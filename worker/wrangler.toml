@@ -3,13 +3,8 @@ main = "src/worker.ts"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-[env.production]
-routes = [
-  { pattern = "youtube-intelligence.workers.dev/*", zone_name = "workers.dev" }
-]
-
 [build]
-command = "npm run build"
+command = "pnpm run build"
 cwd = "./"
 watch_paths = ["src/**/*.ts"]
 
@@ -18,22 +13,11 @@ format = "service-worker"
 
 [env.production.vars]
 ENVIRONMENT = "production"
-
-[[env.production.vars]]
-name = "YOUTUBE_API_KEY"
-text = ""
-
-[env.staging]
-routes = [
-  { pattern = "youtube-intel-staging.workers.dev/*", zone_name = "workers.dev" }
-]
+YOUTUBE_API_KEY = "AIzaSyChEE4iNoH4Ei4SO8s5dt-VwnBjC3q-7qw"
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
-
-[[env.staging.vars]]
-name = "YOUTUBE_API_KEY"
-text = ""
+YOUTUBE_API_KEY = "AIzaSyChEE4iNoH4Ei4SO8s5dt-VwnBjC3q-7qw"
 
 # Local development
 [env.development]
