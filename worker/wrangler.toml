@@ -7,12 +7,30 @@ compatibility_flags = ["nodejs_compat"]
 command = "pnpm run build"
 cwd = "./"
 
-[env.production.vars]
-ENVIRONMENT = "production"
-YOUTUBE_API_KEY = "AIzaSyChEE4iNoH4Ei4SO8s5dt-VwnBjC3q-7qw"
+[observability]
+enabled = true
 
-[env.staging.vars]
-ENVIRONMENT = "staging"
+[observability.logs]
+enabled = true
+head_sampling_rate = 1.0
+persist = true
+invocation_logs = true
 
-[env.development.vars]
-ENVIRONMENT = "development"
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1.0
+
+[env.production]
+name = "yt-intel-prod"
+routes = [
+  { pattern = "yt-intel.kellybakri.workers.dev/*" }
+]
+placement = { mode = "smart" }
+vars = { ENVIRONMENT = "production", REGION = "eu-west-1" }
+
+[env.staging]
+vars = { ENVIRONMENT = "staging" }
+
+[env.development]
+vars = { ENVIRONMENT = "development" }

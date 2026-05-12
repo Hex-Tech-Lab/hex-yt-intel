@@ -67,17 +67,17 @@ app.get("/fetch-metadata", async (c) => {
 
     return c.json(
       {
-        video_id: videoId,
+        videoId: videoId,
         title: snippet.title,
         description: snippet.description,
-        channel: snippet.channelTitle,
-        channel_id: snippet.channelId,
-        published_at: snippet.publishedAt,
+        channelTitle: snippet.channelTitle,
+        channelId: snippet.channelId,
+        publishedAt: snippet.publishedAt,
         duration: parseDuration(details.duration),
-        views: parseInt(stats.viewCount || "0"),
-        likes: parseInt(stats.likeCount || "0"),
-        comments: parseInt(stats.commentCount || "0"),
-        thumbnail_url: snippet.thumbnails.high.url,
+        viewCount: stats.viewCount || "0",
+        likeCount: stats.likeCount || "0",
+        commentCount: stats.commentCount || "0",
+        thumbnailUrl: snippet.thumbnails.high.url,
       },
       200,
       {
