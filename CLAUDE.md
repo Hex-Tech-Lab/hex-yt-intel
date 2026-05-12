@@ -1,5 +1,19 @@
 # hex-yt-intel: Master Development Context
 
+## GITHUB REPOSITORY
+
+**Organization**: Hex-Tech-Lab  
+**Repository**: hex-yt-intel  
+**URL**: https://github.com/Hex-Tech-Lab/hex-yt-intel  
+**Visibility**: PUBLIC ✅  
+**Remote**: origin (primary)  
+**Branch**: master  
+**Status**: All code pushed and available on GitHub  
+
+This is the authoritative source of truth for the project.
+
+---
+
 ## PROJECT MISSION
 Single skill: YouTube Content Intelligence
 Input: YouTube URL
