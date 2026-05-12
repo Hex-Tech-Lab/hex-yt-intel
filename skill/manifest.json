@@ -1,7 +1,7 @@
 {
   "name": "YouTube Content Intelligence",
   "version": "1.0.0",
-  "description": "Intelligent analysis of YouTube videos using Ultimate Content Intelligence v3.2 Framework. Extracts metadata and generates comprehensive content analysis across 7 dimensions: structure, audience intelligence, technical execution, message architecture, performance metrics, competitive positioning, and actionable insights.",
+  "description": "Intelligent analysis of YouTube videos using Ultimate Content Intelligence v3.2 Framework. Extracts metadata and generates 16-section comprehensive content analysis: Header Intelligence, Strategic Context, Executive Overview, Sentiment Analysis, Content Map, Priority Insights, Comparative Analysis, Q&A Extraction, Implementation Systems, Intelligence Database, Power Quotes, Semantic Layer, Discovery Pathways, Scenario Analysis, Forward Intelligence, Risk Disclosures.",
   "author": "CCW",
   "license": "MIT",
   "keywords": [
@@ -9,18 +9,21 @@
     "content-analysis",
     "content-intelligence",
     "video-analysis",
-    "content-strategy"
+    "content-strategy",
+    "16-section-framework",
+    "psychological-analysis",
+    "implementation-pathways"
   ],
   "capabilities": {
     "input": "YouTube URL",
-    "output": "Markdown report with 7-dimensional content analysis",
-    "processing": "Real-time metadata extraction + AI-powered analysis"
+    "output": "Markdown report with 16-section Ultimate Content Intelligence v3.2 comprehensive analysis",
+    "processing": "Real-time metadata extraction + AI-powered 16-section analysis"
   },
   "metadata": {
     "icon": "🎬",
     "category": "Content Analysis",
     "complexity": "Advanced",
-    "estimatedDuration": "2-5 minutes per video"
+    "estimatedDuration": "5-15 minutes per video (Claude analysis time)"
   },
   "usage": {
     "example": "https://www.youtube.com/watch?v=VIDEO_ID",
@@ -34,16 +37,25 @@
   "dependencies": {
     "cloudflare_worker": "https://yt-intel.kellybakri.workers.dev/fetch-metadata",
     "api_version": "1.0",
-    "framework": "Ultimate Content Intelligence v3.2"
+    "framework": "Ultimate Content Intelligence v3.2 (16 sections)"
   },
-  "features": {
-    "content_structure": "Opening hooks, narrative flow, pacing analysis",
-    "audience_intelligence": "Target audience, psychographics, pain points",
-    "technical_execution": "Production quality, audio/visual balance, branding",
-    "message_architecture": "Primary message, supporting arguments, CTAs",
-    "performance_metrics": "Retention curve, engagement potential, virality score",
-    "competitive_positioning": "Unique angle, content gaps, differentiation",
-    "actionable_insights": "Top strengths, improvements, reuse opportunities"
+  "sections": {
+    "1": "Header Intelligence (metadata, authority, timestamps)",
+    "2": "Strategic Context & Framing (positioning, relevance, audience)",
+    "3": "Executive Overview (narrative summary, thesis, caveats)",
+    "4": "Sentiment & Psychological Architecture (tone, emotional trajectory, bias)",
+    "5": "Comprehensive Content Map (temporal breakdown, themes, transitions)",
+    "6": "Priority Insights Matrix (Tier 1-3 insights with evidence quality)",
+    "7": "Comparative Analysis Tables (multi-dimensional comparisons)",
+    "8": "Q&A Intelligence Extraction (critical questions hierarchy)",
+    "9": "Implementation Systems (executable workflows and frameworks)",
+    "10": "Structured Intelligence Database (quantitative data, entities, resources)",
+    "11": "Power Quotes Library (memorable insights, applications, caveats)",
+    "12": "Semantic Intelligence Layer (keywords, search intent, terminology)",
+    "13": "Discovery Pathways (official resources, deep dives, alternatives)",
+    "14": "Scenario Analysis & Stress Testing (base/optimistic/pessimistic/tail scenarios)",
+    "15": "Forward Intelligence & Strategic Foresight (unanswered questions, expansion vectors)",
+    "16": "Domain-Specific Risk Disclosures (financial, health, legal safeguards)"
   },
   "environment": {
     "CLOUDFLARE_WORKER_URL": "https://yt-intel.kellybakri.workers.dev"
