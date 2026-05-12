@@ -1,6 +1,6 @@
 const CLOUDFLARE_WORKER_URL =
   process.env.CLOUDFLARE_WORKER_URL ||
-  "https://youtube-intelligence.workers.dev";
+  "https://youtube-intelligence.kellybakri.workers.dev";
 
 interface YouTubeMetadata {
   video_id: string;
