@@ -299,8 +299,9 @@ pnpm worker:deploy  # Deploy to Cloudflare
 
 ## License
 
-MIT
+Proprietary License - Copyright (c) 2026 Kelly Bakri. All rights reserved.
+See LICENSE file for full terms and conditions.
 
 ## Author
 
-CCW (Chief Cloud Architect)
+Kelly Bakri
