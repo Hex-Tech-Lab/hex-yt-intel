@@ -18,8 +18,8 @@ Cost: Zero (Cloudflare free + Claude subscription)
 - Environment:
   * YOUTUBE_API_KEY
   * CLOUDFLARE_SECRET_TOKEN
-- Deployment: Via Cloudflare MCP (pending: 2026-05-12)
-- Status: PENDING
+- Deployment: Via Cloudflare wrangler (in progress: 2026-05-12)
+- Status: UPLOADED (awaiting workers.dev subdomain or route config)
 
 ### Component 2: hex-yt-intel Skill
 - Location: skill/src/index.ts
@@ -34,7 +34,7 @@ Cost: Zero (Cloudflare free + Claude subscription)
 - Output: Markdown report (16 sections, complete analysis)
 - Execution context: CCW (Claude Web)
 - Cost: Uses subscription, no API calls
-- Status: IN_PROGRESS
+- Status: READY (dependencies installed, code complete)
 
 ## TECH STACK (FROZEN)
 - Language: TypeScript (strict mode, type aliases, no any)
@@ -76,21 +76,26 @@ Cost: Zero (Cloudflare free + Claude subscription)
 - [x] Directory structure initialized
 - [x] Worker code drafted
 - [x] Skill logic drafted
+- [x] Worker dependencies installed
+- [x] Worker built (dist/worker.js - 63.9KB)
+- [x] Worker uploaded to Cloudflare
+- [x] Skill dependencies installed
 
 ### In Progress
-- [ ] Worker deployment via Cloudflare MCP
-- [ ] Skill testing (unit)
-- [ ] End-to-end integration test
+- [ ] Worker configuration (workers.dev subdomain or route)
+- [ ] Worker endpoint testing
+- [ ] End-to-end skill + worker integration
 
 ### Pending
-- [ ] Final skill deployment
+- [ ] Final skill deployment to Claude Skills
 - [ ] Live testing in CCW
 - [ ] Documentation finalization
 
 ## CURRENT BLOCKERS
-1. **Worker Deployment**: Cloudflare MCP call needed to deploy worker/src/index.ts
-2. **API Credentials**: YouTube API key + Cloudflare token required (user to provide)
-3. **Skill Registration**: Register skill with Claude once code is ready
+1. **Worker Activation**: Need workers.dev subdomain OR route configuration
+   - Option A: Register workers.dev at https://dash.cloudflare.com/d28d44fcd9087c54845a8fb8df1c001e/workers/onboarding
+   - Option B: Use existing domain + add route to wrangler.toml
+2. **Skill Registration**: Register skill manifest with Claude Skills platform once worker is live
 
 ## NEXT IMMEDIATE ACTION
 1. CC: Deploy Worker via Cloudflare MCP
