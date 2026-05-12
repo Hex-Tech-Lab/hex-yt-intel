@@ -1,36 +1,11 @@
 name = "yt-intel"
-main = "src/worker.ts"
-compatibility_date = "2024-01-01"
+main = "dist/worker.js"
+compatibility_date = "2026-04-21"
 compatibility_flags = ["nodejs_compat"]
 
 [build]
 command = "pnpm run build"
-cwd = "./"
-
-[observability]
-enabled = true
-
-[observability.logs]
-enabled = true
-head_sampling_rate = 1.0
-persist = true
-invocation_logs = true
-
-[observability.traces]
-enabled = false
-persist = true
-head_sampling_rate = 1.0
 
 [env.production]
 name = "yt-intel-prod"
-routes = [
-  { pattern = "yt-intel.kellybakri.workers.dev/*" }
-]
-placement = { mode = "smart" }
-vars = { ENVIRONMENT = "production", REGION = "eu-west-3" }
-
-[env.staging]
-vars = { ENVIRONMENT = "staging" }
-
-[env.development]
-vars = { ENVIRONMENT = "development" }
+vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }
