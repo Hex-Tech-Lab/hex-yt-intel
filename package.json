@@ -5,8 +5,8 @@
   "type": "module",
   "main": "skill/index.ts",
   "scripts": {
-    "skill": "pnpm tsx skill/index.ts",
-    "dev": "tsx watch skill/index.ts",
+    "skill": "pnpm tsx skill/src/index.ts",
+    "dev": "tsx watch skill/src/index.ts",
     "build": "tsc",
     "worker:dev": "cd worker && pnpm dev",
     "worker:deploy": "cd worker && pnpm deploy",
