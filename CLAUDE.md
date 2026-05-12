@@ -24,7 +24,7 @@ Cost: Zero (Cloudflare free + Claude subscription)
 ## ARCHITECTURE
 
 ### Component 1: Cloudflare Worker (Metadata Fetcher) ✅
-- Endpoint: https://yt-intel.kellybakri.workers.dev/fetch-metadata
+- Endpoint: https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata
 - Method: GET
 - Params: ?video_id={id}
 - Auth: Bearer token (CLOUDFLARE_SECRET_TOKEN)
@@ -40,7 +40,7 @@ Cost: Zero (Cloudflare free + Claude subscription)
 - Input: YouTube URL (string)
 - Processing:
   1. Extract video_id from URL
-  2. Call Worker → fetch metadata
+  2. Call Worker → fetch metadata via hex-tech-lab.workers.dev
   3. Fetch transcript (via YouTube API or placeholder)
   4. Embed Ultimate Content Intelligence v3.2 prompt
   5. Auto-populate metadata into prompt
