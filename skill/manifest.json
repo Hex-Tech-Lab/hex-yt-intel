@@ -35,7 +35,7 @@
     ]
   },
   "dependencies": {
-    "cloudflare_worker": "https://yt-intel.kellybakri.workers.dev/fetch-metadata",
+    "cloudflare_worker": "https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata",
     "api_version": "1.0",
     "framework": "Ultimate Content Intelligence v3.2 (16 sections)"
   },
@@ -58,6 +58,6 @@
     "16": "Domain-Specific Risk Disclosures (financial, health, legal safeguards)"
   },
   "environment": {
-    "CLOUDFLARE_WORKER_URL": "https://yt-intel.kellybakri.workers.dev"
+    "CLOUDFLARE_WORKER_URL": "https://yt-intel.hex-tech-lab.workers.dev"
   }
 }

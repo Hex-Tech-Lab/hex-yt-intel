@@ -7,5 +7,4 @@ compatibility_flags = ["nodejs_compat"]
 command = "pnpm run build"
 
 [env.production]
-name = "yt-intel-prod"
 vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }

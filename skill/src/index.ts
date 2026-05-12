@@ -2,7 +2,7 @@ import { ULTIMATE_CONTENT_INTELLIGENCE_V3_2 } from "./prompts";
 
 const CLOUDFLARE_WORKER_URL =
   process.env.CLOUDFLARE_WORKER_URL ||
-  "https://yt-intel.kellybakri.workers.dev";
+  "https://yt-intel.hex-tech-lab.workers.dev";
 
 interface YouTubeMetadata {
   videoId: string;
