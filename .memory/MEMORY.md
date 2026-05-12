@@ -1,56 +1,73 @@
-# Quick Reference for Next Session
+# hex-yt-intel: Quick Reference
 
-## Current Status: 90% Complete, Blocked on Cleanup
+**Session**: 2026-05-12 (Consolidation Complete)  
+**Status**: ✅ **DEPLOYMENT COMPLETE & VERIFIED**
 
-### What's Done ✅
-- Ultimate Content Intelligence v3.2 framework (16 sections, fully tested)
-- Cloudflare Worker (yt-intel, live, responding)
-- Skill logic (index.ts, integrated with worker)
-- GitHub repo (PUBLIC, all code pushed, Hex-Tech-Lab org)
-- Documentation (README, CLAUDE.md, manifest.json)
+---
 
-### What's Blocked ⚠️
-- 4 workers in Cloudflare (need to delete 3)
-- Subdomain references (kellybakri vs hex-tech-lab inconsistency)
-- Skill registration (pending worker cleanup)
+## Current Status: 95% Complete, Ready for Skills Platform
 
-### Decisions Needed by User
-1. **Confirm subdomain**: hex-tech-lab.workers.dev (not kellybakri)
-2. **Approve worker deletion**: Delete youtube-intelligence, youtube-intelligence-production, yt-intel-prod via wrangler CLI
+### ✅ What's Done
+- Ultimate Content Intelligence v3.2 (16 sections, fully integrated)
+- Cloudflare Worker (yt-intel.hex-tech-lab.workers.dev, LIVE, tested)
+- Skill logic (skill/src/index.ts, end-to-end verified)
+- GitHub repo (PUBLIC, https://github.com/Hex-Tech-Lab/hex-yt-intel, all code pushed)
+- Documentation (CLAUDE.md, manifest.json, README.md updated)
+- **Worker consolidation** (4 workers → 1, kellybakri → hex-tech-lab) ✅
+- **Subdomain resolved** (hex-tech-lab.workers.dev confirmed) ✅
+- **Secrets configured** (YouTube API key set via wrangler secret) ✅
+- **Tests verified** (Worker responds, skill generates 16-section analysis) ✅
 
-### Once Approved, CC Executes:
-```bash
-wrangler delete youtube-intelligence --yes
-wrangler delete youtube-intelligence-production --yes
-wrangler delete yt-intel-prod --yes
+### 🚀 NO BLOCKERS | Ready for Next Steps
+- ✅ Subdomain: hex-tech-lab.workers.dev (confirmed & deployed)
+- ✅ Workers: Consolidated to single "yt-intel" (env.production collision fixed)
+- ✅ References: All kellybakri → hex-tech-lab (updated in 4+ files)
+- ✅ Endpoint: https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata (live)
+- ✅ GitHub: All changes committed (commit 97d5b4b)
 
-# Update all docs
-grep -r "kellybakri" . --include="*.md" --include="*.json" | sed 's/kellybakri.workers.dev/hex-tech-lab.workers.dev/g'
+### What's Next (For Next Session)
+1. Register skill with Claude Skills Platform
+2. Deploy to Claude Web (@hex-yt-intel)
+3. Test end-to-end in Claude environment
+4. Mark project COMPLETE ✅
 
-# Commit cleanup
-git commit -m "cleanup: consolidate workers, correct subdomain references"
-git push origin master
+---
+
+## Critical Files (Latest 2026-05-12)
+- **CLAUDE.md** — Deployment status, secrets, quick commands
+- **wrangler.toml** — Worker config (NO env.production collision)
+- **skill/manifest.json** — 16 sections, correct endpoint, platform metadata
+- **skill/src/index.ts** — CLOUDFLARE_WORKER_URL = hex-tech-lab
+
+---
+
+## Latest Commits (Consolidation)
+- **97d5b4b**: docs(memory): commit memory files to GitHub
+- **785d122**: docs: update CLAUDE.md consolidation status
+- **ad1b0cb**: fix(wrangler): remove env.production name field
+- **c1f852f**: fix(cloudflare): consolidate to hex-tech-lab subdomain
+
+---
+
+## Endpoint Verification (2026-05-12)
+```
+✓ https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata?video_id=M-uUFLU9IFU
+✓ Returns: 179,669 views, 6,543 likes, DesignCode channel
+✓ Skill test: Generates full 16-section analysis prompt
+✓ Framework: Ultimate Content Intelligence v3.2 ready
 ```
 
-### Then CCD Registers Skill
-- Manifest: https://github.com/Hex-Tech-Lab/hex-yt-intel/blob/master/skill/manifest.json
-- Trigger: @hex-yt-intel
-- Endpoint: https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata
+---
 
-### Key Files
-- wrangler.toml (CC owns, must fix name collision)
-- skill/manifest.json (CCD uses for registration)
-- CLAUDE.md (source of truth for deployment status)
-- GitHub repo (single source of truth)
+## For Next Session: Skills Platform Registration
+- Use manifest.json from GitHub
+- Register @hex-yt-intel trigger
+- Endpoint: https://yt-intel.hex-tech-lab.workers.dev
+- Deploy to Claude Web (CCW)
 
-### Latest Commits
-- Critical fixes: 16-section framework, Paris region
-- Worker deployment and testing
-- GitHub repository creation and docs
+---
 
-## Next Session Checklist
-- [ ] User approves worker cleanup & subdomain
-- [ ] CC executes deletion + doc update
-- [ ] CCD registers skill with Claude Skills Platform
-- [ ] Test in Claude Web (CCW)
-- [ ] Mark complete ✅
+## Detail Memory Files
+- **project_status.md** — Full state, timeline, consolidation details
+- **decisions.md** — Strategic choices & reasoning
+- **lessons.md** — 7 critical lessons (Cloudflare, docs, verification)
