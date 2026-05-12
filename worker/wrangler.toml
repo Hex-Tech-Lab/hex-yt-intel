@@ -2,9 +2,7 @@ name = "yt-intel"
 main = "dist/worker.js"
 compatibility_date = "2026-04-21"
 compatibility_flags = ["nodejs_compat"]
+vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }
 
 [build]
 command = "pnpm run build"
-
-[env.production]
-vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }
