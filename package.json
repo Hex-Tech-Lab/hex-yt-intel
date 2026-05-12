@@ -5,8 +5,12 @@
   "type": "module",
   "main": "skill/index.ts",
   "scripts": {
+    "skill": "pnpm tsx skill/index.ts",
     "dev": "tsx watch skill/index.ts",
     "build": "tsc",
+    "worker:dev": "cd worker && pnpm dev",
+    "worker:deploy": "cd worker && pnpm deploy",
+    "worker:build": "cd worker && pnpm build",
     "test": "echo \"No tests yet\""
   },
   "keywords": [
@@ -17,9 +21,7 @@
   ],
   "author": "CCW",
   "license": "MIT",
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.24.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.3.0",
