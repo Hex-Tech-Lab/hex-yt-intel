@@ -5,7 +5,7 @@
 Intelligent analysis of YouTube videos using the **Ultimate Content Intelligence v3.2 Framework**. This skill extracts live metadata from any YouTube video and generates a comprehensive 7-dimensional content analysis ready for strategic decision-making.
 
 **Status**: ✅ Production-ready  
-**Framework**: Ultimate Content Intelligence v3.2  
+**Framework**: Ultimate Content Intelligence v3.2 (16 sections)  
 **Cost**: Zero (free Cloudflare Worker + Claude subscription)
 
 ---
@@ -55,17 +55,26 @@ pnpm tsx skill/index.ts "https://www.youtube.com/watch?v=M-uUFLU9IFU"
 - Embeds 7-dimensional evaluation framework
 - Provides detailed analysis instructions
 
-### 3. **7-Dimensional Analysis Framework**
+### 3. **16-Section Analysis Framework**
 
-| Dimension | Focus |
-|-----------|-------|
-| **Content Structure** | Hooks, narrative flow, pacing, conclusions |
-| **Audience Intelligence** | Demographics, psychographics, pain points |
-| **Technical Execution** | Production quality, audio/visual, branding |
-| **Message Architecture** | Primary message, arguments, CTAs |
-| **Performance Metrics** | Retention, engagement potential, virality |
-| **Competitive Positioning** | Unique angle, gaps, differentiation |
-| **Actionable Insights** | Strengths, improvements, reuse opportunities |
+| Section | Focus |
+|---------|-------|
+| **1. Header Intelligence** | Title effectiveness, hook strength, audience appeal |
+| **2. Strategic Context & Framing** | Positioning, competitive landscape, alignment |
+| **3. Executive Overview** | Summary, value propositions, differentiators |
+| **4. Sentiment & Psychology** | Emotional triggers, persuasion, psychological appeals |
+| **5. Content Map** | Structure, flow, narrative progression |
+| **6. Priority Insights** | Ranked findings, success factors, pivotal moments |
+| **7. Comparative Analysis** | Benchmarking, competitive intelligence, metrics |
+| **8. Q&A Intelligence** | Questions, FAQs, audience pain points |
+| **9. Implementation Systems** | Actionable steps, frameworks, methodologies |
+| **10. Intelligence Database** | Organized findings, categorized insights |
+| **11. Power Quotes** | Memorable statements, shareable excerpts |
+| **12. Semantic Intelligence** | Keywords, semantic clusters, language patterns |
+| **13. Discovery Pathways** | Research trails, learning sequences |
+| **14. Scenario Analysis** | Edge cases, failure modes, robustness |
+| **15. Strategic Foresight** | Future implications, trends, recommendations |
+| **16. Risk Disclosures** | Limitations, caveats, context dependencies |
 
 ---
 
