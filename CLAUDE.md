@@ -171,10 +171,13 @@ pnpm tsx skill/src/index.ts "https://www.youtube.com/watch?v=M-uUFLU9IFU"
 - Engagement: 6,543 likes, 157 comments
 - Framework: 16-section Ultimate Content Intelligence v3.2 ✅
 
-## DEPLOYMENT STATUS
+## DEPLOYMENT STATUS ✅ COMPLETE
 
-### Completed ✅
-- [x] Cloudflare Worker deployed and optimized
+### Production (2026-05-12)
+- [x] Cloudflare Worker **consolidated to single deployment** (yt-intel.hex-tech-lab.workers.dev)
+- [x] Removed duplicate workers (youtube-intelligence, youtube-intelligence-production, yt-intel-prod)
+- [x] Fixed wrangler.toml (removed env.production name collision)
+- [x] Updated all endpoint references to hex-tech-lab subdomain
 - [x] Observability enabled (Logs, Traces, 10% sampling)
 - [x] Response format standardized (camelCase)
 - [x] Skill fully integrated and tested
@@ -201,7 +204,7 @@ cd ~/projects/hex-yt-intel
 pnpm tsx skill/src/index.ts "https://www.youtube.com/watch?v=VIDEO_ID"
 
 # Test Worker Endpoint
-curl "https://yt-intel.kellybakri.workers.dev/fetch-metadata?video_id=M-uUFLU9IFU"
+curl "https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata?video_id=M-uUFLU9IFU"
 
 # Worker Deployment
 cd ~/projects/hex-yt-intel/worker
@@ -219,6 +222,22 @@ npm run build
 - Keep timestamps of major milestones
 - Never delete this file
 
+## SECRETS CONFIGURATION
+
+### YouTube API Key
+Set via wrangler CLI (DO NOT COMMIT):
+```bash
+export CLOUDFLARE_API_TOKEN="<your-token>"
+cd worker/
+wrangler secret put YOUTUBE_API_KEY
+# Paste: AIzaSyChEE4iNoH4Ei4SO8s5dt-VwnBjC3q-7qw
+```
+
+### Cloudflare Secret Token
+```bash
+wrangler secret put CLOUDFLARE_SECRET_TOKEN
+```
+
 ## NOTES
 - No Claude API key calls from skill (uses CCW subscription)
 - No man-in-the-middle; fully automated
@@ -227,3 +246,4 @@ npm run build
 - 16-section framework fully integrated and tested
 - Metadata field mapping synchronized (camelCase alignment)
 - All code in GitHub repository (PUBLIC, for review tools)
+- **Worker consolidated** (2026-05-12): Single deployment at yt-intel.hex-tech-lab.workers.dev
