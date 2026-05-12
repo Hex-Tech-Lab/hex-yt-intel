@@ -1,0 +1,28 @@
+{
+  "name": "youtube-content-intelligence",
+  "version": "1.0.0",
+  "description": "Claude Code skill for intelligent YouTube content analysis using Cloudflare Workers",
+  "type": "module",
+  "main": "skill/index.ts",
+  "scripts": {
+    "dev": "tsx watch skill/index.ts",
+    "build": "tsc",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "youtube",
+    "content-intelligence",
+    "claude",
+    "skill"
+  ],
+  "author": "CCW",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "tsx": "^4.7.0"
+  }
+}
