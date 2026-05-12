@@ -8,7 +8,7 @@ Claude Code skill for intelligent YouTube video analysis using Cloudflare Worker
 - **Metadata Fetching** - Retrieve video metadata via Cloudflare Worker (views, likes, comments, duration)
 - **Analysis Prompt Generation** - Create comprehensive analysis prompts for Claude
 - **CCW Integration** - Uses your CCW subscription (no additional API costs)
-- **Ultimate Content Intelligence v3.2** - 7-dimension analysis framework
+- **Ultimate Content Intelligence v3.2** - 16-section comprehensive analysis framework
 
 ## Quick Start
 
@@ -106,54 +106,26 @@ Copy the prompt above and use it with Claude for comprehensive content intellige
 
 ## Analysis Framework
 
-### Ultimate Content Intelligence v3.2 (7 Dimensions)
+### Ultimate Content Intelligence v3.2 (16 Sections)
 
-The generated prompt requests analysis across:
+The generated prompt requests comprehensive analysis across:
 
-1. **Content Structure & Flow**
-   - Opening hook effectiveness
-   - Narrative arc and pacing
-   - Transition quality
-   - Conclusion strength
-
-2. **Audience Intelligence**
-   - Target audience profile
-   - Pain points addressed
-   - Value proposition
-   - Engagement signals
-
-3. **Technical Execution**
-   - Production quality
-   - Audio/visual balance
-   - Graphics effectiveness
-   - Platform optimization
-
-4. **Message Architecture**
-   - Primary thesis
-   - Supporting arguments
-   - Social proof
-   - Persuasion techniques
-   - Call-to-action
-
-5. **Performance Metrics Potential**
-   - Viewer retention estimate
-   - Engagement rate prediction
-   - Viral potential (0-10)
-   - Algorithm-friendly elements
-   - Monetization opportunities
-
-6. **Competitive Positioning**
-   - Unique angle
-   - Content gaps filled
-   - Differentiation factors
-   - Positioning effectiveness
-
-7. **Actionable Insights**
-   - Top 3 strengths to replicate
-   - Top 3 improvement areas
-   - Performance benchmarks
-   - Content reuse opportunities
-   - Cross-platform adaptation
+1. **Header Intelligence** - Title effectiveness, hook strength, audience appeal
+2. **Strategic Context & Framing** - Positioning, competitive landscape, market alignment
+3. **Executive Overview** - High-level summary, key value propositions, core differentiators
+4. **Sentiment & Psychological Architecture** - Emotional triggers, persuasion patterns, psychological appeals
+5. **Comprehensive Content Map** - Structure breakdown, flow analysis, narrative progression
+6. **Priority Insights Matrix** - Ranked findings, critical success factors, pivotal moments
+7. **Comparative Analysis Tables** - Benchmarking, competitive intelligence, performance metrics
+8. **Q&A Intelligence Extraction** - Common questions, FAQs, audience pain points
+9. **Implementation Systems** - Actionable steps, frameworks, reproducible methodologies
+10. **Structured Intelligence Database** - Organized findings, categorized insights, searchable intelligence
+11. **Power Quotes Library** - Memorable statements, quotable moments, shareable excerpts
+12. **Semantic Intelligence Layer** - Keyword analysis, semantic clusters, language patterns
+13. **Discovery Pathways** - Research trails, learning sequences, content exploration maps
+14. **Scenario Analysis & Stress Testing** - Edge cases, failure modes, robustness assessment
+15. **Forward Intelligence & Strategic Foresight** - Future implications, trend analysis, strategic recommendations
+16. **Domain-Specific Risk Disclosures** - Limitations, caveats, context-dependent factors
 
 ## Installation
 
@@ -220,8 +192,9 @@ The skill generates a markdown prompt with:
 [Full description]
 
 ## Analysis Required
-[7-dimension framework with specific questions]
-[Instructions for Claude]
+[16-section Ultimate Content Intelligence v3.2 framework]
+[Specific evaluation criteria for each section]
+[Instructions for comprehensive analysis]
 ```
 
 **To use:**

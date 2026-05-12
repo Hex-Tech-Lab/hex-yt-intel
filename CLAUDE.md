@@ -57,6 +57,7 @@ Cost: Zero (Cloudflare free + Claude subscription)
 - Cloudflare: Workers + Pages (if needed)
 - APIs: YouTube Data API v3, Claude API (via CCW)
 - Git: GitHub (Hex-Tech-Lab org)
+- Analysis Framework: Ultimate Content Intelligence v3.2 (16 sections)
 
 ## PROJECT STRUCTURE
 ```
@@ -111,7 +112,7 @@ Cost: Zero (Cloudflare free + Claude subscription)
 **Endpoint**: https://yt-intel.kellybakri.workers.dev/fetch-metadata
 **Status**: ✅ LIVE & PRODUCTION-READY
 **Subdomain**: yt-intel.kellybakri.workers.dev
-**Region**: Frankfurt (eu-west-1) - optimal for Cairo connectivity
+**Region**: Paris (eu-west-3) - Marseille submarine cable optimized for Cairo connectivity
 **Deployed**: 2026-05-12
 **Response Format**: camelCase JSON with proper field names
 **Observability**: ✅ Fully Enabled

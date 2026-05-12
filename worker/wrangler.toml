@@ -27,7 +27,7 @@ routes = [
   { pattern = "yt-intel.kellybakri.workers.dev/*" }
 ]
 placement = { mode = "smart" }
-vars = { ENVIRONMENT = "production", REGION = "eu-west-1" }
+vars = { ENVIRONMENT = "production", REGION = "eu-west-3" }
 
 [env.staging]
 vars = { ENVIRONMENT = "staging" }
