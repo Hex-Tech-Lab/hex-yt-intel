@@ -12,4 +12,3 @@ dist/
 *~
 .turbo/
 pnpm-lock.yaml
-.memory/
