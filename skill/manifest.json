@@ -1,0 +1,51 @@
+{
+  "name": "YouTube Content Intelligence",
+  "version": "1.0.0",
+  "description": "Intelligent analysis of YouTube videos using Ultimate Content Intelligence v3.2 Framework. Extracts metadata and generates comprehensive content analysis across 7 dimensions: structure, audience intelligence, technical execution, message architecture, performance metrics, competitive positioning, and actionable insights.",
+  "author": "CCW",
+  "license": "MIT",
+  "keywords": [
+    "youtube",
+    "content-analysis",
+    "content-intelligence",
+    "video-analysis",
+    "content-strategy"
+  ],
+  "capabilities": {
+    "input": "YouTube URL",
+    "output": "Markdown report with 7-dimensional content analysis",
+    "processing": "Real-time metadata extraction + AI-powered analysis"
+  },
+  "metadata": {
+    "icon": "🎬",
+    "category": "Content Analysis",
+    "complexity": "Advanced",
+    "estimatedDuration": "2-5 minutes per video"
+  },
+  "usage": {
+    "example": "https://www.youtube.com/watch?v=VIDEO_ID",
+    "formats": [
+      "https://www.youtube.com/watch?v=VIDEO_ID",
+      "https://youtu.be/VIDEO_ID",
+      "https://www.youtube.com/embed/VIDEO_ID",
+      "https://www.youtube.com/v/VIDEO_ID"
+    ]
+  },
+  "dependencies": {
+    "cloudflare_worker": "https://yt-intel.kellybakri.workers.dev/fetch-metadata",
+    "api_version": "1.0",
+    "framework": "Ultimate Content Intelligence v3.2"
+  },
+  "features": {
+    "content_structure": "Opening hooks, narrative flow, pacing analysis",
+    "audience_intelligence": "Target audience, psychographics, pain points",
+    "technical_execution": "Production quality, audio/visual balance, branding",
+    "message_architecture": "Primary message, supporting arguments, CTAs",
+    "performance_metrics": "Retention curve, engagement potential, virality score",
+    "competitive_positioning": "Unique angle, content gaps, differentiation",
+    "actionable_insights": "Top strengths, improvements, reuse opportunities"
+  },
+  "environment": {
+    "CLOUDFLARE_WORKER_URL": "https://yt-intel.kellybakri.workers.dev"
+  }
+}
