@@ -102,8 +102,17 @@ CREATE POLICY "Service role writes usage logs" ON usage_logs
   FOR INSERT WITH CHECK (auth.role() = 'service_role');
 
 -- RLS Policies for stripe_events table (service role only)
-CREATE POLICY "Service role can manage stripe events" ON stripe_events
-  FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+CREATE POLICY "Service role can select stripe events" ON stripe_events
+  FOR SELECT USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role can insert stripe events" ON stripe_events
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+
+CREATE POLICY "Service role can update stripe events" ON stripe_events
+  FOR UPDATE USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
+CREATE POLICY "Service role can delete stripe events" ON stripe_events
+  FOR DELETE USING (auth.role() = 'service_role');
 
 -- Trigger function: Update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
