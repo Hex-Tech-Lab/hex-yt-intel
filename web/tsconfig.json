@@ -29,7 +29,7 @@
         "./*"
       ]
     },
-    "allowJs": true,
+    "allowJs": false,
     "noEmit": true,
     "incremental": true,
     "esModuleInterop": true,

@@ -59,7 +59,8 @@ supabase db execute "SELECT tablename FROM pg_tables WHERE schemaname = 'public'
 ```
 
 Expected output:
-```
+
+```text
 users
 analyses
 usage_logs
@@ -69,16 +70,18 @@ stripe_events
 ### 6. Verify Extensions
 
 ```bash
-supabase db execute "SELECT * FROM pg_available_extensions WHERE name = 'vector';"
+supabase db execute "SELECT 1 FROM pg_catalog.pg_proc WHERE proname = 'vector';"
 ```
 
-Expected output: `vector` extension available
+Expected output: One row returned (vector function exists)
 
 ### 7. Verify RLS
 
 ```bash
-supabase db execute "SELECT tablename FROM information_schema.role_table_grants WHERE table_schema='public';"
+supabase db execute "SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname='public' AND rowsecurity=true;"
 ```
+
+Expected output: List of tables with RLS enabled (users, analyses, usage_logs, stripe_events)
 
 ## Production Setup
 
@@ -140,7 +143,7 @@ https://xxxxx.vercel.app
 
 ```bash
 # List tables
-supabase db list-tables
+supabase db execute "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;"
 
 # Execute SQL
 supabase db execute "SELECT * FROM users;"
@@ -161,14 +164,17 @@ supabase functions logs
 ## Troubleshooting
 
 ### pgvector not available
+
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
 ### RLS blocking inserts
+
 Check RLS policies in Supabase Dashboard → Authentication → Policies
 
 ### Connection errors
+
 Verify:
 - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`
 - Supabase project is not paused (free tier auto-pauses after 1 week of inactivity)

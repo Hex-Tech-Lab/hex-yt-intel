@@ -98,31 +98,12 @@ CREATE POLICY "Users can delete own analyses" ON analyses
 CREATE POLICY "Users can read own usage logs" ON usage_logs
   FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "System can write usage logs" ON usage_logs
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Service role writes usage logs" ON usage_logs
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
 
--- RLS Policies for stripe_events table (admin only access, TBD)
+-- RLS Policies for stripe_events table (service role only)
 CREATE POLICY "Service role can manage stripe events" ON stripe_events
-  FOR ALL USING (true);
-
--- Trigger function: Auto-delete free tier analyses after 30 days
-CREATE OR REPLACE FUNCTION delete_old_free_analyses()
-RETURNS TRIGGER AS $$
-BEGIN
-  DELETE FROM analyses
-  WHERE user_id IN (
-    SELECT id FROM users WHERE tier = 'free'
-  )
-  AND created_at < NOW() - INTERVAL '30 days';
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger: Run cleanup daily (on any insert)
-CREATE TRIGGER trigger_delete_old_analyses
-AFTER INSERT ON analyses
-FOR EACH STATEMENT
-EXECUTE FUNCTION delete_old_free_analyses();
+  FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
 
 -- Trigger function: Update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
