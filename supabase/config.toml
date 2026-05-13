@@ -1,0 +1,29 @@
+# Supabase configuration
+# Local development only - production config in Supabase dashboard
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+max_enrolled_factors = 2
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbrowser]
+enabled = true
+
+[vector]
+enabled = true
