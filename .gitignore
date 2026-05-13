@@ -13,3 +13,4 @@ dist/
 .turbo/
 pnpm-lock.yaml
 .next/
+.env*.local
