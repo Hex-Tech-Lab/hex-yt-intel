@@ -3,6 +3,7 @@ import { authConfig } from '@/lib/auth/nextauth-config';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { createUCISPrompt } from '@/lib/prompts';
+import { generateEmbedding } from '@/lib/embeddings';
 import * as Sentry from '@sentry/nextjs';
 
 interface AnalysisRequest {
@@ -197,7 +198,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 9. Insert analysis into Supabase
+    // 9. Insert analysis into Supabase (without embedding initially)
     const { data: analysis, error: insertError } = await supabase
       .from('analyses')
       .insert({
@@ -206,8 +207,8 @@ export async function POST(request: NextRequest) {
         title: metadata.title || '',
         channel_title: metadata.channelTitle || '',
         view_count: parseInt(metadata.viewCount || '0', 10),
-        markdown,
-        embedding: null, // TODO: Generate embedding from markdown
+        analysis_markdown: markdown,
+        embedding: null, // Will be generated asynchronously
         created_at: new Date().toISOString(),
       })
       .select('id, created_at')
@@ -220,6 +221,13 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // 9.5 Trigger async embedding generation (background job)
+    // Don't await: embedding generation is non-blocking
+    generateEmbeddingAsync(userId, analysis.id, markdown).catch((error) => {
+      console.error('[/api/analyses] Background embedding generation failed:', error);
+      // Non-fatal: analysis is already saved
+    });
 
     // 10. Increment user counter
     const newCount = (userData?.analyses_used || 0) + 1;
@@ -272,5 +280,74 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Background job: Generate and store embedding for analysis
+ * Runs asynchronously after analysis is saved
+ * Non-blocking: errors are logged but don't fail the analysis creation
+ *
+ * @param userId - User ID
+ * @param analysisId - Analysis ID
+ * @param markdown - Analysis markdown content
+ */
+async function generateEmbeddingAsync(
+  userId: string,
+  analysisId: string,
+  markdown: string
+): Promise<void> {
+  try {
+    // Generate embedding from analysis markdown
+    const embeddingResult = await generateEmbedding(markdown);
+
+    // Update analysis with embedding
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { error: updateError } = await supabase
+      .from('analyses')
+      .update({
+        embedding: embeddingResult.embedding,
+      })
+      .eq('id', analysisId)
+      .eq('user_id', userId);
+
+    if (updateError) {
+      console.error('[generateEmbeddingAsync] Failed to update embedding:', updateError);
+      return;
+    }
+
+    // Log embedding generation cost
+    await supabase.from('usage_logs').insert({
+      user_id: userId,
+      action: 'embedding_generated',
+      metadata: {
+        analysis_id: analysisId,
+        cost_usd: embeddingResult.costUsd,
+        model: 'text-embedding-3-small',
+      },
+      created_at: new Date().toISOString(),
+    });
+
+    console.log(`[generateEmbeddingAsync] Embedding generated for analysis ${analysisId}`);
+  } catch (error) {
+    console.error('[generateEmbeddingAsync] Error:', error);
+    Sentry.captureException(error, {
+      contexts: {
+        background_job: {
+          job: 'embedding_generation',
+          analysisId,
+          userId,
+        },
+      },
+      tags: {
+        severity: 'low',
+        blocking: false,
+      },
+    });
+    // Non-fatal: don't rethrow
   }
 }
