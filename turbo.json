@@ -1,10 +1,8 @@
 {
-  "version": "2",
   "tasks": {
     "dev": {
       "cache": false,
-      "interactive": true,
-      "parallel": false
+      "interactive": true
     },
     "build": {
       "outputs": [".next/**", "dist/**"],
