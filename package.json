@@ -20,7 +20,7 @@
     "skill"
   ],
   "author": "CCW",
-  "license": "MIT",
+  "license": "Proprietary",
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -4,6 +4,14 @@ const CLOUDFLARE_WORKER_URL =
   process.env.CLOUDFLARE_WORKER_URL ||
   "https://yt-intel.hex-tech-lab.workers.dev";
 
+const CLOUDFLARE_SECRET_TOKEN = process.env.CLOUDFLARE_SECRET_TOKEN;
+
+if (!CLOUDFLARE_SECRET_TOKEN) {
+  throw new Error(
+    "Missing CLOUDFLARE_SECRET_TOKEN environment variable. Please set it to authenticate with the worker."
+  );
+}
+
 interface YouTubeMetadata {
   videoId: string;
   title: string;
@@ -19,16 +27,32 @@ interface YouTubeMetadata {
 }
 
 function parseYouTubeUrl(url: string): string {
+  // Normalize to HTTPS
+  url = url.replace(/^http:/, "https:");
+
+  // Validate domain
+  if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
+    throw new Error(
+      `Invalid YouTube URL: ${url}. Must be from youtube.com or youtu.be`
+    );
+  }
+
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+    /(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
   ];
 
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) {
-      return match[1];
+      const videoId = match[1];
+      // Validate video ID format
+      if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+        throw new Error(`Invalid video ID format: ${videoId}`);
+      }
+      return videoId;
     }
   }
 
@@ -47,6 +71,7 @@ async function fetchMetadata(
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${CLOUDFLARE_SECRET_TOKEN}`,
         },
       }
     );
@@ -57,36 +82,45 @@ async function fetchMetadata(
       );
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
+
+    // Validate required fields
+    if (!data.title || typeof data.title !== "string") {
+      throw new Error("Invalid response: missing or invalid title field");
+    }
+    if (typeof data.viewCount !== "number") {
+      throw new Error(
+        `Invalid response: viewCount should be number, got ${typeof data.viewCount}`
+      );
+    }
+
     return {
       videoId: videoId,
-      title: data.title || "Unknown Title",
-      description: data.description || "",
-      channelTitle: data.channelTitle || "Unknown Channel",
-      channelId: data.channelId || "unknown",
-      duration: data.duration || 0,
-      viewCount: data.viewCount || 0,
-      likeCount: data.likeCount || 0,
-      commentCount: data.commentCount || 0,
-      publishedAt: data.publishedAt || "Unknown Date",
-      thumbnailUrl: data.thumbnailUrl || "",
+      title: data.title,
+      description:
+        typeof data.description === "string" ? data.description : "",
+      channelTitle:
+        typeof data.channelTitle === "string"
+          ? data.channelTitle
+          : "Unknown Channel",
+      channelId:
+        typeof data.channelId === "string" ? data.channelId : "unknown",
+      duration: typeof data.duration === "number" ? data.duration : 0,
+      viewCount: typeof data.viewCount === "number" ? data.viewCount : 0,
+      likeCount: typeof data.likeCount === "number" ? data.likeCount : 0,
+      commentCount:
+        typeof data.commentCount === "number" ? data.commentCount : 0,
+      publishedAt:
+        typeof data.publishedAt === "string" ? data.publishedAt : "Unknown Date",
+      thumbnailUrl:
+        typeof data.thumbnailUrl === "string" ? data.thumbnailUrl : "",
     };
   } catch (error) {
-    console.error(`Failed to fetch metadata for ${videoId}:`, error);
-    // Return minimal metadata on failure
-    return {
-      videoId: videoId,
-      title: "Metadata unavailable",
-      description: "",
-      channelTitle: "Unknown",
-      channelId: "unknown",
-      duration: 0,
-      viewCount: 0,
-      likeCount: 0,
-      commentCount: 0,
-      publishedAt: "Unknown",
-      thumbnailUrl: "",
-    };
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to fetch YouTube metadata for video ${videoId}: ${errorMessage}`
+    );
   }
 }
 
@@ -145,7 +179,9 @@ async function main() {
     console.log(`✓ Title: ${metadata.title}`);
     console.log(`✓ Channel: ${metadata.channelTitle}`);
     console.log(`✓ Views: ${metadata.viewCount.toLocaleString()}`);
-    console.log(`✓ Engagement: ${metadata.likeCount.toLocaleString()} likes, ${metadata.commentCount.toLocaleString()} comments\n`);
+    console.log(
+      `✓ Engagement: ${metadata.likeCount.toLocaleString()} likes, ${metadata.commentCount.toLocaleString()} comments\n`
+    );
 
     console.log("📋 Generating analysis prompt for Claude...");
     const prompt = formatAnalysisPrompt(metadata);
@@ -156,7 +192,9 @@ async function main() {
     console.log("=====================================\n");
 
     console.log("✨ READY FOR CLAUDE ANALYSIS");
-    console.log("Copy the prompt above and use it with Claude for comprehensive content intelligence analysis.\n");
+    console.log(
+      "Copy the prompt above and use it with Claude for comprehensive content intelligence analysis.\n"
+    );
 
     return {
       success: true,
