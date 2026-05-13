@@ -37,8 +37,9 @@ In Supabase Project Settings → API:
 
 ```bash
 cp web/.env.local.example web/.env.local
-# Edit web/.env.local and paste Supabase credentials
 ```
+
+Edit `web/.env.local` and paste Supabase credentials
 
 ### 5. Apply Database Migrations
 
@@ -55,7 +56,7 @@ supabase link --project-ref xxxxx
 supabase db push
 
 # Verify migration
-supabase db execute "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
+supabase db execute "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;"
 ```
 
 Expected output:
