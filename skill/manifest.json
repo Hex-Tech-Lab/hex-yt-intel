@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Intelligent analysis of YouTube videos using Ultimate Content Intelligence v3.2 Framework. Extracts metadata and generates 16-section comprehensive content analysis: Header Intelligence, Strategic Context, Executive Overview, Sentiment Analysis, Content Map, Priority Insights, Comparative Analysis, Q&A Extraction, Implementation Systems, Intelligence Database, Power Quotes, Semantic Layer, Discovery Pathways, Scenario Analysis, Forward Intelligence, Risk Disclosures.",
   "author": "CCW",
-  "license": "MIT",
+  "license": "Proprietary",
+  "licenseText": "© 2026 Kelly Bakri. All rights reserved. No use without explicit permission.",
   "keywords": [
     "youtube",
     "content-analysis",
@@ -37,7 +38,7 @@
   "dependencies": {
     "cloudflare_worker": "https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata",
     "api_version": "1.0",
-    "framework": "Ultimate Content Intelligence v3.2 (16 sections)"
+    "framework": "Ultimate Content Intelligence System v3.2 (16 sections)"
   },
   "sections": {
     "1": "Header Intelligence (metadata, authority, timestamps)",

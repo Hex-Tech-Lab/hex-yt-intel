@@ -3,12 +3,30 @@ import { cors } from "hono/cors";
 
 type Env = {
   YOUTUBE_API_KEY: string;
+  CLOUDFLARE_SECRET_TOKEN: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
 
 // Enable CORS
 app.use("*", cors());
+
+// Authentication middleware for protected endpoints
+app.use("/fetch-metadata", async (c, next) => {
+  const authHeader = c.req.header("Authorization");
+  const token = c.env.CLOUDFLARE_SECRET_TOKEN;
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return c.json({ error: "Missing or invalid Authorization header" }, 401);
+  }
+
+  const providedToken = authHeader.slice(7);
+  if (providedToken !== token) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  await next();
+});
 
 // Health check
 app.get("/", (c) => {
@@ -74,9 +92,9 @@ app.get("/fetch-metadata", async (c) => {
         channelId: snippet.channelId,
         publishedAt: snippet.publishedAt,
         duration: parseDuration(details.duration),
-        viewCount: stats.viewCount || "0",
-        likeCount: stats.likeCount || "0",
-        commentCount: stats.commentCount || "0",
+        viewCount: parseInt(stats.viewCount || "0", 10),
+        likeCount: parseInt(stats.likeCount || "0", 10),
+        commentCount: parseInt(stats.commentCount || "0", 10),
         thumbnailUrl: snippet.thumbnails.high.url,
       },
       200,
@@ -87,7 +105,11 @@ app.get("/fetch-metadata", async (c) => {
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    return c.json({ error: `Failed to fetch metadata: ${errorMessage}` }, 500);
+    console.error(`Worker error for video ${videoId}:`, errorMessage);
+    return c.json(
+      { error: "Failed to fetch video metadata. Please try again later." },
+      500
+    );
   }
 });
 

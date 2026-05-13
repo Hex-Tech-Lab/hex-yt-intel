@@ -12,7 +12,7 @@
   },
   "keywords": ["cloudflare", "worker", "youtube"],
   "author": "CCW",
-  "license": "MIT",
+  "license": "Proprietary",
   "dependencies": {
     "hono": "^4.4.0"
   },
