@@ -4,7 +4,14 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { createUCISPrompt } from '@/lib/prompts';
 import { generateEmbedding } from '@/lib/embeddings';
+import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import * as Sentry from '@sentry/nextjs';
+import {
+  trackExternalCall,
+  trackDatabaseQuery,
+  addBreadcrumb,
+  setUserContext
+} from '@/lib/monitoring/sentry-utils';
 
 interface AnalysisRequest {
   url: string;
@@ -97,6 +104,9 @@ async function callOpenRouter(
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = performance.now();
+  let userId: string | undefined;
+
   try {
     // 1. Auth check
     const session = await getServerSession(authConfig);
@@ -107,7 +117,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userId = (session.user as any).id;
+    userId = (session.user as any).id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID not found in session' },
+        { status: 401 }
+      );
+    }
+    const userEmail = (session.user as any).email || '';
+    const userTierAuth = await getUserTier(userId);
+
+    // Set user context for Sentry
+    setUserContext(userId, userEmail || '', userTierAuth);
+    addBreadcrumb(`Analysis creation initiated by user ${userId}`, { userId });
+
+    // 1.5. Rate limiting check
+    const { allowed, response, headers } = await applyRateLimit(
+      request,
+      'analyses',
+      userId,
+      userTierAuth
+    );
+
+    if (!allowed) {
+      addBreadcrumb('Rate limit exceeded', { userId, tier: userTierAuth }, 'rate_limiting');
+      Sentry.captureMessage('Rate limit: POST /api/analyses', 'warning');
+      // Rate limit exceeded - response already has 429 status
+      if (response) {
+        // Attach headers to response
+        if (headers) {
+          for (const [key, value] of Object.entries(headers)) {
+            response.headers.set(key, value);
+          }
+        }
+        return response;
+      }
+    }
 
     // 2. Parse request
     const body: AnalysisRequest = await request.json();
@@ -120,7 +165,9 @@ export async function POST(request: NextRequest) {
 
     // 3. Extract video ID
     const videoId = extractVideoId(body.url);
+    addBreadcrumb('Video ID extracted', { videoId, url: body.url });
     if (!videoId) {
+      addBreadcrumb('Invalid YouTube URL provided', { url: body.url }, 'validation');
       return NextResponse.json(
         { error: 'Invalid YouTube URL' },
         { status: 400 }
@@ -133,50 +180,106 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // 5. Check free tier quota
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('tier, analyses_used')
-      .eq('id', userId)
-      .single();
+    // 5. Check quota enforcement
+    const userData = await trackDatabaseQuery(
+      'select',
+      'users',
+      async () => {
+        const { data, error } = await supabase
+          .from('users')
+          .select('tier, analyses_used, last_reset_date')
+          .eq('id', userId)
+          .single();
+        if (error) throw error;
+        return data;
+      },
+      { userId }
+    ).catch((error) => {
+      addBreadcrumb('Failed to fetch user quota data', { userId, error: String(error) }, 'database');
+      throw error;
+    });
 
-    if (userError) {
+    if (!userData) {
       return NextResponse.json(
         { error: 'Failed to fetch user data' },
         { status: 500 }
       );
     }
 
-    if (userData?.tier === 'free' && (userData?.analyses_used || 0) >= 3) {
+    // Check if monthly quota should be reset
+    const now = new Date();
+    const lastReset = new Date(userData.last_reset_date || now);
+    const monthsElapsed = (now.getFullYear() - lastReset.getFullYear()) * 12 +
+                          (now.getMonth() - lastReset.getMonth());
+
+    let analysesUsed = userData.analyses_used || 0;
+    if (monthsElapsed > 0) {
+      // Reset quota for new month
+      analysesUsed = 0;
+      addBreadcrumb('Monthly quota reset', { userId, monthsElapsed }, 'quota');
+      await supabase
+        .from('users')
+        .update({ analyses_used: 0, last_reset_date: now.toISOString() })
+        .eq('id', userId);
+    }
+
+    // Enforce quota based on tier
+    const quotaLimit = userTierAuth === 'free' ? 3 : null; // null = unlimited for pro
+
+    if (quotaLimit && analysesUsed >= quotaLimit) {
+      addBreadcrumb('Quota limit exceeded', { userId, used: analysesUsed, limit: quotaLimit }, 'quota');
+      Sentry.captureMessage(`Quota exceeded: user ${userId}`, 'warning');
       return NextResponse.json(
-        { error: 'Monthly quota exceeded. Upgrade to Pro.' },
+        {
+          error: `Monthly quota exceeded (${analysesUsed}/${quotaLimit}). Upgrade to Pro for unlimited analyses.`,
+          quotaExceeded: true,
+          remaining: 0,
+        },
         { status: 402 }
       );
     }
+
+    addBreadcrumb('Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
 
     // 6. Fetch metadata from Worker
     const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
     const metadataUrl = `${workerUrl}/fetch-metadata?video_id=${videoId}`;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
-
     let metadata: any;
     try {
-      const response = await fetch(metadataUrl, {
-        method: 'GET',
-        signal: controller.signal,
-      });
+      metadata = await trackExternalCall(
+        'cloudflare-worker',
+        'fetch-metadata',
+        async () => {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 3000);
 
-      clearTimeout(timeout);
+          try {
+            const response = await fetch(metadataUrl, {
+              method: 'GET',
+              signal: controller.signal,
+            });
 
-      if (!response.ok) {
-        throw new Error(`Worker returned ${response.status}`);
-      }
+            clearTimeout(timeout);
 
-      metadata = await response.json();
+            if (!response.ok) {
+              throw new Error(`Worker returned ${response.status}`);
+            }
+
+            return await response.json();
+          } finally {
+            clearTimeout(timeout);
+          }
+        },
+        { videoId }
+      );
+      addBreadcrumb('Metadata fetched from worker', { videoId, title: metadata.title });
     } catch (error) {
-      clearTimeout(timeout);
+      addBreadcrumb('Worker call failed', { videoId, error: String(error) }, 'external_service');
+      Sentry.captureException(error, {
+        tags: { service: 'cloudflare-worker', operation: 'fetch-metadata' },
+        contexts: { video: { videoId } },
+      });
       return NextResponse.json(
         { error: 'Failed to fetch video metadata' },
         { status: 500 }
@@ -189,9 +292,20 @@ export async function POST(request: NextRequest) {
     // 8. Call OpenRouter / Claude Haiku
     let markdown: string;
     try {
-      markdown = await callOpenRouter(metadata, transcript);
+      markdown = await trackExternalCall(
+        'openrouter',
+        'claude-analysis',
+        () => callOpenRouter(metadata, transcript),
+        { videoId, model: 'anthropic/claude-haiku-4.5:free' }
+      );
+      addBreadcrumb('Analysis generated successfully', { videoId, markdownLength: markdown.length });
     } catch (error) {
       console.error('[/api/analyses] OpenRouter error:', error);
+      addBreadcrumb('Analysis generation failed', { videoId, error: String(error) }, 'external_service');
+      Sentry.captureException(error, {
+        tags: { service: 'openrouter', operation: 'claude-analysis' },
+        contexts: { video: { videoId } },
+      });
       return NextResponse.json(
         { error: 'Failed to generate analysis' },
         { status: 500 }
@@ -199,28 +313,43 @@ export async function POST(request: NextRequest) {
     }
 
     // 9. Insert analysis into Supabase (without embedding initially)
-    const { data: analysis, error: insertError } = await supabase
-      .from('analyses')
-      .insert({
-        user_id: userId,
-        video_id: videoId,
-        title: metadata.title || '',
-        channel_title: metadata.channelTitle || '',
-        view_count: parseInt(metadata.viewCount || '0', 10),
-        analysis_markdown: markdown,
-        embedding: null, // Will be generated asynchronously
-        created_at: new Date().toISOString(),
-      })
-      .select('id, created_at')
-      .single();
+    const analysis = await trackDatabaseQuery(
+      'insert',
+      'analyses',
+      async () => {
+        const { data, error } = await supabase
+          .from('analyses')
+          .insert({
+            user_id: userId,
+            video_id: videoId,
+            title: metadata.title || '',
+            channel_title: metadata.channelTitle || '',
+            view_count: parseInt(metadata.viewCount || '0', 10),
+            analysis_markdown: markdown,
+            embedding: null, // Will be generated asynchronously
+            created_at: new Date().toISOString(),
+          })
+          .select('id, created_at')
+          .single();
 
-    if (insertError) {
-      console.error('[/api/analyses] Insert error:', insertError);
+        if (error) throw error;
+        return data;
+      },
+      { userId, videoId }
+    ).catch((error) => {
+      console.error('[/api/analyses] Insert error:', error);
+      addBreadcrumb('Analysis insert failed', { userId, videoId, error: String(error) }, 'database');
+      throw error;
+    });
+
+    if (!analysis) {
       return NextResponse.json(
         { error: 'Failed to save analysis' },
         { status: 500 }
       );
     }
+
+    addBreadcrumb('Analysis saved to database', { analysisId: analysis.id, videoId });
 
     // 9.5 Trigger async embedding generation (background job)
     // Don't await: embedding generation is non-blocking
@@ -230,29 +359,57 @@ export async function POST(request: NextRequest) {
     });
 
     // 10. Increment user counter
-    const newCount = (userData?.analyses_used || 0) + 1;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ analyses_used: newCount })
-      .eq('id', userId);
-
-    if (updateError) {
-      console.error('[/api/analyses] Update counter error:', updateError);
+    const newCount = (userData.analyses_used || 0) + 1;
+    await trackDatabaseQuery(
+      'update',
+      'users',
+      async () => {
+        await supabase
+          .from('users')
+          .update({ analyses_used: newCount })
+          .eq('id', userId);
+        return null;
+      },
+      { userId, newCount }
+    ).catch((error) => {
+      console.error('[/api/analyses] Update counter error:', error);
       // Non-fatal: analysis was saved, just counter update failed
-    }
+      addBreadcrumb('Counter update failed (non-fatal)', { userId, error: String(error) }, 'database');
+    });
 
     // 11. Log usage
-    await supabase.from('usage_logs').insert({
-      user_id: userId,
-      action: 'analysis_created',
-      metadata: {
-        video_id: videoId,
-        analysis_id: analysis.id,
+    await trackDatabaseQuery(
+      'insert',
+      'usage_logs',
+      async () => {
+        await supabase.from('usage_logs').insert({
+          user_id: userId,
+          action: 'analysis_created',
+          metadata: {
+            video_id: videoId,
+            analysis_id: analysis.id,
+            latency_ms: Math.round(performance.now() - startTime),
+            tier: userTierAuth,
+          },
+          created_at: new Date().toISOString(),
+        });
+        return null;
       },
-      created_at: new Date().toISOString(),
+      { userId, videoId }
+    ).catch((error) => {
+      console.warn('[/api/analyses] Usage log insert failed:', error);
+      // Non-fatal: don't fail the whole request
     });
 
     // 12. Return response
+    const duration = Math.round(performance.now() - startTime);
+    addBreadcrumb('Analysis request completed', {
+      analysisId: analysis.id,
+      videoId,
+      duration,
+      tier: userTierAuth,
+    });
+
     const result: AnalysisResponse = {
       id: analysis.id,
       videoId,
@@ -263,12 +420,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
+    const duration = Math.round(performance.now() - startTime);
     console.error('[/api/analyses] Error:', error);
+
     Sentry.captureException(error, {
       contexts: {
         api: {
           endpoint: '/api/analyses',
           method: 'POST',
+          userId,
+          duration,
         },
       },
       tags: {
@@ -276,6 +437,12 @@ export async function POST(request: NextRequest) {
         severity: 'critical',
       },
     });
+
+    addBreadcrumb('Unhandled error in POST /api/analyses', {
+      error: error instanceof Error ? error.message : String(error),
+      duration,
+    });
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -299,7 +466,17 @@ async function generateEmbeddingAsync(
 ): Promise<void> {
   try {
     // Generate embedding from analysis markdown
-    const embeddingResult = await generateEmbedding(markdown);
+    const embeddingResult = await trackExternalCall(
+      'openai',
+      'text-embedding-3-small',
+      () => generateEmbedding(markdown),
+      { analysisId, userId }
+    );
+
+    addBreadcrumb('Embedding generated asynchronously', {
+      analysisId,
+      costUsd: embeddingResult.costUsd,
+    });
 
     // Update analysis with embedding
     const supabase = createClient(
@@ -307,32 +484,47 @@ async function generateEmbeddingAsync(
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    const { error: updateError } = await supabase
-      .from('analyses')
-      .update({
-        embedding: embeddingResult.embedding,
-      })
-      .eq('id', analysisId)
-      .eq('user_id', userId);
-
-    if (updateError) {
-      console.error('[generateEmbeddingAsync] Failed to update embedding:', updateError);
-      return;
-    }
+    await trackDatabaseQuery(
+      'update',
+      'analyses',
+      async () => {
+        const { error } = await supabase
+          .from('analyses')
+          .update({
+            embedding: embeddingResult.embedding,
+          })
+          .eq('id', analysisId)
+          .eq('user_id', userId);
+        if (error) throw error;
+        return null;
+      },
+      { analysisId, userId }
+    );
 
     // Log embedding generation cost
-    await supabase.from('usage_logs').insert({
-      user_id: userId,
-      action: 'embedding_generated',
-      metadata: {
-        analysis_id: analysisId,
-        cost_usd: embeddingResult.costUsd,
-        model: 'text-embedding-3-small',
+    await trackDatabaseQuery(
+      'insert',
+      'usage_logs',
+      async () => {
+        const { error } = await supabase.from('usage_logs').insert({
+          user_id: userId,
+          action: 'embedding_generated',
+          metadata: {
+            analysis_id: analysisId,
+            cost_usd: embeddingResult.costUsd,
+            model: 'text-embedding-3-small',
+          },
+          created_at: new Date().toISOString(),
+        });
+        if (error) throw error;
+        return null;
       },
-      created_at: new Date().toISOString(),
-    });
+      { userId, analysisId }
+    );
 
-    console.log(`[generateEmbeddingAsync] Embedding generated for analysis ${analysisId}`);
+    console.log(
+      `[generateEmbeddingAsync] Embedding generated for analysis ${analysisId} (cost: $${embeddingResult.costUsd})`
+    );
   } catch (error) {
     console.error('[generateEmbeddingAsync] Error:', error);
     Sentry.captureException(error, {
@@ -347,6 +539,11 @@ async function generateEmbeddingAsync(
         severity: 'low',
         blocking: false,
       },
+    });
+
+    addBreadcrumb('Background embedding generation failed', {
+      analysisId,
+      error: error instanceof Error ? error.message : String(error),
     });
     // Non-fatal: don't rethrow
   }

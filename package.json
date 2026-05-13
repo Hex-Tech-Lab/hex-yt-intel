@@ -17,7 +17,12 @@
     "type-check": "turbo run type-check",
     "db:push": "cd web && npx supabase db push",
     "db:seed": "cd web && npx supabase db seed",
-    "stripe:listen": "stripe listen --forward-to localhost:3000/api/stripe/webhook"
+    "stripe:listen": "stripe listen --forward-to localhost:3000/api/stripe/webhook",
+    "verify:production": "./scripts/verify-production.sh https://hex-yt-intel.vercel.app",
+    "verify:staging": "./scripts/verify-production.sh https://staging.hex-yt-intel.vercel.app",
+    "deploy:prod": "vercel deploy --prod",
+    "deploy:staging": "vercel deploy --scope=hex-tech-lab",
+    "env:validate": "pnpm tsx web/lib/env.ts"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

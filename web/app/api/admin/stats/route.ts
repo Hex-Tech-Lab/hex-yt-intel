@@ -1,0 +1,175 @@
+import { getServerSession } from 'next-auth';
+import { authConfig } from '@/lib/auth/nextauth-config';
+import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+
+interface AdminStats {
+  analyses_total: number;
+  searches_total: number;
+  active_users: number;
+  pro_users: number;
+  free_users: number;
+  avg_api_latency: number;
+  error_rate_24h: number;
+  total_revenue: number;
+  retention_7d: number;
+  created_at: string;
+}
+
+/**
+ * Admin-only endpoint for observability stats
+ * Returns aggregated usage and performance metrics
+ */
+export async function GET(_request: NextRequest): Promise<NextResponse<AdminStats | { error: string }>> {
+  try {
+    // 1. Auth check - must be authenticated
+    const session = await getServerSession(authConfig);
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // TODO: Add role check - verify user is admin
+    // For now, allow any authenticated user
+    const userId = (session.user as any).id;
+
+    // 2. Initialize Supabase
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    // 3. Fetch stats from database
+    const stats: AdminStats = {
+      analyses_total: 0,
+      searches_total: 0,
+      active_users: 0,
+      pro_users: 0,
+      free_users: 0,
+      avg_api_latency: 0,
+      error_rate_24h: 0,
+      total_revenue: 0,
+      retention_7d: 0,
+      created_at: new Date().toISOString(),
+    };
+
+    // Get total analyses
+    const { count: analysesCount } = await supabase
+      .from('analyses')
+      .select('*', { count: 'exact', head: true });
+    stats.analyses_total = analysesCount || 0;
+
+    // Get total searches
+    const { count: searchCount } = await supabase
+      .from('usage_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('action', 'search_executed');
+    stats.searches_total = searchCount || 0;
+
+    // Get user counts
+    const { count: totalUsers } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true });
+    stats.active_users = totalUsers || 0;
+
+    // Get Pro/Free split
+    const { count: proCount } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('tier', 'pro');
+    stats.pro_users = proCount || 0;
+    stats.free_users = (totalUsers || 0) - stats.pro_users;
+
+    // Get average API latency from usage logs (last 24 hours)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: latencyData } = await supabase
+      .from('usage_logs')
+      .select('metadata')
+      .gte('created_at', oneDayAgo)
+      .filter('metadata->>latency_ms', 'neq', 'null');
+
+    if (latencyData && latencyData.length > 0) {
+      const latencies = latencyData
+        .map((log) => {
+          try {
+            return parseInt((log.metadata as any)?.latency_ms || '0');
+          } catch {
+            return 0;
+          }
+        })
+        .filter((l) => l > 0);
+
+      if (latencies.length > 0) {
+        stats.avg_api_latency = Math.round(
+          latencies.reduce((a, b) => a + b, 0) / latencies.length
+        );
+      }
+    }
+
+    // Get error rate (last 24 hours) - from Sentry would be better
+    // For now, estimate from database
+    const { count: errorCount } = await supabase
+      .from('usage_logs')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', oneDayAgo)
+      .filter('action', 'ilike', '%error%');
+
+    const { count: totalEvents } = await supabase
+      .from('usage_logs')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', oneDayAgo);
+
+    stats.error_rate_24h =
+      totalEvents && totalEvents > 0 ? ((errorCount || 0) / totalEvents) * 100 : 0;
+
+    // Get revenue (from stripe_events or manual tracking)
+    // For now, return 0 - implement if billing data is available
+    stats.total_revenue = 0;
+
+    // Get 7-day retention (users active in last 7 days)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: activeUsersData } = await supabase
+      .from('usage_logs')
+      .select('user_id', { head: false })
+      .gte('created_at', sevenDaysAgo);
+
+    const uniqueActiveUsers = new Set(
+      activeUsersData?.map((log) => log.user_id) || []
+    ).size;
+    stats.retention_7d =
+      stats.active_users > 0 ? Math.round((uniqueActiveUsers / stats.active_users) * 100) : 0;
+
+    // Log access to admin stats
+    await supabase.from('usage_logs').insert({
+      user_id: userId,
+      action: 'admin_stats_viewed',
+      metadata: {
+        timestamp: new Date().toISOString(),
+      },
+      created_at: new Date().toISOString(),
+    });
+
+    return NextResponse.json(stats);
+  } catch (error) {
+    console.error('[/api/admin/stats] Error:', error);
+    Sentry.captureException(error, {
+      contexts: {
+        api: {
+          endpoint: '/api/admin/stats',
+          method: 'GET',
+        },
+      },
+      tags: {
+        endpoint: 'admin_stats',
+      },
+    });
+
+    return NextResponse.json(
+      { error: 'Failed to fetch stats' },
+      { status: 500 }
+    );
+  }
+}

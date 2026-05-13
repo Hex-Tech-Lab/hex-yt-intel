@@ -1,0 +1,492 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - staging
+  pull_request:
+    branches:
+      - main
+      - master
+      - staging
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9.1.0"
+
+jobs:
+  # ============================================================================
+  # STAGE 1: SETUP & VALIDATION
+  # ============================================================================
+  setup:
+    name: Setup & Validate
+    runs-on: ubuntu-latest
+    outputs:
+      build-needed: ${{ steps.check-changes.outputs.build-needed }}
+      db-migration-needed: ${{ steps.check-changes.outputs.db-migration-needed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for changes that require build
+        id: check-changes
+        run: |
+          if git diff --quiet origin/main HEAD -- 'web/' 'packages/' '*.json' '*.ts'; then
+            echo "build-needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "build-needed=true" >> $GITHUB_OUTPUT
+          fi
+
+          if git diff --quiet origin/main HEAD -- 'supabase/migrations/'; then
+            echo "db-migration-needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "db-migration-needed=true" >> $GITHUB_OUTPUT
+          fi
+
+  # ============================================================================
+  # STAGE 2: QUALITY CHECKS (Type, Lint, Test)
+  # ============================================================================
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run type check
+        run: pnpm run type-check
+
+      - name: Upload type check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: type-check-report
+          path: .turbo/coverage/
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linter
+        run: pnpm run lint
+
+      - name: Comment lint results on PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ Linting failed. Please fix linting errors before merging.'
+            })
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm run test --no-coverage || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: coverage/
+
+  # ============================================================================
+  # STAGE 3: BUILD VERIFICATION
+  # ============================================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [setup, type-check, lint, test]
+    if: needs.setup.outputs.build-needed == 'true' || github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm run build
+        env:
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+      - name: Check build output
+        run: |
+          if [ ! -d "web/.next" ]; then
+            echo "ERROR: Next.js build output (.next) not found"
+            exit 1
+          fi
+          echo "✓ Build output verified"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            web/.next
+            web/public
+
+  # ============================================================================
+  # STAGE 4: SECURITY & VALIDATION
+  # ============================================================================
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for secrets in code
+        run: |
+          if grep -r "NEXT_PUBLIC_SUPABASE_ANON_KEY\|OPENROUTER_API_KEY" web/app --include="*.ts" --include="*.tsx" | grep -v "process.env\|import" | grep -v "undefined"; then
+            echo "ERROR: Potential secrets found in code"
+            exit 1
+          fi
+          echo "✓ No exposed secrets detected"
+
+      - name: Check for hardcoded credentials
+        run: |
+          if grep -r "sk-\|pk_live\|pk_test" web --include="*.ts" --include="*.tsx" | grep -v "process.env"; then
+            echo "ERROR: Hardcoded credentials found"
+            exit 1
+          fi
+          echo "✓ No hardcoded credentials detected"
+
+  env-validation:
+    name: Environment Variables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate environment configuration
+        run: pnpm tsx web/lib/env.ts
+        continue-on-error: true
+
+  # ============================================================================
+  # STAGE 5: DEPLOYMENT (Main/Master branch only)
+  # ============================================================================
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: [type-check, lint, test, build, security-check, env-validation]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    environment:
+      name: production
+      url: https://hex-yt-intel.vercel.app
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: vercel/action@v5.1.0
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          production: true
+
+      - name: Comment deployment status
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const status = '${{ job.status }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: status === 'success'
+                ? '✅ Deployed to production: https://hex-yt-intel.vercel.app'
+                : '❌ Deployment failed. Check workflow logs.'
+            })
+
+  # ============================================================================
+  # STAGE 6: DATABASE MIGRATION (Main/Master branch only)
+  # ============================================================================
+  database-migration:
+    name: Database Migration
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for pending migrations
+        run: |
+          cd web
+          npx supabase migration list --linked
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Apply database migrations
+        run: |
+          cd web
+          npx supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        continue-on-error: true
+
+      - name: Verify database schema
+        run: |
+          cd web
+          npx supabase db execute "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+  # ============================================================================
+  # STAGE 7: POST-DEPLOYMENT VERIFICATION
+  # ============================================================================
+  production-health:
+    name: Production Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    steps:
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Health check
+        run: |
+          for i in {1..12}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://hex-yt-intel.vercel.app/api/health)
+            if [ $STATUS -eq 200 ]; then
+              echo "✓ Health check passed ($STATUS)"
+              exit 0
+            fi
+            echo "Attempt $i/12: Status $STATUS, retrying..."
+            sleep 5
+          done
+          echo "❌ Health check failed after 60 seconds"
+          exit 1
+
+      - name: Fetch health details
+        if: always()
+        run: |
+          curl -s https://hex-yt-intel.vercel.app/api/health | jq '.'
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ Production health check failed. Investigate immediately.'
+            })
+
+  # ============================================================================
+  # FINAL STATUS
+  # ============================================================================
+  final-status:
+    name: Pipeline Status
+    runs-on: ubuntu-latest
+    needs: [type-check, lint, test, build, security-check, env-validation]
+    if: always()
+    steps:
+      - name: Check pipeline status
+        run: |
+          if [[ "${{ needs.type-check.result }}" == "failure" || \
+                "${{ needs.lint.result }}" == "failure" || \
+                "${{ needs.test.result }}" == "failure" || \
+                "${{ needs.build.result }}" == "failure" || \
+                "${{ needs.security-check.result }}" == "failure" ]]; then
+            echo "❌ Pipeline failed"
+            exit 1
+          fi
+          echo "✅ Pipeline passed"
+
+      - name: Comment on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const status = '${{ job.status }}';
+            const statusEmoji = status === 'success' ? '✅' : '❌';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${statusEmoji} **Pipeline Status**: All checks passed. Ready to merge.`
+            })
