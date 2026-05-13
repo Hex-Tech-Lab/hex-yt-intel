@@ -12,7 +12,6 @@ max_rows = 1000
 enabled = true
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["http://localhost:3000/auth/callback"]
-max_enrolled_factors = 2
 
 [db]
 port = 54322
@@ -21,9 +20,3 @@ major_version = 15
 [studio]
 enabled = true
 port = 54323
-
-[inbrowser]
-enabled = true
-
-[vector]
-enabled = true
