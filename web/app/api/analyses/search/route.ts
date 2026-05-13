@@ -36,7 +36,14 @@ import { authConfig } from '@/lib/auth/nextauth-config';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbedding, extractSnippet } from '@/lib/embeddings';
+import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import * as Sentry from '@sentry/nextjs';
+import {
+  trackExternalCall,
+  trackDatabaseQuery,
+  addBreadcrumb,
+  setUserContext,
+} from '@/lib/monitoring/sentry-utils';
 
 interface SearchRequest {
   query: string;
@@ -63,6 +70,7 @@ interface SearchResponse {
 
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
+  let userId: string | undefined;
 
   try {
     // 1. Auth check
@@ -74,12 +82,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userId = (session.user as any).id;
+    userId = (session.user as any).id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID not found in session' },
+        { status: 401 }
+      );
+    }
+    const userEmail = (session.user as any).email || '';
+    const userTierAuth = await getUserTier(userId);
+
+    // Set user context for Sentry
+    setUserContext(userId, userEmail || '', userTierAuth);
+    addBreadcrumb('Search initiated', { userId });
+
+    // 1.5. Rate limiting check
+    const { allowed, response: rateLimitResponse, headers: rateLimitHeaders } = await applyRateLimit(
+      request,
+      'search',
+      userId,
+      userTierAuth
+    );
+
+    if (!allowed) {
+      addBreadcrumb('Rate limit exceeded for search', { userId, tier: userTierAuth }, 'rate_limiting');
+      Sentry.captureMessage('Rate limit: POST /api/analyses/search', 'warning');
+      // Rate limit exceeded - response already has 429 status
+      if (rateLimitResponse) {
+        // Attach headers to response
+        if (rateLimitHeaders) {
+          for (const [key, value] of Object.entries(rateLimitHeaders)) {
+            rateLimitResponse.headers.set(key, value);
+          }
+        }
+        return rateLimitResponse;
+      }
+    }
 
     // 2. Parse and validate request
     const body: SearchRequest = await request.json();
 
     if (!body.query || body.query.trim().length === 0) {
+      addBreadcrumb('Empty search query', {}, 'validation');
       return NextResponse.json(
         { error: 'Search query is required' },
         { status: 400 }
@@ -89,11 +133,26 @@ export async function POST(request: NextRequest) {
     const limit = Math.min(Math.max(body.limit || 10, 1), 100);
     const threshold = Math.max(Math.min(body.threshold || 0.75, 1), 0);
 
+    addBreadcrumb('Search query validated', {
+      query: body.query.substring(0, 100),
+      limit,
+      threshold,
+    });
+
     // 3. Generate embedding for search query
     let queryEmbedding: number[];
     try {
-      const embeddingResult = await generateEmbedding(body.query);
+      const embeddingResult = await trackExternalCall(
+        'openai',
+        'text-embedding-3-small',
+        () => generateEmbedding(body.query),
+        { query: body.query.substring(0, 100) }
+      );
       queryEmbedding = embeddingResult.embedding;
+
+      addBreadcrumb('Search query embedded', {
+        costUsd: embeddingResult.costUsd,
+      });
 
       // Log embedding cost
       await logUsage(userId, 'search', {
@@ -102,6 +161,13 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       console.error('[/api/analyses/search] Embedding generation failed:', error);
+      addBreadcrumb('Embedding generation failed for search', {
+        error: String(error),
+      }, 'external_service');
+      Sentry.captureException(error, {
+        tags: { service: 'openai', operation: 'text-embedding-3-small' },
+        contexts: { search: { query: body.query.substring(0, 100) } },
+      });
       return NextResponse.json(
         { error: 'Failed to process search query' },
         { status: 500 }
@@ -117,36 +183,49 @@ export async function POST(request: NextRequest) {
     // 5. Execute pgvector semantic search
     // Query: cosine similarity (1 - distance), ordered by similarity
     // RLS automatically filters to user_id = auth.uid()
-    let query = supabase
-      .from('analyses')
-      .select('id, title, analysis_markdown, created_at, embedding')
-      .eq('user_id', userId)
-      .not('embedding', 'is', null)
-      .order('embedding', {
-        ascending: false,
-        referencedColumn: 'embedding',
-      } as any);
+    const analyses = await trackDatabaseQuery(
+      'select',
+      'analyses',
+      async () => {
+        let query = supabase
+          .from('analyses')
+          .select('id, title, analysis_markdown, created_at, embedding')
+          .eq('user_id', userId)
+          .not('embedding', 'is', null)
+          .order('embedding', {
+            ascending: false,
+            referencedColumn: 'embedding',
+          } as any);
 
-    // Apply date filters if provided
-    if (body.dateFrom) {
-      query = query.gte('created_at', body.dateFrom);
-    }
-    if (body.dateTo) {
-      query = query.lte('created_at', body.dateTo);
-    }
+        // Apply date filters if provided
+        if (body.dateFrom) {
+          query = query.gte('created_at', body.dateFrom);
+        }
+        if (body.dateTo) {
+          query = query.lte('created_at', body.dateTo);
+        }
 
-    const { data: analyses, error: queryError } = await query;
+        const { data, error } = await query;
 
-    if (queryError) {
-      console.error('[/api/analyses/search] Database query failed:', queryError);
-      return NextResponse.json(
-        { error: 'Search query failed' },
-        { status: 500 }
-      );
+        if (error) throw error;
+        return data;
+      },
+      { userId }
+    ).catch((error) => {
+      console.error('[/api/analyses/search] Database query failed:', error);
+      addBreadcrumb('Database query failed for search', {
+        error: String(error),
+      }, 'database');
+      throw error;
+    });
+
+    if (!analyses) {
+      addBreadcrumb('No analyses found for user', { userId }, 'database');
     }
 
     if (!analyses || analyses.length === 0) {
       const queryTime = Math.round(performance.now() - startTime);
+      addBreadcrumb('Search completed (no results)', { queryTime });
       return NextResponse.json<SearchResponse>(
         {
           results: [],
@@ -156,6 +235,10 @@ export async function POST(request: NextRequest) {
         { status: 200 }
       );
     }
+
+    addBreadcrumb('Analyses retrieved from database', {
+      count: analyses.length,
+    });
 
     // 6. Calculate similarity scores client-side and filter by threshold
     // (In production, could use pgvector's <=> operator directly in SQL)
@@ -183,6 +266,12 @@ export async function POST(request: NextRequest) {
 
     const queryTime = Math.round(performance.now() - startTime);
 
+    addBreadcrumb('Search completed successfully', {
+      queryTime,
+      resultsCount: results.length,
+      threshold,
+    });
+
     const response: SearchResponse = {
       results,
       queryTime,
@@ -191,12 +280,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
+    const queryTime = Math.round(performance.now() - startTime);
     console.error('[/api/analyses/search] Error:', error);
+
     Sentry.captureException(error, {
       contexts: {
         api: {
           endpoint: '/api/analyses/search',
           method: 'POST',
+          userId,
+          duration: queryTime,
         },
       },
       tags: {
@@ -204,6 +297,12 @@ export async function POST(request: NextRequest) {
         severity: 'high',
       },
     });
+
+    addBreadcrumb('Unhandled error in POST /api/analyses/search', {
+      error: error instanceof Error ? error.message : String(error),
+      duration: queryTime,
+    });
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

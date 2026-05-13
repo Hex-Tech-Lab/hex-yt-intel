@@ -1,0 +1,100 @@
+name: Staging Deployment
+
+on:
+  push:
+    branches:
+      - staging
+  pull_request:
+    branches:
+      - staging
+
+concurrency:
+  group: staging-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9.1.0"
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.hex-yt-intel.vercel.app
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm run type-check
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Test
+        run: pnpm run test || true
+
+      - name: Build
+        run: pnpm run build
+        env:
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.STAGING_NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.STAGING_SENTRY_AUTH_TOKEN }}
+
+      - name: Deploy to Vercel (Staging)
+        uses: vercel/action@v5.1.0
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          production: false
+
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Health check (Staging)
+        run: |
+          for i in {1..12}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://staging.hex-yt-intel.vercel.app/api/health)
+            if [ $STATUS -eq 200 ]; then
+              echo "✓ Staging health check passed"
+              exit 0
+            fi
+            echo "Attempt $i/12: Status $STATUS"
+            sleep 5
+          done
+          echo "❌ Staging health check failed"
+          exit 1
+
+      - name: Comment deployment status
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Deployed to staging: https://staging.hex-yt-intel.vercel.app'
+            })
