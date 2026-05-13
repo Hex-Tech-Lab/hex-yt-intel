@@ -1,12 +1,17 @@
--- Enable pg_cron extension for scheduled jobs
-CREATE EXTENSION IF NOT EXISTS "pg_cron";
+-- Enable pg_cron extension for scheduled maintenance
+CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Schedule daily cleanup of old free-tier analyses
--- Runs at 2 AM UTC (off-peak hours)
+-- Schedule automatic deletion of analyses older than 30 days (free tier retention)
+-- Runs daily at 2 AM UTC
 SELECT cron.schedule(
-  'delete-old-free-analyses',
+  'delete-old-analyses-free-tier',
   '0 2 * * *',
-  $$DELETE FROM analyses
-    WHERE user_id IN (SELECT id FROM users WHERE tier = 'free')
-    AND created_at < NOW() - INTERVAL '30 days'$$
+  $$
+  DELETE FROM analyses
+  WHERE tier = 'free'
+    AND created_at < CURRENT_TIMESTAMP - INTERVAL '30 days'
+  $$
 );
+
+-- Grant execute permissions to postgres user (required for cron jobs)
+GRANT EXECUTE ON FUNCTION cron.schedule(text, text, text) TO postgres;
