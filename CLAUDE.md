@@ -191,29 +191,130 @@ pnpm tsx skill/src/index.ts "https://www.youtube.com/watch?v=M-uUFLU9IFU"
 - [x] Zero external dependencies (free Cloudflare + Claude subscription)
 - [x] Production-ready response format
 
+---
+
+## PROJECT PIVOT (May 2026): From Skill → Complete Product
+
+**Strategic Decision**: Instead of registering skill with Claude Skills platform (uncertain path, browser sandbox limitations), build **standalone web application on Vercel** that directly calls Cloudflare Worker.
+
+This transforms hex-yt-intel from a single-use analysis tool into a **complete knowledge management system with:**
+- Persistent analysis storage (Supabase PostgreSQL)
+- Semantic vector search (pgvector, 1536-dim embeddings)
+- Freemium monetization (Stripe integration)
+- User authentication (Google + GitHub OAuth)
+- Usage tracking & rate limiting (Upstash Redis)
+- Second brain integration ready (design assumes future cross-system search with hex-adhd-prep)
+
+### New Architecture (Foundational Complete Product)
+
+**Monorepo Structure**:
+```
+hex-yt-intel/
+├── worker/                 # Cloudflare Worker (EXISTING - metadata fetcher)
+├── skill/                  # Claude Skill (LEGACY - archived reference)
+├── web/                    # Next.js 15 Frontend (NEW - primary UI)
+├── packages/types/         # Shared TypeScript types (NEW)
+├── supabase/               # Database migrations + seed (NEW)
+└── docs/                   # PRD, implementation plan, API spec (NEW)
+```
+
+**Tech Stack (FROZEN)**:
+- Frontend: Next.js 15 + React 19 + Tailwind CSS + shadcn/ui
+- Backend: Next.js API routes (Vercel serverless)
+- Database: Supabase PostgreSQL + pgvector (1536-dim vectors)
+- Cache: Upstash Redis (rate limiting, session cache)
+- Auth: next-auth (Google + GitHub OAuth)
+- Payments: Stripe (freemium: $9/month Pro tier)
+- Vector Embeddings: OpenAI text-embedding-3-small
+- Errors: Sentry (error tracking + alerting)
+- Deployment: Vercel (monorepo auto-deploy on merge to master)
+
+**Billing Model (Freemium)**:
+| Feature | Free | Pro ($9/mo) |
+|---------|------|-----------|
+| UCIS v3.2 Analyses | 3/month | Unlimited |
+| Semantic Search | ❌ | ✅ |
+| Export (MD/JSON/CSV) | ❌ | ✅ |
+| API Access | ❌ | ✅ (100 req/day) |
+| History Retention | 30 days | 1 year |
+
+**Database Schema** (4 core tables + RLS):
+- `users` (auth, tier, Stripe customer ID)
+- `analyses` (video metadata + UCIS v3.2 markdown + embedding vector)
+- `usage_logs` (track quota + cost for billing)
+- `stripe_events` (async payment notifications)
+
+**API Endpoints** (Complete):
+- POST /api/auth/login (OAuth callback)
+- POST /api/analyses (create analysis, quota check)
+- GET /api/analyses (list, pagination)
+- POST /api/analyses/search (semantic vector search)
+- POST /api/analyses/export (ZIP/JSON/CSV download)
+- GET /api/usage (quota + cost tracking)
+- POST /api/stripe/webhook (Stripe payment events)
+
+### Documentation (Foundational)
+- ✅ [PRD.md](PRD.md) - Product requirements, vision, features, success metrics
+- ✅ [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - 12 chunked tasks with verification gates
+- 📋 [API.md](API.md) - OpenAPI specification (TBD)
+- 📋 [ARCHITECTURE.md](ARCHITECTURE.md) - System design, data flow (TBD)
+
+### Implementation Status (May 2026)
+**Phase 1: Foundational** (Current)
+- [ ] Chunk 1: Monorepo + Database ⏳
+- [ ] Chunk 2: Next.js + TypeScript ⏳
+- [ ] Chunk 3: Authentication ⏳
+- [ ] Chunk 4-5: Backend API ⏳
+- [ ] Chunk 6-8: Frontend UI ⏳
+- [ ] Chunk 9-10: Billing + Rate Limiting ⏳
+- [ ] Chunk 11-12: Observability + Deploy ⏳
+
+**Phase 2: Polish** (June-July)
+- [ ] Team collaboration
+- [ ] Obsidian/Notion sync
+- [ ] Advanced filtering
+
+**Phase 3: Second Brain** (Aug-Sept)
+- [ ] Shared Supabase with hex-adhd-prep
+- [ ] Cross-system vector search
+- [ ] Knowledge graph
+
+**Phase 4: Enterprise** (Oct-Dec)
+- [ ] Team plans
+- [ ] Custom retention
+- [ ] SSO + audit logs
+
 ## NEXT STEPS
-1. Register skill manifest with Claude Skills platform
-2. Deploy skill to Claude Web (CCW)
-3. Live end-to-end testing in Claude environment
+1. ✅ Create PRD (Product Requirements Document)
+2. ✅ Create Implementation Plan (chunked with verification gates)
+3. ⏳ **Execute Chunk 1**: Monorepo + Supabase Database
+4. ⏳ Execute Chunk 2: Next.js + TypeScript Setup
+5. ⏳ Execute remaining chunks (with verification gate after each)
 
 ## QUICK START COMMANDS
 
 ```bash
-# Test Skill (end-to-end)
-cd ~/projects/hex-yt-intel
-pnpm tsx skill/src/index.ts "https://www.youtube.com/watch?v=VIDEO_ID"
+# Development (all packages)
+pnpm dev                    # Start web app dev server (localhost:3000)
+pnpm type-check            # Type check all packages
+pnpm lint                  # Lint all packages
+pnpm test                  # Run all tests
 
-# Test Worker Endpoint
+# Database (Supabase)
+supabase status            # Check Supabase project status
+supabase db push           # Apply migrations
+supabase db execute "SELECT count(*) FROM analyses;"
+
+# Deployment
+pnpm build                 # Build all packages
+vercel deploy --prod       # Deploy to Vercel
+
+# Stripe (local development)
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+
+# Legacy (reference, not used in new architecture)
 curl "https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata?video_id=M-uUFLU9IFU"
-
-# Worker Deployment
-cd ~/projects/hex-yt-intel/worker
-wrangler deploy
-
-# Build Skill
-cd ~/projects/hex-yt-intel/skill
-npm install
-npm run build
+pnpm tsx skill/src/index.ts "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
 ## SESSION CONTINUITY
