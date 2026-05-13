@@ -3,6 +3,7 @@ import { authConfig } from '@/lib/auth/nextauth-config';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { createUCISPrompt } from '@/lib/prompts';
+import * as Sentry from '@sentry/nextjs';
 
 interface AnalysisRequest {
   url: string;
@@ -255,6 +256,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error('[/api/analyses] Error:', error);
+    Sentry.captureException(error, {
+      contexts: {
+        api: {
+          endpoint: '/api/analyses',
+          method: 'POST',
+        },
+      },
+      tags: {
+        endpoint: 'analyses',
+        severity: 'critical',
+      },
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
