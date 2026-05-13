@@ -1,0 +1,23 @@
+{
+  "version": "2",
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "interactive": true,
+      "parallel": false
+    },
+    "build": {
+      "outputs": [".next/**", "dist/**"],
+      "cache": true
+    },
+    "test": {
+      "cache": true
+    },
+    "lint": {
+      "cache": true
+    },
+    "type-check": {
+      "cache": true
+    }
+  }
+}
