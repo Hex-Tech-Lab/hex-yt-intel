@@ -11,11 +11,6 @@
       "runtime": "nodejs20.x"
     }
   },
-  "regions": [
-    "iad1",
-    "lhr1",
-    "sfo1"
-  ],
   "crons": [],
   "headers": [
     {
