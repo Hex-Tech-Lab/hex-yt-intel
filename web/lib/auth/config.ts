@@ -2,8 +2,8 @@ export const AUTH_CONFIG = {
   provider: (process.env.AUTH_PROVIDER || 'nextauth') as 'vercel' | 'supabase' | 'nextauth',
 
   google: {
-    clientId: process.env.GOOGLE_ID || '',
-    clientSecret: process.env.GOOGLE_SECRET || '',
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     redirectUri: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/callback/google`,
   },
 
