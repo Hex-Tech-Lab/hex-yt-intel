@@ -2,6 +2,7 @@
   "projectName": "hex-yt-intel",
   "buildCommand": "pnpm run build",
   "installCommand": "pnpm install --frozen-lockfile",
+  "outputDirectory": ".next",
   "devCommand": "pnpm run dev",
   "framework": "nextjs",
   "functions": {
