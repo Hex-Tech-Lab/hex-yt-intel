@@ -14,3 +14,5 @@ dist/
 pnpm-lock.yaml
 .next/
 .env*.local
+test-results/
+playwright-report/
