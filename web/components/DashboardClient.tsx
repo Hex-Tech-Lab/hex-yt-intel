@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import toast from 'react-hot-toast';
 
 export function DashboardClient() {
   const [url, setUrl] = useState('');
   const [synthesis, setSynthesis] = useState<string | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleFetch = async () => {
@@ -21,8 +23,9 @@ export function DashboardClient() {
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setSynthesis(`Title: ${data.title}\nChannel: ${data.channelTitle}`);
+      setAnalysisId(null);
     } catch (error) {
-      alert('Error: ' + (error instanceof Error ? error.message : 'Unknown'));
+      toast.error('Error: ' + (error instanceof Error ? error.message : 'Unknown'));
     } finally {
       setLoading(false);
     }
@@ -30,7 +33,7 @@ export function DashboardClient() {
 
   const handleAnalyze = async () => {
     if (!url) {
-      alert('Please paste a URL first');
+      toast.error('Please paste a URL first');
       return;
     }
     setLoading(true);
@@ -42,19 +45,60 @@ export function DashboardClient() {
       if (!res.ok) throw new Error('Failed to analyze');
       const data = await res.json();
       setSynthesis(data.markdown || data.synthesis);
+      setAnalysisId(data.id);
+      toast.success('Analysis generated successfully!');
     } catch (error) {
-      alert('Error: ' + (error instanceof Error ? error.message : 'Unknown'));
+      toast.error('Error: ' + (error instanceof Error ? error.message : 'Unknown'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = async () => {
-    if (!url) {
-      alert('Search not ready yet (Phase 2)');
+  const handleExport = async () => {
+    if (!analysisId) {
+      toast.error('No analysis to export');
       return;
     }
-    alert('Semantic search coming in Chunk 9');
+    try {
+      const res = await fetch(`/api/analyses/${analysisId}/export?format=pdf`);
+      if (!res.ok) throw new Error('Failed to export');
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `synthesis-${analysisId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      toast.success('PDF exported!');
+    } catch (error) {
+      toast.error('Export failed: ' + (error instanceof Error ? error.message : 'Unknown'));
+    }
+  };
+
+  const handleShare = async () => {
+    if (!analysisId) {
+      toast.error('No analysis to share');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/analyses/${analysisId}/share`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Failed to generate share link');
+      const data = await res.json();
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(data.shareUrl);
+      toast.success('Share link copied to clipboard!');
+    } catch (error) {
+      toast.error('Share failed: ' + (error instanceof Error ? error.message : 'Unknown'));
+    }
+  };
+
+  const handleSearch = async () => {
+    toast('Semantic search coming in Chunk 7');
   };
 
   return (
@@ -74,6 +118,18 @@ export function DashboardClient() {
             </div>
           )}
         </Card>
+
+        {/* Export + Share buttons (below synthesis) */}
+        {synthesis && analysisId && (
+          <div className="flex gap-2 mt-4">
+            <Button onClick={handleExport} variant="outline" className="flex-1">
+              📥 Export PDF
+            </Button>
+            <Button onClick={handleShare} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+              🔗 Share Link
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* RIGHT PANEL: 25-30% width (cols 10-12) */}

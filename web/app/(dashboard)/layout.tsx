@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { Toaster } from 'react-hot-toast';
 
 export default async function DashboardLayout({
   children,
@@ -25,6 +26,7 @@ export default async function DashboardLayout({
 
       {/* Footer */}
       <Footer />
+      <Toaster position="bottom-right" />
     </div>
   );
 }
