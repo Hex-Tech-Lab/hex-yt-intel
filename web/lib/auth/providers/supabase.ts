@@ -76,7 +76,7 @@ export class SupabaseAuthProvider implements AuthProvider {
     const session = await this.getCurrentSession();
     if (!session?.user) throw new Error('No session');
 
-    const { data: updated, error } = await this.supabase.auth.updateUser({
+    const { error } = await this.supabase.auth.updateUser({
       data: {
         name: data.name,
         picture: data.image,
