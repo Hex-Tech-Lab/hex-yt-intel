@@ -6,6 +6,7 @@ import { generateEmbedding } from '@/lib/embeddings';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClient } from '@/lib/supabase';
+import { AnalysisCreateSchema } from '@/lib/schemas';
 import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
@@ -13,10 +14,6 @@ import {
   addBreadcrumb,
   setUserContext
 } from '@/lib/monitoring/sentry-utils';
-
-interface AnalysisRequest {
-  url: string;
-}
 
 interface AnalysisResponse {
   id: string;
@@ -130,20 +127,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2. Parse request
-    const body: AnalysisRequest = await request.json();
-    if (!body.url) {
+    // 2. Parse and validate request
+    const body = await request.json();
+    const validation = AnalysisCreateSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'URL is required' },
+        { error: 'Invalid request', details: validation.error.flatten() },
         { status: 400 }
       );
     }
 
     // 3. Extract video ID
-    const videoId = extractVideoId(body.url);
-    addBreadcrumb('Video ID extracted', { videoId, url: body.url });
+    const videoId = extractVideoId(validation.data.url);
+    addBreadcrumb('Video ID extracted', { videoId, url: validation.data.url });
     if (!videoId) {
-      addBreadcrumb('Invalid YouTube URL provided', { url: body.url }, 'validation');
+      addBreadcrumb('Invalid YouTube URL provided', { url: validation.data.url }, 'validation');
       return NextResponse.json(
         { error: 'Invalid YouTube URL' },
         { status: 400 }

@@ -37,6 +37,16 @@ interface SearchState {
   hasNextPage: boolean;
 }
 
+const INITIAL_STATE: SearchState = {
+  results: [],
+  isLoading: false,
+  error: null,
+  queryTime: 0,
+  totalResults: 0,
+  currentPage: 1,
+  hasNextPage: false,
+};
+
 /**
  * useSearch Hook
  *
@@ -64,17 +74,7 @@ export function useSearch(options: UseSearchOptions = {}) {
   } = options;
 
   const [query, setQuery] = useState('');
-  const initialState: SearchState = {
-    results: [],
-    isLoading: false,
-    error: null,
-    queryTime: 0,
-    totalResults: 0,
-    currentPage: 1,
-    hasNextPage: false,
-  };
-
-  const [state, setState] = useState<SearchState>(initialState);
+  const [state, setState] = useState<SearchState>(INITIAL_STATE);
 
   const [filters, setFilters] = useState<SearchFilters>({});
   const debounceTimer = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -128,7 +128,7 @@ export function useSearch(options: UseSearchOptions = {}) {
           totalResults: data.resultsCount || 0,
           queryTime: data.queryTime || 0,
           currentPage: page,
-          hasNextPage: (data.results || []).length === maxResults,
+          hasNextPage: data.hasMore || false,
           isLoading: false,
         }));
       } catch (err) {
@@ -201,6 +201,8 @@ export function useSearch(options: UseSearchOptions = {}) {
       error: null,
       totalResults: 0,
       currentPage: 1,
+      hasNextPage: false,
+      isLoading: false,
     }));
   }, []);
 
@@ -213,14 +215,14 @@ export function useSearch(options: UseSearchOptions = {}) {
   }, []);
 
   /**
-   * Clear all filters
+   * Clear all filters and re-search
    */
   const clearFilters = useCallback(() => {
     setFilters({});
     if (query.trim()) {
-      performSearch(query, 1);
+      setQuery(query);
     }
-  }, [query, performSearch]);
+  }, [query]);
 
   return {
     // Query state
