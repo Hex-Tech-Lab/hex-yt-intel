@@ -1,8 +1,8 @@
 {
-  "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "outputDirectory": "web/.next",
-  "devCommand": "pnpm run dev",
+  "devCommand": "npm run dev",
   "framework": "nextjs",
   "crons": [],
   "headers": [
