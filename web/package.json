@@ -20,7 +20,8 @@
     "next-auth": "4.24.14",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "stripe": "^15.7.0"
+    "stripe": "^15.7.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.0",

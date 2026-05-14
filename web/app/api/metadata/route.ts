@@ -3,10 +3,7 @@ import { authConfig } from '@/lib/auth/nextauth-config';
 import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId } from '@/lib/youtube';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
-
-interface MetadataRequest {
-  url: string;
-}
+import { AnalysisCreateSchema } from '@/lib/schemas';
 
 interface MetadataResponse {
   videoId: string;
@@ -32,17 +29,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body: MetadataRequest = await request.json();
-
-    if (!body.url) {
+    const body = await request.json();
+    const validation = AnalysisCreateSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'URL is required' },
+        { error: 'Invalid request', details: validation.error.flatten() },
         { status: 400 }
       );
     }
 
     // 400: Invalid URL
-    const videoId = extractVideoId(body.url);
+    const videoId = extractVideoId(validation.data.url);
     if (!videoId) {
       return NextResponse.json(
         { error: 'Invalid YouTube URL' },

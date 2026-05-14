@@ -3,12 +3,8 @@ import { authConfig } from '@/lib/auth/nextauth-config';
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession, getOrCreateStripeCustomer } from '@/lib/stripe';
 import { getSupabaseClient } from '@/lib/supabase';
+import { CheckoutSchema } from '@/lib/schemas';
 import * as Sentry from '@sentry/nextjs';
-
-interface CheckoutRequest {
-  successUrl: string;
-  cancelUrl: string;
-}
 
 interface CheckoutResponse {
   sessionUrl: string;
@@ -35,11 +31,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Parse request
-    const body: CheckoutRequest = await request.json();
-    if (!body.successUrl || !body.cancelUrl) {
+    // 2. Parse and validate request
+    const body = await request.json();
+    const validation = CheckoutSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'successUrl and cancelUrl are required' },
+        { error: 'Invalid request', details: validation.error.flatten() },
         { status: 400 }
       );
     }
@@ -95,8 +92,8 @@ export async function POST(request: NextRequest) {
     // 6. Create checkout session
     const checkoutUrl = await createCheckoutSession(
       customerId,
-      body.successUrl,
-      body.cancelUrl
+      validation.data.successUrl,
+      validation.data.cancelUrl
     );
 
     if (!checkoutUrl) {

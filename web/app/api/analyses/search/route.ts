@@ -38,6 +38,7 @@ import { generateEmbedding, extractSnippet } from '@/lib/embeddings';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { getSupabaseClient } from '@/lib/supabase';
 import { logUsage } from '@/lib/usage';
+import { SearchSchema } from '@/lib/schemas';
 import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
@@ -45,14 +46,6 @@ import {
   addBreadcrumb,
   setUserContext,
 } from '@/lib/monitoring/sentry-utils';
-
-interface SearchRequest {
-  query: string;
-  limit?: number;
-  threshold?: number;
-  dateFrom?: string;
-  dateTo?: string;
-}
 
 interface SearchResult {
   id: string;
@@ -67,6 +60,7 @@ interface SearchResponse {
   results: SearchResult[];
   queryTime: number;
   resultsCount: number;
+  hasMore: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -121,21 +115,21 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Parse and validate request
-    const body: SearchRequest = await request.json();
-
-    if (!body.query || body.query.trim().length === 0) {
-      addBreadcrumb('Empty search query', {}, 'validation');
+    const body = await request.json();
+    const validation = SearchSchema.safeParse(body);
+    if (!validation.success) {
+      addBreadcrumb('Invalid search query', { errors: validation.error.flatten() }, 'validation');
       return NextResponse.json(
-        { error: 'Search query is required' },
+        { error: 'Invalid request', details: validation.error.flatten() },
         { status: 400 }
       );
     }
 
-    const limit = Math.min(Math.max(body.limit || 10, 1), 100);
-    const threshold = Math.max(Math.min(body.threshold || 0.75, 1), 0);
+    const limit = validation.data.limit;
+    const threshold = validation.data.threshold;
 
     addBreadcrumb('Search query validated', {
-      query: body.query.substring(0, 100),
+      query: validation.data.query.substring(0, 100),
       limit,
       threshold,
     });
@@ -146,8 +140,8 @@ export async function POST(request: NextRequest) {
       const embeddingResult = await trackExternalCall(
         'openai',
         'text-embedding-3-small',
-        () => generateEmbedding(body.query),
-        { query: body.query.substring(0, 100) }
+        () => generateEmbedding(validation.data.query),
+        { query: validation.data.query.substring(0, 100) }
       );
       queryEmbedding = embeddingResult.embedding;
 
@@ -160,7 +154,7 @@ export async function POST(request: NextRequest) {
         userId,
         action: 'search',
         metadata: {
-          query: body.query,
+          query: validation.data.query,
           cost_usd: embeddingResult.costUsd,
         },
       });
@@ -171,7 +165,7 @@ export async function POST(request: NextRequest) {
       }, 'external_service');
       Sentry.captureException(error, {
         tags: { service: 'openai', operation: 'text-embedding-3-small' },
-        contexts: { search: { query: body.query.substring(0, 100) } },
+        contexts: { search: { query: validation.data.query.substring(0, 100) } },
       });
       return NextResponse.json(
         { error: 'Failed to process search query' },
@@ -200,11 +194,11 @@ export async function POST(request: NextRequest) {
           } as any);
 
         // Apply date filters if provided
-        if (body.dateFrom) {
-          query = query.gte('created_at', body.dateFrom);
+        if (validation.data.dateFrom) {
+          query = query.gte('created_at', validation.data.dateFrom);
         }
-        if (body.dateTo) {
-          query = query.lte('created_at', body.dateTo);
+        if (validation.data.dateTo) {
+          query = query.lte('created_at', validation.data.dateTo);
         }
 
         const { data, error } = await query;
@@ -233,6 +227,7 @@ export async function POST(request: NextRequest) {
           results: [],
           queryTime,
           resultsCount: 0,
+          hasMore: false,
         },
         { status: 200 }
       );
@@ -278,6 +273,7 @@ export async function POST(request: NextRequest) {
       results,
       queryTime,
       resultsCount: results.length,
+      hasMore: results.length === limit,
     };
 
     return NextResponse.json(response, { status: 200 });
