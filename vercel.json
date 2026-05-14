@@ -1,9 +1,12 @@
 {
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm build",
+  "installCommand": "pnpm install --frozen-lockfile",
   "outputDirectory": "web/.next",
-  "devCommand": "npm run dev",
+  "devCommand": "pnpm dev",
   "framework": "nextjs",
+  "env": {
+    "PNPM_HOME": "/pnpm"
+  },
   "crons": [],
   "headers": [
     {
