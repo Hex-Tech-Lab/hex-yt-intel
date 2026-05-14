@@ -69,5 +69,6 @@
 
 ## Detail Memory Files
 - **project_status.md** — Full state, timeline, consolidation details
+- **production_fix_complete.md** — FINAL: Supabase production integration verified & fixed
 - **decisions.md** — Strategic choices & reasoning
 - **lessons.md** — 7 critical lessons (Cloudflare, docs, verification)

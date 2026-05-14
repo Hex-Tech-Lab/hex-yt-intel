@@ -135,20 +135,6 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // ============================================================================
-  // WEBPACK OPTIMIZATION
-  // ============================================================================
-  webpack: (config, { isServer }) => {
-    // Optimize webpack build
-    if (!isServer) {
-      config.optimization = {
-        ...config.optimization,
-        usedExports: true,
-        sideEffects: false,
-      };
-    }
-    return config;
-  },
 
   // ============================================================================
   // LOGGING

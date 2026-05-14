@@ -4,19 +4,34 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Play, Search, TrendingUp, Lock } from 'lucide-react';
+import { Play, Download, RotateCcw } from 'lucide-react';
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<{ id: string; title: string; markdown: string } | null>(null);
+  const [devMode, setDevMode] = useState(true); // Allow testing without auth
+
+  const handleDevLogin = async () => {
+    // Mock session for development testing
+    await updateSession({
+      user: {
+        id: 'dev-user-123',
+        email: 'dev@example.com',
+        name: 'Test User',
+        image: null,
+      },
+    });
+    setDevMode(false);
+  };
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
 
-    if (!session) {
+    if (!session && !devMode) {
       router.push('/auth/signin');
       return;
     }
@@ -31,7 +46,11 @@ export default function Home() {
 
       if (response.ok) {
         const data = await response.json();
-        router.push(`/analyses/${data.id}`);
+        setAnalysis({
+          id: data.id,
+          title: data.title || 'Analysis',
+          markdown: data.markdown || 'Analysis in progress...',
+        });
       } else {
         alert('Failed to analyze video');
       }
@@ -42,61 +61,104 @@ export default function Home() {
     }
   };
 
+  const handleClear = () => {
+    setAnalysis(null);
+    setUrl('');
+  };
+
+  const handleExport = () => {
+    if (!analysis) return;
+    const element = document.createElement('a');
+    element.setAttribute('href', `data:text/markdown;charset=utf-8,${encodeURIComponent(analysis.markdown)}`);
+    element.setAttribute('download', `${analysis.title}.md`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
   return (
-    <>
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-white border-b border-gray-200 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold">Hex-YT-Intel</div>
-          <div className="flex gap-4">
+    <div className="flex h-screen flex-col bg-white">
+      {/* Header */}
+      <header className="border-b border-gray-200 bg-white">
+        <div className="px-6 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Hex-YT-Intel</h1>
+          <nav className="flex gap-4">
+            <button
+              onClick={handleDevLogin}
+              disabled={!devMode}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              Dev Login
+            </button>
+            <Link href="/search" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
+              Search
+            </Link>
+            <Link href="/analyses/saved" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
+              Saved
+            </Link>
+            <Link href="/pricing" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
+              Pricing
+            </Link>
             {session ? (
-              <>
-                <Link href="/search" className="px-4 py-2 text-gray-700 hover:text-black">
-                  Search
-                </Link>
-                <Link href="/analyses/saved" className="px-4 py-2 text-gray-700 hover:text-black">
-                  Saved
-                </Link>
-                <Link href="/pricing" className="px-4 py-2 text-gray-700 hover:text-black">
-                  Pricing
-                </Link>
-              </>
+              <Link href="/api/auth/signout" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
+                Sign Out
+              </Link>
             ) : (
-              <Link
-                href="/auth/signin"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
+              <Link href="/auth/signin" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
                 Sign In
               </Link>
             )}
-          </div>
+          </nav>
         </div>
-      </nav>
+      </header>
 
-      {/* Hero Section */}
-      <main className="pt-24">
-        <section className="bg-gradient-to-b from-blue-50 to-white py-20">
-          <div className="max-w-7xl mx-auto px-6 text-center">
-            <h1 className="text-5xl font-bold mb-4">YouTube Intelligence</h1>
-            <p className="text-xl text-gray-600 mb-12">
-              Deep analysis of any YouTube video using AI-powered synthesis
-            </p>
+      {/* Main Layout: 70% left (output) + 30% right (input) */}
+      <div className="flex flex-1 overflow-hidden">
 
-            {/* Search Form */}
-            <form onSubmit={handleAnalyze} className="max-w-2xl mx-auto mb-12">
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  placeholder="Paste YouTube URL..."
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  required
-                />
+        {/* Left Panel: Output (70-75%) */}
+        <div className="flex-1 overflow-auto bg-gray-50 border-r border-gray-200 p-8">
+          {analysis ? (
+            <div className="max-w-4xl">
+              <h2 className="text-3xl font-bold mb-6">{analysis.title}</h2>
+              <div className="prose prose-sm max-w-none">
+                <div className="whitespace-pre-wrap text-gray-800 font-mono text-sm leading-relaxed">
+                  {analysis.markdown}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <p className="text-gray-400 text-lg">Paste a YouTube URL and click Analyze to see results</p>
+                <p className="text-gray-400 text-sm mt-2">Example: https://www.youtube.com/watch?v=dQw4w9WgXcQ</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Panel: Input & Controls (25-30%) */}
+        <div className="w-[30%] bg-white border-l border-gray-200 p-6 flex flex-col overflow-auto">
+
+          {/* Input Section */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">YouTube URL</label>
+            <form onSubmit={handleAnalyze} className="space-y-3">
+              <input
+                type="url"
+                placeholder="Paste YouTube URL..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
+                required
+              />
+
+              {/* 3 Action Buttons */}
+              <div className="grid grid-cols-1 gap-2">
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                  disabled={isLoading || !url.trim()}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <>
@@ -108,65 +170,67 @@ export default function Home() {
                     </>
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={!analysis}
+                  className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" /> Export
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  disabled={!analysis}
+                  className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" /> Clear
+                </button>
               </div>
-              {!session && (
-                <p className="text-sm text-gray-500 mt-3">
-                  Sign in to analyze videos →
+
+              {!session && devMode && (
+                <p className="text-xs text-gray-500 pt-2">
+                  Click &quot;Dev Login&quot; above to test the UI
                 </p>
               )}
             </form>
+          </div>
 
-            {/* Features */}
-            <div className="grid md:grid-cols-3 gap-8 mt-16">
-              <div className="p-6 bg-white rounded-lg border border-gray-200">
-                <div className="flex justify-center mb-4">
-                  <Search className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Semantic Search</h3>
-                <p className="text-gray-600">
-                  Search across all your analyzed videos using natural language
-                </p>
+          {/* Pricing Info */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Pricing</h3>
+            <div className="space-y-2 text-xs text-gray-600">
+              <div className="flex justify-between">
+                <span>Free tier:</span>
+                <span className="font-medium">3 analyses/month</span>
               </div>
-
-              <div className="p-6 bg-white rounded-lg border border-gray-200">
-                <div className="flex justify-center mb-4">
-                  <TrendingUp className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Intelligence</h3>
-                <p className="text-gray-600">
-                  Ultimate Content Intelligence v3.2 framework analysis
-                </p>
+              <div className="flex justify-between">
+                <span>Pro ($9/mo):</span>
+                <span className="font-medium">Unlimited</span>
               </div>
-
-              <div className="p-6 bg-white rounded-lg border border-gray-200">
-                <div className="flex justify-center mb-4">
-                  <Lock className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Secure</h3>
-                <p className="text-gray-600">
-                  Your data is private and secure with end-to-end encryption
-                </p>
-              </div>
+              <Link
+                href="/pricing"
+                className="block mt-3 px-3 py-2 bg-blue-50 text-blue-600 rounded text-center hover:bg-blue-100 text-xs font-medium"
+              >
+                View Full Pricing
+              </Link>
             </div>
           </div>
-        </section>
 
-        {/* Pricing CTA */}
-        <section className="bg-white py-16 border-t border-gray-200">
-          <div className="max-w-7xl mx-auto px-6 text-center">
-            <h2 className="text-3xl font-bold mb-4">Pricing Plans</h2>
-            <p className="text-gray-600 mb-8">
-              Free tier includes 3 analyses/month. Upgrade for unlimited access.
-            </p>
-            <Link
-              href="/pricing"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              View Pricing
-            </Link>
+          {/* Features */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Features</h3>
+            <ul className="space-y-2 text-xs text-gray-600">
+              <li>✓ Ultimate Content Intelligence v3.2</li>
+              <li>✓ Semantic search (Pro)</li>
+              <li>✓ Export as Markdown</li>
+              <li>✓ Secure & private</li>
+            </ul>
           </div>
-        </section>
-      </main>
-    </>
+        </div>
+      </div>
+    </div>
   );
 }
