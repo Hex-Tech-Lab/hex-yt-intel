@@ -91,7 +91,7 @@ export class SupabaseAuthProvider implements AuthProvider {
     };
   }
 
-  async middleware(req: any): Promise<any> {
+  async middleware(_req: any): Promise<any> {
     return undefined;
   }
 
