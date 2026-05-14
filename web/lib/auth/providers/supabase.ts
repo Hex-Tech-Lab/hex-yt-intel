@@ -25,7 +25,7 @@ export class SupabaseAuthProvider implements AuthProvider {
             image: data.session.user.user_metadata?.picture || undefined,
             createdAt: new Date(data.session.user.created_at),
           },
-          expiresAt: new Date(data.session.expires_at * 1000),
+          expiresAt: new Date((data.session.expires_at || 0) * 1000),
         };
       }
 
