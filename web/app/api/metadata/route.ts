@@ -1,6 +1,8 @@
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth/nextauth-config';
 import { NextRequest, NextResponse } from 'next/server';
+import { extractVideoId } from '@/lib/youtube';
+import { fetchWorkerMetadata } from '@/lib/worker-client';
 
 interface MetadataRequest {
   url: string;
@@ -17,40 +19,6 @@ interface MetadataResponse {
   likeCount: string;
   commentCount: string;
   thumbnailUrl: string | null;
-}
-
-function extractVideoId(url: string): string | null {
-  try {
-    const urlObj = new URL(url);
-
-    // youtube.com/watch?v=ID
-    if (urlObj.hostname.includes('youtube.com')) {
-      const id = urlObj.searchParams.get('v');
-      if (id) return id;
-    }
-
-    // youtu.be/ID
-    if (urlObj.hostname.includes('youtu.be')) {
-      const id = urlObj.pathname.slice(1);
-      if (id) return id;
-    }
-
-    // youtube.com/embed/ID
-    if (urlObj.pathname.startsWith('/embed/')) {
-      const id = urlObj.pathname.split('/')[2];
-      if (id) return id;
-    }
-
-    // youtube.com/v/ID
-    if (urlObj.pathname.startsWith('/v/')) {
-      const id = urlObj.pathname.split('/')[2];
-      if (id) return id;
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -82,54 +50,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Cloudflare Worker
-    const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
-    const metadataUrl = `${workerUrl}/fetch-metadata?video_id=${videoId}`;
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
     try {
-      const response = await fetch(metadataUrl, {
-        method: 'GET',
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        throw new Error(`Worker returned ${response.status}`);
-      }
-
-      const metadata = await response.json();
+      const metadata = await fetchWorkerMetadata(videoId);
 
       const result: MetadataResponse = {
         videoId,
-        title: metadata.title || '',
-        channelTitle: metadata.channelTitle || '',
-        channelId: metadata.channelId || '',
-        publishedAt: metadata.publishedAt || '',
-        duration: metadata.duration || null,
-        viewCount: metadata.viewCount || '0',
-        likeCount: metadata.likeCount || '0',
-        commentCount: metadata.commentCount || '0',
-        thumbnailUrl: metadata.thumbnailUrl || null,
+        title: metadata.title,
+        channelTitle: metadata.channelTitle,
+        channelId: metadata.channelId,
+        publishedAt: metadata.publishedAt,
+        duration: metadata.duration,
+        viewCount: metadata.viewCount,
+        likeCount: metadata.likeCount,
+        commentCount: metadata.commentCount,
+        thumbnailUrl: metadata.thumbnailUrl,
       };
 
       return NextResponse.json(result, { status: 200 });
     } catch (error) {
-      clearTimeout(timeout);
-
-      if (error instanceof Error && error.name === 'AbortError') {
-        return NextResponse.json(
-          { error: 'Worker request timeout' },
-          { status: 500 }
-        );
-      }
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const statusCode = message.includes('timeout') ? 500 : 500;
 
       return NextResponse.json(
-        { error: 'Failed to fetch metadata from Worker' },
-        { status: 500 }
+        { error: message },
+        { status: statusCode }
       );
     }
   } catch (error) {

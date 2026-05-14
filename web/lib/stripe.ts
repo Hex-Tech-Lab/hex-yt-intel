@@ -124,51 +124,6 @@ export async function createCheckoutSession(
   return session.url || '';
 }
 
-/**
- * Get subscription status
- */
-export async function getSubscriptionStatus(customerId: string): Promise<{
-  status: 'active' | 'inactive' | 'canceled' | 'past_due';
-  currentPeriodEnd?: Date;
-  subscriptionId?: string;
-} | null> {
-  const subscriptions = await stripe.subscriptions.list({
-    customer: customerId,
-    status: 'all',
-    limit: 1,
-  });
-
-  if (!subscriptions.data || subscriptions.data.length === 0) {
-    return null;
-  }
-
-  const subscription = subscriptions.data[0];
-  if (!subscription) {
-    return null;
-  }
-
-  const statusMap: Record<string, 'active' | 'inactive' | 'canceled' | 'past_due'> = {
-    'active': 'active',
-    'past_due': 'past_due',
-    'canceled': 'canceled',
-    'incomplete': 'inactive',
-    'incomplete_expired': 'inactive',
-    'trialing': 'active',
-  };
-
-  return {
-    status: (statusMap[subscription.status] || 'inactive') as 'active' | 'inactive' | 'canceled' | 'past_due',
-    currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-    subscriptionId: subscription.id,
-  };
-}
-
-/**
- * Cancel subscription
- */
-export async function cancelSubscription(subscriptionId: string): Promise<void> {
-  await stripe.subscriptions.cancel(subscriptionId);
-}
 
 /**
  * Verify webhook signature

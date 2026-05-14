@@ -169,26 +169,6 @@ export async function setRedisExpiration(key: string, expirationSeconds: number)
   return false;
 }
 
-/**
- * Delete a key from Redis
- */
-export async function deleteRedisKey(key: string): Promise<boolean> {
-  const redis = initializeRedis();
-
-  try {
-    if (redis && redisAvailable) {
-      const result = await redis.del(key);
-      return result > 0;
-    }
-  } catch (error) {
-    console.warn(`[redis.ts] Failed to delete key ${key}:`, error);
-  }
-
-  // Fallback to memory cache
-  const existed = memoryCache.has(key);
-  memoryCache.delete(key);
-  return existed;
-}
 
 /**
  * Get current Redis status
@@ -215,39 +195,3 @@ export async function getRedisStatus(): Promise<{ available: boolean; source: 'r
   }
 }
 
-/**
- * Clean up expired entries from memory cache
- * Called periodically to prevent unbounded growth
- */
-export function cleanupMemoryCache(): number {
-  let cleaned = 0;
-  const now = Date.now();
-
-  for (const [key, cached] of memoryCache.entries()) {
-    if (cached.expireAt <= now) {
-      memoryCache.delete(key);
-      cleaned++;
-    }
-  }
-
-  return cleaned;
-}
-
-/**
- * Get memory cache statistics (for monitoring)
- */
-export function getMemoryCacheStats(): { size: number; expired: number } {
-  let expired = 0;
-  const now = Date.now();
-
-  for (const cached of memoryCache.values()) {
-    if (cached.expireAt <= now) {
-      expired++;
-    }
-  }
-
-  return {
-    size: memoryCache.size,
-    expired,
-  };
-}

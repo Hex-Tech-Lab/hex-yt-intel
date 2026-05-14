@@ -1,16 +1,12 @@
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth/nextauth-config';
-import { createClient } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
 import { stripe, STRIPE_PRICING } from '@/lib/stripe';
+import { getSupabaseClient } from '@/lib/supabase';
 import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
 
 async function getBillingData(userId: string) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false } }
-  );
+  const supabase = getSupabaseClient();
 
   // Get user data
   const { data: userData, error: userError } = await supabase

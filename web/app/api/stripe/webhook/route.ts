@@ -1,6 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, verifyWebhookSignature } from '@/lib/stripe';
+import { getSupabaseClient } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
@@ -21,7 +22,7 @@ if (!webhookSecret) {
  * - customer.subscription.deleted: Subscription canceled
  * - payment_intent.succeeded: Payment successful
  * - payment_intent.payment_failed: Payment failed
- * - invoice.paid: Invoice paid
+ * - invoice.payment_succeeded: Invoice charge succeeded
  * - invoice.payment_failed: Invoice payment failed
  */
 export async function POST(request: NextRequest) {
@@ -51,10 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Initialize Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getSupabaseClient();
 
     // 4. Handle events
     switch (event.type) {
@@ -440,11 +438,7 @@ async function getUserIdFromEvent(event: Stripe.Event): Promise<string | null> {
       return null;
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { auth: { persistSession: false } }
-    );
+    const supabase = getSupabaseClient();
 
     const { data: users } = await supabase
       .from('users')
