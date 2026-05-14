@@ -47,7 +47,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse<HealthRes
     const supabase = getSupabaseClient();
 
     const dbStartTime = performance.now();
-    const { error } = await supabase.from('users').select('count(*)').limit(1);
+    const { error } = await supabase.from('users').select('id', { count: 'exact' }).limit(1);
 
     components.database.latency = Math.round(performance.now() - dbStartTime);
 
