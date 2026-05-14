@@ -164,11 +164,11 @@ export default withSentryConfig(nextConfig, {
   org: "hex-tech-lab",
   project: "hex-yt-intel",
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: false,
+  silent: true,
   widenClientFileUpload: true,
   tunnelRoute: "/monitoring",
   sourcemaps: {
-    disable: false,
+    disable: !process.env.SENTRY_AUTH_TOKEN,
   },
   debug: process.env.NODE_ENV === "development",
 });
