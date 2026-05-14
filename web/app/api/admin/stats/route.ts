@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth/nextauth-config';
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
 interface AdminStats {
@@ -32,15 +32,16 @@ export async function GET(_request: NextRequest): Promise<NextResponse<AdminStat
       );
     }
 
-    // TODO: Add role check - verify user is admin
-    // For now, allow any authenticated user
+    // Role check — restrict to admin emails until RBAC column is added (Phase 4)
+    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+    const userEmail = session.user?.email || '';
+    if (!adminEmails.includes(userEmail)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     const userId = (session.user as any).id;
 
-    // 2. Initialize Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    // 2. Initialize Supabase with service role key for cross-user aggregate counts
+    const supabase = getSupabaseServiceClient();
 
     // 3. Fetch stats from database
     const stats: AdminStats = {

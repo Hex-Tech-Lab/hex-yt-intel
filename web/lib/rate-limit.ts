@@ -18,7 +18,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase';
 import {
   getRedisValue,
   incrementRedisValue,
@@ -228,10 +228,7 @@ async function logRateLimitHit(
   limit: number
 ): Promise<void> {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getSupabaseClient();
 
     await supabase.from('usage_logs').insert({
       user_id: userId,
@@ -257,10 +254,7 @@ async function logRateLimitHit(
  */
 export async function getUserTier(userId: string): Promise<Tier> {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getSupabaseClient();
 
     const { data, error } = await supabase
       .from('users')
@@ -288,35 +282,3 @@ export async function getUserTier(userId: string): Promise<Tier> {
   }
 }
 
-/**
- * Reset rate limit for a user (admin use)
- * Used for manual intervention in abuse cases
- */
-export async function resetUserRateLimit(userId: string, endpoint: string): Promise<boolean> {
-  try {
-    // Note: We could delete the Redis key for the current window.
-    // For now, we log the reset for audit trail.
-    // Next request will start fresh when the window expires.
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    // Log the reset for audit trail
-    await supabase.from('usage_logs').insert({
-      user_id: userId,
-      action: 'rate_limit_reset',
-      metadata: {
-        endpoint,
-        reset_at: new Date().toISOString(),
-      },
-      created_at: new Date().toISOString(),
-    });
-
-    return true;
-  } catch (error) {
-    console.warn('[rate-limit] Failed to reset rate limit:', error);
-    return false;
-  }
-}

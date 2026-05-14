@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
 interface HealthResponse {
@@ -44,10 +44,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse<HealthRes
 
   // 1. Check Supabase connection
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getSupabaseClient();
 
     const dbStartTime = performance.now();
     const { error } = await supabase.from('users').select('count(*)').limit(1);

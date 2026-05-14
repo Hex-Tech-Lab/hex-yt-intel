@@ -10,14 +10,6 @@
       "DOM.Iterable"
     ],
     "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "useUnknownInCatchVariables": true,
-    "alwaysStrict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
@@ -29,7 +21,6 @@
         "./*"
       ]
     },
-    "allowJs": false,
     "noEmit": true,
     "incremental": true,
     "esModuleInterop": true,
@@ -38,7 +29,8 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "allowJs": true
   },
   "include": [
     "**/*.ts",

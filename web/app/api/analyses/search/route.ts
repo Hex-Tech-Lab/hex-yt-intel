@@ -33,10 +33,11 @@
 
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth/nextauth-config';
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbedding, extractSnippet } from '@/lib/embeddings';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
+import { getSupabaseClient } from '@/lib/supabase';
+import { logUsage } from '@/lib/usage';
 import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
@@ -155,9 +156,13 @@ export async function POST(request: NextRequest) {
       });
 
       // Log embedding cost
-      await logUsage(userId, 'search', {
-        query: body.query,
-        cost_usd: embeddingResult.costUsd,
+      await logUsage({
+        userId,
+        action: 'search',
+        metadata: {
+          query: body.query,
+          cost_usd: embeddingResult.costUsd,
+        },
       });
     } catch (error) {
       console.error('[/api/analyses/search] Embedding generation failed:', error);
@@ -175,10 +180,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Create Supabase client (server-side)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getSupabaseClient();
 
     // 5. Execute pgvector semantic search
     // Query: cosine similarity (1 - distance), ordered by similarity
@@ -361,27 +363,4 @@ function cosineSimilarityFromVector(vectorA: number[], vectorB: any): number {
   }
 
   return dotProduct / denominator;
-}
-
-/**
- * Log search usage for quota tracking
- * Non-fatal: errors logged but don't break search
- */
-async function logUsage(userId: string, action: string, metadata: any) {
-  try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    await supabase.from('usage_logs').insert({
-      user_id: userId,
-      action,
-      metadata,
-      created_at: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.warn('[logUsage] Failed to log search usage:', error);
-    // Non-fatal, don't throw
-  }
 }

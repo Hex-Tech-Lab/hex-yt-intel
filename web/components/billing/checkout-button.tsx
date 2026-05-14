@@ -3,7 +3,6 @@
 import { useState } from 'react';
 
 interface CheckoutButtonProps {
-  email?: string;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
 }

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { CheckoutButton } from './checkout-button';
 
 interface PricingTableClientProps {
-  pricingData: Record<string, any>;
   userInfo: {
     userId: string;
     userEmail: string;
@@ -95,7 +94,6 @@ export function PricingTableClient({ userInfo }: PricingTableClientProps) {
 
           {userInfo ? (
             <CheckoutButton
-              email={userInfo.userEmail}
               isLoading={isCheckoutLoading}
               setIsLoading={setIsCheckoutLoading}
             />

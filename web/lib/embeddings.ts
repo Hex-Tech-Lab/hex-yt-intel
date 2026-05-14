@@ -19,8 +19,7 @@ const EMBEDDING_MODEL = 'text-embedding-3-small';
 const EMBEDDING_DIMENSION = 1536;
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/embeddings';
 
-// Batch configuration
-const MAX_BATCH_SIZE = 10; // Careful batching to avoid rate limits
+// Retry configuration
 const RETRY_MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
 
@@ -102,49 +101,6 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
   );
 }
 
-/**
- * Generate embeddings for multiple texts in batches
- * Processes texts in small batches to avoid rate limiting
- *
- * @param texts - Array of texts to embed
- * @returns Promise with array of embeddings and total cost
- */
-export async function generateBatchEmbeddings(
-  texts: string[]
-): Promise<{
-  embeddings: EmbeddingResult[];
-  totalCostUsd: number;
-}> {
-  const embeddings: EmbeddingResult[] = [];
-  let totalCost = 0;
-
-  // Process in batches
-  for (let i = 0; i < texts.length; i += MAX_BATCH_SIZE) {
-    const batch = texts.slice(i, i + MAX_BATCH_SIZE);
-
-    for (const text of batch) {
-      try {
-        const result = await generateEmbedding(text);
-        embeddings.push(result);
-        totalCost += result.costUsd;
-      } catch (error) {
-        // Log error but continue processing remaining texts
-        console.error(`[embeddings] Failed to embed text at index ${i}: ${error}`);
-        throw error;
-      }
-    }
-
-    // Small delay between batches to avoid rate limiting
-    if (i + MAX_BATCH_SIZE < texts.length) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-  }
-
-  return {
-    embeddings,
-    totalCostUsd: totalCost,
-  };
-}
 
 /**
  * Calculate cosine similarity between two embedding vectors

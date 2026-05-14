@@ -50,7 +50,6 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
             </p>
             {initialData.tier === 'free' && (
               <CheckoutButton
-                email={initialData.user.email}
                 isLoading={isLoading}
                 setIsLoading={setIsLoading}
               />

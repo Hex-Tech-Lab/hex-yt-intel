@@ -1,10 +1,11 @@
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth/nextauth-config';
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { createUCISPrompt } from '@/lib/prompts';
 import { generateEmbedding } from '@/lib/embeddings';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
+import { extractVideoId } from '@/lib/youtube';
+import { getSupabaseClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
@@ -23,31 +24,6 @@ interface AnalysisResponse {
   title: string;
   markdown: string;
   createdAt: string;
-}
-
-function extractVideoId(url: string): string | null {
-  try {
-    const urlObj = new URL(url);
-    if (urlObj.hostname.includes('youtube.com')) {
-      const id = urlObj.searchParams.get('v');
-      if (id) return id;
-    }
-    if (urlObj.hostname.includes('youtu.be')) {
-      const id = urlObj.pathname.slice(1);
-      if (id) return id;
-    }
-    if (urlObj.pathname.startsWith('/embed/')) {
-      const id = urlObj.pathname.split('/')[2];
-      if (id) return id;
-    }
-    if (urlObj.pathname.startsWith('/v/')) {
-      const id = urlObj.pathname.split('/')[2];
-      if (id) return id;
-    }
-  } catch {
-    return null;
-  }
-  return null;
 }
 
 async function fetchTranscript(videoId: string): Promise<string> {
@@ -175,10 +151,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Supabase client (server-side)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getSupabaseClient();
 
     // 5. Check quota enforcement
     const userData = await trackDatabaseQuery(
@@ -464,6 +437,8 @@ async function generateEmbeddingAsync(
   analysisId: string,
   markdown: string
 ): Promise<void> {
+  const supabase = getSupabaseClient();
+
   try {
     // Generate embedding from analysis markdown
     const embeddingResult = await trackExternalCall(
@@ -479,11 +454,6 @@ async function generateEmbeddingAsync(
     });
 
     // Update analysis with embedding
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
     await trackDatabaseQuery(
       'update',
       'analyses',

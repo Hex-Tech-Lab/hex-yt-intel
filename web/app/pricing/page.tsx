@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth/nextauth-config';
 import { PricingTableClient } from '@/components/billing/pricing-table-client';
-import { STRIPE_PRICING } from '@/lib/stripe';
 
 async function getUserTier() {
   const session = await getServerSession(authConfig);
@@ -31,7 +30,6 @@ export default async function PricingPage() {
       {/* Pricing Table */}
       <div className="max-w-6xl mx-auto px-4 py-12">
         <PricingTableClient
-          pricingData={STRIPE_PRICING}
           userInfo={userInfo}
         />
       </div>

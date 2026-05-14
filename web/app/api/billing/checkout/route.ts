@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth/nextauth-config';
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession, getOrCreateStripeCustomer } from '@/lib/stripe';
+import { getSupabaseClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
 interface CheckoutRequest {
@@ -45,10 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Fetch user data from Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getSupabaseClient();
 
     const { data: userData, error: userError } = await supabase
       .from('users')
