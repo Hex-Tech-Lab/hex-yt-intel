@@ -1,5 +1,18 @@
+import { AUTH_CONFIG } from './config';
 import { NextAuthProvider } from './providers/nextauth';
+import { VercelAuthProvider } from './providers/vercel';
+import { AuthProvider } from './types';
 
-// Phase 4 (Enterprise): extend this factory to support Supabase Auth and Vercel Auth
-// for SSO and multi-provider scenarios. See CLAUDE.md Phase 4 roadmap.
-export const authProvider = new NextAuthProvider();
+const getAuthProvider = (): AuthProvider => {
+  const providerType = AUTH_CONFIG.provider;
+
+  switch (providerType) {
+    case 'vercel':
+      return new VercelAuthProvider();
+    case 'nextauth':
+    default:
+      return new NextAuthProvider();
+  }
+};
+
+export const authProvider = getAuthProvider();

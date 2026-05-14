@@ -10,8 +10,8 @@ export const authConfig: NextAuthOptions = {
       name: 'Google',
       type: 'oauth',
       authorization: { params: { prompt: 'consent' } },
-      clientId: AUTH_CONFIG.google.clientId || '',
-      clientSecret: AUTH_CONFIG.google.clientSecret || '',
+      clientId: AUTH_CONFIG.google.clientId,
+      clientSecret: AUTH_CONFIG.google.clientSecret,
       wellKnown: 'https://accounts.google.com/.well-known/openid-configuration',
       profile(profile: any) {
         return {
