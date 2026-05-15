@@ -123,4 +123,23 @@ Save Client ID + Client Secret immediately — shown once.
 
 ---
 
-*End of handover. Start at Section 5.*
+*End of handover. ALL TASKS COMPLETE as of 2026-05-15T21:36 EEST.*
+
+---
+
+## 9 · CC Session Results — Post-Handover
+
+All items from Section 5 completed by Claude Code (CC):
+
+| Step | Status |
+|---|---|
+| SA Auth | ✅ `agent-orchestrator@hex-yt-intel` activated |
+| Project | ✅ `283991426265` set |
+| APIs enabled | ✅ people, iam, cloudresourcemanager live |
+| Google Client Secret | ✅ Vercel production env vars set |
+| Auth fix | ✅ Facebook replaced with GitHub OAuth, TS fix committed |
+| Deploy | ✅ Live at `https://hex-yt-intel.vercel.app` |
+| Commit | `8ba155a` pushed |
+
+**Test endpoint:** `https://hex-yt-intel.vercel.app/auth/signin`
+**Auth fix commit:** `8ba155a`

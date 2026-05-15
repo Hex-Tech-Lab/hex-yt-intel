@@ -2,102 +2,57 @@
 
 ## Service Account Configuration
 
-**Service Account Email**: `agent-orchestrator@gen-lang-client-0373183545.iam.gserviceaccount.com`  
-**Project ID**: `gen-lang-client-0373183545`  
-**Key Location**: `/home/kellyb_dev/.config/gcloud/hex-yt-intel-key.json`
+**Service Account Email**: `agent-orchestrator@hex-yt-intel.iam.gserviceaccount.com`  
+**Project ID**: `283991426265` (display: `hex-yt-intel`)  
+**Key Location**: `/home/kellyb_dev/.config/gcloud/hex-yt-intel-new-key.json` (chmod 600)
 
 ### Prerequisites
 
-#### 1. **Enable Required APIs** in Google Cloud Console (MANUAL - Service Account Cannot Enable Programmatically)
+#### 1. Google Cloud APIs (✅ ALL LIVE — 2026-05-15T21:25 EEST)
 
-**Why Manual?** The service account has Editor role in IAM, but Google Cloud requires console access to enable the Service Usage API first. This is a security boundary.
+apis verified via `gcloud services list --enabled`:
 
-**Required APIs** (3 total):
+| API | ID | Status |
+|---|---|---|
+| Cloud Resource Manager API | `cloudresourcemanager.googleapis.com` | ✅ Enabled (project 283991426265) |
+| **Google People API** | **`people.googleapis.com`** | ✅ Enabled (NOT Google+) |
+| Google Cloud IAM API | `iam.googleapis.com` | ✅ Enabled |
 
-| API | ID | Purpose | Why It's Required | Status |
-|-----|----|---------| ------ | -------|
-| Cloud Resource Manager API | `cloudresourcemanager.googleapis.com` | Manages OAuth credentials and projects | Needed to create/manage OAuth client IDs | ⏳ NEEDS MANUAL ENABLE |
-| **Google People API** | **`people.googleapis.com`** | Retrieve user profile and email during OAuth | **CRITICAL**: Supabase OAuth callback needs to fetch user profile (email, name, picture) after authorization. Without this, OAuth flow fails with "scope not found" or 403 error | ⏳ NEEDS MANUAL ENABLE |
-| Google Cloud IAM API | `iam.googleapis.com` | Service account and role management | Needed to manage service account permissions | ⏳ NEEDS MANUAL ENABLE |
-
-⚠️ **CRITICAL NOTE**: The deprecated "Google+ API" (`plus.googleapis.com`) is **NOT** sufficient. You **MUST** enable the **Google People API** (`people.googleapis.com`) instead. Google+ was sunsetted years ago and will cause OAuth failures.
-
-**Steps to Enable Manually**:
-
-1. Go to: https://console.cloud.google.com/apis/dashboard?project=gen-lang-client-0373183545
-2. Click **"Enable APIs and Services"** (top bar)
-3. Search for and enable **each API** in this order:
-   
-   **Step 1: Enable Cloud Resource Manager API**
-   - Search: "Cloud Resource Manager"
-   - Click the result
-   - Click **"Enable"**
-   - Wait 2-3 minutes for propagation
-   
-   **Step 2: Enable Google People API**
-   - Search: "Google People API" or just "People API"
-   - Click the result (should show: "Provides access to information about profiles and contacts")
-   - Click **"Enable"**
-   - Wait 2-3 minutes for propagation
-   - ⚠️ DO NOT enable "Google+ API" (deprecated, will not work)
-   
-   **Step 3: Enable Google Cloud IAM API**
-   - Search: "Cloud Identity and Access Management"
-   - Click the result
-   - Click **"Enable"**
-   - Wait 2-3 minutes for propagation
-
-4. Verify all three are enabled:
-   - Go to: https://console.cloud.google.com/apis/dashboard?project=gen-lang-client-0373183545
-   - Look for all three APIs in the "Enabled APIs" list
-   - If not visible, refresh the page
-
-**Fail-Fast Verification** (run after EACH API enable to confirm propagation):
+To verify manually:
 ```bash
-# Check if APIs are enabled (repeat after each API enable, wait 2-3 min between checks)
 gcloud services list --enabled \
   --filter="name:(cloudresourcemanager.googleapis.com OR people.googleapis.com OR iam.googleapis.com)" \
   --format="table(name)" \
-  --project=gen-lang-client-0373183545
+  --project=283991426265
 ```
 
-Expected output after all three are enabled:
-```
-NAME
-cloudresourcemanager.googleapis.com
-iam.googleapis.com
-people.googleapis.com
-```
+#### 2. Service Account Permissions
 
-**If you see `plus.googleapis.com` instead of `people.googleapis.com`**: You enabled the wrong API. Disable Google+ API and enable Google People API instead.
+`agent-orchestrator@hex-yt-intel.iam.gserviceaccount.com` has **Owner + Service Usage Admin** roles (created 2026-05-15).  
+Full credential was generated 2026-05-15T21:00 EEST.
 
-2. **Grant Service Account Permissions**:
-   - IAM & Admin → Service Accounts → agent-orchestrator
-   - Grant role: `Editor` (for OAuth management)
+---
 
 ### Setup Steps
 
 #### Step 1: Authenticate with Service Account (One-time)
 
 ```bash
-# Already configured at:
-# /home/kellyb_dev/.config/gcloud/hex-yt-intel-key.json
-
-# Verify authentication
-gcloud auth activate-service-account --key-file=/home/kellyb_dev/.config/gcloud/hex-yt-intel-key.json
-gcloud config set project gen-lang-client-0373183545
+# Correct key file:
+gcloud auth activate-service-account --key-file=/home/kellyb_dev/.config/gcloud/hex-yt-intel-new-key.json
+gcloud config set project 283991426265
 gcloud auth list
 ```
 
 Expected output:
 ```
 ACTIVE  ACCOUNT
-*       agent-orchestrator@gen-lang-client-0373183545.iam.gserviceaccount.com
+*       agent-orchestrator@hex-yt-intel.iam.gserviceaccount.com
 ```
 
 #### Step 2: Create OAuth 2.0 Consent Screen
 
-Navigate to: https://console.cloud.google.com/apis/credentials/consent?project=gen-lang-client-0373183545
+Navigate to: https://console.cloud.google.com/apis/credentials/consent?project=283991426265
 
 **Configuration**:
 - **User Type**: External
@@ -112,7 +67,7 @@ Navigate to: https://console.cloud.google.com/apis/credentials/consent?project=g
 
 #### Step 3: Create OAuth 2.0 Credentials
 
-Navigate to: https://console.cloud.google.com/apis/credentials?project=gen-lang-client-0373183545
+Navigate to: https://console.cloud.google.com/apis/credentials?project=283991426265
 
 **Create → OAuth 2.0 Client IDs**:
 - **Application Type**: Web application
@@ -190,6 +145,25 @@ gcloud oauth-config update [CLIENT_ID] \
 
 ## Troubleshooting
 
+### Error: Auth callback lands on 404 after Google sign-in
+
+**Symptom**: OAuth succeeds, browser redirects to `/dashboard` → 404  
+**Cause**: `web/app/auth/callback/route.ts` lines 8 and 46 fallback to `'/dashboard'`, which has no page  
+**Fix (applied commit `efea2c1`)**: Changed both fallbacks to `'/'`. Root page is live at `web/app/page.tsx`.
+
+**File reference**: `web/app/auth/callback/route.ts`  
+```typescript
+// Line 8 — before
+const next = searchParams.get('next') || '/dashboard';
+// Line 8 — after
+const next = searchParams.get('next') || '/';
+
+// Line 46 — before
+const safeNext = decodedNext.startsWith('/') ? decodedNext : '/dashboard';
+// Line 46 — after
+const safeNext = decodedNext.startsWith('/') ? decodedNext : '/';
+```
+
 ### Error: "Cloud Resource Manager API has not been used"
 
 **Solution**: Enable the API
@@ -234,7 +208,7 @@ gcloud oauth-config update [CLIENT_ID] \
 ## Security Notes
 
 ⚠️ **Key Management**:
-- The service account key is stored at `/home/kellyb_dev/.config/gcloud/hex-yt-intel-key.json`
+- The service account key is stored at `/home/kellyb_dev/.config/gcloud/hex-yt-intel-new-key.json`
 - **Never commit this to Git** (it's in `.gitignore`)
 - **Rotate the key annually** (Google Cloud best practice)
 
@@ -261,7 +235,7 @@ After enabling each API, verify it's actually enabled **before proceeding**:
 gcloud services list --enabled \
   --filter="name:(cloudresourcemanager.googleapis.com OR people.googleapis.com OR iam.googleapis.com)" \
   --format="table(name)" \
-  --project=gen-lang-client-0373183545
+  --project=283991426265
 ```
 
 **Why**: API propagation can fail silently. Google Cloud Console might say "enabled" but backend services haven't synced yet. Verify programmatically first.
@@ -320,10 +294,29 @@ Before enabling OAuth, ensure these match **exactly**:
 - [ ] Sign-in flow tested locally (Step 5)
 - [ ] Sign-in flow tested in production (Step 5)
 
-**API Enablement Timeline**:
-- Estimated time to enable all three APIs: 10-15 minutes (including propagation delays)
-- After enabling: Wait 2-3 minutes between each enable for system propagation
-- Verification: Run the `gcloud services list` command to confirm
+**API Enablement Timeline (2026-05-15):**
+| Time (EEST) | Action |
+|---|---|
+| 21:15 | Identified two GCP projects — wrong SA was active |
+| 21:18 | Wrote `hex-yt-intel-new-key.json` for `agent-orchestrator@hex-yt-intel` |
+| 21:25 | All three APIs enabled via `gcloud services enable` (project `283991426265`) |
+| 21:36 | Google OAuth Client ID created via console; Vercel env vars set |
+| 21:58 | Identified `/dashboard` 404 — callback fallback targets non-existent route |
+| 22:01 | Commit `efea2c1` — fixed callback fallback to `/` |
+| 22:06 | `web/middleware.ts` confirmed — only protects `/analyses` and `/api` |
+
+**Completion Checklist** (use this exactly):
+- [x] Cloud Resource Manager API enabled ✅
+- [x] Google People API enabled (NOT Google+ API) ✅
+- [x] Google Cloud IAM API enabled ✅
+- [x] OAuth 2.0 Consent Screen configured ✅
+- [x] OAuth 2.0 Credentials created ✅
+- [x] Credentials added to Vercel (production env vars) ✅
+- [x] Auth callback 404 fixed (`web/app/auth/callback/route.ts` → `'/'`) ✅
+- [ ] Verify NEXT_PUBLIC_SITE_URL matches Supabase Site URL (pending user test)
+- [ ] Sign-in flow tested in production (pending user test at `https://hex-yt-intel.vercel.app/auth/signin`)
+
+---
 
 ## Support
 
@@ -331,6 +324,11 @@ For issues:
 1. Check the Troubleshooting section above
 2. Verify all URIs are correct (copy-paste carefully!)
 3. **Ensure APIs are enabled** (use checklist above)
-4. Check service account has Editor role (already confirmed ✅)
+4. Check service account has Owner + Service Usage Admin roles (✅ confirmed 2026-05-15)
 5. Wait 5 minutes after enabling APIs before proceeding
-6. Contact: kellybakri@gmail.com
+6. Contact: `kellybakri@gmail.com`
+
+---
+
+**Last Updated**: 2026-05-15T22:10 EEST  
+**Current Session Commit**: `efea2c1` (auth callback 404 fix)
