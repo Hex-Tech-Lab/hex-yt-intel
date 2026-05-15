@@ -1,11 +1,10 @@
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth/nextauth-config';
 import { NextRequest, NextResponse } from 'next/server';
 import { createUCISPrompt } from '@/lib/prompts';
 import { generateEmbedding } from '@/lib/embeddings';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClient } from '@/lib/supabase';
+import { getAuthSession } from '@/lib/auth/provider-factory';
 import { AnalysisCreateSchema } from '@/lib/schemas';
 import * as Sentry from '@sentry/nextjs';
 import {
@@ -81,8 +80,8 @@ export async function POST(request: NextRequest) {
   let userId: string | undefined;
 
   try {
-    // 1. Auth check
-    const session = await getServerSession(authConfig);
+    // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
+    const session = await getAuthSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -90,14 +89,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    userId = (session.user as any).id;
+    userId = session.user.id;
     if (!userId) {
       return NextResponse.json(
         { error: 'User ID not found in session' },
         { status: 401 }
       );
     }
-    const userEmail = (session.user as any).email || '';
+    const userEmail = session.user.email || '';
     const userTierAuth = await getUserTier(userId);
 
     // Set user context for Sentry

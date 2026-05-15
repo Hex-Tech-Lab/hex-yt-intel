@@ -1,0 +1,48 @@
+{
+  "metadata": {
+    "product": "HEX-YT-INTEL",
+    "purpose": "Semantic color palette for elite content intelligence engine",
+    "rationale": "Cyber-Slate & Electric Cyan aesthetic. Obsidian reduces eye strain; Cyan drives focus to intelligence; Coral strictly reserved for alerts."
+  },
+  "semantic": {
+    "primary": {
+      "value": "#06B6D4",
+      "usage": "Primary actions, intelligence extractions, active states, progress indicators",
+      "psychology": "Vibrant, high-energy, signals 'machine intelligence' and precision"
+    },
+    "secondary": {
+      "value": "#6366F1",
+      "usage": "Accent borders, secondary highlights, subtle gradients (sparingly)",
+      "psychology": "Premium technology, depth"
+    },
+    "tertiary": {
+      "value": "#FF6B6B",
+      "usage": "Strictly for warnings, critical AI insights, destructive actions",
+      "psychology": "Urgent, rare, high-signal"
+    },
+    "neutral_dark": {
+      "background": "#0F172A",
+      "surface": "#1E293B",
+      "surface_elevated": "#334155",
+      "border": "rgba(255, 255, 255, 0.1)",
+      "text_primary": "#F8FAFC",
+      "text_secondary": "#94A3B8"
+    },
+    "neutral_light": {
+      "background": "#FAFAFA",
+      "surface": "#FFFFFF",
+      "surface_elevated": "#F1F5F9",
+      "border": "rgba(0, 0, 0, 0.1)",
+      "text_primary": "#0F172A",
+      "text_secondary": "#475569"
+    }
+  },
+  "contrast_audit": {
+    "note": "Primary Cyan (#06B6D4) on Slate Background (#0F172A) provides high readability. Text primary meets WCAG AAA standards.",
+    "tested": ["primary-on-slate", "text-on-slate", "text-on-white"]
+  },
+  "accessibility": {
+    "colorblind_safe": true,
+    "high_contrast_mode": "Supported via dark/light semantic toggles"
+  }
+}
