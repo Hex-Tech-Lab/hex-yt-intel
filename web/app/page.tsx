@@ -53,7 +53,10 @@ export default function Home() {
           markdown: data.markdown || 'Analysis in progress...',
         });
       } else {
-        alert('Failed to analyze video');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || `HTTP ${response.status}`;
+        console.error('Analysis failed:', errorMsg);
+        alert(`Failed to analyze video: ${errorMsg}`);
       }
     } catch (error) {
       alert('Error analyzing video');
