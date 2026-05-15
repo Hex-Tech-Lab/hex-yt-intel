@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') || '/dashboard';
+  const next = searchParams.get('next') || '/';
 
   if (!code) {
     return NextResponse.redirect(new URL('/auth/error?error=no_code', request.url));
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     // Decode the next parameter and ensure it's safe
     const decodedNext = decodeURIComponent(next);
-    const safeNext = decodedNext.startsWith('/') ? decodedNext : '/dashboard';
+    const safeNext = decodedNext.startsWith('/') ? decodedNext : '/';
 
     return NextResponse.redirect(new URL(safeNext, request.url));
   } catch (error) {
