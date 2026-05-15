@@ -40,7 +40,7 @@ async function callOpenRouter(
   transcript: string
 ): Promise<string> {
   const prompt = createUCISPrompt(metadata, transcript);
-  const models = ['anthropic/claude-haiku-latest', 'anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
+  const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
 
   for (const model of models) {
@@ -290,7 +290,7 @@ export async function POST(request: NextRequest) {
         'openrouter',
         'claude-analysis',
         () => callOpenRouter(metadata, transcript),
-        { videoId, model: 'anthropic/claude-haiku-4.5:free' }
+        { videoId, model: 'anthropic/claude-3.5-haiku' }
       );
       addBreadcrumb('Analysis generated successfully', { videoId, markdownLength: markdown.length });
     } catch (error) {
