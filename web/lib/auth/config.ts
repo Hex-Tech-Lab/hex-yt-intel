@@ -1,29 +1,28 @@
+/**
+ * Centralized auth configuration
+ * Supports multiple auth providers via AUTH_PROVIDER environment variable
+ */
+
+import { validateAuthConfig } from './env-validator';
+
+// Validate environment variables at startup
+validateAuthConfig();
+
 export const AUTH_CONFIG = {
-  provider: (process.env.AUTH_PROVIDER || 'nextauth') as 'vercel' | 'supabase' | 'nextauth',
+  provider: (process.env.AUTH_PROVIDER || 'supabase') as 'supabase' | 'nextauth',
+
+  supabase: {
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  },
+
+  nextauth: {
+    secret: process.env.AUTH_SECRET || '',
+  },
 
   google: {
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    redirectUri: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/callback/google`,
+    clientId: process.env.AUTH_GOOGLE_ID || '',
+    clientSecret: process.env.AUTH_GOOGLE_SECRET || '',
   },
-
-  providers: {
-    vercel: {
-      projectId: process.env.VERCEL_PROJECT_ID,
-      team: process.env.VERCEL_TEAM_ID,
-    },
-    supabase: {
-      url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-      anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    },
-    nextauth: {
-      secret: process.env.NEXTAUTH_SECRET,
-      url: process.env.NEXTAUTH_URL,
-    },
-  },
-};
-
-if (!AUTH_CONFIG.google.clientId && process.env.NODE_ENV === 'production') {
-  console.warn('⚠️ GOOGLE_ID not set. Google OAuth disabled.');
-}
+} as const;

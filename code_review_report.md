@@ -1,155 +1,363 @@
-# Code Review Report — P0 Bugs + Dead Code Purpose Audit
-
-**Date**: 2026-05-14  
-**Scope**: P0 correctness bugs + dead code git/docs verification  
-**Reviewer**: /code-reviewer skill  
+# Code Review Report: Modular Auth System
+**Date:** 2026-05-15  
+**Scope:** Recent modular auth provider implementation  
+**Status:** ⚠️ **2 CRITICAL ISSUES** | 1 BUG | 2 DEAD CODE
 
 ---
 
-## BUG-1 · CRITICAL — Spurious Sentry Events per Breadcrumb
+## Critical Issues
 
-**File**: `web/lib/monitoring/sentry-utils.ts:18`
+### 🔴 ISSUE #1: Unhandled Environment Variable Defaults (Runtime Crash Risk)
+**Files:** 
+- [web/utils/supabase/server.ts:8-9](web/utils/supabase/server.ts#L8-L9)
+- [web/lib/auth/config.ts:11-13, 21-22](web/lib/auth/config.ts#L11-L22)
 
-```ts
-// CURRENT (broken)
-export function addBreadcrumb(...): void {
-  Sentry.captureMessage(message, 'info');   // ← fires a full Sentry event
-  Sentry.addBreadcrumb({ ... });            // ← then adds the breadcrumb
+**Severity:** CRITICAL (Application crash in production)
+
+**Problem:**
+```typescript
+// utils/supabase/server.ts:8-9
+process.env.NEXT_PUBLIC_SUPABASE_URL!,        // ← Non-null assertion
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,   // ← Will be undefined, causes crash
+
+// config.ts:11-13
+supabase: {
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',           // ← Empty string fallback
+  anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',  // ← Empty string fallback
+  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+},
+
+// config.ts:21-22
+google: {
+  clientId: process.env.AUTH_GOOGLE_ID || '',        // ← Missing var, empty string fallback
+  clientSecret: process.env.AUTH_GOOGLE_SECRET || '', // ← Missing var, empty string fallback
+},
+```
+
+**Why it's broken:**
+- Non-null assertions on lines 8-9 force `undefined` values to be treated as truthy
+- Supabase client initialization will fail silently or with cryptic errors
+- Missing credentials are silently replaced with empty strings, causing auth failures downstream
+- No validation that required env vars are present at startup
+- Users experience runtime crashes instead of configuration errors
+
+**Fix options:**
+
+1. **Option A: Add environment variable validation** ✅ RECOMMENDED
+   ```typescript
+   // web/lib/auth/env-validator.ts
+   export function validateAuthConfig() {
+     const required = {
+       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+     };
+     
+     const missing = Object.entries(required)
+       .filter(([_, value]) => !value)
+       .map(([key]) => key);
+     
+     if (missing.length > 0) {
+       throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+     }
+   }
+   
+   // Call in config.ts on import
+   import { validateAuthConfig } from './env-validator';
+   validateAuthConfig();
+   ```
+
+2. **Option B: Remove non-null assertions and validate at runtime**
+   ```typescript
+   // utils/supabase/server.ts
+   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+   
+   if (!url || !anonKey) {
+     throw new Error('Missing Supabase credentials in environment');
+   }
+   
+   return createServerClient(url, anonKey, { cookies: {...} });
+   ```
+
+3. **Option C: Provide clear error messages for missing configs**
+   ```typescript
+   // config.ts
+   const throwIfMissing = (key: string, value: string | undefined) => {
+     if (!value) {
+       throw new Error(
+         `Missing required environment variable: ${key}\n` +
+         `See .env.example for configuration instructions.`
+       );
+     }
+     return value;
+   };
+   
+   export const AUTH_CONFIG = {
+     provider: (process.env.AUTH_PROVIDER || 'supabase') as 'supabase' | 'nextauth',
+     supabase: {
+       url: throwIfMissing('NEXT_PUBLIC_SUPABASE_URL', process.env.NEXT_PUBLIC_SUPABASE_URL),
+       anonKey: throwIfMissing('NEXT_PUBLIC_SUPABASE_ANON_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+       ...
+     },
+   };
+   ```
+
+---
+
+### 🔴 ISSUE #2: Type Coercion Bypass in NextAuth Session Mapping
+**File:** [web/lib/auth/provider-factory.ts:47-48](web/lib/auth/provider-factory.ts#L47-L48)
+
+**Severity:** CRITICAL (Authentication bypass, security vulnerability)
+
+**Problem:**
+```typescript
+// Lines 47-48
+id: (session.user as any).id || '',  // ← Type-unsafe, could be undefined
+email: session.user.email || '',      // ← Could be undefined
+```
+
+**Why it's broken:**
+- Type assertion `as any` bypasses TypeScript type checking
+- If `session.user.id` is undefined, it falls back to empty string `''`
+- Later check at `/api/analyses:93` validates `if (!userId)` but empty string `''` is truthy
+- Attacker or misconfigured session could authenticate with empty user ID
+- The route assumes `userId` is always a valid UUID, but empty string passes validation
+- User ID could be stored as empty string in database, corrupting records
+
+**Attack scenario:**
+```typescript
+// Malicious NextAuth session
+{ user: { id: undefined, email: 'attacker@example.com' } }
+
+// AuthSession becomes:
+{ user: { id: '', email: 'attacker@example.com' } }
+
+// Route validation passes (!'' is falsy, but '' || operation succeeded)
+userId = session.user.id;  // userId = ''
+if (!userId) {             // This PASSES because '' was assigned, not undefined
+  // Security bypass — attacker proceeds with empty ID
 }
 ```
 
-**Impact**: Every call to `addBreadcrumb()` fires TWO Sentry operations: a full captured event + a breadcrumb. `analyses/route.ts` calls `addBreadcrumb` 12+ times per request. Each analysis creation generates 12+ spurious Sentry events, inflating event quota, polluting the issue tracker, and masking real errors.
+**Fix options:**
 
-**Same pattern at line 293** (`captureMetric` also calls `Sentry.captureMessage` before adding a breadcrumb).
+1. **Option A: Strict type checking + validation** ✅ RECOMMENDED
+   ```typescript
+   // provider-factory.ts
+   export async function getAuthSession(): Promise<AuthSession | null> {
+     // ... fetch session for provider ...
+     
+     // Strict validation before returning
+     if (provider === 'nextauth') {
+       const session = await getServerSession(authConfig);
+       if (!session?.user?.id || typeof session.user.id !== 'string') {
+         return null;  // Reject invalid sessions
+       }
+       if (!session.user.email || typeof session.user.email !== 'string') {
+         return null;
+       }
+       
+       return {
+         user: {
+           id: session.user.id,              // ← Guaranteed non-empty string
+           email: session.user.email,        // ← Guaranteed non-empty string
+           name: session.user.name ?? undefined,
+           image: session.user.image ?? undefined,
+         },
+       };
+     }
+   }
+   ```
 
-**Fix**:
-```ts
-// CORRECT — breadcrumbs are context attached to the NEXT event, not events themselves
-export function addBreadcrumb(
-  message: string,
-  data?: Record<string, unknown>,
-  category = 'operation'
-): void {
-  Sentry.addBreadcrumb({
-    message,
-    category,
-    level: 'info',
-    data,
-    timestamp: Date.now() / 1000,
-  });
+2. **Option B: Add UUID validation**
+   ```typescript
+   import { validate as validateUUID } from 'uuid';
+   
+   if (!validateUUID(session.user.id)) {
+     return null;  // Reject invalid UUIDs
+   }
+   ```
+
+3. **Option C: Create auth session validator**
+   ```typescript
+   // lib/auth/validators.ts
+   import { z } from 'zod';
+   
+   export const AuthSessionSchema = z.object({
+     user: z.object({
+       id: z.string().min(1, 'User ID required'),
+       email: z.string().email(),
+       name: z.string().optional(),
+       image: z.string().optional(),
+     }),
+   });
+   
+   // In provider-factory.ts
+   const validated = AuthSessionSchema.safeParse({ user: {...} });
+   if (!validated.success) return null;
+   return validated.data;
+   ```
+
+---
+
+## High-Severity Issues
+
+### 🟠 ISSUE #3: Silent Failure in signOut() Function
+**File:** [web/lib/auth/provider-factory.ts:63-73](web/lib/auth/provider-factory.ts#L63-L73)
+
+**Severity:** HIGH (Error hiding, user confusion)
+
+**Problem:**
+```typescript
+export async function signOut() {
+  const provider = AUTH_CONFIG.provider;
+
+  if (provider === 'supabase') {
+    const { signOutSupabase } = await import('./providers/supabase');
+    await signOutSupabase();  // ← No error handling
+  } else if (provider === 'nextauth') {
+    const { signOut: nextAuthSignOut } = await import('next-auth/react');
+    await nextAuthSignOut();  // ← No error handling, no status returned
+  }
+  // ← Implicit return of undefined
 }
 ```
 
-Remove `Sentry.captureMessage(message, 'info')` on line 18. Remove `Sentry.captureMessage(...)` on line 293 in `captureMetric` for the same reason.
+**Why it's broken:**
+- No error handling: if `signOutSupabase()` or `nextAuthSignOut()` throws, error is silently lost
+- No return value: caller can't know if sign-out succeeded or failed
+- Caller has no way to show error UI to user
+- User may think they're signed out when they're still authenticated
+
+**Fix options:**
+
+1. **Option A: Add error handling + status return** ✅ RECOMMENDED
+   ```typescript
+   export async function signOut(): Promise<{ success: boolean; error?: string }> {
+     const provider = AUTH_CONFIG.provider;
+
+     try {
+       if (provider === 'supabase') {
+         const { signOutSupabase } = await import('./providers/supabase');
+         await signOutSupabase();
+       } else if (provider === 'nextauth') {
+         const { signOut: nextAuthSignOut } = await import('next-auth/react');
+         await nextAuthSignOut({ redirect: false });
+       }
+       return { success: true };
+     } catch (error) {
+       const message = error instanceof Error ? error.message : String(error);
+       return { success: false, error: message };
+     }
+   }
+   ```
+
+2. **Option B: Throw on error (caller must handle)**
+   ```typescript
+   export async function signOut(): Promise<void> {
+     try {
+       // ... sign out logic ...
+     } catch (error) {
+       throw new Error(`Sign out failed: ${error instanceof Error ? error.message : String(error)}`);
+     }
+   }
+   ```
+
+3. **Option C: Log and return void (if async operation ok to fire-and-forget)**
+   ```typescript
+   export async function signOut(): Promise<void> {
+     const provider = AUTH_CONFIG.provider;
+     try {
+       if (provider === 'supabase') {
+         // ...
+       }
+     } catch (error) {
+       console.error(`[signOut] Error: ${error}`);
+       // Still allows user to be logged out client-side even if backend fails
+     }
+   }
+   ```
 
 ---
 
-## BUG-2 · SECURITY — Admin Stats Endpoint Has No Role Check
+## Dead Code
 
-**File**: `web/app/api/admin/stats/route.ts:35-37`
+### 🟡 ISSUE #4: Unused Provider Enabled Flags
+**File:** [web/lib/auth/config.ts:25-32](web/lib/auth/config.ts#L25-L32)
 
-```ts
-// TODO: Add role check - verify user is admin
-// For now, allow any authenticated user
-const userId = (session.user as any).id;
+**Severity:** MEDIUM (Dead code, maintainability)
+
+**Problem:**
+```typescript
+providers: {
+  supabase: {
+    enabled: process.env.AUTH_PROVIDER !== 'nextauth',  // ← Never read
+  },
+  nextauth: {
+    enabled: process.env.AUTH_PROVIDER === 'nextauth',  // ← Never read
+  },
+},
 ```
 
-**Impact**: Any authenticated user (including free-tier users) can call `GET /api/admin/stats` and receive aggregate data: total user counts, pro/free split, error rates, revenue figures, retention metrics. This is a business intelligence leak — a free user can enumerate platform growth metrics.
+**Why it's unused:**
+- These flags are computed but never referenced anywhere in the codebase
+- Provider selection is done via direct string comparison: `if (provider === 'supabase')`
+- Flags add no value and can be safely removed
 
-Additionally, line 40-43 uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` (not service role). The anon key is RLS-restricted — `analyses`, `users`, `usage_logs` counts are scoped to the caller's own data via RLS. The stats returned would be **per-user counts, not platform-wide totals**, meaning the endpoint is both insecure AND returning incorrect data (the admin would see their own counts, not all users' counts).
-
-**Fixes** (choose one, in order of preference):
-
-**Fix A — Email allowlist from env var (immediate, no schema change):**
-```ts
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
-const userEmail = session.user?.email || '';
-if (!ADMIN_EMAILS.includes(userEmail)) {
-  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-}
-// Also switch to service role key for correct cross-user counts
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!  // ← not anon key
-);
-```
-
-**Fix B — Role column on users table:**
-Add `role: 'admin' | 'user'` to users table, check `session.user.role === 'admin'` (requires migration + NextAuth session callback update).
-
-**Fix C — Disable endpoint until RBAC is built:**
-```ts
-return NextResponse.json({ error: 'Not available' }, { status: 503 });
-```
-
-**Recommended: Fix A** — unblocks immediate security gap with zero schema changes.
-
----
-
-## BUG-3 · CORRECTNESS — Webhook JSDoc References Wrong Stripe Event
-
-**File**: `web/app/api/stripe/webhook/route.ts:24`
-
-```ts
-// JSDoc says:
-* - invoice.paid: Invoice paid
-
-// Handler actually processes:
-case 'invoice.payment_succeeded':  // line 81
-```
-
-`invoice.paid` and `invoice.payment_succeeded` are different Stripe events. `invoice.paid` fires when an invoice is marked paid (including manual payments and test mode). `invoice.payment_succeeded` fires when Stripe successfully charges a payment method. Both exist in Stripe's event taxonomy and have different semantics.
-
-**Impact**: Low runtime impact (JSDoc only), but creates a maintenance hazard. A developer adding Stripe webhook handling based on the comment would register the wrong event type in Stripe's dashboard and miss payment confirmations.
-
-**Fix**:
-```ts
-// web/app/api/stripe/webhook/route.ts lines 20-26
-/**
- * Handles:
- * - customer.subscription.created: New subscription
- * - customer.subscription.updated: Subscription modified
- * - customer.subscription.deleted: Subscription canceled
- * - payment_intent.succeeded: Payment successful
- * - payment_intent.payment_failed: Payment failed
- * - invoice.payment_succeeded: Invoice charge succeeded  ← fix this line
- * - invoice.payment_failed: Invoice payment failed
- */
+**Fix:**
+```typescript
+// Delete entire 'providers' object
+export const AUTH_CONFIG = {
+  provider: (process.env.AUTH_PROVIDER || 'supabase') as 'supabase' | 'nextauth',
+  supabase: { ... },
+  nextauth: { ... },
+  google: { ... },
+};
 ```
 
 ---
 
-## DEAD CODE PURPOSE AUDIT
+### 🟡 ISSUE #5: Unused Type Import
+**File:** [web/lib/auth/provider-factory.ts:7](web/lib/auth/provider-factory.ts#L7)
 
-Per the protocol: check git blame + CLAUDE.md before recommending deletion.
+**Severity:** LOW (Dead code, adds noise)
 
-### `lib/monitoring/metrics.ts` (234 lines)
-- **Created by**: `71c0013` (chore: CI/CD pipeline fixes — not a feature commit)
-- **Purpose in CLAUDE.md**: No explicit mention. Phase 2-4 roadmap does not reference custom in-process metrics. Sentry handles all observability per the current architecture.
-- **Verdict**: ❌ **Safe to delete.** Created as scaffolding during CI/CD fixes, never imported by any route or component. Sentry (`sentry-utils.ts`) is the designated monitoring layer. No planned feature depends on this module.
+**Problem:**
+```typescript
+import type { Session } from 'next-auth';  // ← Never used directly
+```
 
-### `lib/auth/providers/supabase.ts` + `lib/auth/providers/vercel.ts` (throw on every method)
-- **Created by**: `a9007d2` (Chunk 4.5: Auth Abstraction Layer — "modular provider-agnostic architecture")
-- **Purpose in CLAUDE.md**: Phase 4 "SSO + audit logs" — a provider-switching interface would support Supabase Auth or Vercel Auth as alternatives to NextAuth for enterprise plans.
-- **Verdict**: ⚠️ **Keep the interface + factory, delete only the stub implementations.** The `AuthProvider` interface and `provider-factory.ts` represent a valid planned abstraction (Phase 4 enterprise). The stub files (`supabase.ts`, `vercel.ts`) that throw `'not yet implemented'` on every method add no value. **Decision**: Delete `providers/supabase.ts` and `providers/vercel.ts`. Keep `provider-factory.ts` and `lib/auth/types.ts`. Add a comment to the factory pointing to Phase 4.
+The `Session` type is imported but never used in the file. NextAuth session is typed via `any` assertion instead.
 
-### `lib/auth/provider-factory.ts` + `lib/auth.ts`
-- `provider-factory.ts`: instantiates the two stub providers — with the stubs deleted, the factory becomes a one-liner that always returns `NextAuthProvider`. Simplify to direct import rather than a factory. **Safe to collapse.**
-- `lib/auth.ts`: barrel that re-exports `authProvider` from the factory. With the factory simplified, this barrel serves no purpose. **Safe to delete.**
+**Fix:**
+```typescript
+// Remove the import
+// The Session type isn't needed; we use AuthSession interface instead
+```
 
 ---
 
-## SECONDARY FINDINGS (from scope expansion)
+## Summary Table
 
-### `web/app/api/admin/stats/route.ts:40-43` — Wrong Supabase key
-Uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` (RLS-restricted) instead of `SUPABASE_SERVICE_ROLE_KEY`. The endpoint is intended to return platform-wide aggregates, but RLS means it returns the admin user's own data only. **Must fix alongside BUG-2.**
+| Issue | File | Line | Severity | Type |
+|-------|------|------|----------|------|
+| 1. Unhandled env var defaults | server.ts, config.ts | 8-9, 11-13, 21-22 | CRITICAL | Error Handling |
+| 2. Type coercion bypass | provider-factory.ts | 47-48 | CRITICAL | Security |
+| 3. Silent signOut failure | provider-factory.ts | 63-73 | HIGH | Error Handling |
+| 4. Unused enabled flags | config.ts | 25-32 | MEDIUM | Dead Code |
+| 5. Unused Session import | provider-factory.ts | 7 | LOW | Dead Code |
 
-### `web/lib/monitoring/sentry-utils.ts:310-324` — `startTransaction` is a no-op
-```ts
-export function startTransaction(name: string, op: string): void {
-  Sentry.startSpan({ name, op }, () => {
-    // Transaction started - caller should execute code within the callback
-  });
-}
-```
-The span executes an empty callback immediately and discards the result. Any caller expecting a transaction handle gets nothing. This is dead-by-design scaffolding that should be removed to prevent future misuse.
+---
+
+## Recommendation
+
+**Fix CRITICAL issues before deployment:**
+1. Add env var validation in config startup
+2. Add strict type checking in getAuthSession() for NextAuth path
+3. Add error handling + return status in signOut()
+
+**Delete dead code** (Issues #4, #5) to reduce maintenance burden.
+
+Build will pass after fixes, but production deployment should include configuration validation to prevent runtime crashes from missing environment variables.
+

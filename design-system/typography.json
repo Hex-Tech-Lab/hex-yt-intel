@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "product": "HEX-YT-INTEL",
+    "rationale": "Geist for sharp, technical machine-intelligence headings. Inter for ultimate data density readability. JetBrains Mono for transcript/code differentiation.",
+    "accessibility": "High readability for long-form textual analysis."
+  },
+  "font_stack": {
+    "display": {
+      "family": "Geist, sans-serif",
+      "usage": "Hero sections, primary marketing headlines",
+      "sizes": "36px - 64px",
+      "line_height": "1.1",
+      "letter_spacing": "-0.02em",
+      "weight": "600-700"
+    },
+    "headline": {
+      "family": "Geist, sans-serif",
+      "usage": "Card titles, section headers (H2, H3)",
+      "sizes": "20px - 32px",
+      "line_height": "1.2",
+      "letter_spacing": "-0.01em",
+      "weight": "500-600"
+    },
+    "body": {
+      "family": "Inter, sans-serif",
+      "usage": "Paragraph text, analysis outputs, tables, standard UI elements",
+      "sizes": "14px - 16px",
+      "line_height": "1.6",
+      "letter_spacing": "0px",
+      "weight": "400"
+    },
+    "monospace": {
+      "family": "'JetBrains Mono', monospace",
+      "usage": "Transcript snippets, JSON outputs, raw data blocks, tags",
+      "sizes": "13px - 14px",
+      "line_height": "1.5"
+    }
+  }
+}
