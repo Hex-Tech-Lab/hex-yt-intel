@@ -14,11 +14,13 @@
 
 **Required APIs** (3 total):
 
-| API | ID | Purpose | Status |
-|-----|----|---------| -------|
-| Cloud Resource Manager API | `cloudresourcemanager.googleapis.com` | Manages OAuth credentials | ⏳ NEEDS MANUAL ENABLE |
-| Google+ API | `plus.googleapis.com` | OAuth consent screen (deprecated but required) | ⏳ NEEDS MANUAL ENABLE |
-| Google Cloud Identity and Access Management API | `iam.googleapis.com` | Service account management | ⏳ NEEDS MANUAL ENABLE |
+| API | ID | Purpose | Why It's Required | Status |
+|-----|----|---------| ------ | -------|
+| Cloud Resource Manager API | `cloudresourcemanager.googleapis.com` | Manages OAuth credentials and projects | Needed to create/manage OAuth client IDs | ⏳ NEEDS MANUAL ENABLE |
+| **Google People API** | **`people.googleapis.com`** | Retrieve user profile and email during OAuth | **CRITICAL**: Supabase OAuth callback needs to fetch user profile (email, name, picture) after authorization. Without this, OAuth flow fails with "scope not found" or 403 error | ⏳ NEEDS MANUAL ENABLE |
+| Google Cloud IAM API | `iam.googleapis.com` | Service account and role management | Needed to manage service account permissions | ⏳ NEEDS MANUAL ENABLE |
+
+⚠️ **CRITICAL NOTE**: The deprecated "Google+ API" (`plus.googleapis.com`) is **NOT** sufficient. You **MUST** enable the **Google People API** (`people.googleapis.com`) instead. Google+ was sunsetted years ago and will cause OAuth failures.
 
 **Steps to Enable Manually**:
 
@@ -32,11 +34,12 @@
    - Click **"Enable"**
    - Wait 2-3 minutes for propagation
    
-   **Step 2: Enable Google+ API**
-   - Search: "Google+ API" or "Plus API"
-   - Click the result
+   **Step 2: Enable Google People API**
+   - Search: "Google People API" or just "People API"
+   - Click the result (should show: "Provides access to information about profiles and contacts")
    - Click **"Enable"**
    - Wait 2-3 minutes for propagation
+   - ⚠️ DO NOT enable "Google+ API" (deprecated, will not work)
    
    **Step 3: Enable Google Cloud IAM API**
    - Search: "Cloud Identity and Access Management"
@@ -49,22 +52,24 @@
    - Look for all three APIs in the "Enabled APIs" list
    - If not visible, refresh the page
 
-**Verification Command** (run after manual enabling):
+**Fail-Fast Verification** (run after EACH API enable to confirm propagation):
 ```bash
-# This will work ONLY after Service Usage API is enabled
+# Check if APIs are enabled (repeat after each API enable, wait 2-3 min between checks)
 gcloud services list --enabled \
-  --filter="name:(cloudresourcemanager.googleapis.com OR plus.googleapis.com OR iam.googleapis.com)" \
+  --filter="name:(cloudresourcemanager.googleapis.com OR people.googleapis.com OR iam.googleapis.com)" \
   --format="table(name)" \
   --project=gen-lang-client-0373183545
 ```
 
-Expected output:
+Expected output after all three are enabled:
 ```
 NAME
 cloudresourcemanager.googleapis.com
 iam.googleapis.com
-plus.googleapis.com
+people.googleapis.com
 ```
+
+**If you see `plus.googleapis.com` instead of `people.googleapis.com`**: You enabled the wrong API. Disable Google+ API and enable Google People API instead.
 
 2. **Grant Service Account Permissions**:
    - IAM & Admin → Service Accounts → agent-orchestrator
@@ -200,12 +205,31 @@ gcloud oauth-config update [CLIENT_ID] \
 2. Select `agent-orchestrator`
 3. Grant role: `Editor`
 
-### OAuth Redirect Error
+### OAuth Redirect Error (mismatched_redirect_uri)
 
 **Solution**: Verify redirect URIs match exactly:
-- In Google Cloud Console (Step 3)
-- In Supabase settings
-- In application code
+- In Google Cloud Console (Step 3): `https://hex-yt-intel.vercel.app/auth/callback`
+- In Supabase settings: Ensure both Google origin and redirect URI are configured
+- In Vercel: NEXT_PUBLIC_SITE_URL = `https://hex-yt-intel.vercel.app`
+- Check the "Patterns to Adopt" section above for exact matching requirements
+
+### OAuth Scope Error (scope not found / 403 Forbidden)
+
+**Symptom**: After clicking "Sign in with Google", you see error about invalid scopes
+
+**Cause**: Google+ API enabled instead of Google People API
+
+**Solution**:
+1. Go to Google Cloud Console → APIs & Services → Enabled APIs
+2. Search for "Google+"
+3. If "Google+ API" is listed, disable it
+4. Search for "Google People"
+5. Enable "Google People API"
+6. Wait 2-3 minutes for propagation
+7. Run verification command: `gcloud services list --enabled | grep people.googleapis.com`
+8. Retry OAuth sign-in
+
+**Why this happens**: The deprecated Google+ API doesn't have the necessary user profile scopes. Only Google People API provides `userinfo.profile` and `userinfo.email` scopes needed for Supabase OAuth callback.
 
 ## Security Notes
 
@@ -226,16 +250,73 @@ gcloud oauth-config update [CLIENT_ID] \
 - [gcloud OAuth Config](https://cloud.google.com/sdk/gcloud/reference/oauth-config)
 - [Google Cloud Console](https://console.cloud.google.com)
 
+## PATTERNS TO ADOPT (Critical Best Practices)
+
+### 1. Fail-Fast Enablement Verification
+
+After enabling each API, verify it's actually enabled **before proceeding**:
+
+```bash
+# After enabling each API, run this immediately (don't wait 2-3 min to test)
+gcloud services list --enabled \
+  --filter="name:(cloudresourcemanager.googleapis.com OR people.googleapis.com OR iam.googleapis.com)" \
+  --format="table(name)" \
+  --project=gen-lang-client-0373183545
+```
+
+**Why**: API propagation can fail silently. Google Cloud Console might say "enabled" but backend services haven't synced yet. Verify programmatically first.
+
+### 2. Stateless OAuth Configuration
+
+Before enabling OAuth, ensure these match **exactly**:
+
+1. **Vercel environment variable**:
+   ```bash
+   vercel env list | grep NEXT_PUBLIC_SITE_URL
+   # Should show: https://hex-yt-intel.vercel.app
+   ```
+
+2. **Supabase Site URL** (Settings → General):
+   ```
+   https://hex-yt-intel.vercel.app
+   ```
+
+3. **Google OAuth Authorized JavaScript Origins**:
+   ```
+   https://hex-yt-intel.vercel.app
+   ```
+
+4. **Google OAuth Authorized Redirect URIs**:
+   ```
+   https://hex-yt-intel.vercel.app/auth/callback
+   https://adnmbikaqnxivalqoild.supabase.co/auth/v1/callback
+   ```
+
+**Why**: Mismatched redirect URIs cause `mismatched_redirect_uri` errors that are hard to debug. Single source of truth: Vercel's NEXT_PUBLIC_SITE_URL.
+
+### 3. Service Account Lifecycle Management
+
+**During setup** (now):
+- Service Account role: `Editor` ✅ (minimum for OAuth credential creation)
+
+**After OAuth setup is complete**:
+- Consider downgrading to `Basic Editor` or custom role with minimal permissions
+- Service Account should NOT have `Owner` or `Admin` roles long-term
+- Review service account permissions quarterly
+
+**Why**: Principle of least privilege. Once OAuth credentials are created, the service account doesn't need broad project management access.
+
 ## API ENABLEMENT STATUS TRACKER
 
-**Completion Checklist**:
-- [ ] Cloud Resource Manager API enabled
-- [ ] Google+ API enabled  
-- [ ] Cloud IAM API enabled
+**Completion Checklist** (use this exactly):
+- [ ] Cloud Resource Manager API enabled ✅
+- [ ] **Google People API** enabled (NOT "Google+ API") ✅
+- [ ] Cloud IAM API enabled ✅
 - [ ] OAuth 2.0 Consent Screen configured (Step 2)
 - [ ] OAuth 2.0 Credentials created (Step 3)
 - [ ] Credentials added to Supabase (Step 4)
 - [ ] Credentials added to Vercel (Step 4)
+- [ ] Verify NEXT_PUBLIC_SITE_URL matches Supabase Site URL
 - [ ] Sign-in flow tested locally (Step 5)
 - [ ] Sign-in flow tested in production (Step 5)
 
