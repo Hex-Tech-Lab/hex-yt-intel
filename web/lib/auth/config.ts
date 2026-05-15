@@ -3,6 +3,11 @@
  * Supports multiple auth providers via AUTH_PROVIDER environment variable
  */
 
+import { validateAuthConfig } from './env-validator';
+
+// Validate environment variables at startup
+validateAuthConfig();
+
 export const AUTH_CONFIG = {
   provider: (process.env.AUTH_PROVIDER || 'supabase') as 'supabase' | 'nextauth',
 
