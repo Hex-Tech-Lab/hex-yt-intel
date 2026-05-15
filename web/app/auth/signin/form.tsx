@@ -11,7 +11,7 @@ interface SignInFormProps {
 
 export default function SignInForm({ provider }: SignInFormProps) {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
