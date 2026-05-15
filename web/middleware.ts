@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected routes (require auth)
-  const protectedRoutes = ['/dashboard', '/analyses', '/settings', '/api/analyses', '/api/search'];
+  const protectedRoutes = ['/analyses', '/api/analyses', '/api/search'];
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
   if (isProtectedRoute && !token) {
@@ -19,5 +19,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/analyses/:path*', '/settings/:path*', '/api/:path*'],
+  matcher: ['/analyses/:path*', '/api/:path*'],
 };
