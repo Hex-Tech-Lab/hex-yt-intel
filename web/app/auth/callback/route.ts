@@ -41,6 +41,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL(`/auth/error?error=${encodeURIComponent(error.message)}`, request.url));
     }
 
+    if (!data.session) {
+      return NextResponse.redirect(new URL('/auth/error?error=no_session', request.url));
+    }
+
     // Auto-create user record if this is a new user
     if (data?.user) {
       const { error: insertError } = await supabase
@@ -61,7 +65,22 @@ export async function GET(request: NextRequest) {
     const decodedNext = decodeURIComponent(next);
     const safeNext = decodedNext.startsWith('/') ? decodedNext : '/';
 
-    return NextResponse.redirect(new URL(safeNext, request.url));
+    // Create response with explicit cookie setting
+    const response = NextResponse.redirect(new URL(safeNext, request.url));
+
+    // Set Supabase session cookies explicitly on the response
+    const cookieOptions = {
+      httpOnly: true,
+      secure: true,
+      path: '/',
+      sameSite: 'lax' as const,
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+    };
+
+    response.cookies.set('sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL!.split('.')[0] + '-auth-token', data.session.access_token, cookieOptions);
+    response.cookies.set('sb-refresh-token', data.session.refresh_token, cookieOptions);
+
+    return response;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.redirect(new URL(`/auth/error?error=${encodeURIComponent(errorMessage)}`, request.url));
