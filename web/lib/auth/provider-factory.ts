@@ -1,9 +1,7 @@
-/**
- * Auth Provider Factory
- * Returns the appropriate auth provider based on AUTH_PROVIDER environment variable
- */
-
 import { AUTH_CONFIG } from './config';
+import { getSupabaseUser } from './providers/supabase';
+import { getServerSession } from 'next-auth';
+import { authConfig } from './nextauth-config';
 import type { Session } from 'next-auth';
 
 export interface AuthSession {
@@ -15,22 +13,18 @@ export interface AuthSession {
   };
 }
 
-/**
- * Get current user session using the active auth provider
- */
 export async function getAuthSession(): Promise<AuthSession | null> {
   const provider = AUTH_CONFIG.provider;
 
   if (provider === 'supabase') {
-    const { getSupabaseSession } = await import('./providers/supabase');
-    const session = await getSupabaseSession();
-    if (session?.user) {
+    const user = await getSupabaseUser();
+    if (user) {
       return {
         user: {
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || session.user.user_metadata?.full_name,
-          image: session.user.user_metadata?.avatar_url,
+          id: user.id,
+          email: user.email || '',
+          name: user.user_metadata?.name || user.user_metadata?.full_name,
+          image: user.user_metadata?.avatar_url,
         },
       };
     }
@@ -38,8 +32,6 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   }
 
   if (provider === 'nextauth') {
-    const { getServerSession } = await import('next-auth');
-    const { authConfig } = await import('./nextauth-config');
     const session = (await getServerSession(authConfig)) as Session | null;
     if (session?.user) {
       return {
@@ -57,10 +49,7 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   return null;
 }
 
-/**
- * Sign out using the active auth provider
- */
-export async function signOut() {
+export async function signOut(): Promise<void> {
   const provider = AUTH_CONFIG.provider;
 
   if (provider === 'supabase') {

@@ -4,7 +4,6 @@
  */
 
 export const AUTH_CONFIG = {
-  // Active provider: 'supabase' | 'nextauth'
   provider: (process.env.AUTH_PROVIDER || 'supabase') as 'supabase' | 'nextauth',
 
   supabase: {
@@ -21,13 +20,4 @@ export const AUTH_CONFIG = {
     clientId: process.env.AUTH_GOOGLE_ID || '',
     clientSecret: process.env.AUTH_GOOGLE_SECRET || '',
   },
-
-  providers: {
-    supabase: {
-      enabled: process.env.AUTH_PROVIDER !== 'nextauth',
-    },
-    nextauth: {
-      enabled: process.env.AUTH_PROVIDER === 'nextauth',
-    },
-  },
-};
+} as const;
