@@ -1,7 +1,7 @@
 # Redis Setup - Upstash Configuration
 
 **Date**: 2026-05-16  
-**Status**: ✅ Local configured, pending Vercel setup  
+**Status**: ✅ Fully configured (local + Vercel production)  
 **Purpose**: Distributed rate limiting, session caching, analytics  
 
 ## Configuration
@@ -12,15 +12,13 @@ UPSTASH_REDIS_REST_URL=https://becoming-lioness-125833.upstash.io
 UPSTASH_REDIS_REST_TOKEN=gQAAAAAAAeuJAAIgcDI5YmFlMjVmYzY1MzE0MjMwODBmZjQ1NTVlMjY0MDQ0Mw
 ```
 
-### Vercel Production - ⏳ TODO (3 minutes)
-1. Go to: https://vercel.com/Hex-Tech-Lab/hex-yt-intel/settings/environment-variables
-2. Add two new variables:
-   - Name: `UPSTASH_REDIS_REST_URL`
-     Value: `https://becoming-lioness-125833.upstash.io`
-   - Name: `UPSTASH_REDIS_REST_TOKEN`
-     Value: `gQAAAAAAAeuJAAIgcDI5YmFlMjVmYzY1MzE0MjMwODBmZjQ1NTVlMjY0MDQ0Mw`
-3. Click **Save**
-4. Vercel will auto-redeploy (watch: https://vercel.com/Hex-Tech-Lab/hex-yt-intel/deployments)
+### Vercel Production - ✅ DONE (2026-05-16T01:09 EEST)
+Added via `vercel env add`:
+```
+UPSTASH_REDIS_REST_URL     → https://becoming-lioness-125833.upstash.io
+UPSTASH_REDIS_REST_TOKEN   → gQAAAAAAAeuJAAIgcDI5YmFlMjVmYzY1MzE0MjMwODBmZjQ1NTVlMjY0MDQ0Mw
+```
+Environments: Production, Preview, Development
 
 ## Features Enabled by Redis
 
