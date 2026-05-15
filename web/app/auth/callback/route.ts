@@ -35,10 +35,29 @@ export async function GET(request: NextRequest) {
     );
 
     // Exchange the authorization code for a session
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error, data } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
       return NextResponse.redirect(new URL(`/auth/error?error=${encodeURIComponent(error.message)}`, request.url));
+    }
+
+    // Auto-create user record if this is a new user
+    if (data?.user) {
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: data.user.email || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .on('*', (payload) => {
+          // Just insert, don't need response
+        });
+      // Ignore conflicts if user already exists
+      if (insertError && !insertError.message.includes('duplicate')) {
+        console.error('Failed to create user record:', insertError);
+      }
     }
 
     // Decode the next parameter and ensure it's safe
