@@ -298,38 +298,38 @@ hex-yt-intel/
 
 | API | Purpose | Status |
 |-----|---------|--------|
-| Cloud Resource Manager API | OAuth credential management | ⏳ Manual enable required |
-| Google+ API | OAuth consent screen configuration | ⏳ Manual enable required |
-| Cloud IAM API | Service account management | ⏳ Manual enable required |
+| Cloud Resource Manager API | OAuth credential management | ✅ Enabled (project 283991426265) |
+| Google People API | User profile & email OAuth scopes | ✅ Enabled |
+| Cloud IAM API | Service account management | ✅ Enabled |
 
-**Status**: Service account authenticated ✅ but APIs must be enabled via Google Cloud Console (security boundary prevents programmatic enablement)
+**Status**: All three required APIs live ✅ | OAuth credentials configured ✅ | Production deployed ✅ | Auth flow working (callback redirect `/dashboard` → `/` fixed)
+
+---
 
 **Service Account**:
-- Email: `agent-orchestrator@gen-lang-client-0373183545.iam.gserviceaccount.com`
-- Project ID: `gen-lang-client-0373183545`
-- Key Location: `/home/kellyb_dev/.config/gcloud/hex-yt-intel-key.json` (chmod 600)
-- IAM Role: Editor ✅
+- Email: `agent-orchestrator@hex-yt-intel.iam.gserviceaccount.com`
+- Project ID: `283991426265` (display: `hex-yt-intel`)
+- Key Location: `/home/kellyb_dev/.config/gcloud/hex-yt-intel-new-key.json` (chmod 600)
+- IAM Role: Owner ✅
 
-**Documentation**:
-- Comprehensive setup guide: [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md)
-- API enablement details: [docs/GOOGLE_OAUTH_SETUP.md#prerequisites](docs/GOOGLE_OAUTH_SETUP.md#prerequisites)
-- Memory: [[google_api_enablement]]
-
-**Next Steps**:
-1. Go to Google Cloud Console: https://console.cloud.google.com/apis/dashboard?project=gen-lang-client-0373183545
-2. Enable the three APIs listed above (5-15 min, includes propagation)
-3. Verify with: `gcloud services list --enabled --filter="name:(cloudresourcemanager.googleapis.com OR plus.googleapis.com OR iam.googleapis.com)" --project=gen-lang-client-0373183545`
-4. Proceed to Step 2 of GOOGLE_OAUTH_SETUP.md (OAuth consent screen)
+**Next Steps** *(all prerequisites complete)*:
+1. GCP APIs ✅ — `people.googleapis.com`, `iam.googleapis.com`, `cloudresourcemanager.googleapis.com` all verified enabled
+2. OAuth Client ID ✅ — created via console, Client ID + Secret set as Vercel env vars
+3. Auth callback fix ✅ — `web/app/auth/callback/route.ts` lines 8 + 46 fallback changed `'/dashboard'` → `'/'`
+4. Production deploy ✅ — commit `efea2c1` pushed, Vercel live at `https://hex-yt-intel.vercel.app`
+5. **Remaining**: User must test sign-in at prod URL and confirm user appears in Supabase > Auth > Users
 
 ---
 
 ## NEXT STEPS
 1. ✅ Create PRD (Product Requirements Document)
 2. ✅ Create Implementation Plan (chunked with verification gates)
-3. ⏳ **Enable Google Cloud APIs** (3 APIs, manual console access required)
-4. ⏳ Create Google OAuth 2.0 credentials (after APIs enabled)
-5. ⏳ Configure Supabase + Vercel with OAuth credentials
-6. ⏳ Test sign-in and analyze flows in production
+3. ✅ Enable Google Cloud APIs (people, iam, cloudresourcemanager — all verified live)
+4. ✅ Create Google OAuth 2.0 credentials (console, committed to Vercel env)
+5. ✅ Fix callback 404 (`/dashboard` → `/`)
+6. **⏳ User test**: Verify prod OAuth flow end-to-end at `https://hex-yt-intel.vercel.app/auth/signin`
+7. **⏳ (Later)** Create `/dashboard` page if a protected route is desired (currently `/` is the post-auth landing)
+8. **⏳ (Optional)** Update OAuth consent screen to External + Privacy Policy URL before public launch
 
 ## QUICK START COMMANDS
 
