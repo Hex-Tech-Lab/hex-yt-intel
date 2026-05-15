@@ -2,15 +2,12 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
+import { DashboardClient } from '@/components/DashboardClient';
 import { Toaster } from 'react-hot-toast';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout() {
   const session = await getServerSession();
   if (!session) {
     redirect('/auth/signin');
@@ -23,7 +20,7 @@ export default async function DashboardLayout({
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">
-        {children}
+        <DashboardClient />
       </main>
 
       {/* Footer */}
