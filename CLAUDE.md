@@ -270,10 +270,12 @@ hex-yt-intel/
 - [ ] Chunk 9-10: Billing + Rate Limiting 🔴 BLOCKED (sign-in hangs, analyze API fails)
 - [ ] Chunk 11-12: Observability + Deploy ⏳
 
-**🔴 CRITICAL BLOCKERS (2026-05-15)**:
-1. **Sign-in hangs**: OAuth flow (Google/GitHub) never completes
-2. **Analyze fails**: POST /api/analyses endpoint not working
-3. **Status**: Deployment READY (0d86aef), but UX blocked by auth + API issues
+**🟡 BLOCKERS RESOLVED + AWAITING CREDENTIALS (2026-05-15)**:
+1. ✅ **Sign-in hangs**: FIXED (b8bdcdc) - Provider-aware auth bridge implemented
+2. ✅ **Analyze fails**: FIXED (b8bdcdc) - Middleware now validates Supabase sessions
+3. ⏳ **Credentials missing**: Google + Facebook OAuth credentials not yet created
+4. ⏳ **Database security**: 3 auto-fixable warnings prepared, not yet applied to prod
+5. **Status**: Code READY for testing, awaiting credentials + manual API enablement
 
 **Phase 2: Polish** (June-July)
 - [ ] Team collaboration
@@ -290,12 +292,44 @@ hex-yt-intel/
 - [ ] Custom retention
 - [ ] SSO + audit logs
 
+## GOOGLE CLOUD SETUP (May 2026)
+
+### Required APIs (3 Total) ⏳ AWAITING MANUAL ENABLEMENT
+
+| API | Purpose | Status |
+|-----|---------|--------|
+| Cloud Resource Manager API | OAuth credential management | ⏳ Manual enable required |
+| Google+ API | OAuth consent screen configuration | ⏳ Manual enable required |
+| Cloud IAM API | Service account management | ⏳ Manual enable required |
+
+**Status**: Service account authenticated ✅ but APIs must be enabled via Google Cloud Console (security boundary prevents programmatic enablement)
+
+**Service Account**:
+- Email: `agent-orchestrator@gen-lang-client-0373183545.iam.gserviceaccount.com`
+- Project ID: `gen-lang-client-0373183545`
+- Key Location: `/home/kellyb_dev/.config/gcloud/hex-yt-intel-key.json` (chmod 600)
+- IAM Role: Editor ✅
+
+**Documentation**:
+- Comprehensive setup guide: [docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md)
+- API enablement details: [docs/GOOGLE_OAUTH_SETUP.md#prerequisites](docs/GOOGLE_OAUTH_SETUP.md#prerequisites)
+- Memory: [[google_api_enablement]]
+
+**Next Steps**:
+1. Go to Google Cloud Console: https://console.cloud.google.com/apis/dashboard?project=gen-lang-client-0373183545
+2. Enable the three APIs listed above (5-15 min, includes propagation)
+3. Verify with: `gcloud services list --enabled --filter="name:(cloudresourcemanager.googleapis.com OR plus.googleapis.com OR iam.googleapis.com)" --project=gen-lang-client-0373183545`
+4. Proceed to Step 2 of GOOGLE_OAUTH_SETUP.md (OAuth consent screen)
+
+---
+
 ## NEXT STEPS
 1. ✅ Create PRD (Product Requirements Document)
 2. ✅ Create Implementation Plan (chunked with verification gates)
-3. ⏳ **Execute Chunk 1**: Monorepo + Supabase Database
-4. ⏳ Execute Chunk 2: Next.js + TypeScript Setup
-5. ⏳ Execute remaining chunks (with verification gate after each)
+3. ⏳ **Enable Google Cloud APIs** (3 APIs, manual console access required)
+4. ⏳ Create Google OAuth 2.0 credentials (after APIs enabled)
+5. ⏳ Configure Supabase + Vercel with OAuth credentials
+6. ⏳ Test sign-in and analyze flows in production
 
 ## QUICK START COMMANDS
 
