@@ -74,11 +74,11 @@ export default function SignInForm({ provider }: SignInFormProps) {
                 {isLoading ? 'Signing in...' : 'Sign in with Google'}
               </button>
               <button
-                onClick={() => handleSupabaseAuth('github')}
+                onClick={() => handleSupabaseAuth('facebook')}
                 disabled={isLoading}
                 className="w-full rounded-lg bg-white px-4 py-2 text-gray-900 font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                {isLoading ? 'Signing in...' : 'Sign in with GitHub'}
+                {isLoading ? 'Signing in...' : 'Sign in with Facebook'}
               </button>
             </div>
           ) : (
