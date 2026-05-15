@@ -1,15 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { createServerClient } from '@supabase/ssr';
+
+async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
+  try {
+    const cookieStore = request.cookies;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return false;
+    }
+
+    const client = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: () => {},
+      },
+    });
+
+    const { data: { user } } = await client.auth.getUser();
+    return !!user;
+  } catch {
+    return false;
+  }
+}
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request });
   const { pathname } = request.nextUrl;
 
   // Protected routes (require auth)
   const protectedRoutes = ['/analyses', '/api/analyses', '/api/search'];
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
-  if (isProtectedRoute && !token) {
+  if (!isProtectedRoute) {
+    return NextResponse.next();
+  }
+
+  // Check auth method based on environment variable
+  const authProvider = process.env.AUTH_PROVIDER || 'supabase';
+
+  let isAuthenticated = false;
+  if (authProvider === 'supabase') {
+    isAuthenticated = await hasSupabaseAuth(request);
+  } else {
+    const token = await getToken({ req: request });
+    isAuthenticated = !!token;
+  }
+
+  if (!isAuthenticated) {
     const signInUrl = new URL('/auth/signin', request.url);
     signInUrl.searchParams.append('callbackUrl', pathname);
     return NextResponse.redirect(signInUrl);
