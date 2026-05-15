@@ -40,9 +40,8 @@ async function callOpenRouter(
   transcript: string
 ): Promise<string> {
   const prompt = createUCISPrompt(metadata, transcript);
-
-  // Model fallback chain: try preferred first, fall back to alternatives
   const models = ['anthropic/claude-haiku-latest', 'anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
+  const errors: Record<string, string> = {};
 
   for (const model of models) {
     try {
@@ -73,28 +72,31 @@ async function callOpenRouter(
 
       if (!response.ok) {
         const errorText = await response.text();
-        // 404 = model not found, try next model
+        errors[model] = `${response.status} - ${errorText.slice(0, 100)}`;
+
         if (response.status === 404) {
-          console.warn(`[callOpenRouter] Model ${model} not available, trying next...`);
+          console.warn(`[callOpenRouter] ${model}: 404 not found`);
           continue;
         }
-        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+        if (response.status === 401) {
+          console.warn(`[callOpenRouter] ${model}: 401 unauthorized (check API key)`);
+          continue;
+        }
+        console.warn(`[callOpenRouter] ${model}: ${response.status} ${errorText.slice(0, 80)}`);
+        continue;
       }
 
       const data = await response.json();
-      console.log(`[callOpenRouter] Successfully used model: ${model}`);
+      console.log(`[callOpenRouter] ✓ Success with ${model}`);
       return data.choices[0].message.content;
-    } catch (error) {
-      // If this is the last model in the chain, throw the error
-      if (model === models[models.length - 1]) {
-        throw error;
-      }
-      // Otherwise log and try next model
-      console.warn(`[callOpenRouter] Model ${model} failed, trying next...`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors[model] = msg.slice(0, 100);
+      console.warn(`[callOpenRouter] ${model}: ${msg.slice(0, 80)}`);
     }
   }
 
-  throw new Error('No available Claude models found on OpenRouter');
+  throw new Error(`All OpenRouter models exhausted: ${JSON.stringify(errors)}`);
 }
 
 export async function POST(request: NextRequest) {
@@ -305,31 +307,45 @@ export async function POST(request: NextRequest) {
     }
 
     // 9. Insert analysis into Supabase (without embedding initially)
+    const analysisPayload = {
+      user_id: userId,
+      video_id: videoId,
+      title: metadata.title || '',
+      channel_title: metadata.channelTitle || '',
+      view_count: parseInt(metadata.viewCount || '0', 10),
+      analysis_markdown: markdown,
+      embedding: null,
+      created_at: new Date().toISOString(),
+    };
+
     const analysis = await trackDatabaseQuery(
       'insert',
       'analyses',
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .insert({
-            user_id: userId,
-            video_id: videoId,
-            title: metadata.title || '',
-            channel_title: metadata.channelTitle || '',
-            view_count: parseInt(metadata.viewCount || '0', 10),
-            analysis_markdown: markdown,
-            embedding: null, // Will be generated asynchronously
-            created_at: new Date().toISOString(),
-          })
+          .insert(analysisPayload)
           .select('id, created_at')
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('[/api/analyses] Insert error:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            payloadKeys: Object.keys(analysisPayload),
+          });
+
+          if (error.code === '42501') {
+            throw new Error(`RLS policy blocked analyses insert: ${error.message}`);
+          }
+          throw error;
+        }
         return data;
       },
       { userId, videoId }
     ).catch((error) => {
-      console.error('[/api/analyses] Insert error:', error);
       addBreadcrumb('Analysis insert failed', { userId, videoId, error: String(error) }, 'database');
       throw error;
     });
