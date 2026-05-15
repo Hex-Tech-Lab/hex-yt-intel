@@ -282,3 +282,200 @@ export async function getUserTier(userId: string): Promise<Tier> {
   }
 }
 
+// ============================================================================
+// MONTHLY QUOTA TRACKING (Analysis Creation)
+// ============================================================================
+// Separate from per-minute rate limiting
+// Uses Redis counters to track analyses created per month per user
+// Tier-based limits: Free=3/month, Pro=unlimited
+
+/**
+ * Monthly quota configuration per tier
+ * Expressed as: analyses per calendar month
+ */
+export const MONTHLY_QUOTAS = {
+  free: 3,
+  pro: null, // null = unlimited
+  enterprise: null,
+} as const;
+
+/**
+ * Quota status returned when checking analysis limits
+ */
+export interface QuotaStatus {
+  count: number; // Analyses created this month
+  limit: number | null; // null = unlimited
+  remaining: number | null; // null = unlimited
+  reset: Date; // Last day of month at 23:59:59 UTC
+  tier: string;
+}
+
+/**
+ * Get the monthly quota limit for a tier
+ * @param tier - User subscription tier
+ * @returns Object with limit and window
+ */
+export function getRateLimit(
+  tier: 'free' | 'pro' | 'enterprise'
+): { limit: number | null; window: string } {
+  const limit = MONTHLY_QUOTAS[tier];
+  return {
+    limit,
+    window: 'month',
+  };
+}
+
+/**
+ * Generate the month key for Redis quota tracking
+ * Format: YYYY-MM (e.g., "2026-05")
+ * @returns Month key string
+ */
+function getMonthKey(): string {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+/**
+ * Calculate the end of current month (for reset time)
+ * @returns Date object representing end of month at 23:59:59 UTC
+ */
+function getMonthEndDate(): Date {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  // Last day of month is day 0 of next month
+  const endOfMonth = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59));
+  return endOfMonth;
+}
+
+/**
+ * Check quota for a user
+ * Returns current count and remaining quota
+ * @param userId - User ID
+ * @param tier - User subscription tier
+ * @returns Quota status with count, limit, remaining, and reset time
+ */
+export async function checkQuota(
+  userId: string,
+  tier: 'free' | 'pro' | 'enterprise'
+): Promise<QuotaStatus> {
+  try {
+    const monthKey = getMonthKey();
+    const redisKey = `quota:${userId}:analyses:${monthKey}`;
+
+    // Get current count from Redis
+    let count = await getRedisValue(redisKey);
+    count = count !== null ? Number(count) : 0;
+
+    const limit = MONTHLY_QUOTAS[tier];
+    const remaining = limit !== null ? Math.max(0, limit - count) : null;
+    const reset = getMonthEndDate();
+
+    return {
+      count,
+      limit,
+      remaining,
+      reset,
+      tier,
+    };
+  } catch (error) {
+    console.error(`[quota] Error checking quota for user ${userId}:`, error);
+    Sentry.captureException(error, {
+      contexts: {
+        quota: {
+          userId,
+          tier,
+        },
+      },
+      tags: {
+        severity: 'medium',
+      },
+    });
+
+    // Graceful degradation: return unknown quota status
+    return {
+      count: 0,
+      limit: MONTHLY_QUOTAS[tier],
+      remaining: MONTHLY_QUOTAS[tier],
+      reset: getMonthEndDate(),
+      tier,
+    };
+  }
+}
+
+/**
+ * Increment the analysis quota counter for a user
+ * Called after successful analysis creation
+ * Automatically sets TTL to end of month
+ * @param userId - User ID
+ * @returns New counter value
+ */
+export async function incrementQuotaCounter(userId: string): Promise<number> {
+  try {
+    const monthKey = getMonthKey();
+    const redisKey = `quota:${userId}:analyses:${monthKey}`;
+
+    // Increment counter
+    let newCount = await incrementRedisValue(redisKey, 1);
+
+    // Set TTL to end of month if this is the first increment this month
+    if (newCount === 1) {
+      const monthEnd = getMonthEndDate();
+      const secondsUntilMonthEnd = Math.floor((monthEnd.getTime() - Date.now()) / 1000);
+
+      if (secondsUntilMonthEnd > 0) {
+        await setRedisExpiration(redisKey, secondsUntilMonthEnd);
+      }
+    }
+
+    return newCount;
+  } catch (error) {
+    console.error(`[quota] Error incrementing counter for user ${userId}:`, error);
+    Sentry.captureException(error, {
+      contexts: {
+        quota: {
+          userId,
+          operation: 'increment',
+        },
+      },
+      tags: {
+        severity: 'medium',
+      },
+    });
+
+    // Graceful degradation: return 1 (allow one more request)
+    return 1;
+  }
+}
+
+/**
+ * Reset quota counter if month has changed
+ * Called at start of month to clear previous month's counter
+ * This is a safety check (Redis TTL handles expiration)
+ * @param userId - User ID
+ * @returns true if reset was needed, false if counter is current month
+ */
+export async function resetQuotaIfMonthChanged(userId: string): Promise<void> {
+  try {
+    const monthKey = getMonthKey();
+    const redisKey = `quota:${userId}:analyses:${monthKey}`;
+
+    // Get current value - if it exists, we're in the right month
+    const count = await getRedisValue(redisKey);
+
+    if (count !== null) {
+      // Counter exists for current month, no reset needed
+      return;
+    }
+
+    // Counter doesn't exist (expired or first request this month)
+    // No explicit reset needed - incrementQuotaCounter will set TTL on next call
+    console.log(`[quota] Month changed for user ${userId}, quota counter reset via TTL expiration`);
+  } catch (error) {
+    console.error(`[quota] Error in resetQuotaIfMonthChanged for user ${userId}:`, error);
+    // Non-fatal: just log and continue
+  }
+}
+
