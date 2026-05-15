@@ -50,9 +50,6 @@ export async function GET(request: NextRequest) {
           email: data.user.email || '',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        })
-        .on('*', (payload) => {
-          // Just insert, don't need response
         });
       // Ignore conflicts if user already exists
       if (insertError && !insertError.message.includes('duplicate')) {
