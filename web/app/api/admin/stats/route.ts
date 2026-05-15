@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
+export const dynamic = 'force-dynamic';
+
 interface AdminStats {
   analyses_total: number;
   searches_total: number;
