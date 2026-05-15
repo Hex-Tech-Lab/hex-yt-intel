@@ -41,38 +41,60 @@ async function callOpenRouter(
 ): Promise<string> {
   const prompt = createUCISPrompt(metadata, transcript);
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      'HTTP-Referer': 'https://hex-yt-intel.vercel.app',
-      'X-Title': 'hex-yt-intel',
-    },
-    body: JSON.stringify({
-      model: 'anthropic/claude-3.5-haiku',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert YouTube content analyst. Generate a comprehensive 16-section content intelligence report in markdown format.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-    }),
-  });
+  // Model fallback chain: try preferred first, fall back to alternatives
+  const models = ['anthropic/claude-haiku-latest', 'anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+  for (const model of models) {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'https://hex-yt-intel.vercel.app',
+          'X-Title': 'hex-yt-intel',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert YouTube content analyst. Generate a comprehensive 16-section content intelligence report in markdown format.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 4000,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        // 404 = model not found, try next model
+        if (response.status === 404) {
+          console.warn(`[callOpenRouter] Model ${model} not available, trying next...`);
+          continue;
+        }
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log(`[callOpenRouter] Successfully used model: ${model}`);
+      return data.choices[0].message.content;
+    } catch (error) {
+      // If this is the last model in the chain, throw the error
+      if (model === models[models.length - 1]) {
+        throw error;
+      }
+      // Otherwise log and try next model
+      console.warn(`[callOpenRouter] Model ${model} failed, trying next...`);
+    }
   }
 
-  const data = await response.json();
-  return data.choices[0].message.content;
+  throw new Error('No available Claude models found on OpenRouter');
 }
 
 export async function POST(request: NextRequest) {
