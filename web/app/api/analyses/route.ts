@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUCISPrompt } from '@/lib/prompts';
 import { generateEmbedding } from '@/lib/embeddings';
-import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
+import { applyRateLimit, getUserTier, checkQuota, incrementQuotaCounter, resetQuotaIfMonthChanged } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
@@ -180,66 +180,44 @@ export async function POST(request: NextRequest) {
     // 4. Supabase client (server-side)
     const supabase = getSupabaseClient();
 
-    // 5. Check quota enforcement
-    const userData = await trackDatabaseQuery(
-      'select',
-      'users',
-      async () => {
-        const { data, error } = await supabase
-          .from('users')
-          .select('tier, analyses_used, last_reset_date')
-          .eq('id', userId)
-          .single();
-        if (error) throw error;
-        return data;
-      },
-      { userId }
-    ).catch((error) => {
-      addBreadcrumb('Failed to fetch user quota data', { userId, error: String(error) }, 'database');
-      throw error;
+    // 5. Check and enforce monthly analysis quota (Redis-backed)
+    // Reset counter if month has changed since last check
+    await resetQuotaIfMonthChanged(userId);
+
+    // Check current quota status
+    const quotaStatus = await checkQuota(userId, userTierAuth);
+    addBreadcrumb('Quota status checked', {
+      userId,
+      count: quotaStatus.count,
+      limit: quotaStatus.limit,
+      remaining: quotaStatus.remaining,
     });
 
-    if (!userData) {
-      return NextResponse.json(
-        { error: 'Failed to fetch user data' },
-        { status: 500 }
-      );
-    }
-
-    // Check if monthly quota should be reset
-    const now = new Date();
-    const lastReset = new Date(userData.last_reset_date || now);
-    const monthsElapsed = (now.getFullYear() - lastReset.getFullYear()) * 12 +
-                          (now.getMonth() - lastReset.getMonth());
-
-    let analysesUsed = userData.analyses_used || 0;
-    if (monthsElapsed > 0) {
-      // Reset quota for new month
-      analysesUsed = 0;
-      addBreadcrumb('Monthly quota reset', { userId, monthsElapsed }, 'quota');
-      await supabase
-        .from('users')
-        .update({ analyses_used: 0, last_reset_date: now.toISOString() })
-        .eq('id', userId);
-    }
-
-    // Enforce quota based on tier
-    const quotaLimit = userTierAuth === 'free' ? 3 : null; // null = unlimited for pro
-
-    if (quotaLimit && analysesUsed >= quotaLimit) {
-      addBreadcrumb('Quota limit exceeded', { userId, used: analysesUsed, limit: quotaLimit }, 'quota');
+    // Enforce quota limit
+    if (quotaStatus.limit !== null && quotaStatus.count >= quotaStatus.limit) {
+      addBreadcrumb('Quota limit exceeded', {
+        userId,
+        used: quotaStatus.count,
+        limit: quotaStatus.limit,
+      }, 'quota');
       Sentry.captureMessage(`Quota exceeded: user ${userId}`, 'warning');
       return NextResponse.json(
         {
-          error: `Monthly quota exceeded (${analysesUsed}/${quotaLimit}). Upgrade to Pro for unlimited analyses.`,
+          error: `Monthly quota exceeded (${quotaStatus.count}/${quotaStatus.limit}). Upgrade to Pro for unlimited analyses.`,
           quotaExceeded: true,
           remaining: 0,
+          resetAt: quotaStatus.reset.toISOString(),
         },
         { status: 402 }
       );
     }
 
-    addBreadcrumb('Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
+    addBreadcrumb('Quota check passed', {
+      userId,
+      used: quotaStatus.count,
+      limit: quotaStatus.limit || 'unlimited',
+      remaining: quotaStatus.remaining,
+    });
 
     // 6. Fetch metadata from Worker
     console.log('[/api/analyses] Fetching metadata from worker...');
@@ -385,23 +363,12 @@ export async function POST(request: NextRequest) {
       // Non-fatal: analysis is already saved
     });
 
-    // 10. Increment user counter
-    const newCount = (userData.analyses_used || 0) + 1;
-    await trackDatabaseQuery(
-      'update',
-      'users',
-      async () => {
-        await supabase
-          .from('users')
-          .update({ analyses_used: newCount })
-          .eq('id', userId);
-        return null;
-      },
-      { userId, newCount }
-    ).catch((error) => {
-      console.error('[/api/analyses] Update counter error:', error);
-      // Non-fatal: analysis was saved, just counter update failed
-      addBreadcrumb('Counter update failed (non-fatal)', { userId, error: String(error) }, 'database');
+    // 10. Increment monthly quota counter (Redis-backed)
+    const newCount = await incrementQuotaCounter(userId);
+    addBreadcrumb('Monthly quota counter incremented', {
+      userId,
+      newCount,
+      tier: userTierAuth,
     });
 
     // 11. Log usage
