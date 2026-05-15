@@ -34,10 +34,18 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   if (provider === 'nextauth') {
     const session = (await getServerSession(authConfig)) as Session | null;
     if (session?.user) {
+      const userId = (session.user as any).id;
+      const userEmail = session.user.email;
+
+      // Strict validation: both ID and email are required
+      if (!userId || typeof userId !== 'string' || !userEmail || typeof userEmail !== 'string') {
+        return null;
+      }
+
       return {
         user: {
-          id: (session.user as any).id || '',
-          email: session.user.email || '',
+          id: userId,
+          email: userEmail,
           name: session.user.name || undefined,
           image: session.user.image || undefined,
         },
@@ -49,14 +57,20 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   return null;
 }
 
-export async function signOut(): Promise<void> {
+export async function signOut(): Promise<{ success: boolean; error?: string }> {
   const provider = AUTH_CONFIG.provider;
 
-  if (provider === 'supabase') {
-    const { signOutSupabase } = await import('./providers/supabase');
-    await signOutSupabase();
-  } else if (provider === 'nextauth') {
-    const { signOut: nextAuthSignOut } = await import('next-auth/react');
-    await nextAuthSignOut();
+  try {
+    if (provider === 'supabase') {
+      const { signOutSupabase } = await import('./providers/supabase');
+      await signOutSupabase();
+    } else if (provider === 'nextauth') {
+      const { signOut: nextAuthSignOut } = await import('next-auth/react');
+      await nextAuthSignOut({ redirect: false });
+    }
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMessage };
   }
 }
