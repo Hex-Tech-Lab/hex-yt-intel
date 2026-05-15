@@ -349,6 +349,26 @@ grep -r "anthropic" web/   # Find Claude model references
 
 ---
 
+## §9 · Do Not Touch (Stale Credentials)
+
+### Files with Outdated Key Paths
+These files contain references to deprecated OAuth credentials or API configurations. **Do not rely on them for current setup:**
+
+- **`CLAUDE.md`** — Documents old OAuth setup paths (GCP project, credential locations)
+  - Status: Superseded by actual Vercel env vars
+  - Action: Reference only for historical context
+
+- **`docs/HEX_OAUTH_CHANDOVER.md`** (if exists) — Similar stale key paths
+  - Status: Outdated; use CLAUDE.md + actual Vercel dashboard as source of truth
+  - Action: Archive or delete in next cleanup
+
+### Current Authority
+- **Vercel Environment Variables**: https://vercel.com/Hex-Tech-Lab/hex-yt-intel/settings/environment-variables (source of truth)
+- **Supabase Project**: https://supabase.com/dashboard/project/adnmbikaqnxivalqoild (database state)
+- **Upstash Console**: https://console.upstash.io (Redis state)
+
+---
+
 ## Critical Reminders
 
 1. **Don't Commit Secrets**: GitHub push protection will block any commits with API keys. Use Vercel env vars instead.
