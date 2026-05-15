@@ -5,8 +5,11 @@
 
 import { validateAuthConfig } from './env-validator';
 
-// Validate environment variables at startup
-validateAuthConfig();
+// Validate only at runtime, not during build
+// Skip validation in build environments (Vercel sets VERCEL=true during builds)
+if (!process.env.VERCEL) {
+  validateAuthConfig();
+}
 
 export const AUTH_CONFIG = {
   provider: (process.env.AUTH_PROVIDER || 'supabase') as 'supabase' | 'nextauth',
