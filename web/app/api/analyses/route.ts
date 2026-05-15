@@ -80,9 +80,15 @@ export async function POST(request: NextRequest) {
   let userId: string | undefined;
 
   try {
+    console.log('[/api/analyses] POST request received');
+
     // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
+    console.log('[/api/analyses] Checking auth...');
     const session = await getAuthSession();
+    console.log('[/api/analyses] Session:', { hasUser: !!session?.user, userEmail: session?.user?.email });
+
     if (!session?.user) {
+      console.log('[/api/analyses] Auth failed - no session');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -212,8 +218,10 @@ export async function POST(request: NextRequest) {
     addBreadcrumb('Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
 
     // 6. Fetch metadata from Worker
+    console.log('[/api/analyses] Fetching metadata from worker...');
     const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
     const metadataUrl = `${workerUrl}/fetch-metadata?video_id=${videoId}`;
+    console.log('[/api/analyses] Worker URL:', workerUrl);
 
     let metadata: any;
     try {
@@ -225,18 +233,24 @@ export async function POST(request: NextRequest) {
           const timeout = setTimeout(() => controller.abort(), 3000);
 
           try {
+            console.log('[/api/analyses] Calling worker:', metadataUrl);
             const response = await fetch(metadataUrl, {
               method: 'GET',
               signal: controller.signal,
             });
 
             clearTimeout(timeout);
+            console.log('[/api/analyses] Worker response status:', response.status);
 
             if (!response.ok) {
-              throw new Error(`Worker returned ${response.status}`);
+              const errorText = await response.text();
+              console.error('[/api/analyses] Worker error:', errorText);
+              throw new Error(`Worker returned ${response.status}: ${errorText}`);
             }
 
-            return await response.json();
+            const data = await response.json();
+            console.log('[/api/analyses] Worker returned metadata:', { title: data.title, viewCount: data.viewCount });
+            return data;
           } finally {
             clearTimeout(timeout);
           }
@@ -245,6 +259,7 @@ export async function POST(request: NextRequest) {
       );
       addBreadcrumb('Metadata fetched from worker', { videoId, title: metadata.title });
     } catch (error) {
+      console.error('[/api/analyses] Worker call failed:', error);
       addBreadcrumb('Worker call failed', { videoId, error: String(error) }, 'external_service');
       Sentry.captureException(error, {
         tags: { service: 'cloudflare-worker', operation: 'fetch-metadata' },
@@ -260,6 +275,9 @@ export async function POST(request: NextRequest) {
     const transcript = await fetchTranscript(videoId);
 
     // 8. Call OpenRouter / Claude Haiku
+    console.log('[/api/analyses] Calling OpenRouter...');
+    console.log('[/api/analyses] OpenRouter API key set:', !!process.env.OPENROUTER_API_KEY);
+
     let markdown: string;
     try {
       markdown = await trackExternalCall(
@@ -268,6 +286,7 @@ export async function POST(request: NextRequest) {
         () => callOpenRouter(metadata, transcript),
         { videoId, model: 'anthropic/claude-haiku-4.5:free' }
       );
+      console.log('[/api/analyses] Analysis generated successfully, length:', markdown.length);
       addBreadcrumb('Analysis generated successfully', { videoId, markdownLength: markdown.length });
     } catch (error) {
       console.error('[/api/analyses] OpenRouter error:', error);
