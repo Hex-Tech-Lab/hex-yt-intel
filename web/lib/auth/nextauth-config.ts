@@ -45,5 +45,5 @@ export const authConfig: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60,
   },
-  secret: AUTH_CONFIG.providers.nextauth.secret || 'dev-secret-change-in-production',
+  secret: AUTH_CONFIG.nextauth.secret || 'dev-secret-change-in-production',
 };
