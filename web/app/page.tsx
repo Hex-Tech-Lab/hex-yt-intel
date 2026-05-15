@@ -110,6 +110,9 @@ export default function Home() {
             <Link href="/pricing" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
               Pricing
             </Link>
+            <Link href="/billing" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
+              Billing
+            </Link>
             <button
               onClick={handleSignOut}
               className="px-4 py-2 text-gray-700 hover:text-black text-sm"
