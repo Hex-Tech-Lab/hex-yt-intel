@@ -50,7 +50,7 @@ async function callOpenRouter(
       'X-Title': 'hex-yt-intel',
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-haiku-4.5:free',
+      model: 'anthropic/claude-3.5-haiku',
       messages: [
         {
           role: 'system',
