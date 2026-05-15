@@ -1,0 +1,4 @@
+# Vercel build cache exclusions
+# Force fresh build by not caching .next folder
+web/.next
+.next
