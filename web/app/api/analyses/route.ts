@@ -43,15 +43,31 @@ async function callOpenRouter(
   const prompt = createUCISPrompt(metadata, transcript);
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
-  const timeout = 25000; // 25 second timeout per model
+
+  // ── Adaptive Timeout Horizon ────────────────────────────────────────────────
+  // Handshake buffer: 5 s  +  1 s per 5 000 chars  (capped at 25 s)
+  const transcriptLength = transcript?.length || 0;
+  const adaptiveTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 5000) * 1000);
+  // ────────────────────────────────────────────────────────────────────────────
 
   for (const model of models) {
     const controller = new AbortController();
-    let timeoutId: NodeJS.Timeout | undefined;
+    let connectTimeoutId: NodeJS.Timeout | undefined;
+    let totalTimeoutId: NodeJS.Timeout | undefined;
 
     try {
-      // Set timeout that aborts the fetch if it hangs
-      timeoutId = setTimeout(() => controller.abort(), timeout);
+      // ── Tier 1: Connect handshake watchdog (3 s) ───────────────────────────
+      // Fires first – trips immediately if OpenRouter is down, credits empty,
+      // or the API key is rejected (auth errors surface within < 1 s).
+      // Does NOT cover the body-read phase; that is handled by Tier 2 below.
+      connectTimeoutId = setTimeout(() => controller.abort(), 3000);
+      // ───────────────────────────────────────────────────────────────────────
+
+      // ── Tier 2: Adaptive total read timeout (header read + body stream) ─────
+      // Once the handshake passes the connectTimeoutId is cleared and this
+      // single remaining timer protects the entire remaining request lifetime.
+      totalTimeoutId = setTimeout(() => controller.abort(), adaptiveTimeout);
+      // ───────────────────────────────────────────────────────────────────────
 
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -75,9 +91,14 @@ async function callOpenRouter(
           ],
           temperature: 0.7,
           max_tokens: 4000,
+          stream: false,
         }),
         signal: controller.signal,
       });
+
+      // Headers arrived within connect window – handshake succeeded
+      clearTimeout(connectTimeoutId);
+      connectTimeoutId = undefined;
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -85,6 +106,7 @@ async function callOpenRouter(
 
         if (response.status === 404) {
           console.warn(`[callOpenRouter] ${model}: 404 not found`);
+          clearTimeout(totalTimeoutId);
           continue;
         }
         if (response.status === 401) {
@@ -92,19 +114,25 @@ async function callOpenRouter(
           throw new Error('OpenRouter authentication failed - check API key');
         }
         console.warn(`[callOpenRouter] ${model}: ${response.status} ${errorText.slice(0, 80)}`);
+        clearTimeout(totalTimeoutId);
         continue;
       }
 
       const data = await response.json();
+      clearTimeout(totalTimeoutId);
+      totalTimeoutId = undefined;
+
       console.log(`[callOpenRouter] ✓ Success with ${model}`);
       return { content: data.choices[0].message.content, model };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      errors[model] = msg.slice(0, 100);
-      console.warn(`[callOpenRouter] ${model}: ${msg.slice(0, 80)}`);
+      // Classify the timeout source for observability
+      const sourceLabel = connectTimeoutId === undefined ? 'total' : 'connect';
+      console.warn(`[callOpenRouter] ${model}: ${sourceLabel} fault – ${msg.slice(0, 80)}`);
+      errors[model] = `${sourceLabel} fault: ${msg.slice(0, 60)}`;
     } finally {
-      // Clean up timeout
-      if (timeoutId) clearTimeout(timeoutId);
+      connectTimeoutId = clearTimeout(connectTimeoutId) as unknown as NodeJS.Timeout | undefined;
+      totalTimeoutId = clearTimeout(totalTimeoutId) as unknown as NodeJS.Timeout | undefined;
     }
   }
 
