@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUCISPrompt } from '@/lib/prompts';
 import { generateEmbedding } from '@/lib/embeddings';
-import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
+import { applyRateLimit, getUserTier, checkQuota, incrementQuotaCounterAtomic, resetQuotaIfMonthChanged } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
@@ -96,8 +96,12 @@ async function callOpenRouter(
     }
   }
 
+<<<<<<< HEAD
   console.error('[callOpenRouter] All models exhausted:', errors);
   throw new Error('Unable to generate analysis with available models');
+=======
+  throw new Error(`All OpenRouter models exhausted: ${JSON.stringify(errors)}`);
+>>>>>>> origin/main
 }
 
 export async function POST(request: NextRequest) {
@@ -105,9 +109,15 @@ export async function POST(request: NextRequest) {
   let userId: string | undefined;
 
   try {
+    console.log('[/api/analyses] POST request received');
+
     // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
+    console.log('[/api/analyses] Checking auth...');
     const session = await getAuthSession();
+    console.log('[/api/analyses] Session:', { hasUser: !!session?.user, userEmail: session?.user?.email });
+
     if (!session?.user) {
+      console.log('[/api/analyses] Auth failed - no session');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -175,70 +185,118 @@ export async function POST(request: NextRequest) {
     // 4. Supabase client (server-side)
     const supabase = getSupabaseClient();
 
-    // 5. Check quota enforcement
-    const userData = await trackDatabaseQuery(
-      'select',
-      'users',
-      async () => {
-        const { data, error } = await supabase
-          .from('users')
-          .select('tier, analyses_used, last_reset_date')
-          .eq('id', userId)
-          .single();
-        if (error) throw error;
-        return data;
-      },
-      { userId }
-    ).catch((error) => {
-      addBreadcrumb('Failed to fetch user quota data', { userId, error: String(error) }, 'database');
-      throw error;
+    // 5. Check and enforce monthly analysis quota (Redis-backed)
+    // Reset counter if month has changed since last check
+    await resetQuotaIfMonthChanged(userId);
+
+    // Check current quota status (for display only)
+    const quotaStatus = await checkQuota(userId, userTierAuth);
+    addBreadcrumb('Quota status checked', {
+      userId,
+      count: quotaStatus.count,
+      limit: quotaStatus.limit,
+      remaining: quotaStatus.remaining,
     });
 
-    if (!userData) {
-      return NextResponse.json(
-        { error: 'Failed to fetch user data' },
-        { status: 500 }
-      );
+    // 5.5 OPTIMISTIC LOCKING: Increment quota counter BEFORE any heavy operations
+    // This prevents concurrent requests from both passing the quota check and both creating analyses.
+    // If increment exceeds limit, we rollback and return 402 immediately (no wasted work).
+    let quotaCounterValue = 0;
+    const quotaLimitForTier = quotaStatus.limit;
+
+    if (quotaLimitForTier !== null) {
+      // For free tier, enforce quota at increment time
+      try {
+        quotaCounterValue = await incrementQuotaCounterAtomic(userId);
+        addBreadcrumb('Quota counter incremented (optimistic lock)', {
+          userId,
+          newCount: quotaCounterValue,
+          limit: quotaLimitForTier,
+        });
+
+        // Check if increment exceeded the limit
+        if (quotaCounterValue > quotaLimitForTier) {
+          // Quota exceeded: need to decrement the counter we just incremented
+          // Create a simple decrement operation (manual Redis decrement as fallback)
+          try {
+            // Attempt to decrement via a second atomic operation
+            // In production, this would be another Lua script, but for MVP we use a simple DECRBY
+            const { decrementValue } = await (async () => {
+              try {
+                const { Redis } = await import('@upstash/redis');
+                const redisClient = new Redis({
+                  url: process.env.UPSTASH_REDIS_REST_URL,
+                  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+                });
+                const monthKey = new Date().toISOString().substring(0, 7); // YYYY-MM
+                const redisKey = `quota:${userId}:analyses:${monthKey}`;
+                const result = await redisClient.decrby(redisKey, 1);
+                return { decrementValue: result };
+              } catch {
+                return { decrementValue: 0 };
+              }
+            })();
+
+            addBreadcrumb('Quota limit exceeded - counter rolled back', {
+              userId,
+              attemptedCount: quotaCounterValue,
+              limit: quotaLimitForTier,
+              rollbackValue: decrementValue,
+            }, 'quota');
+
+            Sentry.captureMessage(`Quota exceeded (optimistic lock rollback): user ${userId}`, 'warning');
+            return NextResponse.json(
+              {
+                error: `Monthly quota exceeded (${quotaCounterValue}/${quotaLimitForTier}). Upgrade to Pro for unlimited analyses.`,
+                quotaExceeded: true,
+                remaining: 0,
+                resetAt: quotaStatus.reset.toISOString(),
+              },
+              { status: 402 }
+            );
+          } catch (rollbackError) {
+            console.error('[/api/analyses] Rollback failed:', rollbackError);
+            Sentry.captureException(rollbackError, {
+              tags: { operation: 'quota_rollback', severity: 'critical' },
+              contexts: { quota: { userId } },
+            });
+            // Return error state: quota exceeded but rollback attempt failed
+            return NextResponse.json(
+              {
+                error: 'Quota enforcement error - please retry',
+                quotaExceeded: true,
+              },
+              { status: 402 }
+            );
+          }
+        }
+      } catch (incrementError) {
+        console.error('[/api/analyses] Quota increment failed:', incrementError);
+        addBreadcrumb('Quota increment failed', {
+          userId,
+          error: String(incrementError),
+        }, 'quota');
+        Sentry.captureException(incrementError, {
+          tags: { operation: 'quota_increment', severity: 'medium' },
+          contexts: { quota: { userId } },
+        });
+        // Non-fatal: allow request to proceed (graceful degradation)
+        // The counter increment failed, but we don't want to block valid users
+      }
     }
 
-    // Check if monthly quota should be reset
-    const now = new Date();
-    const lastReset = new Date(userData.last_reset_date || now);
-    const monthsElapsed = (now.getFullYear() - lastReset.getFullYear()) * 12 +
-                          (now.getMonth() - lastReset.getMonth());
-
-    let analysesUsed = userData.analyses_used || 0;
-    if (monthsElapsed > 0) {
-      // Reset quota for new month
-      analysesUsed = 0;
-      addBreadcrumb('Monthly quota reset', { userId, monthsElapsed }, 'quota');
-      await supabase
-        .from('users')
-        .update({ analyses_used: 0, last_reset_date: now.toISOString() })
-        .eq('id', userId);
-    }
-
-    // Enforce quota based on tier
-    const quotaLimit = userTierAuth === 'free' ? 3 : null; // null = unlimited for pro
-
-    if (quotaLimit && analysesUsed >= quotaLimit) {
-      addBreadcrumb('Quota limit exceeded', { userId, used: analysesUsed, limit: quotaLimit }, 'quota');
-      Sentry.captureMessage(`Quota exceeded: user ${userId}`, 'warning');
-      return NextResponse.json(
-        {
-          error: `Monthly quota exceeded (${analysesUsed}/${quotaLimit}). Upgrade to Pro for unlimited analyses.`,
-          quotaExceeded: true,
-          remaining: 0,
-        },
-        { status: 402 }
-      );
-    }
-
-    addBreadcrumb('Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
+    addBreadcrumb('Quota enforcement passed (optimistic lock)', {
+      userId,
+      tier: userTierAuth,
+      counterValue: quotaCounterValue,
+      limit: quotaLimitForTier,
+    });
 
     // 6. Fetch metadata from Worker
+    console.log('[/api/analyses] Fetching metadata from worker...');
     const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
     const metadataUrl = `${workerUrl}/fetch-metadata?video_id=${videoId}`;
+    console.log('[/api/analyses] Worker URL:', workerUrl);
 
     let metadata: any;
     try {
@@ -250,18 +308,24 @@ export async function POST(request: NextRequest) {
           const timeout = setTimeout(() => controller.abort(), 3000);
 
           try {
+            console.log('[/api/analyses] Calling worker:', metadataUrl);
             const response = await fetch(metadataUrl, {
               method: 'GET',
               signal: controller.signal,
             });
 
             clearTimeout(timeout);
+            console.log('[/api/analyses] Worker response status:', response.status);
 
             if (!response.ok) {
-              throw new Error(`Worker returned ${response.status}`);
+              const errorText = await response.text();
+              console.error('[/api/analyses] Worker error:', errorText);
+              throw new Error(`Worker returned ${response.status}: ${errorText}`);
             }
 
-            return await response.json();
+            const data = await response.json();
+            console.log('[/api/analyses] Worker returned metadata:', { title: data.title, viewCount: data.viewCount });
+            return data;
           } finally {
             clearTimeout(timeout);
           }
@@ -270,6 +334,7 @@ export async function POST(request: NextRequest) {
       );
       addBreadcrumb('Metadata fetched from worker', { videoId, title: metadata.title });
     } catch (error) {
+      console.error('[/api/analyses] Worker call failed:', error);
       addBreadcrumb('Worker call failed', { videoId, error: String(error) }, 'external_service');
       Sentry.captureException(error, {
         tags: { service: 'cloudflare-worker', operation: 'fetch-metadata' },
@@ -285,6 +350,9 @@ export async function POST(request: NextRequest) {
     const transcript = await fetchTranscript(videoId);
 
     // 8. Call OpenRouter / Claude Haiku
+    console.log('[/api/analyses] Calling OpenRouter...');
+    console.log('[/api/analyses] OpenRouter API key set:', !!process.env.OPENROUTER_API_KEY);
+
     let markdown: string;
     let modelUsed: string;
     try {
@@ -292,6 +360,7 @@ export async function POST(request: NextRequest) {
         'openrouter',
         'claude-analysis',
         () => callOpenRouter(metadata, transcript),
+<<<<<<< HEAD
         { videoId }
       );
       markdown = result.content;
@@ -301,6 +370,12 @@ export async function POST(request: NextRequest) {
         markdownLength: markdown.length,
         modelUsed
       });
+=======
+        { videoId, model: 'anthropic/claude-3.5-haiku' }
+      );
+      console.log('[/api/analyses] Analysis generated successfully, length:', markdown.length);
+      addBreadcrumb('Analysis generated successfully', { videoId, markdownLength: markdown.length });
+>>>>>>> origin/main
     } catch (error) {
       console.error('[/api/analyses] OpenRouter error:', error);
       addBreadcrumb('Analysis generation failed', { videoId, error: String(error) }, 'external_service');
@@ -314,7 +389,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+<<<<<<< HEAD
     // 9. Insert analysis into Supabase (without embedding initially)
+=======
+    // 9. Upsert analysis into Supabase (idempotent on user_id + video_id)
+    // unique constraint "unique_user_video" on (user_id, video_id) prevents
+    // duplicate rows; upsert updates the existing record instead of 23505.
+>>>>>>> origin/main
     const analysisPayload = {
       user_id: userId,
       video_id: videoId,
@@ -323,21 +404,34 @@ export async function POST(request: NextRequest) {
       view_count: parseInt(metadata.viewCount || '0', 10),
       analysis_markdown: markdown,
       embedding: null,
+<<<<<<< HEAD
       created_at: new Date().toISOString(),
+=======
+>>>>>>> origin/main
     };
 
     const analysis = await trackDatabaseQuery(
-      'insert',
+      'upsert',
       'analyses',
       async () => {
         const { data, error } = await supabase
           .from('analyses')
+<<<<<<< HEAD
           .insert(analysisPayload)
+=======
+          .upsert(analysisPayload, {
+            onConflict: 'user_id,video_id',
+          })
+>>>>>>> origin/main
           .select('id, created_at')
           .single();
 
         if (error) {
+<<<<<<< HEAD
           console.error('[/api/analyses] Insert error:', {
+=======
+          console.error('[/api/analyses] Upsert error:', {
+>>>>>>> origin/main
             code: error.code,
             message: error.message,
             details: error.details,
@@ -346,7 +440,15 @@ export async function POST(request: NextRequest) {
           });
 
           if (error.code === '42501') {
+<<<<<<< HEAD
             throw new Error(`RLS policy blocked analyses insert: ${error.message}`);
+=======
+            throw new Error(`RLS policy blocked analyses upsert: ${error.message}`);
+          }
+          if (error.code === '23505') {
+            // Should not reach here because upsert handles 23505, but log if it does
+            console.error('[/api/analyses] Unexpected 23505 on upsert:', error.details);
+>>>>>>> origin/main
           }
           throw error;
         }
@@ -354,7 +456,11 @@ export async function POST(request: NextRequest) {
       },
       { userId, videoId }
     ).catch((error) => {
+<<<<<<< HEAD
       addBreadcrumb('Analysis insert failed', { userId, videoId, error: String(error) }, 'database');
+=======
+      addBreadcrumb('Analysis upsert failed', { userId, videoId, error: String(error) }, 'database');
+>>>>>>> origin/main
       throw error;
     });
 
@@ -374,26 +480,7 @@ export async function POST(request: NextRequest) {
       // Non-fatal: analysis is already saved
     });
 
-    // 10. Increment user counter
-    const newCount = (userData.analyses_used || 0) + 1;
-    await trackDatabaseQuery(
-      'update',
-      'users',
-      async () => {
-        await supabase
-          .from('users')
-          .update({ analyses_used: newCount })
-          .eq('id', userId);
-        return null;
-      },
-      { userId, newCount }
-    ).catch((error) => {
-      console.error('[/api/analyses] Update counter error:', error);
-      // Non-fatal: analysis was saved, just counter update failed
-      addBreadcrumb('Counter update failed (non-fatal)', { userId, error: String(error) }, 'database');
-    });
-
-    // 11. Log usage
+    // 10. Log usage (quota counter was already incremented in step 5.5 - optimistic locking)
     await trackDatabaseQuery(
       'insert',
       'usage_logs',
@@ -459,6 +546,106 @@ export async function POST(request: NextRequest) {
       duration,
     });
 
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * GET /api/analyses
+ * List analyses for authenticated user with cursor-based pagination
+ *
+ * Query params:
+ * - limit: number (default: 20, max: 100)
+ * - cursor: string (ISO 8601 timestamp for pagination, optional)
+ *
+ * Response:
+ * {
+ *   data: AnalysisResponse[];
+ *   pagination: {
+ *     nextCursor: string | null;
+ *     hasMore: boolean;
+ *   };
+ * };
+ */
+export async function GET(request: NextRequest) {
+  try {
+    console.log('[/api/analyses] GET request received');
+
+    // 1. Auth check
+    const session = await getAuthSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID not found in session' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Parse query params
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
+    const cursor = searchParams.get('cursor');
+
+    // 3. Query Supabase with cursor-based pagination
+    const supabase = getSupabaseClient();
+
+    let query = supabase
+      .from('analyses')
+      .select('id, video_id, title, analysis_markdown, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit + 1); // Fetch one extra to check for more
+
+    // If cursor provided, fetch items older than cursor
+    if (cursor) {
+      query = query.lt('created_at', cursor);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('[/api/analyses] GET query error:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch analyses' },
+        { status: 500 }
+      );
+    }
+
+    // 4. Determine pagination state
+    const hasMore = data.length > limit;
+    const items = hasMore ? data.slice(0, limit) : data;
+    const nextCursor = hasMore && items.length > 0
+      ? items[items.length - 1]!.created_at
+      : null;
+
+    // 5. Format response
+    const response = {
+      data: items.map(item => ({
+        id: item.id,
+        videoId: item.video_id,
+        title: item.title || '',
+        markdown: item.analysis_markdown,
+        createdAt: item.created_at,
+      })),
+      pagination: {
+        nextCursor,
+        hasMore,
+      },
+    };
+
+    return NextResponse.json(response, { status: 200 });
+  } catch (error) {
+    console.error('[/api/analyses] GET error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
