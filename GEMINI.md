@@ -35,10 +35,11 @@
 **Rationale**: This absolute ban is strictly enforced to maintain the **89% production bundle compression ratio** achieved by our native Tailwind components and guarantees pure Edge Runtime compatibility.
 
 ### Root File Volume Restriction
-There is a strict maximum of **3 Markdown elements** allowed in the repository root directory:
+There is a strict maximum of **4 Markdown elements** allowed in the repository root directory:
 1. `CLAUDE.md`
 2. `GEMINI.md`
 3. `README.md`
+4. `AGENTS.md`
 
 ---
 
@@ -48,7 +49,7 @@ To prevent multi-agent folder pollution and ensure consistent discovery patterns
 
 | Artifact Class | Storage Location | File Naming Pattern | Master Engineering Rule |
 |---|---|---|---|
-| **Master Configs** | `/.claude/`, `/` (Root) | `CLAUDE.md`, `GEMINI.md`, `README.md` | **MAXIMUM 3 markdown files in root directory.** All other docs must be nested in `/docs/`. |
+| **Master Configs** | `/.claude/`, `/` (Root) | `CLAUDE.md`, `GEMINI.md`, `README.md`, `AGENTS.md` | **MAXIMUM 4 markdown files in root directory.** All other docs must be nested in `/docs/`. |
 | **Technical Specs** | `/docs/specs/` | `IMPLEMENTATION_PLAN.md`, `PRD.md`, `design.md`, `SECURITY.md` | Must include full version headers: Filename, Location, Version, Build, Timestamp, Purpose. |
 | **Historical Logs** | `/docs/history/` | `HANDOVER_REPORT_*.md`, `SESSION_EXIT_*.md`, diagnostic reports | Consolidate overlapping trial timelines into singular chronological ledgers. |
 | **Infrastructure Scripts** | `/docs/ops/` | `DEPLOYMENT.md`, `REDIS_SETUP.md`, `VERCEL_ENV_SETUP.md`, runbooks | Document all manual steps, environment variable requirements, and secret rotation. |
