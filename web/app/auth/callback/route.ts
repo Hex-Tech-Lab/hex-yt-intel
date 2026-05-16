@@ -2,6 +2,24 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
+/**
+ * OAuth callback route handler for Supabase authentication.
+ *
+ * Processes the authorization code returned by Supabase OAuth providers,
+ * exchanges it for a session, and sets secure HTTP-only auth cookies.
+ *
+ * @param request - Next.js request containing `code` and `next` query parameters
+ * @returns Redirect response to the safe `next` path with session cookies set,
+ *          or error redirect if code exchange fails
+ *
+ * Flow:
+ * 1. Extract authorization code from query params
+ * 2. Create Supabase client with cookie manager
+ * 3. Exchange code for session via Supabase Auth
+ * 4. Capture session tokens (workaround for Route Handler cookie transience)
+ * 5. Set tokens on response as HTTP-only, Secure, SameSite=Lax cookies
+ * 6. Redirect to safe `next` path (or `/` if unsafe)
+ */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
