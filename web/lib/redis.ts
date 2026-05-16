@@ -178,6 +178,29 @@ export async function setRedisExpiration(key: string, expirationSeconds: number)
 
 
 /**
+ * Execute Lua script against Redis
+ * Used for atomic multi-step operations (e.g., sliding window rate limiting)
+ */
+export async function executeRedisScript(
+  script: string,
+  keys: string[],
+  args: (string | number)[]
+): Promise<any> {
+  const redis = initializeRedis();
+
+  try {
+    if (redis && redisAvailable) {
+      return await redis.eval(script, keys, args);
+    }
+  } catch (error) {
+    console.warn('[redis.ts] Failed to execute Lua script:', error);
+  }
+
+  // Fallback: For sliding window, return -1 to indicate unavailability
+  return -1;
+}
+
+/**
  * Get current Redis status
  * Used for health checks and diagnostics
  */
