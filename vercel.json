@@ -1,4 +1,1 @@
-{
-  "buildCommand": "pnpm -C web build",
-  "outputDirectory": "web/.next"
-}
+{}
