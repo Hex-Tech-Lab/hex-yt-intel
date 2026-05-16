@@ -8,24 +8,31 @@
 
 ### Local Development (.env.local) - ✅ DONE
 ```bash
-UPSTASH_REDIS_REST_URL=https://becoming-lioness-125833.upstash.io
-UPSTASH_REDIS_REST_TOKEN=gQAAAAAAAeuJAAIgcDI5YmFlMjVmYzY1MzE0MjMwODBmZjQ1NTVlMjY0MDQ0Mw
+UPSTASH_REDIS_REST_URL=<UPSTASH_REDIS_REST_URL>
+UPSTASH_REDIS_REST_TOKEN=<UPSTASH_REDIS_REST_TOKEN>
 ```
+⚠️ **NOTE**: Do NOT commit real credentials. Use placeholders above and add actual values to .env.local (git-ignored).
 
 ### Vercel Production - ✅ DONE (2026-05-16T01:09 EEST)
 Added via `vercel env add`:
 ```
-UPSTASH_REDIS_REST_URL     → https://becoming-lioness-125833.upstash.io
-UPSTASH_REDIS_REST_TOKEN   → gQAAAAAAAeuJAAIgcDI5YmFlMjVmYzY1MzE0MjMwODBmZjQ1NTVlMjY0MDQ0Mw
+UPSTASH_REDIS_REST_URL     → <UPSTASH_REDIS_REST_URL>
+UPSTASH_REDIS_REST_TOKEN   → <UPSTASH_REDIS_REST_TOKEN>
 ```
 Environments: Production, Preview, Development
+
+⚠️ **SECURITY ALERT**: If real tokens are present in git history, rotate immediately:
+1. Revoke current token in [Upstash console](https://console.upstash.io)
+2. Create new token
+3. Update Vercel env vars: `vercel env add UPSTASH_REDIS_REST_TOKEN`
+4. Redeploy: `vercel deploy --prod`
 
 ## Features Enabled by Redis
 
 ### 1. Rate Limiting (Chunk 9)
-- Per-user daily limits (free: 3/month, pro: unlimited)
+- Per-user monthly limits (free: 3/month, pro: unlimited)
 - Prevents abuse and quota overages
-- Uses `upstash_redis_key:user:{userId}:analyses:count`
+- Uses `quota:user:{userId}:analyses:{YYYY-MM}`
 
 ### 2. Session Caching (Optional)
 - Cache Supabase auth sessions for fast lookups
@@ -77,9 +84,10 @@ Instead of:
 **Test Command** (local):
 ```bash
 # Verify Redis is connected
-curl -X POST https://becoming-lioness-125833.upstash.io/set/test-key/test-value \
-  -H "Authorization: Bearer gQAAAAAAAeuJAAIgcDI5YmFlMjVmYzY1MzE0MjMwODBmZjQ1NTVlMjY0MDQ0Mw"
+curl -X POST https://<UPSTASH_URL>/set/test-key/test-value \
+  -H "Authorization: Bearer <UPSTASH_TOKEN>"
 ```
+(Replace placeholders with actual values from Upstash console)
 
 ## Troubleshooting
 
