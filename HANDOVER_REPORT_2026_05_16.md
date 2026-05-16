@@ -296,7 +296,7 @@ POST /api/analyses responseStatusCode:500
 
 ### Immediate (Testing Phase)
 1. **Test OAuth Flow**
-   - Signin with Google → should see home page
+   - Sign in with Google → should see home page
    - Paste YouTube URL → should generate analysis
    - Check Vercel logs for any 500 errors
    - Verify user record created in Supabase
@@ -346,26 +346,6 @@ vercel logs                # Stream production logs
 grep -r "OPENROUTER" web/  # Find OpenRouter references
 grep -r "anthropic" web/   # Find Claude model references
 ```
-
----
-
-## §9 · Do Not Touch (Stale Credentials)
-
-### Files with Outdated Key Paths
-These files contain references to deprecated OAuth credentials or API configurations. **Do not rely on them for current setup:**
-
-- **`CLAUDE.md`** — Documents old OAuth setup paths (GCP project, credential locations)
-  - Status: Superseded by actual Vercel env vars
-  - Action: Reference only for historical context
-
-- **`docs/HEX_OAUTH_CHANDOVER.md`** (if exists) — Similar stale key paths
-  - Status: Outdated; use CLAUDE.md + actual Vercel dashboard as source of truth
-  - Action: Archive or delete in next cleanup
-
-### Current Authority
-- **Vercel Environment Variables**: https://vercel.com/Hex-Tech-Lab/hex-yt-intel/settings/environment-variables (source of truth)
-- **Supabase Project**: https://supabase.com/dashboard/project/adnmbikaqnxivalqoild (database state)
-- **Upstash Console**: https://console.upstash.io (Redis state)
 
 ---
 

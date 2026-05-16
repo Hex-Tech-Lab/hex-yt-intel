@@ -1,8 +1,8 @@
 # Blocking Issues Diagnostic & Exit Strategy
 
 **Date**: 2026-05-16  
-**Status**: 🔴 BLOCKED - Two critical issues preventing analyze from completing  
-**User**: kellybakri@gmail.com  
+**Status**: 🔴 BLOCKED - Two critical issues preventing analysis from completing  
+**User**: <authenticated-user>  
 **Session**: Attempted end-to-end test, hit blocker on database insert
 
 ---
@@ -22,12 +22,12 @@ vercel env ls | grep OPENROUTER
 
 **Expected Output**:
 ```
-OPENROUTER_API_KEY     Production  sk-or-v1-...
+OPENROUTER_API_KEY     Production  <OPENROUTER_API_KEY_PREFIX>...
 ```
 
 **If Missing**: 
 1. Go to Vercel: https://vercel.com/Hex-Tech-Lab/hex-yt-intel/settings/environment-variables
-2. Add/verify: `OPENROUTER_API_KEY=sk-or-v1-...` (get from local .env.local)
+2. Add/verify: `OPENROUTER_API_KEY=<OPENROUTER_API_KEY_PREFIX>...` (get from local .env.local)
 3. Redeploy: `git push origin main` triggers Vercel rebuild
 
 ---
@@ -59,15 +59,30 @@ users      | f           (disabled ✓)
 analyses   | t           (ENABLED - this is the problem)
 ```
 
-**Fix Required**:
+**Fix Required** (Secure RLS Policies):
 1. Open: https://supabase.com/dashboard/project/adnmbikaqnxivalqoild
 2. Click: **SQL Editor** → **New Query**
 3. Paste: 
 ```sql
-ALTER TABLE public.analyses DISABLE ROW LEVEL SECURITY;
+-- Enable RLS (already enabled, but ensure it is)
+ALTER TABLE public.analyses ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for secure authenticated inserts
+CREATE POLICY "Allow authenticated inserts based on user_id" 
+ON public.analyses 
+FOR INSERT 
+TO authenticated 
+WITH CHECK (auth.uid() = user_id);
+
+-- Create policy for users to read their own analyses
+CREATE POLICY "Allow users to read their own analyses" 
+ON public.analyses 
+FOR SELECT 
+TO authenticated 
+USING (auth.uid() = user_id);
 ```
 4. Click: **Run**
-5. Verify: `rowsecurity` shows `f` for analyses table
+5. Verify: RLS remains enabled (`rowsecurity` shows `t`) with policies in place
 
 ---
 
@@ -76,7 +91,7 @@ ALTER TABLE public.analyses DISABLE ROW LEVEL SECURITY;
 ### MUST DO (Blocks everything):
 1. ✅ Verify OPENROUTER_API_KEY in Vercel env vars
    - If missing: Add it, redeploy, test
-   - If present: Verify it's correct (should start with `sk-or-v1-`)
+   - If present: Verify it's correct (should start with `<OPENROUTER_API_KEY_PREFIX>`)
 
 2. ✅ Disable RLS on analyses table
    - Run SQL command in Supabase dashboard
@@ -105,7 +120,7 @@ ALTER TABLE public.analyses DISABLE ROW LEVEL SECURITY;
 ```bash
 # Test which models actually work on OpenRouter:
 curl -X POST https://openrouter.ai/api/v1/chat/completions \
-  -H "Authorization: Bearer sk-or-v1-..." \
+  -H "Authorization: Bearer <OPENROUTER_API_KEY_PREFIX>..." \
   -H "Content-Type: application/json" \
   -d '{"model":"anthropic/claude-haiku-latest","messages":[{"role":"user","content":"test"}]}'
 
