@@ -171,4 +171,5 @@ Both gates short-circuit the handler early; no OpenRouter call is made on their 
 
 ---
 
+<!-- PR AUDIT TRIGGER: audit-trigger chunk-13-final-audit architecture validation -->
 *End of Error Taxonomy Manifest v1.5.0*
