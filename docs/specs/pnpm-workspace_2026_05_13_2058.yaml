@@ -1,0 +1,14 @@
+---
+Filename: pnpm-workspace_2026_05_13_2058.yaml
+Location: /specs/pnpm-workspace_2026_05_13_2058.yaml
+Version: v1.0.0
+Build: b947767
+Timestamp: Saturday, 16 May 2026 at 14:25:00 UTC (GCW)
+Purpose: Archived during housekeeping cycle.
+---
+
+packages:
+  - 'worker'
+  - 'skill'
+  - 'web'
+  - 'packages/*'

@@ -15,3 +15,5 @@ dist/
 .env*.local
 test-results/
 playwright-report/
+docs/specs/.env_*
+.env*

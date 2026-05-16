@@ -1,5 +1,5 @@
-import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { createUCISPrompt } from '@/lib/prompts';
 import { generateEmbedding } from '@/lib/embeddings';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
@@ -59,6 +59,7 @@ async function callOpenRouter(
     const controller = new AbortController();
     let connectTimeoutId: NodeJS.Timeout | undefined;
     let totalTimeoutId: NodeJS.Timeout | undefined;
+    let connectionHandshakePassed = false;
 
     try {
       connectTimeoutId = setTimeout(() => controller.abort(), 3000);
@@ -93,6 +94,7 @@ async function callOpenRouter(
 
       clearTimeout(connectTimeoutId);
       connectTimeoutId = undefined;
+      connectionHandshakePassed = true;
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -114,11 +116,16 @@ async function callOpenRouter(
 
       return { content: data.choices[0].message.content, model };
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      // Classify the timeout source for observability
-      const sourceLabel = connectTimeoutId === undefined ? 'total' : 'connect';
-      console.warn(`[callOpenRouter] ${model}: ${sourceLabel} fault – ${msg.slice(0, 80)}`);
-      errors[model] = `${sourceLabel} fault: ${msg.slice(0, 60)}`;
+      const error = err as Error;
+      const msg = error.message;
+      // Classify the timeout source for observability using explicit handshake state
+      if (error.name === 'AbortError' && !connectionHandshakePassed) {
+        console.warn(`[callOpenRouter] ${model}: connect handshake timeout – ${msg.slice(0, 80)}`);
+        errors[model] = `connect fault: ${msg.slice(0, 60)}`;
+      } else {
+        console.warn(`[callOpenRouter] ${model}: total or non-timeout fault – ${msg.slice(0, 80)}`);
+        errors[model] = `total fault: ${msg.slice(0, 60)}`;
+      }
     } finally {
       if (connectTimeoutId !== undefined) clearTimeout(connectTimeoutId);
       if (totalTimeoutId !== undefined) clearTimeout(totalTimeoutId);
