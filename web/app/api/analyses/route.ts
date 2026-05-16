@@ -21,9 +21,39 @@ interface AnalysisResponse {
   title: string;
   markdown: string;
   createdAt: string;
+  model_attempted: string;
   model_used: string;
   cacheHit?: boolean;
   message?: string;
+}
+
+interface AnalysisErrorMeta {
+  errors?: Record<string, string>;
+}
+
+class AnalysisEngineError extends Error {
+  code: string;
+  statusCode: number;
+  modelAttempted: string;
+  retryAfter?: number;
+  meta?: AnalysisErrorMeta;
+
+  constructor(opts: {
+    message: string;
+    code: string;
+    statusCode: number;
+    modelAttempted: string;
+    retryAfter?: number;
+    meta?: AnalysisErrorMeta;
+  }) {
+    super(opts.message);
+    this.name = 'AnalysisEngineError';
+    this.code = opts.code;
+    this.statusCode = opts.statusCode;
+    this.modelAttempted = opts.modelAttempted;
+    this.retryAfter = opts.retryAfter;
+    this.meta = opts.meta;
+  }
 }
 
 async function fetchTranscript(videoId: string): Promise<string> {
@@ -97,35 +127,75 @@ async function callOpenRouter(
       connectionHandshakePassed = true;
 
       if (!response.ok) {
-        const errorText = await response.text();
-        errors[model] = `${response.status} - ${errorText.slice(0, 100)}`;
+        // --- Response-level error classification ---
+        if (response.status === 401 || response.status === 403) {
+          throw new AnalysisEngineError({
+            message: `OpenRouter ${response.status} — provider authentication failed for model "${model}". Check OPENROUTER_API_KEY.`,
+            code: 'ERR_PROVIDER_AUTH_FAILED',
+            statusCode: response.status,
+            modelAttempted: model,
+          });
+        }
 
+        if (response.status === 429) {
+          const retryAfterHeader = response.headers.get('Retry-After');
+          const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
+          throw new AnalysisEngineError({
+            message: `OpenRouter rate limit exceeded (429) for model "${model}".${retryAfter ? ` Retry after ${retryAfter}s.` : ''}`,
+            code: 'ERR_RATE_LIMIT_EXCEEDED',
+            statusCode: 429,
+            modelAttempted: model,
+            retryAfter,
+          });
+        }
+
+        // 404 = model not found / retired → try next model in the fallback chain
         if (response.status === 404) {
           console.warn(`[callOpenRouter] ${model}: 404 not found`);
           continue;
         }
-        if (response.status === 401) {
-          console.error(`[callOpenRouter] ${model}: 401 unauthorized (check API key)`);
-          throw new Error('OpenRouter authentication failed - check API key');
-        }
+
+        // All other non-2xx responses → surface as provider error (stop fallback)
+        const errorText = await response.text();
         console.warn(`[callOpenRouter] ${model}: ${response.status} ${errorText.slice(0, 80)}`);
-        continue;
+        throw new AnalysisEngineError({
+          message: `OpenRouter returned ${response.status} for model "${model}".`,
+          code: 'ERR_PROVIDER_HTTP_ERROR',
+          statusCode: response.status,
+          modelAttempted: model,
+        });
       }
 
       const data = await response.json();
 
       return { content: data.choices[0].message.content, model };
     } catch (err) {
+      // --- Network and unexpected error classification ---
+      if (err instanceof AnalysisEngineError) {
+        // Rethrow typed errors from the loop body unchanged
+        throw err;
+      }
+
       const error = err as Error;
       const msg = error.message;
-      // Classify the timeout source for observability using explicit handshake state
+      // Connect-level timeout: abort fired before the handshake confirmed the connection
       if (error.name === 'AbortError' && !connectionHandshakePassed) {
         console.warn(`[callOpenRouter] ${model}: connect handshake timeout – ${msg.slice(0, 80)}`);
-        errors[model] = `connect fault: ${msg.slice(0, 60)}`;
-      } else {
-        console.warn(`[callOpenRouter] ${model}: total or non-timeout fault – ${msg.slice(0, 80)}`);
-        errors[model] = `total fault: ${msg.slice(0, 60)}`;
+        throw new AnalysisEngineError({
+          message: `Network timeout — connection to OpenRouter for model "${model}" did not complete handshake within 3 s.`,
+          code: 'ERR_NETWORK_TIMEOUT',
+          statusCode: 408,
+          modelAttempted: model,
+        });
       }
+      // Total-level timeout or other unforeseen fault
+      console.warn(`[callOpenRouter] ${model}: total or non-timeout fault – ${msg.slice(0, 80)}`);
+      throw new AnalysisEngineError({
+        message: `Unexpected error during OpenRouter call for model "${model}": ${msg.slice(0, 120)}`,
+        code: 'ERR_UNEXPECTED_FAILURE',
+        statusCode: 502,
+        modelAttempted: model,
+      });
     } finally {
       if (connectTimeoutId !== undefined) clearTimeout(connectTimeoutId);
       if (totalTimeoutId !== undefined) clearTimeout(totalTimeoutId);
@@ -133,7 +203,13 @@ async function callOpenRouter(
   }
 
   console.error('[callOpenRouter] All models exhausted:', errors);
-  throw new Error('Unable to generate analysis with available models');
+  throw new AnalysisEngineError({
+    message: 'All OpenRouter models exhausted. No model returned a usable response.',
+    code: 'ERR_ALL_MODELS_EXHAUSTED',
+    statusCode: 502,
+    modelAttempted: models.at(-1)!,
+    meta: { errors },
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -242,8 +318,9 @@ export async function POST(request: NextRequest) {
         videoId,
         title: existingAnalysis.title,
         markdown: existingAnalysis.markdown,
-        model_used: existingAnalysis.model_used,
         createdAt: existingAnalysis.created_at,
+        model_attempted: existingAnalysis.model_used,
+        model_used: existingAnalysis.model_used,
         cacheHit: true,
         message: 'Analysis compiled previously. Retrieved instantly from local architecture cache.'
       });
@@ -377,14 +454,24 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       console.error('[/api/analyses] OpenRouter error:', error);
-      addBreadcrumb('Analysis generation failed', { videoId, error: String(error) }, 'external_service');
+
+      // Surface typed AnalysisEngineError with precise HTTP status code
+      let statusCode = 500;
+      let errorMessage = 'Failed to generate analysis';
+
+      if (error instanceof AnalysisEngineError) {
+        statusCode = error.statusCode;
+        errorMessage = error.message;
+      }
+
+      addBreadcrumb('Analysis generation failed', { videoId, error: errorMessage }, 'external_service');
       Sentry.captureException(error, {
         tags: { service: 'openrouter', operation: 'claude-analysis' },
         contexts: { video: { videoId } },
       });
       return NextResponse.json(
-        { error: 'Failed to generate analysis' },
-        { status: 500 }
+        { error: errorMessage },
+        { status: statusCode }
       );
     }
 
@@ -512,6 +599,7 @@ export async function POST(request: NextRequest) {
       title: metadata.title || '',
       markdown,
       createdAt: analysis.created_at,
+      model_attempted: modelUsed,
       model_used: modelUsed,
       cacheHit: false,
     };
