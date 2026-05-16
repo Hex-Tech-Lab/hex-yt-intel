@@ -445,6 +445,106 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * GET /api/analyses
+ * List analyses for authenticated user with cursor-based pagination
+ *
+ * Query params:
+ * - limit: number (default: 20, max: 100)
+ * - cursor: string (ISO 8601 timestamp for pagination, optional)
+ *
+ * Response:
+ * {
+ *   data: AnalysisResponse[];
+ *   pagination: {
+ *     nextCursor: string | null;
+ *     hasMore: boolean;
+ *   };
+ * };
+ */
+export async function GET(request: NextRequest) {
+  try {
+    console.log('[/api/analyses] GET request received');
+
+    // 1. Auth check
+    const session = await getAuthSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID not found in session' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Parse query params
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
+    const cursor = searchParams.get('cursor');
+
+    // 3. Query Supabase with cursor-based pagination
+    const supabase = getSupabaseClient();
+
+    let query = supabase
+      .from('analyses')
+      .select('id, video_id, title, analysis_markdown, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit + 1); // Fetch one extra to check for more
+
+    // If cursor provided, fetch items older than cursor
+    if (cursor) {
+      query = query.lt('created_at', cursor);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('[/api/analyses] GET query error:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch analyses' },
+        { status: 500 }
+      );
+    }
+
+    // 4. Determine pagination state
+    const hasMore = data.length > limit;
+    const items = hasMore ? data.slice(0, limit) : data;
+    const nextCursor = hasMore && items.length > 0
+      ? items[items.length - 1]!.created_at
+      : null;
+
+    // 5. Format response
+    const response = {
+      data: items.map(item => ({
+        id: item.id,
+        videoId: item.video_id,
+        title: item.title || '',
+        markdown: item.analysis_markdown,
+        createdAt: item.created_at,
+      })),
+      pagination: {
+        nextCursor,
+        hasMore,
+      },
+    };
+
+    return NextResponse.json(response, { status: 200 });
+  } catch (error) {
+    console.error('[/api/analyses] GET error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * Background job: Generate and store embedding for analysis
  * Runs asynchronously after analysis is saved
  * Non-blocking: errors are logged but don't fail the analysis creation
