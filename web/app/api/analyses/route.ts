@@ -131,8 +131,8 @@ async function callOpenRouter(
       console.warn(`[callOpenRouter] ${model}: ${sourceLabel} fault – ${msg.slice(0, 80)}`);
       errors[model] = `${sourceLabel} fault: ${msg.slice(0, 60)}`;
     } finally {
-      connectTimeoutId = clearTimeout(connectTimeoutId) as unknown as NodeJS.Timeout | undefined;
-      totalTimeoutId = clearTimeout(totalTimeoutId) as unknown as NodeJS.Timeout | undefined;
+      if (connectTimeoutId !== undefined) clearTimeout(connectTimeoutId);
+      if (totalTimeoutId !== undefined) clearTimeout(totalTimeoutId);
     }
   }
 
