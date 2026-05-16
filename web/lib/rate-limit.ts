@@ -17,6 +17,7 @@
  * - Graceful degradation if Redis unavailable
  */
 
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -24,6 +25,7 @@ import {
   getRedisValue,
   incrementRedisValue,
   setRedisExpiration,
+  executeRedisScript,
 } from '@/lib/redis';
 import * as Sentry from '@sentry/nextjs';
 
@@ -76,6 +78,146 @@ export function parseRedisNumber(value: unknown): number {
 }
 
 /**
+ * Lua script for sliding window counter using Redis Sorted Set (ZSET)
+ * Atomically:
+ * 1. Remove timestamps older than 60 seconds (millisecond window)
+ * 2. Count remaining requests in window
+ * 3. If under limit, add unique request identifier
+ * 4. Refresh key TTL to 90 seconds
+ * 5. Return { allowed, count } tuple
+ *
+ * KEYS[1]: Redis key (e.g., ratelimit:user-123:analyses:sliding)
+ * ARGV[1]: Current timestamp in milliseconds
+ * ARGV[2]: Window size in milliseconds (60000)
+ * ARGV[3]: Request limit (e.g., 3 for free tier)
+ * ARGV[4]: TTL in seconds (90)
+ * ARGV[5]: Unique request member (UUID)
+ */
+const SLIDING_WINDOW_SCRIPT = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+local limit = tonumber(ARGV[3])
+local ttl = tonumber(ARGV[4])
+local member = ARGV[5]
+
+-- Remove timestamps older than window
+local cutoff = now - window
+redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
+
+-- Count remaining requests in window
+local count = redis.call('ZCARD', key)
+
+-- Determine if request is allowed
+local allowed = 0
+if count < limit then
+  redis.call('ZADD', key, now, member)
+  count = count + 1
+  allowed = 1
+end
+
+-- Refresh TTL
+redis.call('EXPIRE', key, ttl)
+
+-- Return { allowed, count } tuple
+return { allowed, count }
+`;
+
+/**
+ * Check rate limit using sliding window counter (atomic Lua execution)
+ *
+ * Algorithm: Redis Sorted Set with millisecond-precision timestamps and unique members
+ * - Removes entries older than 60 seconds (ZREMRANGEBYSCORE)
+ * - Counts remaining entries (ZCARD)
+ * - If under limit, adds unique request member (ZADD)
+ * - Refreshes key TTL to 90 seconds (EXPIRE)
+ * - Atomic execution guarantees no race conditions or burst leaks
+ *
+ * Returns: { allowed, status } tuple with accurate remaining count
+ */
+export async function checkRateLimitSlidingWindow(
+  userId: string,
+  tier: Tier,
+  endpoint: 'analyses' | 'search'
+): Promise<{ allowed: boolean; status: RateLimitStatus }> {
+  const limitPerMinute = getRateLimit(tier);
+  const now = Date.now(); // Milliseconds for high-precision timing
+  const uniqueMember = `${now}:${randomUUID()}`; // Unique identifier per request
+  const redisKey = `ratelimit:${userId}:${endpoint}:sliding`;
+
+  try {
+    // Execute Lua script atomically
+    const luaResult = await executeRedisScript(SLIDING_WINDOW_SCRIPT, [redisKey], [
+      now,
+      60000, // 60-second window in milliseconds
+      limitPerMinute,
+      90, // TTL in seconds
+      uniqueMember, // Unique request identifier
+    ]);
+
+    // Sentinel guard: if Redis unavailable, luaResult is -1
+    if (luaResult === -1) {
+      // Graceful degradation path
+      const status = gracefulDegradation(tier, limitPerMinute);
+      status.requestTime = -1;
+      return { allowed: true, status };
+    }
+
+    // Parse Lua response: [allowed, count]
+    if (!Array.isArray(luaResult) || luaResult.length !== 2) {
+      throw new Error(`Unexpected Redis Lua response array format: ${JSON.stringify(luaResult)}`);
+    }
+    const [allowedFlag, requestCount] = luaResult;
+    const allowed = allowedFlag === 1;
+
+    if (!allowed) {
+      await logRateLimitHit(userId, endpoint, tier, requestCount, limitPerMinute);
+      logRateLimitEvent(userId, tier, endpoint, requestCount, limitPerMinute, 'exceeded');
+    } else if (requestCount === limitPerMinute) {
+      // User is at the limit (next request will be blocked)
+      logRateLimitEvent(userId, tier, endpoint, requestCount, limitPerMinute, 'threshold');
+    }
+
+    // Calculate next reset time (60 seconds from now)
+    const resetAt = now + 60000; // Already in milliseconds
+    const retryAfter = 60;
+
+    const status: RateLimitStatus = {
+      remaining: Math.max(0, limitPerMinute - requestCount),
+      limit: limitPerMinute,
+      resetAt,
+      retryAfter,
+      tier,
+      requestTime: requestCount,
+    };
+
+    return { allowed, status };
+  } catch (error) {
+    console.error(`[rate-limit] Sliding window execution failed for user ${userId}:`, error);
+    Sentry.captureException(error, {
+      level: 'error',
+      contexts: {
+        rateLimit: {
+          userId,
+          endpoint,
+          tier,
+          algorithm: 'sliding-window',
+          window: '60s',
+        },
+      },
+      tags: {
+        component: 'rate-limiter',
+        severity: 'high',
+        failureMode: 'redis-unavailable',
+      },
+    });
+
+    // Graceful degradation: Allow request if Redis fails
+    return { allowed: true, status: gracefulDegradation(tier, limitPerMinute) };
+  }
+}
+
+/**
  * Rate limit configuration per tier
  * Expressed as: requests per minute
  */
@@ -100,6 +242,61 @@ export const RATE_LIMITS = {
 type Tier = keyof typeof RATE_LIMITS;
 
 /**
+ * Centralized graceful degradation response (fail-open pattern)
+ */
+function gracefulDegradation(tier: Tier, limitPerMinute: number): RateLimitStatus {
+  return {
+    remaining: -1,
+    limit: limitPerMinute,
+    resetAt: Date.now() + 60000,
+    retryAfter: 60,
+    tier,
+    requestTime: 0,
+  };
+}
+
+/**
+ * Unified rate limit event logger (consolidates Sentry + breadcrumb)
+ */
+function logRateLimitEvent(
+  userId: string,
+  tier: string,
+  endpoint: string,
+  requestCount: number,
+  limit: number,
+  eventType: 'exceeded' | 'threshold'
+): void {
+  const message = eventType === 'exceeded'
+    ? `Rate limit exceeded: ${tier} tier on ${endpoint}`
+    : `User at rate limit threshold`;
+
+  Sentry.captureMessage(message, 'warning');
+  Sentry.addBreadcrumb({
+    category: 'rate-limit',
+    message,
+    level: 'warning',
+    data: { userId, tier, endpoint, requestCount, limit },
+  });
+}
+
+/**
+ * Abstracted rate limit configuration lookup
+ */
+function getRateLimit(tier: Tier): number {
+  return RATE_LIMITS[tier].requestsPerMinute;
+}
+
+/**
+ * HTTP headers assignment utility (RFC 6585 compliance)
+ */
+export function applyRateLimitHeaders(response: NextResponse, status: RateLimitStatus): void {
+  const resetAtSeconds = Math.ceil(status.resetAt / 1000);
+  response.headers.set('X-RateLimit-Limit', String(status.limit));
+  response.headers.set('X-RateLimit-Remaining', String(status.remaining));
+  response.headers.set('X-RateLimit-Reset', String(resetAtSeconds));
+}
+
+/**
  * Rate limit status returned to client
  */
 export interface RateLimitStatus {
@@ -120,8 +317,7 @@ export async function checkRateLimit(
   tier: Tier,
   endpoint: 'analyses' | 'search'
 ): Promise<{ allowed: boolean; status: RateLimitStatus }> {
-  const limit = RATE_LIMITS[tier];
-  const limitPerMinute = limit.requestsPerMinute;
+  const limitPerMinute = getRateLimit(tier);
 
   // Redis key: user:tier:endpoint:minute
   // Pattern allows per-endpoint limiting and hourly rollup if needed
@@ -183,22 +379,13 @@ export async function checkRateLimit(
     });
 
     // Graceful degradation: Allow request if Redis fails
-    // Log the incident for debugging
-    const status: RateLimitStatus = {
-      remaining: -1, // Indicate unknown state
-      limit: limitPerMinute,
-      resetAt: Date.now() + 60000,
-      retryAfter: 60,
-      tier,
-      requestTime: 0,
-    };
-
-    return { allowed: true, status };
+    return { allowed: true, status: gracefulDegradation(tier, limitPerMinute) };
   }
 }
 
 /**
  * Rate limit middleware for Next.js API routes
+ * Uses sliding window counter for per-minute enforcement (no burst leaks)
  * Usage: Apply before main route handler
  *
  * @param request - Next.js request
@@ -217,14 +404,7 @@ export async function applyRateLimit(
   response?: NextResponse;
   headers?: { [key: string]: string };
 }> {
-  const { allowed, status } = await checkRateLimit(userId, tier, endpoint);
-
-  // Headers to attach to response
-  const headers: { [key: string]: string } = {
-    'X-RateLimit-Limit': String(status.limit),
-    'X-RateLimit-Remaining': String(status.remaining),
-    'X-RateLimit-Reset': String(status.resetAt),
-  };
+  const { allowed, status } = await checkRateLimitSlidingWindow(userId, tier, endpoint);
 
   if (!allowed) {
     // Return 429 Too Many Requests with Retry-After header
@@ -238,18 +418,23 @@ export async function applyRateLimit(
       { status: 429 }
     );
 
-    // Add standard rate limit headers
-    for (const [key, value] of Object.entries(headers)) {
-      response.headers.set(key, value);
-    }
-
-    // Add Retry-After header (HTTP standard)
+    // Add RFC 6585 compliant headers
+    applyRateLimitHeaders(response, status);
     response.headers.set('Retry-After', String(status.retryAfter));
 
     return { allowed: false, response };
   }
 
-  return { allowed: true, headers };
+  // For successful requests, return headers as object (caller will apply)
+  const resetAtSeconds = Math.ceil(status.resetAt / 1000);
+  return {
+    allowed: true,
+    headers: {
+      'X-RateLimit-Limit': String(status.limit),
+      'X-RateLimit-Remaining': String(status.remaining),
+      'X-RateLimit-Reset': String(resetAtSeconds),
+    },
+  };
 }
 
 /**
