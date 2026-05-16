@@ -17,6 +17,7 @@
  * - Graceful degradation if Redis unavailable
  */
 
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
 import {
@@ -93,7 +94,7 @@ export async function checkRateLimitSlidingWindow(
   const limit = RATE_LIMITS[tier];
   const limitPerMinute = limit.requestsPerMinute;
   const now = Date.now(); // Milliseconds for high-precision timing
-  const uniqueMember = `${now}:${crypto.randomUUID()}`; // Unique identifier per request
+  const uniqueMember = `${now}:${randomUUID()}`; // Unique identifier per request
   const redisKey = `ratelimit:${userId}:${endpoint}:sliding`;
 
   try {
@@ -121,7 +122,10 @@ export async function checkRateLimitSlidingWindow(
     }
 
     // Parse Lua response: [allowed, count]
-    const [allowedFlag, requestCount] = Array.isArray(luaResult) ? luaResult : [-1, -1];
+    if (!Array.isArray(luaResult) || luaResult.length !== 2) {
+      throw new Error(`Unexpected Redis Lua response array format: ${JSON.stringify(luaResult)}`);
+    }
+    const [allowedFlag, requestCount] = luaResult;
     const allowed = allowedFlag === 1;
 
     if (!allowed) {

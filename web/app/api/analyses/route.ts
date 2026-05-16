@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createUCISPrompt } from '@/lib/prompts';
 import { generateEmbedding } from '@/lib/embeddings';
@@ -326,7 +327,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 9. Insert analysis into Supabase (without embedding initially)
+    const analysisId = randomUUID();
     const analysisPayload = {
+      id: analysisId,
       user_id: userId,
       video_id: videoId,
       title: metadata.title || '',
@@ -360,9 +363,9 @@ export async function POST(request: NextRequest) {
           throw error;
         }
 
-        // INSERT succeeded; returning: 'minimal' skips post-insert SELECT
+        // INSERT succeeded; return the actual record ID
         return {
-          id: `${userId}:${videoId}:${Date.now()}`,
+          id: analysisId,
           created_at: analysisPayload.created_at,
         };
       },
