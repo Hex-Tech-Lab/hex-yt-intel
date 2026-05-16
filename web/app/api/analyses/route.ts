@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { randomUUID } from 'crypto';
 import { createUCISPrompt } from '@/lib/prompts';
 import { generateEmbedding } from '@/lib/embeddings';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
@@ -14,6 +13,8 @@ import {
   addBreadcrumb,
   setUserContext
 } from '@/lib/monitoring/sentry-utils';
+
+export const runtime = 'edge';
 
 interface AnalysisResponse {
   id: string;
@@ -89,11 +90,17 @@ async function callOpenRouter(
     const controller = new AbortController();
     let connectTimeoutId: NodeJS.Timeout | undefined;
     let totalTimeoutId: NodeJS.Timeout | undefined;
-    let connectionHandshakePassed = false;
+    let timeoutSource: 'connect' | 'total' | null = null;
 
     try {
-      connectTimeoutId = setTimeout(() => controller.abort(), 3000);
-      totalTimeoutId = setTimeout(() => controller.abort(), adaptiveTimeout);
+      connectTimeoutId = setTimeout(() => {
+        timeoutSource = 'connect';
+        controller.abort();
+      }, 3000);
+      totalTimeoutId = setTimeout(() => {
+        timeoutSource = 'total';
+        controller.abort();
+      }, adaptiveTimeout);
 
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -124,7 +131,6 @@ async function callOpenRouter(
 
       clearTimeout(connectTimeoutId);
       connectTimeoutId = undefined;
-      connectionHandshakePassed = true;
 
       if (!response.ok) {
         // --- Response-level error classification ---
@@ -178,15 +184,25 @@ async function callOpenRouter(
 
       const error = err as Error;
       const msg = error.message;
-      // Connect-level timeout: abort fired before the handshake confirmed the connection
-      if (error.name === 'AbortError' && !connectionHandshakePassed) {
-        console.warn(`[callOpenRouter] ${model}: connect handshake timeout – ${msg.slice(0, 80)}`);
-        throw new AnalysisEngineError({
-          message: `Network timeout — connection to OpenRouter for model "${model}" did not complete handshake within 3 s.`,
-          code: 'ERR_NETWORK_TIMEOUT',
-          statusCode: 408,
-          modelAttempted: model,
-        });
+      
+      if (error.name === 'AbortError') {
+        if (timeoutSource === 'connect') {
+          console.warn(`[callOpenRouter] ${model}: connect handshake timeout – ${msg.slice(0, 80)}`);
+          throw new AnalysisEngineError({
+            message: `Network timeout — connection to OpenRouter for model "${model}" did not complete handshake within 3s.`,
+            code: 'ERR_NETWORK_TIMEOUT',
+            statusCode: 408,
+            modelAttempted: model,
+          });
+        } else if (timeoutSource === 'total') {
+          console.warn(`[callOpenRouter] ${model}: total task horizon timeout – ${msg.slice(0, 80)}`);
+          throw new AnalysisEngineError({
+            message: `Task horizon timeout — OpenRouter model "${model}" exceeded ${adaptiveTimeout}ms adaptive execution window.`,
+            code: 'ERR_TASK_TIMEOUT',
+            statusCode: 408,
+            modelAttempted: model,
+          });
+        }
       }
       // Total-level timeout or other unforeseen fault
       console.warn(`[callOpenRouter] ${model}: total or non-timeout fault – ${msg.slice(0, 80)}`);
@@ -476,7 +492,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 9. Insert analysis into Supabase (without embedding initially)
-    const analysisId = randomUUID();
+    const analysisId = crypto.randomUUID();
     const analysisPayload = {
       id: analysisId,
       user_id: userId,

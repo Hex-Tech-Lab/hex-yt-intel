@@ -1,4 +1,4 @@
-import { AuthProvider, Session, User } from '../types';
+import { AuthProvider, Session, User } from '@/lib/auth/types';
 
 /**
  * VercelAuthProvider implementation
@@ -8,24 +8,19 @@ import { AuthProvider, Session, User } from '../types';
  */
 export class VercelAuthProvider implements AuthProvider {
   async getCurrentSession(): Promise<Session | null> {
-    // In a real Vercel Auth environment, headers like 'x-vercel-user-id' 
-    // or native SDK calls would be used here.
-    // For now, we provide a structured implementation that can be expanded.
-    try {
-      // Placeholder for Vercel Auth session retrieval
-      return null;
-    } catch {
-      return null;
-    }
+    // TODO: Implement Vercel Auth session retrieval
+    // In a real environment, use headers like 'x-vercel-user-id' or native SDK calls
+    return null;
   }
 
-  async signIn(provider: string): Promise<void> {
-    // Vercel Auth handles sign-in via its own redirects or API
-    console.log(`Redirecting to Vercel Auth for provider: ${provider}`);
+  async signIn(_provider: string): Promise<void> {
+    // TODO: Implement Vercel Auth sign-in
+    // For now, silently no-op (sign-in handled by Vercel's native OAuth)
   }
 
   async signOut(): Promise<void> {
-    // Vercel Auth sign-out logic
+    // TODO: Implement Vercel Auth sign-out
+    // For now, silently no-op (sign-out handled by Vercel's native OAuth)
   }
 
   async getUser(): Promise<User | null> {

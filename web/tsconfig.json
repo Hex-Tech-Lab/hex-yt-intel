@@ -17,9 +17,12 @@
     "noUncheckedIndexedAccess": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@types/*": ["./packages/types/src/*"],
+      "@lib/*": ["./web/lib/*"],
+      "@components/*": ["./web/components/*"],
+      "@hooks/*": ["./web/hooks/*"],
+      "@api/*": ["./web/app/api/*"],
+      "@/*": ["./*"]
     },
     "noEmit": true,
     "incremental": true,
