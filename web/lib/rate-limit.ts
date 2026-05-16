@@ -105,12 +105,18 @@ export async function checkRateLimitSlidingWindow(
 
     if (!allowed) {
       await logRateLimitHit(userId, endpoint, tier, requestCount, limitPerMinute);
-      Sentry.captureMessage(`Rate limit exceeded: ${tier} tier on ${endpoint}`, 'warning', {
-        userId,
-        tier,
-        endpoint,
-        requestCount,
-        limit: limitPerMinute,
+      Sentry.captureMessage(`Rate limit exceeded: ${tier} tier on ${endpoint}`, 'warning');
+      Sentry.addBreadcrumb({
+        category: 'rate-limit',
+        message: 'Rate limit exceeded',
+        level: 'warning',
+        data: {
+          userId,
+          tier,
+          endpoint,
+          requestCount,
+          limit: limitPerMinute,
+        },
       });
     } else if (requestCount === limitPerMinute) {
       // User is at the limit (next request will be blocked)
