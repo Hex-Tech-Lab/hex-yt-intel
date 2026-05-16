@@ -294,7 +294,7 @@ hex-yt-intel/
 
 ## GOOGLE CLOUD SETUP (May 2026)
 
-### Required APIs (3 Total) ⏳ AWAITING MANUAL ENABLEMENT
+### Phase 1: GCP APIs ✅ COMPLETE (2026-05-16)
 
 | API | Purpose | Status |
 |-----|---------|--------|
@@ -302,34 +302,43 @@ hex-yt-intel/
 | Google People API | User profile & email OAuth scopes | ✅ Enabled |
 | Cloud IAM API | Service account management | ✅ Enabled |
 
-**Status**: All three required APIs live ✅ | OAuth credentials configured ✅ | Production deployed ✅ | Auth flow working (callback redirect `/dashboard` → `/` fixed)
+All three APIs verified live via `gcloud services list --enabled` on 2026-05-16.
 
 ---
+
+### Phase 2: OAuth Consent Screen + Client (⏳ MANUAL SETUP REQUIRED)
+
+**Status**: GCP APIs live ✅ | Supabase OAuth active ✅ | Google OAuth credentials needed ⏳
+
+See: [docs/GOOGLE_OAUTH_PHASE2.md](docs/GOOGLE_OAUTH_PHASE2.md) for step-by-step console setup.
 
 **Service Account**:
 - Email: `agent-orchestrator@hex-yt-intel.iam.gserviceaccount.com`
 - Project ID: `283991426265` (display: `hex-yt-intel`)
 - Key Location: `/home/kellyb_dev/.config/gcloud/hex-yt-intel-new-key.json` (chmod 600)
-- IAM Role: Owner ✅
+- IAM Roles: Owner + Service Usage Admin ✅
 
-**Next Steps** *(all prerequisites complete)*:
-1. GCP APIs ✅ — `people.googleapis.com`, `iam.googleapis.com`, `cloudresourcemanager.googleapis.com` all verified enabled
-2. OAuth Client ID ✅ — created via console, Client ID + Secret set as Vercel env vars
-3. Auth callback fix ✅ — `web/app/auth/callback/route.ts` lines 8 + 46 fallback changed `'/dashboard'` → `'/'`
-4. Production deploy ✅ — commit `efea2c1` pushed, Vercel live at `https://hex-yt-intel.vercel.app`
-5. **Remaining**: User must test sign-in at prod URL and confirm user appears in Supabase > Auth > Users
+**What to do**:
+1. Follow [docs/GOOGLE_OAUTH_PHASE2.md](docs/GOOGLE_OAUTH_PHASE2.md) steps 1-2 (OAuth consent screen + client in Google Cloud Console)
+2. Save Client ID + Secret
+3. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Vercel env vars (Step 3 in guide)
+4. Configure Supabase Google provider with these credentials (Step 4)
+5. Test at https://hex-yt-intel.vercel.app/auth/signin
 
 ---
 
 ## NEXT STEPS
-1. ✅ Create PRD (Product Requirements Document)
-2. ✅ Create Implementation Plan (chunked with verification gates)
-3. ✅ Enable Google Cloud APIs (people, iam, cloudresourcemanager — all verified live)
-4. ✅ Create Google OAuth 2.0 credentials (console, committed to Vercel env)
-5. ✅ Fix callback 404 (`/dashboard` → `/`)
-6. **⏳ User test**: Verify prod OAuth flow end-to-end at `https://hex-yt-intel.vercel.app/auth/signin`
-7. **⏳ (Later)** Create `/dashboard` page if a protected route is desired (currently `/` is the post-auth landing)
-8. **⏳ (Optional)** Update OAuth consent screen to External + Privacy Policy URL before public launch
+1. ✅ Chunk 8: Dashboard UI layout (70-75% / 25-30% two-panel)
+2. ✅ Supabase OAuth production deployment (Google/GitHub via Supabase)
+3. ✅ GCP APIs enabled (people, iam, cloudresourcemanager)
+4. **⏳ Phase 2**: Create OAuth consent screen + client ID (manual Google Cloud Console)
+   - See: [docs/GOOGLE_OAUTH_PHASE2.md](docs/GOOGLE_OAUTH_PHASE2.md)
+   - Pre-filled values provided in guide
+   - Estimated time: 10 minutes
+5. **⏳ Chunk 9**: PDF export + sharing functionality
+6. **⏳ Chunk 10**: Stripe billing integration (freemium model)
+7. **(Later)** Team collaboration features
+8. **(Later)** Cross-system search with hex-adhd-prep
 
 ## QUICK START COMMANDS
 
