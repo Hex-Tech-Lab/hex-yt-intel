@@ -43,7 +43,6 @@ async function callOpenRouter(
   const prompt = createUCISPrompt(metadata, transcript);
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
-
   const transcriptLength = transcript?.length || 0;
   const adaptiveTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 5000) * 1000);
 
@@ -107,6 +106,7 @@ async function callOpenRouter(
       return { content: data.choices[0].message.content, model };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      // Classify the timeout source for observability
       const sourceLabel = connectTimeoutId === undefined ? 'total' : 'connect';
       console.warn(`[callOpenRouter] ${model}: ${sourceLabel} fault – ${msg.slice(0, 80)}`);
       errors[model] = `${sourceLabel} fault: ${msg.slice(0, 60)}`;
