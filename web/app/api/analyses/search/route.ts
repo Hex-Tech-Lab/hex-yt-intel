@@ -47,8 +47,6 @@ import {
   setUserContext,
 } from '@/lib/monitoring/sentry-utils';
 
-export const runtime = 'edge';
-
 interface SearchResult {
   id: string;
   title: string;

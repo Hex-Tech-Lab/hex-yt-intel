@@ -14,8 +14,6 @@ import {
   setUserContext
 } from '@/lib/monitoring/sentry-utils';
 
-export const runtime = 'edge';
-
 interface AnalysisResponse {
   id: string;
   videoId: string;
