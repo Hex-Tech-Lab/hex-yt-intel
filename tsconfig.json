@@ -10,6 +10,7 @@
     "noImplicitAny": true,
     "baseUrl": ".",
     "paths": {
+      "@/*": ["./web/*"],
       "@types/*": ["./packages/types/src/*"],
       "@lib/*": ["./web/lib/*"],
       "@components/*": ["./web/components/*"],
