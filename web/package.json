@@ -16,6 +16,7 @@
     "@supabase/ssr": "0.10.3",
     "@supabase/supabase-js": "2.105.4",
     "@upstash/redis": "^1.34.0",
+    "lucide-react": "1.16.0",
     "next": "^15.0.0",
     "next-auth": "4.24.14",
     "pdfkit": "0.18.0",
