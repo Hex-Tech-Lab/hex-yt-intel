@@ -63,7 +63,9 @@ app.get("/fetch-metadata", async (c) => {
     const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${videoId}&key=${apiKey}`;
 
     const response = await fetch(url);
-    const data = await response.json();
+    const data = (await response.json()) as {
+      items?: Array<{ snippet: unknown; statistics: unknown; contentDetails: unknown }>;
+    };
 
     if (!data.items || data.items.length === 0) {
       return c.json({ error: "Video not found" }, 404);
