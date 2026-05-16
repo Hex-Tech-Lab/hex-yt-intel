@@ -22,9 +22,47 @@ git checkout -b feature/chunk-[id]-[description]
 # Example: feature/chunk-9-pdf-export
 ```
 
-### Step 2: Local Triple-Gate Verification (Non-negotiable)
+### Step 2a: Dependency Audit (Critical — Exposed by fresh builds)
 
 ```bash
+# Verify all imports have explicit declarations
+grep -r "^import\|^export" --include="*.ts" --include="*.tsx" app lib components | \
+grep -oE "from ['\"]([^'\"]+)['\"]" | sort -u | sed "s/from ['\"]//;s/['\"]//g" | \
+while read module; do
+  if [[ "$module" != "@/"* ]] && [[ "$module" != "./"* ]] && [[ "$module" != "../"* ]]; then
+    pkg_name=$(echo "$module" | cut -d'/' -f1)
+    if ! grep -q "\"$pkg_name\"" package.json 2>/dev/null; then
+      echo "❌ MISSING: $pkg_name (imported as: $module)"
+      exit 1
+    fi
+  fi
+done
+
+# Verify pnpm config
+if [ ! -f ".npmrc" ] || ! grep -q "auto-install-peers=true" .npmrc; then
+  echo "❌ .npmrc missing or auto-install-peers not enabled"
+  exit 1
+fi
+
+if ! grep -q "autoInstallPeers: true" pnpm-lock.yaml; then
+  echo "❌ pnpm-lock.yaml has incorrect autoInstallPeers setting"
+  exit 1
+fi
+```
+
+**Audit fail?** Stop. Fix locally:
+- Run `pnpm add <package>` for any missing dependencies
+- Verify `.npmrc` exists with `auto-install-peers=true`
+- Regenerate lockfile: `rm pnpm-lock.yaml && pnpm install`
+- Verify `settings.autoInstallPeers: true` in regenerated lockfile
+- Commit ALL THREE: `package.json`, `.npmrc`, `pnpm-lock.yaml`
+
+### Step 2b: Local Triple-Gate Verification (Non-negotiable)
+
+```bash
+# Clean build (no cached node_modules)
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
 pnpm type-check      # 0 TypeScript errors
 pnpm lint            # 0 linting violations
 pnpm build           # Production build completes
@@ -155,7 +193,12 @@ git push origin feature/chunk-[id]-[description]
 
 Merge only when ALL conditions met:
 
-- [ ] All gates pass locally (type-check ✅ | lint ✅ | build ✅)
+- [ ] **Dependency audit passed** — all imports have explicit declarations ✅
+  - Verify with: `grep -r "^import" ... | grep -q missing && echo FAIL`
+  - Check: `.npmrc` exists with `auto-install-peers=true`
+  - Check: `pnpm-lock.yaml` has `settings.autoInstallPeers: true`
+- [ ] All gates pass locally (type-check ✅ | lint ✅ | build ✅) with clean build
+  - `rm -rf node_modules pnpm-lock.yaml && pnpm install && pnpm build`
 - [ ] All CI/CD checks green (CodeRabbit ✅ | Sonar ✅ | Snyk ✅)
 - [ ] Review matrix complete (all items resolved ✅)
 - [ ] No force-push history (clean linear commits)
@@ -163,6 +206,7 @@ Merge only when ALL conditions met:
 - [ ] Git status clean (no uncommitted changes)
 - [ ] Branch up-to-date with main (no stale merge conflicts)
 - [ ] Vercel preview deploy successful (no runtime errors)
+- [ ] `package.json`, `.npmrc`, and `pnpm-lock.yaml` all committed
 
 ### Merge command:
 
@@ -240,7 +284,10 @@ Non-CC agents implementing Phase 3 (Resolve CI Feedback) must route all code-rev
 |---|---|---|
 | Multiple agents on same feature | Merge conflicts + unclear ownership | One agent per feature branch |
 | Force-push main | Breaks history, CI chaos | `--force-with-lease` on feature branches only |
+| Skipping dependency audit | Fresh build exposes missing packages on Vercel | Always audit + clean build before merge |
+| Importing without `pnpm add` | Transitive deps disappear when parent removed | Audit all imports vs package.json |
 | Skipping local gates | CI catches issues after push (waste time) | Run gates locally before push |
+| Using cached node_modules for gate check | Old packages mask missing dependencies | Always `rm -rf node_modules pnpm-lock.yaml && pnpm install` |
 | Ignoring CI/CD feedback | Tech debt + inconsistency | Resolve all matrix items sequentially |
 | Generic commit messages | Lost context in AGENTS.md | Use atomic format with gates + dependencies |
 | Local sandbox work | "I'll push later" → lost code | Everything to GitHub immediately |
