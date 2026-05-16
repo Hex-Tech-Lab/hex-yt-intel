@@ -38,7 +38,7 @@ async function callOpenRouter(
     publishedAt: string;
   },
   transcript: string
-): Promise<string> {
+): Promise<{ content: string; model: string }> {
   const prompt = createUCISPrompt(metadata, transcript);
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
@@ -79,8 +79,8 @@ async function callOpenRouter(
           continue;
         }
         if (response.status === 401) {
-          console.warn(`[callOpenRouter] ${model}: 401 unauthorized (check API key)`);
-          continue;
+          console.error(`[callOpenRouter] ${model}: 401 unauthorized (check API key)`);
+          throw new Error('OpenRouter authentication failed - check API key');
         }
         console.warn(`[callOpenRouter] ${model}: ${response.status} ${errorText.slice(0, 80)}`);
         continue;
@@ -88,7 +88,7 @@ async function callOpenRouter(
 
       const data = await response.json();
       console.log(`[callOpenRouter] ✓ Success with ${model}`);
-      return data.choices[0].message.content;
+      return { content: data.choices[0].message.content, model };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors[model] = msg.slice(0, 100);
@@ -96,7 +96,8 @@ async function callOpenRouter(
     }
   }
 
-  throw new Error(`All OpenRouter models exhausted: ${JSON.stringify(errors)}`);
+  console.error('[callOpenRouter] All models exhausted:', errors);
+  throw new Error('Unable to generate analysis with available models');
 }
 
 export async function POST(request: NextRequest) {
@@ -285,14 +286,21 @@ export async function POST(request: NextRequest) {
 
     // 8. Call OpenRouter / Claude Haiku
     let markdown: string;
+    let modelUsed: string;
     try {
-      markdown = await trackExternalCall(
+      const result = await trackExternalCall(
         'openrouter',
         'claude-analysis',
         () => callOpenRouter(metadata, transcript),
-        { videoId, model: 'anthropic/claude-3.5-haiku' }
+        { videoId }
       );
-      addBreadcrumb('Analysis generated successfully', { videoId, markdownLength: markdown.length });
+      markdown = result.content;
+      modelUsed = result.model;
+      addBreadcrumb('Analysis generated successfully', {
+        videoId,
+        markdownLength: markdown.length,
+        modelUsed
+      });
     } catch (error) {
       console.error('[/api/analyses] OpenRouter error:', error);
       addBreadcrumb('Analysis generation failed', { videoId, error: String(error) }, 'external_service');
