@@ -22,8 +22,20 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+
+  // Short-circuit bad OAuth callback states (416 prevention)
+  if (searchParams.get('error_code') === 'bad_oauth_callback') {
+    const response = NextResponse.redirect(new URL('/', request.url));
+    response.cookies.delete('sb-access-token');
+    response.cookies.delete('sb-refresh-token');
+    return response;
+  }
+
   const code = searchParams.get('code');
   const next = searchParams.get('next') || '/';
+
+  // Validate next is a safe relative path before decoding
+  const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/';
 
   if (!code) {
     return NextResponse.redirect(new URL('/auth/error?error=no_code', request.url));
@@ -41,10 +53,6 @@ export async function GET(request: NextRequest) {
             return cookieStore.getAll();
           },
           setAll(cookiesToSet) {
-            // Route Handlers: cookies() from next/headers is NOT a persistent
-            // store.  The Supabase SSR setAll callback would silently discard
-            // tokens here.  Instead we capture them in sessionTokens and apply
-            // them explicitly to the NextResponse below.
             sessionTokens.current = cookiesToSet.map(c => ({
               name: c.name,
               value: c.value,
@@ -55,10 +63,8 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // Decode the next parameter and ensure it's safe
-    const decodedNext = decodeURIComponent(next);
-    const safeNext = decodedNext.startsWith('/') ? decodedNext : '/';
-    const response = NextResponse.redirect(new URL(safeNext, request.url));
+    const decodedNext = decodeURIComponent(safeNext);
+    const response = NextResponse.redirect(new URL(decodedNext, request.url));
 
     // Exchange the authorization code for a session
     const { error, data } = await supabase.auth.exchangeCodeForSession(code);
@@ -71,9 +77,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/error?error=no_session', request.url));
     }
 
-    // Apply Supabase SSR session tokens captured by setAll to the response.
-    // This is the correct way to propagate auth cookies from a Route Handler
-    // where next/headers cookies() is transient.
+    // Apply Supabase SSR session tokens
     const tokens = sessionTokens.current;
     if (tokens) {
       for (const { name, value, options } of tokens) {

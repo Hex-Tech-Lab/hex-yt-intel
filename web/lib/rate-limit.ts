@@ -549,14 +549,9 @@ export interface QuotaStatus {
  * @param tier - User subscription tier
  * @returns Object with limit and window
  */
-export function getRateLimit(
-  tier: 'free' | 'pro' | 'enterprise'
-): { limit: number | null; window: string } {
+export function getMonthlyQuotaLimit(tier: 'free' | 'pro' | 'enterprise'): { limit: number | null; window: string } {
   const limit = MONTHLY_QUOTAS[tier];
-  return {
-    limit,
-    window: 'month',
-  };
+  return { limit, window: 'month' };
 }
 
 /**
