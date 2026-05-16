@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Play, Download, RotateCcw } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 export default function Home() {
   const { data: session, update: updateSession } = useSession();
@@ -52,7 +53,10 @@ export default function Home() {
           markdown: data.markdown || 'Analysis in progress...',
         });
       } else {
-        alert('Failed to analyze video');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || `HTTP ${response.status}`;
+        console.error('Analysis failed:', errorMsg);
+        alert(`Failed to analyze video: ${errorMsg}`);
       }
     } catch (error) {
       alert('Error analyzing video');
@@ -64,6 +68,12 @@ export default function Home() {
   const handleClear = () => {
     setAnalysis(null);
     setUrl('');
+  };
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/');
   };
 
   const handleExport = () => {
@@ -100,11 +110,16 @@ export default function Home() {
             <Link href="/pricing" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
               Pricing
             </Link>
-            {session ? (
-              <Link href="/api/auth/signout" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
-                Sign Out
-              </Link>
-            ) : (
+            <Link href="/billing" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
+              Billing
+            </Link>
+            <button
+              onClick={handleSignOut}
+              className="px-4 py-2 text-gray-700 hover:text-black text-sm"
+            >
+              Sign Out
+            </button>
+            {!session && (
               <Link href="/auth/signin" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
                 Sign In
               </Link>

@@ -67,7 +67,11 @@ export async function getRedisValue(key: string): Promise<any> {
       return await redis.get(key);
     }
   } catch (error) {
+    // Any runtime Redis failure (WRONGPASS, connection error, etc.)
+    // must disable Redis for all subsequent calls in this process so
+    // they use the in-memory cache without repeated failed lookups.
     console.warn(`[redis.ts] Failed to get key ${key}:`, error);
+    redisAvailable = false;
   }
 
   // Fallback to memory cache
@@ -104,6 +108,7 @@ export async function setRedisValue(
     }
   } catch (error) {
     console.warn(`[redis.ts] Failed to set key ${key}:`, error);
+    redisAvailable = false;
   }
 
   // Fallback to memory cache
@@ -130,6 +135,7 @@ export async function incrementRedisValue(key: string, amount: number = 1): Prom
     }
   } catch (error) {
     console.warn(`[redis.ts] Failed to increment key ${key}:`, error);
+    redisAvailable = false;
   }
 
   // Fallback to memory cache
@@ -151,11 +157,12 @@ export async function setRedisExpiration(key: string, expirationSeconds: number)
 
   try {
     if (redis && redisAvailable) {
-      const result = await redis.expire(key, expirationSeconds);
+      const result =       await redis.expire(key, expirationSeconds);
       return result === 1; // 1 = success, 0 = key doesn't exist
     }
   } catch (error) {
     console.warn(`[redis.ts] Failed to set expiration on key ${key}:`, error);
+    redisAvailable = false;
   }
 
   // Fallback to memory cache
