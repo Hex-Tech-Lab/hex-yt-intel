@@ -296,7 +296,7 @@ POST /api/analyses responseStatusCode:500
 
 ### Immediate (Testing Phase)
 1. **Test OAuth Flow**
-   - Signin with Google → should see home page
+   - Sign in with Google → should see home page
    - Paste YouTube URL → should generate analysis
    - Check Vercel logs for any 500 errors
    - Verify user record created in Supabase
