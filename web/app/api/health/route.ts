@@ -1,136 +1,57 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
-import * as Sentry from '@sentry/nextjs';
 
-interface HealthResponse {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  timestamp: string;
-  components: {
-    database: {
-      status: 'ok' | 'error';
-      latency?: number;
-      error?: string;
-    };
-    sentry: {
-      status: 'ok' | 'error';
-      dsn_configured: boolean;
-    };
-    openrouter: {
-      status: 'ok' | 'error';
-      api_key_configured: boolean;
-    };
-    worker: {
-      status: 'ok' | 'error';
-      latency?: number;
-      error?: string;
-    };
-  };
-  uptime?: number;
-  version?: string;
-}
+export const runtime = 'edge';
 
-const startTime = Date.now();
-
-/**
- * Health check endpoint for monitoring
- * Returns status of critical components
- * Used by uptime monitoring tools and deployment verification
- */
-export async function GET(_request: NextRequest): Promise<NextResponse<HealthResponse>> {
-  const timestamp = new Date().toISOString();
-
-  // Check OpenRouter first using process.env directly (won't throw)
-  const hasOpenRouterKey = !!process.env.OPENROUTER_API_KEY;
-
-  const components: HealthResponse['components'] = {
-    database: { status: 'ok' },
-    sentry: { status: 'ok', dsn_configured: !!process.env.NEXT_PUBLIC_SENTRY_DSN },
-    openrouter: { status: hasOpenRouterKey ? 'ok' : 'error', api_key_configured: hasOpenRouterKey },
-    worker: { status: 'ok' },
+export async function GET() {
+  const components = {
+    database: { status: 'unknown', latency: 0, error: null as string | null },
+    worker: { status: 'unknown', latency: 0, error: null as string | null },
+    sentry: { dsn_configured: !!process.env.SENTRY_DSN || !!process.env.NEXT_PUBLIC_SENTRY_DSN }
   };
 
-  let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+  let overallStatus = 'healthy';
 
-  // Mark as unhealthy if OpenRouter key is missing
-  if (!hasOpenRouterKey) {
-    overallStatus = 'unhealthy';
-    console.error('[/api/health] OPENROUTER_API_KEY not configured');
-  }
-
-  // 1. Check Supabase connection
+  // 1. Check Database Connectivity
   try {
+    const dbStart = performance.now();
     const supabase = getSupabaseClient();
+    const { error } = await supabase.from('users').select('id').limit(1);
 
-    const dbStartTime = performance.now();
-    const { error } = await supabase.from('users').select('id', { count: 'exact' }).limit(1);
+    if (error) throw error;
 
-    components.database.latency = Math.round(performance.now() - dbStartTime);
-
-    if (error) {
-      components.database.status = 'error';
-      components.database.error = error.message;
-      overallStatus = 'degraded';
-      console.error('[/api/health] Database error:', error);
-    }
-  } catch (error) {
+    components.database.status = 'ok';
+    components.database.latency = Math.round(performance.now() - dbStart);
+  } catch (err) {
     components.database.status = 'error';
-    components.database.error = error instanceof Error ? error.message : 'Unknown error';
+    components.database.error = err instanceof Error ? err.message : String(err);
     overallStatus = 'degraded';
-    console.error('[/api/health] Database connection failed:', error);
   }
 
-  // 2. Check Cloudflare Worker
+  // 2. Check Cloudflare Worker Connectivity
   try {
+    const workerStart = performance.now();
     const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
-    const testUrl = `${workerUrl}/fetch-metadata?video_id=dQw4w9WgXcQ`; // Test with Rick Roll
 
-    const workerStartTime = performance.now();
-    const response = await fetch(testUrl, {
-      method: 'GET',
-      signal: AbortSignal.timeout(5000),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
 
-    components.worker.latency = Math.round(performance.now() - workerStartTime);
+    await fetch(workerUrl, { method: 'HEAD', signal: controller.signal });
+    clearTimeout(timeout);
 
-    if (!response.ok) {
-      components.worker.status = 'error';
-      components.worker.error = `HTTP ${response.status}`;
-      overallStatus = 'degraded';
-      console.error('[/api/health] Worker error:', response.status);
-    }
-  } catch (error) {
+    components.worker.status = 'ok';
+    components.worker.latency = Math.round(performance.now() - workerStart);
+  } catch (err) {
     components.worker.status = 'error';
-    components.worker.error = error instanceof Error ? error.message : 'Unknown error';
+    components.worker.error = err instanceof Error ? err.message : String(err);
     overallStatus = 'degraded';
-    console.error('[/api/health] Worker check failed:', error);
   }
 
-  // 3. Check Sentry configuration
-  if (!process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    components.sentry.status = 'error';
-    components.sentry.dsn_configured = false;
-    // Sentry not configured is degraded, not critical
-    if (overallStatus === 'healthy') {
-      overallStatus = 'degraded';
-    }
-  }
-
-  // Create response
-  const response: HealthResponse = {
+  return NextResponse.json({
     status: overallStatus,
-    timestamp,
-    components,
-    uptime: Math.round((Date.now() - startTime) / 1000),
-    version: process.env.NEXT_PUBLIC_APP_VERSION || '0.1.0',
-  };
-
-  // Return appropriate status code
-  const statusCode = overallStatus === 'healthy' ? 200 : 200;
-
-  // Log to Sentry if degraded
-  if (overallStatus === 'degraded') {
-    Sentry.captureMessage('Health check degraded: one or more components down', 'warning');
-  }
-
-  return NextResponse.json(response, { status: statusCode });
+    timestamp: new Date().toISOString(),
+    components
+  }, {
+    status: 200
+  });
 }
