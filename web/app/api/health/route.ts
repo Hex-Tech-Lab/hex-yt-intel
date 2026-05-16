@@ -15,6 +15,10 @@ interface HealthResponse {
       status: 'ok' | 'error';
       dsn_configured: boolean;
     };
+    openrouter: {
+      status: 'ok' | 'error';
+      api_key_configured: boolean;
+    };
     worker: {
       status: 'ok' | 'error';
       latency?: number;
@@ -34,13 +38,24 @@ const startTime = Date.now();
  */
 export async function GET(_request: NextRequest): Promise<NextResponse<HealthResponse>> {
   const timestamp = new Date().toISOString();
+
+  // Check OpenRouter first using process.env directly (won't throw)
+  const hasOpenRouterKey = !!process.env.OPENROUTER_API_KEY;
+
   const components: HealthResponse['components'] = {
     database: { status: 'ok' },
     sentry: { status: 'ok', dsn_configured: !!process.env.NEXT_PUBLIC_SENTRY_DSN },
+    openrouter: { status: hasOpenRouterKey ? 'ok' : 'error', api_key_configured: hasOpenRouterKey },
     worker: { status: 'ok' },
   };
 
   let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+
+  // Mark as unhealthy if OpenRouter key is missing
+  if (!hasOpenRouterKey) {
+    overallStatus = 'unhealthy';
+    console.error('[/api/health] OPENROUTER_API_KEY not configured');
+  }
 
   // 1. Check Supabase connection
   try {

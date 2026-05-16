@@ -35,8 +35,10 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
     throw new Error('Cannot generate embedding for empty text');
   }
 
-  if (!process.env.OPENROUTER_API_KEY) {
-    throw new Error('OPENROUTER_API_KEY is not configured');
+  // Defensive runtime check - will fail fast if key is missing
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY is not configured. Set it in Vercel environment variables.');
   }
 
   // Truncate text to reasonable length (max ~8000 tokens for embeddings)
@@ -50,7 +52,7 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
           'HTTP-Referer': 'https://hex-yt-intel.vercel.app',
           'X-Title': 'hex-yt-intel-embeddings',
         },

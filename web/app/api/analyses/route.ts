@@ -21,6 +21,9 @@ interface AnalysisResponse {
   title: string;
   markdown: string;
   createdAt: string;
+  model_used: string;
+  cacheHit?: boolean;
+  message?: string;
 }
 
 async function fetchTranscript(videoId: string): Promise<string> {
@@ -40,6 +43,12 @@ async function callOpenRouter(
   },
   transcript: string
 ): Promise<{ content: string; model: string }> {
+  // Defensive runtime check - will fail fast if key is missing
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY is not configured. Set it in Vercel environment variables.');
+  }
+
   const prompt = createUCISPrompt(metadata, transcript);
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
@@ -59,7 +68,7 @@ async function callOpenRouter(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
           'HTTP-Referer': 'https://hex-yt-intel.vercel.app',
           'X-Title': 'hex-yt-intel',
         },
@@ -194,6 +203,44 @@ export async function POST(request: NextRequest) {
 
     // 4. Supabase client (server-side)
     const supabase = getSupabaseClient();
+
+    // 4.5 CACHE HIT CHECK: Query for existing analysis with this videoId
+    const existingAnalysis = await trackDatabaseQuery(
+      'select',
+      'analyses',
+      async () => {
+        const { data, error } = await supabase
+          .from('analyses')
+          .select('id, title, markdown, model_used, created_at')
+          .eq('video_id', videoId)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+        return data || null;
+      },
+      { videoId, userId }
+    ).catch((err) => {
+      addBreadcrumb('Cache lookup failed (non-blocking)', { videoId, error: String(err) }, 'database');
+      return null; // Non-blocking: continue even if cache lookup fails
+    });
+
+    // If found in cache, return immediately
+    if (existingAnalysis) {
+      addBreadcrumb('Cache hit: analysis retrieved from DB', { videoId, analysisId: existingAnalysis.id }, 'cache');
+      Sentry.captureMessage('Cache hit: duplicate analysis prevented', 'info');
+      return NextResponse.json({
+        id: existingAnalysis.id,
+        videoId,
+        title: existingAnalysis.title,
+        markdown: existingAnalysis.markdown,
+        model_used: existingAnalysis.model_used,
+        createdAt: existingAnalysis.created_at,
+        cacheHit: true,
+        message: 'Analysis compiled previously. Retrieved instantly from local architecture cache.'
+      });
+    }
 
     // 5. Check quota enforcement
     const userData = await trackDatabaseQuery(
@@ -344,6 +391,7 @@ export async function POST(request: NextRequest) {
       channel_title: metadata.channelTitle || '',
       view_count: parseInt(metadata.viewCount || '0', 10),
       analysis_markdown: markdown,
+      model_used: modelUsed,
       embedding: null,
       created_at: new Date().toISOString(),
     };
@@ -457,6 +505,8 @@ export async function POST(request: NextRequest) {
       title: metadata.title || '',
       markdown,
       createdAt: analysis.created_at,
+      model_used: modelUsed,
+      cacheHit: false,
     };
 
     return NextResponse.json(result, { status: 201 });
