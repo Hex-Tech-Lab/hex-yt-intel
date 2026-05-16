@@ -71,9 +71,15 @@ return count
 
 /**
  * Check rate limit using sliding window counter (atomic Lua execution)
- * Ensures no burst-traffic leaks at window boundaries
  *
- * Returns: { allowed, status } tuple
+ * Algorithm: Redis Sorted Set with microsecond-precision timestamps
+ * - Removes entries older than 60 seconds (ZREMRANGEBYSCORE)
+ * - Counts remaining entries (ZCARD)
+ * - If under limit, adds current request timestamp (ZADD)
+ * - Refreshes key TTL to 90 seconds (EXPIRE)
+ * - Atomic execution guarantees no race conditions or burst leaks
+ *
+ * Returns: { allowed, status } tuple with accurate remaining count
  */
 export async function checkRateLimitSlidingWindow(
   userId: string,
@@ -99,6 +105,27 @@ export async function checkRateLimitSlidingWindow(
 
     if (!allowed) {
       await logRateLimitHit(userId, endpoint, tier, requestCount, limitPerMinute);
+      Sentry.captureMessage(`Rate limit exceeded: ${tier} tier on ${endpoint}`, 'warning', {
+        userId,
+        tier,
+        endpoint,
+        requestCount,
+        limit: limitPerMinute,
+      });
+    } else if (requestCount === limitPerMinute) {
+      // User is at the limit (next request will be blocked)
+      Sentry.addBreadcrumb({
+        category: 'rate-limit',
+        message: `User at rate limit threshold`,
+        level: 'warning',
+        data: {
+          userId,
+          tier,
+          endpoint,
+          current: requestCount,
+          limit: limitPerMinute,
+        },
+      });
     }
 
     // Calculate next reset time (60 seconds from now)
@@ -116,22 +143,27 @@ export async function checkRateLimitSlidingWindow(
 
     return { allowed, status };
   } catch (error) {
-    console.error(`[rate-limit] Error in sliding window check for user ${userId}:`, error);
+    console.error(`[rate-limit] Sliding window execution failed for user ${userId}:`, error);
     Sentry.captureException(error, {
+      level: 'error',
       contexts: {
         rateLimit: {
           userId,
           endpoint,
           tier,
           algorithm: 'sliding-window',
+          window: '60s',
         },
       },
       tags: {
+        component: 'rate-limiter',
         severity: 'high',
+        failureMode: 'redis-unavailable',
       },
     });
 
     // Graceful degradation: Allow request if Redis fails
+    // Log this incident for operational awareness
     const status: RateLimitStatus = {
       remaining: -1,
       limit: limitPerMinute,
