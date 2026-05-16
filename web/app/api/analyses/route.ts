@@ -86,8 +86,8 @@ async function callOpenRouter(
 
   for (const model of models) {
     const controller = new AbortController();
-    let connectTimeoutId: NodeJS.Timeout | undefined;
-    let totalTimeoutId: NodeJS.Timeout | undefined;
+    let connectTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let totalTimeoutId: ReturnType<typeof setTimeout> | undefined;
     let timeoutSource: 'connect' | 'total' | null = null;
 
     try {
