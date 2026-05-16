@@ -290,11 +290,12 @@ export async function applyRateLimit(
 }> {
   const { allowed, status } = await checkRateLimitSlidingWindow(userId, tier, endpoint);
 
-  // Headers to attach to response
+  // Headers to attach to response (HTTP standard: Unix timestamp in seconds)
+  const resetAtSeconds = Math.ceil(status.resetAt / 1000);
   const headers: { [key: string]: string } = {
     'X-RateLimit-Limit': String(status.limit),
     'X-RateLimit-Remaining': String(status.remaining),
-    'X-RateLimit-Reset': String(status.resetAt),
+    'X-RateLimit-Reset': String(resetAtSeconds),
   };
 
   if (!allowed) {
