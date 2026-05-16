@@ -1,6 +1,6 @@
-import { AuthProvider, Session, User } from '../types';
+import { AuthProvider, Session, User } from '@/lib/auth/types';
 import { getServerSession } from 'next-auth';
-import { authConfig } from '../nextauth-config';
+import { authConfig } from '@/lib/auth/nextauth-config';
 
 export class NextAuthProvider implements AuthProvider {
   async getCurrentSession(): Promise<Session | null> {
