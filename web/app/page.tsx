@@ -3,9 +3,11 @@
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { Play, Download, RotateCcw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Download, RotateCcw, Clock } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { apiCall } from '@/lib/api-client';
+import RateLimitAlert from '@/components/RateLimitAlert';
 
 export default function Home() {
   const { data: session, update: updateSession } = useSession();
@@ -14,6 +16,25 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [analysis, setAnalysis] = useState<{ id: string; title: string; markdown: string } | null>(null);
   const [devMode, setDevMode] = useState(true); // Allow testing without auth
+  const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState(0);
+
+  // Countdown timer for rate-limit lockout
+  useEffect(() => {
+    if (lockoutTimeRemaining <= 0) return;
+
+    const interval = setInterval(() => {
+      setLockoutTimeRemaining((prev) => {
+        const newValue = prev - 1;
+        if (newValue <= 0) {
+          clearInterval(interval);
+          return 0;
+        }
+        return newValue;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lockoutTimeRemaining]);
 
   const handleDevLogin = async () => {
     // Mock session for development testing
@@ -39,26 +60,29 @@ export default function Home() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/analyses', {
+      const result = await apiCall('/api/analyses', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.ok && result.data) {
+        const data = result.data as { id: string; title?: string; markdown?: string };
         setAnalysis({
           id: data.id,
           title: data.title || 'Analysis',
           markdown: data.markdown || 'Analysis in progress...',
         });
+      } else if (result.rateLimitError) {
+        // Handle rate limit: activate countdown and disable button
+        setLockoutTimeRemaining(result.rateLimitError.retryAfter);
+        console.warn('Rate limited:', result.rateLimitError.message);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || `HTTP ${response.status}`;
+        const errorMsg = result.error || `HTTP ${result.status}`;
         console.error('Analysis failed:', errorMsg);
         alert(`Failed to analyze video: ${errorMsg}`);
       }
     } catch (error) {
+      console.error('Error analyzing video:', error);
       alert('Error analyzing video');
     } finally {
       setIsLoading(false);
@@ -168,14 +192,25 @@ export default function Home() {
                 required
               />
 
+              {/* Rate Limit Alert */}
+              {lockoutTimeRemaining > 0 && (
+                <RateLimitAlert
+                  secondsRemaining={lockoutTimeRemaining}
+                />
+              )}
+
               {/* 3 Action Buttons */}
               <div className="grid grid-cols-1 gap-2">
                 <button
                   type="submit"
-                  disabled={isLoading || !url.trim()}
+                  disabled={isLoading || !url.trim() || lockoutTimeRemaining > 0}
                   className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center gap-2"
                 >
-                  {isLoading ? (
+                  {lockoutTimeRemaining > 0 ? (
+                    <>
+                      <Clock className="w-4 h-4" /> Rate Limited ({lockoutTimeRemaining}s)
+                    </>
+                  ) : isLoading ? (
                     <>
                       <span className="animate-spin">⟳</span> Analyzing...
                     </>
