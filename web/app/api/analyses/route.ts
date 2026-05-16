@@ -82,7 +82,7 @@ async function callOpenRouter(
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
   const transcriptLength = transcript?.length || 0;
-  const adaptiveTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 5000) * 1000);
+  const adaptiveTimeout = Math.min(25000, 8000 + Math.floor(transcriptLength / 5000) * 1000);
 
   for (const model of models) {
     const controller = new AbortController();
