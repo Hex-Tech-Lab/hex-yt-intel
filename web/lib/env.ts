@@ -10,12 +10,12 @@
 const REQUIRED_ENV_VARS = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'OPENROUTER_API_KEY',
 ] as const;
 
 const OPTIONAL_ENV_VARS = [
   'NEXT_PUBLIC_SENTRY_DSN',
   'NEXT_PUBLIC_APP_VERSION',
-  'OPENROUTER_API_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
   'CLOUDFLARE_WORKER_URL',
   'SENTRY_AUTH_TOKEN',
@@ -41,7 +41,7 @@ interface EnvironmentConfig {
     workerUrl: string;
   };
   openrouter: {
-    apiKey?: string;
+    apiKey: string;
   };
   upstash: {
     redisUrl?: string;
@@ -62,6 +62,13 @@ function validateEnvVar(name: EnvVar, required: boolean = false): string | undef
   const value = process.env[name];
 
   if (required && !value) {
+    // OPENROUTER_API_KEY is a runtime requirement - never allow placeholder
+    if (name === 'OPENROUTER_API_KEY') {
+      throw new Error(
+        `Missing required environment variable: ${name}\n` +
+        `Please set this variable in your deployment environment (Vercel: Settings → Environment Variables).`
+      );
+    }
     // During Vercel build, provide default values instead of throwing
     if (process.env.VERCEL) {
       return `[build-time-placeholder-${name}]`;
@@ -142,7 +149,7 @@ export function getEnv(): EnvironmentConfig {
         'https://yt-intel.hex-tech-lab.workers.dev',
     },
     openrouter: {
-      apiKey: validateEnvVar('OPENROUTER_API_KEY', false),
+      apiKey: validateEnvVar('OPENROUTER_API_KEY', true)!,
     },
     upstash: {
       redisUrl: validateEnvVar('UPSTASH_REDIS_REST_URL', false),
@@ -179,8 +186,8 @@ export const env = {
   get sentryDsn(): string | undefined {
     return validateEnvVar('NEXT_PUBLIC_SENTRY_DSN', false);
   },
-  get openrouterApiKey(): string | undefined {
-    return validateEnvVar('OPENROUTER_API_KEY', false);
+  get openrouterApiKey(): string {
+    return validateEnvVar('OPENROUTER_API_KEY', true)!;
   },
   get cloudflareWorkerUrl(): string {
     return validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
