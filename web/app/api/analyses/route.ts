@@ -43,7 +43,7 @@ async function callOpenRouter(
   const prompt = createUCISPrompt(metadata, transcript);
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
-  const timeout = 3000; // 3 second timeout per model
+  const timeout = 25000; // 25 second timeout per model
 
   for (const model of models) {
     const controller = new AbortController();
