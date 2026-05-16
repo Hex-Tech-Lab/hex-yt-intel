@@ -91,8 +91,7 @@ export async function checkRateLimitSlidingWindow(
   tier: Tier,
   endpoint: 'analyses' | 'search'
 ): Promise<{ allowed: boolean; status: RateLimitStatus }> {
-  const limit = RATE_LIMITS[tier];
-  const limitPerMinute = limit.requestsPerMinute;
+  const limitPerMinute = getRateLimit(tier);
   const now = Date.now(); // Milliseconds for high-precision timing
   const uniqueMember = `${now}:${randomUUID()}`; // Unique identifier per request
   const redisKey = `ratelimit:${userId}:${endpoint}:sliding`;
@@ -110,14 +109,8 @@ export async function checkRateLimitSlidingWindow(
     // Sentinel guard: if Redis unavailable, luaResult is -1
     if (luaResult === -1) {
       // Graceful degradation path
-      const status: RateLimitStatus = {
-        remaining: -1,
-        limit: limitPerMinute,
-        resetAt: Date.now() + 60000,
-        retryAfter: 60,
-        tier,
-        requestTime: -1,
-      };
+      const status = gracefulDegradation(tier, limitPerMinute);
+      status.requestTime = -1;
       return { allowed: true, status };
     }
 
@@ -130,33 +123,10 @@ export async function checkRateLimitSlidingWindow(
 
     if (!allowed) {
       await logRateLimitHit(userId, endpoint, tier, requestCount, limitPerMinute);
-      Sentry.captureMessage(`Rate limit exceeded: ${tier} tier on ${endpoint}`, 'warning');
-      Sentry.addBreadcrumb({
-        category: 'rate-limit',
-        message: 'Rate limit exceeded',
-        level: 'warning',
-        data: {
-          userId,
-          tier,
-          endpoint,
-          requestCount,
-          limit: limitPerMinute,
-        },
-      });
+      logRateLimitEvent(userId, tier, endpoint, requestCount, limitPerMinute, 'exceeded');
     } else if (requestCount === limitPerMinute) {
       // User is at the limit (next request will be blocked)
-      Sentry.addBreadcrumb({
-        category: 'rate-limit',
-        message: `User at rate limit threshold`,
-        level: 'warning',
-        data: {
-          userId,
-          tier,
-          endpoint,
-          current: requestCount,
-          limit: limitPerMinute,
-        },
-      });
+      logRateLimitEvent(userId, tier, endpoint, requestCount, limitPerMinute, 'threshold');
     }
 
     // Calculate next reset time (60 seconds from now)
@@ -194,17 +164,7 @@ export async function checkRateLimitSlidingWindow(
     });
 
     // Graceful degradation: Allow request if Redis fails
-    // Log this incident for operational awareness
-    const status: RateLimitStatus = {
-      remaining: -1,
-      limit: limitPerMinute,
-      resetAt: Date.now() + 60000,
-      retryAfter: 60,
-      tier,
-      requestTime: 0,
-    };
-
-    return { allowed: true, status };
+    return { allowed: true, status: gracefulDegradation(tier, limitPerMinute) };
   }
 }
 
@@ -233,6 +193,61 @@ export const RATE_LIMITS = {
 type Tier = keyof typeof RATE_LIMITS;
 
 /**
+ * Centralized graceful degradation response (fail-open pattern)
+ */
+function gracefulDegradation(tier: Tier, limitPerMinute: number): RateLimitStatus {
+  return {
+    remaining: -1,
+    limit: limitPerMinute,
+    resetAt: Date.now() + 60000,
+    retryAfter: 60,
+    tier,
+    requestTime: 0,
+  };
+}
+
+/**
+ * Unified rate limit event logger (consolidates Sentry + breadcrumb)
+ */
+function logRateLimitEvent(
+  userId: string,
+  tier: string,
+  endpoint: string,
+  requestCount: number,
+  limit: number,
+  eventType: 'exceeded' | 'threshold'
+): void {
+  const message = eventType === 'exceeded'
+    ? `Rate limit exceeded: ${tier} tier on ${endpoint}`
+    : `User at rate limit threshold`;
+
+  Sentry.captureMessage(message, 'warning');
+  Sentry.addBreadcrumb({
+    category: 'rate-limit',
+    message,
+    level: 'warning',
+    data: { userId, tier, endpoint, requestCount, limit },
+  });
+}
+
+/**
+ * Abstracted rate limit configuration lookup
+ */
+function getRateLimit(tier: Tier): number {
+  return RATE_LIMITS[tier].requestsPerMinute;
+}
+
+/**
+ * HTTP headers assignment utility (RFC 6585 compliance)
+ */
+export function applyRateLimitHeaders(response: NextResponse, status: RateLimitStatus): void {
+  const resetAtSeconds = Math.ceil(status.resetAt / 1000);
+  response.headers.set('X-RateLimit-Limit', String(status.limit));
+  response.headers.set('X-RateLimit-Remaining', String(status.remaining));
+  response.headers.set('X-RateLimit-Reset', String(resetAtSeconds));
+}
+
+/**
  * Rate limit status returned to client
  */
 export interface RateLimitStatus {
@@ -253,8 +268,7 @@ export async function checkRateLimit(
   tier: Tier,
   endpoint: 'analyses' | 'search'
 ): Promise<{ allowed: boolean; status: RateLimitStatus }> {
-  const limit = RATE_LIMITS[tier];
-  const limitPerMinute = limit.requestsPerMinute;
+  const limitPerMinute = getRateLimit(tier);
 
   // Redis key: user:tier:endpoint:minute
   // Pattern allows per-endpoint limiting and hourly rollup if needed
@@ -316,17 +330,7 @@ export async function checkRateLimit(
     });
 
     // Graceful degradation: Allow request if Redis fails
-    // Log the incident for debugging
-    const status: RateLimitStatus = {
-      remaining: -1, // Indicate unknown state
-      limit: limitPerMinute,
-      resetAt: Date.now() + 60000,
-      retryAfter: 60,
-      tier,
-      requestTime: 0,
-    };
-
-    return { allowed: true, status };
+    return { allowed: true, status: gracefulDegradation(tier, limitPerMinute) };
   }
 }
 
@@ -353,14 +357,6 @@ export async function applyRateLimit(
 }> {
   const { allowed, status } = await checkRateLimitSlidingWindow(userId, tier, endpoint);
 
-  // Headers to attach to response (HTTP standard: Unix timestamp in seconds)
-  const resetAtSeconds = Math.ceil(status.resetAt / 1000);
-  const headers: { [key: string]: string } = {
-    'X-RateLimit-Limit': String(status.limit),
-    'X-RateLimit-Remaining': String(status.remaining),
-    'X-RateLimit-Reset': String(resetAtSeconds),
-  };
-
   if (!allowed) {
     // Return 429 Too Many Requests with Retry-After header
     const response = NextResponse.json(
@@ -373,18 +369,23 @@ export async function applyRateLimit(
       { status: 429 }
     );
 
-    // Add standard rate limit headers
-    for (const [key, value] of Object.entries(headers)) {
-      response.headers.set(key, value);
-    }
-
-    // Add Retry-After header (HTTP standard)
+    // Add RFC 6585 compliant headers
+    applyRateLimitHeaders(response, status);
     response.headers.set('Retry-After', String(status.retryAfter));
 
     return { allowed: false, response };
   }
 
-  return { allowed: true, headers };
+  // For successful requests, return headers as object (caller will apply)
+  const resetAtSeconds = Math.ceil(status.resetAt / 1000);
+  return {
+    allowed: true,
+    headers: {
+      'X-RateLimit-Limit': String(status.limit),
+      'X-RateLimit-Remaining': String(status.remaining),
+      'X-RateLimit-Reset': String(resetAtSeconds),
+    },
+  };
 }
 
 /**
