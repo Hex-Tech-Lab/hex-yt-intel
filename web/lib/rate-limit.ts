@@ -269,6 +269,7 @@ export async function checkRateLimit(
 
 /**
  * Rate limit middleware for Next.js API routes
+ * Uses sliding window counter for per-minute enforcement (no burst leaks)
  * Usage: Apply before main route handler
  *
  * @param request - Next.js request
@@ -287,7 +288,7 @@ export async function applyRateLimit(
   response?: NextResponse;
   headers?: { [key: string]: string };
 }> {
-  const { allowed, status } = await checkRateLimit(userId, tier, endpoint);
+  const { allowed, status } = await checkRateLimitSlidingWindow(userId, tier, endpoint);
 
   // Headers to attach to response
   const headers: { [key: string]: string } = {
