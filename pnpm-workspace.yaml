@@ -1,5 +1,0 @@
-packages:
-  - 'worker'
-  - 'skill'
-  - 'web'
-  - 'packages/*'
