@@ -1,7 +1,7 @@
 # Redis Setup - Upstash Configuration
 
 **Date**: 2026-05-16  
-**Status**: ✅ Fully configured (local + Vercel production)  
+**Status**: ✅ Locally configured, pending Vercel setup  
 **Purpose**: Distributed rate limiting, session caching, analytics  
 
 ## Configuration
@@ -11,28 +11,23 @@
 UPSTASH_REDIS_REST_URL=<UPSTASH_REDIS_REST_URL>
 UPSTASH_REDIS_REST_TOKEN=<UPSTASH_REDIS_REST_TOKEN>
 ```
-⚠️ **NOTE**: Do NOT commit real credentials. Use placeholders above and add actual values to .env.local (git-ignored).
 
-### Vercel Production - ✅ DONE (2026-05-16T01:09 EEST)
-Added via `vercel env add`:
-```
-UPSTASH_REDIS_REST_URL     → <UPSTASH_REDIS_REST_URL>
-UPSTASH_REDIS_REST_TOKEN   → <UPSTASH_REDIS_REST_TOKEN>
-```
-Environments: Production, Preview, Development
-
-⚠️ **SECURITY ALERT**: If real tokens are present in git history, rotate immediately:
-1. Revoke current token in [Upstash console](https://console.upstash.io)
-2. Create new token
-3. Update Vercel env vars: `vercel env add UPSTASH_REDIS_REST_TOKEN`
-4. Redeploy: `vercel deploy --prod`
+### Vercel Production - ⏳ TODO (3 minutes)
+1. Go to: https://vercel.com/Hex-Tech-Lab/hex-yt-intel/settings/environment-variables
+2. Add two new variables:
+   - Name: `UPSTASH_REDIS_REST_URL`
+     Value: `<UPSTASH_REDIS_REST_URL>`
+   - Name: `UPSTASH_REDIS_REST_TOKEN`
+     Value: `<UPSTASH_REDIS_REST_TOKEN>`
+3. Click **Save**
+4. Vercel will auto-redeploy (watch: https://vercel.com/Hex-Tech-Lab/hex-yt-intel/deployments)
 
 ## Features Enabled by Redis
 
 ### 1. Rate Limiting (Chunk 9)
 - Per-user monthly limits (free: 3/month, pro: unlimited)
 - Prevents abuse and quota overages
-- Uses `quota:user:{userId}:analyses:{YYYY-MM}`
+- Uses `upstash_redis_key:user:{userId}:analyses:count`
 
 ### 2. Session Caching (Optional)
 - Cache Supabase auth sessions for fast lookups
@@ -84,10 +79,9 @@ Instead of:
 **Test Command** (local):
 ```bash
 # Verify Redis is connected
-curl -X POST https://<UPSTASH_URL>/set/test-key/test-value \
-  -H "Authorization: Bearer <UPSTASH_TOKEN>"
+curl -X POST <UPSTASH_REDIS_REST_URL>/set/test-key/test-value \
+  -H "Authorization: Bearer <UPSTASH_REDIS_REST_TOKEN>"
 ```
-(Replace placeholders with actual values from Upstash console)
 
 ## Troubleshooting
 
