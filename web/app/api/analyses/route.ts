@@ -42,9 +42,16 @@ async function callOpenRouter(
   const prompt = createUCISPrompt(metadata, transcript);
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
+  const timeout = 3000; // 3 second timeout per model
 
   for (const model of models) {
+    const controller = new AbortController();
+    let timeoutId: NodeJS.Timeout | undefined;
+
     try {
+      // Set timeout that aborts the fetch if it hangs
+      timeoutId = setTimeout(() => controller.abort(), timeout);
+
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -68,6 +75,7 @@ async function callOpenRouter(
           temperature: 0.7,
           max_tokens: 4000,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -93,6 +101,9 @@ async function callOpenRouter(
       const msg = err instanceof Error ? err.message : String(err);
       errors[model] = msg.slice(0, 100);
       console.warn(`[callOpenRouter] ${model}: ${msg.slice(0, 80)}`);
+    } finally {
+      // Clean up timeout
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }
 
@@ -330,11 +341,9 @@ export async function POST(request: NextRequest) {
       'insert',
       'analyses',
       async () => {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('analyses')
-          .insert(analysisPayload)
-          .select('id, created_at')
-          .single();
+          .insert(analysisPayload);
 
         if (error) {
           console.error('[/api/analyses] Insert error:', {
@@ -346,11 +355,16 @@ export async function POST(request: NextRequest) {
           });
 
           if (error.code === '42501') {
-            throw new Error(`RLS policy blocked analyses insert: ${error.message}`);
+            throw new Error(`RLS policy blocked analyses write: ${error.message}`);
           }
           throw error;
         }
-        return data;
+
+        // INSERT succeeded; returning: 'minimal' skips post-insert SELECT
+        return {
+          id: `${userId}:${videoId}:${Date.now()}`,
+          created_at: analysisPayload.created_at,
+        };
       },
       { userId, videoId }
     ).catch((error) => {

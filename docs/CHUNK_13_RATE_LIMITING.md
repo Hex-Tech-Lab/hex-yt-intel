@@ -59,7 +59,7 @@ Chunk 13 implements **per-minute rate limiting** using a sliding window counter 
 2. `POST /api/analyses/search` — Semantic search
 
 **Flow**:
-```
+```text
 Request → applyRateLimit()
     ↓
 checkRateLimitSlidingWindow()
@@ -150,7 +150,7 @@ pnpm test -- rate-limit-sliding-window
 
 ### Redis Key Format
 
-```
+```text
 ratelimit:{userId}:{endpoint}:sliding
 
 Examples:
@@ -161,7 +161,7 @@ Examples:
 ### Sliding Window Accuracy
 
 **Fixed Window Problem** (old approach):
-```
+```text
 Minute 1: [00:00 - 01:00]  → 3 requests allowed
 Minute 2: [01:00 - 02:00]  → 3 requests allowed
 
@@ -169,7 +169,7 @@ At boundary (00:59-01:01), user could make 6 requests (burst leak)
 ```
 
 **Sliding Window Solution** (Chunk 13):
-```
+```text
 Current window: [now-60s, now]
 Always moving forward, no boundary leaks
 Lua script atomically removes old entries before count
@@ -202,7 +202,7 @@ If Redis is unavailable:
 
 ### Observability Queries (Sentry)
 
-```
+```text
 # Rate limit exceeded events
 tags.severity: 'high' AND level: 'warning' AND message: 'Rate limit exceeded'
 

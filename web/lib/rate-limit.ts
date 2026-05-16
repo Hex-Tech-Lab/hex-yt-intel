@@ -30,17 +30,18 @@ import * as Sentry from '@sentry/nextjs';
 /**
  * Lua script for sliding window counter using Redis Sorted Set (ZSET)
  * Atomically:
- * 1. Remove timestamps older than 60 seconds
+ * 1. Remove timestamps older than 60 seconds (millisecond window)
  * 2. Count remaining requests in window
- * 3. If under limit, add current microsecond timestamp
+ * 3. If under limit, add unique request identifier
  * 4. Refresh key TTL to 90 seconds
- * 5. Return current window count
+ * 5. Return { allowed, count } tuple
  *
  * KEYS[1]: Redis key (e.g., ratelimit:user-123:analyses:sliding)
- * ARGV[1]: Current timestamp in seconds
- * ARGV[2]: Window size in seconds (60)
+ * ARGV[1]: Current timestamp in milliseconds
+ * ARGV[2]: Window size in milliseconds (60000)
  * ARGV[3]: Request limit (e.g., 3 for free tier)
  * ARGV[4]: TTL in seconds (90)
+ * ARGV[5]: Unique request member (UUID)
  */
 const SLIDING_WINDOW_SCRIPT = `
 local key = KEYS[1]
@@ -48,6 +49,7 @@ local now = tonumber(ARGV[1])
 local window = tonumber(ARGV[2])
 local limit = tonumber(ARGV[3])
 local ttl = tonumber(ARGV[4])
+local member = ARGV[5]
 
 -- Remove timestamps older than window
 local cutoff = now - window
@@ -56,26 +58,28 @@ redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
 -- Count remaining requests in window
 local count = redis.call('ZCARD', key)
 
--- If under limit, add current request (microsecond precision)
+-- Determine if request is allowed
+local allowed = 0
 if count < limit then
-  local microsecond = math.floor((now - math.floor(now)) * 1000000)
-  redis.call('ZADD', key, now + (microsecond / 1000000), tostring(now))
+  redis.call('ZADD', key, now, member)
   count = count + 1
+  allowed = 1
 end
 
 -- Refresh TTL
 redis.call('EXPIRE', key, ttl)
 
-return count
+-- Return { allowed, count } tuple
+return { allowed, count }
 `;
 
 /**
  * Check rate limit using sliding window counter (atomic Lua execution)
  *
- * Algorithm: Redis Sorted Set with microsecond-precision timestamps
+ * Algorithm: Redis Sorted Set with millisecond-precision timestamps and unique members
  * - Removes entries older than 60 seconds (ZREMRANGEBYSCORE)
  * - Counts remaining entries (ZCARD)
- * - If under limit, adds current request timestamp (ZADD)
+ * - If under limit, adds unique request member (ZADD)
  * - Refreshes key TTL to 90 seconds (EXPIRE)
  * - Atomic execution guarantees no race conditions or burst leaks
  *
@@ -88,20 +92,37 @@ export async function checkRateLimitSlidingWindow(
 ): Promise<{ allowed: boolean; status: RateLimitStatus }> {
   const limit = RATE_LIMITS[tier];
   const limitPerMinute = limit.requestsPerMinute;
-  const now = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
+  const now = Date.now(); // Milliseconds for high-precision timing
+  const uniqueMember = `${now}:${crypto.randomUUID()}`; // Unique identifier per request
   const redisKey = `ratelimit:${userId}:${endpoint}:sliding`;
 
   try {
     // Execute Lua script atomically
-    const requestCount = await executeRedisScript(SLIDING_WINDOW_SCRIPT, [redisKey], [
+    const luaResult = await executeRedisScript(SLIDING_WINDOW_SCRIPT, [redisKey], [
       now,
-      60, // 60-second window
+      60000, // 60-second window in milliseconds
       limitPerMinute,
       90, // TTL in seconds
+      uniqueMember, // Unique request identifier
     ]);
 
-    // requestCount is the count AFTER adding current request
-    const allowed = requestCount <= limitPerMinute;
+    // Sentinel guard: if Redis unavailable, luaResult is -1
+    if (luaResult === -1) {
+      // Graceful degradation path
+      const status: RateLimitStatus = {
+        remaining: -1,
+        limit: limitPerMinute,
+        resetAt: Date.now() + 60000,
+        retryAfter: 60,
+        tier,
+        requestTime: -1,
+      };
+      return { allowed: true, status };
+    }
+
+    // Parse Lua response: [allowed, count]
+    const [allowedFlag, requestCount] = Array.isArray(luaResult) ? luaResult : [-1, -1];
+    const allowed = allowedFlag === 1;
 
     if (!allowed) {
       await logRateLimitHit(userId, endpoint, tier, requestCount, limitPerMinute);
@@ -135,7 +156,7 @@ export async function checkRateLimitSlidingWindow(
     }
 
     // Calculate next reset time (60 seconds from now)
-    const resetAt = (now + 60) * 1000; // Convert to milliseconds
+    const resetAt = now + 60000; // Already in milliseconds
     const retryAfter = 60;
 
     const status: RateLimitStatus = {

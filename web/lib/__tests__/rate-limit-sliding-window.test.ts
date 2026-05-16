@@ -6,12 +6,12 @@
 import { checkRateLimitSlidingWindow, RATE_LIMITS } from '../rate-limit';
 
 describe('Sliding Window Rate Limiting', () => {
-  const testUserId = 'test-user-123';
   const tier = 'free';
   const endpoint = 'analyses' as const;
 
   describe('Per-minute enforcement', () => {
     it('should allow requests up to tier limit', async () => {
+      const testUserId = `test-user-${Math.random()}-allow`;
       // Free tier: 3 requests/minute
       const limit = RATE_LIMITS.free.requestsPerMinute;
 
@@ -22,6 +22,7 @@ describe('Sliding Window Rate Limiting', () => {
     });
 
     it('should block requests exceeding tier limit', async () => {
+      const testUserId = `test-user-${Math.random()}-block`;
       const limit = RATE_LIMITS.free.requestsPerMinute;
 
       // Exhaust limit
@@ -35,12 +36,14 @@ describe('Sliding Window Rate Limiting', () => {
     });
 
     it('should return correct remaining count', async () => {
+      const testUserId = `test-user-${Math.random()}-remaining`;
       const { status } = await checkRateLimitSlidingWindow(testUserId, tier, endpoint);
       expect(status.remaining).toBeGreaterThanOrEqual(0);
       expect(status.remaining).toBeLessThanOrEqual(RATE_LIMITS.free.requestsPerMinute);
     });
 
     it('should set reset time 60 seconds in future', async () => {
+      const testUserId = `test-user-${Math.random()}-reset`;
       const now = Date.now();
       const { status } = await checkRateLimitSlidingWindow(testUserId, tier, endpoint);
 
@@ -91,13 +94,14 @@ describe('Sliding Window Rate Limiting', () => {
 
   describe('Status object accuracy', () => {
     it('should provide accurate Retry-After on block', async () => {
+      const testUserId = `test-user-${Math.random()}-retry`;
       const limit = RATE_LIMITS.free.requestsPerMinute;
 
       for (let i = 0; i < limit + 1; i++) {
-        await checkRateLimitSlidingWindow('user-retry', 'free', endpoint);
+        await checkRateLimitSlidingWindow(testUserId, 'free', endpoint);
       }
 
-      const { status, allowed } = await checkRateLimitSlidingWindow('user-retry', 'free', endpoint);
+      const { status, allowed } = await checkRateLimitSlidingWindow(testUserId, 'free', endpoint);
       if (!allowed) {
         expect(status.retryAfter).toBe(60);
         expect(status.retryAfter).toBeGreaterThan(0);
@@ -105,7 +109,8 @@ describe('Sliding Window Rate Limiting', () => {
     });
 
     it('should never return negative remaining', async () => {
-      const { status } = await checkRateLimitSlidingWindow('user-negative', tier, endpoint);
+      const testUserId = `test-user-${Math.random()}-negative`;
+      const { status } = await checkRateLimitSlidingWindow(testUserId, tier, endpoint);
       expect(status.remaining).toBeGreaterThanOrEqual(0);
     });
   });
