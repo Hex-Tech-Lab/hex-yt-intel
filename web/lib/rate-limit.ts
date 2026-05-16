@@ -23,8 +23,127 @@ import {
   getRedisValue,
   incrementRedisValue,
   setRedisExpiration,
+  executeRedisScript,
 } from '@/lib/redis';
 import * as Sentry from '@sentry/nextjs';
+
+/**
+ * Lua script for sliding window counter using Redis Sorted Set (ZSET)
+ * Atomically:
+ * 1. Remove timestamps older than 60 seconds
+ * 2. Count remaining requests in window
+ * 3. If under limit, add current microsecond timestamp
+ * 4. Refresh key TTL to 90 seconds
+ * 5. Return current window count
+ *
+ * KEYS[1]: Redis key (e.g., ratelimit:user-123:analyses:sliding)
+ * ARGV[1]: Current timestamp in seconds
+ * ARGV[2]: Window size in seconds (60)
+ * ARGV[3]: Request limit (e.g., 3 for free tier)
+ * ARGV[4]: TTL in seconds (90)
+ */
+const SLIDING_WINDOW_SCRIPT = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+local limit = tonumber(ARGV[3])
+local ttl = tonumber(ARGV[4])
+
+-- Remove timestamps older than window
+local cutoff = now - window
+redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
+
+-- Count remaining requests in window
+local count = redis.call('ZCARD', key)
+
+-- If under limit, add current request (microsecond precision)
+if count < limit then
+  local microsecond = math.floor((now - math.floor(now)) * 1000000)
+  redis.call('ZADD', key, now + (microsecond / 1000000), tostring(now))
+  count = count + 1
+end
+
+-- Refresh TTL
+redis.call('EXPIRE', key, ttl)
+
+return count
+`;
+
+/**
+ * Check rate limit using sliding window counter (atomic Lua execution)
+ * Ensures no burst-traffic leaks at window boundaries
+ *
+ * Returns: { allowed, status } tuple
+ */
+export async function checkRateLimitSlidingWindow(
+  userId: string,
+  tier: Tier,
+  endpoint: 'analyses' | 'search'
+): Promise<{ allowed: boolean; status: RateLimitStatus }> {
+  const limit = RATE_LIMITS[tier];
+  const limitPerMinute = limit.requestsPerMinute;
+  const now = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
+  const redisKey = `ratelimit:${userId}:${endpoint}:sliding`;
+
+  try {
+    // Execute Lua script atomically
+    const requestCount = await executeRedisScript(SLIDING_WINDOW_SCRIPT, [redisKey], [
+      now,
+      60, // 60-second window
+      limitPerMinute,
+      90, // TTL in seconds
+    ]);
+
+    // requestCount is the count AFTER adding current request
+    const allowed = requestCount <= limitPerMinute;
+
+    if (!allowed) {
+      await logRateLimitHit(userId, endpoint, tier, requestCount, limitPerMinute);
+    }
+
+    // Calculate next reset time (60 seconds from now)
+    const resetAt = (now + 60) * 1000; // Convert to milliseconds
+    const retryAfter = 60;
+
+    const status: RateLimitStatus = {
+      remaining: Math.max(0, limitPerMinute - requestCount),
+      limit: limitPerMinute,
+      resetAt,
+      retryAfter,
+      tier,
+      requestTime: requestCount,
+    };
+
+    return { allowed, status };
+  } catch (error) {
+    console.error(`[rate-limit] Error in sliding window check for user ${userId}:`, error);
+    Sentry.captureException(error, {
+      contexts: {
+        rateLimit: {
+          userId,
+          endpoint,
+          tier,
+          algorithm: 'sliding-window',
+        },
+      },
+      tags: {
+        severity: 'high',
+      },
+    });
+
+    // Graceful degradation: Allow request if Redis fails
+    const status: RateLimitStatus = {
+      remaining: -1,
+      limit: limitPerMinute,
+      resetAt: Date.now() + 60000,
+      retryAfter: 60,
+      tier,
+      requestTime: 0,
+    };
+
+    return { allowed: true, status };
+  }
+}
 
 /**
  * Rate limit configuration per tier
