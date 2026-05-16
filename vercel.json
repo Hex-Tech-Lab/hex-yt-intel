@@ -1,4 +1,3 @@
 {
-  "buildCommand": "cd web && pnpm build",
-  "outputDirectory": "web/.next"
+  "rootDirectory": "web"
 }
