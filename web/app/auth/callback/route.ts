@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const cookieStore = await cookies();
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -22,17 +23,24 @@ export async function GET(request: NextRequest) {
             return cookieStore.getAll();
           },
           setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options as CookieOptions)
-              );
-            } catch {
-              // Can be safely ignored during middleware/API route execution
-            }
+            // Route Handlers: cookies() from next/headers is NOT a persistent
+            // store.  The Supabase SSR setAll callback would silently discard
+            // tokens here.  Instead we capture them in sessionTokens and apply
+            // them explicitly to the NextResponse below.
+            sessionTokens.current = cookiesToSet.map(c => ({
+              name: c.name,
+              value: c.value,
+              options: c.options,
+            }));
           },
         },
       }
     );
+
+    // Decode the next parameter and ensure it's safe
+    const decodedNext = decodeURIComponent(next);
+    const safeNext = decodedNext.startsWith('/') ? decodedNext : '/';
+    const response = NextResponse.redirect(new URL(safeNext, request.url));
 
     // Exchange the authorization code for a session
     const { error, data } = await supabase.auth.exchangeCodeForSession(code);
@@ -45,40 +53,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/error?error=no_session', request.url));
     }
 
-    // Auto-create user record if this is a new user
-    if (data?.user) {
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          email: data.user.email || '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-      // Ignore conflicts if user already exists
-      if (insertError && !insertError.message.includes('duplicate')) {
-        console.error('Failed to create user record:', insertError);
+    // Apply Supabase SSR session tokens captured by setAll to the response.
+    // This is the correct way to propagate auth cookies from a Route Handler
+    // where next/headers cookies() is transient.
+    const tokens = sessionTokens.current;
+    if (tokens) {
+      for (const { name, value, options } of tokens) {
+        response.cookies.set(name, value, options as any);
       }
     }
-
-    // Decode the next parameter and ensure it's safe
-    const decodedNext = decodeURIComponent(next);
-    const safeNext = decodedNext.startsWith('/') ? decodedNext : '/';
-
-    // Create response with explicit cookie setting
-    const response = NextResponse.redirect(new URL(safeNext, request.url));
-
-    // Set Supabase session cookies explicitly on the response
-    const cookieOptions = {
-      httpOnly: true,
-      secure: true,
-      path: '/',
-      sameSite: 'lax' as const,
-      maxAge: 60 * 60 * 24 * 365, // 1 year
-    };
-
-    response.cookies.set('sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL!.split('.')[0] + '-auth-token', data.session.access_token, cookieOptions);
-    response.cookies.set('sb-refresh-token', data.session.refresh_token, cookieOptions);
 
     return response;
   } catch (error) {
@@ -86,3 +69,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/auth/error?error=${encodeURIComponent(errorMessage)}`, request.url));
   }
 }
+
+// Per-request holder for session tokens captured during exchangeCodeForSession.
+// Must be module-scoped so the closure over sessionTokens survives the
+// exchangeCodeForSession async call into the redirect response block below.
+const sessionTokens: {
+  current: Array<{ name: string; value: string; options?: any }> | null;
+} = { current: null };
