@@ -195,6 +195,153 @@ No critical issues to address. Changes improve code consistency without introduc
 
 ---
 
+## APPENDIX: STANDARDIZED MULTI-AGENT REVIEW WORKFLOW & RUNBOOK
+
+### 4-Step Processing Sequence
+
+This section documents the operational mechanics for multi-agent preflight checks and automated code review execution. All engineering tasks involving code modifications must follow this standardized workflow to ensure consistency, safety, and traceability across agent boundaries.
+
+#### Step 1: Isolation Branching
+**Purpose**: Prevent merge conflicts and state contamination between concurrent agent operations.
+
+- **Trigger**: Before any code modification, agent creates isolated git worktree or feature branch
+- **Naming**: `feature/<task-name>` or `fix/<issue>` following conventional commits
+- **Scope**: Each agent operates on its own branch; never push to shared main/dev branches until Step 4 completes
+- **Rollback**: If Step 2 fails, agent can `git reset --hard` and abandon branch without affecting main
+
+**Implementation**:
+```bash
+git checkout -b feature/typescript-alias-fixes
+# Agent performs all edits on this isolated branch
+```
+
+#### Step 2: Audit Trigger Injection
+**Purpose**: Invoke automated code review tooling to detect issues before human review.
+
+- **Trigger**: Agent invokes `/code-reviewer` skill for structural analysis
+- **Secondary**: Agent invokes `/code-simplifier` skill to catch efficiency issues, duplication, or unnecessary abstractions
+- **Output**: Both skills generate detailed audit reports with severity classification (Critical, Warning, Info)
+- **Decision Gate**: If either skill reports Critical issues → agent must fix and re-run both skills (loop until clean)
+
+**Implementation**:
+```bash
+# Step 2a: Structural review (imports, types, breaking changes, architecture)
+/code-reviewer  # Generates audit report
+
+# Step 2b: Code quality review (duplication, efficiency, readability)
+/code-simplifier  # Generates simplification opportunities
+
+# Step 2c: Gate check — If Critical issues found:
+#  → Agent applies fixes
+#  → Re-run both skills to verify clean state
+#  → If still issues → escalate to KC/CC
+```
+
+#### Step 3: Local Safety Checks (Compilation Gates)
+**Purpose**: Verify code compiles and passes quality gates before remote execution.
+
+- **TypeScript Check**: `pnpm type-check` — Must pass with zero errors
+- **Linting**: `pnpm lint` — Must pass with zero violations (ESLint + Prettier)
+- **Production Build**: `pnpm build` — Must succeed without errors or warnings
+- **Artifact Taxonomy**: Verify root directory contains ≤ 4 markdown files (CLAUDE.md, GEMINI.md, README.md, AGENTS.md)
+
+**Implementation**:
+```bash
+# Execute all gates sequentially — STOP on first failure
+pnpm type-check  # Fail = abort, fix, re-run
+pnpm lint        # Fail = abort, fix, re-run
+pnpm build       # Fail = abort, fix, re-run
+
+# Verify artifact taxonomy compliance
+find . -maxdepth 1 -name "*.md" | wc -l  # Should output ≤ 4
+```
+
+**Failure Protocol**: If any gate fails, agent returns to Step 1, fixes issues locally, and re-executes Steps 2-3. No remote execution occurs until all gates pass.
+
+#### Step 4: Remote PR Execution Tooling Loop
+**Purpose**: Execute peer review and merge operations on the confirmed-safe branch.
+
+- **PR Creation**: Use `/code-reviewer` tool to create pull request with automated summary
+- **Review Loop**: Monitor PR for human review feedback (CodeRabbit, Sourcery, etc.)
+- **Merge Criteria**:
+  - ✅ All automated checks pass (GitHub CI/CD)
+  - ✅ Human code review approvals received (minimum 1 reviewer)
+  - ✅ No unresolved conversations
+- **Deployment**: Upon merge to main, Vercel automatically triggers production deployment (git webhook)
+
+**Implementation**:
+```bash
+# Step 4a: Create PR on isolated branch
+gh pr create --title "..." --body "..."  # Or use /code-reviewer tool
+
+# Step 4b: Monitor (in separate monitoring context)
+# CodeRabbit auto-reviews → watch for comments
+# Sourcery auto-optimizes → watch for suggestions
+# Manual reviewer approves → watch for approval
+
+# Step 4c: Merge when ready
+git merge --ff-only feature/typescript-alias-fixes
+git push origin main
+
+# Vercel webhook auto-triggers:
+# → GitHub Actions CI/CD pipeline
+# → Build verification
+# → Production deployment (if main branch)
+```
+
+---
+
+### Sandbox Barrier Escalation Protocol
+
+**Critical Rule**: If an engineering agent (CC, GC) hits a conversational sandbox barrier (permission denial, execution limitation, tool unavailable), it MUST immediately delegate to KC (human operator) rather than attempting workarounds.
+
+#### Barrier Types and Escalation
+| Barrier Type | Symptom | Action | Escalate To |
+|---|---|---|---|
+| **Permission Denied** | Tool call blocked: "permission denied" | Stop, explain barrier in plain text | KC (request permission approval) |
+| **Terminal Execution Limit** | Bash timeout or max process limit | Stop, export current context | KC (execute via terminal directly) |
+| **MCP Server Unavailable** | Tool returns 503/offline error | Stop, log server name and error | KC (check service status / authenticate MCP) |
+| **Conversational Context** | Agent hit token limit mid-task | Create context snapshot, stop gracefully | KC (review snapshot, approve continuation) |
+| **Git State Conflict** | Merge conflict or uncommitted changes | Stop, document conflict state | KC (manual git resolution) |
+
+#### Example Escalation Message
+```
+🛑 **SANDBOX BARRIER DETECTED**
+
+Barrier Type: Permission Denied
+Tool: mcp__vercel__deploy_to_vercel
+Error: "User has not approved 'vercel-deploy' permission"
+
+Status: HALTED (waiting for human intervention)
+
+Required Action:
+1. Open /settings → Permissions tab
+2. Approve permission: "vercel-deploy"
+3. Re-trigger task in new message
+
+Context Preserved: [task name, branch state, current step]
+```
+
+---
+
+### Compliance Checklist for All Code Changes
+
+Before ANY code change is committed, verify:
+
+- [ ] **Step 1 Complete**: Feature branch created, isolated from main
+- [ ] **Step 2 Complete**: `/code-reviewer` audit passed (no Critical issues)
+- [ ] **Step 2 Complete**: `/code-simplifier` audit passed (no Critical issues)
+- [ ] **Step 3 Complete**: `pnpm type-check` → ✅ zero errors
+- [ ] **Step 3 Complete**: `pnpm lint` → ✅ zero violations
+- [ ] **Step 3 Complete**: `pnpm build` → ✅ succeeds
+- [ ] **Step 3 Complete**: Root directory contains ≤ 4 `.md` files
+- [ ] **Step 4 Ready**: All local gates passed, ready for PR creation
+- [ ] **Escalation Protocol**: If barrier encountered, KC escalation initiated (not agent workaround)
+
+---
+
 Audit Timestamp: 2026-05-16 22:50 UTC  
 Audited Files: 4  
-Audit Method: Precise scope review + system context analysis + TypeScript compilation verification
+Audit Method: Precise scope review + system context analysis + TypeScript compilation verification  
+Runbook Added: 2026-05-16 23:05 UTC  
+Runbook Scope: Multi-agent review workflow standardization + sandbox escalation protocols
