@@ -18,6 +18,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Redis } from '@upstash/redis';
 import { getSupabaseClient } from '@/lib/supabase';
 import {
   getRedisValue,
@@ -25,6 +26,54 @@ import {
   setRedisExpiration,
 } from '@/lib/redis';
 import * as Sentry from '@sentry/nextjs';
+
+// ============================================================================
+// ATOMIC QUOTA INCREMENT WITH DYNAMIC TTL (Lua Script)
+// ============================================================================
+
+/**
+ * Lua script for atomically incrementing quota counter and managing TTL.
+ * Ensures that expired keys get their TTL refreshed on every request,
+ * preventing silent expiration leaks near month-end boundaries.
+ *
+ * Arguments:
+ *   KEYS[1]: Redis key (e.g., "quota:user-id:analyses:2026-05")
+ *   ARGV[1]: Increment amount (e.g., "1")
+ *   ARGV[2]: TTL in seconds (e.g., "864000" for end-of-month)
+ *
+ * Returns: New counter value as a number
+ */
+const QUOTA_INCREMENT_LUA = `
+  local key = KEYS[1]
+  local increment = tonumber(ARGV[1])
+  local ttl = tonumber(ARGV[2])
+
+  local current = redis.call('INCRBY', key, increment)
+
+  -- If this is a fresh key, or if TTL was lost (-1 = no expiration), enforce the month-end boundary
+  if current == increment or redis.call('TTL', key) == -1 then
+    redis.call('EXPIRE', key, ttl)
+  end
+
+  return current
+`;
+
+// ============================================================================
+// TYPE-SAFE REDIS NUMBER PARSING
+// ============================================================================
+
+/**
+ * Parse Redis values to numbers safely, eliminating string-to-number coercion bugs.
+ * Redis stores all values as strings; this utility ensures proper type conversion.
+ *
+ * @param value - Raw value from Redis (string, null, or undefined)
+ * @returns Parsed number, or 0 if conversion fails
+ */
+export function parseRedisNumber(value: unknown): number {
+  if (value === null || value === undefined) return 0;
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+}
 
 /**
  * Rate limit configuration per tier
@@ -82,8 +131,8 @@ export async function checkRateLimit(
 
   try {
     // Get current request count in this minute window
-    let requestCount = await getRedisValue(redisKey);
-    requestCount = requestCount || 0;
+    const redisValue = await getRedisValue(redisKey);
+    const requestCount = parseRedisNumber(redisValue);
 
     // Check if limit exceeded
     const allowed = requestCount < limitPerMinute;
@@ -366,8 +415,8 @@ export async function checkQuota(
     const redisKey = `quota:${userId}:analyses:${monthKey}`;
 
     // Get current count from Redis
-    let count = await getRedisValue(redisKey);
-    count = count !== null ? Number(count) : 0;
+    const redisValue = await getRedisValue(redisKey);
+    const count = parseRedisNumber(redisValue);
 
     const limit = MONTHLY_QUOTAS[tier];
     const remaining = limit !== null ? Math.max(0, limit - count) : null;
@@ -476,6 +525,61 @@ export async function resetQuotaIfMonthChanged(userId: string): Promise<void> {
   } catch (error) {
     console.error(`[quota] Error in resetQuotaIfMonthChanged for user ${userId}:`, error);
     // Non-fatal: just log and continue
+  }
+}
+
+/**
+ * Atomically increment quota counter and manage TTL (Lua-backed).
+ * Replaces incrementQuotaCounter() for critical paths where race conditions are unacceptable.
+ *
+ * Uses a Lua script to ensure:
+ * - Increment and TTL refresh happen in a single atomic operation
+ * - Expired keys automatically get their TTL reset near month-end boundaries
+ * - No data consistency windows where concurrent requests leak through quota limits
+ *
+ * @param userId - User ID
+ * @returns New counter value as a number
+ * @throws Error if Lua execution fails (non-fatal, graceful fallback available)
+ */
+export async function incrementQuotaCounterAtomic(userId: string): Promise<number> {
+  try {
+    const monthKey = getMonthKey();
+    const redisKey = `quota:${userId}:analyses:${monthKey}`;
+    const monthEnd = getMonthEndDate();
+    const secondsUntilMonthEnd = Math.floor((monthEnd.getTime() - Date.now()) / 1000);
+
+    // Validate TTL boundary
+    if (secondsUntilMonthEnd <= 0) {
+      console.warn(`[quota] Month-end TTL is non-positive for user ${userId}, clamping to 60 seconds`);
+    }
+    const ttl = Math.max(60, secondsUntilMonthEnd);
+
+    // Execute Lua script atomically via Upstash Redis
+    const redisClient = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+
+    const result = await redisClient.eval(QUOTA_INCREMENT_LUA, [redisKey], [String(1), String(ttl)]);
+    const newCount = parseRedisNumber(result);
+
+    return newCount;
+  } catch (error) {
+    console.error(`[quota] Lua-backed increment failed for user ${userId}, falling back to standard increment:`, error);
+    Sentry.captureException(error, {
+      contexts: {
+        quota: {
+          userId,
+          operation: 'increment_atomic_lua',
+        },
+      },
+      tags: {
+        severity: 'medium',
+      },
+    });
+
+    // Graceful fallback: use standard increment (slightly less safe, but maintains quota count accuracy)
+    return incrementQuotaCounter(userId);
   }
 }
 
