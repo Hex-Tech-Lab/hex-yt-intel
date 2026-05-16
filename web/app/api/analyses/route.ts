@@ -303,7 +303,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 9. Insert analysis into Supabase (without embedding initially)
+    // 9. Upsert analysis into Supabase (idempotent on user_id + video_id)
+    // unique constraint "unique_user_video" on (user_id, video_id) prevents
+    // duplicate rows; upsert updates the existing record instead of 23505.
     const analysisPayload = {
       user_id: userId,
       video_id: videoId,
@@ -312,21 +314,22 @@ export async function POST(request: NextRequest) {
       view_count: parseInt(metadata.viewCount || '0', 10),
       analysis_markdown: markdown,
       embedding: null,
-      created_at: new Date().toISOString(),
     };
 
     const analysis = await trackDatabaseQuery(
-      'insert',
+      'upsert',
       'analyses',
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .insert(analysisPayload)
+          .upsert(analysisPayload, {
+            onConflict: 'user_id,video_id',
+          })
           .select('id, created_at')
           .single();
 
         if (error) {
-          console.error('[/api/analyses] Insert error:', {
+          console.error('[/api/analyses] Upsert error:', {
             code: error.code,
             message: error.message,
             details: error.details,
@@ -335,7 +338,11 @@ export async function POST(request: NextRequest) {
           });
 
           if (error.code === '42501') {
-            throw new Error(`RLS policy blocked analyses insert: ${error.message}`);
+            throw new Error(`RLS policy blocked analyses upsert: ${error.message}`);
+          }
+          if (error.code === '23505') {
+            // Should not reach here because upsert handles 23505, but log if it does
+            console.error('[/api/analyses] Unexpected 23505 on upsert:', error.details);
           }
           throw error;
         }
@@ -343,7 +350,7 @@ export async function POST(request: NextRequest) {
       },
       { userId, videoId }
     ).catch((error) => {
-      addBreadcrumb('Analysis insert failed', { userId, videoId, error: String(error) }, 'database');
+      addBreadcrumb('Analysis upsert failed', { userId, videoId, error: String(error) }, 'database');
       throw error;
     });
 
