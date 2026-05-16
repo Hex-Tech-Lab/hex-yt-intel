@@ -89,7 +89,7 @@ To prevent multi-agent folder pollution and ensure consistent discovery patterns
 
 | Artifact Class | Storage Location | File Naming Pattern | Master Engineering Rule |
 |---|---|---|---|
-| **Master Configs** | `/.claude/`, `/` (Root) | `CLAUDE.md`, `GEMINI.md`, `README.md` | **MAXIMUM 3 markdown files in root directory.** All other docs must be nested in `/docs/`. |
+| **Master Configs** | `/.claude/`, `/` (Root) | `CLAUDE.md`, `GEMINI.md`, `README.md`, `AGENTS.md` | **MAXIMUM 4 markdown files in root directory.** All other docs must be nested in `/docs/`. |
 | **Technical Specs** | `/docs/specs/` | `IMPLEMENTATION_PLAN.md`, `PRD.md`, `design.md`, `SECURITY.md` | Must include full version headers: Filename, Location, Version (v1.5.0), Build (commit hash), Timestamp (ISO 8601 + timezone), Purpose (engineering intent). |
 | **Historical Logs** | `/docs/history/` | `HANDOVER_REPORT_*.md`, `SESSION_EXIT_*.md`, diagnostic reports | Consolidate overlapping trial timelines into singular chronological ledgers. Include timestamps for every decision boundary. |
 | **Infrastructure Scripts** | `/docs/ops/` | `DEPLOYMENT.md`, `REDIS_SETUP.md`, `VERCEL_ENV_SETUP.md`, runbooks | Document all manual steps, environment variable requirements, and secret rotation procedures. |
@@ -97,7 +97,7 @@ To prevent multi-agent folder pollution and ensure consistent discovery patterns
 | **Reference Material** | `/docs/reference/` | guides, checklists, API documentation, architectural explanations | Static markdown that supports knowledge lookup. No version churn required. |
 | **Source Code** | `/web/`, `/worker/`, `/packages/` | TypeScript, Next.js, Cloudflare config | Strict rule: **Code and docs are separate.** Documentation lives in `/docs/`, not in code comments. |
 
-**Enforcement**: On every session, verify root contains only 3 markdown files. Run: `find . -maxdepth 1 -name "*.md" | wc -l`
+**Enforcement**: On every session, verify root contains only 4 markdown files. Run: `find . -maxdepth 1 -name "*.md" | wc -l`
 
 ---
 
