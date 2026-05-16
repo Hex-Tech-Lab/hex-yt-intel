@@ -1,31 +1,31 @@
 # Redis Setup - Upstash Configuration
 
 **Date**: 2026-05-16  
-**Status**: ✅ Local configured, pending Vercel setup  
+**Status**: ✅ Locally configured, pending Vercel setup  
 **Purpose**: Distributed rate limiting, session caching, analytics  
 
 ## Configuration
 
 ### Local Development (.env.local) - ✅ DONE
 ```bash
-UPSTASH_REDIS_REST_URL=https://becoming-lioness-125833.upstash.io
-UPSTASH_REDIS_REST_TOKEN=gQAAAAAAAeuJAAIgcDI5YmFlMjVmYzY1MzE0MjMwODBmZjQ1NTVlMjY0MDQ0Mw
+UPSTASH_REDIS_REST_URL=<UPSTASH_REDIS_REST_URL>
+UPSTASH_REDIS_REST_TOKEN=<UPSTASH_REDIS_REST_TOKEN>
 ```
 
 ### Vercel Production - ⏳ TODO (3 minutes)
 1. Go to: https://vercel.com/Hex-Tech-Lab/hex-yt-intel/settings/environment-variables
 2. Add two new variables:
    - Name: `UPSTASH_REDIS_REST_URL`
-     Value: `https://becoming-lioness-125833.upstash.io`
+     Value: `<UPSTASH_REDIS_REST_URL>`
    - Name: `UPSTASH_REDIS_REST_TOKEN`
-     Value: `gQAAAAAAAeuJAAIgcDI5YmFlMjVmYzY1MzE0MjMwODBmZjQ1NTVlMjY0MDQ0Mw`
+     Value: `<UPSTASH_REDIS_REST_TOKEN>`
 3. Click **Save**
 4. Vercel will auto-redeploy (watch: https://vercel.com/Hex-Tech-Lab/hex-yt-intel/deployments)
 
 ## Features Enabled by Redis
 
 ### 1. Rate Limiting (Chunk 9)
-- Per-user daily limits (free: 3/month, pro: unlimited)
+- Per-user monthly limits (free: 3/month, pro: unlimited)
 - Prevents abuse and quota overages
 - Uses `upstash_redis_key:user:{userId}:analyses:count`
 
@@ -79,8 +79,8 @@ Instead of:
 **Test Command** (local):
 ```bash
 # Verify Redis is connected
-curl -X POST https://becoming-lioness-125833.upstash.io/set/test-key/test-value \
-  -H "Authorization: Bearer gQAAAAAAAeuJAAIgcDI5YmFlMjVmYzY1MzE0MjMwODBmZjQ1NTVlMjY0MDQ0Mw"
+curl -X POST <UPSTASH_REDIS_REST_URL>/set/test-key/test-value \
+  -H "Authorization: Bearer <UPSTASH_REDIS_REST_TOKEN>"
 ```
 
 ## Troubleshooting
