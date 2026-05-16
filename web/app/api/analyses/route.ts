@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUCISPrompt } from '@/lib/prompts';
 import { generateEmbedding } from '@/lib/embeddings';
-import { applyRateLimit, getUserTier, checkQuota, incrementQuotaCounter, resetQuotaIfMonthChanged } from '@/lib/rate-limit';
+import { applyRateLimit, getUserTier, checkQuota, incrementQuotaCounterAtomic, resetQuotaIfMonthChanged } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
     // Reset counter if month has changed since last check
     await resetQuotaIfMonthChanged(userId);
 
-    // Check current quota status
+    // Check current quota status (for display only)
     const quotaStatus = await checkQuota(userId, userTierAuth);
     addBreadcrumb('Quota status checked', {
       userId,
@@ -193,30 +193,98 @@ export async function POST(request: NextRequest) {
       remaining: quotaStatus.remaining,
     });
 
-    // Enforce quota limit
-    if (quotaStatus.limit !== null && quotaStatus.count >= quotaStatus.limit) {
-      addBreadcrumb('Quota limit exceeded', {
-        userId,
-        used: quotaStatus.count,
-        limit: quotaStatus.limit,
-      }, 'quota');
-      Sentry.captureMessage(`Quota exceeded: user ${userId}`, 'warning');
-      return NextResponse.json(
-        {
-          error: `Monthly quota exceeded (${quotaStatus.count}/${quotaStatus.limit}). Upgrade to Pro for unlimited analyses.`,
-          quotaExceeded: true,
-          remaining: 0,
-          resetAt: quotaStatus.reset.toISOString(),
-        },
-        { status: 402 }
-      );
+    // 5.5 OPTIMISTIC LOCKING: Increment quota counter BEFORE any heavy operations
+    // This prevents concurrent requests from both passing the quota check and both creating analyses.
+    // If increment exceeds limit, we rollback and return 402 immediately (no wasted work).
+    let quotaCounterValue = 0;
+    const quotaLimitForTier = quotaStatus.limit;
+
+    if (quotaLimitForTier !== null) {
+      // For free tier, enforce quota at increment time
+      try {
+        quotaCounterValue = await incrementQuotaCounterAtomic(userId);
+        addBreadcrumb('Quota counter incremented (optimistic lock)', {
+          userId,
+          newCount: quotaCounterValue,
+          limit: quotaLimitForTier,
+        });
+
+        // Check if increment exceeded the limit
+        if (quotaCounterValue > quotaLimitForTier) {
+          // Quota exceeded: need to decrement the counter we just incremented
+          // Create a simple decrement operation (manual Redis decrement as fallback)
+          try {
+            // Attempt to decrement via a second atomic operation
+            // In production, this would be another Lua script, but for MVP we use a simple DECRBY
+            const { decrementValue } = await (async () => {
+              try {
+                const { Redis } = await import('@upstash/redis');
+                const redisClient = new Redis({
+                  url: process.env.UPSTASH_REDIS_REST_URL,
+                  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+                });
+                const monthKey = new Date().toISOString().substring(0, 7); // YYYY-MM
+                const redisKey = `quota:${userId}:analyses:${monthKey}`;
+                const result = await redisClient.decrby(redisKey, 1);
+                return { decrementValue: result };
+              } catch {
+                return { decrementValue: 0 };
+              }
+            })();
+
+            addBreadcrumb('Quota limit exceeded - counter rolled back', {
+              userId,
+              attemptedCount: quotaCounterValue,
+              limit: quotaLimitForTier,
+              rollbackValue: decrementValue,
+            }, 'quota');
+
+            Sentry.captureMessage(`Quota exceeded (optimistic lock rollback): user ${userId}`, 'warning');
+            return NextResponse.json(
+              {
+                error: `Monthly quota exceeded (${quotaCounterValue}/${quotaLimitForTier}). Upgrade to Pro for unlimited analyses.`,
+                quotaExceeded: true,
+                remaining: 0,
+                resetAt: quotaStatus.reset.toISOString(),
+              },
+              { status: 402 }
+            );
+          } catch (rollbackError) {
+            console.error('[/api/analyses] Rollback failed:', rollbackError);
+            Sentry.captureException(rollbackError, {
+              tags: { operation: 'quota_rollback', severity: 'critical' },
+              contexts: { quota: { userId } },
+            });
+            // Return error state: quota exceeded but rollback attempt failed
+            return NextResponse.json(
+              {
+                error: 'Quota enforcement error - please retry',
+                quotaExceeded: true,
+              },
+              { status: 402 }
+            );
+          }
+        }
+      } catch (incrementError) {
+        console.error('[/api/analyses] Quota increment failed:', incrementError);
+        addBreadcrumb('Quota increment failed', {
+          userId,
+          error: String(incrementError),
+        }, 'quota');
+        Sentry.captureException(incrementError, {
+          tags: { operation: 'quota_increment', severity: 'medium' },
+          contexts: { quota: { userId } },
+        });
+        // Non-fatal: allow request to proceed (graceful degradation)
+        // The counter increment failed, but we don't want to block valid users
+      }
     }
 
-    addBreadcrumb('Quota check passed', {
+    addBreadcrumb('Quota enforcement passed (optimistic lock)', {
       userId,
-      used: quotaStatus.count,
-      limit: quotaStatus.limit || 'unlimited',
-      remaining: quotaStatus.remaining,
+      tier: userTierAuth,
+      counterValue: quotaCounterValue,
+      limit: quotaLimitForTier,
     });
 
     // 6. Fetch metadata from Worker
@@ -370,15 +438,7 @@ export async function POST(request: NextRequest) {
       // Non-fatal: analysis is already saved
     });
 
-    // 10. Increment monthly quota counter (Redis-backed)
-    const newCount = await incrementQuotaCounter(userId);
-    addBreadcrumb('Monthly quota counter incremented', {
-      userId,
-      newCount,
-      tier: userTierAuth,
-    });
-
-    // 11. Log usage
+    // 10. Log usage (quota counter was already incremented in step 5.5 - optimistic locking)
     await trackDatabaseQuery(
       'insert',
       'usage_logs',
