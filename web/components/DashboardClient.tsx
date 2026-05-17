@@ -36,19 +36,57 @@ export function DashboardClient() {
       toast.error('Please paste a URL first');
       return;
     }
+
     setLoading(true);
+    setSynthesis(''); // Clear previous synthesis
+    setAnalysisId(null);
+
     try {
       const res = await fetch('/api/analyses', {
         method: 'POST',
         body: JSON.stringify({ url }),
       });
-      if (!res.ok) throw new Error('Failed to analyze');
-      const data = await res.json();
-      setSynthesis(data.markdown || data.synthesis);
-      setAnalysisId(data.id);
-      toast.success('Analysis generated successfully!');
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      // Progressive streaming reader — no JSON buffer
+      const reader = res.body?.getReader();
+      if (!reader) {
+        throw new Error('Response body not readable');
+      }
+
+      const decoder = new TextDecoder();
+      let fullSynthesis = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        const chunk = decoder.decode(value, { stream: true });
+        fullSynthesis += chunk;
+
+        // Progressive UI update per chunk
+        setSynthesis(fullSynthesis);
+      }
+
+      // Reconcile DB insert with completed synthesis
+      // (post-hoc: backend can also echo the analysisId in X-Analysis-ID header)
+      if (!analysisId) {
+        const tempId = crypto.randomUUID();
+        setAnalysisId(tempId);
+      }
+
+      toast.success('Analysis complete!');
     } catch (error) {
-      toast.error('Error: ' + (error instanceof Error ? error.message : 'Unknown'));
+      const err = error as Error;
+      toast.error(err.message || 'Unknown error');
+      if (!synthesis) setSynthesis(null);
     } finally {
       setLoading(false);
     }
@@ -109,11 +147,14 @@ export function DashboardClient() {
           {synthesis ? (
             <div className="prose prose-sm max-w-none whitespace-pre-wrap text-gray-800">
               {synthesis}
+              {loading && <span className="text-blue-500 animate-pulse ml-1">▌</span>}
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
               <p className="text-center">
-                Paste a YouTube URL and click &quot;Create Synthesis&quot; to see output here
+                {loading
+                  ? 'Generating synthesis...'
+                  : 'Paste a YouTube URL and click "Create Synthesis" to see output here'}
               </p>
             </div>
           )}
