@@ -161,15 +161,18 @@ async function callOpenRouter(
         continue;
       }
 
-      const error = err as Error;
-      if (error.name === 'AbortError') {
-        console.warn('[callOpenRouter] Abort error (timeout or cancel)', { model });
-        errors[model] = 'Connection timeout (10s)';
-        continue;
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          console.warn('[callOpenRouter] Abort error (timeout or cancel)', { model });
+          errors[model] = 'Connection timeout (10s)';
+          continue;
+        }
+        console.warn('[callOpenRouter] Unexpected error, trying next model', { model, error: err.message });
+        errors[model] = err.message;
+      } else {
+        console.warn('[callOpenRouter] Unexpected error, trying next model', { model, error: String(err) });
+        errors[model] = String(err);
       }
-
-      console.warn('[callOpenRouter] Unexpected error, trying next model', { model, error: error.message });
-      errors[model] = error.message;
       continue;
     } finally {
       if (connectTimeoutId !== undefined) clearTimeout(connectTimeoutId);
@@ -196,23 +199,15 @@ export async function POST(request: NextRequest) {
 
     // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
     const session = await getAuthSession();
-    if (!session?.user) {
-      console.warn('[analyses] Auth check failed - no session');
+    userId = session?.user?.id;
+    if (!userId) {
+      console.warn('[analyses] Auth check failed - no valid session or user ID');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    userId = session.user.id;
-    if (!userId) {
-      console.warn('[analyses] Auth check failed - no user ID in session');
-      return NextResponse.json(
-        { error: 'User ID not found in session' },
-        { status: 401 }
-      );
-    }
-    const userEmail = session.user.email || '';
+    const userEmail = session?.user?.email || '';
     const userTierAuth = await getUserTier(userId);
     console.log('[analyses] 2. Auth success', { userId, email: userEmail, tier: userTierAuth });
 
@@ -396,8 +391,6 @@ export async function POST(request: NextRequest) {
               method: 'GET',
               signal: controller.signal,
             });
-
-            clearTimeout(timeout);
 
             if (!response.ok) {
               throw new Error(`Worker returned ${response.status}`);
