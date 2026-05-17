@@ -457,12 +457,67 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8.5 Return streaming response directly to client - keeps connection alive during token generation
-    // This bypasses the JSON buffer deadlock by immediately returning the stream to the client
-    // The client receives tokens as they're generated, preventing timeout drops
-    console.log('[analyses] 9. Streaming response to client', { videoId });
+    // 8.5 Return streaming response with SSE normalization for Claude 4.5 compatibility
+    // Transform raw OpenRouter stream to normalize Claude 4.5's delta format
+    console.log('[analyses] 9. Setting up stream transformer for Claude 4.5 normalization', { videoId });
     addBreadcrumb('Streaming analysis response to client', { videoId });
-    return new Response(openrouterResponse.body, {
+
+    const transformedStream = openrouterResponse.body!.pipeThrough(
+      new TransformStream({
+        async transform(chunk: Uint8Array, controller: TransformStreamDefaultController) {
+          const chunkText = new TextDecoder().decode(chunk);
+          const lines = chunkText.split('\n');
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            if (!trimmed.startsWith('data: ')) {
+              controller.enqueue(new TextEncoder().encode(line + '\n'));
+              continue;
+            }
+
+            if (trimmed === 'data: [DONE]') {
+              controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+              continue;
+            }
+
+            try {
+              const jsonText = trimmed.slice(6);
+              const parsed = JSON.parse(jsonText);
+
+              // Defensively extract content from both Claude 4.5 and legacy formats
+              const contentToken =
+                parsed.choices?.[0]?.delta?.content ||
+                parsed.choices?.[0]?.text ||
+                '';
+
+              if (contentToken) {
+                const normalized = JSON.stringify({
+                  choices: [
+                    {
+                      delta: {
+                        content: contentToken,
+                      },
+                    },
+                  ],
+                });
+                controller.enqueue(
+                  new TextEncoder().encode(`data: ${normalized}\n\n`)
+                );
+              }
+            } catch (parseError) {
+              // Silently skip malformed chunks to prevent stream closure
+              console.warn('[analyses] Non-critical chunk parse skip', {
+                videoId,
+                linePreview: trimmed.slice(0, 100),
+              });
+            }
+          }
+        },
+      })
+    );
+
+    return new Response(transformedStream, {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
