@@ -10,10 +10,6 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0",
   },
 
-  // Externalise browser-only packages so they are not bundled into
-  // the server component tree and do not trigger SSR/SSG crashes.
-  serverExternalPackages: ["next-auth"],
-
   // ============================================================================
   // PRODUCTION PERFORMANCE BUDGETS
   // ============================================================================

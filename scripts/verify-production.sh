@@ -141,8 +141,8 @@ check_api_metadata() {
   if [ "$http_code" = "200" ]; then
     log_pass "Metadata endpoint accessible"
     return 0
-  elif [ "$http_code" = "400" ] || [ "$http_code" = "500" ]; then
-    log_warn "Metadata endpoint returned HTTP $http_code (may be expected for invalid URL)"
+  elif [ "$http_code" = "400" ] || [ "$http_code" = "500" ] || [ "$http_code" = "405" ]; then
+    log_warn "Metadata endpoint returned HTTP $http_code (expected for POST-only endpoints or invalid URLs)"
     return 0
   else
     log_fail "Metadata endpoint returned HTTP $http_code"
