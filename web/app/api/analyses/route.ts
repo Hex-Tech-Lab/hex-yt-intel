@@ -66,7 +66,7 @@ async function callOpenRouter(
   }
 
   const prompt = createUCISPrompt(metadata, transcript);
-  const models = ['anthropic/claude-4.5-haiku', 'anthropic/claude-3.5-haiku'];
+  const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
 
   console.log('[callOpenRouter] Starting with models', { models: models.join(', ') });
@@ -95,16 +95,10 @@ async function callOpenRouter(
           model,
           messages: [
             {
-              role: 'system',
-              content: 'You are an expert YouTube content analyst. Generate a comprehensive 16-section content intelligence report in markdown format.',
-            },
-            {
               role: 'user',
               content: prompt,
             },
           ],
-          temperature: 0.7,
-          max_tokens: 4000,
           stream: true,
         }),
         signal: controller.signal,
@@ -117,7 +111,9 @@ async function callOpenRouter(
 
       if (!response.ok) {
         const status = response.status;
-        errors[model] = `HTTP ${status}`;
+        // Surface full error body for 400 debugging
+        const errorBody = await response.text().catch(() => '<unreadable>');
+        errors[model] = `HTTP ${status}: ${errorBody.slice(0, 200)}`;
 
         // Fallback on service errors (503, 429) - legitimate reason to try next model
         if (status === 429 || status === 503) {
@@ -127,7 +123,7 @@ async function callOpenRouter(
 
         // Auth errors - don't retry, fail immediately
         if (status === 401 || status === 403) {
-          console.error(`[callOpenRouter] Auth error - ${status}`, { model });
+          console.error(`[callOpenRouter] Auth error - ${status}`, { model, errorBody });
           throw new AnalysisEngineError({
             message: `OpenRouter auth failed (${status}). Check OPENROUTER_API_KEY.`,
             code: 'ERR_PROVIDER_AUTH_FAILED',
@@ -136,8 +132,13 @@ async function callOpenRouter(
           });
         }
 
-        // Other errors - fail immediately
-        console.error(`[callOpenRouter] HTTP error - ${status}`, { model });
+        // 400 = model not found or payload rejected — log body, try fallback
+        if (status === 400) {
+          console.error(`[callOpenRouter] 400 Bad Request - ${model}`, { errorBody: errorBody.slice(0, 500) });
+        } else {
+          console.error(`[callOpenRouter] HTTP error - ${status}`, { model, errorBody: errorBody.slice(0, 200) });
+        }
+        continue;
         throw new AnalysisEngineError({
           message: `OpenRouter returned ${status}`,
           code: 'ERR_PROVIDER_HTTP_ERROR',
