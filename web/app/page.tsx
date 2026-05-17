@@ -11,7 +11,9 @@ import RateLimitAlert from '@/components/RateLimitAlert';
 
 export default function Home() {
   // Defensive null-safe session guard: gracefully handle unauthenticated visitors
-  const { data: session, update: updateSession } = useSession() ?? { data: null };
+  const sessionResult = useSession();
+  const session = sessionResult?.data ?? null;
+  const updateSession = sessionResult?.update;
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +41,7 @@ export default function Home() {
 
   const handleDevLogin = async () => {
     // Mock session for development testing
+    if (!updateSession) return;
     await updateSession({
       user: {
         id: 'dev-user-123',
