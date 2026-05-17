@@ -52,7 +52,7 @@ export function DashboardClient() {
         throw new Error(err.error || `HTTP ${res.status}`);
       }
 
-      // Progressive streaming reader — no JSON buffer
+      // Progressive SSE reader — parse OpenRouter line-delimited event-stream format
       const reader = res.body?.getReader();
       if (!reader) {
         throw new Error('Response body not readable');
@@ -60,19 +60,41 @@ export function DashboardClient() {
 
       const decoder = new TextDecoder();
       let fullSynthesis = '';
+      let buffer = ''; // Accumulate incomplete lines across chunk boundaries
 
       while (true) {
         const { done, value } = await reader.read();
 
-        if (done) {
-          break;
+        if (done) break;
+
+        const rawText = decoder.decode(value, { stream: true });
+        buffer += rawText;
+
+        // Split by newline and process complete lines
+        const lines = buffer.split('\n');
+
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          // Parse Server-Sent Events format: "data: {json}"
+          if (line.startsWith('data: ')) {
+            const cleanedLine = line.slice(6).trim();
+            if (cleanedLine === '[DONE]') break;
+
+            try {
+              const parsed = JSON.parse(cleanedLine);
+              const token = parsed.choices?.[0]?.delta?.content || '';
+              if (token) {
+                fullSynthesis += token;
+                setSynthesis(fullSynthesis);
+              }
+            } catch (e) {
+              // Ignore malformed JSON chunks — continue reading
+              continue;
+            }
+          }
         }
-
-        const chunk = decoder.decode(value, { stream: true });
-        fullSynthesis += chunk;
-
-        // Progressive UI update per chunk
-        setSynthesis(fullSynthesis);
       }
 
       // Reconcile DB insert with completed synthesis
