@@ -41,6 +41,11 @@ async function runTelemetry() {
   const context = await browser.newContext();
   const page = await context.newPage();
 
+  // Inject secure test validation header on all requests
+  await page.setExtraHTTPHeaders({
+    'X-Hex-Test-Secret': 'hex_secure_local_wsl_validation_token_string',
+  });
+
   try {
     // 1. Navigate to production target
     await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 });

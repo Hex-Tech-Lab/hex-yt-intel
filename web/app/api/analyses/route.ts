@@ -139,12 +139,6 @@ async function callOpenRouter(
           console.error(`[callOpenRouter] HTTP error - ${status}`, { model, errorBody: errorBody.slice(0, 200) });
         }
         continue;
-        throw new AnalysisEngineError({
-          message: `OpenRouter returned ${status}`,
-          code: 'ERR_PROVIDER_HTTP_ERROR',
-          statusCode: status,
-          modelAttempted: model,
-        });
       }
 
       console.log('[callOpenRouter] Stream response accepted', { model });

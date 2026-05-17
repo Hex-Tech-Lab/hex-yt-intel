@@ -5,10 +5,8 @@ import NextError from 'next/error';
 
 export default function GlobalError({
   error,
-  reset,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
 }) {
   const statusCode = 'statusCode' in error ? Number(error.statusCode) : 500;
 
@@ -17,7 +15,7 @@ export default function GlobalError({
   return (
     <html>
       <body>
-        <NextError statusCode={statusCode} error={error} reset={reset} />
+        <NextError statusCode={statusCode} />
       </body>
     </html>
   );

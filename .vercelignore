@@ -1,0 +1,30 @@
+# Exclude heavy dependencies — Vercel will run pnpm install
+node_modules
+*/node_modules
+.next
+web/.next
+worker/.next
+
+# Exclude build artifacts
+dist
+build
+.turbo
+
+# Exclude dev tooling
+.git
+.github
+.husky
+.vscode
+
+# Exclude docs (not needed at runtime)
+docs
+*.md
+
+# Exclude test outputs
+live_run_diagnostic_bundle.json
+coverage
+
+# Exclude OS files
+.DS_Store
+.env.local
+.env*.local
