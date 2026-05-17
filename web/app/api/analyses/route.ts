@@ -66,18 +66,23 @@ async function callOpenRouter(
   }
 
   const prompt = createUCISPrompt(metadata, transcript);
-  const models = ['anthropic/claude-3.5-sonnet', 'anthropic/claude-3.5-haiku'];
+  const models = ['anthropic/claude-4.5-haiku', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
 
+  console.log('[callOpenRouter] Starting with models', { models: models.join(', ') });
+
   for (const model of models) {
+    console.log('[callOpenRouter] Attempting model', { model });
     const controller = new AbortController();
     let connectTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
     try {
       connectTimeoutId = setTimeout(() => {
+        console.warn('[callOpenRouter] Connection timeout (10s)', { model });
         controller.abort();
       }, 10000);
 
+      console.log('[callOpenRouter] Sending request to OpenRouter', { model, stream: true });
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -108,6 +113,8 @@ async function callOpenRouter(
       clearTimeout(connectTimeoutId);
       connectTimeoutId = undefined;
 
+      console.log('[callOpenRouter] Response received', { model, status: response.status, ok: response.ok });
+
       if (!response.ok) {
         const status = response.status;
         errors[model] = `HTTP ${status}`;
@@ -120,6 +127,7 @@ async function callOpenRouter(
 
         // Auth errors - don't retry, fail immediately
         if (status === 401 || status === 403) {
+          console.error(`[callOpenRouter] Auth error - ${status}`, { model });
           throw new AnalysisEngineError({
             message: `OpenRouter auth failed (${status}). Check OPENROUTER_API_KEY.`,
             code: 'ERR_PROVIDER_AUTH_FAILED',
@@ -129,6 +137,7 @@ async function callOpenRouter(
         }
 
         // Other errors - fail immediately
+        console.error(`[callOpenRouter] HTTP error - ${status}`, { model });
         throw new AnalysisEngineError({
           message: `OpenRouter returned ${status}`,
           code: 'ERR_PROVIDER_HTTP_ERROR',
@@ -137,24 +146,29 @@ async function callOpenRouter(
         });
       }
 
+      console.log('[callOpenRouter] Stream response accepted', { model });
       return response;
     } catch (err) {
       if (err instanceof AnalysisEngineError) {
         // Don't fallback on auth errors - fail immediately
         if (err.code === 'ERR_PROVIDER_AUTH_FAILED') {
+          console.error('[callOpenRouter] Auth error - not retrying', { model, code: err.code });
           throw err;
         }
         // Other typed errors get recorded but we continue to next model
+        console.warn('[callOpenRouter] Typed error, trying next model', { model, code: err.code, message: err.message });
         errors[model] = err.message;
         continue;
       }
 
       const error = err as Error;
       if (error.name === 'AbortError') {
+        console.warn('[callOpenRouter] Abort error (timeout or cancel)', { model });
         errors[model] = 'Connection timeout (10s)';
         continue;
       }
 
+      console.warn('[callOpenRouter] Unexpected error, trying next model', { model, error: error.message });
       errors[model] = error.message;
       continue;
     } finally {
@@ -163,6 +177,7 @@ async function callOpenRouter(
   }
 
   // All models exhausted
+  console.error('[callOpenRouter] All models exhausted', { attemptedModels: models, errors });
   throw new AnalysisEngineError({
     message: 'All OpenRouter models failed or unavailable',
     code: 'ERR_ALL_MODELS_EXHAUSTED',
@@ -177,9 +192,12 @@ export async function POST(request: NextRequest) {
   let userId: string | undefined;
 
   try {
+    console.log('[analyses] 1. Request received - parsing body');
+
     // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
     const session = await getAuthSession();
     if (!session?.user) {
+      console.warn('[analyses] Auth check failed - no session');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -188,6 +206,7 @@ export async function POST(request: NextRequest) {
 
     userId = session.user.id;
     if (!userId) {
+      console.warn('[analyses] Auth check failed - no user ID in session');
       return NextResponse.json(
         { error: 'User ID not found in session' },
         { status: 401 }
@@ -195,6 +214,7 @@ export async function POST(request: NextRequest) {
     }
     const userEmail = session.user.email || '';
     const userTierAuth = await getUserTier(userId);
+    console.log('[analyses] 2. Auth success', { userId, email: userEmail, tier: userTierAuth });
 
     // Set user context for Sentry
     setUserContext(userId, userEmail || '', userTierAuth);
@@ -209,6 +229,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!allowed) {
+      console.warn('[analyses] 3. Rate limit exceeded', { userId, tier: userTierAuth });
       addBreadcrumb('Rate limit exceeded', { userId, tier: userTierAuth }, 'rate_limiting');
       Sentry.captureMessage('Rate limit: POST /api/analyses', 'warning');
       // Rate limit exceeded - response already has 429 status
@@ -222,6 +243,7 @@ export async function POST(request: NextRequest) {
         return response;
       }
     }
+    console.log('[analyses] 3. Rate limit check passed', { userId });
 
     // 2. Parse and validate request
     const body = await request.json();
@@ -248,6 +270,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseClient();
 
     // 4.5 CACHE HIT CHECK: Query for existing analysis with this videoId
+    console.log('[analyses] 4. Cache check starting', { videoId, userId });
     const existingAnalysis = await trackDatabaseQuery(
       'select',
       'analyses',
@@ -271,6 +294,7 @@ export async function POST(request: NextRequest) {
 
     // If found in cache, return immediately
     if (existingAnalysis) {
+      console.log('[analyses] 4. Cache HIT - returning cached analysis', { videoId, analysisId: existingAnalysis.id });
       addBreadcrumb('Cache hit: analysis retrieved from DB', { videoId, analysisId: existingAnalysis.id }, 'cache');
       Sentry.captureMessage('Cache hit: duplicate analysis prevented', 'info');
       return NextResponse.json({
@@ -285,8 +309,10 @@ export async function POST(request: NextRequest) {
         message: 'Analysis compiled previously. Retrieved instantly from local architecture cache.'
       });
     }
+    console.log('[analyses] 4. Cache MISS - proceeding with analysis', { videoId });
 
     // 5. Check quota enforcement
+    console.log('[analyses] 5. Quota check starting', { userId, tier: userTierAuth });
     const userData = await trackDatabaseQuery(
       'select',
       'users',
@@ -306,6 +332,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!userData) {
+      console.error('[analyses] Failed to fetch user data', { userId });
       return NextResponse.json(
         { error: 'Failed to fetch user data' },
         { status: 500 }
@@ -321,6 +348,7 @@ export async function POST(request: NextRequest) {
     let analysesUsed = userData.analyses_used || 0;
     if (monthsElapsed > 0) {
       // Reset quota for new month
+      console.log('[analyses] Monthly quota reset triggered', { userId, monthsElapsed });
       analysesUsed = 0;
       addBreadcrumb('Monthly quota reset', { userId, monthsElapsed }, 'quota');
       await supabase
@@ -333,6 +361,7 @@ export async function POST(request: NextRequest) {
     const quotaLimit = userTierAuth === 'free' ? 3 : null; // null = unlimited for pro
 
     if (quotaLimit && analysesUsed >= quotaLimit) {
+      console.warn('[analyses] Quota limit exceeded', { userId, used: analysesUsed, limit: quotaLimit, tier: userTierAuth });
       addBreadcrumb('Quota limit exceeded', { userId, used: analysesUsed, limit: quotaLimit }, 'quota');
       Sentry.captureMessage(`Quota exceeded: user ${userId}`, 'warning');
       return NextResponse.json(
@@ -345,9 +374,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('[analyses] 5. Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
     addBreadcrumb('Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
 
     // 6. Fetch metadata from Worker
+    console.log('[analyses] 6. Fetching metadata from Cloudflare Worker', { videoId });
     const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
     const metadataUrl = `${workerUrl}/fetch-metadata?video_id=${videoId}`;
 
@@ -379,8 +410,10 @@ export async function POST(request: NextRequest) {
         },
         { videoId }
       );
+      console.log('[analyses] 6. Metadata fetched', { videoId, title: metadata.title, channelTitle: metadata.channelTitle });
       addBreadcrumb('Metadata fetched from worker', { videoId, title: metadata.title });
     } catch (error) {
+      console.error('[analyses] 6. Metadata fetch failed', { videoId, error: String(error) });
       addBreadcrumb('Worker call failed', { videoId, error: String(error) }, 'external_service');
       Sentry.captureException(error, {
         tags: { service: 'cloudflare-worker', operation: 'fetch-metadata' },
@@ -393,9 +426,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Fetch transcript
+    console.log('[analyses] 7. Fetching transcript (placeholder)', { videoId });
     const transcript = await fetchTranscript(videoId);
+    console.log('[analyses] 7. Transcript fetched', { videoId, length: transcript.length });
 
     // 8. Call OpenRouter - stream response directly to client
+    console.log('[analyses] 8. OpenRouter call starting', { videoId });
     let openrouterResponse: Response;
     try {
       openrouterResponse = await trackExternalCall(
@@ -404,9 +440,10 @@ export async function POST(request: NextRequest) {
         () => callOpenRouter(metadata, transcript),
         { videoId }
       );
+      console.log('[analyses] 8. OpenRouter stream initiated successfully', { videoId });
       addBreadcrumb('OpenRouter stream initiated', { videoId });
     } catch (error) {
-      console.error('[/api/analyses] OpenRouter error:', error);
+      console.error('[analyses] 8. OpenRouter call failed', { videoId, error: String(error) });
 
       let statusCode = 500;
       let errorMessage = 'Failed to generate analysis';
@@ -430,6 +467,7 @@ export async function POST(request: NextRequest) {
     // 8.5 Return streaming response directly to client - keeps connection alive during token generation
     // This bypasses the JSON buffer deadlock by immediately returning the stream to the client
     // The client receives tokens as they're generated, preventing timeout drops
+    console.log('[analyses] 9. Streaming response to client', { videoId });
     addBreadcrumb('Streaming analysis response to client', { videoId });
     return new Response(openrouterResponse.body, {
       headers: {
@@ -440,7 +478,13 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const duration = Math.round(performance.now() - startTime);
-    console.error('[/api/analyses] Error:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('[analyses] UNHANDLED ERROR', {
+      error: errorMsg,
+      duration,
+      userId,
+      stack: error instanceof Error ? error.stack : undefined
+    });
 
     Sentry.captureException(error, {
       contexts: {
@@ -458,7 +502,7 @@ export async function POST(request: NextRequest) {
     });
 
     addBreadcrumb('Unhandled error in POST /api/analyses', {
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMsg,
       duration,
     });
 
