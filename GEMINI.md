@@ -82,3 +82,67 @@ response.headers.set('Content-Type', 'application/json');
 ```
 
 **Goal**: By chunking markdown generation back to the client as it produces tokens, we extend the effective timeout window to match our 25-second adaptive task horizon, without sacrificing compatibility with next-auth and other Node.js libraries.
+
+---
+
+## 5. THE 10x VERIFICATION PREFLIGHT MANDATE
+
+### Institutional Rule: Pre-Execution Confirmation Checks
+Before writing any file mutations, running automated pipeline pushes, or executing concurrent agent tasks, the agent MUST execute a local preflight check to confirm if the fix has already been implemented by a sibling agent. **Never assume an error state exists without running local confirmation commands.**
+
+**This prevents**:
+- Duplicate fix attempts across multi-agent sessions (wasted CPU/tokens)
+- Race conditions from concurrent file writes (git merge conflicts)
+- Silent overwrite of sibling agent improvements
+- Redundant commit history pollution (multiple fixes for same issue)
+
+### Preflight Verification Checklist
+
+Before EVERY code mutation or pipeline operation:
+
+1. **For Source Code Changes**:
+   - `git status` — Confirm working tree state (nothing uncommitted from other agents)
+   - `git diff HEAD <file>` — Check if target file already has the fix
+   - `grep -r "pattern" web/` — Verify the problem still exists before fixing it
+
+2. **For Dependency/Build Issues**:
+   - `cd web && pnpm list <package>` — Confirm current package state
+   - `cat pnpm-lock.yaml | grep <package>` — Verify lock file dependencies
+   - `pnpm build --dry-run` — Check if build issue persists before applying fix
+
+3. **For Configuration Files**:
+   - `find . -maxdepth 1 -name "*.md" | wc -l` — Verify root folder structure (max 4 files)
+   - `ls -la .vercelignore` — Check if ignore rules already exist
+   - `grep -n "pattern" CLAUDE.md` — Confirm if documentation is already current
+
+4. **For API/Route Changes**:
+   - `grep -A5 "return" web/middleware.ts` — Verify early return statements are present
+   - `grep -r "export const runtime" web/app/api/` — Check Edge Runtime configuration
+
+### Implementation Pattern
+```typescript
+// MANDATORY PREFLIGHT PSEUDOCODE:
+const shouldProceed = async () => {
+  const fileState = await exec('git diff HEAD <file>');
+  if (fileState.includes(expectedFix)) {
+    console.log('✅ Fix already applied by sibling agent');
+    return false; // SKIP THIS FIX
+  }
+  
+  const buildTest = await exec('pnpm build');
+  if (buildTest.error && buildTest.error.includes(expectedError)) {
+    console.log('⚠️ Error confirmed, proceeding with fix');
+    return true; // APPLY THE FIX
+  }
+  
+  return false; // ERROR DOES NOT EXIST
+};
+```
+
+### Documentation
+All preflight checks executed MUST be logged:
+- **If fix already applied**: "Sibling agent fix detected at [commit hash], skipping redundant application"
+- **If error confirmed**: "Error confirmed via [command], proceeding with [fix name]"
+- **If error not found**: "Error not reproduced locally, aborting [fix name]"
+
+**Benefit**: 10x reduction in duplicate fixes, dramatically cleaner git history, zero silent overwrites of concurrent work.

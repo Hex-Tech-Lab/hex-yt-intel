@@ -71,9 +71,73 @@ hex-yt-intel/
 
 ---
 
-## 3. DEVELOPMENT WORKFLOW
+## 3. MONOREPO WORKSPACE SUB-ROOT COMMAND LOCK
 
-### npm / pnpm scripts (web/)
+### Institutional Rule: All pnpm Operations Must Execute from `web/` Sub-Root
+Because the system utilizes a multi-package layout where **node manifests are isolated inside `/web`**, all execution tracking loops, verification tasks, and `pnpm` operations MUST be invoked directly from the sub-root directory to protect the workspace from root configuration crashes.
+
+### The Problem (Prevention Rule)
+```bash
+# ❌ BROKEN: Running pnpm from repository root
+$ pnpm type-check
+# Error: ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND
+```
+
+The root directory contains NO `package.json` and NO `pnpm-workspace.yaml`. All package definitions are scoped to `/web` (Next.js app) and `/worker/` (Cloudflare Worker).
+
+### The Correct Pattern
+```bash
+# ✅ CORRECT: Always cd into /web before running pnpm commands
+$ cd web
+$ pnpm type-check      # TypeScript verification
+$ pnpm lint            # ESLint + Prettier
+$ pnpm build           # Production build
+$ pnpm dev             # Local development server
+$ pnpm test            # Jest test suite
+```
+
+### Pre-Commit Gate (Non-Negotiable)
+```bash
+# Always execute from /web sub-root
+cd web && pnpm type-check && pnpm lint && pnpm build
+```
+
+### Why This Matters
+1. **Lock files are scoped**: `web/pnpm-lock.yaml` is the authoritative dependency resolution
+2. **Scripts are packaged**: `web/package.json` contains all executable scripts (dev, build, test, lint)
+3. **TypeScript config is isolated**: `web/tsconfig.json` defines type-checking rules for the app
+4. **Build targets are segregated**: `web/next.config.js` controls Next.js compilation, separate from `worker/`
+
+Running `pnpm` from root will produce:
+- `ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND` — root directory is not a valid pnpm workspace
+- Dependency resolution failures — lock file not found
+- Script execution failures — package.json scripts not defined
+- Build failures — Next.js config not found
+
+### Verification Checklist
+Before EVERY pnpm command:
+```bash
+# Confirm you're in the /web directory
+$ pwd
+/home/kellyb_dev/projects/hex-yt-intel/web
+
+# Confirm package.json exists here
+$ ls package.json
+package.json
+
+# Confirm lock file is present
+$ ls pnpm-lock.yaml
+pnpm-lock.yaml
+
+# NOW safe to run pnpm operations
+$ pnpm type-check
+```
+
+---
+
+## 4. DEVELOPMENT WORKFLOW
+
+### pnpm scripts (web/)
 
 | Script | Command | When to use |
 |---|---|---|
@@ -99,7 +163,7 @@ pnpm type-check && pnpm lint && pnpm build
 
 ---
 
-## 4. SECURITY DIRECTIVES (MANDATORY — READ BEFORE ANY COMMIT)
+## 5. SECURITY DIRECTIVES (MANDATORY — READ BEFORE ANY COMMIT)
 
 ### 4.1 Never-Commit Credentials Rule
 
@@ -212,7 +276,7 @@ https://github.com/Hex-Tech-Lab/hex-yt-intel/security/secret-scanning/unblock-se
 
 ---
 
-## 5. CRITICAL CODE-LEVEL PATTERNS
+## 6. CRITICAL CODE-LEVEL PATTERNS
 
 These issues triggered production-integrity bugs. Re-instatement means roll-back. Never revert or work around them.
 
@@ -249,7 +313,7 @@ catch (err) {
 
 ---
 
-## 6. OPENROUTER CALLER PATTERN (`callOpenRouter`)
+## 7. OPENROUTER CALLER PATTERN (`callOpenRouter`)
 
 Location: `web/app/api/analyses/route.ts:34`
 
@@ -268,7 +332,7 @@ Errors are accummulated in `Record<string, string> errors` by model key and the 
 
 ---
 
-## 7. API ROUTE PATTERNS
+## 8. API ROUTE PATTERNS
 
 ### 7.1 Standard request envelope
 
@@ -285,7 +349,7 @@ All `POST /api/*` routes must:
 
 ---
 
-## 8. SENTRY OBSERVABILITY CONVENTIONS
+## 9. SENTRY OBSERVABILITY CONVENTIONS
 
 Defined in `web/lib/monitoring/sentry-utils.ts`
 
@@ -300,7 +364,7 @@ Defined in `web/lib/monitoring/sentry-utils.ts`
 
 ---
 
-## 9. SUPABASE CONVENTIONS
+## 10. SUPABASE CONVENTIONS
 
 Defined in `web/lib/supabase.ts`
 
@@ -317,7 +381,7 @@ Defined in `web/lib/supabase.ts`
 
 ---
 
-## 10. KEY ENVIRONMENT VARIABLES
+## 11. KEY ENVIRONMENT VARIABLES
 
 | Variable | Purpose | Where set |
 |---|---|---|
@@ -332,7 +396,7 @@ Defined in `web/lib/supabase.ts`
 
 ---
 
-## 11. AUTH & RBAC
+## 12. AUTH & RBAC
 
 Defined in `web/lib/auth/provider-factory.ts`
 
@@ -345,7 +409,7 @@ Defined in `web/lib/auth/provider-factory.ts`
 
 ---
 
-## 12. RATE-LIMIT CONVENTIONS
+## 13. RATE-LIMIT CONVENTIONS
 
 | Tier | Rate window | Burst | Hard cap |
 |---|---|---|---|
@@ -356,7 +420,7 @@ Apply via `applyRateLimit(request, 'analyses', userId, userTierAuth)` before any
 
 ---
 
-## 13. OPENROUTER TIMEOUT CONFIGURATION
+## 14. OPENROUTER TIMEOUT CONFIGURATION
 
 ```typescript
 const transcriptLength = transcript?.length || 0;
@@ -368,7 +432,7 @@ const adaptiveTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 500
 
 ---
 
-## 14. CODE STYLE & LINTING
+## 15. CODE STYLE & LINTING
 
 | Rule | Required |
 |---|---|
@@ -380,7 +444,7 @@ const adaptiveTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 500
 
 ---
 
-## 15. PANDO — KNOWN BLOCKING STATUS
+## 16. PANDO — KNOWN BLOCKING STATUS
 
 > **GitHub Push Protection GH013** (false positive, administrative hold)  
 > Origin: Historical commit `7a48b06d` — credential purge has been validated  
@@ -390,7 +454,7 @@ const adaptiveTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 500
 
 ---
 
-## 16. QUICK-REFERENCE FILE INDEX
+## 17. QUICK-REFERENCE FILE INDEX
 
 | Pattern | File | Purpose |
 |---|---|---|
@@ -437,7 +501,7 @@ const adaptiveTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 500
 
 ---
 
-## 17. RECENT FIX LOG (chunk 13 — code review verdicts applied)
+## 18. RECENT FIX LOG (chunk 13 — code review verdicts applied)
 
 All CRITICAL issues from the code review have been surgically applied to `main`.
 
@@ -477,7 +541,7 @@ All CRITICAL issues from the code review have been surgically applied to `main`.
 
 ---
 
-## 18. AGENT ENFORCEMENT SURFACE
+## 19. AGENT ENFORCEMENT SURFACE
 
 Every agent session must scan (or reference) these files before taking any action:
 

@@ -83,6 +83,73 @@ response.headers.set('Content-Type', 'application/json');
 
 ---
 
+## CRITICAL MIDDLEWARE & BUILD ANTI-PATTERNS
+
+### Anti-Pattern #1: Edge Middleware Control Flow Fall-Through
+**Location**: `web/middleware.ts`
+
+**The Problem**: Invoking conditional middleware validations (`NextResponse.next()`, `NextResponse.redirect()`) without an explicit functional `return` statement causes execution to fall through into broken downstream database blocks (`supabase.auth.getUser()`), crashing server-side rendering hydration with unparsed null pointer exceptions (`useState` failures on hydration mismatch).
+
+**Example of BROKEN Code**:
+```typescript
+if (testSecret === 'bypass_token') {
+  NextResponse.next();  // ❌ NO RETURN = falls through to auth check below
+}
+// Auth check executes even though user should be bypassed!
+const { data: { user } } = await client.auth.getUser();
+```
+
+**The Immutable Rule**: Every authorization bypass or routing redirection statement inside Next.js middleware MUST execute an immediate early return anchor:
+```typescript
+if (testSecret === 'bypass_token') {
+  return NextResponse.next();  // ✅ EXPLICIT RETURN = function exits immediately
+}
+```
+
+**Verification**: Check `web/middleware.ts` has explicit `return` statements at:
+- Line 36 (test secret bypass)
+- Line 44 (non-protected routes)
+- Line 61 (redirect unauthenticated users)
+- Line 64 (allow authenticated users)
+
+**Impact**: Missing returns cause hydration crashes → `ReferenceError: window is not defined` → broken auth flows → production incidents.
+
+---
+
+### Anti-Pattern #2: Over-Aggressive .vercelignore Blocker
+**Location**: `.vercelignore` at repository root
+
+**The Problem**: Writing broad root folder wildcards into `.vercelignore` strips essential system configuration maps (like `tsconfig.json`, `.next`, `package.json`, `next.config.js`) out of the remote Vercel build workspace. The Next.js production compiler cannot locate required configuration files, producing `ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND` during build initialization.
+
+**Example of BROKEN Configuration**:
+```
+# ❌ BROKEN: Blocks all top-level files
+/*
+# Selectively unblock only node_modules
+!node_modules/
+```
+
+**The Immutable Rule**: Keep `.vercelignore` limited to heavy cache components (`node_modules`) and never obscure configuration files needed by the Next.js production compiler:
+```
+# ✅ CORRECT: Only ignore build cache and transient files
+node_modules/
+.next/
+dist/
+*.log
+.env.local
+```
+
+**Scope**: `.vercelignore` should ONLY prevent:
+- `node_modules/` (already handled by pnpm)
+- `.next/` (Next.js incremental build cache)
+- `.git/` (version control artifacts)
+- `*.log` (temporary logs)
+- Development-only env files (`.env.local`)
+
+**Impact**: Over-aggressive ignores cause Vercel builds to fail with cryptic manifest errors → production deployments blocked → loss of visibility into deployed state.
+
+---
+
 ## THE COMPLETE ARTIFACT PLACEMENT TAXONOMY
 
 To prevent multi-agent folder pollution and ensure consistent discovery patterns, **all repository files must conform to this absolute hierarchy**:
