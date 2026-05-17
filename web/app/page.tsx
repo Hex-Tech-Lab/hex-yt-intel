@@ -3,6 +3,7 @@ import dynamicImport from 'next/dynamic';
 export const dynamic = 'force-dynamic';
 
 const HomeContent = dynamicImport(() => import('@/components/HomeContent'), {
+  ssr: false,
   loading: () => (
     <div className="flex h-screen flex-col bg-white items-center justify-center">
       <div className="text-center">

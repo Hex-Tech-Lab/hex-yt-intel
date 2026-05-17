@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Play, Download, RotateCcw, Clock } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
-import { apiCall } from '@/lib/api-client';
 import RateLimitAlert from '@/components/RateLimitAlert';
 
 export default function HomeContent() {
@@ -59,30 +58,75 @@ export default function HomeContent() {
     }
 
     setIsLoading(true);
+    setAnalysis(null);
     try {
-      const result = await apiCall('/api/analyses', {
+      const response = await fetch('/api/analyses', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() }),
       });
 
-      if (result.ok && result.data) {
-        const data = result.data as { id: string; title?: string; markdown?: string };
+      if (!response.ok) {
+        if (response.status === 429) {
+          const retryHeader = response.headers.get('Retry-After');
+          setLockoutTimeRemaining(retryHeader ? parseInt(retryHeader, 10) : 60);
+          console.warn('Rate limited: Please wait before trying again');
+          return;
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      // Check for Cache Hit (Standard JSON Response)
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
         setAnalysis({
-          id: data.id,
+          id: data.id || 'cached',
           title: data.title || 'Analysis',
-          markdown: data.markdown || 'Analysis in progress...',
+          markdown: data.markdown || '',
         });
-      } else if (result.rateLimitError) {
-        setLockoutTimeRemaining(result.rateLimitError.retryAfter);
-        console.warn('Rate limited:', result.rateLimitError.message);
-      } else {
-        const errorMsg = result.error || `HTTP ${result.status}`;
-        console.error('Analysis failed:', errorMsg);
-        alert(`Failed to analyze video: ${errorMsg}`);
+        return;
+      }
+
+      // Stream Reader Fallback (OpenRouter Streaming Pathway)
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) throw new Error('Failed to initialize stream reader');
+
+      setAnalysis({ id: 'generating', title: 'Analysis in Progress', markdown: '' });
+      let currentMarkdown = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Hold trailing incomplete chunk in memory
+        
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            const dataStr = trimmed.substring(6);
+            if (dataStr === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(dataStr);
+              const content = parsed.choices?.[0]?.delta?.content || '';
+              if (content) {
+                currentMarkdown += content;
+                setAnalysis(prev => prev ? { ...prev, markdown: currentMarkdown } : null);
+              }
+            } catch (e) {
+              // Safely ignore mid-stream fragment decode errors
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error analyzing video:', error);
-      alert('Error analyzing video');
+      alert(`Failed to analyze video: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }

@@ -49,9 +49,12 @@ export async function middleware(request: NextRequest) {
 
   const isAuthenticated = authProvider === 'supabase'
     ? await hasSupabaseAuth(request)
-    : !!(await getToken({ req: request }));
+    : !!(await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET }));
 
   if (!isAuthenticated) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const signInUrl = new URL('/auth/signin', request.url);
     signInUrl.searchParams.append('callbackUrl', pathname);
     return NextResponse.redirect(signInUrl);
