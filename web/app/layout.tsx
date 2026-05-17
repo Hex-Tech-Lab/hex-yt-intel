@@ -2,6 +2,10 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Providers } from "./providers"
 
+// Skip static generation — layout wraps browser-only provider (SessionProvider)
+// and must only be resolved at request time
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Hex-YT-Intel",
   description: "YouTube synthesis engine",

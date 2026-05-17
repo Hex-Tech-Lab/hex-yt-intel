@@ -5,12 +5,21 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typescript: { tsconfigPath: "./tsconfig.json" },
 
+  // Static env vars baked into the build bundle
+  env: {
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0",
+  },
+
+  // Externalise browser-only packages so they are not bundled into
+  // the server component tree and do not trigger SSR/SSG crashes.
+  serverExternalPackages: ["next-auth"],
+
   // ============================================================================
   // PRODUCTION PERFORMANCE BUDGETS
   // ============================================================================
   onDemandEntries: {
-    maxInactiveAge: 60 * 1000, // 1 minute
-    pagesBufferLength: 50, // Keep up to 50 pages in memory
+    maxInactiveAge: 60 * 1000,
+    pagesBufferLength: 50,
   },
 
   // ============================================================================
@@ -18,17 +27,10 @@ const nextConfig: NextConfig = {
   // ============================================================================
   headers: async () => {
     return [
-      // Cache static assets forever (immutable)
       {
         source: "/_next/static/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
-      // Cache images for 1 year (they have content hashes)
       {
         source: "/_next/image/:path*",
         headers: [
@@ -38,60 +40,26 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // Cache public assets
       {
         source: "/public/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
-      // No cache for HTML (unless explicitly cached via ISR)
       {
         source: "/:path((?!_next|public).*)",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=0, must-revalidate",
-          },
-        ],
+        headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
       },
-      // API routes: no cache by default
       {
         source: "/api/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "no-cache, no-store, must-revalidate",
-          },
-        ],
+        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
       },
-      // Security headers
       {
         source: "/(.*)",
         headers: [
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-XSS-Protection",
-            value: "1; mode=block",
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-          {
-            key: "Permissions-Policy",
-            value: "geolocation=(), microphone=(), camera=()",
-          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-XSS-Protection", value: "1; mode=block" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "geolocation=(), microphone=(), camera=()" },
         ],
       },
     ];
@@ -101,14 +69,7 @@ const nextConfig: NextConfig = {
   // REDIRECTS & REWRITES
   // ============================================================================
   async redirects() {
-    return [
-      // Old API paths (if needed in future)
-      // {
-      //   source: '/api/old/:path*',
-      //   destination: '/api/new/:path*',
-      //   permanent: true,
-      // },
-    ];
+    return [];
   },
 
   async rewrites() {
@@ -116,25 +77,15 @@ const nextConfig: NextConfig = {
   },
 
   // ============================================================================
-  // ENVIRONMENT VARIABLES
-  // ============================================================================
-  env: {
-    // These are baked into the build
-    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0",
-  },
-
-  // ============================================================================
   // EXPERIMENTAL FEATURES
   // ============================================================================
   experimental: {
-    // Enable optimized package imports
     optimizePackageImports: [
       "@supabase/supabase-js",
       "@supabase/auth-helpers-nextjs",
       "@sentry/nextjs",
     ],
   },
-
 
   // ============================================================================
   // LOGGING

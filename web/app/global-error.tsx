@@ -1,0 +1,24 @@
+'use client';
+
+import * as Sentry from '@sentry/nextjs';
+import NextError from 'next/error';
+
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  const statusCode = 'statusCode' in error ? Number(error.statusCode) : 500;
+
+  Sentry.captureException(error);
+
+  return (
+    <html>
+      <body>
+        <NextError statusCode={statusCode} error={error} reset={reset} />
+      </body>
+    </html>
+  );
+}
