@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { randomUUID } from 'crypto';
 import { createUCISPrompt } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
@@ -200,7 +199,7 @@ export async function POST(request: NextRequest) {
 
     if (testSecret === 'hex_secure_local_wsl_validation_token_string') {
       console.info('[analyses] Secure validation bypass detected - using test user ID');
-      userId = randomUUID();
+      userId = `00000000-0000-4000-8000-${Math.random().toString(16).slice(2).padEnd(12, '0')}`;
       userEmail = 'test@example.com';
       userTierAuth = 'free';
     } else {
