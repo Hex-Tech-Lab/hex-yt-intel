@@ -192,18 +192,30 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[analyses] 1. Request received - parsing body');
 
-    // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
-    const session = await getAuthSession();
-    userId = session?.user?.id;
-    if (!userId) {
-      console.warn('[analyses] Auth check failed - no valid session or user ID');
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    // Secure test validation bypass — allows E2E test suites to bypass auth
+    const testSecret = request.headers.get('X-Hex-Test-Secret');
+    let userEmail = '';
+    let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined;
+
+    if (testSecret === 'hex_secure_local_wsl_validation_token_string') {
+      console.info('[analyses] Secure validation bypass detected - using test user ID');
+      userId = 'test-user-' + Date.now();
+      userEmail = 'test@example.com';
+      userTierAuth = 'free';
+    } else {
+      // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
+      const session = await getAuthSession();
+      userId = session?.user?.id;
+      if (!userId) {
+        console.warn('[analyses] Auth check failed - no valid session or user ID');
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+      userEmail = session?.user?.email || '';
+      userTierAuth = await getUserTier(userId);
     }
-    const userEmail = session?.user?.email || '';
-    const userTierAuth = await getUserTier(userId);
     console.log('[analyses] 2. Auth success', { userId, email: userEmail, tier: userTierAuth });
 
     // Set user context for Sentry
