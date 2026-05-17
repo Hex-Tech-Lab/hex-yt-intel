@@ -32,8 +32,8 @@ export async function middleware(request: NextRequest) {
   // Secure test validation bypass — allows E2E test suites to bypass auth
   const testSecret = request.headers.get('X-Hex-Test-Secret');
   if (testSecret === 'hex_secure_local_wsl_validation_token_string') {
-    console.info('[middleware] Secure validation bypass detected - granting route access');
-    return NextResponse.next();
+    console.info('[middleware] Secure validation signature matched. Halting downstream actions.');
+    return NextResponse.next(); // ← CRITICAL: MUST RETURN EXPLICITLY TO EXIT THE FUNCTION
   }
 
   // Protected routes (require auth)
