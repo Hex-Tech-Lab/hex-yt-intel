@@ -10,7 +10,8 @@ import { apiCall } from '@/lib/api-client';
 import RateLimitAlert from '@/components/RateLimitAlert';
 
 export default function HomeContent() {
-  const { data: session, update: updateSession } = useSession();
+  const sessionResult = useSession();
+  const { data: session = null, update: updateSession } = sessionResult || {};
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
