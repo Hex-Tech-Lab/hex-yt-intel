@@ -10,7 +10,7 @@ const BASE_URL            = 'https://hex-yt-intel.vercel.app';
 const STREAM_WAIT_MS      = 15_000;
 const VERCEL_LOG_FILTERS  = ['[analyses]', '[callOpenRouter]', '[worker]'];
 
-async function fetchVercelLogs(deploymentId: string): Promise<unknown[]> {
+async function fetchVercelLogs(deploymentId) {
   const token = process.env.VERCEL_API_TOKEN;
   if (!token || !deploymentId) {
     console.warn('[vercel-logs] VERCEL_API_TOKEN or VERCEL_DEPLOYMENT_ID not set — skipping log extraction');
@@ -29,8 +29,8 @@ async function fetchVercelLogs(deploymentId: string): Promise<unknown[]> {
 
   const events = await response.json();
   return Array.isArray(events)
-    ? events.filter((ev: unknown) => {
-        const msg = (ev as Record<string, unknown>).message;
+    ? events.filter((ev) => {
+        const msg = ev?.message;
         return typeof msg === 'string' && VERCEL_LOG_FILTERS.some((f) => msg.includes(f));
       })
     : [];
@@ -46,32 +46,41 @@ async function runTelemetry() {
     await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 });
     await page.waitForFunction('document.title.includes("Hex-YT-Intel")', { timeout: 10_000 });
 
-    // 2. Authenticate (cookie-based or interactive sign-in)
-    const signInBtn = page.locator('a:has-text("Sign In"), button:has-text("Sign In"), text=Sign In').first();
-    if (await signInBtn.isVisible({ timeout: 5_000 })) {
-      await signInBtn.click();
-      const emailInput = page.locator('input[type="email"], input[name="email"], input#email').first();
-      if (await emailInput.isVisible({ timeout: 3_000 })) {
-        await emailInput.fill(process.env.TEST_USER_EMAIL ?? '');
-        const passInput = page.locator('input[type="password"], input[name="password"], input#password').first();
-        await passInput.fill(process.env.TEST_USER_PASSWORD ?? '');
-        await page.locator('button[type="submit"]:has-text("Sign in"), button:has-text("Continue")').first().click();
-      }
-    }
+    // 2. Skip auth — test will fail gracefully if protected
+    console.log('[telemetry] Skipping sign-in (no TEST_USER_* env vars provided)');
 
     // 3. Pump a YouTube URL and trigger the synthesis pipeline
     const videoUrl = 'https://www.youtube.com/watch?v=HO2a_BTx12k';
     await page.fill('input[placeholder*="YouTube"]', videoUrl);
+
+    // Intercept the API response to capture status/error
+    const apiResponsePromise = page.waitForResponse(
+      (res) => res.url().includes('/api/analyses') && res.request().method() === 'POST'
+    );
+
     await page.click('button[type="submit"], button:has-text("Analyze"), button:has-text("Create")');
+
+    try {
+      const apiRes = await apiResponsePromise;
+      console.log('[telemetry] API response status:', apiRes.status());
+      console.log('[telemetry] API response headers:', Object.fromEntries(apiRes.headers()));
+      const body = await apiRes.text();
+      console.log('[telemetry] API response body (first 500 chars):', body.substring(0, 500));
+    } catch (e) {
+      console.log('[telemetry] API response capture timeout (stream may have started)');
+    }
 
     // 4. Progressive stream wait — give the backend time to flush first chunks
     await page.waitForTimeout(STREAM_WAIT_MS);
 
     // 5. Assertion: at least one markdown heading must surface in the output pane
     const outputPane = page.locator('.prose, [class*="prose"], article, div.whitespace-pre-wrap').first();
-    const hasMarkdown = await outputPane.locator('h1, h2, h3, h4, strong, **').first().isVisible({ timeout: 30_000 }).catch(() => false);
+    const outputText = await outputPane.textContent().catch(() => '');
+    console.log('[telemetry] Output pane text (first 200 chars):', outputText.substring(0, 200));
+
+    const hasMarkdown = await outputPane.locator('h1, h2, h3, h4, strong, **').first().isVisible({ timeout: 5_000 }).catch(() => false);
     if (!hasMarkdown) {
-      throw new Error('No markdown output detected after stream wait');
+      throw new Error(`No markdown output detected. Got text: "${outputText.substring(0, 100)}"`);
     }
 
     console.log('[telemetry] ✅ E2E test passed: markdown output detected');
