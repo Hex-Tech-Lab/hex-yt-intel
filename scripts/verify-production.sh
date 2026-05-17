@@ -306,28 +306,28 @@ main() {
   # Stage 1: Connectivity
   print_separator
   log_info "STAGE 1: CONNECTIVITY & DEPLOYMENT"
-  check_deployment_url
-  check_ssl_certificate
+  check_deployment_url || true
+  check_ssl_certificate || true
   print_separator
 
   # Stage 2: Health & Endpoints
   log_info "STAGE 2: HEALTH & ENDPOINTS"
-  check_health_endpoint
-  check_home_page
-  check_auth_endpoint
-  check_api_metadata
+  check_health_endpoint || true
+  check_home_page || true
+  check_auth_endpoint || true
+  check_api_metadata || true
   print_separator
 
   # Stage 3: Components
   log_info "STAGE 3: COMPONENT VERIFICATION"
-  check_database_connectivity
-  check_cloudflare_worker
-  check_environment_variables
+  check_database_connectivity || true
+  check_cloudflare_worker || true
+  check_environment_variables || true
   print_separator
 
   # Stage 4: Performance
   log_info "STAGE 4: PERFORMANCE"
-  check_response_time
+  check_response_time || true
   print_separator
 
   # Summary

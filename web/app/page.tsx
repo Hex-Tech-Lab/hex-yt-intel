@@ -10,7 +10,8 @@ import { apiCall } from '@/lib/api-client';
 import RateLimitAlert from '@/components/RateLimitAlert';
 
 export default function Home() {
-  const { data: session, update: updateSession } = useSession();
+  // Defensive null-safe session guard: gracefully handle unauthenticated visitors
+  const { data: session, update: updateSession } = useSession() ?? { data: null };
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
