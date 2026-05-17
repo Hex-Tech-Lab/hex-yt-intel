@@ -86,7 +86,7 @@ export function DashboardClient() {
     } catch (error) {
       const err = error as Error;
       toast.error(err.message || 'Unknown error');
-      if (!synthesis) setSynthesis(null);
+      setSynthesis(null); // Clear on error
     } finally {
       setLoading(false);
     }
