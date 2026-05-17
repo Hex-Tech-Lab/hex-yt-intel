@@ -1,6 +1,8 @@
 import type { User } from 'next-auth';
 
-export async function Navigation({ user }: { user?: User }) {
+export async function Navigation({ user }: { user?: User | null }) {
+  const safeUser = user ?? null;
+
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
       {/* Logo / Title (Left) */}
@@ -10,9 +12,9 @@ export async function Navigation({ user }: { user?: User }) {
 
       {/* User Menu (Right) */}
       <div className="flex items-center gap-4">
-        {user && (
+        {safeUser && (
           <>
-            <span className="text-sm text-gray-600">{user.email}</span>
+            <span className="text-sm text-gray-600">{safeUser.email}</span>
             <form action="/api/auth/signout" method="POST">
               <button
                 type="submit"
