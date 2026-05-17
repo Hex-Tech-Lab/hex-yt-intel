@@ -47,13 +47,9 @@ export async function middleware(request: NextRequest) {
   // Check auth method based on environment variable
   const authProvider = process.env.AUTH_PROVIDER || 'supabase';
 
-  let isAuthenticated = false;
-  if (authProvider === 'supabase') {
-    isAuthenticated = await hasSupabaseAuth(request);
-  } else {
-    const token = await getToken({ req: request });
-    isAuthenticated = !!token;
-  }
+  const isAuthenticated = authProvider === 'supabase'
+    ? await hasSupabaseAuth(request)
+    : !!(await getToken({ req: request }));
 
   if (!isAuthenticated) {
     const signInUrl = new URL('/auth/signin', request.url);
