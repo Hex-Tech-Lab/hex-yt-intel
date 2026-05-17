@@ -198,9 +198,9 @@ export async function POST(request: NextRequest) {
     let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined;
 
     if (testSecret === 'hex_secure_local_wsl_validation_token_string') {
-      console.info('[analyses] Secure validation bypass detected - using test user ID');
-      userId = `00000000-0000-4000-8000-${Math.random().toString(16).slice(2).padEnd(12, '0')}`;
-      userEmail = 'test@example.com';
+      console.info('[analyses] Secure validation bypass detected - using persistent test user');
+      userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
+      userEmail = 'kellybakri@gmail.com';
       userTierAuth = 'free';
     } else {
       // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
