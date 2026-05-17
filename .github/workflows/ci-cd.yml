@@ -38,20 +38,6 @@ jobs:
 
       - name: Setup Environment
         uses: ./.github/actions/setup-env
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
-      - name: Setup Environment
-        uses: ./.github/actions/setup-env
 
       - name: Check for changes that require build
         id: check-changes

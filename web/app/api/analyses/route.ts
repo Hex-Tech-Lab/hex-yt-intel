@@ -259,7 +259,6 @@ export async function POST(request: NextRequest) {
 
     // 3. Extract video ID
     const videoId = extractVideoId(validation.data.url);
-    addBreadcrumb('Video ID extracted', { videoId, url: validation.data.url });
     if (!videoId) {
       addBreadcrumb('Invalid YouTube URL provided', { url: validation.data.url }, 'validation');
       return NextResponse.json(
@@ -267,6 +266,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    addBreadcrumb('Video ID extracted', { videoId, url: validation.data.url });
 
     // 4. Supabase client (server-side)
     const supabase = getSupabaseClient();
