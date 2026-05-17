@@ -464,9 +464,11 @@ export async function POST(request: NextRequest) {
     addBreadcrumb('Streaming analysis response to client', { videoId });
     return new Response(openrouterResponse.body, {
       headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
         'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'Pragma': 'no-cache',
       },
     });
   } catch (error) {
