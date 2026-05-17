@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { createUCISPrompt } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
 
     if (testSecret === 'hex_secure_local_wsl_validation_token_string') {
       console.info('[analyses] Secure validation bypass detected - using test user ID');
-      userId = 'test-user-' + Date.now();
+      userId = randomUUID();
       userEmail = 'test@example.com';
       userTierAuth = 'free';
     } else {
@@ -284,9 +285,9 @@ export async function POST(request: NextRequest) {
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
-        return data || null;
+          .maybeSingle();
+        if (error) throw error;
+        return data;
       },
       { videoId, userId }
     ).catch((err) => {
@@ -390,23 +391,16 @@ export async function POST(request: NextRequest) {
         'cloudflare-worker',
         'fetch-metadata',
         async () => {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 3000);
+          const response = await fetch(metadataUrl, {
+            method: 'GET',
+            signal: AbortSignal.timeout(3000),
+          });
 
-          try {
-            const response = await fetch(metadataUrl, {
-              method: 'GET',
-              signal: controller.signal,
-            });
-
-            if (!response.ok) {
-              throw new Error(`Worker returned ${response.status}`);
-            }
-
-            return await response.json();
-          } finally {
-            clearTimeout(timeout);
+          if (!response.ok) {
+            throw new Error(`Worker returned ${response.status}`);
           }
+
+          return await response.json();
         },
         { videoId }
       );
