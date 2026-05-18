@@ -66,12 +66,15 @@ export default function HomeContent() {
   const handleExport = () => {
     if (!analysis) return;
     const element = document.createElement('a');
-    element.setAttribute('href', `data:text/markdown;charset=utf-8,${encodeURIComponent(analysis.markdown)}`);
+    const blob = new Blob([analysis.markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    element.setAttribute('href', url);
     element.setAttribute('download', `${analysis.title}.md`);
     element.style.display = 'none';
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+    URL.revokeObjectURL(url);
   };
 
   return (

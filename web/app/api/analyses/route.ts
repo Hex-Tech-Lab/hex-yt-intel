@@ -7,6 +7,8 @@ import { getAuthSession } from '@/lib/auth/provider-factory';
 import { AnalysisCreateSchema } from '@/lib/schemas';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
 import * as Sentry from '@sentry/nextjs';
+
+export const runtime = 'nodejs';
 import {
   trackExternalCall,
   trackDatabaseQuery,
@@ -299,37 +301,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8.5 Create analysis record in database (before streaming)
+    // 8.5 Create analysis record in database (before streaming) - BLOCKING INSERT
     console.log('[analyses] 9. Creating analysis record', { videoId, userId });
     const analysisId = crypto.randomUUID();
-    await trackDatabaseQuery(
-      'insert',
-      'analyses',
-      async () => {
-        const { error } = await supabase
-          .from('analyses')
-          .insert({
-            id: analysisId,
-            video_id: videoId,
-            user_id: userId,
-            title: metadata.title,
-            markdown: '', // Will be populated after streaming
-            model_attempted: 'anthropic/claude-haiku-4.5',
-            model_used: 'anthropic/claude-haiku-4.5',
-            validation_report: null,
-            validation_passed: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-        if (error) throw error;
-      },
-      { analysisId, videoId, userId }
-    ).catch((err) => {
-      console.warn('[analyses] Failed to create analysis record', { analysisId, error: String(err) });
-      addBreadcrumb('Analysis record creation failed', { analysisId, error: String(err) }, 'database');
-      // Continue non-blocking - Sentry will capture this
-      Sentry.captureException(err, { tags: { operation: 'analysis-insert' } });
-    });
+    try {
+      await trackDatabaseQuery(
+        'insert',
+        'analyses',
+        async () => {
+          const { error } = await supabase
+            .from('analyses')
+            .insert({
+              id: analysisId,
+              video_id: videoId,
+              user_id: userId,
+              title: metadata.title,
+              markdown: '', // Will be populated after streaming
+              model_attempted: 'anthropic/claude-haiku-4.5',
+              model_used: 'anthropic/claude-haiku-4.5',
+              validation_report: null,
+              validation_passed: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          if (error) throw error;
+        },
+        { analysisId, videoId, userId }
+      );
+    } catch (insertErr) {
+      console.error('[analyses] Failed to create analysis record', { analysisId, error: String(insertErr) });
+      addBreadcrumb('Analysis record creation failed', { analysisId }, 'database');
+      Sentry.captureException(insertErr, { tags: { operation: 'analysis-insert' } });
+      return NextResponse.json(
+        { error: 'Failed to create analysis record' },
+        { status: 500 }
+      );
+    }
 
     // 9.5 Return streaming response with SSE normalization for Claude 4.5 compatibility
     // Transform raw OpenRouter stream to normalize Claude 4.5's delta format
@@ -356,6 +363,7 @@ export async function POST(request: NextRequest) {
 
     // Process validator stream asynchronously via QStash (guaranteed delivery)
     // Collect streamed chunks, save markdown, and trigger validation via webhook
+    // Note: Streaming response keeps connection alive, preventing Vercel timeout
     console.log('[analyses] 11. Setting up async validation via QStash', { analysisId });
     (async () => {
       try {
@@ -430,12 +438,12 @@ export async function POST(request: NextRequest) {
               videoId,
               markdown,
               filename,
-              userId,
+              userId: userId!,
               analysisId,
               metadata: {
                 title: metadata.title,
                 channelTitle: metadata.channelTitle,
-                duration: metadata.duration,
+                ...(metadata.duration !== undefined && { duration: metadata.duration }),
               },
             }).catch((err) => {
               console.warn('[analyses] Failed to publish validation task (non-blocking)', {
@@ -447,7 +455,7 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (processingError) {
-        console.warn('[analyses] Async processing error (non-blocking)', {
+        console.warn('[analyses] Async processing error (after handler)', {
           analysisId,
           error: String(processingError),
         });
@@ -456,7 +464,7 @@ export async function POST(request: NextRequest) {
           contexts: { analysis: { analysisId } },
         });
       }
-    })();
+    });
 
     return streamResponse;
   } catch (error) {

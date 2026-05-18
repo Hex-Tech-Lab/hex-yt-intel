@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
 import { UCISValidator } from '@/lib/ucis-v5-validator';
-import { publishEmbeddingTask } from '@/lib/qstash-client';
+import { publishEmbeddingTask, verifyQStashSignature } from '@/lib/qstash-client';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
 
@@ -29,6 +29,17 @@ export async function POST(request: NextRequest) {
 
   try {
     console.log('[validate-webhook] Request received');
+
+    // Early Return Security: Verify QStash signature BEFORE parsing body
+    const verified = await verifyQStashSignature(request);
+    if (!verified) {
+      console.warn('[validate-webhook] QStash signature verification failed');
+      return NextResponse.json(
+        { error: 'Unauthorized: Invalid QStash signature' },
+        { status: 401 }
+      );
+    }
+    console.log('[validate-webhook] QStash signature verified');
 
     // Parse QStash payload
     const payload: ValidationPayload = await request.json();
@@ -99,6 +110,15 @@ export async function POST(request: NextRequest) {
       analysisId,
       markdown,
       userId,
+    }).catch((err) => {
+      console.error('[validate-webhook] Embedding task publish failed', {
+        analysisId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      Sentry.captureException(err, {
+        tags: { service: 'webhook', operation: 'publish_embedding' },
+        contexts: { analysis: { analysisId } },
+      });
     });
 
     const duration = Math.round(performance.now() - startTime);

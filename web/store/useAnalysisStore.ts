@@ -7,6 +7,7 @@
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
 import type { AnalysisResult } from '@/lib/types';
+import { parseSSELine } from '@/lib/streaming/decoder';
 
 export interface AnalysisState {
   // Current analysis
@@ -122,34 +123,27 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           await Sentry.startSpan(
             { name: 'consume SSE stream', op: 'stream.parse' },
             async () => {
+              const decoder = new TextDecoder();
+              let buffer = '';
+
               while (true) {
                 try {
                   const { done, value } = await reader.read();
                   if (done) break;
 
-                  // Decode SSE chunk
-                  const text = new TextDecoder().decode(value);
-                  const lines = text.split('\n');
+                  buffer += decoder.decode(value, { stream: true });
+                  const lines = buffer.split('\n');
+                  buffer = lines.pop() || ''; // Retain incomplete line
 
                   for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                      const dataStr = line.substring(6).trim();
-                      if (dataStr && dataStr !== '[DONE]') {
-                        try {
-                          const json = JSON.parse(dataStr);
-                          const token = json.choices?.[0]?.delta?.content || '';
-                          markdown += token;
-                        } catch (parseError) {
-                          // Malformed JSON - skip chunk
-                          Sentry.captureException(parseError, {
-                            tags: {
-                              operation: 'startAnalysis',
-                              phase: 'stream_chunk_parse',
-                            },
-                            level: 'warning',
-                          });
-                        }
-                      }
+                    try {
+                      const token = parseSSELine(line);
+                      if (token) markdown += token;
+                    } catch (parseError) {
+                      Sentry.captureException(parseError, {
+                        tags: { operation: 'startAnalysis', phase: 'stream_chunk_parse' },
+                        level: 'warning',
+                      });
                     }
                   }
                 } catch (readError) {
