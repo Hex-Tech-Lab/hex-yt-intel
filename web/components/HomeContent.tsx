@@ -9,8 +9,7 @@ import { createClient } from '@/utils/supabase/client';
 import RateLimitAlert from '@/components/RateLimitAlert';
 
 export default function HomeContent() {
-  const sessionResult = useSession();
-  const { data: session = null, update: updateSession } = sessionResult || {};
+  const { data: session = null, update: updateSession } = useSession();
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
