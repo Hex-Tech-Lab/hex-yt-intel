@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { Navigation } from '@/components/Navigation';
+import { Navigation } from '@/components/organisms/Navigation';
 import { Footer } from '@/components/Footer';
 import { DashboardClient } from '@/components/DashboardClient';
 import { Toaster } from 'react-hot-toast';
