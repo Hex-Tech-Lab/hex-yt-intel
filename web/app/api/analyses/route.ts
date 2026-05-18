@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
-import { getUCISPrompt } from '@/lib/prompts/factory';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -15,36 +14,8 @@ import {
   addBreadcrumb,
   setUserContext
 } from '@/lib/monitoring/sentry-utils';
-
-
-interface AnalysisErrorMeta {
-  errors?: Record<string, string>;
-}
-
-class AnalysisEngineError extends Error {
-  code: string;
-  statusCode: number;
-  modelAttempted: string;
-  retryAfter?: number;
-  meta?: AnalysisErrorMeta;
-
-  constructor(opts: {
-    message: string;
-    code: string;
-    statusCode: number;
-    modelAttempted: string;
-    retryAfter?: number;
-    meta?: AnalysisErrorMeta;
-  }) {
-    super(opts.message);
-    this.name = 'AnalysisEngineError';
-    this.code = opts.code;
-    this.statusCode = opts.statusCode;
-    this.modelAttempted = opts.modelAttempted;
-    this.retryAfter = opts.retryAfter;
-    this.meta = opts.meta;
-  }
-}
+import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
+import { createClaudeStreamNormalizer } from '@/lib/streaming';
 
 async function fetchTranscript(videoId: string): Promise<string> {
   // MVP: Simple placeholder transcript
@@ -52,151 +23,6 @@ async function fetchTranscript(videoId: string): Promise<string> {
   return `[Transcript for video ${videoId}]\n\nThis is a placeholder transcript. In production, this would be fetched from YouTube API captions or a transcription service.`;
 }
 
-async function callOpenRouter(
-  metadata: {
-    title: string;
-    channelTitle: string;
-    viewCount: string;
-    likeCount: string;
-    commentCount: string;
-    publishedAt: string;
-  },
-  transcript: string,
-  persona: PersonaId,
-  timezone: string,
-  duration?: number
-): Promise<Response> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY is not configured. Set it in Vercel environment variables.');
-  }
-
-  const prompt = getUCISPrompt({
-    version: '5.1',
-    metadata,
-    transcript,
-    persona,
-    timezone,
-    duration,
-  });
-  const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
-  const errors: Record<string, string> = {};
-
-  console.log('[callOpenRouter] Starting with models', { models: models.join(', ') });
-
-  for (const model of models) {
-    console.log('[callOpenRouter] Attempting model', { model });
-    const controller = new AbortController();
-    let connectTimeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    try {
-      connectTimeoutId = setTimeout(() => {
-        console.warn('[callOpenRouter] Connection timeout (10s)', { model });
-        controller.abort();
-      }, 10000);
-
-      console.log('[callOpenRouter] Sending request to OpenRouter', { model, stream: true });
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://hex-yt-intel.vercel.app',
-          'X-Title': 'hex-yt-intel',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          stream: true,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(connectTimeoutId);
-      connectTimeoutId = undefined;
-
-      console.log('[callOpenRouter] Response received', { model, status: response.status, ok: response.ok });
-
-      if (!response.ok) {
-        const status = response.status;
-        // Surface full error body for 400 debugging
-        const errorBody = await response.text().catch(() => '<unreadable>');
-        errors[model] = `HTTP ${status}: ${errorBody.slice(0, 200)}`;
-
-        // Fallback on service errors (503, 429) - legitimate reason to try next model
-        if (status === 429 || status === 503) {
-          console.warn(`[callOpenRouter] ${model}: ${status} - trying fallback model`);
-          continue;
-        }
-
-        // Auth errors - don't retry, fail immediately
-        if (status === 401 || status === 403) {
-          console.error(`[callOpenRouter] Auth error - ${status}`, { model, errorBody });
-          throw new AnalysisEngineError({
-            message: `OpenRouter auth failed (${status}). Check OPENROUTER_API_KEY.`,
-            code: 'ERR_PROVIDER_AUTH_FAILED',
-            statusCode: status,
-            modelAttempted: model,
-          });
-        }
-
-        // 400 = model not found or payload rejected — log body, try fallback
-        if (status === 400) {
-          console.error(`[callOpenRouter] 400 Bad Request - ${model}`, { errorBody: errorBody.slice(0, 500) });
-        } else {
-          console.error(`[callOpenRouter] HTTP error - ${status}`, { model, errorBody: errorBody.slice(0, 200) });
-        }
-        continue;
-      }
-
-      console.log('[callOpenRouter] Stream response accepted', { model });
-      return response;
-    } catch (err) {
-      if (err instanceof AnalysisEngineError) {
-        // Don't fallback on auth errors - fail immediately
-        if (err.code === 'ERR_PROVIDER_AUTH_FAILED') {
-          console.error('[callOpenRouter] Auth error - not retrying', { model, code: err.code });
-          throw err;
-        }
-        // Other typed errors get recorded but we continue to next model
-        console.warn('[callOpenRouter] Typed error, trying next model', { model, code: err.code, message: err.message });
-        errors[model] = err.message;
-        continue;
-      }
-
-      if (err instanceof Error) {
-        if (err.name === 'AbortError') {
-          console.warn('[callOpenRouter] Abort error (timeout or cancel)', { model });
-          errors[model] = 'Connection timeout (10s)';
-          continue;
-        }
-        console.warn('[callOpenRouter] Unexpected error, trying next model', { model, error: err.message });
-        errors[model] = err.message;
-      } else {
-        console.warn('[callOpenRouter] Unexpected error, trying next model', { model, error: String(err) });
-        errors[model] = String(err);
-      }
-      continue;
-    } finally {
-      if (connectTimeoutId !== undefined) clearTimeout(connectTimeoutId);
-    }
-  }
-
-  // All models exhausted
-  console.error('[callOpenRouter] All models exhausted', { attemptedModels: models, errors });
-  throw new AnalysisEngineError({
-    message: 'All OpenRouter models failed or unavailable',
-    code: 'ERR_ALL_MODELS_EXHAUSTED',
-    statusCode: 503,
-    modelAttempted: models[0]!,
-    meta: { errors },
-  });
-}
 
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
@@ -477,60 +303,7 @@ export async function POST(request: NextRequest) {
     console.log('[analyses] 9. Setting up stream transformer for Claude 4.5 normalization', { videoId });
     addBreadcrumb('Streaming analysis response to client', { videoId });
 
-    const transformedStream = openrouterResponse.body!.pipeThrough(
-      new TransformStream({
-        async transform(chunk: Uint8Array, controller: TransformStreamDefaultController) {
-          const chunkText = new TextDecoder().decode(chunk);
-          const lines = chunkText.split('\n');
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
-            if (!trimmed.startsWith('data: ')) {
-              controller.enqueue(new TextEncoder().encode(line + '\n'));
-              continue;
-            }
-
-            if (trimmed === 'data: [DONE]') {
-              controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
-              continue;
-            }
-
-            try {
-              const jsonText = trimmed.slice(6);
-              const parsed = JSON.parse(jsonText);
-
-              // Defensively extract content from both Claude 4.5 and legacy formats
-              const contentToken =
-                parsed.choices?.[0]?.delta?.content ||
-                parsed.choices?.[0]?.text ||
-                '';
-
-              if (contentToken) {
-                const normalized = JSON.stringify({
-                  choices: [
-                    {
-                      delta: {
-                        content: contentToken,
-                      },
-                    },
-                  ],
-                });
-                controller.enqueue(
-                  new TextEncoder().encode(`data: ${normalized}\n\n`)
-                );
-              }
-            } catch (parseError) {
-              // Silently skip malformed chunks to prevent stream closure
-              console.warn('[analyses] Non-critical chunk parse skip', {
-                videoId,
-                linePreview: trimmed.slice(0, 100),
-              });
-            }
-          }
-        },
-      })
-    );
+    const transformedStream = openrouterResponse.body!.pipeThrough(createClaudeStreamNormalizer());
 
     // Tee the stream so one branch goes to client, the other to async validator
     const [clientStream, validatorStream] = transformedStream.tee();
