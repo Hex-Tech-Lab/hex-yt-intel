@@ -17,6 +17,17 @@ export default function HomeContent() {
   const [devMode, setDevMode] = useState(true);
   const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState(0);
 
+  // Get user's local timezone for analysis request
+  const getUserTimezone = () => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo';
+    } catch (err) {
+      const error = err as Error;
+      console.warn('Failed to get timezone:', error.message);
+      return 'Africa/Cairo';
+    }
+  };
+
   useEffect(() => {
     if (lockoutTimeRemaining <= 0) return;
 
@@ -62,8 +73,13 @@ export default function HomeContent() {
       const response = await fetch('/api/analyses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({
+          url: url.trim(),
+          timezone: getUserTimezone(),
+        }),
       });
+
+      // Persona is injected in X-Active-Persona header (currently for logging/monitoring)
 
       if (!response.ok) {
         if (response.status === 429) {
