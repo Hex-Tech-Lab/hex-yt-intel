@@ -1,6 +1,6 @@
 /**
  * Upstash QStash client wrapper
- * Provides typed, guaranteed background task delivery with exponential backoff and idempotency
+ * Provides typed, guaranteed background task delivery for Serverless environments
  * Replaces fire-and-forget promises that Vercel aggressively kills
  */
 
@@ -37,25 +37,17 @@ export interface ValidationPayload {
 
 /**
  * Publish a validation task to QStash
- * Guarantees delivery via HTTP webhook retry with exponential backoff
+ * Guarantees delivery via HTTP webhook retry (default: 3 attempts)
  * Non-blocking: returns immediately, processing happens asynchronously
  */
 export async function publishValidationTask(payload: ValidationPayload): Promise<string> {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    if (!appUrl) {
-      throw new Error(
-        'NEXT_PUBLIC_APP_URL environment variable is required for webhook publishing. Set it in Vercel environment variables.'
-      );
-    }
-
-    const webhookUrl = `${appUrl}/api/webhooks/validate`;
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://hex-yt-intel.vercel.app'}/api/webhooks/validate`;
     const result = await getQStashClient().publishJSON({
       url: webhookUrl,
       body: payload,
       retries: 3,
-      delay: 0,
-      idempotencyKey: payload.analysisId,
+      delay: 0, // Process immediately
     });
 
     const messageId = typeof result === 'string' ? result : result.messageId;
@@ -73,7 +65,7 @@ export async function publishValidationTask(payload: ValidationPayload): Promise
 
 /**
  * Publish an embedding generation task to QStash
- * Guarantees delivery with exponential backoff and idempotency
+ * For future use: semantic search requires embeddings
  */
 export async function publishEmbeddingTask(payload: {
   analysisId: string;
@@ -81,20 +73,12 @@ export async function publishEmbeddingTask(payload: {
   userId: string;
 }): Promise<string> {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    if (!appUrl) {
-      throw new Error(
-        'NEXT_PUBLIC_APP_URL environment variable is required for webhook publishing. Set it in Vercel environment variables.'
-      );
-    }
-
-    const webhookUrl = `${appUrl}/api/webhooks/embed`;
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://hex-yt-intel.vercel.app'}/api/webhooks/embed`;
     const result = await getQStashClient().publishJSON({
       url: webhookUrl,
       body: payload,
       retries: 2,
-      delay: 5000,
-      idempotencyKey: payload.analysisId,
+      delay: 5000, // 5s delay: allow validation to complete first
     });
 
     const messageId = typeof result === 'string' ? result : result.messageId;
@@ -112,10 +96,12 @@ export async function publishEmbeddingTask(payload: {
 /**
  * Verify QStash signature (for webhook security)
  * Uses HMAC-SHA256 verification against current and next signing keys
- * @returns Promise<boolean> - explicitly true on successful verification, false on any failure or misconfiguration
+ * @param signature The upstash-signature header value
+ * @param body The request body as string (must be read before calling verify)
  */
 export async function verifyQStashSignature(
-  request: Request
+  signature: string,
+  body: string
 ): Promise<boolean> {
   try {
     const currentKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
@@ -131,14 +117,12 @@ export async function verifyQStashSignature(
       nextSigningKey: nextKey,
     });
 
-    const body = await request.text();
     const verified = await receiver.verify({
-      signature: request.headers.get('upstash-signature') || '',
+      signature,
       body,
     }).catch(() => false);
 
-    // Explicitly return boolean true only if verification succeeded
-    return verified === true;
+    return verified;
   } catch (error) {
     console.warn('[qstash] Signature verification failed', {
       error: error instanceof Error ? error.message : String(error),
