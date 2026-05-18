@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createUCISPrompt } from '@/lib/prompts';
+import { createUCISV5Prompt, detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import { AnalysisCreateSchema } from '@/lib/schemas';
+import { fetchWorkerMetadata } from '@/lib/worker-client';
+import { UCISValidator } from '@/lib/ucis-v5-validator';
 import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
@@ -58,14 +60,21 @@ async function callOpenRouter(
     commentCount: string;
     publishedAt: string;
   },
-  transcript: string
+  transcript: string,
+  persona: PersonaId,
+  timezone: string
 ): Promise<Response> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error('OPENROUTER_API_KEY is not configured. Set it in Vercel environment variables.');
   }
 
-  const prompt = createUCISPrompt(metadata, transcript);
+  const prompt = createUCISV5Prompt({
+    metadata,
+    transcript,
+    persona,
+    timezone,
+  });
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
 
@@ -257,6 +266,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Extract timezone and persona from validated request
+    const timezone = validation.data.timezone || 'Africa/Cairo';
+    let selectedPersona: PersonaId | null = validation.data.persona as PersonaId | null;
+
     // 3. Extract video ID
     const videoId = extractVideoId(validation.data.url);
     if (!videoId) {
@@ -379,28 +392,14 @@ export async function POST(request: NextRequest) {
     console.log('[analyses] 5. Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
     addBreadcrumb('Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
 
-    // 6. Fetch metadata from Worker
+    // 6. Fetch metadata from Worker (using centralized wrapper)
     console.log('[analyses] 6. Fetching metadata from Cloudflare Worker', { videoId });
-    const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
-    const metadataUrl = `${workerUrl}/fetch-metadata?video_id=${videoId}`;
-
     let metadata: any;
     try {
       metadata = await trackExternalCall(
         'cloudflare-worker',
         'fetch-metadata',
-        async () => {
-          const response = await fetch(metadataUrl, {
-            method: 'GET',
-            signal: AbortSignal.timeout(3000),
-          });
-
-          if (!response.ok) {
-            throw new Error(`Worker returned ${response.status}`);
-          }
-
-          return await response.json();
-        },
+        () => fetchWorkerMetadata(videoId),
         { videoId }
       );
       console.log('[analyses] 6. Metadata fetched', { videoId, title: metadata.title, channelTitle: metadata.channelTitle });
@@ -418,19 +417,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 6.5 Persona selection (explicit param overrides auto-detection)
+    if (!selectedPersona) {
+      selectedPersona = detectPersona(metadata.title, metadata.channelTitle);
+      console.log('[analyses] 6.5 Persona auto-detected', { videoId, persona: selectedPersona });
+    } else {
+      console.log('[analyses] 6.5 Persona explicitly set', { videoId, persona: selectedPersona });
+    }
+    // Assert selectedPersona is now defined (either from auto-detect or explicit)
+    const finalPersona: PersonaId = selectedPersona!;
+    const personaConfig = rankPersonas(finalPersona);
+    addBreadcrumb('Persona configured', { persona: selectedPersona, ranks: personaConfig.map((p) => `${p.personaId}:${p.weight}%`).join(' ') });
+
     // 7. Fetch transcript
     console.log('[analyses] 7. Fetching transcript (placeholder)', { videoId });
     const transcript = await fetchTranscript(videoId);
     console.log('[analyses] 7. Transcript fetched', { videoId, length: transcript.length });
 
     // 8. Call OpenRouter - stream response directly to client
-    console.log('[analyses] 8. OpenRouter call starting', { videoId });
+    console.log('[analyses] 8. OpenRouter call starting', { videoId, persona: finalPersona, timezone });
     let openrouterResponse: Response;
     try {
       openrouterResponse = await trackExternalCall(
         'openrouter',
         'claude-analysis',
-        () => callOpenRouter(metadata, transcript),
+        () => callOpenRouter(metadata, transcript, finalPersona, timezone),
         { videoId }
       );
       console.log('[analyses] 8. OpenRouter stream initiated successfully', { videoId });
@@ -517,15 +528,96 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    return new Response(transformedStream, {
+    // Inject persona header and set up async validation after stream
+    const streamResponse = new Response(transformedStream, {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
         'Connection': 'keep-alive',
         'X-Accel-Buffering': 'no',
         'Pragma': 'no-cache',
+        'X-Active-Persona': finalPersona,
+        'X-Persona-Config': JSON.stringify(personaConfig),
       },
     });
+
+    // Run validator asynchronously after stream closes (non-blocking)
+    // Collect streamed chunks and validate once complete
+    try {
+      if (streamResponse.body) {
+        const reader = streamResponse.body.getReader();
+        const chunks: Uint8Array[] = [];
+
+        (async () => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+            }
+
+            // Reconstruct markdown from SSE stream chunks
+            const fullOutput = new TextDecoder().decode(Buffer.concat(chunks));
+
+            // Extract markdown from SSE format and validate
+            const markdownMatch = fullOutput.match(/data: ({.*?"choices".*?})/gs);
+            if (markdownMatch) {
+              let markdown = '';
+              for (const chunk of markdownMatch) {
+                try {
+                  const json = JSON.parse(chunk.replace('data: ', ''));
+                  const token = json.choices?.[0]?.delta?.content || '';
+                  markdown += token;
+                } catch {
+                  // Skip malformed chunks
+                }
+              }
+
+              if (markdown.length > 100) {
+                // Generate filename for validation
+                const now = new Date();
+                const dateStr = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const filename = `${metadata.title.slice(0, 80).replace(/[/:?*"]/g, '-')}-${metadata.channelTitle.replace(/[/:?*"]/g, '-')}-${dateStr}.md`;
+
+                // Run validator and log results
+                const report = UCISValidator.validate(markdown, filename);
+                console.log('[analyses] Validator report', {
+                  videoId,
+                  passed: report.passed,
+                  passedChecks: report.passedChecks,
+                  totalChecks: report.totalChecks,
+                  failedCount: report.failedChecks.length,
+                });
+
+                // Log to Sentry
+                if (!report.passed) {
+                  Sentry.captureMessage(`UCIS v5 validation failed: ${report.failedChecks.length} check(s)`, 'warning');
+                  console.warn('[analyses] Validation failed checks:', report.failedChecks);
+                } else {
+                  Sentry.captureMessage('UCIS v5 validation passed', 'info');
+                }
+
+                // Track metrics
+                addBreadcrumb('Validator executed', {
+                  passed: report.passed,
+                  passedChecks: `${report.passedChecks}/${report.totalChecks}`,
+                }, 'validation');
+              }
+            }
+          } catch (validationError) {
+            console.warn('[analyses] Async validation error (non-blocking)', { error: String(validationError) });
+            Sentry.captureException(validationError, {
+              tags: { service: 'ucis-validator', operation: 'async-validation' },
+              contexts: { video: { videoId } },
+            });
+          }
+        })();
+      }
+    } catch (streamSetupError) {
+      console.warn('[analyses] Stream validation setup warning (non-blocking)', { error: String(streamSetupError) });
+    }
+
+    return streamResponse;
   } catch (error) {
     const duration = Math.round(performance.now() - startTime);
     const errorMsg = error instanceof Error ? error.message : String(error);

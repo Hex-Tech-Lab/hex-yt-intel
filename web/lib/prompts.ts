@@ -1,3 +1,64 @@
+import { UCIS_V5_SYSTEM } from './prompts/ucis-v5';
+
+export type PersonaId = 'p1' | 'p2' | 'p3' | 'p4' | 'p5';
+
+export interface PersonaConfiguration {
+  personaId: PersonaId;
+  name: string;
+  weight: number;
+}
+
+const PERSONA_REGISTRY: Record<PersonaId, string> = {
+  p1: 'Content Creator',
+  p2: 'Indie Maker',
+  p3: 'Consultant',
+  p4: 'Researcher',
+  p5: 'Product Manager',
+};
+
+/**
+ * Persona auto-detection using domain-signal keywords
+ * Falls back to p1 (Content Creator) if no match
+ */
+export function detectPersona(title: string, author: string): PersonaId {
+  const text = `${title} ${author}`.toLowerCase();
+
+  // Keyword patterns per persona (domain signals)
+  const patterns: Record<PersonaId, RegExp> = {
+    p1: /content|creator|youtube|video|channel|viral|engagement|audience|subscriber|hack|growth|algorithm/,
+    p2: /startup|founder|saas|indiehacker|bootstrap|mrr|product-market|validation|launch|indie|maker/,
+    p3: /strategy|framework|consulting|business|advisory|methodology|model|analysis|implementation|process/,
+    p4: /research|study|scientific|academic|analysis|data|methodology|evidence|literature|peer-reviewed/,
+    p5: /product|roadmap|prioriti|feature|user|customer|requirements|design|ux|pm|prioriti/,
+  };
+
+  for (const [persona, pattern] of Object.entries(patterns)) {
+    if (pattern.test(text)) {
+      return persona as PersonaId;
+    }
+  }
+
+  // Default fallback
+  return 'p1';
+}
+
+/**
+ * Persona ranking based on detected primary
+ * Returns weighted secondary/tertiary personas
+ */
+export function rankPersonas(primary: PersonaId): PersonaConfiguration[] {
+  const allPersonas: PersonaId[] = ['p1', 'p2', 'p3', 'p4', 'p5'];
+  const ordered: PersonaId[] = [primary, ...allPersonas.filter((p) => p !== primary)];
+
+  return [
+    { personaId: ordered[0]!, name: PERSONA_REGISTRY[ordered[0]!], weight: 50 },
+    { personaId: ordered[1]!, name: PERSONA_REGISTRY[ordered[1]!], weight: 25 },
+    { personaId: ordered[2]!, name: PERSONA_REGISTRY[ordered[2]!], weight: 15 },
+    { personaId: ordered[3]!, name: PERSONA_REGISTRY[ordered[3]!], weight: 5 },
+    { personaId: ordered[4]!, name: PERSONA_REGISTRY[ordered[4]!], weight: 5 },
+  ];
+}
+
 export const UCIS_V3_2_SYSTEM = `You are an expert YouTube content analyst using the Ultimate Content Intelligence System v3.2.
 
 Analyze the provided YouTube video transcript and metadata to generate a comprehensive content intelligence report.
@@ -42,4 +103,49 @@ export function createUCISPrompt(metadata: {
 ${transcript.slice(0, 15000)}${transcript.length > 15000 ? '\n[...transcript truncated...]' : ''}
 
 Generate the 16-section Intelligence Report.`;
+}
+
+/**
+ * UCIS v5.0 prompt factory
+ * Injects metadata blob, persona configuration, and system prompt
+ */
+export function createUCISV5Prompt(params: {
+  metadata: {
+    title: string;
+    channelTitle: string;
+    viewCount: string;
+    likeCount: string;
+    commentCount: string;
+    publishedAt: string;
+  };
+  transcript: string;
+  persona: PersonaId;
+  timezone: string;
+}): string {
+  const personas = rankPersonas(params.persona);
+
+  const metadataJson = JSON.stringify(params.metadata, null, 2);
+
+  return `${UCIS_V5_SYSTEM}
+
+---
+
+## ACTIVE ANALYSIS SESSION
+
+**Metadata JSON Blob** (for Pre-Analysis Protocol Step 1):
+\`\`\`json
+${metadataJson}
+\`\`\`
+
+**Persona Configuration**:
+${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.weight}%)`).join('\n')}
+
+**Timezone**: ${params.timezone}
+
+**Transcript**:
+${params.transcript.slice(0, 20000)}${params.transcript.length > 20000 ? '\n\n[...transcript truncated to 20K characters...]' : ''}
+
+---
+
+**Execution**: Generate the complete v5.0 analysis output using the framework above. All 10 dimensions must be present. Satisfy the quality enforcement checklist before delivering output.`;
 }
