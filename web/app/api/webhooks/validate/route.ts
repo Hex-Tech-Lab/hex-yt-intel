@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       console.warn('[validate-webhook] QStash signature verification failed');
       return NextResponse.json(
         { error: 'Unauthorized: Invalid QStash signature' },
-        { status: 403 }
+        { status: 401 }
       );
     }
     console.log('[validate-webhook] QStash signature verified');

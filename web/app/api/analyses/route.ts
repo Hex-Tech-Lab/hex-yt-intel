@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse, after } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
@@ -506,6 +506,12 @@ export async function POST(request: NextRequest) {
           contexts: { analysis: { analysisId } },
         });
       }
+    })();
+
+    // Store promise for tracking (prevents garbage collection during async processing)
+    // In production, consider using waitUntil() if moving to Edge Runtime
+    processingPromise.catch((err) => {
+      console.error('[analyses] Unhandled processing error', { analysisId, error: String(err) });
     });
 
     // Store promise for tracking (prevents garbage collection during async processing)
