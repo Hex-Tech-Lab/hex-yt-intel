@@ -62,7 +62,8 @@ async function callOpenRouter(
   },
   transcript: string,
   persona: PersonaId,
-  timezone: string
+  timezone: string,
+  duration?: number
 ): Promise<Response> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -74,6 +75,7 @@ async function callOpenRouter(
     transcript,
     persona,
     timezone,
+    duration,
   });
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   const errors: Record<string, string> = {};
@@ -435,13 +437,13 @@ export async function POST(request: NextRequest) {
     console.log('[analyses] 7. Transcript fetched', { videoId, length: transcript.length });
 
     // 8. Call OpenRouter - stream response directly to client
-    console.log('[analyses] 8. OpenRouter call starting', { videoId, persona: finalPersona, timezone });
+    console.log('[analyses] 8. OpenRouter call starting', { videoId, persona: finalPersona, timezone, duration: metadata.duration });
     let openrouterResponse: Response;
     try {
       openrouterResponse = await trackExternalCall(
         'openrouter',
         'claude-analysis',
-        () => callOpenRouter(metadata, transcript, finalPersona, timezone),
+        () => callOpenRouter(metadata, transcript, finalPersona, timezone, metadata.duration || undefined),
         { videoId }
       );
       console.log('[analyses] 8. OpenRouter stream initiated successfully', { videoId });
