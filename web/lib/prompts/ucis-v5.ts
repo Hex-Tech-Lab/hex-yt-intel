@@ -333,7 +333,7 @@ Activate 3–5 lenses based on primary persona and content domain.
 - [ ] Domain-specific risk disclosures applied (financial / health / legal).
 - [ ] Contrarian perspectives included (Dimension 9.5).
 - [ ] Primary KG nodes named and tagged (Dimension 8.1).
-- [ ] At least 2 cross-domain bridges identified (Dimension 8.4).
+- [ ] At least 2 cross-domain bridges identified (Dimension 8.3).
 - [ ] Unfair advantages persona-keyed (Dimension 9.4).
 - [ ] Final Classification table (10.3) completed with all 6 rows.
 - [ ] Read-Depth Guidance in Apex Summary is clear (60s / 5m / full).

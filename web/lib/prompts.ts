@@ -27,8 +27,8 @@ export function detectPersona(title: string, author: string): PersonaId {
   const patterns: Record<PersonaId, RegExp> = {
     p1: /content|creator|youtube|video|channel|viral|engagement|audience|subscriber|hack|growth|algorithm/,
     p2: /startup|founder|saas|indiehacker|bootstrap|mrr|product-market|validation|launch|indie|maker/,
-    p3: /strategy|framework|consulting|business|advisory|methodology|model|analysis|implementation|process/,
-    p4: /research|study|scientific|academic|analysis|data|methodology|evidence|literature|peer-reviewed/,
+    p3: /strategy|framework|consulting|business|advisory|implementation|process|management|case-study/,
+    p4: /research|study|scientific|academic|analysis|data|methodology|evidence|literature|peer-reviewed|experiment|hypothesis/,
     p5: /product|roadmap|prioriti(?:es|zation)?|feature|user|customer|requirements|design|ux|pm/,
   };
 

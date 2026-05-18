@@ -39,7 +39,7 @@ const PATTERNS = {
   filename: /^[a-zA-Z0-9\-\._]+\-[a-zA-Z0-9\-\._]+\-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md$/,
   inlineTimestamp: /`\d{2}:\d{2}:\d{2}`/,
   timestampFormat: /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+[^\s`]+(?:\s+\(Agent\))?)?/,
-  emoji: /[🎨🚀💡🔥👑⭐🎯]/g,
+  emoji: /[\u{1F300}-\u{1F9FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}|\u{1F600}-\u{1F64F}]/gu,
 };
 
 export class UCISValidator {
@@ -59,12 +59,18 @@ export class UCISValidator {
       checks.push({ ok: true, section: 'Persona Header' });
     }
 
-    const dimensionMatches = output.match(PATTERNS.allDimensions) || [];
-    if (dimensionMatches.length < 10) {
+    const dimensionNumbers = new Set<number>();
+    output.match(/###\s+DIMENSION\s+(\d+)\s+[–—-]/gm)?.forEach((match) => {
+      const num = parseInt(match.match(/\d+/)![0], 10);
+      if (num >= 1 && num <= 10) dimensionNumbers.add(num);
+    });
+
+    if (dimensionNumbers.size !== 10) {
+      const missing = Array.from({ length: 10 }, (_, i) => i + 1).filter((n) => !dimensionNumbers.has(n));
       checks.push({
         ok: false,
         section: 'Dimension Headers',
-        reason: `Expected 10 dimension headers, found ${dimensionMatches.length}`,
+        reason: `Expected all dimensions 1–10, missing: ${missing.join(', ')}`,
       });
     } else {
       checks.push({ ok: true, section: 'Dimension Headers' });
