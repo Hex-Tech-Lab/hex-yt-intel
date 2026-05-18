@@ -108,6 +108,7 @@ Generate the 16-section Intelligence Report.`;
 /**
  * UCIS v5.0 prompt factory
  * Injects metadata blob, persona configuration, and system prompt
+ * Includes short-form content detection to prevent hallucination on Shorts
  */
 export function createUCISV5Prompt(params: {
   metadata: {
@@ -121,10 +122,16 @@ export function createUCISV5Prompt(params: {
   transcript: string;
   persona: PersonaId;
   timezone: string;
+  duration?: number; // Duration in seconds; if < 180s, inject short-form notice
 }): string {
   const personas = rankPersonas(params.persona);
-
   const metadataJson = JSON.stringify(params.metadata, null, 2);
+
+  // Short-form detection: inject notice if video is < 3 minutes (180 seconds)
+  const isShortForm = params.duration !== undefined && params.duration < 180;
+  const shortFormNotice = isShortForm
+    ? `\n**SHORT-FORM CONTENT NOTICE**: This is a short-form video (${Math.round(params.duration! / 60)}m ${params.duration! % 60}s). Output a highly condensed report. Skip complex matrices, scenario stress-testing, and deep temporal mapping unless explicitly supported by the transcript. Invoke the Insufficient Data Protocol (section 0.6) liberally if depth is unavailable.`
+    : '';
 
   return `${UCIS_V5_SYSTEM}
 
@@ -140,12 +147,12 @@ ${metadataJson}
 **Persona Configuration**:
 ${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.weight}%)`).join('\n')}
 
-**Timezone**: ${params.timezone}
+**Timezone**: ${params.timezone}${shortFormNotice}
 
 **Transcript**:
 ${params.transcript.slice(0, 20000)}${params.transcript.length > 20000 ? '\n\n[...transcript truncated to 20K characters...]' : ''}
 
 ---
 
-**Execution**: Generate the complete v5.0 analysis output using the framework above. All 10 dimensions must be present. Satisfy the quality enforcement checklist before delivering output.`;
+**Execution**: Generate the complete v5.0 analysis output using the framework above. All 10 dimensions must be present. Satisfy the quality enforcement checklist before delivering output. Remember: Transcript Absolutism (section 0.5) and the Insufficient Data Protocol (section 0.6) override all other instructions.`;
 }
