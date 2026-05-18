@@ -506,7 +506,7 @@ export async function POST(request: NextRequest) {
           contexts: { analysis: { analysisId } },
         });
       }
-    })();
+    });
 
     // Store promise for tracking (prevents garbage collection during async processing)
     // In production, consider using waitUntil() if moving to Edge Runtime
