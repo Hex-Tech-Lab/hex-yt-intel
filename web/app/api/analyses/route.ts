@@ -18,9 +18,46 @@ import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
 
 async function fetchTranscript(videoId: string): Promise<string> {
-  // MVP: Simple placeholder transcript
-  // In production: fetch from YouTube API or caption service
-  return `[Transcript for video ${videoId}]\n\nThis is a placeholder transcript. In production, this would be fetched from YouTube API captions or a transcription service.`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
+
+    if (!workerUrl || workerUrl.includes('[build-time-placeholder')) {
+      clearTimeout(timeout);
+      throw new Error('Cloudflare Worker URL not configured in production environment');
+    }
+
+    const transcriptUrl = `${workerUrl}/fetch-transcript?video_id=${videoId}`;
+    const response = await fetch(transcriptUrl, {
+      method: 'GET',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      throw new Error(`Worker returned ${response.status} for transcript fetch`);
+    }
+
+    const data = await response.json();
+
+    if (!data.transcript || typeof data.transcript !== 'string') {
+      throw new Error('Worker returned invalid transcript format');
+    }
+
+    return data.transcript;
+  } catch (error) {
+    clearTimeout(timeout);
+
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
+
+    // Hard failure: never return placeholder, always throw
+    const fullError = new Error(`Failed to fetch transcript from Cloudflare Worker: ${errorMsg}`);
+    console.error('[fetchTranscript] CRITICAL:', fullError);
+    throw fullError;
+  }
 }
 
 
@@ -259,8 +296,8 @@ export async function POST(request: NextRequest) {
     const personaConfig = rankPersonas(finalPersona);
     addBreadcrumb('Persona configured', { persona: selectedPersona, ranks: personaConfig.map((p) => `${p.personaId}:${p.weight}%`).join(' ') });
 
-    // 7. Fetch transcript
-    console.log('[analyses] 7. Fetching transcript (placeholder)', { videoId });
+    // 7. Fetch transcript from Cloudflare Worker
+    console.log('[analyses] 7. Fetching transcript from worker', { videoId });
     const transcript = await fetchTranscript(videoId);
     console.log('[analyses] 7. Transcript fetched', { videoId, length: transcript.length });
 

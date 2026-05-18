@@ -93,7 +93,6 @@ function validateEnvironment(): void {
   // During Vercel build (next build), skip strict validation
   // Required vars will have placeholder values from validateEnvVar
   if (process.env.VERCEL) {
-    console.log('Running in Vercel build environment - using placeholder values');
     return;
   }
 
