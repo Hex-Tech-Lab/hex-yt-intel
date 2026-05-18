@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createUCISV5Prompt, detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
+import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
+import { getUCISPrompt } from '@/lib/prompts/factory';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -70,7 +71,8 @@ async function callOpenRouter(
     throw new Error('OPENROUTER_API_KEY is not configured. Set it in Vercel environment variables.');
   }
 
-  const prompt = createUCISV5Prompt({
+  const prompt = getUCISPrompt({
+    version: '5.1',
     metadata,
     transcript,
     persona,
