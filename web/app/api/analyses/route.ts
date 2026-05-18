@@ -559,22 +559,34 @@ export async function POST(request: NextRequest) {
               chunks.push(value);
             }
 
-            // Reconstruct markdown from SSE stream chunks
-            const fullOutput = new TextDecoder().decode(Buffer.concat(chunks));
+            // Reconstruct markdown from SSE stream chunks (web stream compatible)
+            const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+            const combined = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunks) {
+              combined.set(chunk, offset);
+              offset += chunk.length;
+            }
+            const fullOutput = new TextDecoder().decode(combined);
 
             // Extract markdown from SSE format and validate
-            const markdownMatch = fullOutput.match(/data: ({.*?"choices".*?})/gs);
-            if (markdownMatch) {
-              let markdown = '';
-              for (const chunk of markdownMatch) {
-                try {
-                  const json = JSON.parse(chunk.replace('data: ', ''));
-                  const token = json.choices?.[0]?.delta?.content || '';
-                  markdown += token;
-                } catch {
-                  // Skip malformed chunks
+            const lines = fullOutput.split('\n');
+            let markdown = '';
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const dataStr = line.substring(6).trim();
+                if (dataStr && dataStr !== '[DONE]') {
+                  try {
+                    const json = JSON.parse(dataStr);
+                    const token = json.choices?.[0]?.delta?.content || '';
+                    markdown += token;
+                  } catch {
+                    // Skip malformed chunks
+                  }
                 }
               }
+            }
+            if (markdown) {
 
               if (markdown.length > 100) {
                 // Generate filename for validation (YYYY-MM-DD_HH-MM-SS format)

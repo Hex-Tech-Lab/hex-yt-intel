@@ -2,7 +2,22 @@ import { z } from 'zod';
 
 export const AnalysisCreateSchema = z.object({
   url: z.string().url('Invalid YouTube URL'),
-  timezone: z.string().default('Africa/Cairo').describe('IANA timezone for timestamps'),
+  timezone: z
+    .string()
+    .trim()
+    .refine(
+      (tz) => {
+        try {
+          Intl.DateTimeFormat('en-US', { timeZone: tz });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      'Invalid IANA timezone'
+    )
+    .default('Africa/Cairo')
+    .describe('IANA timezone for timestamps'),
   persona: z.enum(['p1', 'p2', 'p3', 'p4', 'p5']).optional().describe('Target persona (p1=Content Creator, p2=Indie Maker, p3=Consultant, p4=Researcher, p5=Product Manager)'),
 });
 

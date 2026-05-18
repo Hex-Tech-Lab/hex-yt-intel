@@ -20,9 +20,11 @@ export default function HomeContent() {
   // Get user's local timezone for analysis request
   const getUserTimezone = () => {
     try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone;
-    } catch {
-      return 'Africa/Cairo'; // Fallback to default
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Cairo';
+    } catch (err) {
+      const error = err as Error;
+      console.warn('Failed to get timezone:', error.message);
+      return 'Africa/Cairo';
     }
   };
 
