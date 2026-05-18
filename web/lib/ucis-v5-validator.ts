@@ -27,7 +27,7 @@ const PATTERNS = {
   dimension1Header: /^###\s+DIMENSION\s+1\s+[–—-]\s+APEX\s+INTELLIGENCE/m,
   dimension10Header: /^###\s+DIMENSION\s+10\s+[–—-]/m,
   apexDeliverables: /Top\s+[35]\s*[–—-]\s*5?\s*Ranked\s+Deliverables/i,
-  timestampAnalysis: /Analysis\s+Timestamp[:\s]*`?YYYY-MM-DD\s+HH:MM:SS/i,
+  timestampAnalysis: /Analysis\s+Timestamp[:\s]*`[^`]+`/i,
   personaFitTag: /Persona\s+Fit[:\s]*\[/i,
   lensApplied: /Lens\s+applied:\s*\[/i,
   allDimensions: /###\s+DIMENSION\s+([1-9]|10)\s+[–—-]/gm,
@@ -38,7 +38,7 @@ const PATTERNS = {
   readDepthGuidance: /Read-Depth\s+Guidance/i,
   filename: /^[a-zA-Z0-9\-\._]+\-[a-zA-Z0-9\-\._]+\-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md$/,
   inlineTimestamp: /`\d{2}:\d{2}:\d{2}`/,
-  timestampFormat: /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+[A-Z]{3,4}/,
+  timestampFormat: /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+[^\s`]+(?:\s+\(Agent\))?)?/,
   emoji: /[🎨🚀💡🔥👑⭐🎯]/g,
 };
 

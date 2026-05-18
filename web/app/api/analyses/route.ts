@@ -528,8 +528,11 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    // Inject persona header and set up async validation after stream
-    const streamResponse = new Response(transformedStream, {
+    // Tee the stream so one branch goes to client, the other to async validator
+    const [clientStream, validatorStream] = transformedStream.tee();
+
+    // Inject persona header and wrap client stream in response
+    const streamResponse = new Response(clientStream, {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
@@ -541,11 +544,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Run validator asynchronously after stream closes (non-blocking)
+    // Run validator asynchronously on validator stream (non-blocking)
     // Collect streamed chunks and validate once complete
     try {
-      if (streamResponse.body) {
-        const reader = streamResponse.body.getReader();
+      if (validatorStream) {
+        const reader = validatorStream.getReader();
         const chunks: Uint8Array[] = [];
 
         (async () => {
@@ -574,9 +577,9 @@ export async function POST(request: NextRequest) {
               }
 
               if (markdown.length > 100) {
-                // Generate filename for validation
+                // Generate filename for validation (YYYY-MM-DD_HH-MM-SS format)
                 const now = new Date();
-                const dateStr = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const dateStr = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
                 const filename = `${metadata.title.slice(0, 80).replace(/[/:?*"]/g, '-')}-${metadata.channelTitle.replace(/[/:?*"]/g, '-')}-${dateStr}.md`;
 
                 // Run validator and log results

@@ -29,7 +29,7 @@ export function detectPersona(title: string, author: string): PersonaId {
     p2: /startup|founder|saas|indiehacker|bootstrap|mrr|product-market|validation|launch|indie|maker/,
     p3: /strategy|framework|consulting|business|advisory|methodology|model|analysis|implementation|process/,
     p4: /research|study|scientific|academic|analysis|data|methodology|evidence|literature|peer-reviewed/,
-    p5: /product|roadmap|prioriti|feature|user|customer|requirements|design|ux|pm|prioriti/,
+    p5: /product|roadmap|prioriti(?:es|zation)?|feature|user|customer|requirements|design|ux|pm/,
   };
 
   for (const [persona, pattern] of Object.entries(patterns)) {
