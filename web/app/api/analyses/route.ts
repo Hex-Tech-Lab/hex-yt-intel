@@ -6,7 +6,6 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import { AnalysisCreateSchema } from '@/lib/schemas';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
-import { UCISValidator } from '@/lib/ucis-v5-validator';
 import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
@@ -16,6 +15,7 @@ import {
 } from '@/lib/monitoring/sentry-utils';
 import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
+import { publishValidationTask } from '@/lib/qstash-client';
 
 async function fetchTranscript(videoId: string): Promise<string> {
   // MVP: Simple placeholder transcript
@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
       Sentry.captureMessage('Cache hit: duplicate analysis prevented', 'info');
       return NextResponse.json({
         id: existingAnalysis.id,
+        analysisId: existingAnalysis.id,
         videoId,
         title: existingAnalysis.title,
         markdown: existingAnalysis.markdown,
@@ -298,15 +299,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8.5 Return streaming response with SSE normalization for Claude 4.5 compatibility
+    // 8.5 Create analysis record in database (before streaming)
+    console.log('[analyses] 9. Creating analysis record', { videoId, userId });
+    const analysisId = crypto.randomUUID();
+    await trackDatabaseQuery(
+      'insert',
+      'analyses',
+      async () => {
+        const { error } = await supabase
+          .from('analyses')
+          .insert({
+            id: analysisId,
+            video_id: videoId,
+            user_id: userId,
+            title: metadata.title,
+            markdown: '', // Will be populated after streaming
+            model_attempted: 'anthropic/claude-haiku-4.5',
+            model_used: 'anthropic/claude-haiku-4.5',
+            validation_report: null,
+            validation_passed: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        if (error) throw error;
+      },
+      { analysisId, videoId, userId }
+    ).catch((err) => {
+      console.warn('[analyses] Failed to create analysis record', { analysisId, error: String(err) });
+      addBreadcrumb('Analysis record creation failed', { analysisId, error: String(err) }, 'database');
+      // Continue non-blocking - Sentry will capture this
+      Sentry.captureException(err, { tags: { operation: 'analysis-insert' } });
+    });
+
+    // 9.5 Return streaming response with SSE normalization for Claude 4.5 compatibility
     // Transform raw OpenRouter stream to normalize Claude 4.5's delta format
-    console.log('[analyses] 9. Setting up stream transformer for Claude 4.5 normalization', { videoId });
+    console.log('[analyses] 10. Setting up stream transformer for Claude 4.5 normalization', { videoId });
     addBreadcrumb('Streaming analysis response to client', { videoId });
 
     const transformedStream = openrouterResponse.body!.pipeThrough(createClaudeStreamNormalizer());
 
-    // Tee the stream so one branch goes to client, the other to async validator
-    const [clientStream, validatorStream] = transformedStream.tee();
+    // Tee the stream so one branch goes to client, the other to async processor
+    const [clientStream, processorStream] = transformedStream.tee();
 
     // Inject persona header and wrap client stream in response
     const streamResponse = new Response(clientStream, {
@@ -321,93 +354,109 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Run validator asynchronously on validator stream (non-blocking)
-    // Collect streamed chunks and validate once complete
-    try {
-      if (validatorStream) {
-        const reader = validatorStream.getReader();
+    // Process validator stream asynchronously via QStash (guaranteed delivery)
+    // Collect streamed chunks, save markdown, and trigger validation via webhook
+    console.log('[analyses] 11. Setting up async validation via QStash', { analysisId });
+    (async () => {
+      try {
+        const reader = processorStream.getReader();
         const chunks: Uint8Array[] = [];
 
-        (async () => {
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              chunks.push(value);
-            }
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+        }
 
-            // Reconstruct markdown from SSE stream chunks (web stream compatible)
-            const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-            const combined = new Uint8Array(totalLength);
-            let offset = 0;
-            for (const chunk of chunks) {
-              combined.set(chunk, offset);
-              offset += chunk.length;
-            }
-            const fullOutput = new TextDecoder().decode(combined);
+        // Reconstruct markdown from SSE stream chunks
+        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const combined = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of chunks) {
+          combined.set(chunk, offset);
+          offset += chunk.length;
+        }
+        const fullOutput = new TextDecoder().decode(combined);
 
-            // Extract markdown from SSE format and validate
-            const lines = fullOutput.split('\n');
-            let markdown = '';
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const dataStr = line.substring(6).trim();
-                if (dataStr && dataStr !== '[DONE]') {
-                  try {
-                    const json = JSON.parse(dataStr);
-                    const token = json.choices?.[0]?.delta?.content || '';
-                    markdown += token;
-                  } catch {
-                    // Skip malformed chunks
-                  }
-                }
+        // Extract markdown from SSE format
+        const lines = fullOutput.split('\n');
+        let markdown = '';
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.substring(6).trim();
+            if (dataStr && dataStr !== '[DONE]') {
+              try {
+                const json = JSON.parse(dataStr);
+                const token = json.choices?.[0]?.delta?.content || '';
+                markdown += token;
+              } catch {
+                // Skip malformed chunks
               }
             }
-            if (markdown) {
+          }
+        }
 
-              if (markdown.length > 100) {
-                // Generate filename for validation (YYYY-MM-DD_HH-MM-SS format)
-                const now = new Date();
-                const dateStr = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
-                const filename = `${metadata.title.slice(0, 80).replace(/[/:?*"]/g, '-')}-${metadata.channelTitle.replace(/[/:?*"]/g, '-')}-${dateStr}.md`;
+        if (markdown.length > 0) {
+          console.log('[analyses] 11. Markdown collected, updating analysis record', { analysisId, length: markdown.length });
 
-                // Run validator and log results
-                const report = UCISValidator.validate(markdown, filename);
-                console.log('[analyses] Validator report', {
-                  videoId,
-                  passed: report.passed,
-                  passedChecks: report.passedChecks,
-                  totalChecks: report.totalChecks,
-                  failedCount: report.failedChecks.length,
-                });
+          // Update analysis record with collected markdown
+          await trackDatabaseQuery(
+            'update',
+            'analyses',
+            async () => {
+              const { error } = await supabase
+                .from('analyses')
+                .update({
+                  markdown,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', analysisId);
+              if (error) throw error;
+            },
+            { analysisId }
+          ).catch((err) => {
+            console.warn('[analyses] Failed to update markdown', { analysisId, error: String(err) });
+            addBreadcrumb('Markdown update failed', { analysisId }, 'database');
+          });
 
-                // Log to Sentry
-                if (!report.passed) {
-                  Sentry.captureMessage(`UCIS v5 validation failed: ${report.failedChecks.length} check(s)`, 'warning');
-                  console.warn('[analyses] Validation failed checks:', report.failedChecks);
-                } else {
-                  Sentry.captureMessage('UCIS v5 validation passed', 'info');
-                }
+          // Publish validation task to QStash (guaranteed delivery with retries)
+          if (markdown.length > 100) {
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+            const filename = `${metadata.title.slice(0, 80).replace(/[/:?*"]/g, '-')}-${metadata.channelTitle.replace(/[/:?*"]/g, '-')}-${dateStr}.md`;
 
-                // Track metrics
-                addBreadcrumb('Validator executed', {
-                  passed: report.passed,
-                  passedChecks: `${report.passedChecks}/${report.totalChecks}`,
-                }, 'validation');
-              }
-            }
-          } catch (validationError) {
-            console.warn('[analyses] Async validation error (non-blocking)', { error: String(validationError) });
-            Sentry.captureException(validationError, {
-              tags: { service: 'ucis-validator', operation: 'async-validation' },
-              contexts: { video: { videoId } },
+            console.log('[analyses] 11. Publishing validation task to QStash', { analysisId });
+            await publishValidationTask({
+              videoId,
+              markdown,
+              filename,
+              userId,
+              analysisId,
+              metadata: {
+                title: metadata.title,
+                channelTitle: metadata.channelTitle,
+                duration: metadata.duration,
+              },
+            }).catch((err) => {
+              console.warn('[analyses] Failed to publish validation task (non-blocking)', {
+                analysisId,
+                error: String(err),
+              });
+              addBreadcrumb('Validation task publish failed', { analysisId }, 'qstash');
             });
           }
-        })();
+        }
+      } catch (processingError) {
+        console.warn('[analyses] Async processing error (non-blocking)', {
+          analysisId,
+          error: String(processingError),
+        });
+        Sentry.captureException(processingError, {
+          tags: { service: 'async-processor', operation: 'stream-processing' },
+          contexts: { analysis: { analysisId } },
+        });
       }
-    } catch (streamSetupError) {
-      console.warn('[analyses] Stream validation setup warning (non-blocking)', { error: String(streamSetupError) });
-    }
+    })();
 
     return streamResponse;
   } catch (error) {
