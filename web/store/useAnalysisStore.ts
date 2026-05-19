@@ -22,7 +22,7 @@ export interface AnalysisState extends UseAnalysisStreamState {
   initializeAnalysis: (id: string, title: string, initialMarkdown?: string) => void;
 }
 
-export const useAnalysisStore = create<AnalysisState>((set, get) => ({
+export const useAnalysisStore = create<AnalysisState>((set) => ({
   // Initial state
   analysis: null,
   isLoading: false,
@@ -53,4 +53,25 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
     }),
 
   clearHistory: () => set({ analysisHistory: [] }),
+
+  archiveCurrentAnalysis: () =>
+    set((state) => {
+      if (state.analysis) {
+        const updated = [state.analysis, ...state.analysisHistory].slice(0, 20);
+        return { analysisHistory: updated };
+      }
+      return {};
+    }),
+
+  appendMarkdown: (token) =>
+    set((state) => ({
+      analysis: state.analysis
+        ? { ...state.analysis, markdown: state.analysis.markdown + token }
+        : null,
+    })),
+
+  initializeAnalysis: (id, title, initialMarkdown = '') =>
+    set({
+      analysis: { id, title, markdown: initialMarkdown },
+    }),
 }));
