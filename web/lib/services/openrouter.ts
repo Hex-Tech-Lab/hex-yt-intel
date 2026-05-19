@@ -5,6 +5,7 @@
 
 import { getUCISPrompt } from '@/lib/prompts/factory';
 import type { PersonaId } from '@/lib/prompts';
+import type { VideoMetadata } from '@/lib/types';
 
 export interface AnalysisErrorMeta {
   errors?: Record<string, string>;
@@ -35,15 +36,6 @@ export class AnalysisEngineError extends Error {
   }
 }
 
-interface OpenRouterMetadata {
-  title: string;
-  channelTitle: string;
-  viewCount: string;
-  likeCount: string;
-  commentCount: string;
-  publishedAt: string;
-}
-
 /**
  * Calls OpenRouter API with multi-model fallback strategy
  * - Attempts primary model first (Claude Haiku 4.5)
@@ -52,7 +44,7 @@ interface OpenRouterMetadata {
  * - Implements connection timeout + streaming response
  */
 export async function callOpenRouter(
-  metadata: OpenRouterMetadata,
+  metadata: VideoMetadata,
   transcript: string,
   persona: PersonaId,
   timezone: string,
