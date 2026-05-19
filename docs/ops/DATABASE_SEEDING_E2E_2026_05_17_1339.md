@@ -68,15 +68,19 @@ ON CONFLICT (id) DO NOTHING;
 
 ### Test Header Injection
 
-When running E2E tests, inject the secure validation header into all HTTP requests:
+When running E2E tests, set the `DEV_BYPASS_TOKEN` environment variable and inject it via the `X-Hex-Test-Secret` header:
 
-```
-X-Hex-Test-Secret: hex_secure_local_wsl_validation_token_string
+```bash
+# Set the development bypass token (must match what's in your environment)
+export DEV_BYPASS_TOKEN='your-secret-token-here'
+
+# The test suite will use this value to set the X-Hex-Test-Secret header:
+# X-Hex-Test-Secret: <value of DEV_BYPASS_TOKEN>
 ```
 
 This header triggers:
-- **`web/middleware.ts`** (line 35): Early return before global auth checks
-- **`web/app/api/analyses/route.ts`** (line 200): Use persistent test user ID
+- **`web/middleware.ts`**: Early return before global auth checks (requires DEV_BYPASS_TOKEN env var + constant-time comparison)
+- **`web/app/api/analyses/route.ts`**: Use persistent test user ID (requires DEV_BYPASS_TOKEN env var + timingSafeEqual)
 
 ### Critical Invariant
 

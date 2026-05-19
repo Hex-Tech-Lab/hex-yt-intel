@@ -178,19 +178,21 @@ ON CONFLICT (id) DO NOTHING;
 ```
 
 **Test Header Injection**:
-When running E2E tests, inject the header `X-Hex-Test-Secret: hex_secure_local_wsl_validation_token_string` into all requests. This header triggers the test user bypass in:
-- `web/middleware.ts` (line 35: early return before auth checks)
-- `web/app/api/analyses/route.ts` (line 200: use persistent test user ID)
+When running E2E tests, set the `DEV_BYPASS_TOKEN` environment variable and inject it via the `X-Hex-Test-Secret` header. This triggers the test user bypass in:
+- `web/middleware.ts` (early return before auth checks, requires DEV_BYPASS_TOKEN env var + constant-time comparison)
+- `web/app/api/analyses/route.ts` (use persistent test user ID, requires DEV_BYPASS_TOKEN env var + timingSafeEqual)
 
 **Critical Invariant**: The test user ID is **hardcoded, non-random, and persistent**. Database lookups (rate limits, quotas, cache) will succeed because the user exists in production. This eliminates schema collision errors that occur with synthetic UUIDs.
 
 **Test Execution**:
 ```bash
-# Run E2E tests with test user bypass
-export X_HEX_TEST_SECRET='hex_secure_local_wsl_validation_token_string'
+# Run E2E tests with development bypass token (set in .env.local or via shell)
+export DEV_BYPASS_TOKEN='your-secret-token-here'  # Change this per deployment environment
 cd web
 pnpm playwright test ../docs/testing/visible_production_telemetry.spec.ts --headed --workers=1
 ```
+
+**Security Note**: `DEV_BYPASS_TOKEN` is only checked when `NODE_ENV !== 'production'`. Production deployments **must not** have this variable set to ensure auth gates are never bypassed.
 
 ---
 

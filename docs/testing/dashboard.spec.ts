@@ -1,10 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Authenticated Dashboard Route', () => {
+  // Inject the development bypass token via environment variable (DEV_BYPASS_TOKEN)
+  const devBypassToken = process.env.DEV_BYPASS_TOKEN;
+  if (!devBypassToken) {
+    throw new Error('DEV_BYPASS_TOKEN environment variable is required for E2E testing');
+  }
+
   // Inject the middleware bypass header for all tests in this block
   test.use({
     extraHTTPHeaders: {
-      'X-Hex-Test-Secret': 'hex_secure_local_wsl_validation_token_string',
+      'X-Hex-Test-Secret': devBypassToken,
     },
   });
 

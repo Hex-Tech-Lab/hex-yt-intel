@@ -37,13 +37,18 @@ async function fetchVercelLogs(deploymentId) {
 }
 
 async function runTelemetry() {
+  const devBypassToken = process.env.DEV_BYPASS_TOKEN;
+  if (!devBypassToken) {
+    throw new Error('DEV_BYPASS_TOKEN environment variable is required for E2E testing');
+  }
+
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  // Inject secure test validation header on all requests
+  // Inject development bypass token via environment variable (DEV_BYPASS_TOKEN)
   await page.setExtraHTTPHeaders({
-    'X-Hex-Test-Secret': 'hex_secure_local_wsl_validation_token_string',
+    'X-Hex-Test-Secret': devBypassToken,
   });
 
   try {
