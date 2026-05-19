@@ -110,18 +110,33 @@ export class GraphQLClient {
 /**
  * Factory function to create GraphQL client for Supabase
  * Automatically pulls endpoint and key from environment
+ * Fails fast on missing/invalid credentials
  */
 export function createSupabaseGraphQLClient(): GraphQLClient {
-  const endpoint = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const endpoint = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!endpoint || !anonKey) {
+  if (!endpoint) {
     throw new Error(
-      'Missing Supabase credentials for GraphQL client. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+      'NEXT_PUBLIC_SUPABASE_URL environment variable is required for GraphQL client. Set it in your environment.'
     );
   }
 
-  return new GraphQLClient(endpoint, anonKey);
+  if (!anonKey) {
+    throw new Error(
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable is required for GraphQL client. Set it in your environment.'
+    );
+  }
+
+  try {
+    new URL(endpoint);
+  } catch {
+    throw new Error(
+      `NEXT_PUBLIC_SUPABASE_URL must be a valid URL. Received: ${endpoint}`
+    );
+  }
+
+  return new GraphQLClient(endpoint, anonKey, 30000);
 }
 
 /**
