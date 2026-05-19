@@ -1,8 +1,6 @@
 packages:
   - 'web'
   - 'worker'
-  - 'skill'
-  - 'packages/**'
 
 autoInstallPeers: true
 strictPeerDependencies: false
