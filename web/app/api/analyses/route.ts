@@ -70,15 +70,16 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[analyses] 1. Request received - parsing body');
 
-    // Secure test validation bypass — allows E2E test suites to bypass auth
+    // Secure test validation bypass — allows E2E test suites to bypass auth (env-gated)
     const testSecret = request.headers.get('X-Hex-Test-Secret');
+    const devBypassToken = process.env.DEV_BYPASS_TOKEN;
     let userEmail = '';
     let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined;
 
-    if (testSecret === 'hex_secure_local_wsl_validation_token_string') {
+    if (devBypassToken && testSecret === devBypassToken) {
       console.info('[analyses] Secure validation bypass detected - using persistent test user');
       userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
-      userEmail = 'kellybakri@gmail.com';
+      userEmail = process.env.DEV_TEST_USER_EMAIL || '';
       userTierAuth = 'free';
     } else {
       // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
       userEmail = session?.user?.email || '';
       userTierAuth = await getUserTier(userId);
     }
-    console.log('[analyses] 2. Auth success', { userId, email: userEmail, tier: userTierAuth });
+    console.log('[analyses] 2. Auth success', { userId, tier: userTierAuth });
 
     // Set user context for Sentry
     setUserContext(userId, userEmail || '', userTierAuth);
