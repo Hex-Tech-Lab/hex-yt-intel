@@ -15,8 +15,14 @@ if (!CLOUDFLARE_SECRET_TOKEN) {
 
 const youtubeUrlSchema = z
   .string()
+  .transform((url) => {
+    let normalizedUrl = url.trim();
+    if (!/^https?:\/\//i.test(normalizedUrl)) {
+      normalizedUrl = "https://" + normalizedUrl;
+    }
+    return normalizedUrl;
+  })
   .refine((url) => {
-    if (!url.match(/^https?:\/\//)) url = "https://" + url;
     try {
       const parsed = new URL(url);
       return (
@@ -27,7 +33,6 @@ const youtubeUrlSchema = z
     }
   }, "Invalid YouTube URL")
   .transform((url) => {
-    if (!url.match(/^https?:\/\//)) url = "https://" + url;
     const parsed = new URL(url);
     let videoId = "";
     if (parsed.hostname.includes("youtu.be")) {
@@ -93,14 +98,13 @@ async function fetchMetadata(
 
     const data = (await response.json()) as Record<string, unknown>;
 
+    if (!data || typeof data !== "object") {
+      throw new Error("Invalid response: Expected JSON object from worker");
+    }
+
     // Validate required fields
     if (!data.title || typeof data.title !== "string") {
       throw new Error("Invalid response: missing or invalid title field");
-    }
-    if (typeof data.viewCount !== "number") {
-      throw new Error(
-        `Invalid response: viewCount should be number, got ${typeof data.viewCount}`
-      );
     }
 
     return {
@@ -114,11 +118,10 @@ async function fetchMetadata(
           : "Unknown Channel",
       channelId:
         typeof data.channelId === "string" ? data.channelId : "unknown",
-      duration: typeof data.duration === "number" ? data.duration : 0,
-      viewCount: typeof data.viewCount === "number" ? data.viewCount : 0,
-      likeCount: typeof data.likeCount === "number" ? data.likeCount : 0,
-      commentCount:
-        typeof data.commentCount === "number" ? data.commentCount : 0,
+      duration: parseInt(String(data.duration || "0"), 10) || 0,
+      viewCount: parseInt(String(data.viewCount || "0"), 10) || 0,
+      likeCount: parseInt(String(data.likeCount || "0"), 10) || 0,
+      commentCount: parseInt(String(data.commentCount || "0"), 10) || 0,
       publishedAt:
         typeof data.publishedAt === "string" ? data.publishedAt : "Unknown Date",
       thumbnailUrl:

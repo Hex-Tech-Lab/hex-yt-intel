@@ -122,7 +122,7 @@ export async function verifyQStashSignature(
 
     const receiver = new Receiver({
       currentSigningKey: currentKey,
-      nextSigningKey: nextKey,
+      nextSigningKey: nextKey || "",
     });
 
     const verified = await receiver.verify({

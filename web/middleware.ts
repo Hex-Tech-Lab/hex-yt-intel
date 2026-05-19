@@ -98,7 +98,7 @@ export async function middleware(request: NextRequest) {
 
   const isAuthenticated = authProvider === 'supabase'
     ? await hasSupabaseAuth(request)
-    : !!(await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET }));
+    : !!(await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET || "" }));
 
   if (!isAuthenticated) {
     if (pathname.startsWith('/api/')) {

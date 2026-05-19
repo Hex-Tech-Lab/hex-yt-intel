@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { createHash, randomUUID } from 'crypto';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
@@ -435,43 +435,9 @@ export async function POST(request: NextRequest) {
     // 8.5 Generate analysis ID (non-blocking, used for headers and background task)
     const analysisId = randomUUID();
 
-    // 9. Create initial analysis record (synchronous, before streaming response)
-    console.log('[analyses] 9. Creating initial analysis record', { videoId, userId, analysisId });
-    try {
-      await trackDatabaseQuery(
-        'insert',
-        'analyses',
-        async () => {
-          const { error } = await supabase
-            .from('analyses')
-            .insert({
-              id: analysisId,
-              video_id: videoId,
-              user_id: userId,
-              title: metadata.title,
-              analysis_markdown: '', // Will be populated after streaming
-              model_attempted: 'anthropic/claude-haiku-4.5',
-              model_used: 'anthropic/claude-haiku-4.5',
-              validation_report: null,
-              validation_passed: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-          if (error) throw error;
-        },
-        { analysisId, videoId, userId }
-      );
-    } catch (dbErr) {
-      console.error('[analyses] Failed to create initial record', { analysisId, error: String(dbErr) });
-      return NextResponse.json(
-        { error: 'Database error: Could not create analysis record' },
-        { status: 500 }
-      );
-    }
-
-    // 9.5 Return streaming response with SSE normalization for Claude 4.5 compatibility
+    // 9. Return streaming response with SSE normalization for Claude 4.5 compatibility
     // Transform raw OpenRouter stream to normalize Claude 4.5's delta format
-    console.log('[analyses] 10. Setting up stream transformer for Claude 4.5 normalization', { videoId });
+    console.log('[analyses] 9. Setting up stream transformer for Claude 4.5 normalization', { videoId });
     addBreadcrumb('Streaming analysis response to client', { videoId });
 
     const transformedStream = openrouterResponse.body!.pipeThrough(createClaudeStreamNormalizer());
@@ -492,10 +458,40 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 10. Background stream processing via void promise (non-blocking, no await)
-    // Collect markdown from processorStream and publish validation task
-    void (async () => {
-      console.log('[analyses] 10. Background Task: Collecting markdown and publishing validation', { videoId, analysisId });
+    // 10. Process blocking database inserts and stream parsing in background lifecycle
+    after(async () => {
+      console.log('[analyses] 10. Background Task: Creating analysis record', { videoId, userId, analysisId });
+      try {
+        await trackDatabaseQuery(
+          'insert',
+          'analyses',
+          async () => {
+            const { error } = await supabase
+              .from('analyses')
+              .insert({
+                id: analysisId,
+                video_id: videoId,
+                user_id: userId,
+                title: metadata.title,
+                analysis_markdown: '', // Will be populated after streaming
+                model_attempted: 'anthropic/claude-haiku-4.5',
+                model_used: 'anthropic/claude-haiku-4.5',
+                validation_report: null,
+                validation_passed: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              });
+            if (error) throw error;
+          },
+          { analysisId, videoId, userId }
+        );
+      } catch (insertErr) {
+        console.error('[analyses] Failed to create analysis record in background', { analysisId, error: String(insertErr) });
+        addBreadcrumb('Background analysis record creation failed', { analysisId }, 'database');
+        Sentry.captureException(insertErr, { tags: { operation: 'background-analysis-insert' } });
+      }
+
+      console.log('[analyses] 11. Background Task: Collecting markdown and publishing validation', { videoId, analysisId });
       try {
         const reader = processorStream.getReader();
         const decoder = new TextDecoder();
@@ -552,7 +548,7 @@ export async function POST(request: NextRequest) {
         addBreadcrumb('Background stream processing failed', { analysisId }, 'database');
         Sentry.captureException(bgErr, { tags: { operation: 'background-stream-processing' } });
       }
-    })();
+    });
 
     return streamResponse;
   } catch (error) {
