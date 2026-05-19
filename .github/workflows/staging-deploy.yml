@@ -67,12 +67,11 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.STAGING_SENTRY_AUTH_TOKEN }}
 
       - name: Deploy to Vercel (Staging)
-        uses: vercel/action@v5.1.0
+        uses: amondnet/vercel-action@master
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          production: false
 
       - name: Wait for deployment
         run: sleep 30
