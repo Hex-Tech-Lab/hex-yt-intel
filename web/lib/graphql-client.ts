@@ -1,6 +1,8 @@
 /**
  * Zero-dependency GraphQL client for Supabase pg_graphql
  * Provides typed query/mutation execution with built-in error handling
+ * 
+ * @deprecated Use the standard Supabase PostgREST Client library (`@supabase/supabase-js`) instead.
  */
 
 interface GraphQLError {
@@ -15,6 +17,9 @@ interface GraphQLResponse<T> {
   errors?: GraphQLError[];
 }
 
+/**
+ * @deprecated Migrate data fetch requirements to `@supabase/supabase-js`.
+ */
 export class GraphQLClient {
   private endpoint: string;
   private anonKey: string;
@@ -111,6 +116,8 @@ export class GraphQLClient {
  * Factory function to create GraphQL client for Supabase
  * Automatically pulls endpoint and key from environment
  * Fails fast on missing/invalid credentials
+ * 
+ * @deprecated Use standard Supabase client initialization instead.
  */
 export function createSupabaseGraphQLClient(): GraphQLClient {
   const endpoint = process.env.NEXT_PUBLIC_SUPABASE_URL;

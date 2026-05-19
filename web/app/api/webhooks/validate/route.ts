@@ -7,22 +7,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
 import { UCISValidator } from '@/lib/ucis-v5-validator';
-import { publishEmbeddingTask, verifyQStashSignature } from '@/lib/qstash-client';
+import { publishEmbeddingTask, verifyQStashSignature, type ValidationPayload } from '@/lib/qstash-client';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
-
-interface ValidationPayload {
-  videoId: string;
-  markdown: string;
-  filename: string;
-  userId: string;
-  analysisId: string;
-  metadata: {
-    title: string;
-    channelTitle: string;
-    duration?: number;
-  };
-}
 
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
@@ -30,12 +17,12 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[validate-webhook] Request received');
 
-    // Read body once: needed for both signature verification and JSON parsing
-    const body = await request.text();
+    // Read cloned body: needed for signature verification without blocking request.json()
+    const bodyText = await request.clone().text();
 
     // Early Return Security: Verify QStash signature BEFORE parsing JSON
     const signature = request.headers.get('upstash-signature') || '';
-    const verified = await verifyQStashSignature(signature, body);
+    const verified = await verifyQStashSignature(signature, bodyText);
     if (!verified) {
       console.warn('[validate-webhook] QStash signature verification failed');
       return NextResponse.json(
@@ -45,8 +32,8 @@ export async function POST(request: NextRequest) {
     }
     console.log('[validate-webhook] QStash signature verified');
 
-    // Parse QStash payload from body string
-    const payload: ValidationPayload = JSON.parse(body);
+    // Safely parse the structural payload straight from the verified cloned text string
+    const payload: ValidationPayload = JSON.parse(bodyText);
     const { videoId, markdown, filename, userId, analysisId } = payload;
 
     console.log('[validate-webhook] Processing validation', {
