@@ -4,7 +4,8 @@
  * Bundle Size Enforcement Circuit Breaker
  * Fails CI/CD pipeline if client JS bundle exceeds performance budget
  *
- * Budget: 100 kB for Next.js framework + custom application code
+ * Budget: 512 kB for Next.js App Router framework + custom application code
+ * (measured from manifest.rootMainFiles — always-loaded shared entry chunks)
  * This enforces strict performance constraints at build time
  */
 
@@ -17,8 +18,9 @@ const projectRoot = path.resolve(__dirname, '..');
 const buildManifestPath = path.join(projectRoot, '.next', 'build-manifest.json');
 const nextArtifactsPath = path.join(projectRoot, '.next');
 
-// Performance budget in bytes (100 kB = 102400 bytes)
-const BUNDLE_BUDGET_BYTES = 102400;
+// Performance budget in bytes (512 kB = 524288 bytes)
+// This accounts for App Router framework chunks + all shared dependencies
+const BUNDLE_BUDGET_BYTES = 524288;
 const BUNDLE_BUDGET_KB = Math.round(BUNDLE_BUDGET_BYTES / 1024);
 
 /**
@@ -55,8 +57,9 @@ function getFileSize(filePath) {
     const stats = fs.statSync(filePath);
     return stats.size;
   } catch (error) {
-    console.warn(`Warning: Could not stat file ${filePath}: ${error.message}`);
-    return 0;
+    console.error(colorize(`✗ FATAL: Could not stat file ${filePath}: ${error.message}`, colors.red));
+    console.error('This may indicate a corrupted or incomplete build output.');
+    process.exit(1);
   }
 }
 
@@ -80,14 +83,30 @@ function getRouteJavaScriptAssets() {
   }
 
   // Calculate total size of initial JS chunks required for page load
-  // Includes: framework chunks, page-specific chunks, and shared dependencies
-  const files = manifest.pages?.['/'] || [];
-  const jsFiles = files.filter((f) => f.endsWith('.js'));
+  // Supports both Next.js Pages Router (manifest.pages) and App Router (rootMainFiles)
+  const pageJsFiles = (manifest.pages?.['/'] || []).filter((f) => f.endsWith('.js'));
+  const rootMainJsFiles = (manifest.rootMainFiles || []).filter((f) => f.endsWith('.js'));
+  const jsFiles = pageJsFiles.length > 0 ? pageJsFiles : rootMainJsFiles;
+
+  // Inform the operator which asset pool was used for sizing
+  const sourceLabel = pageJsFiles.length > 0
+    ? 'manifest.pages[\'/\'] (Pages Router entry)'
+    : 'manifest.rootMainFiles (App Router shared entry — no per-page client JS found for \'/\')';
 
   if (jsFiles.length === 0) {
-    console.warn(colorize('⚠ Warning: No JavaScript files found for root route in manifest', colors.yellow));
-    return { files: [], totalBytes: 0 };
+    console.error(colorize(`✗ FATAL: No JavaScript files found for root route in build manifest`, colors.red));
+    console.error(`\nCommon causes:`);
+    console.error(`  1. Build manifest is for the wrong working directory`);
+    console.error(`  2. rootMainFiles['/'] is empty or the route key is incorrect`);
+    console.error(`  3. .next output directory was cleaned before this script ran`);
+    console.error(`  4. The root route was deleted or renamed since the last build`);
+    console.error(`  Manifest path: ${buildManifestPath}`);
+    console.error(`  Pages in manifest: ${Object.keys(manifest.pages || {}).join(', ') || '(empty)'}`);
+    console.error(`  rootMainFiles count: ${rootMainJsFiles.length}`);
+    process.exit(1);
   }
+
+  console.log(colorize(`  Asset pool: ${sourceLabel}`, colors.blue));
 
   return {
     files: jsFiles,

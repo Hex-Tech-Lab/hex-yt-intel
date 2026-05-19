@@ -32,19 +32,20 @@ async function fetchTranscript(videoId: string): Promise<string> {
       throw new Error('Cloudflare Worker URL not configured in production environment');
     }
 
-    const transcriptUrl = `${workerUrl}/fetch-transcript?video_id=${videoId}`;
-    const response = await fetch(transcriptUrl, {
+    const transcriptUrl = new URL(`${workerUrl}/fetch-transcript`);
+    transcriptUrl.searchParams.set('video_id', videoId);
+    const response = await fetch(transcriptUrl.toString(), {
       method: 'GET',
       signal: controller.signal,
     });
 
-    clearTimeout(timeout);
-
+    // Do NOT clear timeout here — body read is still underway
     if (!response.ok) {
       throw new Error(`Worker returned ${response.status} for transcript fetch`);
     }
 
     const data = await response.json();
+    clearTimeout(timeout);
 
     if (!data.transcript || typeof data.transcript !== 'string') {
       throw new Error('Worker returned invalid transcript format');
