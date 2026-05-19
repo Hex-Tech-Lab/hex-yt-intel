@@ -46,8 +46,7 @@ DO $$ BEGIN
       )
       WITH CHECK (
         auth.role() = 'authenticated' AND
-        auth.uid() = user_id AND
-        user_id = (SELECT user_id FROM public.analyses WHERE id = NEW.id)
+        auth.uid() = NEW.user_id
       );
 
     -- DELETE: Only authenticated users can delete their own analyses
@@ -105,8 +104,7 @@ DO $$ BEGIN
       )
       WITH CHECK (
         auth.role() = 'authenticated' AND
-        auth.uid() = id AND
-        id = (SELECT id FROM public.users WHERE id = NEW.id)
+        auth.uid() = NEW.id
       );
 
     -- DELETE: No user deletion allowed via SQL (audit trail required)
