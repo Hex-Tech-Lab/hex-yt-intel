@@ -15,4 +15,24 @@ export interface AnalysisMetadata {
   duration?: number;
 }
 
+export interface VideoMetadata {
+  title: string;
+  channelTitle: string;
+  channelId: string;
+  publishedAt: string;
+  duration: number | null;
+  viewCount: string;
+  likeCount: string;
+  commentCount: string;
+  thumbnailUrl: string | null;
+}
+
 export type AnalysisStatus = 'idle' | 'downloading' | 'parsing' | 'analyzing' | 'complete' | 'error';
+
+export interface UseAnalysisStreamState {
+  analysis: AnalysisResult | null;
+  isLoading: boolean;
+  status: AnalysisStatus;
+  error: string | null;
+  lockoutTimeRemaining: number;
+}

@@ -6,33 +6,19 @@
 
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
-import type { AnalysisResult } from '@/lib/types';
+import type { AnalysisResult, UseAnalysisStreamState, AnalysisStatus } from '@/lib/types';
 import { parseSSELine } from '@/lib/streaming/decoder';
 
-export interface AnalysisState {
-  // Current analysis
-  analysis: AnalysisResult | null;
-  isLoading: boolean;
-  status: 'idle' | 'downloading' | 'parsing' | 'analyzing' | 'complete' | 'error';
-  error: string | null;
-
-  // Rate limit tracking
-  lockoutTimeRemaining: number;
-
-  // History (persisted for session)
+export interface AnalysisState extends UseAnalysisStreamState {
   analysisHistory: AnalysisResult[];
-
-  // Actions
   setAnalysis: (analysis: AnalysisResult | null) => void;
   setIsLoading: (loading: boolean) => void;
-  setStatus: (status: AnalysisState['status']) => void;
+  setStatus: (status: AnalysisStatus) => void;
   setError: (error: string | null) => void;
   setLockoutTimeRemaining: (time: number) => void;
   clearAnalysis: () => void;
   addToHistory: (analysis: AnalysisResult) => void;
   clearHistory: () => void;
-
-  // Observable async operations (wrapped in Sentry spans)
   startAnalysis: (url: string, timezone: string) => Promise<void>;
 }
 
