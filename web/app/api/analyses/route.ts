@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
@@ -70,16 +71,31 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[analyses] 1. Request received - parsing body');
 
-    // Secure test validation bypass — allows E2E test suites to bypass auth (env-gated)
-    const testSecret = request.headers.get('X-Hex-Test-Secret');
+    // sec_002: Force environment gating & hardened bypass header (production safety circuit-breaker)
+    const allowDevBypass = process.env.ALLOW_DEV_BYPASS === 'true';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const bypassSignature = request.headers.get('X-Hex-Dev-Bypass-Signature');
     const devBypassToken = process.env.DEV_BYPASS_TOKEN;
     let userEmail = '';
     let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined;
 
-    if (devBypassToken && testSecret === devBypassToken) {
+    // Instantly isolate bypass logic from production build universe
+    const shouldAttemptBypass = !isProduction && allowDevBypass && devBypassToken && bypassSignature === devBypassToken;
+
+    if (shouldAttemptBypass) {
+      // sec_001: Harden user context attribution (fail-fast on missing email)
+      const testUserEmail = process.env.DEV_TEST_USER_EMAIL;
+      if (!testUserEmail || testUserEmail.trim() === '') {
+        console.error('[analyses] Bypass attempted but DEV_TEST_USER_EMAIL is missing or blank');
+        return NextResponse.json(
+          { error: 'Invalid development configuration' },
+          { status: 500 }
+        );
+      }
+
       console.info('[analyses] Secure validation bypass detected - using persistent test user');
       userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
-      userEmail = process.env.DEV_TEST_USER_EMAIL || '';
+      userEmail = testUserEmail;
       userTierAuth = 'free';
     } else {
       // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
@@ -95,7 +111,10 @@ export async function POST(request: NextRequest) {
       userEmail = session?.user?.email || '';
       userTierAuth = await getUserTier(userId);
     }
-    console.log('[analyses] 2. Auth success', { userId, tier: userTierAuth });
+
+    // qual_002: Improve observability signal with non-PII correlation identifier
+    const emailHash = userEmail ? createHash('sha256').update(userEmail).digest('hex').substring(0, 8) : 'unknown';
+    console.log('[analyses] 2. Auth success', { userId, correlationId: emailHash, tier: userTierAuth });
 
     // Set user context for Sentry
     setUserContext(userId, userEmail || '', userTierAuth);
