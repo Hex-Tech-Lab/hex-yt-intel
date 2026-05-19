@@ -23,7 +23,7 @@ permissions:
 
 env:
   NODE_VERSION: "20"
-  PNPM_VERSION: "9.1.0"
+  PNPM_VERSION: "11.1.3"
 
 jobs:
   # ============================================================================
@@ -377,14 +377,12 @@ jobs:
 
       - name: Check for pending migrations
         run: |
-          cd web
           npx supabase migration list --linked
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Apply database migrations
         run: |
-          cd web
           npx supabase db push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -392,7 +390,6 @@ jobs:
 
       - name: Verify database schema
         run: |
-          cd web
           npx supabase db execute "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
