@@ -84,10 +84,10 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: cd web && pnpm install --frozen-lockfile
 
       - name: Run type check
-        run: pnpm run type-check
+        run: cd web && pnpm run type-check
 
       - name: Upload type check report
         if: always()
@@ -121,10 +121,10 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: cd web && pnpm install --frozen-lockfile
 
       - name: Run linter
-        run: pnpm run lint
+        run: cd web && pnpm run lint
 
       - name: Comment lint results on PR
         if: failure() && github.event_name == 'pull_request'
@@ -164,10 +164,10 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: cd web && pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: pnpm run test --no-coverage || true
+        run: cd web && pnpm run test --no-coverage || true
 
       - name: Upload test results
         if: always()
@@ -205,10 +205,10 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: cd web && pnpm install --frozen-lockfile
 
       - name: Build all packages
-        run: pnpm run build
+        run: cd web && pnpm run build
         env:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -257,7 +257,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: cd web && pnpm install --frozen-lockfile
 
       - name: Check for secrets in code
         run: |
@@ -299,10 +299,10 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: cd web && pnpm install --frozen-lockfile
 
       - name: Validate environment configuration
-        run: pnpm tsx web/lib/env.ts
+        run: cd web && pnpm tsx lib/env.ts
         continue-on-error: true
 
   # ============================================================================
@@ -373,7 +373,7 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: cd web && pnpm install --frozen-lockfile
 
       - name: Check for pending migrations
         run: |
