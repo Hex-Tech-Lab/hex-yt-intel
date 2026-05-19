@@ -54,6 +54,9 @@ async function fetchTranscript(videoId: string): Promise<string> {
       });
 
       if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error(`Video transcript not found (404): captions unavailable or video inaccessible`);
+        }
         throw new Error(`Worker returned ${response.status} for transcript fetch`);
       }
 
@@ -66,7 +69,7 @@ async function fetchTranscript(videoId: string): Promise<string> {
       return data.transcript;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
-      throw new Error(`Failed to fetch transcript from Cloudflare Worker: ${errorMsg}`);
+      throw new Error(`Failed to fetch transcript: ${errorMsg}`);
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
@@ -338,8 +341,23 @@ export async function POST(request: NextRequest) {
 
     // 7. Fetch transcript from Cloudflare Worker
     console.log('[analyses] 7. Fetching transcript from worker', { videoId });
-    const transcript = await fetchTranscript(videoId);
-    console.log('[analyses] 7. Transcript fetched', { videoId, length: transcript.length });
+    let transcript: string;
+    try {
+      transcript = await fetchTranscript(videoId);
+      console.log('[analyses] 7. Transcript fetched', { videoId, length: transcript.length });
+      addBreadcrumb('Transcript fetched from worker', { videoId, length: transcript.length });
+    } catch (error) {
+      console.error('[analyses] 7. Transcript fetch failed', { videoId, error: String(error) });
+      addBreadcrumb('Transcript fetch failed', { videoId, error: String(error) }, 'external_service');
+      Sentry.captureException(error, {
+        tags: { service: 'cloudflare-worker', operation: 'fetch-transcript' },
+        contexts: { video: { videoId } },
+      });
+      return NextResponse.json(
+        { error: 'Failed to fetch video transcript. Captions may be unavailable or the video may be inaccessible.' },
+        { status: 503 }
+      );
+    }
 
     // 8. Call OpenRouter - stream response directly to client
     console.log('[analyses] 8. OpenRouter call starting', { videoId, persona: finalPersona, timezone, duration: metadata.duration });
