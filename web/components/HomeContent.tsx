@@ -7,14 +7,14 @@ import { useState } from 'react';
 import { Play, Download, RotateCcw, Clock } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import RateLimitAlert from '@/components/RateLimitAlert';
-import { useAnalysisStream } from '@/hooks/useAnalysisStream';
+import { useAnalysisStore } from '@/store/useAnalysisStore';
 
 export default function HomeContent() {
   const { data: session = null, update: updateSession } = useSession();
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [devMode, setDevMode] = useState(true);
-  const { startAnalysis, clearAnalysis, analysis, isLoading, lockoutTimeRemaining } = useAnalysisStream();
+  const { startAnalysis, clearAnalysis, analysis, isLoading, lockoutTimeRemaining } = useAnalysisStore();
 
   // Get user's local timezone for analysis request
   const getUserTimezone = () => {
@@ -66,12 +66,15 @@ export default function HomeContent() {
   const handleExport = () => {
     if (!analysis) return;
     const element = document.createElement('a');
-    element.setAttribute('href', `data:text/markdown;charset=utf-8,${encodeURIComponent(analysis.markdown)}`);
+    const blob = new Blob([analysis.markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    element.setAttribute('href', url);
     element.setAttribute('download', `${analysis.title}.md`);
     element.style.display = 'none';
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+    URL.revokeObjectURL(url);
   };
 
   return (
