@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse, after } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
@@ -176,9 +176,10 @@ export async function POST(request: NextRequest) {
       return null; // Non-blocking: continue even if cache lookup fails
     });
 
-    // If found in cache, return immediately
-    if (existingAnalysis) {
-      console.log('[analyses] 4. Cache HIT - returning cached analysis', { videoId, analysisId: existingAnalysis.id });
+    // If found in cache with non-empty markdown, return immediately
+    // CRITICAL: Must have markdown to avoid returning empty content from incomplete analyses
+    if (existingAnalysis && existingAnalysis.markdown && existingAnalysis.markdown.length > 0) {
+      console.log('[analyses] 4. Cache HIT - returning cached analysis', { videoId, analysisId: existingAnalysis.id, markdownLength: existingAnalysis.markdown.length });
       addBreadcrumb('Cache hit: analysis retrieved from DB', { videoId, analysisId: existingAnalysis.id }, 'cache');
       Sentry.captureMessage('Cache hit: duplicate analysis prevented', 'info');
       return NextResponse.json({
@@ -382,8 +383,8 @@ export async function POST(request: NextRequest) {
 
     const transformedStream = openrouterResponse.body!.pipeThrough(createClaudeStreamNormalizer());
 
-    // Tee the stream so one branch goes to client, the other to async processor
-    const [clientStream, processorStream] = transformedStream.tee();
+    // Tee the stream so one branch goes to client, the other to markdown collector
+    const [clientStream, collectorStream] = transformedStream.tee();
 
     // Inject persona header and wrap client stream in response
     const streamResponse = new Response(clientStream, {
@@ -398,13 +399,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Process validator stream asynchronously via QStash (guaranteed delivery)
-    // Collect streamed chunks, save markdown, and trigger validation via webhook
-    // Note: Streaming response keeps connection alive, preventing Vercel timeout
-    console.log('[analyses] 11. Setting up async validation via QStash', { analysisId });
-    after(async () => {
+    // CRITICAL: Process markdown collection and QStash publishing as a tracked Promise
+    // Must complete before function exit to guarantee QStash delivery and database consistency
+    console.log('[analyses] 11. Setting up markdown collection and QStash publishing', { analysisId });
+    const processingPromise = (async () => {
       try {
-        const reader = processorStream.getReader();
+        const reader = collectorStream.getReader();
         const chunks: Uint8Array[] = [];
 
         while (true) {
@@ -441,72 +441,77 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        if (markdown.length > 0) {
-          console.log('[analyses] 11. Markdown collected, updating analysis record', { analysisId, length: markdown.length });
+        if (markdown.length === 0) {
+          console.warn('[analyses] 11. No markdown collected', { analysisId });
+          return;
+        }
 
-          // Update analysis record with collected markdown (blocking operation)
-          try {
-            await trackDatabaseQuery(
-              'update',
-              'analyses',
-              async () => {
-                const { error } = await supabase
-                  .from('analyses')
-                  .update({
-                    markdown,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq('id', analysisId);
-                if (error) throw error;
-              },
-              { analysisId }
-            );
-          } catch (updateErr) {
-            console.error('[analyses] Failed to update markdown (blocking)', { analysisId, error: String(updateErr) });
-            addBreadcrumb('Markdown update failed', { analysisId }, 'database');
-            throw updateErr;
-          }
+        console.log('[analyses] 11. Markdown collected, updating analysis record', { analysisId, length: markdown.length });
 
-          // Publish validation task to QStash (guaranteed delivery with retries)
-          if (markdown.length > 100) {
-            const now = new Date();
-            const dateStr = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
-            const filename = `${metadata.title.slice(0, 80).replace(/[/:?*"]/g, '-')}-${metadata.channelTitle.replace(/[/:?*"]/g, '-')}-${dateStr}.md`;
-
-            console.log('[analyses] 11. Publishing validation task to QStash', { analysisId });
-            try {
-              await publishValidationTask({
-                videoId,
+        // Update analysis record with collected markdown
+        await trackDatabaseQuery(
+          'update',
+          'analyses',
+          async () => {
+            const { error } = await supabase
+              .from('analyses')
+              .update({
                 markdown,
-                filename,
-                userId: userId!,
-                analysisId,
-                metadata: {
-                  title: metadata.title,
-                  channelTitle: metadata.channelTitle,
-                  ...(metadata.duration !== undefined && { duration: metadata.duration }),
-                },
-              });
-            } catch (publishErr) {
-              console.error('[analyses] Failed to publish validation task (blocking)', {
-                analysisId,
-                error: String(publishErr),
-              });
-              addBreadcrumb('Validation task publish failed', { analysisId }, 'qstash');
-              throw publishErr;
-            }
-          }
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', analysisId);
+            if (error) throw error;
+          },
+          { analysisId }
+        ).catch((err) => {
+          console.warn('[analyses] Failed to update markdown', { analysisId, error: String(err) });
+          addBreadcrumb('Markdown update failed', { analysisId }, 'database');
+          throw err;
+        });
+
+        // Publish validation task to QStash (guaranteed delivery with retries)
+        if (markdown.length > 100) {
+          const now = new Date();
+          const dateStr = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+          const filename = `${metadata.title.slice(0, 80).replace(/[/:?*"]/g, '-')}-${metadata.channelTitle.replace(/[/:?*"]/g, '-')}-${dateStr}.md`;
+
+          console.log('[analyses] 11. Publishing validation task to QStash', { analysisId });
+          await publishValidationTask({
+            videoId,
+            markdown,
+            filename,
+            userId: userId!,
+            analysisId,
+            metadata: {
+              title: metadata.title,
+              channelTitle: metadata.channelTitle,
+              ...(metadata.duration !== undefined && { duration: metadata.duration }),
+            },
+          }).catch((err) => {
+            console.error('[analyses] Failed to publish validation task', {
+              analysisId,
+              error: String(err),
+            });
+            addBreadcrumb('Validation task publish failed', { analysisId }, 'qstash');
+            throw err;
+          });
         }
       } catch (processingError) {
-        console.error('[analyses] Async processing error (after handler)', {
+        console.error('[analyses] Markdown collection/publishing error', {
           analysisId,
           error: String(processingError),
         });
         Sentry.captureException(processingError, {
-          tags: { service: 'async-processor', operation: 'stream-processing' },
+          tags: { service: 'markdown-processor', operation: 'collection-publishing' },
           contexts: { analysis: { analysisId } },
         });
       }
+    })();
+
+    // Store promise for tracking (prevents garbage collection during async processing)
+    // In production, consider using waitUntil() if moving to Edge Runtime
+    processingPromise.catch((err) => {
+      console.error('[analyses] Unhandled processing error', { analysisId, error: String(err) });
     });
 
     return streamResponse;

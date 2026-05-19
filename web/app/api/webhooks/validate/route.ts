@@ -30,41 +30,23 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[validate-webhook] Request received');
 
-    // Fail fast: Validate mandatory environment variables before processing
-    const currentKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    // Read body once: needed for both signature verification and JSON parsing
+    const body = await request.text();
 
-    if (!currentKey) {
-      console.error('[validate-webhook] FATAL: QSTASH_CURRENT_SIGNING_KEY not configured');
-      return NextResponse.json(
-        { error: 'Server misconfiguration: QSTASH_CURRENT_SIGNING_KEY not set' },
-        { status: 503 }
-      );
-    }
-
-    if (!appUrl) {
-      console.error('[validate-webhook] FATAL: NEXT_PUBLIC_APP_URL not configured');
-      return NextResponse.json(
-        { error: 'Server misconfiguration: NEXT_PUBLIC_APP_URL not set' },
-        { status: 503 }
-      );
-    }
-
-    // Early Return Security: Verify QStash signature BEFORE parsing body
-    // Clone request to avoid consuming body stream during verification
-    const clonedForVerification = request.clone();
-    const verified = await verifyQStashSignature(clonedForVerification);
+    // Early Return Security: Verify QStash signature BEFORE parsing JSON
+    const signature = request.headers.get('upstash-signature') || '';
+    const verified = await verifyQStashSignature(signature, body);
     if (!verified) {
       console.warn('[validate-webhook] QStash signature verification failed');
       return NextResponse.json(
         { error: 'Unauthorized: Invalid QStash signature' },
-        { status: 403 }
+        { status: 401 }
       );
     }
     console.log('[validate-webhook] QStash signature verified');
 
-    // Parse QStash payload from original request (body stream still intact)
-    const payload: ValidationPayload = await request.json();
+    // Parse QStash payload from body string
+    const payload: ValidationPayload = JSON.parse(body);
     const { videoId, markdown, filename, userId, analysisId } = payload;
 
     console.log('[validate-webhook] Processing validation', {
@@ -173,10 +155,10 @@ export async function POST(request: NextRequest) {
       contexts: { timing: { duration } },
     });
 
-    // Return 5xx to signal Upstash QStash to retry on unexpected errors
+    // Return 503 to signal QStash to retry on unexpected errors
     return NextResponse.json(
       { error: errorMsg, success: false },
-      { status: 500 }
+      { status: 503 }
     );
   }
 }
