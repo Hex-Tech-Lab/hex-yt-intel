@@ -37,6 +37,18 @@ async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
 }
 
 export async function middleware(request: NextRequest) {
+  // CORS Preflight Handling (Fixes 401 on OPTIONS)
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { 
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Hex-Test-Secret',
+      },
+    });
+  }
+
   const { pathname } = request.nextUrl;
 
   // Explicitly allow public API routes to pass through without auth checks.
