@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
+import { unstable_after as after } from 'next/after';
+import { createHash, randomUUID } from 'crypto';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
@@ -9,7 +10,6 @@ import { AnalysisCreateSchema } from '@/lib/schemas';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
 import * as Sentry from '@sentry/nextjs';
 
-export const runtime = 'nodejs';
 import {
   trackExternalCall,
   trackDatabaseQuery,
@@ -19,6 +19,8 @@ import {
 import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
 import { publishValidationTask } from '@/lib/qstash-client';
+
+export const runtime = 'nodejs';
 
 async function fetchTranscript(videoId: string): Promise<string> {
   const controller = new AbortController();
@@ -302,22 +304,32 @@ export async function POST(request: NextRequest) {
     console.log('[analyses] 5. Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
     addBreadcrumb('Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
 
-    // 6. Fetch metadata from Worker (using centralized wrapper)
-    console.log('[analyses] 6. Fetching metadata from Cloudflare Worker', { videoId });
+    // 6. Fetch metadata AND transcript in parallel (non-blocking isolation)
+    console.log('[analyses] 6. Fetching metadata and transcript from Cloudflare Worker (parallel)', { videoId });
     let metadata: any;
-    try {
-      metadata = await trackExternalCall(
+    let transcript: string | null = null;
+
+    // Launch both operations in parallel to avoid blocking on external network operations
+    const [metadataResult, transcriptResult] = await Promise.allSettled([
+      trackExternalCall(
         'cloudflare-worker',
         'fetch-metadata',
         () => fetchWorkerMetadata(videoId),
         { videoId }
-      );
-      console.log('[analyses] 6. Metadata fetched', { videoId, title: metadata.title, channelTitle: metadata.channelTitle });
-      addBreadcrumb('Metadata fetched from worker', { videoId, title: metadata.title });
-    } catch (error) {
-      console.error('[analyses] 6. Metadata fetch failed', { videoId, error: String(error) });
-      addBreadcrumb('Worker call failed', { videoId, error: String(error) }, 'external_service');
-      Sentry.captureException(error, {
+      ),
+      trackExternalCall(
+        'cloudflare-worker',
+        'fetch-transcript',
+        () => fetchTranscript(videoId),
+        { videoId }
+      ),
+    ]);
+
+    // Handle metadata result (required - fail if unavailable)
+    if (metadataResult.status === 'rejected') {
+      console.error('[analyses] 6. Metadata fetch failed', { videoId, error: String(metadataResult.reason) });
+      addBreadcrumb('Worker call failed', { videoId, error: String(metadataResult.reason) }, 'external_service');
+      Sentry.captureException(metadataResult.reason, {
         tags: { service: 'cloudflare-worker', operation: 'fetch-metadata' },
         contexts: { video: { videoId } },
       });
@@ -325,6 +337,27 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to fetch video metadata' },
         { status: 500 }
       );
+    }
+
+    metadata = metadataResult.value;
+    console.log('[analyses] 6. Metadata fetched', { videoId, title: metadata.title, channelTitle: metadata.channelTitle });
+    addBreadcrumb('Metadata fetched from worker', { videoId, title: metadata.title });
+
+    // Handle transcript result (optional - graceful degradation on failure)
+    if (transcriptResult.status === 'fulfilled') {
+      transcript = transcriptResult.value;
+      console.log('[analyses] 6. Transcript fetched (parallel)', { videoId, length: transcript.length });
+      addBreadcrumb('Transcript fetched from worker', { videoId, length: transcript.length });
+    } else {
+      console.warn('[analyses] 6. Transcript fetch failed (non-blocking, proceeding with analysis)', { videoId, error: String(transcriptResult.reason) });
+      addBreadcrumb('Transcript unavailable (proceeding with metadata-only analysis)', { videoId, error: String(transcriptResult.reason) }, 'external_service');
+      Sentry.captureException(transcriptResult.reason, {
+        tags: { service: 'cloudflare-worker', operation: 'fetch-transcript' },
+        level: 'warning',
+        contexts: { video: { videoId } },
+      });
+      // Fallback: Use placeholder token to indicate unavailable captions
+      transcript = '[Transcript Unavailable: video lacks captions or is inaccessible]';
     }
 
     // 6.5 Persona selection (explicit param overrides auto-detection)
@@ -339,40 +372,20 @@ export async function POST(request: NextRequest) {
     const personaConfig = rankPersonas(finalPersona);
     addBreadcrumb('Persona configured', { persona: selectedPersona, ranks: personaConfig.map((p) => `${p.personaId}:${p.weight}%`).join(' ') });
 
-    // 7. Fetch transcript from Cloudflare Worker
-    console.log('[analyses] 7. Fetching transcript from worker', { videoId });
-    let transcript: string;
-    try {
-      transcript = await fetchTranscript(videoId);
-      console.log('[analyses] 7. Transcript fetched', { videoId, length: transcript.length });
-      addBreadcrumb('Transcript fetched from worker', { videoId, length: transcript.length });
-    } catch (error) {
-      console.error('[analyses] 7. Transcript fetch failed', { videoId, error: String(error) });
-      addBreadcrumb('Transcript fetch failed', { videoId, error: String(error) }, 'external_service');
-      Sentry.captureException(error, {
-        tags: { service: 'cloudflare-worker', operation: 'fetch-transcript' },
-        contexts: { video: { videoId } },
-      });
-      return NextResponse.json(
-        { error: 'Failed to fetch video transcript. Captions may be unavailable or the video may be inaccessible.' },
-        { status: 503 }
-      );
-    }
-
-    // 8. Call OpenRouter - stream response directly to client
-    console.log('[analyses] 8. OpenRouter call starting', { videoId, persona: finalPersona, timezone, duration: metadata.duration });
+    // 7. Call OpenRouter - stream response directly to client
+    console.log('[analyses] 7. OpenRouter call starting', { videoId, persona: finalPersona, timezone, duration: metadata.duration, transcriptAvailable: transcript !== '[Transcript Unavailable: video lacks captions or is inaccessible]' });
     let openrouterResponse: Response;
     try {
       openrouterResponse = await trackExternalCall(
         'openrouter',
         'claude-analysis',
-        () => callOpenRouter(metadata, transcript, finalPersona, timezone, metadata.duration || undefined),
+        () => callOpenRouter(metadata, transcript!, finalPersona, timezone, metadata.duration || undefined),
         { videoId }
       );
-      console.log('[analyses] 8. OpenRouter stream initiated successfully', { videoId });
+      console.log('[analyses] 7. OpenRouter stream initiated successfully', { videoId });
       addBreadcrumb('OpenRouter stream initiated', { videoId });
     } catch (error) {
-      console.error('[analyses] 8. OpenRouter call failed', { videoId, error: String(error) });
+      console.error('[analyses] 7. OpenRouter call failed', { videoId, error: String(error) });
 
       let statusCode = 500;
       let errorMessage = 'Failed to generate analysis';
@@ -395,7 +408,7 @@ export async function POST(request: NextRequest) {
 
     // 8.5 Create analysis record in database (before streaming) - BLOCKING INSERT
     console.log('[analyses] 9. Creating analysis record', { videoId, userId });
-    const analysisId = crypto.randomUUID();
+    const analysisId = randomUUID();
     try {
       await trackDatabaseQuery(
         'insert',
@@ -450,14 +463,17 @@ export async function POST(request: NextRequest) {
         'Pragma': 'no-cache',
         'X-Active-Persona': finalPersona,
         'X-Persona-Config': JSON.stringify(personaConfig),
+        'X-Analysis-Id': analysisId,
+        'X-Title': encodeURIComponent(metadata.title || 'Analysis Result'),
       },
     });
 
-    // CRITICAL: Process markdown collection and QStash publishing as a tracked Promise
-    // Must complete before function exit to guarantee QStash delivery and database consistency
-    console.log('[analyses] 11. Setting up markdown collection and QStash publishing', { analysisId });
-    const processingPromise = (async () => {
+    // 11. Schedule guaranteed background processing with unstable_after()
+    // Executes after response is sent to client, with guaranteed completion before function exit
+    console.log('[analyses] 11. Scheduling guaranteed background markdown collection and QStash publishing', { analysisId });
+    after(async () => {
       try {
+        console.log('[analyses] 11. Background: Markdown collection starting', { analysisId });
         const reader = collectorStream.getReader();
         const chunks: Uint8Array[] = [];
 
@@ -496,11 +512,11 @@ export async function POST(request: NextRequest) {
         }
 
         if (markdown.length === 0) {
-          console.warn('[analyses] 11. No markdown collected', { analysisId });
+          console.warn('[analyses] 11. Background: No markdown collected', { analysisId });
           return;
         }
 
-        console.log('[analyses] 11. Markdown collected, updating analysis record', { analysisId, length: markdown.length });
+        console.log('[analyses] 11. Background: Markdown collected, updating analysis record', { analysisId, length: markdown.length });
 
         // Update analysis record with collected markdown
         await trackDatabaseQuery(
@@ -518,7 +534,7 @@ export async function POST(request: NextRequest) {
           },
           { analysisId }
         ).catch((err) => {
-          console.warn('[analyses] Failed to update markdown', { analysisId, error: String(err) });
+          console.warn('[analyses] Background: Failed to update markdown', { analysisId, error: String(err) });
           addBreadcrumb('Markdown update failed', { analysisId }, 'database');
           throw err;
         });
@@ -529,7 +545,7 @@ export async function POST(request: NextRequest) {
           const dateStr = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
           const filename = `${metadata.title.slice(0, 80).replace(/[/:?*"]/g, '-')}-${metadata.channelTitle.replace(/[/:?*"]/g, '-')}-${dateStr}.md`;
 
-          console.log('[analyses] 11. Publishing validation task to QStash', { analysisId });
+          console.log('[analyses] 11. Background: Publishing validation task to QStash', { analysisId });
           await publishValidationTask({
             videoId,
             markdown,
@@ -542,7 +558,7 @@ export async function POST(request: NextRequest) {
               ...(metadata.duration !== undefined && { duration: metadata.duration }),
             },
           }).catch((err) => {
-            console.error('[analyses] Failed to publish validation task', {
+            console.error('[analyses] Background: Failed to publish validation task', {
               analysisId,
               error: String(err),
             });
@@ -550,28 +566,18 @@ export async function POST(request: NextRequest) {
             throw err;
           });
         }
+
+        console.log('[analyses] 11. Background: Processing complete', { analysisId });
       } catch (processingError) {
-        console.error('[analyses] Markdown collection/publishing error', {
+        console.error('[analyses] Background: Markdown collection/publishing error', {
           analysisId,
           error: String(processingError),
         });
         Sentry.captureException(processingError, {
-          tags: { service: 'markdown-processor', operation: 'collection-publishing' },
+          tags: { service: 'markdown-processor', operation: 'collection-publishing', context: 'background' },
           contexts: { analysis: { analysisId } },
         });
       }
-    })();
-
-    // Store promise for tracking (prevents garbage collection during async processing)
-    // In production, consider using waitUntil() if moving to Edge Runtime
-    processingPromise.catch((err) => {
-      console.error('[analyses] Unhandled processing error', { analysisId, error: String(err) });
-    });
-
-    // Store promise for tracking (prevents garbage collection during async processing)
-    // In production, consider using waitUntil() if moving to Edge Runtime
-    processingPromise.catch((err) => {
-      console.error('[analyses] Unhandled processing error', { analysisId, error: String(err) });
     });
 
     return streamResponse;
