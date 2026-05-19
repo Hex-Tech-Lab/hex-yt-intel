@@ -7,32 +7,27 @@
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
 import type { AnalysisResult } from '@/lib/types';
-import { consumeSSEStream } from '@/lib/streaming/decoder';
+import { parseSSELine } from '@/lib/streaming/decoder';
 
 export interface AnalysisState {
   // Current analysis
   analysis: AnalysisResult | null;
-  analysisId: string | null;
   isLoading: boolean;
   status: 'idle' | 'downloading' | 'parsing' | 'analyzing' | 'complete' | 'error';
   error: string | null;
 
   // Rate limit tracking
   lockoutTimeRemaining: number;
-  isLockedOut: boolean;
-  lockedUntil: number | null;
 
   // History (persisted for session)
   analysisHistory: AnalysisResult[];
 
   // Actions
   setAnalysis: (analysis: AnalysisResult | null) => void;
-  setAnalysisId: (id: string | null) => void;
   setIsLoading: (loading: boolean) => void;
   setStatus: (status: AnalysisState['status']) => void;
   setError: (error: string | null) => void;
   setLockoutTimeRemaining: (time: number) => void;
-  setLockedOut: (locked: boolean, until: number | null) => void;
   clearAnalysis: () => void;
   addToHistory: (analysis: AnalysisResult) => void;
   clearHistory: () => void;
@@ -41,61 +36,25 @@ export interface AnalysisState {
   startAnalysis: (url: string, timezone: string) => Promise<void>;
 }
 
-function sanitizeErrorContext(error: unknown, context?: Record<string, any>): Record<string, any> {
-  const sanitized: Record<string, any> = {};
-
-  if (error instanceof Error) {
-    sanitized.message = error.message;
-    if (error.stack) {
-      const stackLines = error.stack.split('\n').slice(0, 3);
-      sanitized.stack = stackLines.join('\n');
-    }
-  }
-
-  if (context) {
-    for (const [key, value] of Object.entries(context)) {
-      if (typeof value === 'string') {
-        if (value.includes('youtube.com') || value.includes('youtu.be')) {
-          sanitized[key] = 'https://youtube.com/watch?v=***';
-        } else if (value.includes('@')) {
-          sanitized[key] = 'user@***';
-        } else {
-          sanitized[key] = value;
-        }
-      } else {
-        sanitized[key] = value;
-      }
-    }
-  }
-
-  return sanitized;
-}
-
 export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   // Initial state
   analysis: null,
-  analysisId: null,
   isLoading: false,
   status: 'idle',
   error: null,
   lockoutTimeRemaining: 0,
-  isLockedOut: false,
-  lockedUntil: null,
   analysisHistory: [],
 
   // Synchronous actions
   setAnalysis: (analysis) => set({ analysis }),
-  setAnalysisId: (id) => set({ analysisId: id }),
   setIsLoading: (loading) => set({ isLoading: loading }),
   setStatus: (status) => set({ status }),
   setError: (error) => set({ error }),
   setLockoutTimeRemaining: (time) => set({ lockoutTimeRemaining: time }),
-  setLockedOut: (locked, until) => set({ isLockedOut: locked, lockedUntil: until }),
 
   clearAnalysis: () =>
     set({
       analysis: null,
-      analysisId: null,
       isLoading: false,
       status: 'idle',
       error: null,
@@ -103,17 +62,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
   addToHistory: (analysis) =>
     set((state) => {
-      const existing = state.analysisHistory.find((a) => a.id === analysis.id);
-      let updated: AnalysisResult[];
-
-      if (existing) {
-        updated = state.analysisHistory.map((a) =>
-          a.id === analysis.id ? { ...a, ...analysis } : a
-        );
-      } else {
-        updated = [analysis, ...state.analysisHistory].slice(0, 20);
-      }
-
+      const updated = [analysis, ...state.analysisHistory].slice(0, 20);
       return { analysisHistory: updated };
     }),
 
@@ -132,7 +81,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       },
       async () => {
         try {
-          set({ isLoading: true, status: 'downloading', error: null, isLockedOut: false });
+          set({ isLoading: true, status: 'downloading', error: null });
 
           const response = await Sentry.startSpan(
             { name: 'POST /api/analyses', op: 'http.client' },
@@ -148,63 +97,109 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             const errorMsg = errorData.error || `HTTP ${response.status}`;
-
-            if (response.status === 429) {
-              const retryAfterHeader = response.headers.get('Retry-After');
-              const retryAfterSeconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : 60;
-              const lockedUntil = Date.now() + retryAfterSeconds * 1000;
-
-              set({ error: errorMsg, status: 'error', isLoading: false, isLockedOut: true, lockedUntil });
-              Sentry.captureMessage('Rate limited: too many requests', 'warning');
-              return;
-            }
-
             set({ error: errorMsg, status: 'error', isLoading: false });
-            const sanitized = sanitizeErrorContext(new Error(errorMsg), { statusCode: response.status });
             Sentry.captureException(new Error(errorMsg), {
               tags: { operation: 'startAnalysis', phase: 'http_response' },
-              contexts: { response: sanitized },
+              contexts: { response: { statusCode: response.status } },
             });
             return;
           }
 
           set({ status: 'parsing' });
 
-          const reader = response.body?.getReader();
-          if (!reader) {
-            const error = new Error('Response body not readable');
-            set({ error: error.message, status: 'error', isLoading: false });
-            Sentry.captureException(error, {
-              tags: { operation: 'startAnalysis', phase: 'stream_setup' },
-            });
-            return;
-          }
+          // Check Content-Type to determine response format
+          const contentType = response.headers.get('content-type') || '';
+          const isSSEStream = contentType.includes('text/event-stream');
 
           let markdown = '';
-          set({ status: 'analyzing' });
 
-          await Sentry.startSpan(
-            { name: 'consume SSE stream', op: 'stream.parse' },
-            async () => {
-              await consumeSSEStream(
-                reader,
-                (token) => {
-                  markdown += token;
-                },
-                (error, phase) => {
-                  Sentry.captureException(error, {
-                    tags: { operation: 'startAnalysis', phase: `stream_${phase}` },
-                    level: phase === 'parse' ? 'warning' : 'error',
-                  });
+          if (isSSEStream) {
+            // Handle SSE streaming response (from OpenRouter)
+            const reader = response.body?.getReader();
+            if (!reader) {
+              const error = new Error('Response body not readable');
+              set({ error: error.message, status: 'error', isLoading: false });
+              Sentry.captureException(error, {
+                tags: { operation: 'startAnalysis', phase: 'stream_setup' },
+              });
+              return;
+            }
 
-                  if (phase === 'read') {
+            set({ status: 'analyzing' });
+
+            await Sentry.startSpan(
+              { name: 'consume SSE stream', op: 'stream.parse' },
+              async () => {
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                  try {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                      // Process final incomplete line if buffer not empty
+                      if (buffer.trim()) {
+                        try {
+                          const token = parseSSELine(buffer);
+                          if (token) markdown += token;
+                        } catch (parseError) {
+                          Sentry.captureException(parseError, {
+                            tags: { operation: 'startAnalysis', phase: 'stream_final_line' },
+                            level: 'warning',
+                          });
+                        }
+                      }
+                      break;
+                    }
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Retain incomplete line
+
+                    for (const line of lines) {
+                      try {
+                        const token = parseSSELine(line);
+                        if (token) markdown += token;
+                      } catch (parseError) {
+                        Sentry.captureException(parseError, {
+                          tags: { operation: 'startAnalysis', phase: 'stream_chunk_parse' },
+                          level: 'warning',
+                        });
+                      }
+                    }
+                  } catch (readError) {
+                    Sentry.captureException(readError, {
+                      tags: { operation: 'startAnalysis', phase: 'stream_read' },
+                    });
                     set({ error: 'Stream reading error', status: 'error', isLoading: false });
-                    throw error;
+                    throw readError;
                   }
                 }
-              );
+              }
+            );
+          } else {
+            // Handle JSON response (cache hit or error response)
+            set({ status: 'analyzing' });
+            try {
+              const jsonData = await response.json();
+              // Extract markdown from cached JSON response
+              if (jsonData.markdown) {
+                markdown = jsonData.markdown;
+                Sentry.captureMessage('Analysis loaded from cache (JSON)', 'info');
+              } else if (jsonData.error) {
+                // This is an error response, not a valid analysis
+                throw new Error(jsonData.error);
+              } else {
+                throw new Error('Invalid response format: no markdown or error field');
+              }
+            } catch (jsonError) {
+              Sentry.captureException(jsonError, {
+                tags: { operation: 'startAnalysis', phase: 'json_parse' },
+              });
+              set({ error: jsonError instanceof Error ? jsonError.message : 'Invalid response', status: 'error', isLoading: false });
+              return;
             }
-          );
+          }
 
           if (!markdown) {
             const error = new Error('Empty response from API');
@@ -215,10 +210,9 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
             return;
           }
 
-          const currentAnalysisId = get().analysisId;
           set({
             analysis: {
-              id: currentAnalysisId || url,
+              id: url,
               markdown,
               title: 'Analysis Result',
             },
@@ -226,7 +220,7 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
             isLoading: false,
           });
 
-          // Add to history (deduplication by analysisId)
+          // Add to history
           const state = get();
           if (state.analysis) {
             state.addToHistory(state.analysis);
@@ -237,13 +231,14 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           const errorMsg = error instanceof Error ? error.message : String(error);
           set({ error: errorMsg, status: 'error', isLoading: false });
 
-          const sanitized = sanitizeErrorContext(error, {
-            currentStatus: get().status,
-            hasAnalysis: !!get().analysis,
-          });
           Sentry.captureException(error, {
             tags: { operation: 'startAnalysis', phase: 'unhandled' },
-            contexts: { store: sanitized },
+            contexts: {
+              store: {
+                currentStatus: get().status,
+                hasAnalysis: !!get().analysis,
+              },
+            },
           });
         }
       }
