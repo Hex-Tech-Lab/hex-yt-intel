@@ -12,9 +12,19 @@ export function useSSEStream() {
     archiveCurrentAnalysis,
   } = useAnalysisStore();
 
+  const extractTelemetryId = (urlStr: string) => {
+    try {
+      const parsed = new URL(urlStr);
+      if (parsed.hostname.includes('youtu.be')) return parsed.pathname.slice(1);
+      if (parsed.pathname.includes('/embed/') || parsed.pathname.includes('/v/')) return parsed.pathname.split('/')[2];
+      return parsed.searchParams.get('v') || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  };
+
   const startAnalysis = async (url: string, timezone: string) => {
-    const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-    const videoId = videoIdMatch?.[1] || 'unknown';
+    const videoId = extractTelemetryId(url);
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
 
     return Sentry.startSpan(

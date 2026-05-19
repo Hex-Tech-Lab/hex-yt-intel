@@ -458,7 +458,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 10. Process blocking database inserts
+    // 10. Process blocking database inserts in background
     (async () => {
       console.log('[analyses] 10. Background Task: Creating analysis record', { videoId, userId });
       try {
