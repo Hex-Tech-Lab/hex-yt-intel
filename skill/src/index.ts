@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { ULTIMATE_CONTENT_INTELLIGENCE_V3_2 } from "./prompts";
 
 const CLOUDFLARE_WORKER_URL =
@@ -11,6 +12,38 @@ if (!CLOUDFLARE_SECRET_TOKEN) {
     "Missing CLOUDFLARE_SECRET_TOKEN environment variable. Please set it to authenticate with the worker."
   );
 }
+
+const youtubeUrlSchema = z
+  .string()
+  .refine((url) => {
+    if (!url.match(/^https?:\/\//)) url = "https://" + url;
+    try {
+      const parsed = new URL(url);
+      return (
+        parsed.hostname.includes("youtube.com") || parsed.hostname.includes("youtu.be")
+      );
+    } catch {
+      return false;
+    }
+  }, "Invalid YouTube URL")
+  .transform((url) => {
+    if (!url.match(/^https?:\/\//)) url = "https://" + url;
+    const parsed = new URL(url);
+    let videoId = "";
+    if (parsed.hostname.includes("youtu.be")) {
+      videoId = parsed.pathname.slice(1);
+    } else if (parsed.pathname.startsWith("/embed/")) {
+      videoId = parsed.pathname.split("/")[2] ?? "";
+    } else if (parsed.pathname.startsWith("/v/")) {
+      videoId = parsed.pathname.split("/")[2] ?? "";
+    } else {
+      videoId = parsed.searchParams.get("v") ?? "";
+    }
+    return videoId;
+  })
+  .refine((id) => /^[a-zA-Z0-9_-]{11}$/.test(id), {
+    message: "Invalid video ID format",
+  });
 
 interface YouTubeMetadata {
   videoId: string;
@@ -27,38 +60,14 @@ interface YouTubeMetadata {
 }
 
 function parseYouTubeUrl(url: string): string {
-  // Normalize to HTTPS
-  url = url.replace(/^http:/, "https:");
-
-  // Validate domain
-  if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
+  const result = youtubeUrlSchema.safeParse(url);
+  if (!result.success) {
+    const errors = result.error.issues.map((issue) => issue.message).join("; ");
     throw new Error(
-      `Invalid YouTube URL: ${url}. Must be from youtube.com or youtu.be`
+      `Invalid YouTube URL: ${url}. ${errors}. Expected format: https://www.youtube.com/watch?v=VIDEO_ID`
     );
   }
-
-  const patterns = [
-    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-    /(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) {
-      const videoId = match[1];
-      // Validate video ID format
-      if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-        throw new Error(`Invalid video ID format: ${videoId}`);
-      }
-      return videoId;
-    }
-  }
-
-  throw new Error(
-    `Invalid YouTube URL: ${url}. Expected format: https://www.youtube.com/watch?v=VIDEO_ID`
-  );
+  return result.data;
 }
 
 async function fetchMetadata(
