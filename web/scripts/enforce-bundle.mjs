@@ -68,6 +68,8 @@ function getFileSize(filePath) {
 /**
  * Extract JavaScript files for a specific route from build manifest
  * Validates both build-manifest.json and app-build-manifest.json across App Router entrypoints
+ * Next.js 13+ (App Router): Uses rootMainFiles['/'] — all shared entry chunks for root layout
+ * Next.js 12 (Pages Router): Uses pages['/'] — legacy pages entry point (fallback only)
  */
 function getRouteJavaScriptAssets() {
   // Try primary manifest first, then fall back to app-build manifest
@@ -147,7 +149,7 @@ function enforceBundle() {
 
   console.log(`${colorize('Route:', colors.blue)} /`);
   console.log(`${colorize('Files:', colors.blue)} ${files.length} JavaScript chunks`);
-  console.log(`${colorize('Files:', colors.blue)}`);
+  console.log(`${colorize('Chunks:', colors.blue)}`);
   files.forEach((file) => {
     const filePath = path.join(nextArtifactsPath, file);
     const fileSize = getFileSize(filePath);

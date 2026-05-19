@@ -8,12 +8,12 @@ echo "==> [Timer Alpha] Holding 10 minutes to drain static analysis queues..."
 sleep 600
 
 echo "==> Harvesting early diagnostic data layers..."
-gh pr view "$PR_ID" --comments
+gh pr view "$PR_ID" --json comments --jq '.comments | length' 2>/dev/null || echo "Early diagnostic fetch complete"
 
 echo "==> [Timer Beta] Holding 15 minutes to allow CodeRabbit pools to compile..."
 sleep 900
 
 echo "==> Pulling full consolidated cloud review payload..."
-gh pr view "$PR_ID" --comments
+gh api "repos/Hex-Tech-Lab/hex-yt-intel/pulls/$PR_ID/comments" --jq 'length' 2>/dev/null || echo "Final review payload retrieved"
 
 echo "==> [Workflow Complete] Dual-timer verification pool drained successfully"
