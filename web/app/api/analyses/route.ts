@@ -17,6 +17,8 @@ import {
 } from '@/lib/monitoring/sentry-utils';
 import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
+import { publishValidationTask } from '@/lib/qstash-client';
+import { parseSSELine } from '@/lib/streaming/decoder';
 
 export const runtime = 'nodejs';
 
@@ -180,7 +182,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Extract video ID
     const videoId = extractVideoId(validation.data.url);
-    if (!videoId) {
+    if (!videoId || videoId === 'unknown') {
       addBreadcrumb('Invalid YouTube URL provided', { url: validation.data.url }, 'validation');
       return NextResponse.json(
         { error: 'Invalid YouTube URL' },
@@ -404,42 +406,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8.5 Create analysis record in database (before streaming) - BLOCKING INSERT
-    console.log('[analyses] 9. Creating analysis record', { videoId, userId });
+    // 8.5 Generate analysis ID (non-blocking, used for headers and background task)
     const analysisId = randomUUID();
-    try {
-      await trackDatabaseQuery(
-        'insert',
-        'analyses',
-        async () => {
-          const { error } = await supabase
-            .from('analyses')
-            .insert({
-              id: analysisId,
-              video_id: videoId,
-              user_id: userId,
-              title: metadata.title,
-              markdown: '', // Will be populated after streaming
-              model_attempted: 'anthropic/claude-haiku-4.5',
-              model_used: 'anthropic/claude-haiku-4.5',
-              validation_report: null,
-              validation_passed: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-          if (error) throw error;
-        },
-        { analysisId, videoId, userId }
-      );
-    } catch (insertErr) {
-      console.error('[analyses] Failed to create analysis record', { analysisId, error: String(insertErr) });
-      addBreadcrumb('Analysis record creation failed', { analysisId }, 'database');
-      Sentry.captureException(insertErr, { tags: { operation: 'analysis-insert' } });
-      return NextResponse.json(
-        { error: 'Failed to create analysis record' },
-        { status: 500 }
-      );
-    }
 
     // 9.5 Return streaming response with SSE normalization for Claude 4.5 compatibility
     // Transform raw OpenRouter stream to normalize Claude 4.5's delta format
@@ -447,9 +415,10 @@ export async function POST(request: NextRequest) {
     addBreadcrumb('Streaming analysis response to client', { videoId });
 
     const transformedStream = openrouterResponse.body!.pipeThrough(createClaudeStreamNormalizer());
+    const [clientStream, processorStream] = transformedStream.tee();
 
     // Inject persona header and wrap stream in response
-    const streamResponse = new Response(transformedStream, {
+    const streamResponse = new Response(clientStream, {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
@@ -463,11 +432,94 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // NOTE: unstable_after() not available in Next.js 15.5.18 public API
-    // Background processing deferred to Task 2 (CC-2) once native API support is available
-    // For now, markdown collection and QStash publishing are handled asynchronously (non-blocking)
-    // Placeholder comment for background task integration point:
-    // after(async () => { ... })
+    // 10. Process blocking database inserts
+    (async () => {
+      console.log('[analyses] 10. Background Task: Creating analysis record', { videoId, userId });
+      try {
+        await trackDatabaseQuery(
+          'insert',
+          'analyses',
+          async () => {
+            const { error } = await supabase
+              .from('analyses')
+              .insert({
+                id: analysisId,
+                video_id: videoId,
+                user_id: userId,
+                title: metadata.title,
+                markdown: '', // Will be populated after streaming
+                model_attempted: 'anthropic/claude-haiku-4.5',
+                model_used: 'anthropic/claude-haiku-4.5',
+                validation_report: null,
+                validation_passed: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              });
+            if (error) throw error;
+          },
+          { analysisId, videoId, userId }
+        );
+
+        // Collect markdown from processorStream
+        const reader = processorStream.getReader();
+        const decoder = new TextDecoder();
+        let markdown = '';
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            if (buffer.trim()) {
+              const token = parseSSELine(buffer);
+              if (token) markdown += token;
+            }
+            break;
+          }
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            const token = parseSSELine(line);
+            if (token) markdown += token;
+          }
+        }
+
+        // Update DB with markdown
+        await trackDatabaseQuery(
+          'update',
+          'analyses',
+          async () => {
+            const { error } = await supabase
+              .from('analyses')
+              .update({ markdown, updated_at: new Date().toISOString() })
+              .eq('id', analysisId);
+            if (error) throw error;
+          },
+          { analysisId }
+        );
+
+        // Publish to QStash
+        await publishValidationTask({
+          videoId,
+          markdown,
+          filename: `${videoId}.md`,
+          userId: userId || 'anonymous',
+          analysisId,
+          metadata: {
+            title: metadata.title,
+            channelTitle: metadata.channelTitle,
+            duration: metadata.duration
+          }
+        });
+      } catch (insertErr) {
+        console.error('[analyses] Failed to create analysis record in background', { analysisId, error: String(insertErr) });
+        addBreadcrumb('Background analysis record creation failed', { analysisId }, 'database');
+        Sentry.captureException(insertErr, { tags: { operation: 'background-analysis-insert' } });
+      }
+    })().catch((err) => {
+      console.error('[analyses] Unhandled error in background task', err);
+      Sentry.captureException(err, { tags: { operation: 'background-task-error' } });
+    });
 
     return streamResponse;
   } catch (error) {
