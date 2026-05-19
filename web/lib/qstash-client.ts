@@ -96,6 +96,7 @@ export async function publishEmbeddingTask(payload: {
 /**
  * Verify QStash signature (for webhook security)
  * Uses HMAC-SHA256 verification against current and next signing keys
+ * @returns Promise<boolean> - explicitly true on successful verification, false on any failure or misconfiguration
  */
 export async function verifyQStashSignature(
   request: Request
@@ -120,7 +121,8 @@ export async function verifyQStashSignature(
       body,
     }).catch(() => false);
 
-    return verified;
+    // Explicitly return boolean true only if verification succeeded
+    return verified === true;
   } catch (error) {
     console.warn('[qstash] Signature verification failed', {
       error: error instanceof Error ? error.message : String(error),
