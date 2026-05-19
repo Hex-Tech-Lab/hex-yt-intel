@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { createServerClient } from '@supabase/ssr';
+import { timingSafeEqual } from 'crypto';
 
 async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
   try {
@@ -29,11 +30,27 @@ async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Secure test validation bypass — allows E2E test suites to bypass auth
+  // Development-only test validation bypass — allows E2E test suites to bypass auth
+  // Requires DEV_BYPASS_TOKEN environment variable (unset in production for safety)
+  const isProduction = process.env.NODE_ENV === 'production';
+  const devBypassToken = process.env.DEV_BYPASS_TOKEN;
   const testSecret = request.headers.get('X-Hex-Test-Secret');
-  if (testSecret === 'hex_secure_local_wsl_validation_token_string') {
-    console.info('[middleware] Secure validation signature matched. Halting downstream actions.');
-    return NextResponse.next(); // ← CRITICAL: MUST RETURN EXPLICITLY TO EXIT THE FUNCTION
+
+  if (!isProduction && devBypassToken && testSecret) {
+    try {
+      const testSecretBuf = Buffer.from(testSecret);
+      const expectedBuf = Buffer.from(devBypassToken);
+      const isValidBypass = testSecretBuf.length === expectedBuf.length &&
+        timingSafeEqual(testSecretBuf, expectedBuf);
+
+      if (isValidBypass) {
+        console.info('[middleware] Development bypass token validated. Halting downstream actions.');
+        return NextResponse.next(); // ← CRITICAL: MUST RETURN EXPLICITLY TO EXIT THE FUNCTION
+      }
+    } catch {
+      // Token comparison failed — treat as unauthorized bypass attempt
+      console.warn('[middleware] Invalid bypass token format');
+    }
   }
 
   // Protected routes (require auth)

@@ -6,33 +6,19 @@
 
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
-import type { AnalysisResult } from '@/lib/types';
+import type { AnalysisResult, UseAnalysisStreamState, AnalysisStatus } from '@/lib/types';
 import { parseSSELine } from '@/lib/streaming/decoder';
 
-export interface AnalysisState {
-  // Current analysis
-  analysis: AnalysisResult | null;
-  isLoading: boolean;
-  status: 'idle' | 'downloading' | 'parsing' | 'analyzing' | 'complete' | 'error';
-  error: string | null;
-
-  // Rate limit tracking
-  lockoutTimeRemaining: number;
-
-  // History (persisted for session)
+export interface AnalysisState extends UseAnalysisStreamState {
   analysisHistory: AnalysisResult[];
-
-  // Actions
   setAnalysis: (analysis: AnalysisResult | null) => void;
   setIsLoading: (loading: boolean) => void;
-  setStatus: (status: AnalysisState['status']) => void;
+  setStatus: (status: AnalysisStatus) => void;
   setError: (error: string | null) => void;
   setLockoutTimeRemaining: (time: number) => void;
   clearAnalysis: () => void;
   addToHistory: (analysis: AnalysisResult) => void;
   clearHistory: () => void;
-
-  // Observable async operations (wrapped in Sentry spans)
   startAnalysis: (url: string, timezone: string) => Promise<void>;
 }
 
@@ -70,13 +56,22 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
   // Observable async operation with Sentry instrumentation
   startAnalysis: async (url: string, timezone: string) => {
+    // Extract videoId from URL for telemetry (redact raw URL to preserve PII compliance)
+    const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    const videoId = videoIdMatch?.[1] || 'unknown';
+
+    // Validate timezone against IANA naming conventions (alphanumeric + underscore/dash)
+    const isValidTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone);
+    const safeTimezone = isValidTimezone ? timezone : 'UTC';
+
     return Sentry.startSpan(
       {
         name: 'stream_analysis',
         op: 'http.client',
         attributes: {
-          url,
-          timezone,
+          videoId, // Safe: extracted identifier only
+          timezone: safeTimezone, // Safe: validated IANA format
+          // Removed: raw 'url' field to prevent PII leakage via user-provided content
         },
       },
       async () => {

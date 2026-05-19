@@ -46,9 +46,13 @@ async function fetchVercelLogs(deploymentId: string): Promise<unknown[]> {
 test.describe('Headed Production E2E — Visible Stream + Vercel Telemetry', () => {
 
   test.beforeEach(async ({ page }) => {
-    // Inject secure test validation header on all HTTP requests
+    // Inject development bypass token via environment variable (DEV_BYPASS_TOKEN)
+    const devBypassToken = process.env.DEV_BYPASS_TOKEN;
+    if (!devBypassToken) {
+      throw new Error('DEV_BYPASS_TOKEN environment variable is required for E2E testing');
+    }
     await page.setExtraHTTPHeaders({
-      'X-Hex-Test-Secret': 'hex_secure_local_wsl_validation_token_string',
+      'X-Hex-Test-Secret': devBypassToken,
     });
   });
 

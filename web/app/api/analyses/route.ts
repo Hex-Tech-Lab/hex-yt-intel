@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
@@ -27,38 +28,54 @@ async function fetchTranscript(videoId: string): Promise<string> {
     const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
 
     if (!workerUrl || workerUrl.includes('[build-time-placeholder')) {
-      clearTimeout(timeout);
       throw new Error('Cloudflare Worker URL not configured in production environment');
     }
 
-    const transcriptUrl = `${workerUrl}/fetch-transcript?video_id=${videoId}`;
-    const response = await fetch(transcriptUrl, {
-      method: 'GET',
-      signal: controller.signal,
-    });
+    // Validate worker URL against SSRF allowlist (must be Cloudflare Workers domain or approved production origin)
+    const allowedOrigins = [
+      'yt-intel.hex-tech-lab.workers.dev',
+      'workers.dev', // Allow any Cloudflare Workers domain
+    ];
+    const urlObj = new URL(workerUrl);
+    const isAllowedOrigin = allowedOrigins.some(origin => urlObj.hostname.endsWith(origin));
 
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      throw new Error(`Worker returned ${response.status} for transcript fetch`);
+    if (!isAllowedOrigin) {
+      console.error('[fetchTranscript] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });
+      throw new Error(`Worker URL origin '${urlObj.hostname}' is not in approved allowlist. SSRF prevention enforced.`);
     }
 
-    const data = await response.json();
+    const transcriptUrl = new URL(`${workerUrl}/fetch-transcript`);
+    transcriptUrl.searchParams.set('video_id', videoId);
 
-    if (!data.transcript || typeof data.transcript !== 'string') {
-      throw new Error('Worker returned invalid transcript format');
+    try {
+      const response = await fetch(transcriptUrl.toString(), {
+        method: 'GET',
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Worker returned ${response.status} for transcript fetch`);
+      }
+
+      const data = await response.json();
+
+      if (!data.transcript || typeof data.transcript !== 'string') {
+        throw new Error('Worker returned invalid transcript format');
+      }
+
+      return data.transcript;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
+      throw new Error(`Failed to fetch transcript from Cloudflare Worker: ${errorMsg}`);
     }
-
-    return data.transcript;
   } catch (error) {
-    clearTimeout(timeout);
-
     const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
-
-    // Hard failure: never return placeholder, always throw
     const fullError = new Error(`Failed to fetch transcript from Cloudflare Worker: ${errorMsg}`);
     console.error('[fetchTranscript] CRITICAL:', fullError);
     throw fullError;
+  } finally {
+    // Guarantee timeout cleanup on both successful returns and unexpected exceptions
+    clearTimeout(timeout);
   }
 }
 
@@ -70,15 +87,31 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[analyses] 1. Request received - parsing body');
 
-    // Secure test validation bypass — allows E2E test suites to bypass auth
-    const testSecret = request.headers.get('X-Hex-Test-Secret');
+    // sec_002: Force environment gating & hardened bypass header (production safety circuit-breaker)
+    const allowDevBypass = process.env.ALLOW_DEV_BYPASS === 'true';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const bypassSignature = request.headers.get('X-Hex-Dev-Bypass-Signature');
+    const devBypassToken = process.env.DEV_BYPASS_TOKEN;
     let userEmail = '';
     let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined;
 
-    if (testSecret === 'hex_secure_local_wsl_validation_token_string') {
+    // Instantly isolate bypass logic from production build universe
+    const shouldAttemptBypass = !isProduction && allowDevBypass && devBypassToken && bypassSignature === devBypassToken;
+
+    if (shouldAttemptBypass) {
+      // sec_001: Harden user context attribution (fail-fast on missing email)
+      const testUserEmail = process.env.DEV_TEST_USER_EMAIL;
+      if (!testUserEmail || testUserEmail.trim() === '') {
+        console.error('[analyses] Bypass attempted but DEV_TEST_USER_EMAIL is missing or blank');
+        return NextResponse.json(
+          { error: 'Invalid development configuration' },
+          { status: 500 }
+        );
+      }
+
       console.info('[analyses] Secure validation bypass detected - using persistent test user');
       userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
-      userEmail = 'kellybakri@gmail.com';
+      userEmail = testUserEmail;
       userTierAuth = 'free';
     } else {
       // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
@@ -94,7 +127,10 @@ export async function POST(request: NextRequest) {
       userEmail = session?.user?.email || '';
       userTierAuth = await getUserTier(userId);
     }
-    console.log('[analyses] 2. Auth success', { userId, email: userEmail, tier: userTierAuth });
+
+    // qual_002: Improve observability signal with non-PII correlation identifier
+    const emailHash = userEmail ? createHash('sha256').update(userEmail).digest('hex').substring(0, 8) : 'unknown';
+    console.log('[analyses] 2. Auth success', { userId, correlationId: emailHash, tier: userTierAuth });
 
     // Set user context for Sentry
     setUserContext(userId, userEmail || '', userTierAuth);
@@ -507,6 +543,12 @@ export async function POST(request: NextRequest) {
         });
       }
     })();
+
+    // Store promise for tracking (prevents garbage collection during async processing)
+    // In production, consider using waitUntil() if moving to Edge Runtime
+    processingPromise.catch((err) => {
+      console.error('[analyses] Unhandled processing error', { analysisId, error: String(err) });
+    });
 
     // Store promise for tracking (prevents garbage collection during async processing)
     // In production, consider using waitUntil() if moving to Edge Runtime
