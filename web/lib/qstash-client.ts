@@ -122,7 +122,8 @@ export async function verifyQStashSignature(
       body,
     }).catch(() => false);
 
-    return verified;
+    // Explicitly return boolean true only if verification succeeded
+    return verified === true;
   } catch (error) {
     console.warn('[qstash] Signature verification failed', {
       error: error instanceof Error ? error.message : String(error),
