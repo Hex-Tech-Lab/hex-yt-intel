@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
 import type { AnalysisResult } from '@/lib/types';
-import { parseSSELine } from '@/lib/streaming/decoder';
+import { consumeSSEStream } from '@/lib/streaming/decoder';
 
 export interface AnalysisState {
   // Current analysis
@@ -186,37 +186,23 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           await Sentry.startSpan(
             { name: 'consume SSE stream', op: 'stream.parse' },
             async () => {
-              const decoder = new TextDecoder();
-              let buffer = '';
-
-              while (true) {
-                try {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-
-                  buffer += decoder.decode(value, { stream: true });
-                  const lines = buffer.split('\n');
-                  buffer = lines.pop() || ''; // Retain incomplete line
-
-                  for (const line of lines) {
-                    try {
-                      const token = parseSSELine(line);
-                      if (token) markdown += token;
-                    } catch (parseError) {
-                      Sentry.captureException(parseError, {
-                        tags: { operation: 'startAnalysis', phase: 'stream_chunk_parse' },
-                        level: 'warning',
-                      });
-                    }
-                  }
-                } catch (readError) {
-                  Sentry.captureException(readError, {
-                    tags: { operation: 'startAnalysis', phase: 'stream_read' },
+              await consumeSSEStream(
+                reader,
+                (token) => {
+                  markdown += token;
+                },
+                (error, phase) => {
+                  Sentry.captureException(error, {
+                    tags: { operation: 'startAnalysis', phase: `stream_${phase}` },
+                    level: phase === 'parse' ? 'warning' : 'error',
                   });
-                  set({ error: 'Stream reading error', status: 'error', isLoading: false });
-                  throw readError;
+
+                  if (phase === 'read') {
+                    set({ error: 'Stream reading error', status: 'error', isLoading: false });
+                    throw error;
+                  }
                 }
-              }
+              );
             }
           );
 
