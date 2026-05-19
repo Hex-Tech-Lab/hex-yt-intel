@@ -66,12 +66,12 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   appendMarkdown: (token) =>
     set((state) => ({
       analysis: state.analysis
-        ? { ...state.analysis, markdown: state.analysis.markdown + token }
+        ? { ...state.analysis, analysis_markdown: state.analysis.analysis_markdown + token }
         : null,
     })),
 
   initializeAnalysis: (id, title, initialMarkdown = '') =>
     set({
-      analysis: { id, title, markdown: initialMarkdown },
+      analysis: { id, title, analysis_markdown: initialMarkdown },
     }),
 }));

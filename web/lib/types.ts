@@ -6,7 +6,7 @@
 export interface AnalysisResult {
   id: string;
   title: string;
-  markdown: string;
+  analysis_markdown: string;
 }
 
 export interface AnalysisMetadata {

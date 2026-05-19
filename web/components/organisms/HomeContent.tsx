@@ -68,7 +68,7 @@ export default function HomeContent() {
   const handleExport = () => {
     if (!analysis) return;
     const element = document.createElement('a');
-    const blob = new Blob([analysis.markdown], { type: 'text/markdown;charset=utf-8' });
+    const blob = new Blob([analysis.analysis_markdown], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     element.setAttribute('href', url);
     element.setAttribute('download', `${analysis.title}.md`);
@@ -126,7 +126,7 @@ export default function HomeContent() {
               <h2 className="text-3xl font-bold mb-6">{analysis.title}</h2>
               <div className="prose prose-sm max-w-none">
                 <div className="whitespace-pre-wrap text-gray-800 font-mono text-sm leading-relaxed">
-                  {analysis.markdown}
+                  {analysis.analysis_markdown}
                 </div>
               </div>
             </div>
