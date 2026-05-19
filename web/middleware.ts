@@ -39,6 +39,20 @@ async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Explicitly allow public API routes to pass through without auth checks.
+  // This includes auth callbacks, webhooks, public health checks, and metadata requests.
+  const publicRoutes = [
+    '/api/auth',           // NextAuth callbacks
+    '/api/stripe',         // Stripe webhooks
+    '/api/webhooks',       // Generic webhooks
+    '/api/health',         // Health check endpoint
+    '/api/metadata',       // Public video metadata endpoint
+  ];
+
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
   // Development-only test validation bypass — allows E2E test suites to bypass auth
   // Requires DEV_BYPASS_TOKEN environment variable (unset in production for safety)
   const isProduction = process.env.NODE_ENV === 'production';
