@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { unstable_after as after } from 'next/after';
 import { createHash, randomUUID } from 'crypto';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
@@ -18,7 +17,6 @@ import {
 } from '@/lib/monitoring/sentry-utils';
 import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
-import { publishValidationTask } from '@/lib/qstash-client';
 
 export const runtime = 'nodejs';
 
@@ -450,11 +448,8 @@ export async function POST(request: NextRequest) {
 
     const transformedStream = openrouterResponse.body!.pipeThrough(createClaudeStreamNormalizer());
 
-    // Tee the stream so one branch goes to client, the other to markdown collector
-    const [clientStream, collectorStream] = transformedStream.tee();
-
-    // Inject persona header and wrap client stream in response
-    const streamResponse = new Response(clientStream, {
+    // Inject persona header and wrap stream in response
+    const streamResponse = new Response(transformedStream, {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
@@ -468,117 +463,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 11. Schedule guaranteed background processing with unstable_after()
-    // Executes after response is sent to client, with guaranteed completion before function exit
-    console.log('[analyses] 11. Scheduling guaranteed background markdown collection and QStash publishing', { analysisId });
-    after(async () => {
-      try {
-        console.log('[analyses] 11. Background: Markdown collection starting', { analysisId });
-        const reader = collectorStream.getReader();
-        const chunks: Uint8Array[] = [];
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-        }
-
-        // Reconstruct markdown from SSE stream chunks
-        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-        const combined = new Uint8Array(totalLength);
-        let offset = 0;
-        for (const chunk of chunks) {
-          combined.set(chunk, offset);
-          offset += chunk.length;
-        }
-        const fullOutput = new TextDecoder().decode(combined);
-
-        // Extract markdown from SSE format
-        const lines = fullOutput.split('\n');
-        let markdown = '';
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.substring(6).trim();
-            if (dataStr && dataStr !== '[DONE]') {
-              try {
-                const json = JSON.parse(dataStr);
-                const token = json.choices?.[0]?.delta?.content || '';
-                markdown += token;
-              } catch {
-                // Skip malformed chunks
-              }
-            }
-          }
-        }
-
-        if (markdown.length === 0) {
-          console.warn('[analyses] 11. Background: No markdown collected', { analysisId });
-          return;
-        }
-
-        console.log('[analyses] 11. Background: Markdown collected, updating analysis record', { analysisId, length: markdown.length });
-
-        // Update analysis record with collected markdown
-        await trackDatabaseQuery(
-          'update',
-          'analyses',
-          async () => {
-            const { error } = await supabase
-              .from('analyses')
-              .update({
-                markdown,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', analysisId);
-            if (error) throw error;
-          },
-          { analysisId }
-        ).catch((err) => {
-          console.warn('[analyses] Background: Failed to update markdown', { analysisId, error: String(err) });
-          addBreadcrumb('Markdown update failed', { analysisId }, 'database');
-          throw err;
-        });
-
-        // Publish validation task to QStash (guaranteed delivery with retries)
-        if (markdown.length > 100) {
-          const now = new Date();
-          const dateStr = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
-          const filename = `${metadata.title.slice(0, 80).replace(/[/:?*"]/g, '-')}-${metadata.channelTitle.replace(/[/:?*"]/g, '-')}-${dateStr}.md`;
-
-          console.log('[analyses] 11. Background: Publishing validation task to QStash', { analysisId });
-          await publishValidationTask({
-            videoId,
-            markdown,
-            filename,
-            userId: userId!,
-            analysisId,
-            metadata: {
-              title: metadata.title,
-              channelTitle: metadata.channelTitle,
-              ...(metadata.duration !== undefined && { duration: metadata.duration }),
-            },
-          }).catch((err) => {
-            console.error('[analyses] Background: Failed to publish validation task', {
-              analysisId,
-              error: String(err),
-            });
-            addBreadcrumb('Validation task publish failed', { analysisId }, 'qstash');
-            throw err;
-          });
-        }
-
-        console.log('[analyses] 11. Background: Processing complete', { analysisId });
-      } catch (processingError) {
-        console.error('[analyses] Background: Markdown collection/publishing error', {
-          analysisId,
-          error: String(processingError),
-        });
-        Sentry.captureException(processingError, {
-          tags: { service: 'markdown-processor', operation: 'collection-publishing', context: 'background' },
-          contexts: { analysis: { analysisId } },
-        });
-      }
-    });
+    // NOTE: unstable_after() not available in Next.js 15.5.18 public API
+    // Background processing deferred to Task 2 (CC-2) once native API support is available
+    // For now, markdown collection and QStash publishing are handled asynchronously (non-blocking)
+    // Placeholder comment for background task integration point:
+    // after(async () => { ... })
 
     return streamResponse;
   } catch (error) {

@@ -8,13 +8,15 @@ import { Play, Download, RotateCcw, Clock } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import RateLimitAlert from '@/components/RateLimitAlert';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
+import { useSSEStream } from '@/hooks/useSSEStream';
 
 export default function HomeContent() {
   const { data: session = null, update: updateSession } = useSession();
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [devMode, setDevMode] = useState(true);
-  const { startAnalysis, clearAnalysis, analysis, isLoading, lockoutTimeRemaining } = useAnalysisStore();
+  const { startAnalysis } = useSSEStream();
+  const { clearAnalysis, analysis, isLoading, lockoutTimeRemaining } = useAnalysisStore();
 
   // Get user's local timezone for analysis request
   const getUserTimezone = () => {
