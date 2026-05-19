@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
 import type { AnalysisResult } from '@/lib/types';
-import { parseSSELine } from '@/lib/streaming/decoder';
+import { consumeSSEStream } from '@/lib/streaming/decoder';
 
 export interface AnalysisState {
   // Current analysis
