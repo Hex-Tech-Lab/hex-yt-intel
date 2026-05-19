@@ -28,39 +28,41 @@ async function fetchTranscript(videoId: string): Promise<string> {
     const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
 
     if (!workerUrl || workerUrl.includes('[build-time-placeholder')) {
-      clearTimeout(timeout);
       throw new Error('Cloudflare Worker URL not configured in production environment');
     }
 
     const transcriptUrl = new URL(`${workerUrl}/fetch-transcript`);
     transcriptUrl.searchParams.set('video_id', videoId);
-    const response = await fetch(transcriptUrl.toString(), {
-      method: 'GET',
-      signal: controller.signal,
-    });
 
-    // Do NOT clear timeout here — body read is still underway
-    if (!response.ok) {
-      throw new Error(`Worker returned ${response.status} for transcript fetch`);
+    try {
+      const response = await fetch(transcriptUrl.toString(), {
+        method: 'GET',
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Worker returned ${response.status} for transcript fetch`);
+      }
+
+      const data = await response.json();
+
+      if (!data.transcript || typeof data.transcript !== 'string') {
+        throw new Error('Worker returned invalid transcript format');
+      }
+
+      return data.transcript;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
+      throw new Error(`Failed to fetch transcript from Cloudflare Worker: ${errorMsg}`);
     }
-
-    const data = await response.json();
-    clearTimeout(timeout);
-
-    if (!data.transcript || typeof data.transcript !== 'string') {
-      throw new Error('Worker returned invalid transcript format');
-    }
-
-    return data.transcript;
   } catch (error) {
-    clearTimeout(timeout);
-
     const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
-
-    // Hard failure: never return placeholder, always throw
     const fullError = new Error(`Failed to fetch transcript from Cloudflare Worker: ${errorMsg}`);
     console.error('[fetchTranscript] CRITICAL:', fullError);
     throw fullError;
+  } finally {
+    // Guarantee timeout cleanup on both successful returns and unexpected exceptions
+    clearTimeout(timeout);
   }
 }
 
