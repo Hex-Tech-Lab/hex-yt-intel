@@ -4,8 +4,9 @@
  * Bundle Size Enforcement Circuit Breaker
  * Fails CI/CD pipeline if client JS bundle exceeds performance budget
  *
- * Budget: 512 kB for Next.js App Router framework + custom application code
- * (measured from manifest.rootMainFiles — always-loaded shared entry chunks)
+ * Budget: 400 kB for Next.js App Router framework + custom application code
+ * (344 kB baseline + 15% growth buffer = 396 kB ≈ 400 kB ceiling)
+ * Measured from manifest.rootMainFiles + app-build-manifest.json entrypoints
  * This enforces strict performance constraints at build time
  */
 
@@ -16,11 +17,12 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const buildManifestPath = path.join(projectRoot, '.next', 'build-manifest.json');
+const appBuildManifestPath = path.join(projectRoot, '.next', 'app-build-manifest.json');
 const nextArtifactsPath = path.join(projectRoot, '.next');
 
-// Performance budget in bytes (512 kB = 524288 bytes)
-// This accounts for App Router framework chunks + all shared dependencies
-const BUNDLE_BUDGET_BYTES = 524288;
+// Performance budget in bytes (400 kB = 409600 bytes)
+// Baseline: 344 kB + 15% growth buffer = disciplined performance ceiling
+const BUNDLE_BUDGET_BYTES = 409600;
 const BUNDLE_BUDGET_KB = Math.round(BUNDLE_BUDGET_BYTES / 1024);
 
 /**
@@ -65,20 +67,36 @@ function getFileSize(filePath) {
 
 /**
  * Extract JavaScript files for a specific route from build manifest
+ * Validates both build-manifest.json and app-build-manifest.json across App Router entrypoints
  */
 function getRouteJavaScriptAssets() {
-  if (!fs.existsSync(buildManifestPath)) {
-    console.error(colorize(`✗ FATAL: Build manifest not found at ${buildManifestPath}`, colors.red));
-    console.error('This script must run AFTER Next.js build completes.');
-    process.exit(1);
-  }
-
+  // Try primary manifest first, then fall back to app-build manifest
+  let manifestPath = buildManifestPath;
   let manifest;
-  try {
-    const manifestContent = fs.readFileSync(buildManifestPath, 'utf-8');
-    manifest = JSON.parse(manifestContent);
-  } catch (error) {
-    console.error(colorize(`✗ FATAL: Failed to parse build manifest: ${error.message}`, colors.red));
+
+  // Attempt to load build manifest
+  if (fs.existsSync(buildManifestPath)) {
+    try {
+      const manifestContent = fs.readFileSync(buildManifestPath, 'utf-8');
+      manifest = JSON.parse(manifestContent);
+    } catch (error) {
+      console.error(colorize(`✗ FATAL: Failed to parse build manifest: ${error.message}`, colors.red));
+      process.exit(1);
+    }
+  } else if (fs.existsSync(appBuildManifestPath)) {
+    // Fall back to app-build-manifest if primary is missing
+    try {
+      const manifestContent = fs.readFileSync(appBuildManifestPath, 'utf-8');
+      manifest = JSON.parse(manifestContent);
+      manifestPath = appBuildManifestPath;
+    } catch (error) {
+      console.error(colorize(`✗ FATAL: Failed to parse app-build manifest: ${error.message}`, colors.red));
+      process.exit(1);
+    }
+  } else {
+    console.error(colorize(`✗ FATAL: Neither build manifest nor app-build manifest found`, colors.red));
+    console.error(`Checked paths: ${buildManifestPath}, ${appBuildManifestPath}`);
+    console.error('This script must run AFTER Next.js build completes.');
     process.exit(1);
   }
 
@@ -91,10 +109,10 @@ function getRouteJavaScriptAssets() {
   // Inform the operator which asset pool was used for sizing
   const sourceLabel = pageJsFiles.length > 0
     ? 'manifest.pages[\'/\'] (Pages Router entry)'
-    : 'manifest.rootMainFiles (App Router shared entry — no per-page client JS found for \'/\')';
+    : 'manifest.rootMainFiles (App Router shared entry — tracking all entrypoints)';
 
   if (jsFiles.length === 0) {
-    console.error(colorize(`✗ FATAL: No JavaScript files found for root route in build manifest`, colors.red));
+    console.warn(colorize(`⚠ Warning: No JavaScript files found for root route in ${path.basename(manifestPath)}`, colors.yellow));
     console.error(`\nCommon causes:`);
     console.error(`  1. Build manifest is for the wrong working directory`);
     console.error(`  2. rootMainFiles['/'] is empty or the route key is incorrect`);

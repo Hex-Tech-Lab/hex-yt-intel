@@ -56,13 +56,22 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
   // Observable async operation with Sentry instrumentation
   startAnalysis: async (url: string, timezone: string) => {
+    // Extract videoId from URL for telemetry (redact raw URL to preserve PII compliance)
+    const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    const videoId = videoIdMatch?.[1] || 'unknown';
+
+    // Validate timezone against IANA naming conventions (alphanumeric + underscore/dash)
+    const isValidTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone);
+    const safeTimezone = isValidTimezone ? timezone : 'UTC';
+
     return Sentry.startSpan(
       {
         name: 'stream_analysis',
         op: 'http.client',
         attributes: {
-          url,
-          timezone,
+          videoId, // Safe: extracted identifier only
+          timezone: safeTimezone, // Safe: validated IANA format
+          // Removed: raw 'url' field to prevent PII leakage via user-provided content
         },
       },
       async () => {
