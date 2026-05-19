@@ -30,18 +30,40 @@ export async function POST(request: NextRequest) {
   try {
     console.log('[validate-webhook] Request received');
 
+    // Fail fast: Validate mandatory environment variables before processing
+    const currentKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+    if (!currentKey) {
+      console.error('[validate-webhook] FATAL: QSTASH_CURRENT_SIGNING_KEY not configured');
+      return NextResponse.json(
+        { error: 'Server misconfiguration: QSTASH_CURRENT_SIGNING_KEY not set' },
+        { status: 503 }
+      );
+    }
+
+    if (!appUrl) {
+      console.error('[validate-webhook] FATAL: NEXT_PUBLIC_APP_URL not configured');
+      return NextResponse.json(
+        { error: 'Server misconfiguration: NEXT_PUBLIC_APP_URL not set' },
+        { status: 503 }
+      );
+    }
+
     // Early Return Security: Verify QStash signature BEFORE parsing body
-    const verified = await verifyQStashSignature(request);
+    // Clone request to avoid consuming body stream during verification
+    const clonedForVerification = request.clone();
+    const verified = await verifyQStashSignature(clonedForVerification);
     if (!verified) {
       console.warn('[validate-webhook] QStash signature verification failed');
       return NextResponse.json(
         { error: 'Unauthorized: Invalid QStash signature' },
-        { status: 401 }
+        { status: 403 }
       );
     }
     console.log('[validate-webhook] QStash signature verified');
 
-    // Parse QStash payload
+    // Parse QStash payload from original request (body stream still intact)
     const payload: ValidationPayload = await request.json();
     const { videoId, markdown, filename, userId, analysisId } = payload;
 
@@ -151,10 +173,10 @@ export async function POST(request: NextRequest) {
       contexts: { timing: { duration } },
     });
 
-    // Return 200 to acknowledge receipt (don't retry on validation errors)
+    // Return 5xx to signal Upstash QStash to retry on unexpected errors
     return NextResponse.json(
       { error: errorMsg, success: false },
-      { status: 200 }
+      { status: 500 }
     );
   }
 }

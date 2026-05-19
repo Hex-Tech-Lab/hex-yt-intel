@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
     // Collect streamed chunks, save markdown, and trigger validation via webhook
     // Note: Streaming response keeps connection alive, preventing Vercel timeout
     console.log('[analyses] 11. Setting up async validation via QStash', { analysisId });
-    (async () => {
+    after(async () => {
       try {
         const reader = processorStream.getReader();
         const chunks: Uint8Array[] = [];
@@ -407,25 +407,28 @@ export async function POST(request: NextRequest) {
         if (markdown.length > 0) {
           console.log('[analyses] 11. Markdown collected, updating analysis record', { analysisId, length: markdown.length });
 
-          // Update analysis record with collected markdown
-          await trackDatabaseQuery(
-            'update',
-            'analyses',
-            async () => {
-              const { error } = await supabase
-                .from('analyses')
-                .update({
-                  markdown,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', analysisId);
-              if (error) throw error;
-            },
-            { analysisId }
-          ).catch((err) => {
-            console.warn('[analyses] Failed to update markdown', { analysisId, error: String(err) });
+          // Update analysis record with collected markdown (blocking operation)
+          try {
+            await trackDatabaseQuery(
+              'update',
+              'analyses',
+              async () => {
+                const { error } = await supabase
+                  .from('analyses')
+                  .update({
+                    markdown,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', analysisId);
+                if (error) throw error;
+              },
+              { analysisId }
+            );
+          } catch (updateErr) {
+            console.error('[analyses] Failed to update markdown (blocking)', { analysisId, error: String(updateErr) });
             addBreadcrumb('Markdown update failed', { analysisId }, 'database');
-          });
+            throw updateErr;
+          }
 
           // Publish validation task to QStash (guaranteed delivery with retries)
           if (markdown.length > 100) {
@@ -434,28 +437,31 @@ export async function POST(request: NextRequest) {
             const filename = `${metadata.title.slice(0, 80).replace(/[/:?*"]/g, '-')}-${metadata.channelTitle.replace(/[/:?*"]/g, '-')}-${dateStr}.md`;
 
             console.log('[analyses] 11. Publishing validation task to QStash', { analysisId });
-            await publishValidationTask({
-              videoId,
-              markdown,
-              filename,
-              userId: userId!,
-              analysisId,
-              metadata: {
-                title: metadata.title,
-                channelTitle: metadata.channelTitle,
-                ...(metadata.duration !== undefined && { duration: metadata.duration }),
-              },
-            }).catch((err) => {
-              console.warn('[analyses] Failed to publish validation task (non-blocking)', {
+            try {
+              await publishValidationTask({
+                videoId,
+                markdown,
+                filename,
+                userId: userId!,
                 analysisId,
-                error: String(err),
+                metadata: {
+                  title: metadata.title,
+                  channelTitle: metadata.channelTitle,
+                  ...(metadata.duration !== undefined && { duration: metadata.duration }),
+                },
+              });
+            } catch (publishErr) {
+              console.error('[analyses] Failed to publish validation task (blocking)', {
+                analysisId,
+                error: String(publishErr),
               });
               addBreadcrumb('Validation task publish failed', { analysisId }, 'qstash');
-            });
+              throw publishErr;
+            }
           }
         }
       } catch (processingError) {
-        console.warn('[analyses] Async processing error (after handler)', {
+        console.error('[analyses] Async processing error (after handler)', {
           analysisId,
           error: String(processingError),
         });
