@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .select('id, title, markdown, model_used, created_at')
+          .select('id, title, analysis_markdown, model_used, created_at')
           .eq('video_id', videoId)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
@@ -243,10 +243,10 @@ export async function POST(request: NextRequest) {
       return null; // Non-blocking: continue even if cache lookup fails
     });
 
-    // If found in cache with non-empty markdown, return immediately
-    // CRITICAL: Must have markdown to avoid returning empty content from incomplete analyses
-    if (existingAnalysis && existingAnalysis.markdown && existingAnalysis.markdown.length > 0) {
-      console.log('[analyses] 4. Cache HIT - returning cached analysis', { videoId, analysisId: existingAnalysis.id, markdownLength: existingAnalysis.markdown.length });
+    // If found in cache with non-empty analysis_markdown, return immediately
+    // CRITICAL: Must have analysis_markdown to avoid returning empty content from incomplete analyses
+    if (existingAnalysis && existingAnalysis.analysis_markdown && existingAnalysis.analysis_markdown.length > 0) {
+      console.log('[analyses] 4. Cache HIT - returning cached analysis', { videoId, analysisId: existingAnalysis.id, markdownLength: existingAnalysis.analysis_markdown.length });
       addBreadcrumb('Cache hit: analysis retrieved from DB', { videoId, analysisId: existingAnalysis.id }, 'cache');
       Sentry.captureMessage('Cache hit: duplicate analysis prevented', 'info');
       return NextResponse.json({
@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
         analysisId: existingAnalysis.id,
         videoId,
         title: existingAnalysis.title,
-        markdown: existingAnalysis.markdown,
+        analysis_markdown: existingAnalysis.analysis_markdown,
         createdAt: existingAnalysis.created_at,
         model_attempted: existingAnalysis.model_used,
         model_used: existingAnalysis.model_used,
@@ -473,7 +473,7 @@ export async function POST(request: NextRequest) {
                 video_id: videoId,
                 user_id: userId,
                 title: metadata.title,
-                markdown: '', // Will be populated after streaming
+                analysis_markdown: '', // Will be populated after streaming
                 model_attempted: 'anthropic/claude-haiku-4.5',
                 model_used: 'anthropic/claude-haiku-4.5',
                 validation_report: null,
@@ -517,7 +517,7 @@ export async function POST(request: NextRequest) {
           async () => {
             const { error } = await supabase
               .from('analyses')
-              .update({ markdown, updated_at: new Date().toISOString() })
+              .update({ analysis_markdown: markdown, updated_at: new Date().toISOString() })
               .eq('id', analysisId);
             if (error) throw error;
           },
