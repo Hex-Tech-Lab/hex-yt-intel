@@ -1,6 +1,0 @@
-packages:
-  - 'web'
-  - 'worker'
-
-autoInstallPeers: true
-strictPeerDependencies: false
