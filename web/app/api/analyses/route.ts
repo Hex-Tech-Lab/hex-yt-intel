@@ -90,7 +90,58 @@ export async function POST(request: NextRequest) {
   let userId: string | undefined;
 
   try {
-    console.log('[analyses] 1. Request received - parsing body');
+    console.log('[analyses] 1. Request received - validating ingress perimeter');
+
+    // PERIMETER 0: Parse and validate request BEFORE any business logic
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (parseErr) {
+      console.warn('[analyses] 0. JSON parse error', { error: String(parseErr) });
+      return NextResponse.json(
+        { error: 'Invalid JSON payload' },
+        { status: 400 }
+      );
+    }
+
+    const validation = AnalysisCreateSchema.safeParse(body);
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      if (!firstError) {
+        return NextResponse.json(
+          { error: 'Invalid request: unknown validation error' },
+          { status: 400 }
+        );
+      }
+      console.warn('[analyses] 0. Input validation failed', {
+        field: firstError.path.join('.'),
+        message: firstError.message,
+      });
+      return NextResponse.json(
+        {
+          error: 'Invalid request',
+          field: firstError.path.join('.') || 'root',
+          message: firstError.message,
+        },
+        { status: 400 }
+      );
+    }
+
+    const timezone = validation.data.timezone || 'Africa/Cairo';
+    let selectedPersona: PersonaId | null = validation.data.persona as PersonaId | null;
+
+    // Validate YouTube URL and extract video ID at perimeter
+    const videoId = extractVideoId(validation.data.url);
+    if (!videoId || videoId === 'unknown') {
+      console.warn('[analyses] 0. Video ID extraction failed', { url: validation.data.url });
+      addBreadcrumb('Invalid YouTube URL at perimeter', { url: validation.data.url }, 'validation');
+      return NextResponse.json(
+        { error: 'Unsupported YouTube URL format' },
+        { status: 400 }
+      );
+    }
+
+    console.log('[analyses] 1. Ingress perimeter passed - proceeding to auth', { videoId });
 
     // sec_002: Force environment gating & hardened bypass header (production safety circuit-breaker)
     const allowDevBypass = process.env.ALLOW_DEV_BYPASS === 'true';
@@ -165,31 +216,6 @@ export async function POST(request: NextRequest) {
       }
     }
     console.log('[analyses] 3. Rate limit check passed', { userId });
-
-    // 2. Parse and validate request
-    const body = await request.json();
-    const validation = AnalysisCreateSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: 'Invalid request', details: validation.error.flatten() },
-        { status: 400 }
-      );
-    }
-
-    // Extract timezone and persona from validated request
-    const timezone = validation.data.timezone || 'Africa/Cairo';
-    let selectedPersona: PersonaId | null = validation.data.persona as PersonaId | null;
-
-    // 3. Extract video ID
-    const videoId = extractVideoId(validation.data.url);
-    if (!videoId || videoId === 'unknown') {
-      addBreadcrumb('Invalid YouTube URL provided', { url: validation.data.url }, 'validation');
-      return NextResponse.json(
-        { error: 'Invalid YouTube URL' },
-        { status: 400 }
-      );
-    }
-    addBreadcrumb('Video ID extracted', { videoId, url: validation.data.url });
 
     // 4. Supabase client (server-side)
     const supabase = getSupabaseClient();
