@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { createServerClient } from '@supabase/ssr';
-import { timingSafeEqual } from 'crypto';
+
+// Timing-safe string comparison without crypto module (Edge Runtime compatible)
+function timingSafeStringEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
 
 async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
   try {
@@ -38,10 +47,7 @@ export async function middleware(request: NextRequest) {
 
   if (!isProduction && devBypassToken && testSecret) {
     try {
-      const testSecretBuf = Buffer.from(testSecret);
-      const expectedBuf = Buffer.from(devBypassToken);
-      const isValidBypass = testSecretBuf.length === expectedBuf.length &&
-        timingSafeEqual(testSecretBuf, expectedBuf);
+      const isValidBypass = timingSafeStringEqual(testSecret, devBypassToken);
 
       if (isValidBypass) {
         console.info('[middleware] Development bypass token validated. Halting downstream actions.');

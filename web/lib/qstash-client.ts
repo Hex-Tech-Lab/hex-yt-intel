@@ -42,7 +42,11 @@ export interface ValidationPayload {
  */
 export async function publishValidationTask(payload: ValidationPayload): Promise<string> {
   try {
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://hex-yt-intel.vercel.app'}/api/webhooks/validate`;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!baseUrl) {
+      throw new Error('NEXT_PUBLIC_APP_URL is missing. Cannot publish QStash task safely.');
+    }
+    const webhookUrl = `${baseUrl}/api/webhooks/validate`;
     const result = await getQStashClient().publishJSON({
       url: webhookUrl,
       body: payload,
@@ -73,7 +77,11 @@ export async function publishEmbeddingTask(payload: {
   userId: string;
 }): Promise<string> {
   try {
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://hex-yt-intel.vercel.app'}/api/webhooks/embed`;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!baseUrl) {
+      throw new Error('NEXT_PUBLIC_APP_URL is missing. Cannot publish QStash task safely.');
+    }
+    const webhookUrl = `${baseUrl}/api/webhooks/embed`;
     const result = await getQStashClient().publishJSON({
       url: webhookUrl,
       body: payload,
