@@ -234,7 +234,7 @@ test.describe('4 · OAuth 416 Prevention', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.describe('5 · OpenRouter Fallback Continuation', () => {
-  const INVALID_KEY = 'sk-or-nonexistent-key-for-fallback-test';
+  const INVALID_KEY = 'sk_or-nonexistent-key-for-fallback-test';
 
   test('5.1 — analyses route handler is callable (compile check)', async ({ request }) => {
     // callOpenRouter is a private function inside web/app/api/analyses/route.ts.

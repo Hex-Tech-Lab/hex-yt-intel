@@ -48,6 +48,9 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
 
   for (let attempt = 0; attempt < RETRY_MAX_ATTEMPTS; attempt++) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch(OPENROUTER_API_URL, {
         method: 'POST',
         headers: {
@@ -60,33 +63,40 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
           model: EMBEDDING_MODEL,
           input: truncatedText,
         }),
+        signal: controller.signal,
       });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+      clearTimeout(timeout);
+
+      try {
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+        }
+
+        const data = await response.json();
+
+        // Extract embedding from response
+        const embeddingData = data.data[0] as EmbeddingResponse;
+        if (!embeddingData.embedding || embeddingData.embedding.length !== EMBEDDING_DIMENSION) {
+          throw new Error(
+            `Invalid embedding dimension: got ${embeddingData.embedding?.length || 0}, expected ${EMBEDDING_DIMENSION}`
+          );
+        }
+
+        // Cost tracking: text-embedding-3-small is typically $0.02 per 1M tokens
+        // ~4 characters per token on average
+        const estimatedTokens = Math.ceil(truncatedText.length / 4);
+        const costPerToken = 0.00000002; // $0.02 / 1M tokens
+        const costUsd = estimatedTokens * costPerToken;
+
+        return {
+          embedding: embeddingData.embedding,
+          costUsd,
+        };
+      } finally {
+        clearTimeout(timeout);
       }
-
-      const data = await response.json();
-
-      // Extract embedding from response
-      const embeddingData = data.data[0] as EmbeddingResponse;
-      if (!embeddingData.embedding || embeddingData.embedding.length !== EMBEDDING_DIMENSION) {
-        throw new Error(
-          `Invalid embedding dimension: got ${embeddingData.embedding?.length || 0}, expected ${EMBEDDING_DIMENSION}`
-        );
-      }
-
-      // Cost tracking: text-embedding-3-small is typically $0.02 per 1M tokens
-      // ~4 characters per token on average
-      const estimatedTokens = Math.ceil(truncatedText.length / 4);
-      const costPerToken = 0.00000002; // $0.02 / 1M tokens
-      const costUsd = estimatedTokens * costPerToken;
-
-      return {
-        embedding: embeddingData.embedding,
-        costUsd,
-      };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 

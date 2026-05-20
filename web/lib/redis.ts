@@ -178,8 +178,11 @@ export async function setRedisExpiration(key: string, expirationSeconds: number)
 
 
 /**
- * Execute Lua script against Redis
+ * Execute Lua script against Redis with exponential backoff retry
  * Used for atomic multi-step operations (e.g., sliding window rate limiting)
+ *
+ * Circuit breaker: Implements 3 retries with exponential backoff (100ms, 200ms, 400ms)
+ * to handle transient network spikes on Serverless edge environments
  */
 export async function executeRedisScript(
   script: string,
@@ -188,15 +191,55 @@ export async function executeRedisScript(
 ): Promise<any> {
   const redis = initializeRedis();
 
-  try {
-    if (redis && redisAvailable) {
-      return await redis.eval(script, keys, args);
-    }
-  } catch (error) {
-    console.warn('[redis.ts] Failed to execute Lua script:', error);
+  if (!redis || !redisAvailable) {
+    // Redis not configured or already marked unavailable
+    return -1;
   }
 
-  // Fallback: For sliding window, return -1 to indicate unavailability
+  const maxRetries = 3;
+  const baseDelayMs = 100;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await redis.eval(script, keys, args);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if this is a transient error (not auth/invalid command)
+      const errorMsg = lastError.message.toLowerCase();
+      const isTransient =
+        errorMsg.includes('timeout') ||
+        errorMsg.includes('econnreset') ||
+        errorMsg.includes('econnrefused') ||
+        errorMsg.includes('etimedout');
+
+      // Only retry on transient errors, fail immediately on permanent errors
+      if (!isTransient) {
+        console.warn('[redis.ts] Permanent Redis error, marking unavailable:', lastError.message);
+        redisAvailable = false;
+        return -1;
+      }
+
+      // Exponential backoff: 100ms, 200ms, 400ms
+      if (attempt < maxRetries - 1) {
+        const delayMs = baseDelayMs * Math.pow(2, attempt);
+        console.warn(
+          `[redis.ts] Transient Redis error (attempt ${attempt + 1}/${maxRetries}), ` +
+          `retrying in ${delayMs}ms:`,
+          lastError.message
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  // All retries exhausted
+  console.warn(
+    `[redis.ts] Failed to execute Lua script after ${maxRetries} attempts:`,
+    lastError?.message
+  );
+  redisAvailable = false;
   return -1;
 }
 

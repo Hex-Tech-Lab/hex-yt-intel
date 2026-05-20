@@ -106,11 +106,6 @@ async function fetchMetadata(
     if (!data.title || typeof data.title !== "string") {
       throw new Error("Invalid response: missing or invalid title field");
     }
-    if (typeof data.viewCount !== "number") {
-      throw new Error(
-        `Invalid response: viewCount should be number, got ${typeof data.viewCount}`
-      );
-    }
 
     return {
       videoId: videoId,
