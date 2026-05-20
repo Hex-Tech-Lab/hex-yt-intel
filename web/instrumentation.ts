@@ -8,21 +8,17 @@
 
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Server-side initialization
-    try {
-      // sentry.config.js is loaded automatically by Next.js Sentry integration
-      // This import ensures it's initialized during the register phase
-      // eslint-disable-next-line -- require is needed for sentry initialization
-      require('./sentry.config');
-    } catch (_error) {
-      // Sentry config may not be available in all environments
-      console.debug('[instrumentation.ts] Sentry config not available');
+    // 1. DSN GUARD (NEW)
+    if (!process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      console.warn('[instrumentation.ts] Sentry DSN missing, skipping init.');
+    } else {
+      // 2. PRESERVE EXISTING CONFIG
+      await import('./sentry.server.config');
     }
-    console.log('[instrumentation.ts] Initialization complete for Node.js runtime');
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
-    // Edge runtime initialization (if needed)
-    console.log('[instrumentation.ts] Edge runtime detected');
+    // 3. PRESERVE EXISTING CONFIG
+    await import('./sentry.edge.config');
   }
 }

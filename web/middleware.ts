@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { createServerClient } from '@supabase/ssr';
-import { timingSafeEqual } from 'crypto';
+
+// Timing-safe string comparison without crypto module (Edge Runtime compatible)
+function timingSafeStringEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
 
 async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
   try {
@@ -28,7 +37,33 @@ async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
 }
 
 export async function middleware(request: NextRequest) {
+  // CORS Preflight Handling (Fixes 401 on OPTIONS)
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { 
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Hex-Test-Secret',
+      },
+    });
+  }
+
   const { pathname } = request.nextUrl;
+
+  // Explicitly allow public API routes to pass through without auth checks.
+  // This includes auth callbacks, webhooks, public health checks, and metadata requests.
+  const publicRoutes = [
+    '/api/auth',           // NextAuth callbacks
+    '/api/stripe',         // Stripe webhooks
+    '/api/webhooks',       // Generic webhooks
+    '/api/health',         // Health check endpoint
+    '/api/metadata',       // Public video metadata endpoint
+  ];
+
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
 
   // Development-only test validation bypass — allows E2E test suites to bypass auth
   // Requires DEV_BYPASS_TOKEN environment variable (unset in production for safety)
@@ -38,10 +73,7 @@ export async function middleware(request: NextRequest) {
 
   if (!isProduction && devBypassToken && testSecret) {
     try {
-      const testSecretBuf = Buffer.from(testSecret);
-      const expectedBuf = Buffer.from(devBypassToken);
-      const isValidBypass = testSecretBuf.length === expectedBuf.length &&
-        timingSafeEqual(testSecretBuf, expectedBuf);
+      const isValidBypass = timingSafeStringEqual(testSecret, devBypassToken);
 
       if (isValidBypass) {
         console.info('[middleware] Development bypass token validated. Halting downstream actions.');
@@ -66,7 +98,7 @@ export async function middleware(request: NextRequest) {
 
   const isAuthenticated = authProvider === 'supabase'
     ? await hasSupabaseAuth(request)
-    : !!(await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET }));
+    : !!(await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET || "" }));
 
   if (!isAuthenticated) {
     if (pathname.startsWith('/api/')) {
