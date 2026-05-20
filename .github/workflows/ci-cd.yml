@@ -173,7 +173,7 @@ jobs:
 
       - name: Check for secrets in code
         run: |
-          if grep -r "NEXT_PUBLIC_SUPABASE_ANON_KEY\|OPENROUTER_API_KEY" web/app --include="*.ts" --include="*.tsx" | grep -v "process.env\|import" | grep -v "undefined"; then
+          if grep -r --exclude-dir=node_modules "NEXT_PUBLIC_SUPABASE_ANON_KEY\|OPENROUTER_API_KEY" web/app --include="*.ts" --include="*.tsx" | grep -v "process.env\|import" | grep -v "undefined"; then
             echo "ERROR: Potential secrets found in code"
             exit 1
           fi
@@ -181,7 +181,7 @@ jobs:
 
       - name: Check for hardcoded credentials
         run: |
-          if grep -r "sk-\|pk_live\|pk_test" web --include="*.ts" --include="*.tsx" | grep -v "process.env"; then
+          if grep -r --exclude-dir=node_modules "sk-\|pk_live\|pk_test" web --include="*.ts" --include="*.tsx" | grep -v "process.env"; then
             echo "ERROR: Hardcoded credentials found"
             exit 1
           fi
