@@ -3,11 +3,25 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  turbopack: {
+    root: "/home/kellyb_dev/projects/hex-yt-intel",
+  },
   typescript: { tsconfigPath: "./tsconfig.json" },
+
+  // ============================================================================
+  // EXPERIMENTAL FEATURES
+  // ============================================================================
+  experimental: {
+    optimizePackageImports: [
+      "@supabase/supabase-js",
+      "@supabase/auth-helpers-nextjs",
+      "@sentry/nextjs",
+    ],
+  },
 
   // Static env vars baked into the build bundle
   env: {
-    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0",
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || "1.0.1",
   },
 
   // ============================================================================
@@ -23,19 +37,6 @@ const nextConfig: NextConfig = {
   // ============================================================================
   headers: async () => {
     return [
-      {
-        source: "/_next/static/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
-      },
-      {
-        source: "/_next/image/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=60, stale-while-revalidate=31536000",
-          },
-        ],
-      },
       {
         source: "/public/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
@@ -70,17 +71,6 @@ const nextConfig: NextConfig = {
 
   async rewrites() {
     return [];
-  },
-
-  // ============================================================================
-  // EXPERIMENTAL FEATURES
-  // ============================================================================
-  experimental: {
-    optimizePackageImports: [
-      "@supabase/supabase-js",
-      "@supabase/auth-helpers-nextjs",
-      "@sentry/nextjs",
-    ],
   },
 
   // ============================================================================

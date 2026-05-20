@@ -36,7 +36,7 @@ async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // CORS Preflight Handling (Fixes 401 on OPTIONS)
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { 
