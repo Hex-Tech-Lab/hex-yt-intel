@@ -33,13 +33,12 @@ async function fetchTranscript(videoId: string): Promise<string> {
       throw new Error('Cloudflare Worker URL not configured in production environment');
     }
 
-    // Validate worker URL against SSRF allowlist (must be Cloudflare Workers domain or approved production origin)
-    const allowedOrigins = [
+    // Validate worker URL against SSRF allowlist (exact hostname match only)
+    const allowedOrigins = new Set([
       'yt-intel.hex-tech-lab.workers.dev',
-      'workers.dev', // Allow any Cloudflare Workers domain
-    ];
+    ]);
     const urlObj = new URL(workerUrl);
-    const isAllowedOrigin = allowedOrigins.some(origin => urlObj.hostname.endsWith(origin));
+    const isAllowedOrigin = urlObj.protocol === 'https:' && allowedOrigins.has(urlObj.hostname);
 
     if (!isAllowedOrigin) {
       console.error('[fetchTranscript] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });

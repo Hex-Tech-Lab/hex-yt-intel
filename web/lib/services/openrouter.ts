@@ -74,6 +74,11 @@ export async function callOpenRouter(
   }, 10000);
 
   try {
+    // Law #2: Dynamic token budget scales with transcript length
+    // Base 5000ms + 1000ms per 5000 transcript chars, capped at 25000ms
+    // max_tokens proportional: 4000 base + (transcript_length / 10) tokens, capped at 10000
+    const maxTokens = Math.min(10000, 4000 + Math.floor(transcript.length / 10));
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -86,6 +91,7 @@ export async function callOpenRouter(
         models, // OpenRouter natively attempts these sequentially
         messages: [{ role: 'user', content: prompt }],
         stream: true,
+        max_tokens: maxTokens,
       }),
       signal: controller.signal,
     });

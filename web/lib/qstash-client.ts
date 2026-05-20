@@ -125,11 +125,16 @@ export async function verifyQStashSignature(
       nextSigningKey: nextKey || "",
     });
 
-    const verified = await receiver.verify({
+    const timeoutPromise = new Promise<boolean>((_, reject) =>
+      setTimeout(() => reject(new Error('Signature verification timeout')), 5000)
+    );
+
+    const verificationPromise = receiver.verify({
       signature,
       body,
     }).catch(() => false);
 
+    const verified = await Promise.race([verificationPromise, timeoutPromise]);
     return verified;
   } catch (error) {
     console.warn('[qstash] Signature verification failed', {
