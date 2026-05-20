@@ -1,0 +1,176 @@
+-- 1. Create extension outside of any DO block to avoid permission/scope issues
+CREATE EXTENSION IF NOT EXISTS vector;
+
+DO $$
+DECLARE
+    v_col_type text;
+BEGIN
+  -- ============================================================================
+  -- USERS TABLE MIGRATIONS
+  -- ============================================================================
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
+
+    -- Add missing columns
+    ALTER TABLE public.users
+    ADD COLUMN IF NOT EXISTS name text,
+    ADD COLUMN IF NOT EXISTS avatar_url text,
+    ADD COLUMN IF NOT EXISTS stripe_customer_id text,
+    ADD COLUMN IF NOT EXISTS stripe_subscription_id text;
+
+    -- Conditionally convert timestamps to timestamptz for timezone safety
+    SELECT data_type INTO v_col_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'created_at';
+    IF v_col_type = 'timestamp without time zone' THEN
+        ALTER TABLE public.users ALTER COLUMN created_at TYPE timestamp with time zone USING created_at AT TIME ZONE 'UTC';
+    END IF;
+
+    SELECT data_type INTO v_col_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'updated_at';
+    IF v_col_type = 'timestamp without time zone' THEN
+        ALTER TABLE public.users ALTER COLUMN updated_at TYPE timestamp with time zone USING updated_at AT TIME ZONE 'UTC';
+    END IF;
+
+    SELECT data_type INTO v_col_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'last_reset_date';
+    IF v_col_type = 'timestamp without time zone' THEN
+        ALTER TABLE public.users ALTER COLUMN last_reset_date TYPE timestamp with time zone USING last_reset_date AT TIME ZONE 'UTC';
+    END IF;
+
+    -- Add constraints idempotently
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_stripe_customer_id_key') THEN
+        ALTER TABLE public.users ADD CONSTRAINT users_stripe_customer_id_key UNIQUE (stripe_customer_id);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_analyses_used_non_negative') THEN
+      ALTER TABLE public.users ADD CONSTRAINT check_analyses_used_non_negative CHECK (analyses_used >= 0);
+    END IF;
+  END IF;
+
+  -- ============================================================================
+  -- ANALYSES TABLE MIGRATIONS
+  -- ============================================================================
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'analyses' AND table_schema = 'public') THEN
+
+    -- Add vector column for semantic search
+    ALTER TABLE public.analyses ADD COLUMN IF NOT EXISTS embedding vector(1536);
+
+    -- Add shared token support
+    ALTER TABLE public.analyses
+    ADD COLUMN IF NOT EXISTS shared_token character varying,
+    ADD COLUMN IF NOT EXISTS shared_expires_at timestamp with time zone;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'analyses_shared_token_key') THEN
+        ALTER TABLE public.analyses ADD CONSTRAINT analyses_shared_token_key UNIQUE (shared_token);
+    END IF;
+
+    -- Add model_used resolving conflicting defaults
+    ALTER TABLE public.analyses ADD COLUMN IF NOT EXISTS model_used VARCHAR(255) DEFAULT 'anthropic/claude-haiku-4.5';
+
+    -- Conditionally convert timestamps (preserving NULLs correctly)
+    SELECT data_type INTO v_col_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'analyses' AND column_name = 'created_at';
+    IF v_col_type = 'timestamp without time zone' THEN
+        ALTER TABLE public.analyses ALTER COLUMN created_at TYPE timestamp with time zone USING created_at AT TIME ZONE 'UTC';
+    END IF;
+
+    SELECT data_type INTO v_col_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'analyses' AND column_name = 'updated_at';
+    IF v_col_type = 'timestamp without time zone' THEN
+        ALTER TABLE public.analyses ALTER COLUMN updated_at TYPE timestamp with time zone USING updated_at AT TIME ZONE 'UTC';
+    END IF;
+
+    SELECT data_type INTO v_col_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'analyses' AND column_name = 'published_at';
+    IF v_col_type = 'timestamp without time zone' THEN
+        ALTER TABLE public.analyses ALTER COLUMN published_at TYPE timestamp with time zone USING published_at AT TIME ZONE 'UTC';
+    END IF;
+
+    -- Add unique user/video constraint idempotently
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'unique_user_video') THEN
+      ALTER TABLE public.analyses ADD CONSTRAINT unique_user_video UNIQUE (user_id, video_id);
+    END IF;
+
+    -- Ensure indices exist
+    CREATE INDEX IF NOT EXISTS idx_analyses_user_id ON public.analyses(user_id);
+  END IF;
+
+  -- ============================================================================
+  -- USAGE LOGS / STRIPE INDEXES (Moved out of analyses block)
+  -- ============================================================================
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'usage_logs' AND table_schema = 'public') THEN
+    CREATE INDEX IF NOT EXISTS idx_usage_logs_user_id ON public.usage_logs(user_id);
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'stripe_events' AND table_schema = 'public') THEN
+    CREATE INDEX IF NOT EXISTS idx_stripe_events_user_id ON public.stripe_events(user_id);
+  END IF;
+
+END $$;
+
+-- ============================================================================
+-- RPC: INCREMENT USER QUOTA
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.increment_user_quota(p_user_id uuid, p_increment integer DEFAULT 1)
+RETURNS TABLE (
+  new_quota integer,
+  tier text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $func$
+DECLARE
+  v_new_quota integer;
+  v_tier text;
+BEGIN
+  -- Security Check: Prevent privilege escalation unless executed via Service Role
+  IF auth.uid() IS NOT NULL AND auth.uid() != p_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: Cannot modify quota for other users';
+  END IF;
+
+  UPDATE public.users
+  SET analyses_used = analyses_used + p_increment,
+      updated_at = now()
+  WHERE id = p_user_id
+  RETURNING analyses_used, users.tier INTO v_new_quota, v_tier;
+
+  -- Ensure row existed and was updated
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'user not found: %', p_user_id;
+  END IF;
+
+  RETURN QUERY SELECT v_new_quota, v_tier;
+END;
+$func$;
+
+-- ============================================================================
+-- RPC: RESET USER QUOTA
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.reset_user_quota(p_user_id uuid)
+RETURNS TABLE (
+  reset_success boolean,
+  new_quota integer,
+  reset_date timestamp with time zone
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $func$
+DECLARE
+  v_now timestamp with time zone;
+BEGIN
+  -- Security Check: Prevent privilege escalation unless executed via Service Role
+  IF auth.uid() IS NOT NULL AND auth.uid() != p_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: Cannot modify quota for other users';
+  END IF;
+
+  v_now := now();
+
+  UPDATE public.users
+  SET analyses_used = 0,
+      last_reset_date = v_now,
+      updated_at = v_now
+  WHERE id = p_user_id;
+
+  -- Validate if row updated and return corresponding state
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT false AS reset_success, NULL::integer AS new_quota, v_now AS reset_date;
+  ELSE
+    RETURN QUERY SELECT true AS reset_success, 0 AS new_quota, v_now AS reset_date;
+  END IF;
+END;
+$func$;

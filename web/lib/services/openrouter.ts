@@ -67,11 +67,24 @@ export async function callOpenRouter(
   const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
   
   console.log('[callOpenRouter] Sending request to OpenRouter with native fallback models', { models });
+
+  const transcriptLength = transcript?.length || 0;
+  const adaptiveTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 5000) * 1000);
+
   const controller = new AbortController();
+  let connectionHandshakePassed = false;
+
   const connectTimeoutId = setTimeout(() => {
-    console.warn('[callOpenRouter] Connection timeout (10s)');
+    console.warn('[callOpenRouter] Connection timeout (3s) triggered');
     controller.abort();
-  }, 10000);
+  }, 3000);
+
+  const totalTimeoutId = setTimeout(() => {
+    if (connectionHandshakePassed) {
+      console.warn(`[callOpenRouter] Total streaming timeout (${adaptiveTimeout}ms) triggered`);
+      controller.abort();
+    }
+  }, adaptiveTimeout);
 
   try {
     // Law #2: Dynamic token budget scales with transcript length
@@ -97,6 +110,7 @@ export async function callOpenRouter(
     });
 
     clearTimeout(connectTimeoutId);
+    connectionHandshakePassed = true;
 
     if (!response.ok) {
       const status = response.status;
@@ -117,6 +131,17 @@ export async function callOpenRouter(
     return response;
   } catch (err) {
     clearTimeout(connectTimeoutId);
-    throw err;
+    const error = err as Error;
+    if (error.name === 'AbortError' && !connectionHandshakePassed) {
+      console.error('[callOpenRouter] Connection handshake aborted (≤ 3s)');
+      throw new Error('Connection timeout (3s)');
+    } else if (error.name === 'AbortError' && connectionHandshakePassed) {
+      console.error(`[callOpenRouter] Total streaming window timeout aborted (${adaptiveTimeout}ms)`);
+      throw new Error(`Total execution timeout (${adaptiveTimeout}ms)`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(connectTimeoutId);
+    clearTimeout(totalTimeoutId);
   }
 }

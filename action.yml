@@ -1,22 +1,17 @@
-name: Setup Environment
-description: "Sets up Node.js, pnpm, and installs dependencies"
-inputs:
-  node-version:
-    description: "Node.js version"
-    required: false
-    default: "20"
-  pnpm-version:
-    description: "pnpm version"
-    required: false
-    default: "11.1.3"
+name: 'Hex Intel Environment'
+description: 'Standardized setup, caching, and install for monorepo'
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - uses: actions/setup-node@v4
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v3
       with:
-        node-version: ${{ inputs.node-version }}
-    - uses: pnpm/action-setup@v3
+        version: 11.1.3
+    - name: Setup Node
+      uses: actions/setup-node@v4
       with:
-        version: ${{ inputs.pnpm-version }}
-    - run: pnpm install --frozen-lockfile
+        node-version: 20
+        cache: 'pnpm'
+    - name: Install dependencies
       shell: bash
+      run: pnpm install --frozen-lockfile
