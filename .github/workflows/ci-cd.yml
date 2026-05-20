@@ -2,15 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
-      - master
-      - staging
   pull_request:
-    branches:
-      - main
-      - master
-      - staging
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
