@@ -1,10 +1,12 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import path from "path";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  distDir: '.next',
   turbopack: {
-    root: "/home/kellyb_dev/projects/hex-yt-intel",
+    root: path.resolve(__dirname, '..'),
   },
   typescript: { tsconfigPath: "./tsconfig.json" },
 
