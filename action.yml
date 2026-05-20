@@ -12,6 +12,9 @@ runs:
       with:
         node-version: 24
         cache: 'pnpm'
+        cache-dependency-path: '**/pnpm-lock.yaml'
     - name: Install dependencies
       shell: bash
-      run: pnpm install --recursive --frozen-lockfile --config.auto-install-peers=true
+      env:
+        PNPM_CONFIG_AUTO_INSTALL_PEERS: "true"
+      run: pnpm install --recursive --frozen-lockfile
