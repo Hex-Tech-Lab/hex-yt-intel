@@ -7,7 +7,7 @@
     "build": "next build && node scripts/enforce-bundle.mjs",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit --ignoreDeprecations 6.0",
     "format": "prettier --write .",
     "test": "playwright test"
   },
