@@ -2,7 +2,7 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "skipLibCheck": true,
-    "ignoreDeprecations": "5.0",
+    "ignoreDeprecations": "6.0",
     "jsx": "preserve",
     "jsxImportSource": "react",
     "lib": [
@@ -16,7 +16,7 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "baseUrl": ".",
+    "baseUrl": "./",
     "paths": {
       "@types/*": ["./packages/types/src/*"],
       "@lib/*": ["./web/lib/*"],
