@@ -44,6 +44,9 @@ export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
 
+    // Request-scoped token holder — avoids module-level race condition in warm isolates
+    const pendingTokens: Array<{ name: string; value: string; options?: any }> = [];
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -53,11 +56,10 @@ export async function GET(request: NextRequest) {
             return cookieStore.getAll();
           },
           setAll(cookiesToSet) {
-            sessionTokens.current = cookiesToSet.map(c => ({
-              name: c.name,
-              value: c.value,
-              options: c.options,
-            }));
+            pendingTokens.length = 0;
+            for (const c of cookiesToSet) {
+              pendingTokens.push({ name: c.name, value: c.value, options: c.options });
+            }
           },
         },
       }
@@ -77,12 +79,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/error?error=no_session', request.url));
     }
 
-    // Apply Supabase SSR session tokens
-    const tokens = sessionTokens.current;
-    if (tokens) {
-      for (const { name, value, options } of tokens) {
-        response.cookies.set(name, value, options as any);
-      }
+    // Apply Supabase SSR session tokens to the redirect response
+    for (const { name, value, options } of pendingTokens) {
+      response.cookies.set(name, value, options as any);
     }
 
     return response;
@@ -91,10 +90,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/auth/error?error=${encodeURIComponent(errorMessage)}`, request.url));
   }
 }
-
-// Per-request holder for session tokens captured during exchangeCodeForSession.
-// Must be module-scoped so the closure over sessionTokens survives the
-// exchangeCodeForSession async call into the redirect response block below.
-const sessionTokens: {
-  current: Array<{ name: string; value: string; options?: any }> | null;
-} = { current: null };

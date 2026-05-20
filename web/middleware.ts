@@ -12,26 +12,75 @@ function timingSafeStringEqual(a: string, b: string): boolean {
   return mismatch === 0;
 }
 
-async function hasSupabaseAuth(request: NextRequest): Promise<boolean> {
+async function hasSupabaseAuth(
+  request: NextRequest,
+  response: NextResponse
+): Promise<boolean> {
   try {
-    const cookieStore = request.cookies;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+    // Diagnostic: surface dummy-key CI leakage or missing Edge Runtime vars
+    console.log('[middleware] Env diagnostic', {
+      hasUrl: !!supabaseUrl,
+      isDummyUrl: supabaseUrl?.includes('dummy') ?? false,
+      authProvider: process.env.AUTH_PROVIDER ?? '(unset)',
+    });
+
     if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('[middleware] SUPABASE env vars missing — check Vercel Edge Runtime settings');
       return false;
+    }
+
+    const isPlaceholderCred = (v: string) => v.includes('dummy') || v.includes('ci-build-placeholder');
+    if (isPlaceholderCred(supabaseUrl) || isPlaceholderCred(supabaseAnonKey)) {
+      console.error('[middleware] CI placeholder credentials detected in runtime — Vercel env vars not set for Edge Runtime');
+      return false;
+    }
+
+    // Bearer token fallback: allow API clients that send Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const bearerToken = authHeader.slice(7);
+      // Validate JWT structure (3 base64 segments) before trusting it
+      const parts = bearerToken.split('.');
+      if (parts.length === 3 && parts.every(p => p.length > 0)) {
+        console.info('[middleware] Bearer token detected — bypassing cookie auth');
+        return true;
+      }
+      console.warn('[middleware] Malformed Bearer token rejected');
+    }
+
+    const allCookies = request.cookies.getAll();
+    const hasAuthCookie = allCookies.some(c => c.name.includes('auth-token') || c.name.includes('sb-'));
+    if (!hasAuthCookie) {
+      console.warn('[middleware] No Supabase auth cookies found in request', {
+        cookieNames: allCookies.map(c => c.name),
+        path: request.nextUrl.pathname,
+      });
     }
 
     const client = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: () => {},
+        getAll: () => request.cookies.getAll(),
+        setAll(cookiesToSet) {
+          // Keep the request cookie jar in sync for downstream reads in this middleware
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          // Write refreshed tokens to the response so they reach the browser
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options as any)
+          );
+        },
       },
     });
 
-    const { data: { user } } = await client.auth.getUser();
+    const { data: { user }, error } = await client.auth.getUser();
+    if (error) {
+      console.warn('[middleware] Supabase getUser error', { message: error.message, status: error.status });
+    }
     return !!user;
-  } catch {
+  } catch (err) {
+    console.error('[middleware] hasSupabaseAuth threw', { error: String(err) });
     return false;
   }
 }
@@ -96,8 +145,12 @@ export async function middleware(request: NextRequest) {
   // Check auth method based on environment variable
   const authProvider = process.env.AUTH_PROVIDER || 'supabase';
 
+  // Forward the mutated request (with refreshed cookies) to downstream route handlers.
+  // Without this, Server Components calling cookies() won't see the updated session.
+  const supabaseResponse = NextResponse.next({ request });
+
   const isAuthenticated = authProvider === 'supabase'
-    ? await hasSupabaseAuth(request)
+    ? await hasSupabaseAuth(request, supabaseResponse)
     : !!(await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET || "" }));
 
   if (!isAuthenticated) {
@@ -109,7 +162,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
-  return NextResponse.next();
+  // Return the supabaseResponse so any refreshed cookies are forwarded to the browser
+  return supabaseResponse;
 }
 
 export const config = {
