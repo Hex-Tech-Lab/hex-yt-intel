@@ -19,13 +19,18 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'pnpm run dev',
-    cwd: '.',
-    url: "http://localhost:3005",
-    reuseExistingServer: false,
-    timeout: 120000,
-  },
+  webServer: (() => {
+    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+    return {
+      command: isCI
+        ? 'pnpm --filter @hex-yt-intel/web run build && pnpm --filter @hex-yt-intel/web run start'
+        : 'pnpm run dev',
+      cwd: isCI ? '..' : '.',
+      url: 'http://localhost:3000',
+      reuseExistingServer: !isCI,
+      timeout: 180000,
+    };
+  })(),
 
   timeout: 30 * 1000,
   expect: {
