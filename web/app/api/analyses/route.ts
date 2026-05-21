@@ -7,7 +7,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import { AnalysisCreateSchema } from '@/lib/schemas';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
-import { ERROR_CODES, type ErrorCode } from '@/lib/error-codes';
+import { ERROR_CODES } from '@/lib/error-codes';
 import * as Sentry from '@sentry/nextjs';
 
 import {
