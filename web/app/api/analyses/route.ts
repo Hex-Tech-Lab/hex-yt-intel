@@ -7,7 +7,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import { AnalysisCreateSchema } from '@/lib/schemas';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
-import { ERROR_CODES } from '@/lib/error-codes';
+import { ERROR_CODES, type ErrorCode } from '@/lib/error-codes';
 import * as Sentry from '@sentry/nextjs';
 
 import {
@@ -97,7 +97,12 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
     } catch (parseErr) {
-      console.warn('[analyses] 0. JSON parse error', { error: String(parseErr) });
+      const errorCode = ERROR_CODES.INVALID_JSON;
+      Sentry.withScope((scope) => {
+        scope.setTag('errorCode', errorCode);
+        Sentry.captureException(parseErr, { tags: { operation: 'json-parse', code: errorCode } });
+      });
+      console.warn(`[analyses] 0. JSON parse error [${errorCode}]`, { error: String(parseErr) });
       return NextResponse.json(
         { error: 'Invalid JSON payload' },
         { status: 400 }
@@ -107,13 +112,23 @@ export async function POST(request: NextRequest) {
     const validation = AnalysisCreateSchema.safeParse(body);
     if (!validation.success) {
       const firstError = validation.error.issues[0];
+      const errorCode = ERROR_CODES.INVALID_REQUEST_SCHEMA;
       if (!firstError) {
+        Sentry.withScope((scope) => {
+          scope.setTag('errorCode', errorCode);
+          Sentry.captureMessage('Unknown validation error', { level: 'warning', tags: { code: errorCode } });
+        });
         return NextResponse.json(
           { error: 'Invalid request: unknown validation error' },
           { status: 400 }
         );
       }
-      console.warn('[analyses] 0. Input validation failed', {
+      Sentry.withScope((scope) => {
+        scope.setTag('errorCode', errorCode);
+        scope.setContext('validation', { field: firstError.path.join('.'), message: firstError.message });
+        Sentry.captureMessage(`Schema validation failed: ${firstError.message}`, { level: 'warning', tags: { code: errorCode } });
+      });
+      console.warn(`[analyses] 0. Input validation failed [${errorCode}]`, {
         field: firstError.path.join('.'),
         message: firstError.message,
       });
@@ -133,7 +148,13 @@ export async function POST(request: NextRequest) {
     // Validate YouTube URL and extract video ID at perimeter
     const videoId = extractVideoId(validation.data.url);
     if (!videoId || videoId === 'unknown') {
-      console.warn('[analyses] 0. Video ID extraction failed', { url: validation.data.url });
+      const errorCode = ERROR_CODES.INVALID_VIDEO_URL;
+      Sentry.withScope((scope) => {
+        scope.setTag('errorCode', errorCode);
+        scope.setContext('url', { url: validation.data.url });
+        Sentry.captureMessage('Invalid YouTube URL format', { level: 'warning', tags: { code: errorCode } });
+      });
+      console.warn(`[analyses] 0. Video ID extraction failed [${errorCode}]`, { url: validation.data.url });
       addBreadcrumb('Invalid YouTube URL at perimeter', { url: validation.data.url }, 'validation');
       return NextResponse.json(
         { error: 'Unsupported YouTube URL format' },
@@ -158,7 +179,12 @@ export async function POST(request: NextRequest) {
       // sec_001: Harden user context attribution (fail-fast on missing email)
       const testUserEmail = process.env.DEV_TEST_USER_EMAIL;
       if (!testUserEmail || testUserEmail.trim() === '') {
-        console.error('[analyses] Bypass attempted but DEV_TEST_USER_EMAIL is missing or blank');
+        const errorCode = ERROR_CODES.ENV_MISSING_VARIABLE;
+        Sentry.withScope((scope) => {
+          scope.setTag('errorCode', errorCode);
+          Sentry.captureMessage('DEV_TEST_USER_EMAIL not configured', { level: 'error', tags: { code: errorCode } });
+        });
+        console.error(`[analyses] Bypass attempted but DEV_TEST_USER_EMAIL is missing [${errorCode}]`);
         return NextResponse.json(
           { error: 'Invalid development configuration' },
           { status: 500 }
@@ -174,7 +200,12 @@ export async function POST(request: NextRequest) {
       const session = await getAuthSession();
       userId = session?.user?.id;
       if (!userId) {
-        console.warn('[analyses] Auth check failed - no valid session or user ID');
+        const errorCode = ERROR_CODES.AUTH_UNAUTHORIZED;
+        Sentry.withScope((scope) => {
+          scope.setTag('errorCode', errorCode);
+          Sentry.captureMessage('Authentication check failed - no user ID', { level: 'warning', tags: { code: errorCode } });
+        });
+        console.warn(`[analyses] Auth check failed [${errorCode}]`);
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
@@ -202,9 +233,13 @@ export async function POST(request: NextRequest) {
 
     if (!allowed) {
       const errorCode = ERROR_CODES.RATE_LIMIT_EXCEEDED;
-      console.warn('[analyses] 3. Rate limit exceeded', { code: errorCode, userId, tier: userTierAuth });
+      Sentry.withScope((scope) => {
+        scope.setTag('errorCode', errorCode);
+        scope.setContext('user', { userId, tier: userTierAuth });
+        Sentry.captureMessage('Rate limit exceeded', { level: 'warning', tags: { code: errorCode } });
+      });
+      console.warn(`[analyses] 3. Rate limit exceeded [${errorCode}]`, { userId, tier: userTierAuth });
       addBreadcrumb('Rate limit exceeded', { code: errorCode, userId, tier: userTierAuth }, 'rate_limiting');
-      Sentry.captureMessage('Rate limit: POST /api/analyses', { level: 'warning', tags: { code: errorCode } });
       // Rate limit exceeded - response already has 429 status
       if (response) {
         // Attach headers to response
@@ -278,7 +313,8 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
         
         if (error) {
-          console.warn('[analyses] Supabase error fetching user quota:', error);
+          const errorCode = ERROR_CODES.QUOTA_FETCH_FAILED;
+          console.warn(`[analyses] Supabase error fetching user quota [${errorCode}]:`, error);
           throw error;
         }
 
@@ -329,9 +365,13 @@ export async function POST(request: NextRequest) {
 
     if (quotaLimit && analysesUsed >= quotaLimit) {
       const errorCode = ERROR_CODES.QUOTA_EXCEEDED;
-      console.warn('[analyses] Quota limit exceeded', { code: errorCode, userId, used: analysesUsed, limit: quotaLimit, tier: userTierAuth });
+      Sentry.withScope((scope) => {
+        scope.setTag('errorCode', errorCode);
+        scope.setContext('quota', { userId, used: analysesUsed, limit: quotaLimit, tier: userTierAuth });
+        Sentry.captureMessage(`Quota exceeded for user`, { level: 'warning', tags: { code: errorCode } });
+      });
+      console.warn(`[analyses] Quota limit exceeded [${errorCode}]`, { userId, used: analysesUsed, limit: quotaLimit, tier: userTierAuth });
       addBreadcrumb('Quota limit exceeded', { code: errorCode, userId, used: analysesUsed, limit: quotaLimit }, 'quota');
-      Sentry.captureMessage(`Quota exceeded: user ${userId}`, { level: 'warning', tags: { code: errorCode } });
       return NextResponse.json(
         {
           error: `Monthly quota exceeded (${analysesUsed}/${quotaLimit}). Upgrade to Pro for unlimited analyses.`,
@@ -369,12 +409,17 @@ export async function POST(request: NextRequest) {
 
     // Handle metadata result (required - fail if unavailable)
     if (metadataResult.status === 'rejected') {
-      console.error('[analyses] 6. Metadata fetch failed', { videoId, error: String(metadataResult.reason) });
-      addBreadcrumb('Worker call failed', { videoId, error: String(metadataResult.reason) }, 'external_service');
-      Sentry.captureException(metadataResult.reason, {
-        tags: { service: 'cloudflare-worker', operation: 'fetch-metadata' },
-        contexts: { video: { videoId } },
+      const errorCode = ERROR_CODES.CLOUDFLARE_METADATA_INVALID;
+      Sentry.withScope((scope) => {
+        scope.setTag('errorCode', errorCode);
+        scope.setContext('worker', { service: 'cloudflare-worker', operation: 'fetch-metadata', videoId });
+        Sentry.captureException(metadataResult.reason, {
+          tags: { service: 'cloudflare-worker', operation: 'fetch-metadata', code: errorCode },
+          contexts: { video: { videoId } },
+        });
       });
+      console.error(`[analyses] 6. Metadata fetch failed [${errorCode}]`, { videoId, error: String(metadataResult.reason) });
+      addBreadcrumb('Worker call failed', { videoId, error: String(metadataResult.reason) }, 'external_service');
       return NextResponse.json(
         { error: 'Failed to fetch video metadata' },
         { status: 500 }
@@ -391,13 +436,17 @@ export async function POST(request: NextRequest) {
       console.log('[analyses] 6. Transcript fetched (parallel)', { videoId, length: transcript.length });
       addBreadcrumb('Transcript fetched from worker', { videoId, length: transcript.length });
     } else {
-      console.warn('[analyses] 6. Transcript fetch failed (non-blocking, proceeding with analysis)', { videoId, error: String(transcriptResult.reason) });
-      addBreadcrumb('Transcript unavailable (proceeding with metadata-only analysis)', { videoId, error: String(transcriptResult.reason) }, 'external_service');
-      Sentry.captureException(transcriptResult.reason, {
-        tags: { service: 'cloudflare-worker', operation: 'fetch-transcript' },
-        level: 'warning',
-        contexts: { video: { videoId } },
+      const errorCode = ERROR_CODES.CLOUDFLARE_TRANSCRIPT_NOT_FOUND;
+      Sentry.withScope((scope) => {
+        scope.setTag('errorCode', errorCode);
+        scope.setContext('worker', { service: 'cloudflare-worker', operation: 'fetch-transcript', videoId });
+        Sentry.captureException(transcriptResult.reason, {
+          tags: { service: 'cloudflare-worker', operation: 'fetch-transcript', code: errorCode, level: 'warning' },
+          contexts: { video: { videoId } },
+        });
       });
+      console.warn(`[analyses] 6. Transcript fetch failed [${errorCode}] (non-blocking, proceeding with analysis)`, { videoId, error: String(transcriptResult.reason) });
+      addBreadcrumb('Transcript unavailable (proceeding with metadata-only analysis)', { videoId, error: String(transcriptResult.reason) }, 'external_service');
       // Fallback: Use placeholder token to indicate unavailable captions
       transcript = '[Transcript Unavailable: video lacks captions or is inaccessible]';
     }
@@ -427,21 +476,31 @@ export async function POST(request: NextRequest) {
       console.log('[analyses] 7. OpenRouter stream initiated successfully', { videoId });
       addBreadcrumb('OpenRouter stream initiated', { videoId });
     } catch (error) {
-      console.error('[analyses] 7. OpenRouter call failed', { videoId, error: String(error) });
-
+      let errorCode: ErrorCode = ERROR_CODES.ANALYSIS_GENERATION_FAILED;
       let statusCode = 500;
       let errorMessage = 'Failed to generate analysis';
 
       if (error instanceof AnalysisEngineError) {
         statusCode = error.statusCode;
         errorMessage = error.message;
+        // Map specific error types to error codes
+        if (error.message.includes('timeout')) {
+          errorCode = ERROR_CODES.OPENROUTER_TIMEOUT as ErrorCode;
+        } else if (error.message.includes('rate limit')) {
+          errorCode = ERROR_CODES.OPENROUTER_RATE_LIMIT as ErrorCode;
+        }
       }
 
-      addBreadcrumb('Analysis generation failed', { videoId, error: errorMessage }, 'external_service');
-      Sentry.captureException(error, {
-        tags: { service: 'openrouter', operation: 'claude-analysis' },
-        contexts: { video: { videoId } },
+      Sentry.withScope((scope) => {
+        scope.setTag('errorCode', errorCode);
+        scope.setContext('openrouter', { service: 'openrouter', operation: 'claude-analysis', videoId, statusCode });
+        Sentry.captureException(error, {
+          tags: { service: 'openrouter', operation: 'claude-analysis', code: errorCode },
+          contexts: { video: { videoId }, error: { statusCode, message: errorMessage } },
+        });
       });
+      console.error(`[analyses] 7. OpenRouter call failed [${errorCode}]`, { videoId, error: String(error), statusCode });
+      addBreadcrumb('Analysis generation failed', { videoId, error: errorMessage }, 'external_service');
       return NextResponse.json(
         { error: errorMessage },
         { status: statusCode }
@@ -502,9 +561,14 @@ export async function POST(request: NextRequest) {
           { analysisId, videoId, userId }
         );
       } catch (insertErr) {
-        console.error('[analyses] Failed to create analysis record in background', { analysisId, error: String(insertErr) });
+        const errorCode = ERROR_CODES.DATABASE_ANALYSIS_INSERT_FAILED;
+        Sentry.withScope((scope) => {
+          scope.setTag('errorCode', errorCode);
+          scope.setContext('database', { operation: 'background-analysis-insert', analysisId, videoId, userId });
+          Sentry.captureException(insertErr, { tags: { operation: 'background-analysis-insert', code: errorCode } });
+        });
+        console.error(`[analyses] Failed to create analysis record in background [${errorCode}]`, { analysisId, error: String(insertErr) });
         addBreadcrumb('Background analysis record creation failed', { analysisId }, 'database');
-        Sentry.captureException(insertErr, { tags: { operation: 'background-analysis-insert' } });
       }
 
       console.log('[analyses] 11. Background Task: Collecting markdown and publishing validation', { videoId, analysisId });
@@ -560,9 +624,14 @@ export async function POST(request: NextRequest) {
           }
         });
       } catch (bgErr) {
-        console.error('[analyses] Background processing failed', { analysisId, error: String(bgErr) });
+        const errorCode = ERROR_CODES.ANALYSIS_STREAMING_FAILED;
+        Sentry.withScope((scope) => {
+          scope.setTag('errorCode', errorCode);
+          scope.setContext('database', { operation: 'background-stream-processing', analysisId, videoId, userId });
+          Sentry.captureException(bgErr, { tags: { operation: 'background-stream-processing', code: errorCode } });
+        });
+        console.error(`[analyses] Background processing failed [${errorCode}]`, { analysisId, error: String(bgErr) });
         addBreadcrumb('Background stream processing failed', { analysisId }, 'database');
-        Sentry.captureException(bgErr, { tags: { operation: 'background-stream-processing' } });
       }
     });
 
