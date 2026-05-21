@@ -483,6 +483,50 @@ export async function POST(request: NextRequest) {
     console.log('[analyses] 5. Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
     addBreadcrumb('Quota check passed', { userId, used: analysesUsed, limit: quotaLimit || 'unlimited' });
 
+    // 5.5 ATOMIC QUOTA INCREMENT: Must happen BEFORE OpenRouter to prevent race
+    console.log('[analyses] 5.5 Atomically incrementing quota (before OpenRouter)', { userId, tier: userTierAuth });
+    const { data: quotaResult, error: quotaIncrementError } = await supabase
+      .rpc('increment_user_quota_atomic', { p_user_id: userId })
+      .maybeSingle();
+
+    if (quotaIncrementError) {
+      const errorCode = ERROR_CODES.QUOTA_ENFORCEMENT_FAILED;
+      Sentry.captureException(quotaIncrementError, {
+        tags: { operation: 'increment_user_quota_atomic', code: errorCode },
+        contexts: { quota: { userId, tier: userTierAuth, operation: 'atomic_increment' } }
+      });
+      console.error(`[analyses] Quota increment failed [${errorCode}]`, { userId, error: quotaIncrementError });
+      addBreadcrumb('Quota increment failed', { userId, error: String(quotaIncrementError) }, 'quota');
+      return NextResponse.json(
+        { error: 'Quota enforcement error' },
+        { status: 500 }
+      );
+    }
+
+    // Check if increment succeeded (compare-and-swap succeeded)
+    const quotaIncremented = (quotaResult as any)?.success === true;
+    if (!quotaIncremented) {
+      const errorCode = ERROR_CODES.QUOTA_EXCEEDED;
+      Sentry.captureMessage(`Quota exceeded (atomic enforcement)`, {
+        level: 'warning',
+        tags: { code: errorCode },
+        contexts: { quota: { userId, tier: userTierAuth, operation: 'atomic_increment_failed' } }
+      });
+      console.warn(`[analyses] Quota exceeded at atomic increment [${errorCode}]`, { userId, tier: userTierAuth });
+      addBreadcrumb('Quota exceeded (atomic enforcement)', { userId, tier: userTierAuth }, 'quota');
+      return NextResponse.json(
+        {
+          error: `Monthly quota exceeded. Upgrade to Pro for unlimited analyses.`,
+          code: errorCode,
+          quotaExceeded: true,
+          remaining: 0,
+        },
+        { status: 402 }
+      );
+    }
+
+    console.log('[analyses] 5.5 Quota increment succeeded', { userId, newQuota: (quotaResult as any)?.new_quota });
+
     // 6. Fetch metadata AND transcript in parallel (non-blocking isolation)
     console.log('[analyses] 6. Fetching metadata and transcript from Cloudflare Worker (parallel)', { videoId });
     let metadata: any;
@@ -566,6 +610,17 @@ export async function POST(request: NextRequest) {
       console.log('[analyses] 7. OpenRouter stream initiated successfully', { videoId });
       addBreadcrumb('OpenRouter stream initiated', { videoId });
     } catch (error) {
+      // OpenRouter failed after quota was already incremented
+      // Decrement the quota atomically to restore state
+      console.warn('[analyses] 7. OpenRouter failed, rolling back quota increment', { userId, videoId });
+      const { error: decrementError } = await supabase
+        .rpc('decrement_user_quota', { p_user_id: userId, p_decrement: 1 })
+        .maybeSingle();
+      if (decrementError) {
+        console.error('[analyses] Failed to decrement quota on OpenRouter failure', { userId, error: decrementError });
+        Sentry.captureException(decrementError, { tags: { operation: 'decrement_user_quota_on_failure' } });
+      }
+
       let errorCode: ErrorCode = ERROR_CODES.ANALYSIS_GENERATION_FAILED;
       let statusCode = 500;
       let errorMessage = 'Failed to generate analysis';
@@ -648,15 +703,8 @@ export async function POST(request: NextRequest) {
           { analysisId, videoId, userId }
         );
 
-        // 10.5. Increment user quota atomically
-        if (userId) {
-          console.log('[analyses] 10.5 Background Task: Incrementing user quota', { userId });
-          const { error: quotaError } = await supabase.rpc('increment_user_quota', { p_user_id: userId, p_increment: 1 });
-          if (quotaError) {
-            console.error('[analyses] Failed to increment user quota', { userId, error: quotaError });
-            Sentry.captureException(quotaError, { tags: { operation: 'increment_user_quota' } });
-          }
-        }
+        // 10.5. Quota already incremented atomically before OpenRouter (line 5.5)
+        // No additional increment needed here
       } catch (insertErr) {
         const errorCode = ERROR_CODES.DATABASE_ANALYSIS_INSERT_FAILED;
         Sentry.captureException(insertErr, {

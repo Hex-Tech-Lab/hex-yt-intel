@@ -42,7 +42,8 @@ export async function POST(
       shared_token: token,
       shared_expires_at: expiryDate.toISOString(),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', userId);
 
   if (updateError) {
     return NextResponse.json({ error: 'Failed to generate link' }, { status: 500 });
