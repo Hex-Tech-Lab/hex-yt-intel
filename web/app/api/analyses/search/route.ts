@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Vector Semantic Search API
  * POST /api/analyses/search

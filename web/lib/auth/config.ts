@@ -5,8 +5,10 @@
 
 import { validateAuthConfig } from './env-validator';
 
-// Validate at runtime (not during Vercel build)
-if (typeof window === 'undefined' && !process.env.VERCEL) {
+// Validate only in production Vercel deployments
+// Skip validation in development, local testing, CI, and edge runtime environments
+const isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
+if (typeof window === 'undefined' && isProduction) {
   validateAuthConfig();
 }
 

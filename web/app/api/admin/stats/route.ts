@@ -1,9 +1,9 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import * as Sentry from '@sentry/nextjs';
-
-export const dynamic = 'force-dynamic';
 
 interface AdminStats {
   analyses_total: number;
