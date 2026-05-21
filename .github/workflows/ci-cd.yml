@@ -112,6 +112,15 @@ jobs:
 
       - name: Run tests
         run: pnpm --filter @hex-yt-intel/web run test
+        env:
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN || 'https://00000000000000000000000000000000@o000000.ingest.sentry.io/0000000' }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN || 'mock-sentry-auth-token-64-chars-long-xxxxxxxxxxxxxxxxxxxx' }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key' }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || 'sk-or-v1-mock' }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'mock-nextauth-secret-32-chars-long-min' }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_mock' }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_mock' }}
 
       - name: Upload test results
         if: always()
