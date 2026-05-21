@@ -267,11 +267,11 @@ export function getEnv(): EnvironmentConfig {
 
 /**
  * Initialize and validate environment on module load
- * Only validate in production Vercel deployments; skip in development, CI, and testing
+ * Validate on local machines and production; skip only in CI/Preview to allow scaffolding placeholders
  */
-const isProductionEnvironment = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
-if (typeof window === 'undefined' && isProductionEnvironment) {
-  // Server-side only, production Vercel only
+const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
+if (typeof window === 'undefined' && !isCI) {
+  // Server-side only, skip validation bypass exclusively in active CI runners
   validateEnvironment();
 }
 
