@@ -23,9 +23,15 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
-  // Short-circuit bad OAuth callback states (416 prevention)
-  if (searchParams.get('error_code') === 'bad_oauth_callback') {
-    const response = NextResponse.redirect(new URL('/', request.url));
+  // Catch any Supabase auth error before attempting code exchange.
+  // Common codes: bad_oauth_callback, redirect_uri_mismatch, access_denied, server_error
+  const errorCode = searchParams.get('error_code');
+  const errorDesc = searchParams.get('error_description') ?? searchParams.get('error') ?? 'unknown_error';
+  if (errorCode) {
+    console.error('[callback] Supabase OAuth error received', { errorCode, errorDesc });
+    const response = NextResponse.redirect(
+      new URL(`/auth/error?error=${encodeURIComponent(errorDesc)}`, request.url)
+    );
     response.cookies.delete('sb-access-token');
     response.cookies.delete('sb-refresh-token');
     return response;
@@ -38,8 +44,15 @@ export async function GET(request: NextRequest) {
   const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/';
 
   if (!code) {
+    console.error('[callback] No code parameter — OAuth redirect did not include code');
     return NextResponse.redirect(new URL('/auth/error?error=no_code', request.url));
   }
+
+  console.log('[callback] Code exchange starting', {
+    hasCode: true,
+    origin: request.headers.get('origin') ?? request.nextUrl.origin,
+    next,
+  });
 
   try {
     const cookieStore = await cookies();
@@ -80,6 +93,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply Supabase SSR session tokens to the redirect response
+    console.log('[callback] Exchange succeeded', {
+      pendingTokenCount: pendingTokens.length,
+      tokenNames: pendingTokens.map(t => t.name),
+      redirectTo: decodedNext,
+    });
     for (const { name, value, options } of pendingTokens) {
       response.cookies.set(name, value, options as any);
     }
