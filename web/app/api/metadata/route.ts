@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth/nextauth-config';
+import { getAuthSession } from '@/lib/auth/provider-factory';
 import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId } from '@/lib/youtube';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
@@ -21,7 +20,7 @@ interface MetadataResponse {
 export async function POST(request: NextRequest) {
   try {
     // 401: No auth
-    const session = await getServerSession(authConfig);
+    const session = await getAuthSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
