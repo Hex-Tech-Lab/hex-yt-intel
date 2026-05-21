@@ -5,10 +5,11 @@
 
 import { validateAuthConfig } from './env-validator';
 
-// Validate environment except in CI runners to allow placeholder scaffolding
-// Production enforces strict validation via fallback defaults in validateAuthConfig
+// Skip validation only in CI and Preview environments to allow scaffolding placeholders
+// Enforce strict validation in local development and production
 const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
-if (typeof window === 'undefined' && !isCI) {
+const isPreview = process.env.VERCEL_ENV === 'preview';
+if (typeof window === 'undefined' && !isCI && !isPreview) {
   validateAuthConfig();
 }
 

@@ -267,11 +267,12 @@ export function getEnv(): EnvironmentConfig {
 
 /**
  * Initialize and validate environment on module load
- * Validate on local machines and production; skip only in CI/Preview to allow scaffolding placeholders
+ * Skip validation only in CI and Preview environments to allow scaffolding placeholders
+ * Enforce strict validation in local development and production
  */
 const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
-if (typeof window === 'undefined' && !isCI) {
-  // Server-side only, skip validation bypass exclusively in active CI runners
+const isPreview = process.env.VERCEL_ENV === 'preview';
+if (typeof window === 'undefined' && !isCI && !isPreview) {
   validateEnvironment();
 }
 
