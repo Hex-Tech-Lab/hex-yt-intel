@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import { getSupabaseClient } from '@/lib/supabase';
 import PDFDocument from 'pdfkit';
