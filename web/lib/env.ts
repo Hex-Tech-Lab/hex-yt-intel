@@ -63,9 +63,28 @@ interface EnvironmentConfig {
 }
 
 /**
+ * Detect if a value is a placeholder (build-time stub)
+ */
+function isPlaceholder(value: string | undefined): boolean {
+  if (!value) return true;
+  const normalized = value.toLowerCase();
+  return (
+    normalized.includes('dummy') ||
+    normalized.includes('placeholder') ||
+    normalized.includes('stub') ||
+    normalized.includes('ci-build') ||
+    value === ''
+  );
+}
+
+/**
  * Validate a single environment variable
  */
-function validateEnvVar(name: EnvVar, required: boolean = false): string | undefined {
+function validateEnvVar(
+  name: EnvVar,
+  required: boolean = false,
+  allowPlaceholder: boolean = false
+): string | undefined {
   const value = process.env[name];
 
   if (required && !value) {
@@ -79,6 +98,14 @@ function validateEnvVar(name: EnvVar, required: boolean = false): string | undef
     throw new Error(`Environment variable ${name} must be a string, got ${typeof value}`);
   }
 
+  // In production, reject placeholder values
+  if (required && value && isPlaceholder(value) && !allowPlaceholder) {
+    throw new Error(
+      `Environment variable ${name} has a placeholder value in production.\n` +
+      `Please set a real value in your deployment environment.`
+    );
+  }
+
   return value;
 }
 
@@ -88,10 +115,21 @@ function validateEnvVar(name: EnvVar, required: boolean = false): string | undef
 function validateEnvironment(): void {
   const errors: string[] = [];
 
+  // Detect environment context
+  const isProduction =
+    process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
+    process.env.NODE_ENV === 'production';
+  const isCIorPreview =
+    process.env.GITHUB_ACTIONS === 'true' ||
+    process.env.VERCEL_ENV === 'preview';
+
+  // Allow placeholders in CI/Preview, but enforce strict validation in production
+  const allowPlaceholder = isCIorPreview && !isProduction;
+
   // Check required variables (only in runtime, not build)
   for (const envVar of REQUIRED_ENV_VARS) {
     try {
-      validateEnvVar(envVar, true);
+      validateEnvVar(envVar, true, allowPlaceholder);
     } catch (error) {
       errors.push(error instanceof Error ? error.message : `Missing ${envVar}`);
     }
@@ -100,8 +138,8 @@ function validateEnvironment(): void {
   // Check optional variables (no error, just log warnings)
   for (const envVar of OPTIONAL_ENV_VARS) {
     try {
-      const value = validateEnvVar(envVar, false);
-      if (!value && process.env.NODE_ENV === 'production') {
+      const value = validateEnvVar(envVar, false, allowPlaceholder);
+      if (!value && isProduction) {
         console.warn(`Warning: Optional environment variable not set: ${envVar}`);
       }
     } catch (error) {
@@ -109,14 +147,15 @@ function validateEnvironment(): void {
     }
   }
 
-  // Throw if any required variables are missing
+  // Throw if any required variables are missing or invalid in production
   if (errors.length > 0) {
     console.error('Environment validation failed:');
     errors.forEach(error => console.error(`  - ${error}`));
     throw new Error(`Environment validation failed with ${errors.length} error(s)`);
   }
 
-  console.log('✓ Environment variables validated successfully');
+  const envType = isProduction ? 'production' : isCIorPreview ? 'CI/Preview' : 'development';
+  console.log(`✓ Environment variables validated successfully (${envType})`);
 }
 
 /**
