@@ -167,7 +167,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const signInUrl = new URL('/auth/signin', request.url);
-    signInUrl.searchParams.append('callbackUrl', pathname);
+    // Redirect to dashboard after sign-in, not back to raw page paths
+    const callbackTarget = pathname.startsWith('/analyses') ? pathname : '/';
+    signInUrl.searchParams.append('callbackUrl', callbackTarget);
     return NextResponse.redirect(signInUrl);
   }
 
