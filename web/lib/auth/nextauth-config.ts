@@ -49,10 +49,15 @@ export const authConfig: NextAuthOptions = {
     const secret = AUTH_CONFIG.nextauth.secret;
     // Allow build-time placeholder if secret is missing (will fail at runtime)
     if (!secret) {
-      if (process.env.NODE_ENV === 'production' && process.env.VERCEL) {
+      // During Vercel build, allow placeholder (will be checked at runtime)
+      if (process.env.VERCEL) {
+        return 'build-time-placeholder-nextauth-secret';
+      }
+      // At runtime in production without secret, throw error
+      if (process.env.NODE_ENV === 'production') {
         throw new Error('NEXTAUTH_SECRET environment variable is required but not set in production.');
       }
-      // During build, use a placeholder that will fail at runtime
+      // Development: use placeholder
       return 'build-time-placeholder-nextauth-secret';
     }
     return secret;
