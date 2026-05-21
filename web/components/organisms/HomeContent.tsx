@@ -10,11 +10,26 @@ import RateLimitAlert from '@/components/RateLimitAlert';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
 
+interface CachedAnalysisDialog {
+  show: boolean;
+  title: string;
+  createdAt: string;
+  videoId: string;
+  analysisId: string;
+}
+
 export default function HomeContent() {
   const { data: session = null, update: updateSession } = useSession();
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [devMode, setDevMode] = useState(true);
+  const [cachedDialog, setCachedDialog] = useState<CachedAnalysisDialog>({
+    show: false,
+    title: '',
+    createdAt: '',
+    videoId: '',
+    analysisId: '',
+  });
   const { startAnalysis } = useSSEStream();
   const { clearAnalysis, analysis, isLoading, lockoutTimeRemaining } = useAnalysisStore();
 
@@ -42,6 +57,41 @@ export default function HomeContent() {
     setDevMode(false);
   };
 
+  const checkCachedAnalysis = async (videoUrl: string) => {
+    try {
+      const urlObj = new URL(videoUrl);
+      const videoId = urlObj.searchParams.get('v') || videoUrl.split('/').pop();
+
+      if (!videoId) {
+        return null;
+      }
+
+      const response = await fetch(`/api/analyses/check?videoId=${encodeURIComponent(videoId)}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.exists && data.cached) {
+        return {
+          title: data.title || 'Analysis',
+          createdAt: data.createdAt ? new Date(data.createdAt).toLocaleString() : 'unknown',
+          videoId: data.videoId || videoId,
+          analysisId: data.analysisId,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Cache check failed:', error);
+      return null;
+    }
+  };
+
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
@@ -51,7 +101,31 @@ export default function HomeContent() {
       return;
     }
 
+    // Pre-flight check: Look for cached analysis
+    const cached = await checkCachedAnalysis(url);
+    if (cached) {
+      setCachedDialog({
+        show: true,
+        title: cached.title,
+        createdAt: cached.createdAt,
+        videoId: cached.videoId,
+        analysisId: cached.analysisId,
+      });
+      return;
+    }
+
     await startAnalysis(url, getUserTimezone());
+  };
+
+  const handleUseCached = () => {
+    // Load cached analysis from store or navigate to view
+    setCachedDialog({ ...cachedDialog, show: false });
+    router.push(`/analyses/saved?id=${cachedDialog.analysisId}`);
+  };
+
+  const handleForceRefresh = () => {
+    setCachedDialog({ ...cachedDialog, show: false });
+    startAnalysis(url, getUserTimezone());
   };
 
   const handleClear = () => {
@@ -205,6 +279,35 @@ export default function HomeContent() {
                 </p>
               )}
             </form>
+
+            {cachedDialog.show && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg p-6 max-w-md">
+                  <h3 className="text-lg font-semibold mb-2">Analysis Already Exists</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    We found a cached analysis for this video:
+                  </p>
+                  <div className="bg-gray-50 p-3 rounded mb-4 text-sm">
+                    <p className="font-medium">{cachedDialog.title}</p>
+                    <p className="text-gray-500 text-xs mt-1">Analyzed: {cachedDialog.createdAt}</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleUseCached}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+                    >
+                      View Cached
+                    </button>
+                    <button
+                      onClick={handleForceRefresh}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 text-sm font-medium"
+                    >
+                      Re-analyze
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-8 pt-6 border-t border-gray-200">
