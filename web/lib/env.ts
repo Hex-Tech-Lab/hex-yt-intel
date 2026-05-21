@@ -16,11 +16,15 @@ const REQUIRED_ENV_VARS = [
 const OPTIONAL_ENV_VARS = [
   'NEXT_PUBLIC_SENTRY_DSN',
   'NEXT_PUBLIC_APP_VERSION',
+  'NEXT_PUBLIC_APP_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
   'CLOUDFLARE_WORKER_URL',
   'SENTRY_AUTH_TOKEN',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
+  'QSTASH_TOKEN',
+  'QSTASH_CURRENT_SIGNING_KEY',
+  'QSTASH_NEXT_SIGNING_KEY',
 ] as const;
 
 type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];
@@ -203,5 +207,14 @@ export const env = {
   },
   get isProduction(): boolean {
     return process.env.NODE_ENV === 'production';
+  },
+  get appUrl(): string | undefined {
+    return validateEnvVar('NEXT_PUBLIC_APP_URL', false);
+  },
+  get qstashToken(): string | undefined {
+    return validateEnvVar('QSTASH_TOKEN', false);
+  },
+  get qstashSigningKey(): string | undefined {
+    return validateEnvVar('QSTASH_CURRENT_SIGNING_KEY', false);
   },
 };
