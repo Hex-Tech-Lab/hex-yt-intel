@@ -43,6 +43,7 @@ export function useSSEStream() {
             { name: 'POST /api/analyses', op: 'http.client' },
             async () => fetch('/api/analyses', {
               method: 'POST',
+              credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ url, timezone }),
             })

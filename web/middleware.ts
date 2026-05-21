@@ -75,8 +75,16 @@ async function hasSupabaseAuth(
     });
 
     const { data: { user }, error } = await client.auth.getUser();
-    if (error) {
-      console.warn('[middleware] Supabase getUser error', { message: error.message, status: error.status });
+    if (!user) {
+      console.error('[middleware] Auth guard rejected', {
+        error: error?.message ?? 'no error object',
+        cookieCount: allCookies.length,
+        authCookieNames: allCookies
+          .filter(c => c.name.includes('sb-') || c.name.includes('auth-token'))
+          .map(c => c.name),
+        path: request.nextUrl.pathname,
+        method: request.method,
+      });
     }
     return !!user;
   } catch (err) {
