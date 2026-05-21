@@ -35,7 +35,7 @@ export async function POST(
   const expiryDate = new Date();
   expiryDate.setDate(expiryDate.getDate() + 30);
 
-  const { error: updateError } = await supabase
+  const { error: updateError, count } = await supabase
     .from('analyses')
     .update({
       shared_token: token,
@@ -46,6 +46,10 @@ export async function POST(
 
   if (updateError) {
     return NextResponse.json({ error: 'Failed to generate link' }, { status: 500 });
+  }
+
+  if (!count) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';

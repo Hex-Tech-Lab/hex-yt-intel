@@ -69,19 +69,6 @@ function validateEnvVar(name: EnvVar, required: boolean = false): string | undef
   const value = process.env[name];
 
   if (required && !value) {
-    // During Vercel build, provide default values instead of throwing
-    if (process.env.VERCEL) {
-      return `[build-time-placeholder-${name}]`;
-    }
-
-    // Production critical variables - never allow placeholder in runtime
-    const PRODUCTION_CRITICAL = ['OPENROUTER_API_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'NEXTAUTH_SECRET'];
-    if (PRODUCTION_CRITICAL.includes(name)) {
-      throw new Error(
-        `Missing required environment variable: ${name}\n` +
-        `Please set this variable in your deployment environment (Vercel: Settings → Environment Variables).`
-      );
-    }
     throw new Error(
       `Missing required environment variable: ${name}\n` +
       `Please set this variable in your .env.local or deployment environment.`
@@ -96,15 +83,9 @@ function validateEnvVar(name: EnvVar, required: boolean = false): string | undef
 }
 
 /**
- * Validate all environment variables
+ * Validate all environment variables at runtime
  */
 function validateEnvironment(): void {
-  // During Vercel build (next build), skip strict validation
-  // Required vars will have placeholder values from validateEnvVar
-  if (process.env.VERCEL) {
-    return;
-  }
-
   const errors: string[] = [];
 
   // Check required variables (only in runtime, not build)

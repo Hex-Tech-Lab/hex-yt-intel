@@ -550,6 +550,15 @@ export async function POST(request: NextRequest) {
 
     // Handle metadata result (required - fail if unavailable)
     if (metadataResult.status === 'rejected') {
+      // Rollback quota increment since analysis cannot proceed
+      const { error: decrementError } = await supabase
+        .rpc('decrement_user_quota', { p_user_id: userId, p_decrement: 1 })
+        .maybeSingle();
+      if (decrementError) {
+        console.error('[analyses] Failed to decrement quota on metadata fetch failure', { userId, error: decrementError });
+        Sentry.captureException(decrementError, { tags: { operation: 'decrement_user_quota_on_metadata_failure' } });
+      }
+
       const errorCode = ERROR_CODES.CLOUDFLARE_METADATA_INVALID;
       Sentry.captureException(metadataResult.reason, {
         tags: { service: 'cloudflare-worker', operation: 'fetch-metadata', code: errorCode },

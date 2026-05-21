@@ -5,9 +5,8 @@
 
 import { validateAuthConfig } from './env-validator';
 
-// Validate only at runtime, not during build
-// Skip validation in build environments (Vercel sets VERCEL=true during builds)
-if (!process.env.VERCEL) {
+// Validate at runtime (not during Vercel build)
+if (typeof window === 'undefined' && !process.env.VERCEL) {
   validateAuthConfig();
 }
 
@@ -21,11 +20,11 @@ export const AUTH_CONFIG = {
   },
 
   nextauth: {
-    secret: process.env.AUTH_SECRET || '',
+    secret: process.env.NEXTAUTH_SECRET || '',
   },
 
   google: {
-    clientId: process.env.AUTH_GOOGLE_ID || '',
-    clientSecret: process.env.AUTH_GOOGLE_SECRET || '',
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   },
 } as const;

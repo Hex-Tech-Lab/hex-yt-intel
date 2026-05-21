@@ -48,7 +48,14 @@ export const CheckoutSchema = z.object({
 }).refine(
   (data) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    return data.successUrl.startsWith(appUrl) && data.cancelUrl.startsWith(appUrl);
+    try {
+      const appOrigin = new URL(appUrl).origin;
+      const successOrigin = new URL(data.successUrl).origin;
+      const cancelOrigin = new URL(data.cancelUrl).origin;
+      return successOrigin === appOrigin && cancelOrigin === appOrigin;
+    } catch {
+      return false;
+    }
   },
   { message: 'URLs must be on this domain' }
 );
