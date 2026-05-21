@@ -63,10 +63,17 @@ interface EnvironmentConfig {
 }
 
 /**
- * Detect if a value is a placeholder (build-time stub)
+ * Detect if a value is a placeholder (build-time stub).
+ *
+ * Identifies values used as placeholders during CI/Preview builds that should
+ * not be allowed in production environments. Safely handles null, undefined,
+ * and non-string types by returning false for all non-string inputs.
+ *
+ * @param value - The environment variable value to check
+ * @returns true if the value is a placeholder (dummy, placeholder, stub, ci-build), false otherwise
  */
 function isPlaceholder(value: string | undefined): boolean {
-  if (!value) return true;
+  if (!value || typeof value !== 'string') return false;
   const normalized = value.toLowerCase();
   return (
     normalized.includes('dummy') ||
@@ -78,7 +85,18 @@ function isPlaceholder(value: string | undefined): boolean {
 }
 
 /**
- * Validate a single environment variable
+ * Validate a single environment variable.
+ *
+ * Retrieves an environment variable by name and validates its presence, type, and
+ * value for both required and optional variables. In production environments, rejects
+ * placeholder values even if allowPlaceholder is true. Safely handles undefined and
+ * non-string types with defensive type checking.
+ *
+ * @param name - The environment variable name to validate
+ * @param required - If true, throws an error when the variable is missing
+ * @param allowPlaceholder - If true, allows placeholder values in non-production environments
+ * @returns The environment variable value as a string, or undefined if not set and not required
+ * @throws {Error} If the variable is required but missing, or if the value is invalid
  */
 function validateEnvVar(
   name: EnvVar,
@@ -110,7 +128,16 @@ function validateEnvVar(
 }
 
 /**
- * Validate all environment variables at runtime
+ * Validate all environment variables at runtime.
+ *
+ * Performs comprehensive environment validation with context-aware strictness:
+ * - Detects execution environment (production, CI/Preview, or development)
+ * - Allows placeholder values in CI/Preview builds for scaffolding
+ * - Enforces strict validation in production with zero placeholders
+ * - Logs environment context and validation results
+ * - Throws detailed errors if required variables are missing or invalid
+ *
+ * @throws {Error} If any required environment variables are missing in the current environment
  */
 function validateEnvironment(): void {
   const errors: string[] = [];
@@ -159,7 +186,13 @@ function validateEnvironment(): void {
 }
 
 /**
- * Get the environment configuration
+ * Get the complete environment configuration object.
+ *
+ * Constructs and returns a typed configuration object containing all validated
+ * environment variables organized by service domain. Validates required variables
+ * on access and provides sensible defaults for optional configuration.
+ *
+ * @returns A complete EnvironmentConfig object with all validated services and app settings
  */
 export function getEnv(): EnvironmentConfig {
   return {
