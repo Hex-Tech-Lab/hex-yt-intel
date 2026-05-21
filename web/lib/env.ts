@@ -143,12 +143,12 @@ function validateEnvironment(): void {
   const errors: string[] = [];
 
   // Detect environment context
+  const isCI = process.env.GITHUB_ACTIONS === 'true';
   const isProduction =
-    process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
-    process.env.NODE_ENV === 'production';
-  const isCIorPreview =
-    process.env.GITHUB_ACTIONS === 'true' ||
-    process.env.VERCEL_ENV === 'preview';
+    !isCI &&
+    (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
+      process.env.NODE_ENV === 'production');
+  const isCIorPreview = isCI || process.env.VERCEL_ENV === 'preview';
 
   // Allow placeholders in CI/Preview, but enforce strict validation in production
   const allowPlaceholder = isCIorPreview && !isProduction;
