@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse, after } from 'next/server';
 import { createHash, randomUUID } from 'crypto';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
@@ -268,8 +270,9 @@ export async function POST(request: NextRequest) {
     let userEmail = '';
     let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined;
 
-    // Instantly isolate bypass logic from production build universe
-    const shouldAttemptBypass = !isProduction && allowDevBypass && devBypassToken && bypassSignature === devBypassToken;
+    // Bypass if header token equals devBypassToken
+    const hasValidBypassToken = devBypassToken && bypassSignature === devBypassToken;
+    const shouldAttemptBypass = !isProduction && allowDevBypass && hasValidBypassToken;
 
     if (shouldAttemptBypass) {
       // sec_001: Harden user context attribution (fail-fast on missing email)

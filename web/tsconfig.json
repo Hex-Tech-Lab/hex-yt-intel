@@ -33,7 +33,7 @@
         "name": "next"
       }
     ],
-    "allowJs": true
+    "allowJs": false
   },
   "include": [
     "**/*.ts",

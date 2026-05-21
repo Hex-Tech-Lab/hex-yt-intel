@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId } from '@/lib/youtube';
