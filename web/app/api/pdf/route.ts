@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import PDFDocument from 'pdfkit';
 import { ERROR_CODES } from '@/lib/error-codes';
 import * as Sentry from '@sentry/nextjs';
+import { getAuthSession } from '@/lib/auth/provider-factory';
 
 export const runtime = 'nodejs';
 
@@ -14,6 +15,15 @@ interface PDFGenerationRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify authentication before processing
+    const session = await getAuthSession();
+    if (!session || !session.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized', code: ERROR_CODES.AUTH_UNAUTHORIZED },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json() as PDFGenerationRequest;
 
     if (!body.markdown || typeof body.markdown !== 'string') {
@@ -29,7 +39,11 @@ export async function POST(request: NextRequest) {
     }
 
     const title = body.title || 'YouTube Content Analysis';
-    const fileName = body.fileName || 'analysis.pdf';
+    // Sanitize fileName: allow only alphanumeric, dots, hyphens, underscores
+    const sanitizedFileName = (body.fileName || 'analysis.pdf')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .slice(0, 255); // Limit length to prevent buffer overflow
+    const fileName = sanitizedFileName || 'analysis.pdf';
 
     // Create PDF document in memory
     const doc = new PDFDocument({

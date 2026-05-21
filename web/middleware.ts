@@ -57,18 +57,6 @@ async function hasSupabaseAuth(
       return false;
     }
 
-    // Bearer token fallback: allow API clients that send Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const parts = authHeader.slice(7).split('.');
-      if (parts.length === 3 && parts.every(p => p.length > 0)) {
-        diag.outcome = 'bearer_accepted';
-        console.log('[middleware] auth-diag', diag);
-        return true;
-      }
-      diag.outcome = 'bearer_malformed';
-    }
-
     const client = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         // Map to plain objects as required by @supabase/ssr getAll contract
@@ -81,6 +69,22 @@ async function hasSupabaseAuth(
         },
       },
     });
+
+    // Bearer token fallback: cryptographically verify the token via Supabase
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const { data: { user: bearerUser }, error: bearerError } = await client.auth.getUser(token);
+      if (bearerError || !bearerUser) {
+        diag.outcome = 'bearer_invalid';
+        diag.bearerError = bearerError?.message ?? null;
+        console.error('[middleware] auth-diag', diag);
+        return false;
+      }
+      diag.outcome = 'bearer_accepted';
+      console.log('[middleware] auth-diag', diag);
+      return true;
+    }
 
     const { data: { user }, error } = await client.auth.getUser();
     diag.outcome = user ? 'authenticated' : 'rejected';
