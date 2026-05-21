@@ -111,7 +111,7 @@ jobs:
         uses: ./
 
       - name: Run tests
-        run: pnpm --filter @hex-yt-intel/web run test --no-coverage || true
+        run: pnpm --filter @hex-yt-intel/web run test
 
       - name: Upload test results
         if: always()
