@@ -1,7 +1,6 @@
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth/nextauth-config';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '@/lib/supabase';
+import { getAuthSession } from '@/lib/auth/provider-factory';
 import * as Sentry from '@sentry/nextjs';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +25,7 @@ interface AdminStats {
 export async function GET(_request: NextRequest): Promise<NextResponse<AdminStats | { error: string }>> {
   try {
     // 1. Auth check - must be authenticated
-    const session = await getServerSession(authConfig);
+    const session = await getAuthSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -34,18 +33,23 @@ export async function GET(_request: NextRequest): Promise<NextResponse<AdminStat
       );
     }
 
-    // Role check — restrict to admin emails until RBAC column is added (Phase 4)
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
-    const userEmail = session.user?.email || '';
-    if (!adminEmails.includes(userEmail)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
     const userId = (session.user as any).id;
 
-    // 2. Initialize Supabase with service role key for cross-user aggregate counts
+    // 2. Initialize Supabase early for role check
     const supabase = getSupabaseServiceClient();
 
-    // 3. Fetch stats from database
+    // 3. Role check - query database role column (replaces fragile email-based check)
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (userError || !userData || userData.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // 4. Fetch stats from database
     const stats: AdminStats = {
       analyses_total: 0,
       searches_total: 0,

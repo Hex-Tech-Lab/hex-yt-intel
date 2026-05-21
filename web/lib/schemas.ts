@@ -45,7 +45,13 @@ export const SearchSchema = z.object({
 export const CheckoutSchema = z.object({
   successUrl: z.string().url('Invalid success URL'),
   cancelUrl: z.string().url('Invalid cancel URL'),
-});
+}).refine(
+  (data) => {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    return data.successUrl.startsWith(appUrl) && data.cancelUrl.startsWith(appUrl);
+  },
+  { message: 'URLs must be on this domain' }
+);
 
 export const MetadataSchema = z.object({
   videoId: z.string().min(1, 'Video ID required'),
