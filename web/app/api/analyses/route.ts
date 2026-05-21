@@ -439,14 +439,22 @@ export async function POST(request: NextRequest) {
 
     let analysesUsed = userData.analyses_used || 0;
     if (monthsElapsed > 0) {
-      // Reset quota for new month
+      // Reset quota for new month using atomic RPC
       console.log('[analyses] Monthly quota reset triggered', { userId, monthsElapsed });
-      analysesUsed = 0;
       addBreadcrumb('Monthly quota reset', { userId, monthsElapsed }, 'quota');
-      await supabase
-        .from('users')
-        .update({ analyses_used: 0, last_reset_date: now.toISOString() })
-        .eq('id', userId);
+      
+      const { data: resetData, error: resetError } = await supabase
+        .rpc('reset_user_quota', { p_user_id: userId })
+        .maybeSingle();
+
+      if (resetError) {
+        console.error('[analyses] Failed to reset monthly quota via RPC', { userId, error: resetError });
+        Sentry.captureException(resetError, { tags: { operation: 'reset_user_quota' } });
+      } else if (resetData) {
+        analysesUsed = (resetData as any).new_quota;
+      } else {
+        analysesUsed = 0;
+      }
     }
 
     // Enforce quota based on tier
@@ -638,6 +646,16 @@ export async function POST(request: NextRequest) {
           },
           { analysisId, videoId, userId }
         );
+
+        // 10.5. Increment user quota atomically
+        if (userId) {
+          console.log('[analyses] 10.5 Background Task: Incrementing user quota', { userId });
+          const { error: quotaError } = await supabase.rpc('increment_user_quota', { p_user_id: userId, p_increment: 1 });
+          if (quotaError) {
+            console.error('[analyses] Failed to increment user quota', { userId, error: quotaError });
+            Sentry.captureException(quotaError, { tags: { operation: 'increment_user_quota' } });
+          }
+        }
       } catch (insertErr) {
         const errorCode = ERROR_CODES.DATABASE_ANALYSIS_INSERT_FAILED;
         Sentry.captureException(insertErr, {
