@@ -26,8 +26,7 @@
  * }
  */
 
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth/nextauth-config';
+import { getAuthSession } from '@/lib/auth/provider-factory';
 import { NextRequest, NextResponse } from 'next/server';
 import { getRateLimitStatus, getUserTier, RATE_LIMITS } from '@/lib/rate-limit';
 import * as Sentry from '@sentry/nextjs';
@@ -54,7 +53,7 @@ interface RateLimitStatusResponse {
 export async function GET(_request: NextRequest) {
   try {
     // 1. Auth check
-    const session = await getServerSession(authConfig);
+    const session = await getAuthSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
