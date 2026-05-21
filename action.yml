@@ -17,4 +17,4 @@ runs:
       shell: bash
       env:
         PNPM_CONFIG_AUTO_INSTALL_PEERS: "true"
-      run: pnpm install --recursive --frozen-lockfile
+      run: pnpm install --frozen-lockfile
