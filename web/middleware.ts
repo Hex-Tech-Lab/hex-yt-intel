@@ -71,9 +71,10 @@ async function hasSupabaseAuth(
 
     const client = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        // Map to plain objects as required by @supabase/ssr getAll contract
+        getAll: () => request.cookies.getAll().map(c => ({ name: c.name, value: c.value })),
+        // Write refreshed tokens to response only — official pattern per @supabase/ssr docs
+        setAll: (cookiesToSet) => {
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options as any)
           );
@@ -154,9 +155,9 @@ export async function middleware(request: NextRequest) {
   // Check auth method based on environment variable
   const authProvider = process.env.AUTH_PROVIDER || 'supabase';
 
-  // Forward the mutated request (with refreshed cookies) to downstream route handlers.
-  // Without this, Server Components calling cookies() won't see the updated session.
-  const supabaseResponse = NextResponse.next({ request });
+  // Official @supabase/ssr pattern: plain NextResponse.next(), cookies written
+  // onto the response only (not back onto request). See supabase/ssr docs.
+  const supabaseResponse = NextResponse.next();
 
   const isAuthenticated = authProvider === 'supabase'
     ? await hasSupabaseAuth(request, supabaseResponse)
