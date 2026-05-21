@@ -48,6 +48,28 @@ export async function getSupabaseClientWithAuth() {
 }
 
 /**
+ * Create Supabase client with explicit JWT token
+ * Enforces RLS by attaching Authorization header with user's JWT
+ * Use this in API routes that receive accessToken from session
+ */
+export function getSupabaseClientWithToken(accessToken: string) {
+  const supabaseUrl = env.supabaseUrl;
+  const supabaseKey = env.supabaseAnonKey;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase configuration');
+  }
+
+  return createSupabaseClient(supabaseUrl, supabaseKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  });
+}
+
+/**
  * Extract JWT token from request cookies
  * Used for explicit token passing to request-scoped clients
  */

@@ -11,6 +11,7 @@ const REQUIRED_ENV_VARS = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'OPENROUTER_API_KEY',
+  'NEXTAUTH_SECRET',
 ] as const;
 
 const OPTIONAL_ENV_VARS = [
@@ -216,5 +217,8 @@ export const env = {
   },
   get qstashSigningKey(): string | undefined {
     return validateEnvVar('QSTASH_CURRENT_SIGNING_KEY', false);
+  },
+  get nextAuthSecret(): string {
+    return validateEnvVar('NEXTAUTH_SECRET', true)!;
   },
 };

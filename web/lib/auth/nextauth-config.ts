@@ -45,5 +45,16 @@ export const authConfig: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60,
   },
-  secret: AUTH_CONFIG.nextauth.secret || 'dev-secret-change-in-production',
+  secret: (() => {
+    const secret = AUTH_CONFIG.nextauth.secret;
+    // Allow build-time placeholder if secret is missing (will fail at runtime)
+    if (!secret) {
+      if (process.env.NODE_ENV === 'production' && process.env.VERCEL) {
+        throw new Error('NEXTAUTH_SECRET environment variable is required but not set in production.');
+      }
+      // During build, use a placeholder that will fail at runtime
+      return 'build-time-placeholder-nextauth-secret';
+    }
+    return secret;
+  })(),
 };
