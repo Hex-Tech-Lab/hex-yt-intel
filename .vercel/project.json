@@ -1,1 +1,16 @@
-{"projectId":"prj_jKAo3z8jKyHwi3qXqSIeoZO1ILku","orgId":"team_vgnBI2s3ynPBzQdOLqhGvBnK","projectName":"hex-yt-intel"}
+{
+  "projectId": "prj_jKAo3z8jKyHwi3qXqSIeoZO1ILku",
+  "orgId": "team_vgnBI2s3ynPBzQdOLqhGvBnK",
+  "projectName": "hex-yt-intel",
+  "settings": {
+    "createdAt": 1778696622019,
+    "framework": null,
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": "web",
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}
