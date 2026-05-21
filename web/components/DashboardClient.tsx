@@ -49,6 +49,11 @@ export function DashboardClient() {
         body: JSON.stringify({ url }),
       });
 
+      if (res.status === 401) {
+        window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
         throw new Error(err.error || `HTTP ${res.status}`);
