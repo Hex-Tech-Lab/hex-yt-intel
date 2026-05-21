@@ -22,7 +22,8 @@ export default function HomeContent() {
   const { data: session = null, update: updateSession } = useSession();
   const router = useRouter();
   const [url, setUrl] = useState('');
-  const [devMode, setDevMode] = useState(true);
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const [devMode, setDevMode] = useState(isDevelopment);
   const [cachedDialog, setCachedDialog] = useState<CachedAnalysisDialog>({
     show: false,
     title: '',
@@ -159,13 +160,15 @@ export default function HomeContent() {
         <div className="px-6 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Hex-YT-Intel</h1>
           <nav className="flex gap-4">
-            <button
-              onClick={handleDevLogin}
-              disabled={!devMode}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              Dev Login
-            </button>
+            {isDevelopment && (
+              <button
+                onClick={handleDevLogin}
+                disabled={!devMode}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Dev Login
+              </button>
+            )}
             <Link href="/search" className="px-4 py-2 text-gray-700 hover:text-black text-sm">
               Search
             </Link>
@@ -273,7 +276,7 @@ export default function HomeContent() {
                 </button>
               </div>
 
-              {!session && devMode && (
+              {!session && devMode && isDevelopment && (
                 <p className="text-xs text-gray-500 pt-2">
                   Click &quot;Dev Login&quot; above to test the UI
                 </p>
