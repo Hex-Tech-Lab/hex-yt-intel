@@ -25,7 +25,7 @@ export async function GET(
     .select('*')
     .eq('id', id)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (error || !analysis) {
     return new Response('Not found', { status: 404 });

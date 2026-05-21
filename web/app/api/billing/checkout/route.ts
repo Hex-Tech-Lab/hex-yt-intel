@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('id, email, name, tier, stripe_customer_id')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (userError || !userData) {
       return NextResponse.json(

@@ -12,6 +12,8 @@ const REQUIRED_ENV_VARS = [
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'OPENROUTER_API_KEY',
   'NEXTAUTH_SECRET',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
 ] as const;
 
 const OPTIONAL_ENV_VARS = [
@@ -67,8 +69,9 @@ function validateEnvVar(name: EnvVar, required: boolean = false): string | undef
   const value = process.env[name];
 
   if (required && !value) {
-    // OPENROUTER_API_KEY is a runtime requirement - never allow placeholder
-    if (name === 'OPENROUTER_API_KEY') {
+    // Production critical variables - never allow placeholder
+    const PRODUCTION_CRITICAL = ['OPENROUTER_API_KEY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'NEXTAUTH_SECRET'];
+    if (PRODUCTION_CRITICAL.includes(name)) {
       throw new Error(
         `Missing required environment variable: ${name}\n` +
         `Please set this variable in your deployment environment (Vercel: Settings → Environment Variables).`
@@ -220,5 +223,11 @@ export const env = {
   },
   get nextAuthSecret(): string {
     return validateEnvVar('NEXTAUTH_SECRET', true)!;
+  },
+  get stripeSecretKey(): string {
+    return validateEnvVar('STRIPE_SECRET_KEY', true)!;
+  },
+  get stripeWebhookSecret(): string {
+    return validateEnvVar('STRIPE_WEBHOOK_SECRET', true)!;
   },
 };

@@ -23,7 +23,7 @@ export async function POST(
     .select('*')
     .eq('id', id)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (error || !analysis) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
