@@ -273,23 +273,36 @@ export async function POST(request: NextRequest) {
           .from('users')
           .select('tier, analyses_used, last_reset_date')
           .eq('id', userId)
-          .single();
-        if (error) throw error;
+          .maybeSingle();
+        
+        if (error) {
+          console.warn('[analyses] Supabase error fetching user quota:', error);
+          throw error;
+        }
+
+        // If user doesn't exist in DB yet, return a default 'free' state
+        // This prevents the 'Null Tier Trap' and unhandled crashes downstream
+        if (!data) {
+          console.info('[analyses] User not found in database, defaulting to free tier state', { userId });
+          return {
+            tier: 'free',
+            analyses_used: 0,
+            last_reset_date: new Date().toISOString()
+          };
+        }
+
         return data;
       },
       { userId }
     ).catch((error) => {
-      addBreadcrumb('Failed to fetch user quota data', { userId, error: String(error) }, 'database');
-      throw error;
+      addBreadcrumb('Quota lookup failed (non-blocking fallback)', { userId, error: String(error) }, 'database');
+      // Graceful degradation: allow the request to proceed with free tier limits if DB is flaky
+      return {
+        tier: 'free',
+        analyses_used: 0,
+        last_reset_date: new Date().toISOString()
+      };
     });
-
-    if (!userData) {
-      console.error('[analyses] Failed to fetch user data', { userId });
-      return NextResponse.json(
-        { error: 'Failed to fetch user data' },
-        { status: 500 }
-      );
-    }
 
     // Check if monthly quota should be reset
     const now = new Date();
