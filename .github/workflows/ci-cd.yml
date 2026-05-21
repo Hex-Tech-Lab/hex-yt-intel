@@ -110,6 +110,9 @@ jobs:
       - name: Hex Intel Environment
         uses: ./
 
+      - name: Purge Stale Next.js & Tooling Caches
+        run: rm -rf web/.next node_modules/.cache
+
       - name: Install Playwright Browsers
         run: pnpm --filter @hex-yt-intel/web exec playwright install --with-deps
 
@@ -147,6 +150,9 @@ jobs:
 
       - name: Hex Intel Environment
         uses: ./
+
+      - name: Purge Stale Next.js & Tooling Caches
+        run: rm -rf web/.next node_modules/.cache
 
       - name: Cache Next.js build
         uses: actions/cache@v4
