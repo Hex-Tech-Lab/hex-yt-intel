@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
         );
       }
       userEmail = session?.user?.email || '';
-      userTierAuth = await getUserTier(userId);
+      userTierAuth = (await getUserTier(userId)) ?? 'free';
     }
 
     // qual_002: Improve observability signal with non-PII correlation identifier
