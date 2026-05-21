@@ -16,57 +16,55 @@ async function hasSupabaseAuth(
   request: NextRequest,
   response: NextResponse
 ): Promise<boolean> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const allCookies = request.cookies.getAll();
+  const authCookieNames = allCookies
+    .filter(c => c.name.includes('sb-') || c.name.includes('auth-token'))
+    .map(c => c.name);
+
+  // Collect all state upfront, emit ONE log after getUser() — prevents MCP truncation
+  const diag: Record<string, unknown> = {
+    hasUrl: !!supabaseUrl,
+    isDummyUrl: supabaseUrl?.includes('dummy') ?? false,
+    authProvider: process.env.AUTH_PROVIDER ?? '(unset)',
+    cookieCount: allCookies.length,
+    authCookieNames,
+    path: request.nextUrl.pathname,
+    method: request.method,
+  };
+
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    // Diagnostic: surface dummy-key CI leakage or missing Edge Runtime vars
-    console.log('[middleware] Env diagnostic', {
-      hasUrl: !!supabaseUrl,
-      isDummyUrl: supabaseUrl?.includes('dummy') ?? false,
-      authProvider: process.env.AUTH_PROVIDER ?? '(unset)',
-    });
-
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('[middleware] SUPABASE env vars missing — check Vercel Edge Runtime settings');
+      diag.outcome = 'env_missing';
+      console.error('[middleware] auth-diag', diag);
       return false;
     }
 
     const isPlaceholderCred = (v: string) => v.includes('dummy') || v.includes('ci-build-placeholder');
     if (isPlaceholderCred(supabaseUrl) || isPlaceholderCred(supabaseAnonKey)) {
-      console.error('[middleware] CI placeholder credentials detected in runtime — Vercel env vars not set for Edge Runtime');
+      diag.outcome = 'placeholder_creds';
+      console.error('[middleware] auth-diag', diag);
       return false;
     }
 
     // Bearer token fallback: allow API clients that send Authorization header
     const authHeader = request.headers.get('authorization');
     if (authHeader?.startsWith('Bearer ')) {
-      const bearerToken = authHeader.slice(7);
-      // Validate JWT structure (3 base64 segments) before trusting it
-      const parts = bearerToken.split('.');
+      const parts = authHeader.slice(7).split('.');
       if (parts.length === 3 && parts.every(p => p.length > 0)) {
-        console.info('[middleware] Bearer token detected — bypassing cookie auth');
+        diag.outcome = 'bearer_accepted';
+        console.log('[middleware] auth-diag', diag);
         return true;
       }
-      console.warn('[middleware] Malformed Bearer token rejected');
-    }
-
-    const allCookies = request.cookies.getAll();
-    const hasAuthCookie = allCookies.some(c => c.name.includes('auth-token') || c.name.includes('sb-'));
-    if (!hasAuthCookie) {
-      console.warn('[middleware] No Supabase auth cookies found in request', {
-        cookieNames: allCookies.map(c => c.name),
-        path: request.nextUrl.pathname,
-      });
+      diag.outcome = 'bearer_malformed';
     }
 
     const client = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll(cookiesToSet) {
-          // Keep the request cookie jar in sync for downstream reads in this middleware
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          // Write refreshed tokens to the response so they reach the browser
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options as any)
           );
@@ -75,20 +73,14 @@ async function hasSupabaseAuth(
     });
 
     const { data: { user }, error } = await client.auth.getUser();
-    if (!user) {
-      console.error('[middleware] Auth guard rejected', {
-        error: error?.message ?? 'no error object',
-        cookieCount: allCookies.length,
-        authCookieNames: allCookies
-          .filter(c => c.name.includes('sb-') || c.name.includes('auth-token'))
-          .map(c => c.name),
-        path: request.nextUrl.pathname,
-        method: request.method,
-      });
-    }
+    diag.outcome = user ? 'authenticated' : 'rejected';
+    diag.supabaseError = error?.message ?? null;
+    console.log('[middleware] auth-diag', diag);
     return !!user;
   } catch (err) {
-    console.error('[middleware] hasSupabaseAuth threw', { error: String(err) });
+    diag.outcome = 'threw';
+    diag.error = String(err);
+    console.error('[middleware] auth-diag', diag);
     return false;
   }
 }
