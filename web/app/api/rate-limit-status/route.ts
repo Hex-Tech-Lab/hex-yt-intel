@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Rate Limit Status Endpoint
  * GET /api/rate-limit-status

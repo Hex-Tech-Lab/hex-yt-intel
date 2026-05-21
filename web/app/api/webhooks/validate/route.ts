@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * QStash Webhook Handler: UCIS Validation & Embedding Generation
  * Receives guaranteed background task delivery from Upstash QStash

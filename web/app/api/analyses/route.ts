@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse, after } from 'next/server';
 import { createHash, randomUUID } from 'crypto';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
