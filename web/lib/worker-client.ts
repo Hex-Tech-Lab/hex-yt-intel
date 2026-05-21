@@ -29,7 +29,25 @@ export async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetada
   const timeout = setTimeout(() => controller.abort(), 3000);
 
   try {
-    const metadataUrl = `${env.cloudflareWorkerUrl}/fetch-metadata?video_id=${videoId}`;
+    const workerUrl = env.cloudflareWorkerUrl;
+
+    if (!workerUrl || workerUrl.includes('[build-time-placeholder')) {
+      throw new Error('Cloudflare Worker URL not configured in production environment');
+    }
+
+    // Validate worker URL against SSRF allowlist (exact hostname match only)
+    const allowedOrigins = new Set([
+      'yt-intel.hex-tech-lab.workers.dev',
+    ]);
+    const urlObj = new URL(workerUrl);
+    const isAllowedOrigin = urlObj.protocol === 'https:' && allowedOrigins.has(urlObj.hostname);
+
+    if (!isAllowedOrigin) {
+      console.error('[fetchWorkerMetadata] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });
+      throw new Error(`Worker URL origin '${urlObj.hostname}' is not in approved allowlist. SSRF prevention enforced.`);
+    }
+
+    const metadataUrl = `${workerUrl}/fetch-metadata?video_id=${videoId}`;
     const response = await fetch(metadataUrl, {
       method: 'GET',
       headers: {
