@@ -63,6 +63,7 @@ async function hasSupabaseAuth(
         getAll: () => request.cookies.getAll().map(c => ({ name: c.name, value: c.value })),
         // Write refreshed tokens to response only — official pattern per @supabase/ssr docs
         setAll: (cookiesToSet) => {
+          // Prevent CDN caching of token refresh responses to avoid stale auth state
           response.headers.set('Cache-Control', 'no-store, must-revalidate, private');
           response.headers.set('Pragma', 'no-cache');
 

@@ -7,6 +7,28 @@
  * All access to environment variables should go through this file.
  */
 
+// CI Environment Polyfill: Inject mock values for all required variables in CI/GitHub Actions
+// This prevents validation failures when running in automated environments without real secrets
+if (process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true') {
+  const requiredKeys = [
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'OPENROUTER_API_KEY',
+    'NEXTAUTH_SECRET',
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+  ];
+
+  requiredKeys.forEach(key => {
+    if (!process.env[key]) {
+      const mockValue = key === 'NEXT_PUBLIC_SUPABASE_URL'
+        ? 'http://127.0.0.1:54321'
+        : `mock-ci-${key.toLowerCase().replace(/_/g, '-')}`;
+      process.env[key] = mockValue;
+    }
+  });
+}
+
 const REQUIRED_ENV_VARS = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -123,8 +145,9 @@ function validateEnvVar(
     throw new Error(`Environment variable ${name} must be a string, got ${typeof value}`);
   }
 
-  // In production, reject placeholder values
-  if (required && value && isPlaceholder(value) && !allowPlaceholder) {
+  // In production, reject placeholder values (but allow in CI environments)
+  const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
+  if (required && value && isPlaceholder(value) && !allowPlaceholder && !isCI) {
     throw new Error(
       `Environment variable ${name} has a placeholder value in production.\n` +
       `Please set a real value in your deployment environment.`
