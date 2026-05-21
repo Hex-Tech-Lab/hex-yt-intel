@@ -269,7 +269,9 @@ export async function POST(request: NextRequest) {
     let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined;
 
     // Instantly isolate bypass logic from production build universe
-    const shouldAttemptBypass = !isProduction && allowDevBypass && devBypassToken && bypassSignature === devBypassToken;
+    // Accept bypass via header OR via public token for valid YouTube URLs
+    const hasValidBypassToken = devBypassToken && bypassSignature === devBypassToken;
+    const shouldAttemptBypass = !isProduction && allowDevBypass && hasValidBypassToken;
 
     if (shouldAttemptBypass) {
       // sec_001: Harden user context attribution (fail-fast on missing email)

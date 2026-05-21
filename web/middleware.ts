@@ -63,9 +63,17 @@ async function hasSupabaseAuth(
         getAll: () => request.cookies.getAll().map(c => ({ name: c.name, value: c.value })),
         // Write refreshed tokens to response only — official pattern per @supabase/ssr docs
         setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options as any)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Preserve all cookie options: domain, path, maxAge, secure, httpOnly, sameSite
+            response.cookies.set(name, value, {
+              domain: options?.domain,
+              path: options?.path || '/',
+              maxAge: options?.maxAge,
+              secure: options?.secure ?? true,
+              httpOnly: options?.httpOnly ?? true,
+              sameSite: options?.sameSite || 'lax',
+            });
+          });
         },
       },
     });
