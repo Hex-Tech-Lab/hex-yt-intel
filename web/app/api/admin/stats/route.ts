@@ -45,7 +45,18 @@ export async function GET(_request: NextRequest): Promise<NextResponse<AdminStat
       .eq('id', userId)
       .maybeSingle();
 
-    if (userError || !userData || userData.role !== 'admin') {
+    if (userError) {
+      Sentry.captureException(userError, {
+        tags: { operation: 'admin_role_check' },
+        contexts: { admin: { userId, operation: 'role_check' } }
+      });
+      return NextResponse.json(
+        { error: 'Failed to verify admin status' },
+        { status: 500 }
+      );
+    }
+
+    if (!userData || userData.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

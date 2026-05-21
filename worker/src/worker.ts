@@ -15,8 +15,13 @@ const allowedOrigins = [
   'http://localhost:3005',
 ];
 
+const corsMiddleware = (origin: string | undefined): boolean => {
+  if (!origin) return false;
+  return allowedOrigins.some(allowed => origin.startsWith(allowed));
+};
+
 app.use("*", cors({
-  origin: allowedOrigins,
+  origin: corsMiddleware,
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'OPTIONS'],
 }));
@@ -37,11 +42,6 @@ const authMiddleware = async (c: any, next: any) => {
 
   await next();
 };
-
-// Apply auth middleware to protected endpoints
-app.use("/fetch-metadata", authMiddleware);
-app.use("/fetch-transcript", authMiddleware);
-app.use("/log-analysis", authMiddleware);
 
 // Apply auth middleware to protected endpoints
 app.use("/fetch-metadata", authMiddleware);
@@ -84,7 +84,7 @@ app.get("/fetch-metadata", async (c) => {
 
     const response = await fetch(url);
     const data = (await response.json()) as {
-      items?: Array<{ snippet: unknown; statistics: unknown; contentDetails: unknown }>;
+      items?: Array<{ snippet: any; statistics: any; contentDetails: any }>;
     };
 
     if (!data.items || data.items.length === 0) {
@@ -92,12 +92,13 @@ app.get("/fetch-metadata", async (c) => {
     }
 
     const video = data.items[0];
-    const snippet = video.snippet;
-    const stats = video.statistics;
-    const details = video.contentDetails;
+    const snippet = video.snippet || {};
+    const stats = video.statistics || {};
+    const details = video.contentDetails || {};
 
     // Parse ISO 8601 duration to seconds
-    const parseDuration = (duration: string): number => {
+    const parseDuration = (duration: any): number => {
+      if (!duration || typeof duration !== "string") return 0;
       const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
       const hours = parseInt(match?.[1] || "0") * 3600;
       const minutes = parseInt(match?.[2] || "0") * 60;
@@ -105,19 +106,30 @@ app.get("/fetch-metadata", async (c) => {
       return hours + minutes + seconds;
     };
 
+    // Get thumbnail URL with fallback chain: high → medium → default
+    const getThumbnailUrl = (thumbnails: any): string => {
+      if (!thumbnails) return "";
+      return (
+        thumbnails.high?.url ||
+        thumbnails.medium?.url ||
+        thumbnails.default?.url ||
+        ""
+      );
+    };
+
     return c.json(
       {
         videoId: videoId,
-        title: snippet.title,
-        description: snippet.description,
-        channelTitle: snippet.channelTitle,
-        channelId: snippet.channelId,
-        publishedAt: snippet.publishedAt,
+        title: snippet.title || "",
+        description: snippet.description || "",
+        channelTitle: snippet.channelTitle || "",
+        channelId: snippet.channelId || "",
+        publishedAt: snippet.publishedAt || "",
         duration: parseDuration(details.duration),
         viewCount: parseInt(stats.viewCount || "0", 10),
         likeCount: parseInt(stats.likeCount || "0", 10),
         commentCount: parseInt(stats.commentCount || "0", 10),
-        thumbnailUrl: snippet.thumbnails.high.url,
+        thumbnailUrl: getThumbnailUrl(snippet.thumbnails),
       },
       200,
       {
@@ -186,18 +198,18 @@ app.post("/fetch-transcript", async (c) => {
     }
 
     const captionData = (await captionResponse.json()) as {
-      events?: Array<{ tStartMs: string; dur: string; segs?: Array<{ utf8: string }> }>;
+      events?: Array<{ tStartMs?: string; dur?: string; segs?: Array<{ utf8?: string }> }>;
     };
 
-    if (!captionData.events) {
+    if (!captionData.events || !Array.isArray(captionData.events)) {
       return c.json({ error: "No transcript events found" }, 404);
     }
 
     // Reconstruct transcript from events
     const transcript = captionData.events
       .map((event) => {
-        const segments = event.segs || [];
-        return segments.map((seg) => seg.utf8).join("");
+        if (!event || !Array.isArray(event.segs)) return "";
+        return event.segs.map((seg) => seg?.utf8 || "").join("");
       })
       .join(" ")
       .replace(/\n/g, " ")
