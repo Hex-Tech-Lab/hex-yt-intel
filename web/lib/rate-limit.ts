@@ -494,7 +494,7 @@ export async function getUserTier(userId: string): Promise<Tier> {
       .from('users')
       .select('tier')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       console.warn(`[rate-limit] Failed to get tier for user ${userId}:`, error);
