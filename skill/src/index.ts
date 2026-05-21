@@ -79,6 +79,18 @@ async function fetchMetadata(
   videoId: string
 ): Promise<YouTubeMetadata> {
   try {
+    // Validate worker URL against SSRF allowlist (exact hostname match only)
+    const allowedOrigins = new Set([
+      'yt-intel.hex-tech-lab.workers.dev',
+    ]);
+
+    const urlObj = new URL(CLOUDFLARE_WORKER_URL);
+    const isAllowedOrigin = urlObj.protocol === 'https:' && allowedOrigins.has(urlObj.hostname);
+
+    if (!isAllowedOrigin) {
+      throw new Error(`Worker URL origin '${urlObj.hostname}' is not in approved allowlist. SSRF prevention enforced.`);
+    }
+
     const response = await fetch(
       `${CLOUDFLARE_WORKER_URL}/fetch-metadata?video_id=${videoId}`,
       {
