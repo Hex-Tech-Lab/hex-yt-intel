@@ -1,6 +1,12 @@
 node_modules/
+**/node_modules/
 .next/
+**/dist/
 dist/
 *.log
 .env.local
 .git/
+.kilo/
+.turbo/
+test-results/
+review-loop.log
