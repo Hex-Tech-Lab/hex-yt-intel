@@ -1,7 +1,17 @@
 import { z } from 'zod';
 
 export const AnalysisCreateSchema = z.object({
-  url: z.string().url('Invalid YouTube URL'),
+  url: z.string()
+    .url('Invalid YouTube URL')
+    .transform((val) => {
+      // Auto-transform YouTube shorts to standard watch format at perimeter
+      const shortsRegex = /\/shorts\/([a-zA-Z0-9_-]{11})/;
+      const match = val.match(shortsRegex);
+      if (match && match[1]) {
+        return `https://www.youtube.com/watch?v=${match[1]}`;
+      }
+      return val;
+    }),
   timezone: z
     .string()
     .trim()

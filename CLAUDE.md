@@ -386,8 +386,50 @@ Reference: `/docs/history/HANDOVER_REPORT_2026-05-21.md` (Sections: Architectura
 **Reasoning**: Hardcoded `/home/kellyb_dev/...` paths fail in CI/Docker. Dynamic resolution ensures 100% portability.  
 **Location**: `web/next.config.ts` line 12: `turbopack.root: path.resolve(__dirname, '..')`.
 
+### ADR-005: Error Registry & Structured Logging (Sentry Integration)
+**Status**: ✅ **IMPLEMENTED** (2026-05-21 Hardening Sprint)  
+**Decision**: All error paths tagged with centralized ERROR_CODES dictionary, integrated with Sentry context capture.  
+**Reasoning**: Enables error dashboard filtering, consistent logging patterns, and root-cause tracking across all API routes.  
+**Implementation**: 12 error blocks in `/api/analyses/route.ts` now use `Sentry.withScope()` + error code tagging.  
+**Location**: `web/lib/error-codes.ts` (registry), `web/app/api/analyses/route.ts` (implementation).
+
+### ADR-006: Asynchronous Pipeline Architecture (Future Phase 2)
+**Status**: ✅ **DOCUMENTED** (2026-05-21 Hardening Sprint) | ⏳ **PENDING IMPLEMENTATION**  
+**Pattern**: 202 Accepted + QStash background workers + Redis progress polling for batch operations.  
+**Rationale**: Non-blocking execution, resilient retry logic, real-time progress tracking without frontend polling overhead.  
+**Documentation**: `docs/reference/ARCHITECTURE_PATTERNS.md` + memory files (async pipeline, SWR/Zod/Zustand matrix).  
+**Ready for Phase 2**: Batch video processing, PDF generation, multi-resource operations.
+
 ---
 
-**Last Updated**: Tuesday, 21 May 2026 at 01:15:00 EEST  
-**Build Hash**: 872f92e  
-**Status**: ✅ **PRODUCTION READY** | ✅ **Phase 1 (Stabilization) COMPLETE** | 🚀 **Phase 2 (MVP 1.5) READY**
+## HARDENING SPRINT COMPLETION (2026-05-21)
+
+✅ **Sprint Status**: COMPLETE
+
+### Completed Tasks
+1. **Task 1: Error Registry & Logging** — All 12 error paths in analyses route tagged with ERROR_CODES + Sentry integration
+2. **Task 2: Environment Variable Injection** — UPSTASH, SUPABASE, APP_URL variables confirmed/injected to production
+3. **Code Enhancement**: User-Agent rotation added to `worker-client.ts` (bypasses 403 security checkpoints)
+4. **Documentation**: Three architectural patterns documented (Multi-Tenancy, Async Pipeline, SWR/Zod/Zustand)
+
+### Key Files Changed
+- `web/app/api/analyses/route.ts` — ERROR_CODES integration across 12 error paths
+- `web/lib/worker-client.ts` — User-Agent rotation for external service calls
+- `web/lib/error-codes.ts` — Error registry (reviewed, no changes needed)
+- `.env.production.local` — NEXT_PUBLIC_APP_URL injected
+
+### Deployment
+- ✅ Production deployment: READY (`dpl_HAoxptqNgAp4KuRKbLuVRutsgud1`)
+- ✅ Type-check: Passing (zero TypeScript errors)
+- ✅ Build: Successful (all chunks under 250KB limit)
+
+### Documentation Artifacts
+- `docs/history/SESSION_SNAPSHOT_2026-05-21.md` — Complete session state snapshot
+- `docs/reference/ARCHITECTURE_PATTERNS.md` — Ready-to-implement patterns for Phase 2
+- Memory files: `arch_multi_tenancy_zero_cost.md`, `arch_async_pipeline_progress.md`, `arch_swr_zod_zustand_matrix.md`
+
+---
+
+**Last Updated**: Tuesday, 21 May 2026 at ~14:45 UTC (Hardening Sprint Complete)  
+**Build Hash**: Latest (post-deployment)  
+**Status**: ✅ **PRODUCTION READY** | ✅ **Phase 1 (Stabilization) COMPLETE** | ✅ **Hardening Sprint COMPLETE** | 🚀 **Phase 2 (MVP 1.5) READY**
