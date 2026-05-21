@@ -168,8 +168,12 @@ export async function POST(request: NextRequest) {
       duration,
     });
 
-    // Return 200 to avoid Stripe retry
-    return NextResponse.json({ received: true }, { status: 200 });
+    // HIGH-6 Fix: Return 500 for unhandled errors to trigger Stripe retry mechanism
+    // Do NOT return 200 here, as it swallows the error and permanently drops the event
+    return NextResponse.json(
+      { error: 'Webhook handler failed' }, 
+      { status: 500 }
+    );
   }
 }
 
