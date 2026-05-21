@@ -2,9 +2,11 @@
 
 _Read on session start. Do not override with assumptions — this is ground truth._
 
-**Last updated:** 2026-05-16 19:03 (UTC+3)  
+**Last updated:** 2026-05-21 01:15 (UTC+3)  
+**Current Commit:** 872f92e (PR #22 squash-merged to main)  
 **Branch:** `origin/main` — clean, no commits ahead  
-**Pipeline status:** `pnpm type-check` ✓ · `pnpm lint` ✓ · `pnpm build` ✓
+**Pipeline status:** `pnpm type-check` ✓ · `pnpm lint` ✓ · `pnpm build` ✓ · `pnpm test` ✓  
+**Deployment:** https://hex-yt-intel.vercel.app ✅ LIVE (47s build time)
 
 ---
 
@@ -552,6 +554,93 @@ Every agent session must scan (or reference) these files before taking any actio
 | `.gemini/SECURITY.md` | **Gemini-only** — security policy |
 | `.gemini/MEMORY.md` | **Gemini-only** — session memory + fix log |
 | `AGENTS.md` | **KC / Kilo** — production runbook (this file) |
+
+---
+
+## 20. PHASE 1 STABILIZATION ✅ COMPLETE (2026-05-21)
+
+**Status**: All deliverables merged to `main` (commit 872f92e, PR #22)
+
+### What Changed in Phase 1
+
+| Layer | Status | Key Deliverables |
+|-------|--------|------------------|
+| **Infrastructure** | ✅ Locked | Node 24 + pnpm 11.1.3 in `action.yml`; Composite Action pattern (7 jobs consolidated) |
+| **CI/CD Pipeline** | ✅ Locked | Monorepo context anchoring (`pnpm --filter`); environment fallback strategy; all 7 stages passing |
+| **Security** | ✅ Locked | RLS enforced on all tables; auth middleware with explicit returns; Upstash token rotated |
+| **Database** | ✅ Locked | Supabase OAuth live (Google, GitHub); test user seeded (`da4381c6-f774-4c99-8f04-2c1c9e27d1fb`) |
+| **Resilience** | ✅ Locked | SSRF prevention, embedding timeouts, webhook verification, Redis circuit breaker |
+| **Observability** | ✅ Locked | Sentry integration + breadcrumbs, usage logs table, health-check endpoint |
+| **Deployment** | ✅ Live | https://hex-yt-intel.vercel.app (47s build time, all gates passing) |
+
+### Phase 1 Handover Documentation
+
+**Read these before Phase 2 work**:
+- `/docs/history/HANDOVER_REPORT_2026-05-21.md` — 10x THOS with 4 ADRs, Known Good State, brittleness points
+- `/ROADMAP.md` — Phase 1→2 transition with week-by-week Phase 2 schedule
+- `/docs/history/INDEX_HANDOVER_VERSIONS.md` — Master version index of all handover documents
+
+### Known Good State Verification
+
+Before starting Phase 2, verify all Phase 1 systems:
+```bash
+# From /web directory
+pnpm type-check && pnpm lint && pnpm build
+
+# Verify Vercel deployment
+curl https://hex-yt-intel.vercel.app/api/health
+
+# Verify database connectivity
+# (check Supabase dashboard → auth users are present)
+```
+
+**See**: `/docs/ops/KNOWN_GOOD_STATE_CHECKLIST.md` (25-item operational checklist)
+
+---
+
+## 21. PHASE 2 READINESS 🚀 (Next: 2026-05-22)
+
+**Status**: Ready to start (blocked on Shopify API credentials)
+
+### What Phase 2 Requires
+
+| Week | Feature | Blocker |
+|------|---------|---------|
+| 1 | Shopify Integration | SHOPIFY_STORE_ID, SHOPIFY_ACCESS_TOKEN |
+| 2 | Catalog Search | Product schema approval |
+| 3 | Checkout Flow | Payment processor decision (Stripe vs Shopify Payments) |
+| 4 | Analytics + Polish | None (all prior weeks complete) |
+
+### Unblocking Actions
+
+Before Phase 2 kickoff:
+1. [ ] Obtain Shopify credentials from business stakeholder
+2. [ ] Add `SHOPIFY_STORE_ID` + `SHOPIFY_ACCESS_TOKEN` to Vercel env
+3. [ ] Approve `products` table schema (fields: id, title, description, price, image_url, created_at, tags)
+4. [ ] Decide on payment processor (Stripe or Shopify Payments)
+
+### Phase 2 Reference
+
+**See**: `/ROADMAP.md` for full Phase 2-3 roadmap with:
+- Week-by-week breakdown (4 weeks)
+- Acceptance criteria per week
+- Success metrics
+- Dependency chain
+
+---
+
+## 22. CRITICAL STATE AT PHASE BOUNDARY
+
+**Do not start Phase 2 unless ALL of these are true**:
+
+- ✅ Vercel deployment healthy (check `/api/health`)
+- ✅ Supabase RLS enforced + auth working
+- ✅ All 7 CI/CD pipeline stages passing
+- ✅ Redis circuit breaker functional
+- ✅ Sentry integration logging events
+- ✅ Shopify credentials in Vercel env
+
+**If ANY of these fail**, revert to Phase 1 troubleshooting and consult the Known Good State checklist.
 
 ---
 
