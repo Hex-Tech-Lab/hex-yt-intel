@@ -7,6 +7,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import { AnalysisCreateSchema } from '@/lib/schemas';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
+import { ERROR_CODES, createErrorContext, type ErrorCode } from '@/lib/error-codes';
 import * as Sentry from '@sentry/nextjs';
 
 import {
@@ -200,9 +201,10 @@ export async function POST(request: NextRequest) {
     );
 
     if (!allowed) {
-      console.warn('[analyses] 3. Rate limit exceeded', { userId, tier: userTierAuth });
-      addBreadcrumb('Rate limit exceeded', { userId, tier: userTierAuth }, 'rate_limiting');
-      Sentry.captureMessage('Rate limit: POST /api/analyses', 'warning');
+      const errorCode = ERROR_CODES.RATE_LIMIT_EXCEEDED;
+      console.warn('[analyses] 3. Rate limit exceeded', { code: errorCode, userId, tier: userTierAuth });
+      addBreadcrumb('Rate limit exceeded', { code: errorCode, userId, tier: userTierAuth }, 'rate_limiting');
+      Sentry.captureMessage('Rate limit: POST /api/analyses', 'warning', { tags: { code: errorCode } });
       // Rate limit exceeded - response already has 429 status
       if (response) {
         // Attach headers to response
@@ -326,12 +328,14 @@ export async function POST(request: NextRequest) {
     const quotaLimit = userTierAuth === 'free' ? 3 : null; // null = unlimited for pro
 
     if (quotaLimit && analysesUsed >= quotaLimit) {
-      console.warn('[analyses] Quota limit exceeded', { userId, used: analysesUsed, limit: quotaLimit, tier: userTierAuth });
-      addBreadcrumb('Quota limit exceeded', { userId, used: analysesUsed, limit: quotaLimit }, 'quota');
-      Sentry.captureMessage(`Quota exceeded: user ${userId}`, 'warning');
+      const errorCode = ERROR_CODES.QUOTA_EXCEEDED;
+      console.warn('[analyses] Quota limit exceeded', { code: errorCode, userId, used: analysesUsed, limit: quotaLimit, tier: userTierAuth });
+      addBreadcrumb('Quota limit exceeded', { code: errorCode, userId, used: analysesUsed, limit: quotaLimit }, 'quota');
+      Sentry.captureMessage(`Quota exceeded: user ${userId}`, 'warning', { tags: { code: errorCode } });
       return NextResponse.json(
         {
           error: `Monthly quota exceeded (${analysesUsed}/${quotaLimit}). Upgrade to Pro for unlimited analyses.`,
+          code: errorCode,
           quotaExceeded: true,
           remaining: 0,
         },
@@ -566,7 +570,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const duration = Math.round(performance.now() - startTime);
     const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorCode = ERROR_CODES.UNHANDLED_EXCEPTION;
+
     console.error('[analyses] UNHANDLED ERROR', {
+      code: errorCode,
       error: errorMsg,
       duration,
       userId,
@@ -580,21 +587,24 @@ export async function POST(request: NextRequest) {
           method: 'POST',
           userId,
           duration,
+          errorCode,
         },
       },
       tags: {
         endpoint: 'analyses',
         severity: 'critical',
+        errorCode,
       },
     });
 
     addBreadcrumb('Unhandled error in POST /api/analyses', {
+      code: errorCode,
       error: errorMsg,
       duration,
     });
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', code: errorCode },
       { status: 500 }
     );
   }
