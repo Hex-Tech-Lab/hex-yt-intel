@@ -13,7 +13,7 @@ export default async function SharePage(props: {
     .from('analyses')
     .select('*')
     .eq('shared_token', token)
-    .single();
+    .maybeSingle();
 
   if (error || !analysis) {
     notFound();

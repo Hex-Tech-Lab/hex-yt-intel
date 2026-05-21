@@ -1,0 +1,1772 @@
+[
+  {
+    "ruleId": "cpp/MemoryLeak",
+    "level": "warning",
+    "message": "Leaking memory. MetadataWorker is allocated on the heap and never freed",
+    "file": "node_modules/.pnpm/sharp@0.34.5/node_modules/sharp/src/metadata.cc"
+  },
+  {
+    "ruleId": "cpp/MemoryLeak",
+    "level": "warning",
+    "message": "Leaking memory. PipelineWorker is allocated on the heap and never freed",
+    "file": "node_modules/.pnpm/sharp@0.34.5/node_modules/sharp/src/pipeline.cc"
+  },
+  {
+    "ruleId": "javascript/DOMXSS",
+    "level": "error",
+    "message": "Unsanitized input from the document location flows into a 'src' script element attribute, where it is used to dynamically construct the HTML page on client side. This may result in a DOM Based Cross-Site Scripting attack (DOMXSS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/shared/lib/router/router.js"
+  },
+  {
+    "ruleId": "javascript/DOMXSS",
+    "level": "error",
+    "message": "Unsanitized input from the document location flows into a 'src' script element attribute, where it is used to dynamically construct the HTML page on client side. This may result in a DOM Based Cross-Site Scripting attack (DOMXSS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/shared/lib/router/router.js"
+  },
+  {
+    "ruleId": "javascript/DisablePoweredBy",
+    "level": "warning",
+    "message": "Disable X-Powered-By header for your Express app (consider using Helmet middleware), because it exposes information about the used framework to potential attackers.",
+    "file": "node_modules/.pnpm/oauth@0.9.15/node_modules/oauth/examples/express-gdata/server.js"
+  },
+  {
+    "ruleId": "javascript/FormatString",
+    "level": "warning",
+    "message": "Unsanitized user input from an HTTP parameter flows into warn, where it is used as a format string. This may allow a user to inject unexpected content into an application log.",
+    "file": "app/api/analyses/route.ts"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/@sentry+browser@10.53.1/node_modules/@sentry/browser/build/npm/cjs/dev/transports/fetch.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/@sentry+browser@10.53.1/node_modules/@sentry/browser/build/npm/cjs/prod/transports/fetch.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/@sentry+browser@10.53.1/node_modules/@sentry/browser/build/npm/esm/dev/transports/fetch.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/@sentry+browser@10.53.1/node_modules/@sentry/browser/build/npm/esm/prod/transports/fetch.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/@sentry+bundler-plugin-core@5.3.0/node_modules/@sentry/bundler-plugin-core/dist/cjs/index.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/@sentry+bundler-plugin-core@5.3.0/node_modules/@sentry/bundler-plugin-core/dist/esm/index.mjs"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/@sentry+node-core@10.53.1_@opentelemetry+api@1.9.1_@opentelemetry+core@2.7.1_@opentelem_a069076ec7da9ab6bb6e077992e982e3/node_modules/@sentry/node-core/build/cjs/transports/http.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/@sentry+node-core@10.53.1_@opentelemetry+api@1.9.1_@opentelemetry+core@2.7.1_@opentelem_a069076ec7da9ab6bb6e077992e982e3/node_modules/@sentry/node-core/build/esm/transports/http.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/@edge-runtime/primitives/fetch.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/@edge-runtime/primitives/load.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "lib/auth/nextauth-config.ts"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/@opentelemetry+semantic-conventions@1.41.1/node_modules/@opentelemetry/semantic-conventions/build/esm/experimental_attributes.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/@opentelemetry+semantic-conventions@1.41.1/node_modules/@opentelemetry/semantic-conventions/build/esnext/experimental_attributes.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/build/webpack/plugins/flight-client-entry-plugin.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/webpack/plugins/flight-client-entry-plugin.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/preact@10.29.1/node_modules/preact/debug/src/check-props.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/prop-types@15.8.1/node_modules/prop-types/lib/ReactPropTypesSecret.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/prop-types@15.8.1/node_modules/prop-types/prop-types.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/src/v4/locales/th.ts"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/src/v4/locales/ur.ts"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/th.cjs"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/th.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ur.cjs"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/ur.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in express.session.",
+    "file": "node_modules/.pnpm/oauth@0.9.15/node_modules/oauth/examples/express-gdata/server.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret",
+    "level": "error",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in oauth.OAuth.",
+    "file": "node_modules/.pnpm/oauth@0.9.15/node_modules/oauth/examples/express-gdata/server.js"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret/test",
+    "level": "note",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/src/v4/mini/tests/string.test.ts"
+  },
+  {
+    "ruleId": "javascript/HardcodedNonCryptoSecret/test",
+    "level": "note",
+    "message": "Avoid hardcoding values that are meant to be secret. Found a hardcoded string used in here.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/src/v4/mini/tests/string.test.ts"
+  },
+  {
+    "ruleId": "javascript/HardcodedSecret",
+    "level": "error",
+    "message": "Hardcoded value is used as a cipher key (in crypto.createHmac). Generate the value with a cryptographically strong random number generator and do not hardcode it in source code.",
+    "file": "node_modules/.pnpm/@panva+hkdf@1.2.1/node_modules/@panva/hkdf/dist/node/esm/runtime/fallback.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "node:http.request uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/@sentry+node-core@10.53.1_@opentelemetry+api@1.9.1_@opentelemetry+core@2.7.1_@opentelem_a069076ec7da9ab6bb6e077992e982e3/node_modules/@sentry/node-core/build/cjs/integrations/spotlight.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "node:http.request uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/@sentry+node-core@10.53.1_@opentelemetry+api@1.9.1_@opentelemetry+core@2.7.1_@opentelem_a069076ec7da9ab6bb6e077992e982e3/node_modules/@sentry/node-core/build/esm/integrations/spotlight.js"
+  },
+  {
+    "ruleId": "cpp/MemoryLeak",
+    "level": "warning",
+    "message": "Leaking memory. StatsWorker is allocated on the heap and never freed",
+    "file": "node_modules/.pnpm/sharp@0.34.5/node_modules/sharp/src/stats.cc"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "get uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/napi-postinstall@0.3.4/node_modules/napi-postinstall/lib/index.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/build/analyze/index.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/experimental/testmode/proxy/server.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/lib/start-server.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/lib/worker-utils.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "request uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/webpack/lazy-compilation-node.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "request uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/oauth@0.9.15/node_modules/oauth/lib/oauth.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "request uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/stripe@15.12.0/node_modules/stripe/cjs/net/NodeHttpClient.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "node:http.default.createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/analyze/index.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "http.default.createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/start-server.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "http.default.createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/worker-utils.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "_ uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/node-fetch@2.7.0/node_modules/node-fetch/lib/index.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "http.createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/oauth@0.9.15/node_modules/oauth/examples/github-example.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "http.createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/oauth@0.9.15/node_modules/oauth/examples/twitter-example.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "bind uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/webpack@5.106.2_postcss@8.5.14/node_modules/webpack/lib/hmr/lazyCompilationBackend.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into eval is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/loader-runner@4.3.2/node_modules/loader-runner/lib/loadLoader.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into eval is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/common/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into eval is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/common/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into eval is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/transform/esmLoader.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into eval is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/transform/esmLoader.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/analyze/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/turbopack-build/impl.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/turbopack-build/impl.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/turbopack-build/impl.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/webpack-build/impl.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/export/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/export/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/export/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/export/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/export/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/export/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/export/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/export/index.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/router-server.js"
+  },
+  {
+    "ruleId": "javascript/ImproperCodeSanitization",
+    "level": "warning",
+    "message": "Data that flows into require is incorrectly sanitized with stringify. stringify is inappropriate for defending against this kind of vulnerability, special characters need to be specifically escaped.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/next.js"
+  },
+  {
+    "ruleId": "javascript/CodeInjection",
+    "level": "warning",
+    "message": "Unsanitized input from an exception flows into require, where it is executed as JavaScript code. This may result in a Code Injection vulnerability.",
+    "file": "node_modules/.pnpm/@eslint+eslintrc@2.1.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js"
+  },
+  {
+    "ruleId": "javascript/CodeInjection",
+    "level": "warning",
+    "message": "Unsanitized input from an exception flows into require, where it is executed as JavaScript code. This may result in a Code Injection vulnerability.",
+    "file": "node_modules/.pnpm/@eslint+eslintrc@2.1.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js"
+  },
+  {
+    "ruleId": "javascript/CodeInjection",
+    "level": "warning",
+    "message": "Unsanitized input from an exception flows into require, where it is executed as JavaScript code. This may result in a Code Injection vulnerability.",
+    "file": "node_modules/.pnpm/@eslint+eslintrc@2.1.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js"
+  },
+  {
+    "ruleId": "javascript/CodeInjection",
+    "level": "warning",
+    "message": "Unsanitized input from an exception flows into require, where it is executed as JavaScript code. This may result in a Code Injection vulnerability.",
+    "file": "node_modules/.pnpm/@eslint+eslintrc@2.1.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js"
+  },
+  {
+    "ruleId": "javascript/CodeInjection",
+    "level": "warning",
+    "message": "Unsanitized input from an exception flows into require, where it is executed as JavaScript code. This may result in a Code Injection vulnerability.",
+    "file": "node_modules/.pnpm/@eslint+eslintrc@2.1.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js"
+  },
+  {
+    "ruleId": "javascript/CodeInjection",
+    "level": "warning",
+    "message": "Unsanitized input from an exception flows into require, where it is executed as JavaScript code. This may result in a Code Injection vulnerability.",
+    "file": "node_modules/.pnpm/@eslint+eslintrc@2.1.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js"
+  },
+  {
+    "ruleId": "javascript/CodeInjection",
+    "level": "warning",
+    "message": "Unsanitized input from an exception flows into require, where it is executed as JavaScript code. This may result in a Code Injection vulnerability.",
+    "file": "node_modules/.pnpm/@eslint+eslintrc@2.1.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "SHA1 hash (used in SHA1) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/@noble+hashes@1.8.0/node_modules/@noble/hashes/esm/legacy.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "SHA1 hash (used in SHA1) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/@noble+hashes@1.8.0/node_modules/@noble/hashes/legacy.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "SHA1 hash (used in SHA1) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/@noble+hashes@1.8.0/node_modules/@noble/hashes/src/legacy.ts"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "MD5 hash (used in MD5) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/@noble+hashes@1.8.0/node_modules/@noble/hashes/esm/legacy.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "MD5 hash (used in MD5) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/@noble+hashes@1.8.0/node_modules/@noble/hashes/legacy.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "MD5 hash (used in MD5) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/@noble+hashes@1.8.0/node_modules/@noble/hashes/src/legacy.ts"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/@sentry+cli@2.58.5/node_modules/@sentry/cli/scripts/install.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/file-entry-cache@6.0.1/node_modules/file-entry-cache/cache.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/js-md5@0.8.3/node_modules/js-md5/src/md5.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/js-md5@0.8.3/node_modules/js-md5/src/md5.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-server.node.development.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/react-dom-experimental/cjs/react-dom-server.node.production.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/react-dom/cjs/react-dom-server.node.development.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/react-dom/cjs/react-dom-server.node.production.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/react-refresh/cjs/react-refresh-babel.development.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/analysis/parse-module.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/hot-reloader-rspack.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/hot-reloader-webpack.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/dev/hot-reloader-webpack.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/react-dom@19.2.6_react@19.2.6/node_modules/react-dom/cjs/react-dom-server.node.development.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/react-dom@19.2.6_react@19.2.6/node_modules/react-dom/cjs/react-dom-server.node.production.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/build/webpack-config.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/build/webpack-config.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/build/webpack/loaders/next-flight-css-loader.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/build/webpack/loaders/next-middleware-wasm-loader.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/@edge-runtime/primitives/fetch.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/@edge-runtime/primitives/load.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/playwright-core@1.60.0/node_modules/playwright-core/lib/tools/cli-client/program.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/playwright-core@1.60.0/node_modules/playwright-core/lib/tools/cli-client/registry.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/common/index.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/common/index.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/transform/esmLoader.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/transform/esmLoader.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/styled-jsx@5.1.6_@babel+core@7.29.0_react@19.2.6/node_modules/styled-jsx/dist/webpack/index.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/md5.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/sha1.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/webpack@5.106.2_postcss@8.5.14/node_modules/webpack/lib/util/createHash.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.default.createHash hash (used in crypto.default.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/webpack-config.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.default.createHash hash (used in crypto.default.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/webpack-config.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.default.createHash hash (used in crypto.default.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/webpack/loaders/next-flight-css-loader.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.default.createHash hash (used in crypto.default.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/webpack/loaders/next-middleware-wasm-loader.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.default.createHash hash (used in crypto.default.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/prettier@3.8.3/node_modules/prettier/internal/experimental-cli.mjs"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.default.createHash hash (used in crypto.default.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/prettier@3.8.3/node_modules/prettier/internal/experimental-cli.mjs"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.default.createHash hash (used in crypto.default.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/md5.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.default.createHash hash (used in crypto.default.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/uuid@8.3.2/node_modules/uuid/dist/esm-node/sha1.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "digest hash (used in digest) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/app-render/app-render.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "digest hash (used in digest) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/app-render/app-render.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "SHA1 hash (used in hex_sha1) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/oauth@0.9.15/node_modules/oauth/lib/sha1.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "MD5 hash (used in js-md5.default) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/pdfkit@0.18.0/node_modules/pdfkit/js/pdfkit.es.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "MD5 hash (used in js-md5) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/pdfkit@0.18.0/node_modules/pdfkit/js/pdfkit.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/@sentry+browser@10.53.1/node_modules/@sentry/browser/build/npm/cjs/dev/integrations/webWorker.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/@sentry+browser@10.53.1/node_modules/@sentry/browser/build/npm/cjs/prod/integrations/webWorker.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/@sentry+browser@10.53.1/node_modules/@sentry/browser/build/npm/esm/dev/integrations/webWorker.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/@sentry+browser@10.53.1/node_modules/@sentry/browser/build/npm/esm/prod/integrations/webWorker.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/@sentry-internal+replay@10.53.1/node_modules/@sentry-internal/replay/build/npm/cjs/index.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/@sentry-internal+replay@10.53.1/node_modules/@sentry-internal/replay/build/npm/esm/index.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/@supabase+auth-js@2.105.4/node_modules/@supabase/auth-js/dist/main/GoTrueClient.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/@supabase+auth-js@2.105.4/node_modules/@supabase/auth-js/dist/module/GoTrueClient.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/@supabase+auth-js@2.105.4/node_modules/@supabase/auth-js/src/GoTrueClient.ts"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/react-server-dom-turbopack-experimental/cjs/react-server-dom-turbopack-server.node.development.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-server.node.development.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/react-server-dom-webpack-experimental/cjs/react-server-dom-webpack-server.node.development.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-server.node.development.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/hot-reloader-turbopack.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/hot-reloader-webpack.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/on-demand-entry-handler.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/dev/hot-reloader-turbopack.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/dev/hot-reloader-webpack.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/dev/on-demand-entry-handler.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/common/index.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/isomorphic.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/transform/esmLoader.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/prettier@3.8.3/node_modules/prettier/internal/experimental-cli.mjs"
+  },
+  {
+    "ruleId": "javascript/CodeInjection",
+    "level": "warning",
+    "message": "Unsanitized input from a command line argument flows into require, where it is executed as JavaScript code. This may result in a Code Injection vulnerability.",
+    "file": "node_modules/.pnpm/ajv@6.15.0/node_modules/ajv/scripts/bundle.js"
+  },
+  {
+    "ruleId": "javascript/NoHardcodedCredentials",
+    "level": "note",
+    "message": "Do not hardcode credentials in code. Found hardcoded credential used in insert.",
+    "file": "app/api/analyses/route.ts"
+  },
+  {
+    "ruleId": "javascript/NoHardcodedPasswords/test",
+    "level": "note",
+    "message": "Do not hardcode passwords in code. Found hardcoded password used in password.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/src/v3/tests/error.test.ts"
+  },
+  {
+    "ruleId": "javascript/NoHardcodedPasswords/test",
+    "level": "note",
+    "message": "Do not hardcode passwords in code. Found hardcoded password used in password.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/src/v3/tests/refine.test.ts"
+  },
+  {
+    "ruleId": "javascript/NoHardcodedPasswords/test",
+    "level": "note",
+    "message": "Do not hardcode passwords in code. Found hardcoded password used in password.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/src/v4/classic/tests/error.test.ts"
+  },
+  {
+    "ruleId": "javascript/NoHardcodedPasswords/test",
+    "level": "note",
+    "message": "Do not hardcode passwords in code. Found hardcoded password used in password.",
+    "file": "node_modules/.pnpm/zod@4.4.3/node_modules/zod/src/v4/classic/tests/refine.test.ts"
+  },
+  {
+    "ruleId": "javascript/NoRateLimitingForExpensiveWebOperation",
+    "level": "warning",
+    "message": "Expensive operation (a file system operation) is performed by an endpoint handler which does not use a rate-limiting mechanism. It may enable the attackers to perform Denial-of-service attacks. Consider using a rate-limiting middleware such as express-limit.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/next-devtools/server/devtools-config-middleware.js"
+  },
+  {
+    "ruleId": "javascript/NoRateLimitingForExpensiveWebOperation",
+    "level": "warning",
+    "message": "Expensive operation (a file system operation) is performed by an endpoint handler which does not use a rate-limiting mechanism. It may enable the attackers to perform Denial-of-service attacks. Consider using a rate-limiting middleware such as express-limit.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/next-devtools/server/font/get-dev-overlay-font-middleware.js"
+  },
+  {
+    "ruleId": "javascript/NoRateLimitingForExpensiveWebOperation",
+    "level": "warning",
+    "message": "Expensive operation (a file system operation) is performed by an endpoint handler which does not use a rate-limiting mechanism. It may enable the attackers to perform Denial-of-service attacks. Consider using a rate-limiting middleware such as express-limit.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/next-devtools/server/font/get-dev-overlay-font-middleware.js"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from data from a remote resource flows into window.location, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "components/billing/checkout-button.tsx"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from data from a remote resource flows into window.location, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from data from a remote resource flows into window.location, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from data from a remote resource flows into window.location, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from data from a remote resource flows into window.location, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from an HTTP header flows into the url argument of redirect, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/core/index.ts"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from the HTTP request body flows into the url argument of redirect, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/next/index.ts"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from an HTTP parameter flows into the url argument of redirect, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/next/index.ts"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from the document location flows into window.location, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/shared/lib/router/router.js"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from the document location flows into window.location, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/shared/lib/router/router.js"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from the request URL flows into redirect, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/base-server.js"
+  },
+  {
+    "ruleId": "javascript/OR",
+    "level": "warning",
+    "message": "Unsanitized input from the request URL flows into redirect, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/base-server.js"
+  },
+  {
+    "ruleId": "javascript/OR/test",
+    "level": "note",
+    "message": "Unsanitized input from the document location flows into window.location, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/client/__tests__/sign-out.test.js"
+  },
+  {
+    "ruleId": "javascript/OR/test",
+    "level": "note",
+    "message": "Unsanitized input from the document location flows into window.location, where it is used as input for request redirection. This may result in an Open Redirect vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/client/__tests__/sign-out.test.js"
+  },
+  {
+    "ruleId": "javascript/CommandInjection",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into concat, where it is used to build a shell command. This may result in a Command Injection vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/webpack/plugins/wellknown-errors-plugin/parseNotFoundError.js"
+  },
+  {
+    "ruleId": "javascript/CommandInjection",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into concat, where it is used to build a shell command. This may result in a Command Injection vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-turbopack.js"
+  },
+  {
+    "ruleId": "javascript/CommandInjection",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into concat, where it is used to build a shell command. This may result in a Command Injection vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-turbopack.js"
+  },
+  {
+    "ruleId": "javascript/CommandInjection",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into concat, where it is used to build a shell command. This may result in a Command Injection vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-webpack.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.readFileSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to read arbitrary files.",
+    "file": "node_modules/.pnpm/@babel+parser@7.29.3/node_modules/@babel/parser/bin/babel-parser.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.readFileSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to read arbitrary files.",
+    "file": "node_modules/.pnpm/ajv@6.15.0/node_modules/ajv/scripts/compile-dots.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.readFileSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to read arbitrary files.",
+    "file": "node_modules/.pnpm/ajv@6.15.0/node_modules/ajv/scripts/compile-dots.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.readFileSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to read arbitrary files.",
+    "file": "node_modules/.pnpm/browserslist@4.28.2/node_modules/browserslist/cli.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.writeFileSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write to arbitrary files.",
+    "file": "node_modules/.pnpm/ajv@6.15.0/node_modules/ajv/scripts/bundle.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.writeFileSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write to arbitrary files.",
+    "file": "node_modules/.pnpm/ajv@6.15.0/node_modules/ajv/scripts/bundle.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.writeFileSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write to arbitrary files.",
+    "file": "node_modules/.pnpm/ajv@6.15.0/node_modules/ajv/scripts/bundle.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.writeFileSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write to arbitrary files.",
+    "file": "node_modules/.pnpm/ajv@6.15.0/node_modules/ajv/scripts/compile-dots.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into readFile, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to read arbitrary files.",
+    "file": "node_modules/.pnpm/enhanced-resolve@5.21.3/node_modules/enhanced-resolve/lib/DescriptionFilePlugin.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.createReadStream, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to read arbitrary files.",
+    "file": "node_modules/.pnpm/json5@2.2.3/node_modules/json5/lib/cli.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.createReadStream, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to read arbitrary files.",
+    "file": "node_modules/.pnpm/loose-envify@1.4.0/node_modules/loose-envify/cli.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.createWriteStream, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write to arbitrary files.",
+    "file": "node_modules/.pnpm/json5@2.2.3/node_modules/json5/lib/cli.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into fs.createWriteStream, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to write to arbitrary files.",
+    "file": "node_modules/.pnpm/json5@2.2.3/node_modules/json5/lib/cli.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into fs/promises.default.readFile, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to read arbitrary files.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-webpack.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into readFileSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to read arbitrary files.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/telemetry/detached-flush.js"
+  },
+  {
+    "ruleId": "javascript/PT",
+    "level": "note",
+    "message": "Unsanitized input from a command line argument flows into unlinkSync, where it is used as a path. This may result in a Path Traversal vulnerability and allow an attacker to delete arbitrary files.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/telemetry/detached-flush.js"
+  },
+  {
+    "ruleId": "javascript/PrototypePollution",
+    "level": "warning",
+    "message": "Unsanitized input from the document location flows into a member access and is used to access a property of this object by name. This may allow a malicious user to pollute the Object.prototype and cause a crash, remote code execution or logic bypasses.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/shared/lib/router/router.js"
+  },
+  {
+    "ruleId": "javascript/PrototypePollution",
+    "level": "warning",
+    "message": "Unsanitized input from the document location flows into a member access and is used to access a property of this object by name. This may allow a malicious user to pollute the Object.prototype and cause a crash, remote code execution or logic bypasses.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/shared/lib/router/router.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to send and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/next/index.ts"
+  },
+  {
+    "ruleId": "javascript/DOMXSS",
+    "level": "warning",
+    "message": "Unsanitized input from data from a remote resource flows into appendChild, where it is used to dynamically construct the HTML page on client side. This may result in a DOM Based Cross-Site Scripting attack (DOMXSS).",
+    "file": "components/DashboardClient.tsx"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/build/webpack/plugins/wellknown-errors-plugin/index.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/next-devtools/server/middleware-response.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-turbopack.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-turbopack.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-webpack.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-webpack.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/router-utils/setup-dev-bundler.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/next-server.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/next-devtools/server/middleware-response.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/oauth@0.9.15/node_modules/oauth/examples/twitter-example.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/oauth@0.9.15/node_modules/oauth/examples/twitter-example.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An exception object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-turbopack.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An exception object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/dev/middleware-turbopack.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/chunk-LB3C5PJP.mjs"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/chunk-LB3C5PJP.mjs"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/cloudflare.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/cloudflare.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/h3.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/h3.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/hono.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/hono.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/index.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/index.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/nextjs.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/nextjs.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/solidjs.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/solidjs.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/svelte.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/svelte.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/workflow.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/workflow.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/chunk-LB3C5PJP.mjs"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/cloudflare.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/h3.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/hono.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/nextjs.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/solidjs.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/svelte.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into the path argument of request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash/workflow.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+redis@1.38.0/node_modules/@upstash/redis/chunk-2X4SLXT7.mjs"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+redis@1.38.0/node_modules/@upstash/redis/cloudflare.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+redis@1.38.0/node_modules/@upstash/redis/fastly.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/@upstash+redis@1.38.0/node_modules/@upstash/redis/nodejs.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/core/index.ts"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/core/index.ts"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/next/index.ts"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP parameter flows into request, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/next/index.ts"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/react/index.tsx"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/api-utils/node/api-resolver.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/api-utils/node/api-resolver.js"
+  },
+  {
+    "ruleId": "javascript/DOMXSS",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP header flows into a script 'src' attribute, where it is used to dynamically construct the HTML page on client side. This may result in a DOM Based Cross-Site Scripting attack (DOMXSS).",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/core/index.ts"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into _, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/node-fetch@2.7.0/node_modules/node-fetch/lib/index.js"
+  },
+  {
+    "ruleId": "javascript/Ssti",
+    "level": "warning",
+    "message": "Unsanitized input from a command line argument flows into dot.compile, where it is used to construct a template that gets rendered. This may result in a Server-Side Template Injection vulnerability.",
+    "file": "node_modules/.pnpm/ajv@6.15.0/node_modules/ajv/scripts/compile-dots.js"
+  },
+  {
+    "ruleId": "javascript/WebCookieSecureDisabledByDefault",
+    "level": "note",
+    "message": "Cookie misses the Secure attribute (it is false by default). Set it to true to protect the cookie from man-in-the-middle attacks.",
+    "file": "node_modules/.pnpm/@supabase+ssr@0.10.3_@supabase+supabase-js@2.105.4/node_modules/@supabase/ssr/dist/main/cookies.js"
+  },
+  {
+    "ruleId": "javascript/WebCookieSecureDisabledByDefault",
+    "level": "note",
+    "message": "Cookie misses the Secure attribute (it is false by default). Set it to true to protect the cookie from man-in-the-middle attacks.",
+    "file": "node_modules/.pnpm/@supabase+ssr@0.10.3_@supabase+supabase-js@2.105.4/node_modules/@supabase/ssr/dist/module/cookies.js"
+  },
+  {
+    "ruleId": "javascript/WebCookieSecureDisabledByDefault",
+    "level": "note",
+    "message": "Cookie misses the Secure attribute (it is false by default). Set it to true to protect the cookie from man-in-the-middle attacks.",
+    "file": "node_modules/.pnpm/@supabase+ssr@0.10.3_@supabase+supabase-js@2.105.4/node_modules/@supabase/ssr/src/cookies.ts"
+  },
+  {
+    "ruleId": "javascript/WebCookieSecureDisabledByDefault",
+    "level": "note",
+    "message": "Cookie misses the Secure attribute (it is false by default). Set it to true to protect the cookie from man-in-the-middle attacks.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js"
+  },
+  {
+    "ruleId": "javascript/WebCookieSecureDisabledByDefault",
+    "level": "note",
+    "message": "Cookie misses the Secure attribute (it is false by default). Set it to true to protect the cookie from man-in-the-middle attacks.",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/client/dev/hot-reloader/app/hot-reloader-app.js"
+  },
+  {
+    "ruleId": "javascript/XSS",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into send, where it is used to render an HTML page returned to the user. This may result in a Cross-Site Scripting attack (XSS).",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/next/index.js"
+  },
+  {
+    "ruleId": "javascript/XSS",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into send, where it is used to render an HTML page returned to the user. This may result in a Cross-Site Scripting attack (XSS).",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/next/index.ts"
+  },
+  {
+    "ruleId": "javascript/XSS",
+    "level": "warning",
+    "message": "Unsanitized input from an exception flows into end, where it is used to render an HTML page returned to the user. This may result in a Cross-Site Scripting attack (XSS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/api-utils/node/api-resolver.js"
+  },
+  {
+    "ruleId": "javascript/XSS",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into end, where it is used to render an HTML page returned to the user. This may result in a Cross-Site Scripting attack (XSS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/router-server.js"
+  },
+  {
+    "ruleId": "javascript/XSS",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into end, where it is used to render an HTML page returned to the user. This may result in a Cross-Site Scripting attack (XSS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/lib/router-server.js"
+  },
+  {
+    "ruleId": "javascript/XSS",
+    "level": "warning",
+    "message": "Unsanitized input from data from a remote resource flows into end, where it is used to render an HTML page returned to the user. This may result in a Cross-Site Scripting attack (XSS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/next-server.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the request URL flows into pattern, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/@sentry+core@10.53.1/node_modules/@sentry/core/build/cjs/integrations/http/inject-trace-propagation-headers.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the request URL flows into pattern, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/@sentry+core@10.53.1/node_modules/@sentry/core/build/esm/integrations/http/inject-trace-propagation-headers.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from a command line argument flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/ajv@6.15.0/node_modules/ajv/scripts/compile-dots.js"
+  },
+  {
+    "ruleId": "javascript/DOMXSS",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into a script 'src' attribute, where it is used to dynamically construct the HTML page on client side. This may result in a DOM Based Cross-Site Scripting attack (DOMXSS).",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/next/index.ts"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the request URL flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/base-server.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the request URL flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/base-server.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the request URL flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/base-server.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the request URL flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/base-server.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the document location flows into RegExp, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/base-server.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the document location flows into RegExp, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/router-utils/resolve-routes.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the document location flows into RegExp, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/router-utils/resolve-routes.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the document location flows into RegExp, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/shared/lib/router/router.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the document location flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/base-server.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the document location flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/router-utils/resolve-routes.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the document location flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/router-utils/resolve-routes.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the document location flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/esm/server/lib/router-utils/resolve-routes.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from an HTTP header flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next/dist/server/base-server.js"
+  },
+  {
+    "ruleId": "javascript/reDOS/test",
+    "level": "note",
+    "message": "Unsanitized user input from an exception flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/fastq@1.20.1/node_modules/fastq/test/promise.js"
+  },
+  {
+    "ruleId": "javascript/reDOS/test",
+    "level": "note",
+    "message": "Unsanitized user input from an exception flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/fastq@1.20.1/node_modules/fastq/test/promise.js"
+  },
+  {
+    "ruleId": "javascript/DOMXSS",
+    "level": "error",
+    "message": "Unsanitized input from an HTTP parameter flows into a script 'src' attribute, where it is used to dynamically construct the HTML page on client side. This may result in a DOM Based Cross-Site Scripting attack (DOMXSS).",
+    "file": "node_modules/.pnpm/next-auth@4.24.14_next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+t_76a77a5c511964c4d7686ac8034a8aa5/node_modules/next-auth/src/next/index.ts"
+  }
+]

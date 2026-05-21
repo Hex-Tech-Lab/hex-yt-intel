@@ -202,7 +202,7 @@ async function handleSubscriptionEvent(
       .from('users')
       .select('id')
       .eq('email', userEmail)
-      .single();
+      .maybeSingle();
 
     if (queryError || !users || typeof users === 'object' && !('id' in users)) {
       console.error('[handleSubscriptionEvent] User not found for email:', userEmail, queryError);
@@ -274,7 +274,7 @@ async function handleSubscriptionCanceled(
       .from('users')
       .select('id')
       .eq('email', customer.email)
-      .single();
+      .maybeSingle();
 
     if (queryError || !users || typeof users === 'object' && !('id' in users)) {
       console.error('[handleSubscriptionCanceled] User not found:', queryError);
@@ -344,7 +344,7 @@ async function handleInvoicePaid(
       .from('users')
       .select('id')
       .eq('email', customer.email)
-      .single();
+      .maybeSingle();
 
     if (users && typeof users === 'object' && 'id' in users) {
       const userId = (users as any).id;
@@ -395,7 +395,7 @@ async function handleInvoiceFailed(
       .from('users')
       .select('id')
       .eq('email', customer.email)
-      .single();
+      .maybeSingle();
 
     if (users && typeof users === 'object' && 'id' in users) {
       const userId = (users as any).id;
@@ -444,7 +444,7 @@ async function getUserIdFromEvent(event: Stripe.Event): Promise<string | null> {
       .from('users')
       .select('id')
       .eq('email', customer.email)
-      .single();
+      .maybeSingle();
 
     return (users && typeof users === 'object' && 'id' in users ? (users as any).id : null) || null;
   } catch (error) {

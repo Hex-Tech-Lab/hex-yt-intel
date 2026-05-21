@@ -1,0 +1,158 @@
+[
+  {
+    "ruleId": "cpp/MemoryLeak",
+    "level": "warning",
+    "message": "Leaking memory. MetadataWorker is allocated on the heap and never freed",
+    "file": "node_modules/.pnpm/sharp@0.33.5/node_modules/sharp/src/metadata.cc"
+  },
+  {
+    "ruleId": "cpp/MemoryLeak",
+    "level": "warning",
+    "message": "Leaking memory. PipelineWorker is allocated on the heap and never freed",
+    "file": "node_modules/.pnpm/sharp@0.33.5/node_modules/sharp/src/pipeline.cc"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/ws@8.18.0/node_modules/ws/lib/websocket-server.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "crypto.createHash hash (used in crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/ws@8.18.0/node_modules/ws/lib/websocket.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/hono@4.12.21/node_modules/hono/dist/adapter/cloudflare-workers/websocket.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/hono@4.12.21/node_modules/hono/dist/cjs/adapter/cloudflare-workers/websocket.js"
+  },
+  {
+    "ruleId": "javascript/InsufficientPostmessageValidation",
+    "level": "note",
+    "message": "The origin of the received message is not checked. This means any site (even malicious) can send message to this window. If you don't expect this, consider checking the origin of sender.",
+    "file": "node_modules/.pnpm/miniflare@3.20250718.3/node_modules/miniflare/dist/src/index.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An error object flows to write and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/miniflare@3.20250718.3/node_modules/miniflare/dist/src/index.js"
+  },
+  {
+    "ruleId": "javascript/ServerLeak",
+    "level": "warning",
+    "message": "An exception object flows to end and is leaked to the attacker. This may disclose important information about the application to an attacker.",
+    "file": "node_modules/.pnpm/miniflare@3.20250718.3/node_modules/miniflare/dist/src/index.js"
+  },
+  {
+    "ruleId": "javascript/Sqli",
+    "level": "warning",
+    "message": "Unsanitized input from a database flows into exec, where it is used in an SQL query. This may result in an SQL Injection vulnerability.",
+    "file": "node_modules/.pnpm/miniflare@3.20250718.3/node_modules/miniflare/dist/src/workers/d1/database.worker.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the HTTP request body flows into connect, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/undici@5.29.0/node_modules/undici/lib/client.js"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/wrangler@3.114.17_@cloudflare+workers-types@4.20260519.1/node_modules/wrangler/templates/startDevWorker/ProxyWorker.ts"
+  },
+  {
+    "ruleId": "javascript/Ssrf",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into fetch, where it is used as an URL to perform a request. This may result in a Server-Side Request Forgery vulnerability.",
+    "file": "node_modules/.pnpm/wrangler@3.114.17_@cloudflare+workers-types@4.20260519.1/node_modules/wrangler/wrangler-dist/ProxyWorker.js"
+  },
+  {
+    "ruleId": "javascript/XSS",
+    "level": "error",
+    "message": "Unsanitized input from the request URL flows into write, where it is used to render an HTML page returned to the user. This may result in a Cross-Site Scripting attack (XSS).",
+    "file": "node_modules/.pnpm/miniflare@3.20250718.3/node_modules/miniflare/dist/src/index.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the request URL flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/@cloudflare+kv-asset-handler@0.3.4/node_modules/@cloudflare/kv-asset-handler/dist/index.js"
+  },
+  {
+    "ruleId": "javascript/reDOS",
+    "level": "error",
+    "message": "Unsanitized user input from the request URL flows into match, where it is used to build a regular expression. This may result in a Regular expression Denial of Service attack (reDOS).",
+    "file": "node_modules/.pnpm/@cloudflare+kv-asset-handler@0.3.4/node_modules/@cloudflare/kv-asset-handler/src/index.ts"
+  },
+  {
+    "ruleId": "cpp/MemoryLeak",
+    "level": "warning",
+    "message": "Leaking memory. StatsWorker is allocated on the heap and never freed",
+    "file": "node_modules/.pnpm/sharp@0.33.5/node_modules/sharp/src/stats.cc"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from query and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/miniflare@3.20250718.3/node_modules/miniflare/dist/src/workers/assets/assets.worker.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from query and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/miniflare@3.20250718.3/node_modules/miniflare/dist/src/workers/assets/router.worker.js"
+  },
+  {
+    "ruleId": "javascript/HTTPSourceWithUncheckedType",
+    "level": "note",
+    "message": "The type of this object, coming from body and the value of its length property can be controlled by the user. An attacker may craft the properties of the object to crash the application or bypass its logic. Consider checking the type of the object.",
+    "file": "node_modules/.pnpm/undici@5.29.0/node_modules/undici/lib/fetch/index.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps",
+    "level": "warning",
+    "message": "http.createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/ws@8.18.0/node_modules/ws/lib/websocket-server.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps/test",
+    "level": "note",
+    "message": "http.createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/blake3-wasm@2.1.5/node_modules/blake3-wasm/dist/browser.test.js"
+  },
+  {
+    "ruleId": "javascript/HttpToHttps/test",
+    "level": "note",
+    "message": "http.createServer uses HTTP which is an insecure protocol and should not be used in code due to cleartext transmission of information. Data in cleartext in a communication channel can be sniffed by unauthorized actors. Consider using the https module instead.",
+    "file": "node_modules/.pnpm/blake3-wasm@2.1.5/node_modules/blake3-wasm/dist/browser.test.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "node:crypto.createHash hash (used in node:crypto.createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/miniflare@3.20250718.3/node_modules/miniflare/dist/src/workers/r2/bucket.worker.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "digest hash (used in digest) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/miniflare@3.20250718.3/node_modules/miniflare/dist/src/workers/workflows/binding.worker.js"
+  },
+  {
+    "ruleId": "javascript/InsecureHash",
+    "level": "note",
+    "message": "createHash hash (used in createHash) is insecure. Consider changing it to a secure hashing algorithm.",
+    "file": "node_modules/.pnpm/undici@5.29.0/node_modules/undici/lib/websocket/connection.js"
+  }
+]

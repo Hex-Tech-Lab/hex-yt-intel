@@ -13,7 +13,7 @@ async function getBillingData(userId: string) {
     .from('users')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (userError || !userData) {
     throw new Error('Failed to fetch user data');

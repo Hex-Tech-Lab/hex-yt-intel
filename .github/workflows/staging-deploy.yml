@@ -54,7 +54,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'dummy-service-key' }}
 
       - name: Deploy to Vercel (Staging)
-        uses: amondnet/vercel-action@master
+        uses: amondnet/vercel-action@c31f44fa7eb28f5a12b29ea3a80f3a8df1c18c6f
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}

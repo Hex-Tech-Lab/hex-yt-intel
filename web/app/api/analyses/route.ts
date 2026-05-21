@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'crypto';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClient, getSupabaseServiceClient } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import { AnalysisCreateSchema } from '@/lib/schemas';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
@@ -623,11 +623,12 @@ export async function POST(request: NextRequest) {
     after(async () => {
       console.log('[analyses] 10. Background Task: Creating analysis record', { videoId, userId, analysisId });
       try {
+        const supabaseService = getSupabaseServiceClient();
         await trackDatabaseQuery(
           'insert',
           'analyses',
           async () => {
-            const { error } = await supabase
+            const { error } = await supabaseService
               .from('analyses')
               .insert({
                 id: analysisId,
