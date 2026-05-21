@@ -353,6 +353,41 @@ Strategic, architectural, and business-level decisions must **NEVER** be committ
 
 ---
 
-**Last Updated**: Saturday, 16 May 2026 at 17:15:00 EEST  
-**Build Hash**: b947767  
-**Status**: ✅ PRODUCTION READY
+---
+
+## ARCHITECTURAL DECISION RECORDS (ADRs)
+
+Reference: `/docs/history/HANDOVER_REPORT_2026-05-21.md` (Sections: Architectural Decision Records)
+
+### ADR-001: Composite Action Pattern (CI/CD Convergence)
+**Status**: ✅ **IMPLEMENTED** (2026-05-21)  
+**Decision**: Extract Node/pnpm setup boilerplate into `action.yml` Composite Action.  
+**Reasoning**: 7 separate CI jobs had copy-paste setup code; Composite Actions centralize config and eliminate version drift.  
+**Trade-off**: One extra indirection file vs. 60% reduction in workflow verbosity.  
+**Location**: `.github/action.yml` specifies Node 24 + pnpm 11.1.3; all 7 CI jobs call this action.
+
+### ADR-002: Environment Fallback Strategy (Static Build Paradox)
+**Status**: ✅ **IMPLEMENTED** (2026-05-21)  
+**Decision**: Inject dummy secrets into CI build to satisfy Next.js static compilation.  
+**Reasoning**: Turbopack evaluates `process.env.*` at build time; real secrets can't be in logs. Dummy fallbacks satisfy build-time validation; Vercel runtime injects real secrets.  
+**Critical Invariant**: Dummy values (`dummy-anon-key`) are *never* used; they're build-time scaffolding only.  
+**Location**: `.github/workflows/ci-cd.yml` build job env block.
+
+### ADR-003: Monorepo Context Anchoring (`--filter` Standardization)
+**Status**: ✅ **IMPLEMENTED** (2026-05-21)  
+**Decision**: Replace all `cd web && pnpm...` with root-level `pnpm --filter @hex-yt-intel/web...`.  
+**Reasoning**: `cd web` severs hoisting context; CI can't find shared dependencies. `--filter` preserves monorepo context at root level.  
+**Mandate**: This is the *only* approved pattern for sub-package commands in CI.  
+**Location**: All instances replaced in `.github/workflows/ci-cd.yml`.
+
+### ADR-004: Dynamic Turbopack Root Resolution (Portability)
+**Status**: ✅ **IMPLEMENTED** (2026-05-21)  
+**Decision**: Replace hardcoded path with `path.resolve(__dirname, '..')`.  
+**Reasoning**: Hardcoded `/home/kellyb_dev/...` paths fail in CI/Docker. Dynamic resolution ensures 100% portability.  
+**Location**: `web/next.config.ts` line 12: `turbopack.root: path.resolve(__dirname, '..')`.
+
+---
+
+**Last Updated**: Tuesday, 21 May 2026 at 01:15:00 EEST  
+**Build Hash**: 872f92e  
+**Status**: ✅ **PRODUCTION READY** | ✅ **Phase 1 (Stabilization) COMPLETE** | 🚀 **Phase 2 (MVP 1.5) READY**
