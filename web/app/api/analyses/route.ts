@@ -204,10 +204,7 @@ export async function POST(request: NextRequest) {
       const errorCode = ERROR_CODES.RATE_LIMIT_EXCEEDED;
       console.warn('[analyses] 3. Rate limit exceeded', { code: errorCode, userId, tier: userTierAuth });
       addBreadcrumb('Rate limit exceeded', { code: errorCode, userId, tier: userTierAuth }, 'rate_limiting');
-      Sentry.withScope((scope) => {
-        scope.setTag('code', errorCode);
-        Sentry.captureMessage('Rate limit: POST /api/analyses', 'warning');
-      });
+      Sentry.captureMessage('Rate limit: POST /api/analyses', { level: 'warning', tags: { code: errorCode } });
       // Rate limit exceeded - response already has 429 status
       if (response) {
         // Attach headers to response
@@ -334,10 +331,7 @@ export async function POST(request: NextRequest) {
       const errorCode = ERROR_CODES.QUOTA_EXCEEDED;
       console.warn('[analyses] Quota limit exceeded', { code: errorCode, userId, used: analysesUsed, limit: quotaLimit, tier: userTierAuth });
       addBreadcrumb('Quota limit exceeded', { code: errorCode, userId, used: analysesUsed, limit: quotaLimit }, 'quota');
-      Sentry.withScope((scope) => {
-        scope.setTag('code', errorCode);
-        Sentry.captureMessage(`Quota exceeded: user ${userId}`, 'warning');
-      });
+      Sentry.captureMessage(`Quota exceeded: user ${userId}`, { level: 'warning', tags: { code: errorCode } });
       return NextResponse.json(
         {
           error: `Monthly quota exceeded (${analysesUsed}/${quotaLimit}). Upgrade to Pro for unlimited analyses.`,
