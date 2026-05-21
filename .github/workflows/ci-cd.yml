@@ -210,7 +210,7 @@ jobs:
         uses: ./
 
       - name: Validate environment configuration
-        run: cd web && pnpm tsx lib/env.ts
+        run: pnpm --filter @hex-yt-intel/web exec tsx lib/env.ts
         continue-on-error: true
 
   # ============================================================================
