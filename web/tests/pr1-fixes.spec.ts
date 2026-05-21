@@ -117,7 +117,8 @@ test.describe('PR #1 Fixes Verification', () => {
 
   test('typescript configuration allows no js files', async () => {
     const fs = require('fs');
-    const tsconfigPath = '/home/kellyb_dev/projects/hex-yt-intel/web/tsconfig.json';
+    const path = require('path');
+    const tsconfigPath = path.join(__dirname, '../tsconfig.json');
     const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8'));
 
     expect(tsconfig.compilerOptions.allowJs).toBe(false);
