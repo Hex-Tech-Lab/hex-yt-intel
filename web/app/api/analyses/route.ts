@@ -270,8 +270,7 @@ export async function POST(request: NextRequest) {
     let userEmail = '';
     let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined;
 
-    // Instantly isolate bypass logic from production build universe
-    // Accept bypass via header OR via public token for valid YouTube URLs
+    // Bypass if header token equals devBypassToken
     const hasValidBypassToken = devBypassToken && bypassSignature === devBypassToken;
     const shouldAttemptBypass = !isProduction && allowDevBypass && hasValidBypassToken;
 

@@ -79,7 +79,8 @@ test.describe('PR #1 Fixes Verification', () => {
   test('rls policies syntax is valid (migration check)', async () => {
     // Read the migration file to verify RLS policies
     const fs = require('fs');
-    const migrationPath = '/home/kellyb_dev/projects/hex-yt-intel/supabase/migrations/001_initial_schema.sql';
+    const path = require('path');
+    const migrationPath = path.join(__dirname, '../../supabase/migrations/001_initial_schema.sql');
     const content = fs.readFileSync(migrationPath, 'utf-8');
 
     // Check for correct stripe_events RLS policy
@@ -102,7 +103,8 @@ test.describe('PR #1 Fixes Verification', () => {
 
   test('pg_cron cleanup job is scheduled', async () => {
     const fs = require('fs');
-    const cronPath = '/home/kellyb_dev/projects/hex-yt-intel/supabase/migrations/002_schedule_cleanup.sql';
+    const path = require('path');
+    const cronPath = path.join(__dirname, '../../supabase/migrations/002_schedule_cleanup.sql');
     const content = fs.readFileSync(cronPath, 'utf-8');
 
     // Check for pg_cron job
