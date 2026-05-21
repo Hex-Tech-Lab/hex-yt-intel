@@ -267,9 +267,11 @@ export function getEnv(): EnvironmentConfig {
 
 /**
  * Initialize and validate environment on module load
+ * Only validate in production Vercel deployments; skip in development, CI, and testing
  */
-if (typeof window === 'undefined') {
-  // Server-side only
+const isProductionEnvironment = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
+if (typeof window === 'undefined' && isProductionEnvironment) {
+  // Server-side only, production Vercel only
   validateEnvironment();
 }
 
