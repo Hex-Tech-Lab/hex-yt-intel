@@ -176,32 +176,19 @@ export async function POST(request: NextRequest) {
     // 4. Create Supabase client (server-side)
     const supabase = getSupabaseClient();
 
-    // 5. Execute pgvector semantic search
-    // Query: cosine similarity (1 - distance), ordered by similarity
-    // RLS automatically filters to user_id = auth.uid()
+    // 5. Execute pgvector semantic search natively in Postgres via RPC
     const analyses = await trackDatabaseQuery(
       'select',
-      'analyses',
+      'analyses_semantic_search',
       async () => {
-        let query = supabase
-          .from('analyses')
-          .select('id, title, analysis_markdown, created_at, embedding')
-          .eq('user_id', userId)
-          .not('embedding', 'is', null)
-          .order('embedding', {
-            ascending: false,
-            referencedColumn: 'embedding',
-          } as any);
-
-        // Apply date filters if provided
-        if (validation.data.dateFrom) {
-          query = query.gte('created_at', validation.data.dateFrom);
-        }
-        if (validation.data.dateTo) {
-          query = query.lte('created_at', validation.data.dateTo);
-        }
-
-        const { data, error } = await query;
+        const { data, error } = await supabase.rpc('search_analyses_semantic', {
+          query_embedding: queryEmbedding,
+          match_threshold: threshold,
+          match_count: limit,
+          p_user_id: userId,
+          p_date_from: validation.data.dateFrom || null,
+          p_date_to: validation.data.dateTo || null,
+        });
 
         if (error) throw error;
         return data;
@@ -237,29 +224,15 @@ export async function POST(request: NextRequest) {
       count: analyses.length,
     });
 
-    // 6. Calculate similarity scores client-side and filter by threshold
-    // (In production, could use pgvector's <=> operator directly in SQL)
-    const results: SearchResult[] = analyses
-      .map((analysis: any) => {
-        // Calculate cosine similarity: 1 - cosine_distance
-        // pgvector vector_cosine_ops returns distance, we convert to similarity
-        const similarity = cosineSimilarityFromVector(
-          queryEmbedding,
-          analysis.embedding
-        );
-
-        return {
-          id: analysis.id,
-          title: analysis.title || 'Untitled Analysis',
-          snippet: extractSnippet(analysis.analysis_markdown, 150),
-          similarity,
-          createdAt: analysis.created_at,
-          matchType: 'semantic' as const,
-        };
-      })
-      .filter((result) => result.similarity >= threshold)
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, limit);
+    // 6. Format results (similarity is calculated by the database RPC)
+    const results: SearchResult[] = analyses.map((analysis: any) => ({
+      id: analysis.id,
+      title: analysis.title || 'Untitled Analysis',
+      snippet: extractSnippet(analysis.analysis_markdown, 150),
+      similarity: analysis.similarity,
+      createdAt: analysis.created_at,
+      matchType: 'semantic' as const,
+    }));
 
     const queryTime = Math.round(performance.now() - startTime);
 
@@ -308,55 +281,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Calculate cosine similarity from stored pgvector embedding
- * Assumes embedding is already normalized or is a valid 1536-dim vector
- *
- * @param vectorA - Query embedding (from generateEmbedding)
- * @param vectorB - Stored embedding from database
- * @returns Similarity score 0-1
- */
-function cosineSimilarityFromVector(vectorA: number[], vectorB: any): number {
-  // Handle pgvector format (could be array or string)
-  let vectorBArray: number[] = [];
-
-  if (Array.isArray(vectorB)) {
-    vectorBArray = vectorB;
-  } else if (typeof vectorB === 'string') {
-    // Parse pgvector string format "[1.0, 2.0, 3.0, ...]"
-    try {
-      vectorBArray = JSON.parse(vectorB.replace(/\[|\]/g, '').split(',').map(s => s.trim()).join(','));
-    } catch {
-      return 0;
-    }
-  } else {
-    return 0;
-  }
-
-  if (vectorA.length !== vectorBArray.length) {
-    return 0;
-  }
-
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-
-  for (let i = 0; i < vectorA.length; i++) {
-    const a = vectorA[i];
-    const b = vectorBArray[i];
-    if (a === undefined) {
-      throw new Error(`Query vector has undefined at index ${i}`);
-    }
-    const bVal = b === undefined ? 0 : b;
-    dotProduct += a * bVal;
-    normA += a * a;
-    normB += bVal * bVal;
-  }
-
-  const denominator = Math.sqrt(normA) * Math.sqrt(normB);
-  if (denominator === 0) {
-    return 0;
-  }
-
-  return dotProduct / denominator;
-}
