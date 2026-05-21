@@ -110,6 +110,9 @@ jobs:
       - name: Hex Intel Environment
         uses: ./
 
+      - name: Install Playwright Browsers
+        run: pnpm --filter @hex-yt-intel/web exec playwright install --with-deps
+
       - name: Run tests
         run: pnpm --filter @hex-yt-intel/web run test
         env:

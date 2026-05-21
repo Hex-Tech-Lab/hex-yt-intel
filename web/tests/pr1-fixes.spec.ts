@@ -126,7 +126,8 @@ test.describe('PR #1 Fixes Verification', () => {
 
   test('globals.css uses tailwind v4 directive', async () => {
     const fs = require('fs');
-    const globalsPath = '/home/kellyb_dev/projects/hex-yt-intel/web/app/globals.css';
+    const path = require('path');
+    const globalsPath = path.join(__dirname, '../app/globals.css');
     const content = fs.readFileSync(globalsPath, 'utf-8');
 
     // Check for v4 directive
