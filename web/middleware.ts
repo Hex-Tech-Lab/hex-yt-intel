@@ -19,16 +19,25 @@ async function hasSupabaseAuth(
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const allCookies = request.cookies.getAll();
+  // @supabase/auth-js default storageKey is 'supabase.auth.token'; chunked cookies are
+  // 'supabase.auth.token.0', 'supabase.auth.token.1' etc. Legacy ssr versions used 'sb-*'.
   const authCookieNames = allCookies
-    .filter(c => c.name.includes('sb-') || c.name.includes('auth-token'))
+    .filter(c =>
+      c.name.startsWith('supabase.auth') ||
+      c.name.startsWith('sb-') ||
+      c.name.includes('auth-token')
+    )
     .map(c => c.name);
 
   // Collect all state upfront, emit ONE log after getUser() — prevents MCP truncation
+  // Note: @supabase/auth-js@2.x uses STORAGE_KEY='supabase.auth.token', chunked as
+  // 'supabase.auth.token.0', 'supabase.auth.token.1' etc — NOT 'sb-*' or 'auth-token'
   const diag: Record<string, unknown> = {
     hasUrl: !!supabaseUrl,
     isDummyUrl: supabaseUrl?.includes('dummy') ?? false,
     authProvider: process.env.AUTH_PROVIDER ?? '(unset)',
     cookieCount: allCookies.length,
+    allCookieNames: allCookies.map(c => c.name),
     authCookieNames,
     path: request.nextUrl.pathname,
     method: request.method,
