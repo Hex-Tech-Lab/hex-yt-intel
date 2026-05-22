@@ -82,6 +82,7 @@ async function hasSupabaseAuth(
 
     // Bearer token fallback: cryptographically verify the token via Supabase
     const authHeader = request.headers.get('authorization');
+    console.log('[middleware] auth-diag: header presence', { hasAuth: !!authHeader, header: authHeader?.substring(0, 15) });
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
       const { data: { user: bearerUser }, error: bearerError } = await client.auth.getUser(token);
