@@ -72,23 +72,13 @@ jobs:
           path: web/test-results.json
           retention-days: 30
 
-      - name: Publish test report
+      - name: Log test summary
         if: always()
-        uses: dorny/test-reporter@v1
-        with:
-          name: Pairwise Test Results
-          path: web/test-results.json
-          reporter: 'json'
-          fail-on-error: false
-
-      - name: Notify on failure
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          text: 'Pairwise test suite failed on ${{ github.ref }}'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          fields: repo,ref,commit,message
+        run: |
+          echo "Test execution complete. Results available in artifacts."
+          if [ -f web/test-results.json ]; then
+            echo "✓ Test results JSON artifact created"
+          fi
 
   coverage-report:
     name: Generate Coverage Matrix
