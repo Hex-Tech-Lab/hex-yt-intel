@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
     // sec_002: Force environment gating & hardened bypass header (production safety circuit-breaker)
     const allowDevBypass = process.env.ALLOW_DEV_BYPASS === 'true';
     const isProduction = process.env.NODE_ENV === 'production';
-    const bypassSignature = request.headers.get('X-Hex-Dev-Bypass-Signature');
+    const bypassSignature = request.headers.get('X-Hex-Test-Secret');
     const devBypassToken = process.env.DEV_BYPASS_TOKEN;
     let userEmail = '';
     let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined;
