@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { freeUser, adminUser } from '../fixtures/users';
-import { shortEducational } from '../fixtures/videos';
+import { testUsers } from '../fixtures/users';
+import { testVideos } from '../fixtures/videos';
 
 const testCases = [
   {
@@ -20,7 +20,7 @@ const testCases = [
     includeAuth: false,
     expectedStatus: 200,
     middleware: 'public',
-    queryParams: { videoId: shortEducational.id },
+    queryParams: { videoId: testVideos.shortEducational.id },
   },
   {
     id: 'PW1-029',
@@ -38,7 +38,7 @@ const testCases = [
     endpoint: '/api/admin/stats',
     method: 'GET',
     includeAuth: true,
-    user: adminUser,
+    user: testUsers.adminUser,
     expectedStatus: 200,
     middleware: 'admin',
   },
@@ -48,7 +48,7 @@ const testCases = [
     endpoint: '/api/analyses',
     method: 'POST',
     includeAuth: true,
-    user: freeUser,
+    user: testUsers.freeUser,
     expectedStatus: 200,
     middleware: 'protected',
     validateChain: true,
@@ -56,18 +56,17 @@ const testCases = [
 ];
 
 test.describe('Middleware & Routing Chain Execution', () => {
-  test.each(testCases)(
-    '$id: $description',
-    async ({ id, endpoint, method, includeAuth, user, userRole, expectedStatus, queryParams, validateChain }) => {
+  testCases.forEach(({ id, endpoint, method, includeAuth, user, userRole, expectedStatus, queryParams, validateChain, description }) => {
+    test(`${id}: ${description}`, async () => {
       // Arrange: Build request headers
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
 
       if (includeAuth) {
-        const authUser = user || freeUser;
+        const authUser = user || testUsers.freeUser;
         headers['X-Hex-Test-Secret'] = process.env.DEV_BYPASS_TOKEN || 'test-token';
-        headers['Authorization'] = `Bearer ${authUser.testToken}`;
+        headers['Authorization'] = `Bearer ${authUser.id}`;
       }
 
       // Arrange: Build request body/query
@@ -76,7 +75,7 @@ test.describe('Middleware & Routing Chain Execution', () => {
 
       if (method === 'POST') {
         body = JSON.stringify({
-          url: `https://www.youtube.com/watch?v=${shortEducational.id}`,
+          url: `https://www.youtube.com/watch?v=${testVideos.shortEducational.id}`,
         });
       } else if (method === 'GET' && queryParams) {
         url += `?${new URLSearchParams(queryParams as Record<string, string>).toString()}`;
@@ -121,13 +120,13 @@ test.describe('Middleware & Routing Chain Execution', () => {
         const body = await response.json();
         expect(body.error || body.message).toBeTruthy();
       }
-    },
-  );
+    });
+  });
 
   // Additional test: Verify auth header variants are processed correctly
   test('PW1-043: Auth header parsing with multiple formats (Bearer, Supabase, NextAuth)', async () => {
     const endpoint = '/api/analyses';
-    const videoId = shortEducational.id;
+    const videoId = testVideos.shortEducational.id;
 
     // Test Bearer token format
     const bearerResponse = await fetch(
@@ -137,7 +136,7 @@ test.describe('Middleware & Routing Chain Execution', () => {
         headers: {
           'Content-Type': 'application/json',
           'X-Hex-Test-Secret': process.env.DEV_BYPASS_TOKEN || 'test-token',
-          'Authorization': `Bearer ${freeUser.testToken}`,
+          'Authorization': `Bearer ${testUsers.freeUser.id}`,
         },
         body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${videoId}` }),
       },
@@ -163,7 +162,7 @@ test.describe('Middleware & Routing Chain Execution', () => {
   // Additional test: Verify public endpoints skip auth entirely
   test('PW1-044: Public endpoint /api/metadata requires no auth validation', async () => {
     const response = await fetch(
-      `${process.env.BASE_URL || 'http://localhost:3000'}/api/metadata?videoId=${shortEducational.id}`,
+      `${process.env.BASE_URL || 'http://localhost:3000'}/api/metadata?videoId=${testVideos.shortEducational.id}`,
       {
         method: 'GET',
         headers: {
