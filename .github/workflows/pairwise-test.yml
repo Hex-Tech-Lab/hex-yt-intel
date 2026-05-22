@@ -61,27 +61,6 @@ jobs:
       - name: Install Playwright Browsers
         run: pnpm --filter @hex-yt-intel/web exec playwright install --with-deps
 
-      - name: Seed test user to Supabase
-        run: |
-          PROJECT_ID=$(echo "$SUPABASE_URL" | grep -oP 'https://\K[^.]+')
-
-          curl -X POST "https://${PROJECT_ID}.supabase.co/rest/v1/users" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Content-Type: application/json" \
-            -H "Prefer: return=minimal" \
-            -d '{
-              "id": "da4381c6-f774-4c99-8f04-2c1c9e27d1fb",
-              "email": "kellybakri@gmail.com",
-              "tier": "free",
-              "analyses_used": 0,
-              "last_reset_date": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
-              "created_at": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
-            }' && echo "✓ Test user seeded" || echo "⚠ Seed upsert handled by DB constraint"
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
       - name: Run Playwright pairwise tests
         run: pnpm --filter @hex-yt-intel/web exec playwright test --config=playwright.config.ts
         env:

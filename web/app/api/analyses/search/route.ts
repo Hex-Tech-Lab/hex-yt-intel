@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    const userTierAuth = await getUserTier(userId);
+    const userTierAuth = (await getUserTier(userId)) ?? 'free';
 
     // Set user context for Sentry
     setUserContext(userId, userEmail || '', userTierAuth);
