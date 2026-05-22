@@ -72,21 +72,13 @@ jobs:
           path: web/test-results.json
           retention-days: 30
 
-      - name: Upload test videos
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-test-videos
-          path: web/test-results/
-          retention-days: 14
-
       - name: Publish test report
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Pairwise Test Results
           path: web/test-results.json
-          reporter: 'java-junit'
+          reporter: 'json'
           fail-on-error: false
 
       - name: Notify on failure
@@ -95,7 +87,7 @@ jobs:
         with:
           status: ${{ job.status }}
           text: 'Pairwise test suite failed on ${{ github.ref }}'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           fields: repo,ref,commit,message
 
   coverage-report:
