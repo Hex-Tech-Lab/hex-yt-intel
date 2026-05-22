@@ -67,41 +67,26 @@ interface SearchResponse {
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
   let userId: string | undefined;
-  let userEmail = '';
 
   try {
-    // Dev bypass check (CI/test environments only)
-    const allowDevBypass = process.env.ALLOW_DEV_BYPASS === 'true';
-    const isProduction = process.env.NODE_ENV === 'production';
-    const bypassSignature = request.headers.get('X-Hex-Test-Secret');
-    const devBypassToken = process.env.DEV_BYPASS_TOKEN;
-    const hasValidBypassToken = devBypassToken && bypassSignature === devBypassToken;
-    const shouldAttemptBypass = !isProduction && allowDevBypass && hasValidBypassToken;
-
-    if (shouldAttemptBypass) {
-      // Use persistent test user for CI/dev bypass
-      userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
-      userEmail = process.env.DEV_TEST_USER_EMAIL || 'test@test.com';
-    } else {
-      // 1. Auth check
-      const session = await getAuthSession();
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-
-      userId = (session.user as any).id;
-      userEmail = (session.user as any).email || '';
+    // 1. Auth check
+    const session = await getAuthSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
+
+    userId = (session.user as any).id;
     if (!userId) {
       return NextResponse.json(
         { error: 'User ID not found in session' },
         { status: 401 }
       );
     }
-    const userTierAuth = (await getUserTier(userId)) ?? 'free';
+    const userEmail = (session.user as any).email || '';
+    const userTierAuth = await getUserTier(userId);
 
     // Set user context for Sentry
     setUserContext(userId, userEmail || '', userTierAuth);

@@ -22,29 +22,18 @@ interface AdminStats {
  * Admin-only endpoint for observability stats
  * Returns aggregated usage and performance metrics
  */
-export async function GET(request: NextRequest): Promise<NextResponse<AdminStats | { error: string }>> {
+export async function GET(_request: NextRequest): Promise<NextResponse<AdminStats | { error: string }>> {
   try {
-    // 1. Dev bypass check for CI/test environments
-    const isProduction = process.env.NODE_ENV === 'production' && !process.env.CI && !process.env.GITHUB_ACTIONS;
-    const devBypassToken = process.env.DEV_BYPASS_TOKEN;
-    const testSecret = request.headers.get('X-Hex-Test-Secret');
-
-    let userId: string;
-
-    if (!isProduction && devBypassToken && testSecret === devBypassToken) {
-      // Use persistent test user for CI/dev bypass
-      userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
-    } else {
-      // 2. Auth check - must be authenticated
-      const session = await getAuthSession();
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      userId = (session.user as any).id;
+    // 1. Auth check - must be authenticated
+    const session = await getAuthSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
+
+    const userId = (session.user as any).id;
 
     // 2. Initialize Supabase early for role check
     const supabase = getSupabaseServiceClient();

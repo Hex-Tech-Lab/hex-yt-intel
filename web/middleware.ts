@@ -82,7 +82,6 @@ async function hasSupabaseAuth(
 
     // Bearer token fallback: cryptographically verify the token via Supabase
     const authHeader = request.headers.get('authorization');
-    console.log('[middleware] auth-diag: header presence', { hasAuth: !!authHeader, header: authHeader?.substring(0, 15) });
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
       const { data: { user: bearerUser }, error: bearerError } = await client.auth.getUser(token);
@@ -129,7 +128,6 @@ export async function middleware(request: NextRequest) {
   // This includes auth callbacks, webhooks, public health checks, and metadata requests.
   const publicRoutes = [
     '/api/auth',           // NextAuth callbacks
-    '/api/auth/callback',  // Explicitly allow OAuth callbacks
     '/api/stripe',         // Stripe webhooks
     '/api/webhooks',       // Generic webhooks
     '/api/health',         // Health check endpoint
@@ -142,8 +140,7 @@ export async function middleware(request: NextRequest) {
 
   // Development-only test validation bypass — allows E2E test suites to bypass auth
   // Requires DEV_BYPASS_TOKEN environment variable (unset in production for safety)
-  // Allow bypass in CI environments even with production builds (NODE_ENV=production but CI=true)
-  const isProduction = process.env.NODE_ENV === 'production' && !process.env.CI && !process.env.GITHUB_ACTIONS;
+  const isProduction = process.env.NODE_ENV === 'production';
   const devBypassToken = process.env.DEV_BYPASS_TOKEN;
   const testSecret = request.headers.get('X-Hex-Test-Secret');
 
@@ -170,7 +167,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check auth method based on environment variable
-  const authProvider = (process.env.AUTH_PROVIDER && process.env.AUTH_PROVIDER !== '(unset)') ? process.env.AUTH_PROVIDER : 'supabase';
+  const authProvider = process.env.AUTH_PROVIDER || 'supabase';
 
   // Official @supabase/ssr pattern: plain NextResponse.next(), cookies written
   // onto the response only (not back onto request). See supabase/ssr docs.
