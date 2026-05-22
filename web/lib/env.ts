@@ -327,3 +327,18 @@ export const env = {
     return validateEnvVar('STRIPE_WEBHOOK_SECRET', true)!;
   },
 };
+
+/**
+ * Direct Supabase Configuration Exports
+ *
+ * These exports provide safe, CI-aware fallback values for Supabase initialization
+ * in headless runners and test environments. In CI/GitHub Actions environments,
+ * these guarantee non-empty strings to prevent runtime errors during client construction.
+ */
+const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
+
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  (isCI ? 'https://test-project.supabase.co' : '');
+
+export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  (isCI ? 'test-anon-key-safeguard-string-placeholder' : '');
