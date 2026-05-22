@@ -142,7 +142,8 @@ export async function middleware(request: NextRequest) {
 
   // Development-only test validation bypass — allows E2E test suites to bypass auth
   // Requires DEV_BYPASS_TOKEN environment variable (unset in production for safety)
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Allow bypass in CI environments even with production builds (NODE_ENV=production but CI=true)
+  const isProduction = process.env.NODE_ENV === 'production' && !process.env.CI && !process.env.GITHUB_ACTIONS;
   const devBypassToken = process.env.DEV_BYPASS_TOKEN;
   const testSecret = request.headers.get('X-Hex-Test-Secret');
 
