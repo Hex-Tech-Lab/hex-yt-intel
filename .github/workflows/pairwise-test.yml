@@ -52,13 +52,6 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: dummy-url-for-build
           NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key-for-build
 
-      - name: Start Next.js development server
-        run: |
-          pnpm --filter @hex-yt-intel/web run dev &
-          sleep 5
-          curl -f http://localhost:3000 || exit 1
-        timeout-minutes: 5
-
       - name: Run Playwright pairwise tests
         run: pnpm --filter @hex-yt-intel/web exec playwright test --config=playwright.config.ts tests/pairwise/
         env:
