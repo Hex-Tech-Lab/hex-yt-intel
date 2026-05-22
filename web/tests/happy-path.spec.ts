@@ -5,8 +5,8 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { testUsers } from '../fixtures/users';
-import { testVideos } from '../fixtures/videos';
+import { testUsers } from './fixtures/users';
+import { testVideos } from './fixtures/videos';
 
 const happyPathCases = [
   {
@@ -61,34 +61,36 @@ const happyPathCases = [
 ];
 
 test.describe('Happy Path Suite - Normal Operation Succeeds', () => {
-  test.each(happyPathCases)('$id: $description', async ({ page }, testCase) => {
-    // Arrange: Setup user and video
-    const user = testCase.user;
-    const video = testCase.video;
+  happyPathCases.forEach((testCase) => {
+    test(`${testCase.id}: ${testCase.description}`, async ({ page }) => {
+      // Arrange: Setup user and video
+      const user = testCase.user;
+      const video = testCase.video;
 
-    // Act: Create analysis request
-    const response = await page.request.post('/api/analyses', {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer test-token-${user.id}`,
-        'User-Agent': `PairwiseTest/${testCase.id}`,
-      },
-      data: {
-        url: `https://youtube.com/watch?v=${video.videoId}`,
-      },
+      // Act: Create analysis request
+      const response = await page.request.post('/api/analyses', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer test-token-${user.id}`,
+          'User-Agent': `PairwiseTest/${testCase.id}`,
+        },
+        data: {
+          url: `https://youtube.com/watch?v=${video.videoId}`,
+        },
+      });
+
+      // Assert: Response indicates success
+      expect(response.ok()).toBe(true);
+      const body = await response.json();
+
+      // Verify analysis structure
+      expect(body).toHaveProperty('sections');
+      expect(Array.isArray(body.sections)).toBe(true);
+      expect(body.sections.length).toBeGreaterThan(0);
+
+      // Verify response headers indicate successful execution
+      expect(response.headers.get('content-type')).toContain('application/json');
     });
-
-    // Assert: Response indicates success
-    expect(response.ok()).toBe(true);
-    const body = await response.json();
-
-    // Verify analysis structure
-    expect(body).toHaveProperty('sections');
-    expect(Array.isArray(body.sections)).toBe(true);
-    expect(body.sections.length).toBeGreaterThan(0);
-
-    // Verify response headers indicate successful execution
-    expect(response.headers.get('content-type')).toContain('application/json');
   });
 
   test('PW1-027: Free user can analyze short video with quota tracking', async ({ page }) => {

@@ -5,8 +5,8 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { testUsers, supabaseSession, nextAuthSession } from '../fixtures/users';
-import { testVideos } from '../fixtures/videos';
+import { testUsers, supabaseSession, nextAuthSession } from './fixtures/users';
+import { testVideos } from './fixtures/videos';
 
 test.describe('Authentication & Authorization - Provider & Role Validation', () => {
   test('PW1-003: Supabase OAuth session validates enterprise user', async ({ page }) => {

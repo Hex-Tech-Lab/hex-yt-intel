@@ -62,23 +62,19 @@
   "suites": [],
   "errors": [
     {
-      "message": "Error: Cannot find module '../fixtures/users'\nRequire stack:\n- /home/kellyb_dev/projects/hex-yt-intel/web/tests/index.spec.ts\n- /home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/common/index.js\n- /home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/program.js\n- /home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@playwright+test@1.60.0/node_modules/@playwright/test/cli.js",
-      "stack": "Error: Cannot find module '../fixtures/users'\nRequire stack:\n- /home/kellyb_dev/projects/hex-yt-intel/web/tests/index.spec.ts\n- /home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/common/index.js\n- /home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/playwright@1.60.0/node_modules/playwright/lib/program.js\n- /home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@playwright+test@1.60.0/node_modules/@playwright/test/cli.js\n    at Object.<anonymous> (/home/kellyb_dev/projects/hex-yt-intel/web/tests/index.spec.ts:8:1)",
+      "message": "TypeError: _test.test.each is not a function",
+      "stack": "TypeError: _test.test.each is not a function\n    at /home/kellyb_dev/projects/hex-yt-intel/web/tests/happy-path.spec.ts:64:8\n    at Object.<anonymous> (/home/kellyb_dev/projects/hex-yt-intel/web/tests/happy-path.spec.ts:63:6)",
       "location": {
-        "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/index.spec.ts",
-        "column": 1,
-        "line": 8
+        "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/happy-path.spec.ts",
+        "column": 8,
+        "line": 64
       },
-      "snippet": "\u001b[90m   at \u001b[39mindex.spec.ts:8\n\n\u001b[0m \u001b[90m  6 |\u001b[39m \u001b[90m */\u001b[39m\n \u001b[90m  7 |\u001b[39m \u001b[36mimport\u001b[39m { test\u001b[33m,\u001b[39m expect } \u001b[36mfrom\u001b[39m \u001b[32m'@playwright/test'\u001b[39m\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m  8 |\u001b[39m \u001b[36mimport\u001b[39m { testUsers } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/users'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m  9 |\u001b[39m \u001b[36mimport\u001b[39m { testVideos } \u001b[36mfrom\u001b[39m \u001b[32m'../fixtures/videos'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 10 |\u001b[39m \u001b[36mimport\u001b[39m { openrouterMocks } \u001b[36mfrom\u001b[39m \u001b[32m'../mocks/services'\u001b[39m\u001b[33m;\u001b[39m\n \u001b[90m 11 |\u001b[39m \u001b[36mimport\u001b[39m { createTestRequest } \u001b[36mfrom\u001b[39m \u001b[32m'./config'\u001b[39m\u001b[33m;\u001b[39m\u001b[0m"
-    },
-    {
-      "message": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.",
-      "stack": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments."
+      "snippet": "\u001b[90m   at \u001b[39mhappy-path.spec.ts:64\n\n  62 |\n  63 | test.describe('Happy Path Suite - Normal Operation Succeeds', () => {\n> 64 |   test.each(happyPathCases)('$id: $description', async ({ page }, testCase) => {\n     |        ^\n  65 |     // Arrange: Setup user and video\n  66 |     const user = testCase.user;\n  67 |     const video = testCase.video;"
     }
   ],
   "stats": {
-    "startTime": "2026-05-21T22:38:54.716Z",
-    "duration": 15316.471,
+    "startTime": "2026-05-22T10:26:14.492Z",
+    "duration": 5039.206,
     "expected": 0,
     "skipped": 0,
     "unexpected": 0,

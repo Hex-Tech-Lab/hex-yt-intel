@@ -5,8 +5,8 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { testUsers } from '../fixtures/users';
-import { testVideos } from '../fixtures/videos';
+import { testUsers } from './fixtures/users';
+import { testVideos } from './fixtures/videos';
 
 test.describe('Quota & Rate Limiting - Tier Enforcement', () => {
   test('PW1-011: Pro tier user has unlimited monthly analyses', async ({ page }) => {

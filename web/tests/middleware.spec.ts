@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { testUsers } from '../fixtures/users';
-import { testVideos } from '../fixtures/videos';
+import { testUsers } from './fixtures/users';
+import { testVideos } from './fixtures/videos';
 
 const testCases = [
   {
