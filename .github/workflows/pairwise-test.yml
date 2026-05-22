@@ -53,6 +53,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: dummy-url-for-build
           NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key-for-build
 
+      - name: Install Playwright Browsers
+        run: pnpm --filter @hex-yt-intel/web exec playwright install --with-deps
+
       - name: Run Playwright pairwise tests
         run: pnpm --filter @hex-yt-intel/web exec playwright test --config=playwright.config.ts
         env:
