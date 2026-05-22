@@ -128,6 +128,7 @@ export async function middleware(request: NextRequest) {
   // This includes auth callbacks, webhooks, public health checks, and metadata requests.
   const publicRoutes = [
     '/api/auth',           // NextAuth callbacks
+    '/api/auth/callback',  // Explicitly allow OAuth callbacks
     '/api/stripe',         // Stripe webhooks
     '/api/webhooks',       // Generic webhooks
     '/api/health',         // Health check endpoint
