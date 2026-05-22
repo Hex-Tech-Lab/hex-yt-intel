@@ -47,6 +47,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Purge build cache
+        run: rm -rf web/.next web/.turbo .turbo
+
       - name: Build application
         run: pnpm --filter @hex-yt-intel/web run build
         env:
