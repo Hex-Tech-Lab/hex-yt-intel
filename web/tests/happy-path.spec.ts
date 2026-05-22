@@ -62,25 +62,30 @@ const happyPathCases = [
 
 test.describe('Happy Path Suite - Normal Operation Succeeds', () => {
   happyPathCases.forEach((testCase) => {
-    test(`${testCase.id}: ${testCase.description}`, async ({ page }) => {
+    test(`${testCase.id}: ${testCase.description}`, async () => {
       // Arrange: Setup user and video
       const user = testCase.user;
       const video = testCase.video;
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Hex-Test-Secret': process.env.DEV_BYPASS_TOKEN || 'test-token',
+        Authorization: `Bearer ${user.id}`,
+      };
+
+      const url = `${process.env.BASE_URL || 'http://localhost:3000'}/api/analyses`;
+
       // Act: Create analysis request
-      const response = await page.request.post('/api/analyses', {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer test-token-${user.id}`,
-          'User-Agent': `PairwiseTest/${testCase.id}`,
-        },
-        data: {
-          url: `https://youtube.com/watch?v=${video.videoId}`,
-        },
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          url: `https://www.youtube.com/watch?v=${video.id}`,
+        }),
       });
 
       // Assert: Response indicates success
-      expect(response.ok()).toBe(true);
+      expect(response.ok).toBe(true);
       const body = await response.json();
 
       // Verify analysis structure
@@ -93,21 +98,25 @@ test.describe('Happy Path Suite - Normal Operation Succeeds', () => {
     });
   });
 
-  test('PW1-027: Free user can analyze short video with quota tracking', async ({ page }) => {
+  test('PW1-027: Free user can analyze short video with quota tracking', async () => {
     const user = testUsers.freeUser;
     const video = testVideos.shortEducational;
 
-    const response = await page.request.post('/api/analyses', {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer test-token-${user.id}`,
-      },
-      data: {
-        url: `https://youtube.com/watch?v=${video.videoId}`,
-      },
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Hex-Test-Secret': process.env.DEV_BYPASS_TOKEN || 'test-token',
+      Authorization: `Bearer ${user.id}`,
+    };
+
+    const response = await fetch(`${process.env.BASE_URL || 'http://localhost:3000'}/api/analyses`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${video.id}`,
+      }),
     });
 
-    expect(response.ok()).toBe(true);
+    expect(response.ok).toBe(true);
 
     // Verify quota header in response
     const quotaHeader = response.headers.get('X-Quota-Remaining');
@@ -117,22 +126,26 @@ test.describe('Happy Path Suite - Normal Operation Succeeds', () => {
     expect(remaining).toBeLessThanOrEqual(3);
   });
 
-  test('PW1-031: Enterprise user can analyze with multiple endpoints', async ({ page }) => {
+  test('PW1-031: Enterprise user can analyze with multiple endpoints', async () => {
     const user = testUsers.enterpriseUser;
     const video = testVideos.longTechnical;
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Hex-Test-Secret': process.env.DEV_BYPASS_TOKEN || 'test-token',
+      Authorization: `Bearer ${user.id}`,
+    };
+
     // Test analyses endpoint
-    const response = await page.request.post('/api/analyses', {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer test-token-${user.id}`,
-      },
-      data: {
-        url: `https://youtube.com/watch?v=${video.videoId}`,
-      },
+    const response = await fetch(`${process.env.BASE_URL || 'http://localhost:3000'}/api/analyses`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${video.id}`,
+      }),
     });
 
-    expect(response.ok()).toBe(true);
+    expect(response.ok).toBe(true);
 
     // Enterprise tier should have no quota restrictions
     const quotaHeader = response.headers.get('X-Quota-Remaining');
@@ -142,22 +155,25 @@ test.describe('Happy Path Suite - Normal Operation Succeeds', () => {
     }
   });
 
-  test('PW1-038: CI test user inherits persistent identity across test runs', async ({ page }) => {
+  test('PW1-038: CI test user inherits persistent identity across test runs', async () => {
     const user = testUsers.ciTestUser;
     const video = testVideos.shortEducational;
 
-    const response = await page.request.post('/api/analyses', {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer test-token-${user.id}`,
-        'X-Hex-Test-Secret': process.env.DEV_BYPASS_TOKEN || '',
-      },
-      data: {
-        url: `https://youtube.com/watch?v=${video.videoId}`,
-      },
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Hex-Test-Secret': process.env.DEV_BYPASS_TOKEN || 'test-token',
+      Authorization: `Bearer ${user.id}`,
+    };
+
+    const response = await fetch(`${process.env.BASE_URL || 'http://localhost:3000'}/api/analyses`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${video.id}`,
+      }),
     });
 
     // CI user should be recognized across runs
-    expect(response.status()).not.toBe(401);
+    expect(response.status).not.toBe(401);
   });
 });

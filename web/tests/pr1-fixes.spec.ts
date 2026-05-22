@@ -60,7 +60,7 @@ test.describe('PR #1 Fixes Verification', () => {
     console.log(`✓ Page loaded in ${loadTime}ms`);
   });
 
-  test('api routes respond without errors', async ({ page }) => {
+  test('api routes respond without errors', async () => {
     // Test health/readiness of key API routes
     const routes = [
       '/api/auth/session',
@@ -68,11 +68,11 @@ test.describe('PR #1 Fixes Verification', () => {
     ];
 
     for (const route of routes) {
-      const response = await page.request.get(`http://localhost:3000${route}`);
+      const response = await fetch(`http://localhost:3000${route}`);
 
       // Should either return success or auth error, not 500
-      expect(response.status()).toBeLessThan(500);
-      console.log(`✓ ${route}: ${response.status()}`);
+      expect(response.status).toBeLessThan(500);
+      console.log(`✓ ${route}: ${response.status}`);
     }
   });
 
