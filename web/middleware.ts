@@ -169,7 +169,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check auth method based on environment variable
-  const authProvider = process.env.AUTH_PROVIDER || 'supabase';
+  const authProvider = (process.env.AUTH_PROVIDER && process.env.AUTH_PROVIDER !== '(unset)') ? process.env.AUTH_PROVIDER : 'supabase';
 
   // Official @supabase/ssr pattern: plain NextResponse.next(), cookies written
   // onto the response only (not back onto request). See supabase/ssr docs.
