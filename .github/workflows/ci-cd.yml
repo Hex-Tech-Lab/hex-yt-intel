@@ -120,6 +120,7 @@ jobs:
         run: pnpm --filter @hex-yt-intel/web run test
         env:
           AUTH_PROVIDER: supabase
+          ALLOW_DEV_BYPASS: 'true'
           DEV_BYPASS_TOKEN: test-token
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN || 'https://00000000000000000000000000000000@o000000.ingest.sentry.io/0000000' }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN || 'mock-sentry-auth-token-64-chars-long-xxxxxxxxxxxxxxxxxxxx' }}
