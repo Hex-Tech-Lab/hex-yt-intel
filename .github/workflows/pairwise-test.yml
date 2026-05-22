@@ -22,6 +22,7 @@ jobs:
     environment: test
 
     env:
+      AUTH_PROVIDER: supabase
       CI: true
       NODE_ENV: test
       BASE_URL: http://localhost:3000
