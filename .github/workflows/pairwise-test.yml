@@ -24,6 +24,7 @@ jobs:
       DEV_BYPASS_TOKEN: test-token
       ALLOW_DEV_BYPASS: 'true'
       DEV_TEST_USER_EMAIL: kellybakri@gmail.com
+      RUN_PAIRWISE: 'true'
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

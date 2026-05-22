@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: process.env.RUN_PAIRWISE === 'true' ? [] : ['**/pairwise_matrix/**'],
   fullyParallel: true,
   forbidOnly: false,
   retries: 0,
