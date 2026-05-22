@@ -61,6 +61,38 @@ jobs:
       - name: Install Playwright Browsers
         run: pnpm --filter @hex-yt-intel/web exec playwright install --with-deps
 
+      - name: Seed test user to Supabase
+        run: |
+          cat > /tmp/seed-test-user.js << 'SEED_EOF'
+          const { createClient } = require('@supabase/supabase-js');
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+          );
+          (async () => {
+            try {
+              const { error } = await supabase.from('users').insert({
+                id: 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb',
+                email: 'kellybakri@gmail.com',
+                tier: 'free',
+                analyses_used: 0,
+                last_reset_date: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+              }).on('*', payload => {}).throwOnError();
+              if (error) throw error;
+              console.log('✓ Test user seeded successfully');
+              process.exit(0);
+            } catch (err) {
+              console.error('Error seeding test user:', err.message);
+              process.exit(1);
+            }
+          })();
+          SEED_EOF
+          node /tmp/seed-test-user.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: Run Playwright pairwise tests
         run: pnpm --filter @hex-yt-intel/web exec playwright test --config=playwright.config.ts
         env:
