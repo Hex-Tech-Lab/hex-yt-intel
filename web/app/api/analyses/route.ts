@@ -400,7 +400,7 @@ export async function POST(request: NextRequest) {
     if (existingAnalysis && existingAnalysis.analysis_markdown && existingAnalysis.analysis_markdown.length > 0) {
       console.log('[analyses] 4. Cache HIT - returning cached analysis', { videoId, analysisId: existingAnalysis.id, markdownLength: existingAnalysis.analysis_markdown.length });
       addBreadcrumb('Cache hit: analysis retrieved from DB', { videoId, analysisId: existingAnalysis.id }, 'cache');
-      return NextResponse.json({
+      const cacheResponse = NextResponse.json({
         id: existingAnalysis.id,
         analysisId: existingAnalysis.id,
         videoId,
@@ -412,6 +412,13 @@ export async function POST(request: NextRequest) {
         cacheHit: true,
         message: 'Analysis compiled previously. Retrieved instantly from local architecture cache.'
       });
+      // Apply rate-limit headers to cache hit response
+      if (headers) {
+        for (const [key, value] of Object.entries(headers)) {
+          cacheResponse.headers.set(key, value);
+        }
+      }
+      return cacheResponse;
     }
     console.log('[analyses] 4. Cache MISS - proceeding with analysis', { videoId });
 
@@ -695,18 +702,21 @@ export async function POST(request: NextRequest) {
     const [clientStream, processorStream] = transformedStream.tee();
 
     // Inject persona header and wrap stream in response
+    const streamResponseHeaders = {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Pragma': 'no-cache',
+      'X-Active-Persona': finalPersona,
+      'X-Persona-Config': JSON.stringify(personaConfig),
+      'X-Analysis-Id': analysisId,
+      'X-Title': encodeURIComponent(metadata.title || 'Analysis Result'),
+      ...(headers || {}), // Merge rate-limit headers
+    };
+
     const streamResponse = new Response(clientStream, {
-      headers: {
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-        'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no',
-        'Pragma': 'no-cache',
-        'X-Active-Persona': finalPersona,
-        'X-Persona-Config': JSON.stringify(personaConfig),
-        'X-Analysis-Id': analysisId,
-        'X-Title': encodeURIComponent(metadata.title || 'Analysis Result'),
-      },
+      headers: streamResponseHeaders,
     });
 
     // 10. Process blocking database inserts and stream parsing in background lifecycle
