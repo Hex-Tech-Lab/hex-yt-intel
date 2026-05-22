@@ -482,9 +482,9 @@ GOOGLE_ID=xxxxx
 GOOGLE_SECRET=xxxxx
 
 # Stripe
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
-STRIPE_SECRET_KEY=sk_test_xxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=test_pk_xxxxx
+STRIPE_SECRET_KEY=test_sk_xxxxx
+STRIPE_WEBHOOK_SECRET=test_whsec_xxxxx
 
 # Upstash Redis
 UPSTASH_REDIS_REST_URL=xxxxx

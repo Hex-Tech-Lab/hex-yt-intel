@@ -308,8 +308,8 @@ UPSTASH_REDIS_REST_TOKEN=gQAAAAAAAeuJAAIgcDI1NTZmNDNiMzlkZjU0NTcxODQ4MTU4ZjRmMzd
 QSTASH_URL=https://qstash-eu-central-1.upstash.io ✅
 QSTASH_TOKEN=eyJVc2VySUQiOiIzZTRiMGIyZC04MDkyLTQ2MzgtODZlZC1lNDYxMTM5MjA0MDciLCJQYXNzd29yZCI6IjZhZjY3MzU3MjRlZTQ1NTdiNWU5NTZlNWQ2MzNmYmRhIn0= ✅
 CLOUDFLARE_WORKER_URL=https://yt-intel.hex-tech-lab.workers.dev ✅
-STRIPE_SECRET_KEY=sk_live_placeholder_update_later [STUB - user to provide]
-STRIPE_WEBHOOK_SECRET=whsec_placeholder_update_later [STUB - user to provide]
+STRIPE_SECRET_KEY=test_stripe_secret_placeholder_update_later [STUB - user to provide]
+STRIPE_WEBHOOK_SECRET=test_webhook_secret_placeholder_update_later [STUB - user to provide]
 ```
 
 **Status**: All encrypted and active in Vercel production environment
@@ -330,8 +330,8 @@ SUPABASE_ANON_KEY=[key]
 AUTH_PROVIDER=supabase
 
 # Billing (Awaiting User Keys)
-STRIPE_SECRET_KEY=sk_live_placeholder_update_later [STUB]
-STRIPE_WEBHOOK_SECRET=whsec_placeholder_update_later [STUB]
+STRIPE_SECRET_KEY=test_stripe_secret_placeholder_update_later [STUB]
+STRIPE_WEBHOOK_SECRET=test_webhook_secret_placeholder_update_later [STUB]
 
 # Observability
 SENTRY_DSN=[configured]
