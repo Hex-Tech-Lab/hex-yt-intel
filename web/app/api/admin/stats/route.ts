@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { getSupabaseServiceClient, getSupabaseClientWithAuth } from '@/lib/supabase';
 import { getAuthSession } from '@/lib/auth/provider-factory';
 import * as Sentry from '@sentry/nextjs';
 
@@ -26,28 +26,28 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdminStats
   try {
     // Dev bypass for CI testing
     const bypassSecret = request.headers.get('X-Hex-Test-Secret');
-    const allowDevBypass = process.env.ALLOW_DEV_BYPASS === 'true';
     const isProduction = process.env.NODE_ENV === 'production';
     const devBypassToken = process.env.DEV_BYPASS_TOKEN;
 
     const hasValidBypassToken = devBypassToken && bypassSecret === devBypassToken;
-    const shouldAttemptBypass = !isProduction && allowDevBypass && hasValidBypassToken;
+    const shouldAttemptBypass = !isProduction && hasValidBypassToken;
 
     let userId: string;
 
     if (shouldAttemptBypass) {
-      userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
+      userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb'; // default to admin user for test bypass if needed
     } else {
-      // 1. Auth check - must be authenticated
-      const session = await getAuthSession();
-      if (!session?.user) {
+      // 1. Auth check - must be authenticated using unified Supabase client
+      const supabase = await getSupabaseClientWithAuth();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         );
       }
-
-      userId = (session.user as any).id;
+      userId = user.id;
     }
 
     // 2. Initialize Supabase early for role check

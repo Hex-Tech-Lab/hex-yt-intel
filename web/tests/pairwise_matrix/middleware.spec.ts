@@ -16,11 +16,11 @@ const testCases = [
     id: 'PW1-022',
     description: 'Public endpoint allows unauthenticated requests',
     endpoint: '/api/metadata',
-    method: 'GET',
+    method: 'POST',
     includeAuth: false,
     expectedStatus: 200,
     middleware: 'public',
-    queryParams: { videoId: testVideos.shortEducational.id },
+    body: JSON.stringify({ url: `https://youtube.com/watch?v=${testVideos.shortEducational.id}` }),
   },
   {
     id: 'PW1-029',
@@ -162,14 +162,16 @@ test.describe('Middleware & Routing Chain Execution', () => {
   // Additional test: Verify public endpoints skip auth entirely
   test('PW1-044: Public endpoint /api/metadata requires no auth validation', async () => {
     const response = await fetch(
-      `${process.env.BASE_URL || 'http://localhost:3000'}/api/metadata?videoId=${testVideos.shortEducational.id}`,
+      `${process.env.BASE_URL || 'http://localhost:3000'}/api/metadata`,
       {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ url: `https://youtube.com/watch?v=${testVideos.shortEducational.id}` })
       },
     );
+
 
     expect(response.status).toBe(200);
     const body = await response.json();

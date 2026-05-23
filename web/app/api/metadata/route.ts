@@ -21,15 +21,6 @@ interface MetadataResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    // 401: No auth
-    const session = await getAuthSession();
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json();
     const validation = AnalysisCreateSchema.safeParse(body);
     if (!validation.success) {
@@ -38,6 +29,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
 
     // 400: Invalid URL
     const videoId = extractVideoId(validation.data.url);

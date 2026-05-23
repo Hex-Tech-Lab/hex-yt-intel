@@ -25,9 +25,7 @@
         "id": "chromium",
         "name": "chromium",
         "testDir": "/home/kellyb_dev/projects/hex-yt-intel/web/tests",
-        "testIgnore": [
-          "**/pairwise_matrix/**"
-        ],
+        "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
@@ -79,20 +77,20 @@
   },
   "suites": [
     {
-      "title": "pr1-fixes.spec.ts",
-      "file": "pr1-fixes.spec.ts",
+      "title": "pairwise_matrix/middleware.spec.ts",
+      "file": "pairwise_matrix/middleware.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "PR #1 Fixes Verification",
-          "file": "pr1-fixes.spec.ts",
-          "line": 3,
+          "title": "Middleware & Routing Chain Execution",
+          "file": "pairwise_matrix/middleware.spec.ts",
+          "line": 58,
           "column": 6,
           "specs": [
             {
-              "title": "tailwind v4 styles are applied correctly",
+              "title": "PW1-012: Protected route rejects unauthenticated requests",
               "ok": true,
               "tags": [],
               "tests": [
@@ -107,34 +105,91 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 5990,
+                      "duration": 667,
                       "errors": [],
-                      "stdout": [
-                        {
-                          "text": "Starting app verification...\n"
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T13:10:58.731Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "752fa089de0dfc2ae2b4-8d774e90957abc1d3ffc",
+              "file": "pairwise_matrix/middleware.spec.ts",
+              "line": 60,
+              "column": 9
+            },
+            {
+              "title": "PW1-022: Public endpoint allows unauthenticated requests",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 15000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 625,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m405\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m405\u001b[39m\n    at /home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts:92:31",
+                        "location": {
+                          "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                          "column": 31,
+                          "line": 92
                         },
+                        "snippet": "\u001b[0m \u001b[90m 90 |\u001b[39m\n \u001b[90m 91 |\u001b[39m       \u001b[90m// Assert: Validate response status\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 92 |\u001b[39m       expect(response\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(expectedStatus)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 93 |\u001b[39m\n \u001b[90m 94 |\u001b[39m       \u001b[90m// Assert: Validate middleware chain ordering if required\u001b[39m\n \u001b[90m 95 |\u001b[39m       \u001b[36mif\u001b[39m (validateChain) {\u001b[0m"
+                      },
+                      "errors": [
                         {
-                          "text": "✓ Tailwind v4 styles applied correctly\n"
+                          "location": {
+                            "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                            "column": 31,
+                            "line": 92
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m405\u001b[39m\n\n\u001b[0m \u001b[90m 90 |\u001b[39m\n \u001b[90m 91 |\u001b[39m       \u001b[90m// Assert: Validate response status\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 92 |\u001b[39m       expect(response\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(expectedStatus)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 93 |\u001b[39m\n \u001b[90m 94 |\u001b[39m       \u001b[90m// Assert: Validate middleware chain ordering if required\u001b[39m\n \u001b[90m 95 |\u001b[39m       \u001b[36mif\u001b[39m (validateChain) {\u001b[0m\n\u001b[2m    at /home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts:92:31\u001b[22m"
                         }
                       ],
+                      "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-23T09:14:22.285Z",
+                      "startTime": "2026-05-23T13:10:59.548Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results/pairwise_matrix-middleware-03f73-ws-unauthenticated-requests-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                        "column": 31,
+                        "line": 92
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "0371a2b33e415d560231-6c15504403f71bfd062b",
-              "file": "pr1-fixes.spec.ts",
-              "line": 9,
-              "column": 7
+              "id": "752fa089de0dfc2ae2b4-4d681feb4ab28b208b1a",
+              "file": "pairwise_matrix/middleware.spec.ts",
+              "line": 60,
+              "column": 9
             },
             {
-              "title": "no console errors during page load",
-              "ok": true,
+              "title": "PW1-029: Admin gate restricts free users (403), allows admins (200)",
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -145,34 +200,44 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 1,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2043,
-                      "errors": [],
-                      "stdout": [
+                      "status": "timedOut",
+                      "duration": 15002,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 15000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 15000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
                         {
-                          "text": "✓ No critical console errors detected\n"
+                          "message": "\u001b[31mTest timeout of 15000ms exceeded.\u001b[39m"
                         }
                       ],
+                      "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-23T09:14:29.591Z",
+                      "startTime": "2026-05-23T13:11:01.590Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results/pairwise_matrix-middleware-4bb47-sers-403-allows-admins-200--chromium/error-context.md"
+                        }
+                      ]
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "0371a2b33e415d560231-4cda05623b0946b19965",
-              "file": "pr1-fixes.spec.ts",
-              "line": 23,
-              "column": 7
+              "id": "752fa089de0dfc2ae2b4-dec82a2f500b3dddfbae",
+              "file": "pairwise_matrix/middleware.spec.ts",
+              "line": 60,
+              "column": 9
             },
             {
-              "title": "page content loads without timeout",
-              "ok": true,
+              "title": "PW1-041: Admin route allows authenticated admin users",
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -183,34 +248,44 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1726,
-                      "errors": [],
-                      "stdout": [
+                      "status": "timedOut",
+                      "duration": 15002,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 15000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 15000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
                         {
-                          "text": "✓ Page loaded in 1680ms\n"
+                          "message": "\u001b[31mTest timeout of 15000ms exceeded.\u001b[39m"
                         }
                       ],
+                      "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-23T09:14:31.665Z",
+                      "startTime": "2026-05-23T13:11:17.366Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results/pairwise_matrix-middleware-3e10a-s-authenticated-admin-users-chromium/error-context.md"
+                        }
+                      ]
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "0371a2b33e415d560231-d151b271c3a5df6664f1",
-              "file": "pr1-fixes.spec.ts",
-              "line": 48,
-              "column": 7
+              "id": "752fa089de0dfc2ae2b4-7e005c806632c52f2b6e",
+              "file": "pairwise_matrix/middleware.spec.ts",
+              "line": 60,
+              "column": 9
             },
             {
-              "title": "api routes respond without errors",
-              "ok": true,
+              "title": "PW1-042: Middleware chain executes in order: auth → rate-limit → handler",
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -221,37 +296,60 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 3,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 99,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✓ /api/auth/session: 200\n"
+                      "status": "failed",
+                      "duration": 14730,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m500\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m500\u001b[39m\n    at /home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts:92:31",
+                        "location": {
+                          "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                          "column": 31,
+                          "line": 92
                         },
+                        "snippet": "\u001b[0m \u001b[90m 90 |\u001b[39m\n \u001b[90m 91 |\u001b[39m       \u001b[90m// Assert: Validate response status\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 92 |\u001b[39m       expect(response\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(expectedStatus)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 93 |\u001b[39m\n \u001b[90m 94 |\u001b[39m       \u001b[90m// Assert: Validate middleware chain ordering if required\u001b[39m\n \u001b[90m 95 |\u001b[39m       \u001b[36mif\u001b[39m (validateChain) {\u001b[0m"
+                      },
+                      "errors": [
                         {
-                          "text": "✓ /api/analyses: 401\n"
+                          "location": {
+                            "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                            "column": 31,
+                            "line": 92
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m500\u001b[39m\n\n\u001b[0m \u001b[90m 90 |\u001b[39m\n \u001b[90m 91 |\u001b[39m       \u001b[90m// Assert: Validate response status\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 92 |\u001b[39m       expect(response\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(expectedStatus)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 93 |\u001b[39m\n \u001b[90m 94 |\u001b[39m       \u001b[90m// Assert: Validate middleware chain ordering if required\u001b[39m\n \u001b[90m 95 |\u001b[39m       \u001b[36mif\u001b[39m (validateChain) {\u001b[0m\n\u001b[2m    at /home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts:92:31\u001b[22m"
                         }
                       ],
+                      "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-23T09:14:33.403Z",
+                      "startTime": "2026-05-23T13:11:33.765Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results/pairwise_matrix-middleware-3f7c0-auth-→-rate-limit-→-handler-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                        "column": 31,
+                        "line": 92
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "0371a2b33e415d560231-dcf6bd1f2452b05d6964",
-              "file": "pr1-fixes.spec.ts",
-              "line": 63,
-              "column": 7
+              "id": "752fa089de0dfc2ae2b4-eb1aba4c3075085c51fb",
+              "file": "pairwise_matrix/middleware.spec.ts",
+              "line": 60,
+              "column": 9
             },
             {
-              "title": "rls policies syntax is valid (migration check)",
-              "ok": true,
+              "title": "PW1-043: Auth header parsing with multiple formats (Bearer, Supabase, NextAuth)",
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -262,34 +360,60 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 11,
-                      "errors": [],
-                      "stdout": [
+                      "status": "failed",
+                      "duration": 14555,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m500\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m500\u001b[39m\n    at /home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts:145:35",
+                        "location": {
+                          "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                          "column": 35,
+                          "line": 145
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 143 |\u001b[39m     )\u001b[33m;\u001b[39m\n \u001b[90m 144 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 145 |\u001b[39m     expect(bearerResponse\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(\u001b[35m200\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 146 |\u001b[39m\n \u001b[90m 147 |\u001b[39m     \u001b[90m// Test with missing auth should fail\u001b[39m\n \u001b[90m 148 |\u001b[39m     \u001b[36mconst\u001b[39m noAuthResponse \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m fetch(\u001b[0m"
+                      },
+                      "errors": [
                         {
-                          "text": "✓ Schema improvements verified in 20260519220000_complete_stabilization.sql\n"
+                          "location": {
+                            "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                            "column": 35,
+                            "line": 145
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m500\u001b[39m\n\n\u001b[0m \u001b[90m 143 |\u001b[39m     )\u001b[33m;\u001b[39m\n \u001b[90m 144 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 145 |\u001b[39m     expect(bearerResponse\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(\u001b[35m200\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 146 |\u001b[39m\n \u001b[90m 147 |\u001b[39m     \u001b[90m// Test with missing auth should fail\u001b[39m\n \u001b[90m 148 |\u001b[39m     \u001b[36mconst\u001b[39m noAuthResponse \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m fetch(\u001b[0m\n\u001b[2m    at /home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts:145:35\u001b[22m"
                         }
                       ],
+                      "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-23T09:14:33.513Z",
+                      "startTime": "2026-05-23T13:11:49.347Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results/pairwise_matrix-middleware-8b341-s-Bearer-Supabase-NextAuth--chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                        "column": 35,
+                        "line": 145
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "0371a2b33e415d560231-1cfd43b0fd1b30a0c41b",
-              "file": "pr1-fixes.spec.ts",
-              "line": 79,
+              "id": "752fa089de0dfc2ae2b4-47c9556285f4e452e0dc",
+              "file": "pairwise_matrix/middleware.spec.ts",
+              "line": 127,
               "column": 7
             },
             {
-              "title": "pg_cron cleanup job is scheduled",
-              "ok": true,
+              "title": "PW1-044: Public endpoint /api/metadata requires no auth validation",
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -300,181 +424,55 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 5,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 11,
-                      "errors": [],
-                      "stdout": [
+                      "status": "failed",
+                      "duration": 80,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m401\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m401\u001b[39m\n    at /home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts:176:29",
+                        "location": {
+                          "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                          "column": 29,
+                          "line": 176
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 174 |\u001b[39m\n \u001b[90m 175 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 176 |\u001b[39m     expect(response\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(\u001b[35m200\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 177 |\u001b[39m     \u001b[36mconst\u001b[39m body \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m response\u001b[33m.\u001b[39mjson()\u001b[33m;\u001b[39m\n \u001b[90m 178 |\u001b[39m     expect(body)\u001b[33m.\u001b[39mtoHaveProperty(\u001b[32m'title'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 179 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
                         {
-                          "text": "✓ Found 11 migrations; cleanup logic present: false\n"
+                          "location": {
+                            "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                            "column": 29,
+                            "line": 176
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m200\u001b[39m\nReceived: \u001b[31m401\u001b[39m\n\n\u001b[0m \u001b[90m 174 |\u001b[39m\n \u001b[90m 175 |\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 176 |\u001b[39m     expect(response\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(\u001b[35m200\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 177 |\u001b[39m     \u001b[36mconst\u001b[39m body \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m response\u001b[33m.\u001b[39mjson()\u001b[33m;\u001b[39m\n \u001b[90m 178 |\u001b[39m     expect(body)\u001b[33m.\u001b[39mtoHaveProperty(\u001b[32m'title'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 179 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts:176:29\u001b[22m"
                         }
                       ],
+                      "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-05-23T09:14:33.552Z",
+                      "startTime": "2026-05-23T13:12:05.235Z",
                       "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0371a2b33e415d560231-c438619e31e8d2423cd4",
-              "file": "pr1-fixes.spec.ts",
-              "line": 106,
-              "column": 7
-            },
-            {
-              "title": "typescript configuration allows no js files",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3,
-                      "errors": [],
-                      "stdout": [
+                      "attachments": [
                         {
-                          "text": "✓ tsconfig.json correctly set to allowJs: false\n"
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results/pairwise_matrix-middleware-6b8df-requires-no-auth-validation-chromium/error-context.md"
                         }
                       ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-23T09:14:33.587Z",
-                      "annotations": [],
-                      "attachments": []
+                      "errorLocation": {
+                        "file": "/home/kellyb_dev/projects/hex-yt-intel/web/tests/pairwise_matrix/middleware.spec.ts",
+                        "column": 29,
+                        "line": 176
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "0371a2b33e415d560231-3d18557bd1b4133c0efc",
-              "file": "pr1-fixes.spec.ts",
-              "line": 135,
-              "column": 7
-            },
-            {
-              "title": "globals.css uses tailwind v4 directive",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 6,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✓ Tailwind v4 directive (@import) verified\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-23T09:14:33.606Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0371a2b33e415d560231-94b22820973d1b24fdad",
-              "file": "pr1-fixes.spec.ts",
-              "line": 145,
-              "column": 7
-            },
-            {
-              "title": "build artifacts contain tailwind styles",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 1830,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✓ Tailwind CSS bundle detected in build artifacts\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-23T09:14:33.634Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0371a2b33e415d560231-b7d7c087e7fbd14e0c01",
-              "file": "pr1-fixes.spec.ts",
-              "line": 162,
-              "column": 7
-            },
-            {
-              "title": "no sentry configuration errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2181,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "✓ Sentry configuration verified (no errors)\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-05-23T09:14:35.482Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "0371a2b33e415d560231-f79e64a11adc324cd05d",
-              "file": "pr1-fixes.spec.ts",
-              "line": 181,
+              "id": "752fa089de0dfc2ae2b4-4501c0b9668e5bcb4433",
+              "file": "pairwise_matrix/middleware.spec.ts",
+              "line": 163,
               "column": 7
             }
           ]
@@ -484,11 +482,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-05-23T09:14:05.110Z",
-    "duration": 32752.810999999998,
-    "expected": 10,
+    "startTime": "2026-05-23T13:10:45.572Z",
+    "duration": 78677.124,
+    "expected": 1,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 6,
     "flaky": 0
   }
 }
