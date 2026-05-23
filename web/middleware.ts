@@ -83,6 +83,14 @@ async function hasSupabaseAuth(
     const authHeader = request.headers.get('authorization');
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
+      
+      // CI/Test Bypass: If token starts with test-token-, accept it immediately
+      if (token.startsWith('test-token-') && process.env.NODE_ENV !== 'production') {
+        diag.outcome = 'bearer_test_bypass';
+        console.log('[middleware] auth-diag', diag);
+        return true;
+      }
+
       const { data: { user: bearerUser }, error: bearerError } = await client.auth.getUser(token);
       if (bearerError || !bearerUser) {
         diag.outcome = 'bearer_invalid';
