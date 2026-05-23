@@ -541,7 +541,7 @@ Cost: Zero (Cloudflare free tier + Claude subscription)
 **Current Build**: Latest (post-e5ec466)  
 **Deployment**: https://hex-yt-intel.vercel.app (59s build, 200 OK)  
 **Backend**: Edge Runtime with 25-second adaptive timeout  
-**Database**: Supabase PostgreSQL + pgvector  
+**Database**: Supabase PostgreSQL + Upstash Vector (semantic search index)  
 **Authentication**: Supabase OAuth (Google, GitHub)  
 **Rate Limiting**: Upstash Redis with per-minute + monthly quotas ✅ DEPLOYED  
 **Observability**: Sentry breadcrumbs + usage_logs table  
