@@ -48,8 +48,8 @@ BEGIN
   -- ============================================================================
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'analyses' AND table_schema = 'public') THEN
 
-    -- Add vector column for semantic search
-    ALTER TABLE public.analyses ADD COLUMN IF NOT EXISTS embedding vector(1536);
+    -- Vector column deferred to later migration (free-tier memory constraint workaround)
+    -- ALTER TABLE public.analyses ADD COLUMN IF NOT EXISTS embedding vector(1536);
 
     -- Add shared token support
     ALTER TABLE public.analyses
