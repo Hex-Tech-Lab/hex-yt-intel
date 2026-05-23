@@ -65,6 +65,16 @@ print_separator() {
   echo ""
 }
 
+start_stage() {
+  STAGE_START=$(date +%s%N)
+}
+
+end_stage() {
+  local stage_end=$(date +%s%N)
+  local elapsed_ms=$(( (stage_end - STAGE_START) / 1000000 ))
+  echo -e "${BLUE}⏳ Stage completed in ${elapsed_ms}ms${NC}"
+}
+
 ##############################################################################
 # Health Checks
 ##############################################################################
@@ -331,6 +341,8 @@ check_cloudflare_worker() {
 ##############################################################################
 
 main() {
+  local total_start=$(date +%s%N)
+
   echo ""
   echo "╔════════════════════════════════════════════════════════════════════╗"
   echo "║         Production Verification Script                            ║"
@@ -341,37 +353,51 @@ main() {
   # Stage 1: Connectivity
   print_separator
   log_info "STAGE 1: CONNECTIVITY & DEPLOYMENT"
+  start_stage
   check_deployment_url || true
   check_ssl_certificate || true
+  end_stage
   print_separator
 
   # Stage 2: Health & Endpoints
   log_info "STAGE 2: HEALTH & ENDPOINTS"
+  start_stage
   check_health_endpoint || true
   check_home_page || true
   check_auth_endpoint || true
   check_api_metadata || true
+  end_stage
   print_separator
 
   # Stage 3: Frontend Rendering (Headless Browser)
   log_info "STAGE 3: FRONTEND RENDERING & CLIENT ENVIRONMENT"
+  start_stage
   check_frontend_rendering || true
+  end_stage
   print_separator
 
   # Stage 4: Components
   log_info "STAGE 4: COMPONENT VERIFICATION"
+  start_stage
   check_database_connectivity || true
   check_cloudflare_worker || true
   check_environment_variables || true
+  end_stage
   print_separator
 
   # Stage 5: Performance
   log_info "STAGE 5: PERFORMANCE"
+  start_stage
   check_response_time || true
+  end_stage
   print_separator
 
   # Summary
   local total=$((CHECKS_PASSED + CHECKS_FAILED + CHECKS_WARNED))
+  local total_end=$(date +%s%N)
+  local total_elapsed_ms=$(( (total_end - total_start) / 1000000 ))
+  local total_elapsed_s=$(( total_elapsed_ms / 1000 ))
+
   echo ""
   echo "╔════════════════════════════════════════════════════════════════════╗"
   echo "║                      VERIFICATION SUMMARY                          ║"
@@ -380,6 +406,8 @@ main() {
   echo -e "  ${GREEN}✓ Passed:${NC}  $CHECKS_PASSED/$total"
   echo -e "  ${YELLOW}⚠ Warned:${NC}  $CHECKS_WARNED/$total"
   echo -e "  ${RED}✗ Failed:${NC}  $CHECKS_FAILED/$total"
+  echo ""
+  echo -e "  ${BLUE}⏳ Total time:${NC} ${total_elapsed_s}s (${total_elapsed_ms}ms)"
   echo ""
 
   if [ $CHECKS_FAILED -eq 0 ]; then
