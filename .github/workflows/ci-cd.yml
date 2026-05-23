@@ -28,10 +28,13 @@ jobs:
       build-needed: ${{ steps.check-changes.outputs.build-needed }}
       db-migration-needed: ${{ steps.check-changes.outputs.db-migration-needed }}
     steps:
+      - name: Cleanup Git Config
+        run: |
+          git config --global --unset-all http.https://github.com/.extraheader || true
+          git config --global --unset-all core.askPass || true
+
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
