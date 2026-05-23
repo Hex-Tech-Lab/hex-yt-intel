@@ -15,11 +15,17 @@ export function getSupabaseClient() {
   // CI/Test Mock: If in CI and URL is localhost/missing, return a mock client
   if (process.env.GITHUB_ACTIONS === 'true' && (supabaseUrl.includes('localhost') || supabaseUrl.includes('dummy'))) {
     return {
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            maybeSingle: async () => ({ data: { tier: 'free' }, error: null }),
-          }),
+      from: (table: string) => ({
+        select: (columns: string) => ({
+          eq: (col: string, val: string) => {
+            if (table === 'users' && col === 'id') {
+              let tier = 'free';
+              if (val.includes('pro')) tier = 'pro';
+              if (val.includes('enterprise') || val.includes('admin')) tier = 'enterprise';
+              return { maybeSingle: async () => ({ data: { tier, id: val }, error: null }) };
+            }
+            return { maybeSingle: async () => ({ data: null, error: null }) };
+          },
         }),
         insert: async () => ({ error: null }),
       }),
@@ -47,8 +53,9 @@ export async function getSupabaseClientWithAuth() {
     return {
       auth: {
         getUser: async (token?: string) => {
-          if (token?.startsWith('test-token-')) {
-            const id = token.replace('test-token-', '');
+          const actualToken = token || '';
+          const id = actualToken.includes('test-token-') ? actualToken.replace('test-token-', '') : actualToken;
+          if (id) {
             return { data: { user: { id, email: 'test@example.com' } }, error: null };
           }
           return { data: { user: null }, error: new Error('Mock unauthorized') };
@@ -56,14 +63,38 @@ export async function getSupabaseClientWithAuth() {
         getSession: async () => ({ data: { session: null }, error: null }),
         signOut: async () => ({ error: null }),
       },
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            maybeSingle: async () => ({ data: { tier: 'free' }, error: null }),
-            order: () => ({ limit: async () => ({ data: [], error: null }) }),
-          }),
+      from: (table: string) => ({
+        select: (columns: string) => ({
+          eq: (col: string, val: string) => {
+            // Handle Quota checks in E2E tests
+            if (table === 'users' && col === 'id') {
+              let tier = 'free';
+              if (val.includes('pro')) tier = 'pro';
+              if (val.includes('enterprise') || val.includes('admin')) tier = 'enterprise';
+              return { maybeSingle: async () => ({ data: { tier, id: val }, error: null }) };
+            }
+            if (table === 'usage_logs' && col === 'user_id') {
+              let count = 0;
+              if (val.includes('near-quota')) count = 2;
+              if (val.includes('over-quota')) count = 5; // Force 429
+              return { 
+                gte: () => ({
+                  order: () => ({ limit: async () => ({ data: Array(count).fill({ id: 'log' }), error: null }) })
+                }),
+                select: () => ({
+                  gte: async () => ({ data: Array(count).fill({ id: 'log' }), error: null })
+                })
+              };
+            }
+            return {
+              maybeSingle: async () => ({ data: null, error: null }),
+              order: () => ({ limit: async () => ({ data: [], error: null }) }),
+              gte: () => ({ count: async () => ({ data: 0, error: null }) }),
+            };
+          },
         }),
         insert: async () => ({ error: null }),
+        upsert: async () => ({ error: null }),
       }),
     } as any;
   }
