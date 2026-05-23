@@ -9,7 +9,7 @@ export default defineConfig({
   workers: process.env.CI ? 8 : 1,
   reporter: [['list'], ['json', { outputFile: 'test-results.json' }]],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'https://hex-yt-intel.vercel.app',
     trace: 'on-first-retry',
   },
 
