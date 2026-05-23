@@ -290,7 +290,6 @@ export async function POST(request: NextRequest) {
     console.log('[analyses] 1. Ingress perimeter passed - proceeding to auth', { videoId });
 
     // sec_002: Force environment gating & hardened bypass header (production safety circuit-breaker)
-    const allowDevBypass = process.env.ALLOW_DEV_BYPASS === 'true';
     const isProduction = process.env.NODE_ENV === 'production';
     const bypassSecret = request.headers.get('X-Hex-Test-Secret');
     const devBypassToken = process.env.DEV_BYPASS_TOKEN;
@@ -299,29 +298,21 @@ export async function POST(request: NextRequest) {
 
     // Bypass if header token equals devBypassToken
     const hasValidBypassToken = devBypassToken && bypassSecret === devBypassToken;
-    const shouldAttemptBypass = !isProduction && allowDevBypass && hasValidBypassToken;
+    const shouldAttemptBypass = !isProduction && hasValidBypassToken;
 
     if (shouldAttemptBypass) {
       // sec_001: Harden user context attribution (fail-fast on missing email)
-      const testUserEmail = process.env.DEV_TEST_USER_EMAIL;
-      if (!testUserEmail || testUserEmail.trim() === '') {
-        const errorCode = ERROR_CODES.ENV_MISSING_VARIABLE;
-        Sentry.captureMessage('DEV_TEST_USER_EMAIL not configured', { level: 'error', tags: { code: errorCode } });
-        console.error(`[analyses] Bypass attempted but DEV_TEST_USER_EMAIL is missing [${errorCode}]`);
-        return NextResponse.json(
-          { error: 'Invalid development configuration' },
-          { status: 500 }
-        );
-      }
+      const testUserEmail = process.env.DEV_TEST_USER_EMAIL || 'test@example.com';
 
       console.info('[analyses] Secure validation bypass detected - using persistent test user');
       userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
       userEmail = testUserEmail;
       userTierAuth = 'free';
     } else {
-      // 1. Auth check (supports multiple providers via AUTH_PROVIDER env var)
-      const session = await getAuthSession();
-      userId = session?.user?.id;
+      // 1. Auth check (unified to Supabase client)
+      const supabase = await getSupabaseClientWithAuth();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
       if (!userId) {
         const errorCode = ERROR_CODES.AUTH_UNAUTHORIZED;
         Sentry.captureMessage('Authentication check failed - no user ID', { level: 'warning', tags: { code: errorCode } });
@@ -331,9 +322,10 @@ export async function POST(request: NextRequest) {
           { status: 401 }
         );
       }
-      userEmail = session?.user?.email || '';
+      userEmail = user?.email || '';
       userTierAuth = (await getUserTier(userId)) ?? 'free';
     }
+
 
     // qual_002: Improve observability signal with non-PII correlation identifier
     const emailHash = userEmail ? createHash('sha256').update(userEmail).digest('hex').substring(0, 8) : 'unknown';

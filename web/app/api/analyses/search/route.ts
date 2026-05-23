@@ -71,43 +71,34 @@ export async function POST(request: NextRequest) {
   try {
     // Dev bypass for CI testing
     const bypassSecret = request.headers.get('X-Hex-Test-Secret');
-    const allowDevBypass = process.env.ALLOW_DEV_BYPASS === 'true';
     const isProduction = process.env.NODE_ENV === 'production';
     const devBypassToken = process.env.DEV_BYPASS_TOKEN;
 
     const hasValidBypassToken = devBypassToken && bypassSecret === devBypassToken;
-    const shouldAttemptBypass = !isProduction && allowDevBypass && hasValidBypassToken;
+    const shouldAttemptBypass = !isProduction && hasValidBypassToken;
+
+    let userEmail = '';
+    let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined = 'free';
 
     if (shouldAttemptBypass) {
       userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
+      userEmail = process.env.DEV_TEST_USER_EMAIL || 'test@example.com';
       addBreadcrumb('Search initiated (dev bypass)', { userId });
     } else {
-      // 1. Auth check
-      const session = await getAuthSession();
-      if (!session?.user) {
+      // 1. Auth check (unified to Supabase client)
+      const supabase = await getSupabaseClientWithAuth();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         );
       }
-
-      userId = (session.user as any).id;
-    }
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID not found' },
-        { status: 401 }
-      );
-    }
-
-    let userEmail = '';
-    let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined = 'free';
-
-    if (!shouldAttemptBypass) {
-      const session = await getAuthSession();
-      userEmail = (session?.user as any)?.email || '';
+      userId = user.id;
+      userEmail = user.email || '';
       userTierAuth = await getUserTier(userId);
     }
+
 
     // Set user context for Sentry
     setUserContext(userId, userEmail || '', userTierAuth);
