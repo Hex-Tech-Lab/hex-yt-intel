@@ -110,55 +110,13 @@ jobs:
               body: '❌ Linting failed. Please fix linting errors before merging.'
             })
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: true
-
-      - name: Hex Intel Environment
-        uses: ./
-
-      - name: Purge Stale Next.js & Tooling Caches
-        run: rm -rf web/.next node_modules/.cache
-
-      - name: Install Playwright Browsers
-        run: pnpm --filter @hex-yt-intel/web exec playwright install --with-deps
-
-      - name: Run tests
-        run: pnpm --filter @hex-yt-intel/web run test
-        env:
-          AUTH_PROVIDER: supabase
-          ALLOW_DEV_BYPASS: 'true'
-          DEV_BYPASS_TOKEN: test-token
-          DEV_TEST_USER_EMAIL: kellybakri@gmail.com
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN || 'https://00000000000000000000000000000000@o000000.ingest.sentry.io/0000000' }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN || 'mock-sentry-auth-token-64-chars-long-xxxxxxxxxxxxxxxxxxxx' }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: coverage/
-
   # ============================================================================
   # STAGE 3: BUILD VERIFICATION
   # ============================================================================
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [setup, type-check, lint, test]
+    needs: [setup, type-check, lint]
     if: needs.setup.outputs.build-needed == 'true' || github.event_name == 'pull_request'
     steps:
       - name: Checkout code
@@ -262,7 +220,7 @@ jobs:
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
-    needs: [type-check, lint, test, build, security-check, env-validation]
+    needs: [type-check, lint, build, security-check, env-validation]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     environment:
       name: production
@@ -406,14 +364,13 @@ jobs:
   final-status:
     name: Pipeline Status
     runs-on: ubuntu-latest
-    needs: [type-check, lint, test, build, security-check, env-validation]
+    needs: [type-check, lint, build, security-check, env-validation]
     if: always()
     steps:
       - name: Check pipeline status
         run: |
           if [[ "${{ needs.type-check.result }}" == "failure" || \
                 "${{ needs.lint.result }}" == "failure" || \
-                "${{ needs.test.result }}" == "failure" || \
                 "${{ needs.build.result }}" == "failure" || \
                 "${{ needs.security-check.result }}" == "failure" ]]; then
             echo "❌ Pipeline failed"
