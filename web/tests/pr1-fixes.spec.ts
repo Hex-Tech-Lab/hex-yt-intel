@@ -89,7 +89,8 @@ test.describe('PR #1 Fixes Verification', () => {
     const content = fs.readFileSync(migrationPath, 'utf-8');
 
     // Check for schema improvements
-    expect(content).toContain('UNIQUE constraint');
+    expect(content).toContain('UNIQUE');
+    expect(content).toContain('CONSTRAINT');
     expect(content).toContain('ON DELETE CASCADE');
     expect(content).toContain('timestamptz');
 

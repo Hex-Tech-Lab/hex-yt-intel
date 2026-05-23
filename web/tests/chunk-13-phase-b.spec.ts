@@ -333,7 +333,6 @@ test.describe('6 · Adaptive Timeout Horizon', () => {
     //   Math.min(25000, 5000 + Math.floor(len/5000)*1000)
     // We verify the math is correct.
 
-    const shortRes = await request.get('http://localhost:3000/api/rate-limit-status');
     // The adaptiveTimeout function is internal – we just verify the math unit.
     const shortTranscriptLen = 8_000;   // 6 s timeout: 5000 + floor(8000/5000)*1000 = 6000
     const longTranscriptLen  = 100_000; // 25 s cap: min(25000, 5000 + floor(100000/5000)*1000) = 25000
