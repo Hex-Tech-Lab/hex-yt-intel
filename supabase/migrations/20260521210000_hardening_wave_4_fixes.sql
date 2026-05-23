@@ -34,9 +34,11 @@ DO $$ BEGIN
     -- Update any NULL analyses_used to 0 (graceful migration for legacy data)
     UPDATE public.users SET analyses_used = 0 WHERE analyses_used IS NULL;
 
-    -- Set NOT NULL constraint
+    -- Set NOT NULL constraint with default
     ALTER TABLE public.users
-    ALTER COLUMN analyses_used SET NOT NULL DEFAULT 0;
+    ALTER COLUMN analyses_used SET DEFAULT 0;
+    ALTER TABLE public.users
+    ALTER COLUMN analyses_used SET NOT NULL;
 
     RAISE NOTICE 'Fixed users.analyses_used: set NOT NULL with default 0';
   END IF;

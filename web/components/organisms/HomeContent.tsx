@@ -231,7 +231,7 @@ export default function HomeContent() {
             <label className="block text-sm font-semibold text-gray-900 mb-2">YouTube URL</label>
             <form onSubmit={handleAnalyze} className="space-y-3">
               <input
-                type="url"
+                type="text"
                 placeholder="Paste YouTube URL..."
                 value={isMounted ? url : ''}
                 onChange={handleUrlChange}
