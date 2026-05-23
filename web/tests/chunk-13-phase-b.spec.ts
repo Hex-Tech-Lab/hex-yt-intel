@@ -210,11 +210,12 @@ test.describe('3 · 429 Response Body Schema', () => {
 
 test.describe('4 · OAuth 416 Prevention', () => {
   test('4.1 — redirects to / on error_code=bad_oauth_callback', async ({ request }) => {
-    const { url: redirected } = await request.fetch(
+    const response = await request.fetch(
       'http://localhost:3000/api/auth/callback?error_code=bad_oauth_callback',
       { followRedirects: true }
     );
 
+    const redirected = response.url();
     expect(redirected).toContain('/');
     console.log(`  4.1 — Redirected to: ${redirected}`);
   });
@@ -284,13 +285,13 @@ test.describe('6 · Adaptive Timeout Horizon', () => {
 
     const shortRes = await request.get('http://localhost:3000/api/rate-limit-status');
     // The adaptiveTimeout function is internal – we just verify the math unit.
-    const shortTranscriptLen = 8_000;   // ~8 s timeout
-    const longTranscriptLen  = 80_000;  // 25 s cap
+    const shortTranscriptLen = 8_000;   // 6 s timeout: 5000 + floor(8000/5000)*1000 = 6000
+    const longTranscriptLen  = 100_000; // 25 s cap: min(25000, 5000 + floor(100000/5000)*1000) = 25000
 
     const adaptiveTimeout = (chars: number) =>
       Math.min(25_000, 5_000 + Math.floor(chars / 5_000) * 1_000);
 
-    expect(adaptiveTimeout(shortTranscriptLen)).toBeLessThanOrEqual(8_000);
+    expect(adaptiveTimeout(shortTranscriptLen)).toBe(6_000);
     expect(adaptiveTimeout(longTranscriptLen)).toBe(25_000);
     console.log(`  6.1 — short=${adaptiveTimeout(shortTranscriptLen)}ms long=${adaptiveTimeout(longTranscriptLen)}ms`);
   });
@@ -308,12 +309,12 @@ test.describe('7 · Rate-Limit Status Endpoint Cycle', () => {
 
     if (res.status() === 200) {
       const body = await res.json();
-      expect(body).toMatchObject({
-        remaining: expect.any(Number),
-        limit:     expect.any(Number),
-        tier:      expect.any(String),
-      });
-      expect(body.remaining).toBeGreaterThanOrEqual(0);
+      expect(body).toHaveProperty('tier');
+      expect(body).toHaveProperty('analyses');
+      expect(body).toHaveProperty('search');
+      expect(body.analyses).toHaveProperty('remaining');
+      expect(body.analyses).toHaveProperty('limit');
+      expect(body.analyses.remaining).toBeGreaterThanOrEqual(0);
     }
   });
 
