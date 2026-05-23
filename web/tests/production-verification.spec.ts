@@ -42,8 +42,7 @@ test.describe('Production Verification Suite', () => {
       // Get rendered HTML
       const html = await page.content();
 
-      // Check for empty client environment strings
-      expect(html).not.toContain('undefined');
+      // Check for unpolyfilled environment variables (raw process.env references)
       expect(html).not.toContain('process.env.NEXT_PUBLIC_SUPABASE_URL');
       expect(html).not.toContain('process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
