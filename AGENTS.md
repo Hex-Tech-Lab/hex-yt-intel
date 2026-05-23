@@ -1,12 +1,13 @@
-# AGENTS.md — HEX-YT-INTEL Production Runbook
+# AGENTS.md — HEX-YT-INTEL Production Runbook (GCT Coordinated)
 
 _Read on session start. Do not override with assumptions — this is ground truth._
 
-**Last updated:** 2026-05-21 01:15 (UTC+3)  
-**Current Commit:** 872f92e (PR #22 squash-merged to main)  
-**Branch:** `origin/main` — clean, no commits ahead  
-**Pipeline status:** `pnpm type-check` ✓ · `pnpm lint` ✓ · `pnpm build` ✓ · `pnpm test` ✓  
-**Deployment:** https://hex-yt-intel.vercel.app ✅ LIVE (47s build time)
+**Last updated:** 2026-05-23 (UTC) — GCT Tech Stack Freeze + Phase 2 Execution Order  
+**Tech Stack Authority:** CC (CLAUDE.md) — Node 24.16.0, pnpm 11.1.3, Next 16.2.6, TS 5.6.2  
+**Current Deployment:** https://yt-intel.getmytestdrive.com ✅ LIVE (custom domain)  
+**Backup Domain:** https://hex-yt-intel.vercel.app (Vercel preview)  
+**Pipeline status:** Pending Phase 2 gates (Auth Unification → Frozen Stack → Hydration Fixes)  
+**Critical Note:** Next-Auth removed (2026-05-23). Supabase auth only via `getSupabaseClientWithAuth()`
 
 ---
 

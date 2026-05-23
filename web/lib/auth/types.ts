@@ -1,23 +1,12 @@
-export interface User {
-  id: string;
-  email: string;
-  name?: string | null;
-  image?: string | null;
-  tier?: 'free' | 'pro' | 'startup' | 'sme';
-  createdAt: Date;
-}
+import type { User as SupabaseUser, Session as SupabaseSession } from '@supabase/supabase-js';
 
-export interface Session {
-  user: User;
-  expiresAt: Date;
-}
+export type User = SupabaseUser;
+export type Session = SupabaseSession;
 
 export interface AuthProvider {
   getCurrentSession(): Promise<Session | null>;
   signIn(provider: string): Promise<void>;
   signOut(): Promise<void>;
   getUser(): Promise<User | null>;
-  updateUser(data: Partial<User>): Promise<User>;
-  middleware(req: any): Promise<any>;
-  handleCallback(req: any): Promise<Response>;
+  updateUser(data: any): Promise<User>;
 }

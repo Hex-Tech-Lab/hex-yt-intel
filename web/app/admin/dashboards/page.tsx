@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -67,20 +67,24 @@ const MetricCard = ({
 };
 
 export default function DashboardsPage() {
-  const { status } = useSession();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const router = useRouter();
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [stats] = useState<UsageStats | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  // Redirect if not admin
-  if (status === 'unauthenticated') {
-    redirect('/auth/signin');
-  }
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/auth/signin');
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   // TODO: Add role check - only admins can view this
   // For now, allow any authenticated user
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const fetchData = async () => {
       try {
         // Fetch health status
@@ -111,14 +115,18 @@ export default function DashboardsPage() {
     // Auto-refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isAuthenticated]);
 
-  if (status === 'loading') {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="text-center">Loading...</div>
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

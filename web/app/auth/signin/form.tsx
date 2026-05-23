@@ -3,13 +3,8 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { signIn } from 'next-auth/react';
 
-interface SignInFormProps {
-  provider: 'supabase' | 'nextauth';
-}
-
-export default function SignInForm({ provider }: SignInFormProps) {
+export default function SignInForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
   const [isLoading, setIsLoading] = useState(false);
@@ -32,17 +27,7 @@ export default function SignInForm({ provider }: SignInFormProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleNextAuthOAuth = async (oauthProvider: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await signIn(oauthProvider, { callbackUrl });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      // Note: redirectTo will handle the actual navigation if successful
       setIsLoading(false);
     }
   };
@@ -64,26 +49,16 @@ export default function SignInForm({ provider }: SignInFormProps) {
             </div>
           )}
 
-          {provider === 'supabase' ? (
-            <button
-              onClick={() => handleSupabaseAuth('google')}
-              disabled={isLoading}
-              className="w-full rounded-lg bg-white px-4 py-2 text-gray-900 font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {isLoading ? 'Signing in...' : 'Sign in with Google'}
-            </button>
-          ) : (
-            <button
-              onClick={() => handleNextAuthOAuth('google')}
-              disabled={isLoading}
-              className="w-full rounded-lg bg-white px-4 py-2 text-gray-900 font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {isLoading ? 'Signing in...' : 'Sign in with Google'}
-            </button>
-          )}
+          <button
+            onClick={() => handleSupabaseAuth('google')}
+            disabled={isLoading}
+            className="w-full rounded-lg bg-white px-4 py-2 text-gray-900 font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {isLoading ? 'Signing in...' : 'Sign in with Google'}
+          </button>
 
           <div className="mt-4 text-center text-sm text-gray-500">
-            <p>Powered by {provider === 'supabase' ? 'Supabase' : 'NextAuth'}</p>
+            <p>Powered by Supabase</p>
           </div>
         </div>
       </div>

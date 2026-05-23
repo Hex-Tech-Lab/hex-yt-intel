@@ -1,15 +1,15 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Play, Download, RotateCcw, Clock } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
 import RateLimitAlert from '@/components/RateLimitAlert';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
-import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
+import { useAuth } from '@/hooks/useAuth';
+
+const STORAGE_KEY = 'hex_intel_saved_input';
 
 interface CachedAnalysisDialog {
   show: boolean;
@@ -20,23 +20,24 @@ interface CachedAnalysisDialog {
 }
 
 export default function HomeContent() {
-  const { data: session = null, update: updateSession } = useSession();
+  const { user, signOut } = useAuth();
   const router = useRouter();
-  
-  const inputStoreUrl = useInputStore((state) => state.url);
-  const setInputStoreUrl = useInputStore((state) => state.setUrl);
+
   const [url, setUrl] = useState('');
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-    setUrl(inputStoreUrl);
-  }, [inputStoreUrl]);
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      setUrl(cached);
+    }
+  }, []);
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUrl = e.target.value;
     setUrl(newUrl);
-    setInputStoreUrl(newUrl);
+    localStorage.setItem(STORAGE_KEY, newUrl);
   };
 
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -63,15 +64,7 @@ export default function HomeContent() {
   };
 
   const handleDevLogin = async () => {
-    if (!updateSession) return;
-    await updateSession({
-      user: {
-        id: 'dev-user-123',
-        email: 'dev@example.com',
-        name: 'Test User',
-        image: null,
-      },
-    });
+    // This now simply shows the dev mode state as we don't mock sessions for now
     setDevMode(false);
   };
 
@@ -114,7 +107,7 @@ export default function HomeContent() {
     e.preventDefault();
     if (!url.trim()) return;
 
-    if (!session && !devMode) {
+    if (!user && !devMode) {
       router.push('/auth/signin');
       return;
     }
@@ -152,8 +145,7 @@ export default function HomeContent() {
   };
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOut();
     router.push('/');
   };
 
@@ -204,7 +196,7 @@ export default function HomeContent() {
             >
               Sign Out
             </button>
-            {!session && (
+            {!user && (
               <Link href="/auth/signin" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
                 Sign In
               </Link>
@@ -293,7 +285,7 @@ export default function HomeContent() {
                 </button>
               </div>
 
-              {!session && devMode && isDevelopment && (
+              {!user && devMode && isDevelopment && (
                 <p className="text-xs text-gray-500 pt-2">
                   Click &quot;Dev Login&quot; above to test the UI
                 </p>

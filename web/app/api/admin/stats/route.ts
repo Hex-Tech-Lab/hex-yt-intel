@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServiceClient, getSupabaseClientWithAuth } from '@/lib/supabase';
+import { getSupabaseServiceClient, getSupabaseClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
 interface AdminStats {
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdminStats
       userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb'; // default to admin user for test bypass if needed
     } else {
       // 1. Auth check - must be authenticated using unified Supabase client
-      const supabase = await getSupabaseClientWithAuth();
+      const supabase = await getSupabaseClient();
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {

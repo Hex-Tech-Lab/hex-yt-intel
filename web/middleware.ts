@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 import { createServerClient } from '@supabase/ssr';
 
 // Timing-safe string comparison without crypto module (Edge Runtime compatible)
@@ -127,7 +126,7 @@ export async function middleware(request: NextRequest) {
   // Explicitly allow public API routes to pass through without auth checks.
   // This includes auth callbacks, webhooks, public health checks, and metadata requests.
   const publicRoutes = [
-    '/api/auth',           // NextAuth callbacks
+    '/auth/callback',      // Supabase OAuth callback
     '/api/stripe',         // Stripe webhooks
     '/api/webhooks',       // Generic webhooks
     '/api/health',         // Health check endpoint
@@ -166,16 +165,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check auth method based on environment variable
-  const authProvider = process.env.AUTH_PROVIDER || 'supabase';
-
   // Official @supabase/ssr pattern: plain NextResponse.next(), cookies written
   // onto the response only (not back onto request). See supabase/ssr docs.
   const supabaseResponse = NextResponse.next();
 
-  const isAuthenticated = authProvider === 'supabase'
-    ? await hasSupabaseAuth(request, supabaseResponse)
-    : !!(await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET || "" }));
+  const isAuthenticated = await hasSupabaseAuth(request, supabaseResponse);
 
   if (!isAuthenticated) {
     if (pathname.startsWith('/api/')) {

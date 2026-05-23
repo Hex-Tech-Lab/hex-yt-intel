@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Search, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSearch } from '@/hooks/useSearch';
@@ -23,7 +23,7 @@ import ResultCard from '@/components/search/result-card';
  * Integrates with Chunk 7 API (/api/analyses/search)
  */
 export default function SearchPage() {
-  const { status } = useSession();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   const {
@@ -53,10 +53,10 @@ export default function SearchPage() {
 
   // Redirect to signin if not authenticated
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!authLoading && !isAuthenticated) {
       router.push('/auth/signin');
     }
-  }, [status, router]);
+  }, [isAuthenticated, authLoading, router]);
 
   // Load unique channels from results for filter dropdown
   useEffect(() => {
@@ -104,7 +104,7 @@ export default function SearchPage() {
     clearSearch();
   };
 
-  if (status === 'loading') {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="animate-spin text-blue-500" size={40} />
@@ -112,7 +112,7 @@ export default function SearchPage() {
     );
   }
 
-  if (status === 'unauthenticated') {
+  if (!isAuthenticated) {
     return null; // Will redirect
   }
 

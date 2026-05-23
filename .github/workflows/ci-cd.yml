@@ -31,7 +31,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          persist-credentials: true
+        with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: Check for changes that require build
         id: check-changes
@@ -58,6 +62,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Hex Intel Environment
         uses: ./
@@ -79,6 +85,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Hex Intel Environment
         uses: ./
@@ -106,6 +114,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Hex Intel Environment
         uses: ./
@@ -151,6 +161,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Hex Intel Environment
         uses: ./
@@ -206,6 +218,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Hex Intel Environment
         uses: ./
@@ -232,6 +246,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Hex Intel Environment
         uses: ./
@@ -253,6 +269,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@c31f44fa7eb28f5a12b29ea3a80f3a8df1c18c6f
@@ -293,6 +311,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Hex Intel Environment
         uses: ./
@@ -332,6 +352,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Wait for deployment
         run: sleep 30
