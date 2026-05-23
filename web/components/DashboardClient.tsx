@@ -1,16 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
+import { useInputStore } from '@/store/useInputStore';
 
 export function DashboardClient() {
+  const inputStoreUrl = useInputStore((state) => state.url);
+  const setInputStoreUrl = useInputStore((state) => state.setUrl);
+  
   const [url, setUrl] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setUrl(inputStoreUrl);
+  }, [inputStoreUrl]);
+
   const [synthesis, setSynthesis] = useState<string | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setUrl(newUrl);
+    setInputStoreUrl(newUrl);
+  };
 
   const handleFetch = async () => {
     if (!url) return;
@@ -133,10 +150,8 @@ export function DashboardClient() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `synthesis-${analysisId}.pdf`;
-      document.body.appendChild(a);
+      a.download = `synthesis-${analysisId.replace(/[^a-zA-Z0-9-]/g, '')}.pdf`;
       a.click();
-      a.remove();
       window.URL.revokeObjectURL(downloadUrl);
       toast.success('PDF exported!');
     } catch (error) {
@@ -212,8 +227,8 @@ export function DashboardClient() {
           <Input
             type="text"
             placeholder="https://youtube.com/watch?v=..."
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            value={isMounted ? url : ''}
+            onChange={handleUrlChange}
             className="w-full"
           />
         </div>

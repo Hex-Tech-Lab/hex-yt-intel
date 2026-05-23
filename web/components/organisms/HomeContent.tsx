@@ -3,11 +3,12 @@
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Play, Download, RotateCcw, Clock } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import RateLimitAlert from '@/components/RateLimitAlert';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
+import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
 
 interface CachedAnalysisDialog {
@@ -21,7 +22,23 @@ interface CachedAnalysisDialog {
 export default function HomeContent() {
   const { data: session = null, update: updateSession } = useSession();
   const router = useRouter();
+  
+  const inputStoreUrl = useInputStore((state) => state.url);
+  const setInputStoreUrl = useInputStore((state) => state.setUrl);
   const [url, setUrl] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setUrl(inputStoreUrl);
+  }, [inputStoreUrl]);
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setUrl(newUrl);
+    setInputStoreUrl(newUrl);
+  };
+
   const isDevelopment = process.env.NODE_ENV === 'development';
   const [devMode, setDevMode] = useState(isDevelopment);
   const [cachedDialog, setCachedDialog] = useState<CachedAnalysisDialog>({
@@ -224,8 +241,8 @@ export default function HomeContent() {
               <input
                 type="url"
                 placeholder="Paste YouTube URL..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                value={isMounted ? url : ''}
+                onChange={handleUrlChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
                 required
               />
