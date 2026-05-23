@@ -176,10 +176,8 @@ function validateEnvironment(): void {
   // Check optional variables (no error, just log warnings)
   for (const envVar of OPTIONAL_ENV_VARS) {
     try {
-      const value = validateEnvVar(envVar, false, allowPlaceholder);
-      if (!value && isProduction) {
-        console.warn(`Warning: Optional environment variable not set: ${envVar}`);
-      }
+      // Validate optional variables silently - optional values are allowed to be missing
+      validateEnvVar(envVar, false, allowPlaceholder);
     } catch (error) {
       console.warn(`Warning: ${error instanceof Error ? error.message : `Invalid ${envVar}`}`);
     }
