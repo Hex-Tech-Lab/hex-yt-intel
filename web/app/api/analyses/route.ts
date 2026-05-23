@@ -25,6 +25,29 @@ import { parseSSELine } from '@/lib/streaming/decoder';
 
 export const runtime = 'nodejs';
 
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  maxRetries: number = 3
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxRetries - 1) {
+        const delayMs = Math.min(1000 * Math.pow(2, attempt), 10000); // Exponential backoff: 1s, 2s, 4s (max 10s)
+        console.warn(`[analyses] ${operationName} failed on attempt ${attempt + 1}/${maxRetries}. Retrying in ${delayMs}ms...`, { error: lastError.message });
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  throw lastError || new Error(`${operationName} failed after ${maxRetries} attempts`);
+}
+
 async function publishPdfToQStash(
   markdown: string,
   metadata: { title: string; duration?: string },
@@ -691,28 +714,32 @@ export async function POST(request: NextRequest) {
       console.log('[analyses] 10. Background Task: Creating analysis record', { videoId, userId, analysisId });
       try {
         const supabaseService = getSupabaseServiceClient();
-        await trackDatabaseQuery(
-          'insert',
-          'analyses',
-          async () => {
-            const { error } = await supabaseService
-              .from('analyses')
-              .insert({
-                id: analysisId,
-                video_id: videoId,
-                user_id: userId,
-                title: metadata.title,
-                analysis_markdown: '', // Will be populated after streaming
-                model_attempted: 'anthropic/claude-haiku-4.5',
-                model_used: 'anthropic/claude-haiku-4.5',
-                validation_report: null,
-                validation_passed: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              });
-            if (error) throw error;
-          },
-          { analysisId, videoId, userId }
+        await retryWithBackoff(
+          () => trackDatabaseQuery(
+            'insert',
+            'analyses',
+            async () => {
+              const { error } = await supabaseService
+                .from('analyses')
+                .insert({
+                  id: analysisId,
+                  video_id: videoId,
+                  user_id: userId,
+                  title: metadata.title,
+                  analysis_markdown: '', // Will be populated after streaming
+                  model_attempted: 'anthropic/claude-haiku-4.5',
+                  model_used: 'anthropic/claude-haiku-4.5',
+                  validation_report: null,
+                  validation_passed: false,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+              if (error) throw error;
+            },
+            { analysisId, videoId, userId }
+          ),
+          'database-analysis-insert',
+          3
         );
 
         // 10.5. Quota already incremented atomically before OpenRouter (line 5.5)
@@ -723,8 +750,8 @@ export async function POST(request: NextRequest) {
           tags: { operation: 'background-analysis-insert', code: errorCode },
           contexts: { database: { operation: 'background-analysis-insert', analysisId, videoId, userId } }
         });
-        console.error(`[analyses] Failed to create analysis record in background [${errorCode}]`, { analysisId, error: insertErr instanceof Error ? insertErr.message : JSON.stringify(insertErr) });
-        addBreadcrumb('Background analysis record creation failed', { analysisId }, 'database');
+        console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId, error: insertErr instanceof Error ? insertErr.message : JSON.stringify(insertErr) });
+        addBreadcrumb('Background analysis record creation failed after retries', { analysisId }, 'database');
       }
 
       console.log('[analyses] 11. Background Task: Collecting markdown and publishing validation', { videoId, analysisId });
@@ -752,18 +779,22 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Update DB with markdown
-        await trackDatabaseQuery(
-          'update',
-          'analyses',
-          async () => {
-            const { error } = await supabase
-              .from('analyses')
-              .update({ analysis_markdown: markdown, updated_at: new Date().toISOString() })
-              .eq('id', analysisId);
-            if (error) throw error;
-          },
-          { analysisId }
+        // Update DB with markdown (with retry backoff for transient failures)
+        await retryWithBackoff(
+          () => trackDatabaseQuery(
+            'update',
+            'analyses',
+            async () => {
+              const { error } = await supabase
+                .from('analyses')
+                .update({ analysis_markdown: markdown, updated_at: new Date().toISOString() })
+                .eq('id', analysisId);
+              if (error) throw error;
+            },
+            { analysisId }
+          ),
+          'database-analysis-update',
+          3
         );
 
         // Publish to QStash for validation

@@ -5,10 +5,11 @@
 
 import { validateAuthConfig } from './env-validator';
 
-// Validate only in production Vercel deployments
-// Skip validation in development, local testing, CI, and edge runtime environments
-const isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
-if (typeof window === 'undefined' && isProduction) {
+// Skip validation only in CI and Preview environments to allow scaffolding placeholders
+// Enforce strict validation in local development and production
+const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
+const isPreview = process.env.VERCEL_ENV === 'preview';
+if (typeof window === 'undefined' && !isCI && !isPreview) {
   validateAuthConfig();
 }
 
