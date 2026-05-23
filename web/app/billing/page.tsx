@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { redirect } from 'next/navigation';
 import { stripe, STRIPE_PRICING } from '@/lib/stripe';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
