@@ -1,9 +1,8 @@
 export const dynamic = 'force-dynamic';
 
-import { getAuthSession } from '@/lib/auth/provider-factory';
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession, getOrCreateStripeCustomer } from '@/lib/stripe';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { CheckoutSchema } from '@/lib/schemas';
 import * as Sentry from '@sentry/nextjs';
 
@@ -14,16 +13,17 @@ interface CheckoutResponse {
 export async function POST(request: NextRequest) {
   try {
     // 1. Auth check
-    const session = await getAuthSession();
-    if (!session?.user) {
+    const supabase = await getSupabaseClientWithAuth();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = (session.user as any).id;
-    const userEmail = session.user.email;
+    const userId = user.id;
+    const userEmail = user.email;
 
     if (!userEmail) {
       return NextResponse.json(
@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Fetch user data from Supabase
-    const supabase = getSupabaseClient();
 
     const { data: userData, error: userError } = await supabase
       .from('users')

@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getSupabaseClient } from '@/lib/supabase';
-import { getAuthSession } from '@/lib/auth/provider-factory';
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { ERROR_CODES } from '@/lib/error-codes';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
@@ -35,8 +34,9 @@ export async function GET(request: NextRequest) {
     const normalizedVideoId = validation.data;
 
     // Get authenticated user
-    const session = await getAuthSession();
-    const userId = session?.user?.id;
+    const supabase = await getSupabaseClientWithAuth();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       const errorCode = ERROR_CODES.AUTH_UNAUTHORIZED;
@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if analysis exists for this user/video combination
-    const supabase = getSupabaseClient();
     const existingAnalysis = await trackDatabaseQuery(
       'select',
       'analyses',

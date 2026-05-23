@@ -28,8 +28,8 @@ export const dynamic = 'force-dynamic';
  * }
  */
 
-import { getAuthSession } from '@/lib/auth/provider-factory';
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { getRateLimitStatus, getUserTier, RATE_LIMITS } from '@/lib/rate-limit';
 import * as Sentry from '@sentry/nextjs';
 
@@ -55,15 +55,17 @@ interface RateLimitStatusResponse {
 export async function GET(_request: NextRequest) {
   try {
     // 1. Auth check
-    const session = await getAuthSession();
-    if (!session?.user) {
+    const supabase = await getSupabaseClientWithAuth();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = (session.user as any).id;
+    const userId = user.id;
 
     // 2. Get user tier
     const tier = await getUserTier(userId);
