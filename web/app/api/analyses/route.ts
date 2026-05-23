@@ -514,6 +514,8 @@ export async function POST(request: NextRequest) {
           code: errorCode,
           quotaExceeded: true,
           remaining: 0,
+          redirectUrl: "/billing",
+          fallbackUrl: "/"
         },
         { status: 402 }
       );
@@ -559,6 +561,8 @@ export async function POST(request: NextRequest) {
           code: errorCode,
           quotaExceeded: true,
           remaining: 0,
+          redirectUrl: "/billing",
+          fallbackUrl: "/"
         },
         { status: 402 }
       );
