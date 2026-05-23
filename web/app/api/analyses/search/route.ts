@@ -33,11 +33,10 @@ export const dynamic = 'force-dynamic';
  * }
  */
 
-import { getAuthSession } from '@/lib/auth/provider-factory';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbedding, extractSnippet } from '@/lib/embeddings';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClient, getSupabaseClientWithAuth } from '@/lib/supabase';
 import { logUsage } from '@/lib/usage';
 import { SearchSchema } from '@/lib/schemas';
 import * as Sentry from '@sentry/nextjs';
@@ -66,7 +65,7 @@ interface SearchResponse {
 
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
-  let userId: string | undefined;
+  let userId: string = '';
 
   try {
     // Dev bypass for CI testing

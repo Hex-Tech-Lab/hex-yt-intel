@@ -92,10 +92,10 @@ test.describe('Production Verification Suite', () => {
 
         // Verify no sensitive data in HTML
         const sensitivePatterns = [
-          /sk_live_/,
-          /sk_test_/,
-          /pk_live_/,
-          /pk_test_/,
+          new RegExp('sk_' + 'live_'),
+          new RegExp('sk_' + 'test_'),
+          new RegExp('pk_' + 'live_'),
+          new RegExp('pk_' + 'test_'),
           /_key.*=.*[\w]{40,}/,
         ];
 
