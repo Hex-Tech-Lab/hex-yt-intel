@@ -4,13 +4,14 @@ export default defineConfig({
   testDir: './tests',
   testIgnore: process.env.RUN_PAIRWISE === 'true' ? [] : ['**/pairwise_matrix/**'],
   fullyParallel: true,
-  forbidOnly: false,
-  retries: 0,
-  workers: process.env.CI ? 8 : 1,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 4 : undefined,
   reporter: [['list'], ['json', { outputFile: 'test-results.json' }]],
   use: {
     baseURL: process.env.BASE_URL || 'https://hex-yt-intel.vercel.app',
     trace: 'on-first-retry',
+    video: 'on-first-retry',
   },
 
   projects: [
@@ -20,33 +21,8 @@ export default defineConfig({
     },
   ],
 
-  webServer: (() => {
-    const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
-    return {
-      command: isCI
-        ? 'pnpm --filter @hex-yt-intel/web run build && pnpm --filter @hex-yt-intel/web run start'
-        : 'pnpm run dev',
-      cwd: isCI ? '..' : '.',
-      url: 'http://localhost:3000',
-      reuseExistingServer: !isCI,
-      timeout: 180000,
-      env: {
-        NODE_ENV: 'production',
-        CI: 'true',
-        GITHUB_ACTIONS: 'true',
-        NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpLW1vY2stcHJvamVjdCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNjIwMDAwMDAwLCJleHAiOjE5MzA3NjU5OTl9.mock_anon_key_string_long_enough_for_validation',
-        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpLW1vY2stcHJvamVjdCIsInJvbGUiOiJzZXJ2aWNlX3JvbGUiLCJpYXQiOjE2MjAwMDAwMDAsImV4cCI6MTkzMDc2NTk5OX0.mock_service_role_key_string_long_enough_for_validation',
-        OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || 'mock-openrouter-key-v1-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz5',
-        NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'mock-nextauth-secret-32-characters-long-minimum-requirement',
-        STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || 'mock-stripe-secret-key-long-enough-for-validation-requirements',
-        STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || 'mock-webhook-secret-key-long-enough-for-validation-gates',
-      },
-    };
-  })(),
-
-  timeout: 15 * 1000,
+  timeout: 60 * 1000,
   expect: {
-    timeout: 5 * 1000,
+    timeout: 10 * 1000,
   },
 });

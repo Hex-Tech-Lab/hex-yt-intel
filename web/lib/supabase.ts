@@ -3,40 +3,6 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { env } from './env';
 import { cookies } from 'next/headers';
 
-const createCiMock = () => {
-  const mock: any = new Proxy(() => {}, {
-    get: (_target, prop) => {
-      if (prop === 'auth') {
-        return {
-          getUser: async (token?: string) => {
-            const actualToken = token || '';
-            const id = actualToken.includes('test-token-') ? actualToken.replace('test-token-', '') : actualToken;
-            return { data: { user: id ? { id, email: 'test@example.com' } : null }, error: null };
-          },
-          getSession: async () => ({ data: { session: null }, error: null }),
-          signOut: async () => ({ error: null }),
-        };
-      }
-      if (prop === 'then') return undefined;
-      if (prop === 'maybeSingle' || prop === 'single') {
-        return async () => ({ data: { tier: 'free', role: 'user' }, error: null });
-      }
-      if (prop === 'insert' || prop === 'update' || prop === 'upsert' || prop === 'delete') {
-        return async () => ({ data: null, error: null });
-      }
-      if (prop === 'rpc') {
-        return async () => ({ data: null, error: null });
-      }
-      if (prop === 'count') {
-        return async () => ({ data: 0, error: null });
-      }
-      return mock;
-    },
-    apply: () => mock
-  });
-  return mock;
-};
-
 /**
  * Synchronous Supabase client factory (backward compatible)
  * Returns anonKey-based client for immediate use
@@ -45,10 +11,6 @@ const createCiMock = () => {
 export function getSupabaseClient() {
   const supabaseUrl = env.supabaseUrl;
   const supabaseKey = env.supabaseAnonKey;
-
-  if (process.env.GITHUB_ACTIONS === 'true' && (supabaseUrl.includes('localhost') || supabaseUrl.includes('dummy'))) {
-    return createCiMock();
-  }
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase configuration');
@@ -65,10 +27,6 @@ export function getSupabaseClient() {
 export async function getSupabaseClientWithAuth() {
   const supabaseUrl = env.supabaseUrl;
   const supabaseKey = env.supabaseAnonKey;
-
-  if (process.env.GITHUB_ACTIONS === 'true' && (supabaseUrl.includes('localhost') || supabaseUrl.includes('dummy'))) {
-    return createCiMock();
-  }
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase configuration');
@@ -127,26 +85,10 @@ export async function extractUserToken(): Promise<string | null> {
 
 export function getSupabaseServiceClient() {
   const serviceKey = env.supabaseServiceRoleKey;
-
-  // CI/Test Mock: If in CI and URL is localhost/missing, return a mock client
-  if (process.env.GITHUB_ACTIONS === 'true' && (env.supabaseUrl.includes('localhost') || env.supabaseUrl.includes('dummy'))) {
-    return {
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            maybeSingle: async () => ({ data: { tier: 'free' }, error: null }),
-          }),
-        }),
-        insert: async () => ({ error: null }),
-        update: () => ({ eq: async () => ({ error: null }) }),
-        upsert: async () => ({ error: null }),
-      }),
-      rpc: async () => ({ data: null, error: null }),
-    } as any;
-  }
+  const supabaseUrl = env.supabaseUrl;
 
   if (!serviceKey) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is not set');
   }
-  return createSupabaseClient(env.supabaseUrl, serviceKey);
+  return createSupabaseClient(supabaseUrl, serviceKey);
 }
