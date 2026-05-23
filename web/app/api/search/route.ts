@@ -14,6 +14,11 @@ const vectorIndex = new Index({
   token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
 });
 
+// Production guard: Ensure real credentials are configured
+if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL?.includes('placeholder')) {
+  throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 1. Parse and validate request

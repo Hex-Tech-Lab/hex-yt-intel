@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
         title: analysis.title,
         videoId: analysis.video_id,
         userId,
+        analysisId,
       },
     });
 
