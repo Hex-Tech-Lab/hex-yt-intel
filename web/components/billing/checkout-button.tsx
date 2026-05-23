@@ -15,9 +15,10 @@ export function CheckoutButton({ isLoading, setIsLoading }: CheckoutButtonProps)
     setIsLoading(true);
 
     try {
-      // Get current URL for redirect
-      const successUrl = `${window.location.origin}/billing?success=true`;
-      const cancelUrl = `${window.location.origin}/pricing?canceled=true`;
+      // Get safe URL for redirect
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hex-yt-intel.vercel.app';
+      const successUrl = `${baseUrl}/billing?success=true`;
+      const cancelUrl = `${baseUrl}/pricing?canceled=true`;
 
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
