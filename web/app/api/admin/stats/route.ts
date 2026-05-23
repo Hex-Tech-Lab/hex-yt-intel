@@ -22,42 +22,59 @@ interface AdminStats {
  * Admin-only endpoint for observability stats
  * Returns aggregated usage and performance metrics
  */
-export async function GET(_request: NextRequest): Promise<NextResponse<AdminStats | { error: string }>> {
+export async function GET(request: NextRequest): Promise<NextResponse<AdminStats | { error: string }>> {
   try {
-    // 1. Auth check - must be authenticated
-    const session = await getAuthSession();
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // Dev bypass for CI testing
+    const bypassSecret = request.headers.get('X-Hex-Test-Secret');
+    const allowDevBypass = process.env.ALLOW_DEV_BYPASS === 'true';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const devBypassToken = process.env.DEV_BYPASS_TOKEN;
 
-    const userId = (session.user as any).id;
+    const hasValidBypassToken = devBypassToken && bypassSecret === devBypassToken;
+    const shouldAttemptBypass = !isProduction && allowDevBypass && hasValidBypassToken;
+
+    let userId: string;
+
+    if (shouldAttemptBypass) {
+      userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
+    } else {
+      // 1. Auth check - must be authenticated
+      const session = await getAuthSession();
+      if (!session?.user) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+
+      userId = (session.user as any).id;
+    }
 
     // 2. Initialize Supabase early for role check
     const supabase = getSupabaseServiceClient();
 
-    // 3. Role check - query database role column (replaces fragile email-based check)
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .maybeSingle();
+    // 3. Role check - bypass for dev, otherwise query database
+    if (!shouldAttemptBypass) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (userError) {
-      Sentry.captureException(userError, {
-        tags: { operation: 'admin_role_check' },
-        contexts: { admin: { userId, operation: 'role_check' } }
-      });
-      return NextResponse.json(
-        { error: 'Failed to verify admin status' },
-        { status: 500 }
-      );
-    }
+      if (userError) {
+        Sentry.captureException(userError, {
+          tags: { operation: 'admin_role_check' },
+          contexts: { admin: { userId, operation: 'role_check' } }
+        });
+        return NextResponse.json(
+          { error: 'Failed to verify admin status' },
+          { status: 500 }
+        );
+      }
 
-    if (!userData || userData.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      if (!userData || userData.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     // 4. Fetch stats from database

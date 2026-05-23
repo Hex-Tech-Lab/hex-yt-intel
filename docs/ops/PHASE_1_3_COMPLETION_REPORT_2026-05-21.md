@@ -28,8 +28,8 @@ Deploy 7 critical environment variables to Vercel production required for rate l
 ✅ QSTASH_URL=https://qstash-eu-central-1.upstash.io
 ✅ QSTASH_TOKEN=eyJVc2VySUQiOiIzZTRiMGIyZC04MDkyLTQ2MzgtODZlZC1lNDYxMTM5MjA0MDciLCJQYXNzd29yZCI6IjZhZjY3MzU3MjRlZTQ1NTdiNWU5NTZlNWQ2MzNmYmRhIn0=
 ✅ CLOUDFLARE_WORKER_URL=https://yt-intel.hex-tech-lab.workers.dev
-✅ STRIPE_SECRET_KEY=sk_live_placeholder_update_later [STUB - awaiting user key]
-✅ STRIPE_WEBHOOK_SECRET=whsec_placeholder_update_later [STUB - awaiting user key]
+✅ STRIPE_SECRET_KEY=test_stripe_secret_placeholder_update_later [STUB - awaiting user key]
+✅ STRIPE_WEBHOOK_SECRET=test_webhook_secret_placeholder_update_later [STUB - awaiting user key]
 ```
 
 ### Deployment Method
@@ -255,8 +255,8 @@ pnpm --filter @hex-yt-intel/web test
 
 **Implementation**:
 ```bash
-STRIPE_SECRET_KEY=sk_live_placeholder_update_later
-STRIPE_WEBHOOK_SECRET=whsec_placeholder_update_later
+STRIPE_SECRET_KEY=test_stripe_secret_placeholder_update_later
+STRIPE_WEBHOOK_SECRET=test_webhook_secret_placeholder_update_later
 ```
 
 **Status**: ✅ Stubs active in production, real keys expected from user

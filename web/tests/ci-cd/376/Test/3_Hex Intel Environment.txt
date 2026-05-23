@@ -1,0 +1,90 @@
+﻿2026-05-22T18:05:54.7482752Z Prepare all required actions
+2026-05-22T18:05:54.7484242Z Getting action download info
+2026-05-22T18:05:54.8931163Z Download action repository 'pnpm/action-setup@v3' (SHA:a3252b78c470c02df07e9d59298aecedc3ccdd6d)
+2026-05-22T18:05:55.0988054Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-05-22T18:05:55.2232340Z ##[group]Run ./
+2026-05-22T18:05:55.2233136Z env:
+2026-05-22T18:05:55.2233968Z   NODE_VERSION: 24
+2026-05-22T18:05:55.2234770Z   PNPM_VERSION: 11.1.3
+2026-05-22T18:05:55.2235561Z ##[endgroup]
+2026-05-22T18:05:55.2382771Z ##[group]Run pnpm/action-setup@v3
+2026-05-22T18:05:55.2383848Z with:
+2026-05-22T18:05:55.2384545Z   version: 11.1.3
+2026-05-22T18:05:55.2385294Z   dest: ~/setup-pnpm
+2026-05-22T18:05:55.2386053Z   run_install: null
+2026-05-22T18:05:55.2386843Z   package_json_file: package.json
+2026-05-22T18:05:55.2387726Z   standalone: false
+2026-05-22T18:05:55.2388457Z env:
+2026-05-22T18:05:55.2389114Z   NODE_VERSION: 24
+2026-05-22T18:05:55.2389921Z   PNPM_VERSION: 11.1.3
+2026-05-22T18:05:55.2390689Z ##[endgroup]
+2026-05-22T18:05:55.3279981Z ##[group]Running self-installer...
+2026-05-22T18:05:55.8654679Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-05-22T18:05:55.8763032Z Packages: +1
+2026-05-22T18:05:55.8763455Z +
+2026-05-22T18:05:56.1594779Z Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-05-22T18:05:56.1859120Z 
+2026-05-22T18:05:56.1859892Z dependencies:
+2026-05-22T18:05:56.1860348Z + pnpm 11.1.3 (11.2.2 is available)
+2026-05-22T18:05:56.1860670Z 
+2026-05-22T18:05:56.1886634Z Done in 692ms
+2026-05-22T18:05:56.2049862Z ##[endgroup]
+2026-05-22T18:05:56.2053149Z Installation Completed!
+2026-05-22T18:05:56.2209970Z ##[group]Run actions/setup-node@v4
+2026-05-22T18:05:56.2210276Z with:
+2026-05-22T18:05:56.2210483Z   node-version: 24
+2026-05-22T18:05:56.2210715Z   cache: pnpm
+2026-05-22T18:05:56.2210995Z   cache-dependency-path: **/pnpm-lock.yaml
+2026-05-22T18:05:56.2211303Z   always-auth: false
+2026-05-22T18:05:56.2211562Z   check-latest: false
+2026-05-22T18:05:56.2211939Z   token: ***
+2026-05-22T18:05:56.2212159Z env:
+2026-05-22T18:05:56.2212363Z   NODE_VERSION: 24
+2026-05-22T18:05:56.2212619Z   PNPM_VERSION: 11.1.3
+2026-05-22T18:05:56.2212924Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-05-22T18:05:56.2213284Z ##[endgroup]
+2026-05-22T18:05:56.4029495Z Found in cache @ /opt/hostedtoolcache/node/24.15.0/x64
+2026-05-22T18:05:56.4037250Z ##[group]Environment details
+2026-05-22T18:05:56.7706302Z node: v24.15.0
+2026-05-22T18:05:56.7708061Z npm: 11.12.1
+2026-05-22T18:05:56.7708394Z yarn: 1.22.22
+2026-05-22T18:05:56.7709457Z ##[endgroup]
+2026-05-22T18:05:56.7732874Z [command]/home/runner/setup-pnpm/node_modules/.bin/pnpm store path --silent
+2026-05-22T18:05:57.2915328Z /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-05-22T18:05:57.4790461Z Cache hit for: node-cache-Linux-x64-pnpm-9940ae66d88a3444a3d6f8df372750be28f6c58ffb694164e746d4f890f2df32
+2026-05-22T18:05:58.3469351Z Received 220763908 of 220763908 (100.0%), 256.1 MBs/sec
+2026-05-22T18:05:58.3470594Z Cache Size: ~211 MB (220763908 B)
+2026-05-22T18:05:58.3543892Z [command]/usr/bin/tar -xf /home/runner/work/_temp/2cfd469b-749c-4697-8920-e3e34fb460b3/cache.tzst -P -C /home/runner/work/hex-yt-intel/hex-yt-intel --use-compress-program unzstd
+2026-05-22T18:06:00.4793194Z Cache restored successfully
+2026-05-22T18:06:00.4905955Z Cache restored from key: node-cache-Linux-x64-pnpm-9940ae66d88a3444a3d6f8df372750be28f6c58ffb694164e746d4f890f2df32
+2026-05-22T18:06:00.5095713Z ##[group]Run pnpm install --frozen-lockfile
+2026-05-22T18:06:00.5096127Z [36;1mpnpm install --frozen-lockfile[0m
+2026-05-22T18:06:00.5142115Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-05-22T18:06:00.5142461Z env:
+2026-05-22T18:06:00.5142635Z   NODE_VERSION: 24
+2026-05-22T18:06:00.5142845Z   PNPM_VERSION: 11.1.3
+2026-05-22T18:06:00.5143109Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-05-22T18:06:00.5143416Z   PNPM_CONFIG_AUTO_INSTALL_PEERS: true
+2026-05-22T18:06:00.5144280Z ##[endgroup]
+2026-05-22T18:06:00.9076210Z Scope: all 3 workspace projects
+2026-05-22T18:06:00.9940820Z ? Verifying lockfile against supply-chain policies (841 entries)...
+2026-05-22T18:06:06.0725705Z ✓ Lockfile passes supply-chain policies (841 entries in 5s)
+2026-05-22T18:06:06.0784812Z Lockfile is up to date, resolution step is skipped
+2026-05-22T18:06:06.1704370Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-05-22T18:06:06.3010800Z Packages: +641
+2026-05-22T18:06:06.3017187Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-05-22T18:06:07.1713203Z Progress: resolved 641, reused 641, downloaded 0, added 460
+2026-05-22T18:06:07.2821490Z Progress: resolved 641, reused 641, downloaded 0, added 641, done
+2026-05-22T18:06:10.4970828Z .../node_modules/unrs-resolver postinstall$ node postinstall.js
+2026-05-22T18:06:10.4992159Z .../sharp@0.34.5/node_modules/sharp install$ node install/check.js || npm run build
+2026-05-22T18:06:10.5009595Z .../sharp@0.33.5/node_modules/sharp install$ node install/check
+2026-05-22T18:06:10.5566139Z .../node_modules/@sentry/cli postinstall$ node ./scripts/install.js
+2026-05-22T18:06:10.5925186Z .../node_modules/unrs-resolver postinstall: Done
+2026-05-22T18:06:10.7465421Z .../sharp@0.34.5/node_modules/sharp install: Done
+2026-05-22T18:06:10.7509943Z .../sharp@0.33.5/node_modules/sharp install: Done
+2026-05-22T18:06:10.7580215Z .../node_modules/@sentry/cli postinstall: Done
+2026-05-22T18:06:10.9409507Z 
+2026-05-22T18:06:10.9410578Z devDependencies:
+2026-05-22T18:06:10.9410936Z + pnpm 11.1.3
+2026-05-22T18:06:10.9411158Z 
+2026-05-22T18:06:11.0644220Z Done in 10.5s using pnpm v11.1.3
