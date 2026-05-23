@@ -80,9 +80,24 @@ export async function POST(request: NextRequest) {
     let userTierAuth: 'free' | 'pro' | 'enterprise' | undefined = 'free';
 
     if (shouldAttemptBypass) {
-      userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
+      // Extract userId from Authorization header if present: "Bearer test-token-ID"
+      const authHeader = request.headers.get('Authorization');
+      const testTokenMatch = authHeader?.match(/test-token-(.+)/);
+      const testUserId = testTokenMatch ? testTokenMatch[1] : 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
+      userId = testUserId!;
+      
       userEmail = process.env.DEV_TEST_USER_EMAIL || 'test@example.com';
-      addBreadcrumb('Search initiated (dev bypass)', { userId });
+      
+      // Extract tier from userId if it follows test user pattern: "user-tier-001"
+      if (testUserId!.includes('pro')) {
+        userTierAuth = 'pro';
+      } else if (testUserId!.includes('enterprise') || testUserId!.includes('admin')) {
+        userTierAuth = 'enterprise';
+      } else {
+        userTierAuth = 'free';
+      }
+      
+      addBreadcrumb('Search initiated (dev bypass)', { userId, tier: userTierAuth });
     } else {
       // 1. Auth check (unified to Supabase client)
       const supabase = await getSupabaseClientWithAuth();
