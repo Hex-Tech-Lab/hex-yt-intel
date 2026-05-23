@@ -34,10 +34,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdminStats
     let userId: string;
 
     if (shouldAttemptBypass) {
-      userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb'; // default to admin user for test bypass if needed
+      // Extract userId from Authorization header if present: "Bearer test-token-ID" or "Bearer user-ID"
+      const authHeader = request.headers.get('Authorization');
+      const token = authHeader?.replace('Bearer ', '') || '';
+      const testUserId = token.startsWith('test-token-') ? token.replace('test-token-', '') : token;
+      userId = testUserId || 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
     } else {
       // 1. Auth check - must be authenticated using unified Supabase client
-      const supabase = await getSupabaseClient();
+      const supabase = await getSupabaseClientWithAuth();
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
@@ -48,6 +52,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdminStats
       }
       userId = user.id;
     }
+
 
     // 2. Initialize Supabase early for role check
     const supabase = getSupabaseServiceClient();
