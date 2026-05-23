@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-DEPLOYMENT_URL="${1:-https://hex-yt-intel.vercel.app}"
+DEPLOYMENT_URL="${1:-https://yt-intel.getmytestdrive.com}"
 HEADED_MODE=""
 
 # Handle URL vs flag argument

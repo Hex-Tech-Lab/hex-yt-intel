@@ -26,7 +26,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-DEPLOYMENT_URL="${1:-https://hex-yt-intel.vercel.app}"
+DEPLOYMENT_URL="${1:-https://yt-intel.getmytestdrive.com}"
 TIMEOUT=60
 RETRY_COUNT=12
 RETRY_DELAY=5
