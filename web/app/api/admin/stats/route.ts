@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServiceClient, getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseServiceClient, getSupabaseClientWithAuth } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
 interface AdminStats {
