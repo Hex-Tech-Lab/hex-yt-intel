@@ -27,7 +27,7 @@ async function getBillingData(userId: string) {
     .eq('user_id', userId)
     .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-  const usageStats = usageLogs?.reduce((acc, log) => {
+  const usageStats = usageLogs?.reduce((acc: Record<string, number>, log: any) => {
     acc[log.action] = (acc[log.action] || 0) + 1;
     return acc;
   }, {} as Record<string, number>) || {};

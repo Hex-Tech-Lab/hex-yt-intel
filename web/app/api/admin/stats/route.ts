@@ -127,18 +127,18 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdminStats
 
     if (latencyData && latencyData.length > 0) {
       const latencies = latencyData
-        .map((log) => {
+        .map((log: any) => {
           try {
             return parseInt((log.metadata as any)?.latency_ms || '0');
           } catch {
             return 0;
           }
         })
-        .filter((l) => l > 0);
+        .filter((l: number) => l > 0);
 
       if (latencies.length > 0) {
         stats.avg_api_latency = Math.round(
-          latencies.reduce((a, b) => a + b, 0) / latencies.length
+          latencies.reduce((a: number, b: number) => a + b, 0) / latencies.length
         );
       }
     }
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<AdminStats
       .gte('created_at', sevenDaysAgo);
 
     const uniqueActiveUsers = new Set(
-      activeUsersData?.map((log) => log.user_id) || []
+      activeUsersData?.map((log: any) => log.user_id) || []
     ).size;
     stats.retention_7d =
       stats.active_users > 0 ? Math.round((uniqueActiveUsers / stats.active_users) * 100) : 0;
