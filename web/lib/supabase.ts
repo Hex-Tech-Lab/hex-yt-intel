@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 
 const createCiMock = () => {
   const mock: any = new Proxy(() => {}, {
-    get: (target, prop) => {
+    get: (_target, prop) => {
       if (prop === 'auth') {
         return {
           getUser: async (token?: string) => {
