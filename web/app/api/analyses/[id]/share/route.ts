@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { getAuthSession } from '@/lib/auth/provider-factory';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -10,15 +9,15 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-  const session = await getAuthSession();
-  if (!session?.user) {
+  const supabase = await getSupabaseClientWithAuth();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = (session.user as any).id;
+  const userId = user.id;
 
   // Fetch analysis
-  const supabase = getSupabaseClient();
   const { data: analysis, error } = await supabase
     .from('analyses')
     .select('*')

@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { getAuthSession } from '@/lib/auth/provider-factory';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import PDFDocument from 'pdfkit';
 import { NextRequest } from 'next/server';
 
@@ -10,17 +9,17 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-  const session = await getAuthSession();
-  if (!session?.user) {
+  const supabase = await getSupabaseClientWithAuth();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const userId = (session.user as any).id;
+  const userId = user.id;
   const searchParams = request.nextUrl.searchParams;
   const format = searchParams.get('format') || 'pdf';
 
   // Fetch analysis
-  const supabase = getSupabaseClient();
   const { data: analysis, error } = await supabase
     .from('analyses')
     .select('*')
