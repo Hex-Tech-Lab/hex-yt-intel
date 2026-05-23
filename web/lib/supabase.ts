@@ -16,7 +16,7 @@ export function getSupabaseClient() {
   if (process.env.GITHUB_ACTIONS === 'true' && (supabaseUrl.includes('localhost') || supabaseUrl.includes('dummy'))) {
     return {
       from: (table: string) => ({
-        select: (columns: string) => ({
+        select: (_columns: string) => ({
           eq: (col: string, val: string) => {
             if (table === 'users' && col === 'id') {
               let tier = 'free';
@@ -64,7 +64,7 @@ export async function getSupabaseClientWithAuth() {
         signOut: async () => ({ error: null }),
       },
       from: (table: string) => ({
-        select: (columns: string) => ({
+        select: (_columns: string) => ({
           eq: (col: string, val: string) => {
             // Handle Quota checks in E2E tests
             if (table === 'users' && col === 'id') {
