@@ -294,6 +294,9 @@ export function applyRateLimitHeaders(response: NextResponse, status: RateLimitS
   response.headers.set('X-RateLimit-Limit', String(status.limit));
   response.headers.set('X-RateLimit-Remaining', String(status.remaining));
   response.headers.set('X-RateLimit-Reset', String(resetAtSeconds));
+  
+  // Backward compatibility for existing E2E tests
+  response.headers.set('X-Quota-Remaining', String(status.remaining));
 }
 
 /**
