@@ -1,4 +1,4 @@
-import { getSupabaseUser } from './providers/supabase';
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 
 export interface AuthSession {
   user: {
@@ -10,7 +10,9 @@ export interface AuthSession {
 }
 
 export async function getAuthSession(): Promise<AuthSession | null> {
-  const user = await getSupabaseUser();
+  const supabase = await getSupabaseClientWithAuth();
+  const { data: { user } } = await supabase.auth.getUser();
+  
   if (user) {
     return {
       user: {
@@ -26,8 +28,8 @@ export async function getAuthSession(): Promise<AuthSession | null> {
 
 export async function signOut(): Promise<{ success: boolean; error?: string }> {
   try {
-    const { signOutSupabase } = await import('./providers/supabase');
-    await signOutSupabase();
+    const supabase = await getSupabaseClientWithAuth();
+    await supabase.auth.signOut();
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
