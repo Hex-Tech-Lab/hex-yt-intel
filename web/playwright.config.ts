@@ -2,11 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: false,
+  testIgnore: process.env.RUN_PAIRWISE === 'true' ? [] : ['**/pairwise_matrix/**'],
+  fullyParallel: true,
   forbidOnly: false,
   retries: 0,
-  workers: 1,
-  reporter: 'list',
+  workers: process.env.CI ? 8 : 1,
+  reporter: [['list'], ['json', { outputFile: 'test-results.json' }]],
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -44,7 +45,7 @@ export default defineConfig({
     };
   })(),
 
-  timeout: 30 * 1000,
+  timeout: 15 * 1000,
   expect: {
     timeout: 5 * 1000,
   },

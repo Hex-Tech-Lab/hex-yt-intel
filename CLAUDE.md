@@ -192,6 +192,41 @@ cd web
 pnpm playwright test ../docs/testing/visible_production_telemetry.spec.ts --headed --workers=1
 ```
 
+### Test Strategy: Normal E2E vs Pairwise Matrix (Waves 1-4)
+
+**Decision** (2026-05-22): Separate testing pyramid into two layers with different objectives and cadences:
+
+| Test Type | Scope | Trigger | Purpose | Speed | Goal |
+|-----------|-------|---------|---------|-------|------|
+| **Normal E2E** | 10 test files (happy-path, auth, errors, quota, cache, middleware, etc.) | Every PR / push | Validate key workflows and error scenarios | <5 min | Fast feedback, confidence in basic functionality |
+| **Pairwise Matrix** | 38 combinations across 6 categories + 7 dimensions | Weekly (Sunday 1:00 AM UTC) | Comprehensive coverage of edge cases and interactions | ~30-50 min | Exhaustive validation before release |
+
+**Rationale**:
+- PR-blocking tests must be **fast** (<5-10 min) and **reliable** — enables rapid iteration
+- Pairwise tests are **comprehensive but slow** — unsuitable for on every commit
+- Industry standard (Microsoft, Google, etc.) runs unit/integration on every commit, E2E on PRs, matrix tests nightly
+- Prevents troubleshooting loops caused by flaky/slow CI blocking development
+
+**Normal E2E Tests** (run on every PR via `ci-cd.yml`):
+- `web/tests/happy-path.spec.ts` — Core user workflows (analysis, search, export)
+- `web/tests/auth.spec.ts` — OAuth login/logout, session persistence
+- `web/tests/errors.spec.ts` — Error handling and recovery
+- `web/tests/quota.spec.ts` — Quota enforcement for free/pro tiers
+- `web/tests/cache.spec.ts` — Cache behavior (hits, misses, expiration)
+- `web/tests/middleware.spec.ts` — Middleware validation and protection
+- Plus: chunk-13-phase-b.spec.ts, chunk-8-search.spec.ts, index.spec.ts, pr1-fixes.spec.ts
+
+**Pairwise Tests** (run weekly via `.github/workflows/pairwise-test.yml`):
+- 38 test cases covering 38 combinations (minimal reduced set)
+- 6 categories: Happy Path, Error Handling, Auth, Quota, Cache, Middleware
+- 7 dimensions: Environment, Auth Provider, Rate Tier, Error Scenario, Cache State, API Endpoint, Middleware Type
+- **Non-blocking** — results reviewed for comprehensive coverage analysis, not PR validation
+
+**Phase 2 TODO** (before MVP launch in 2-3 weeks):
+- Set up staging environment with proper test database seeding
+- Finalize pairwise test suite configuration
+- Create comprehensive pre-release validation runbook
+
 **Security Note**: `DEV_BYPASS_TOKEN` is only checked when `NODE_ENV !== 'production'`. Production deployments **must not** have this variable set to ensure auth gates are never bypassed.
 
 ---
@@ -273,8 +308,8 @@ UPSTASH_REDIS_REST_TOKEN=gQAAAAAAAeuJAAIgcDI1NTZmNDNiMzlkZjU0NTcxODQ4MTU4ZjRmMzd
 QSTASH_URL=https://qstash-eu-central-1.upstash.io ✅
 QSTASH_TOKEN=eyJVc2VySUQiOiIzZTRiMGIyZC04MDkyLTQ2MzgtODZlZC1lNDYxMTM5MjA0MDciLCJQYXNzd29yZCI6IjZhZjY3MzU3MjRlZTQ1NTdiNWU5NTZlNWQ2MzNmYmRhIn0= ✅
 CLOUDFLARE_WORKER_URL=https://yt-intel.hex-tech-lab.workers.dev ✅
-STRIPE_SECRET_KEY=sk_live_placeholder_update_later [STUB - user to provide]
-STRIPE_WEBHOOK_SECRET=whsec_placeholder_update_later [STUB - user to provide]
+STRIPE_SECRET_KEY=test_stripe_secret_placeholder_update_later [STUB - user to provide]
+STRIPE_WEBHOOK_SECRET=test_webhook_secret_placeholder_update_later [STUB - user to provide]
 ```
 
 **Status**: All encrypted and active in Vercel production environment
@@ -295,8 +330,8 @@ SUPABASE_ANON_KEY=[key]
 AUTH_PROVIDER=supabase
 
 # Billing (Awaiting User Keys)
-STRIPE_SECRET_KEY=sk_live_placeholder_update_later [STUB]
-STRIPE_WEBHOOK_SECRET=whsec_placeholder_update_later [STUB]
+STRIPE_SECRET_KEY=test_stripe_secret_placeholder_update_later [STUB]
+STRIPE_WEBHOOK_SECRET=test_webhook_secret_placeholder_update_later [STUB]
 
 # Observability
 SENTRY_DSN=[configured]
