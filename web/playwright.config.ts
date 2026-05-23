@@ -9,9 +9,15 @@ export default defineConfig({
   workers: process.env.CI ? 4 : undefined,
   reporter: [['list'], ['json', { outputFile: 'test-results.json' }]],
   use: {
-    baseURL: process.env.BASE_URL || 'https://hex-yt-intel.vercel.app',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     video: 'on-first-retry',
+  },
+
+  webServer: {
+    command: 'pnpm dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
   },
 
   projects: [
