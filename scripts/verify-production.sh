@@ -229,6 +229,41 @@ check_response_time() {
 }
 
 ##############################################################################
+# Frontend Rendering Checks (Headless Browser via Playwright)
+##############################################################################
+
+check_frontend_rendering() {
+  log_info "Checking frontend rendering (headless browser)..."
+
+  # Check if pnpm is available
+  if ! command -v pnpm &> /dev/null && ! command -v npx &> /dev/null; then
+    log_warn "pnpm/npx not available, skipping Playwright checks (run: npm install -g pnpm)"
+    return 0
+  fi
+
+  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+  if [ ! -x "$script_dir/scripts/run-production-verification.sh" ]; then
+    log_warn "Frontend test script not found, skipping Playwright checks"
+    return 0
+  fi
+
+  # Run the dedicated Playwright test suite (non-fatal on failure)
+  if DEPLOYMENT_URL="$DEPLOYMENT_URL" "$script_dir/scripts/run-production-verification.sh" "$DEPLOYMENT_URL" > /tmp/playwright-output.txt 2>&1; then
+    log_pass "Frontend rendering verified (no hydration mismatches, client strings valid)"
+    return 0
+  else
+    # Log output but don't fail the entire verification - playwright may not be fully set up
+    if grep -q "Cannot find module" /tmp/playwright-output.txt || grep -q "MODULE_NOT_FOUND" /tmp/playwright-output.txt; then
+      log_warn "Playwright installation issue, skipping frontend tests"
+      return 0
+    fi
+    log_fail "Frontend rendering check failed (see /tmp/playwright-output.txt for details)"
+    return 1
+  fi
+}
+
+##############################################################################
 # Environment Checks
 ##############################################################################
 
@@ -318,15 +353,20 @@ main() {
   check_api_metadata || true
   print_separator
 
-  # Stage 3: Components
-  log_info "STAGE 3: COMPONENT VERIFICATION"
+  # Stage 3: Frontend Rendering (Headless Browser)
+  log_info "STAGE 3: FRONTEND RENDERING & CLIENT ENVIRONMENT"
+  check_frontend_rendering || true
+  print_separator
+
+  # Stage 4: Components
+  log_info "STAGE 4: COMPONENT VERIFICATION"
   check_database_connectivity || true
   check_cloudflare_worker || true
   check_environment_variables || true
   print_separator
 
-  # Stage 4: Performance
-  log_info "STAGE 4: PERFORMANCE"
+  # Stage 5: Performance
+  log_info "STAGE 5: PERFORMANCE"
   check_response_time || true
   print_separator
 
