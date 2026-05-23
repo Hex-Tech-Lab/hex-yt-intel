@@ -23,15 +23,6 @@ interface AdminStats {
  * Returns aggregated usage and performance metrics
  */
 export async function GET(request: NextRequest): Promise<NextResponse<AdminStats | { error: string }>> {
-  // Build-time safety: Return mock response during Next.js module tracing to prevent
-  // environment evaluation errors from cascading into the build system
-  if (process.env.NEXT_PHASE === 'phase-production-build') {
-    return NextResponse.json(
-      { error: 'Not available during build' },
-      { status: 503 }
-    );
-  }
-
   try {
     // Dev bypass for CI testing
     const bypassSecret = request.headers.get('X-Hex-Test-Secret');

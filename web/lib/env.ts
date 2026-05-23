@@ -267,11 +267,12 @@ export function getEnv(): EnvironmentConfig {
 
 /**
  * Initialize and validate environment on module load
- * Only validate in production Vercel deployments; skip in development, CI, and testing
+ * Only validate in production Vercel deployments; skip in development, CI, testing, and build phase
  */
 const isProductionEnvironment = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
-if (typeof window === 'undefined' && isProductionEnvironment) {
-  // Server-side only, production Vercel only
+const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+if (typeof window === 'undefined' && isProductionEnvironment && !isBuildPhase) {
+  // Server-side only, production Vercel only, NOT during Next.js build phase
   validateEnvironment();
 }
 
