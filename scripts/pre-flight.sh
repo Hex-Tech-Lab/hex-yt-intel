@@ -25,8 +25,17 @@ fi
 
 echo "🛡️  Running pre-flight environment validation..."
 
+# Determine context: are we running from root or web directory?
+if [ -f "web/utils/supabase/client.ts" ]; then
+  FILE="web/utils/supabase/client.ts"
+elif [ -f "utils/supabase/client.ts" ]; then
+  FILE="utils/supabase/client.ts"
+else
+  echo "❌ FAIL: Could not locate Supabase client file"
+  exit 1
+fi
+
 # Check 1: Supabase client initialization has fallback placeholders
-FILE="web/utils/supabase/client.ts"
 if ! grep -q "placeholder-project.supabase.co" "$FILE"; then
   echo "❌ FAIL: Missing supabaseUrl fallback in $FILE"
   echo "   Add: const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';"
