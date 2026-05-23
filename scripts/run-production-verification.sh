@@ -16,12 +16,14 @@
 set -euo pipefail
 
 DEPLOYMENT_URL="${1:-https://hex-yt-intel.vercel.app}"
-HEADED_MODE="${2:---headed=false}"
+HEADED_MODE=""
 
 # Handle URL vs flag argument
-if [[ "$DEPLOYMENT_URL" == "--"* ]]; then
-  HEADED_MODE="$DEPLOYMENT_URL"
+if [[ "$DEPLOYMENT_URL" == "--headed" ]]; then
+  HEADED_MODE="--headed"
   DEPLOYMENT_URL="https://hex-yt-intel.vercel.app"
+elif [[ "${2:-}" == "--headed" ]]; then
+  HEADED_MODE="--headed"
 fi
 
 # Colors
