@@ -9,8 +9,8 @@ import * as Sentry from '@sentry/nextjs';
 
 // Initialize Upstash Vector Index for semantic search
 const vectorIndex = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL,
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN,
+  url: process.env.UPSTASH_VECTOR_REST_URL || 'https://placeholder-vector.upstash.io',
+  token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
 });
 
 export async function POST(request: NextRequest) {
