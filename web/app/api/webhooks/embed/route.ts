@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Index } from '@upstash/vector';
 import { getSupabaseClient } from '@/lib/supabase';
 import { generateEmbedding } from '@/lib/embeddings';
 import { verifyQStashSignature } from '@/lib/qstash-client';
@@ -14,7 +15,6 @@ import { logUsage } from '@/lib/usage';
 import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
-  trackDatabaseQuery,
   addBreadcrumb,
   setUserContext,
 } from '@/lib/monitoring/sentry-utils';
@@ -24,6 +24,11 @@ interface EmbeddingPayload {
   markdown: string;
   userId: string;
 }
+
+const vectorIndex = new Index({
+  url: process.env.UPSTASH_VECTOR_REST_URL || 'https://placeholder-vector.upstash.io',
+  token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
+});
 
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
@@ -85,26 +90,31 @@ export async function POST(request: NextRequest) {
       costUsd: embeddingResult.costUsd,
     });
 
-    // 6. Save embedding to database
+    // 6. Fetch analysis metadata for vector metadata
     const supabase = getSupabaseClient();
-    await trackDatabaseQuery(
-      'update',
-      'analyses',
-      async () => {
-        const { error } = await supabase
-          .from('analyses')
-          .update({
-            embedding: embeddingResult.embedding,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', analysisId);
+    const { data: analysis, error: fetchError } = await supabase
+      .from('analyses')
+      .select('title, video_id')
+      .eq('id', analysisId)
+      .maybeSingle();
 
-        if (error) throw error;
+    if (fetchError || !analysis) {
+      throw new Error(`Failed to fetch analysis metadata: ${fetchError?.message || 'Not found'}`);
+    }
+
+    // 7. Upsert embedding to Upstash Vector Index
+    await vectorIndex.upsert({
+      id: analysisId,
+      vector: embeddingResult.embedding as unknown as number[],
+      metadata: {
+        title: analysis.title,
+        videoId: analysis.video_id,
+        userId,
+        analysisId,
       },
-      { analysisId }
-    );
+    });
 
-    // 7. Log usage cost
+    // 8. Log usage cost
     await logUsage({
       userId,
       action: 'embedding_generation',

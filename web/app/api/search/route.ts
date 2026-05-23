@@ -5,13 +5,19 @@ import { Index } from '@upstash/vector';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { ERROR_CODES } from '@/lib/error-codes';
+import { generateEmbedding } from '@/lib/embeddings';
 import * as Sentry from '@sentry/nextjs';
 
 // Initialize Upstash Vector Index for semantic search
 const vectorIndex = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL,
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN,
+  url: process.env.UPSTASH_VECTOR_REST_URL || 'https://placeholder-vector.upstash.io',
+  token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
 });
+
+// Production guard: Ensure real credentials are configured
+if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL?.includes('placeholder')) {
+  throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -188,16 +194,13 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate embedding for search query
- * In production, integrate with Claude or dedicated embedding service
- * For now, generates a deterministic 1536-dimensional vector from text
+ * Generate embedding for search query via OpenRouter
+ * Uses text-embedding-3-small model for 1536-dimensional vectors
  */
 async function generateQueryEmbedding(query: string): Promise<number[]> {
   try {
-    // For MVP: Generate a simple deterministic embedding from text
-    // In production, call OpenRouter or Upstash Embedding API
-    const embedding = generateSimpleEmbedding(query, 1536);
-    return embedding;
+    const result = await generateEmbedding(query);
+    return result.embedding;
   } catch (error) {
     console.error('[search] Failed to generate embedding:', error);
     Sentry.captureException(error, {
@@ -205,33 +208,4 @@ async function generateQueryEmbedding(query: string): Promise<number[]> {
     });
     return [];
   }
-}
-
-/**
- * Simple deterministic embedding generator (MVP)
- * Generates a 1536-dimensional vector from text
- * In production, replace with real embedding model via OpenRouter or Upstash
- */
-function generateSimpleEmbedding(text: string, dimensions: number): number[] {
-  // Create deterministic seed from text
-  let hash = 0;
-  for (let i = 0; i < text.length; i++) {
-    const char = text.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-
-  // Generate dimensions using hash as seed
-  const embedding: number[] = [];
-  for (let i = 0; i < dimensions; i++) {
-    // Use hash and index to generate pseudo-random values between -1 and 1
-    const seed = hash + i * 73856093; // Prime number for better distribution
-    const value = Math.sin(seed) * 0.5 + 0.5; // Normalize to [0, 1]
-    embedding.push(value * 2 - 1); // Scale to [-1, 1]
-  }
-
-  // Normalize to unit vector (required by Upstash)
-  let magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-  if (magnitude === 0) magnitude = 1;
-  return embedding.map(val => val / magnitude);
 }

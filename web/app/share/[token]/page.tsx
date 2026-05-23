@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getSupabaseClient } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';

@@ -127,9 +127,6 @@ jobs:
       - name: Hex Intel Environment
         uses: ./
 
-      - name: Purge Stale Next.js & Tooling Caches
-        run: rm -rf web/.next node_modules/.cache
-
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:

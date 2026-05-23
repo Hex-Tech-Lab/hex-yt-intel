@@ -138,7 +138,7 @@ return { allowed, count }
 export async function checkRateLimitSlidingWindow(
   userId: string,
   tier: Tier,
-  endpoint: 'analyses' | 'search'
+  endpoint: 'analyses' | 'search' | 'checkout'
 ): Promise<{ allowed: boolean; status: RateLimitStatus }> {
   const limitPerMinute = getRateLimit(tier);
   const now = Date.now(); // Milliseconds for high-precision timing
@@ -318,7 +318,7 @@ export interface RateLimitStatus {
 export async function checkRateLimit(
   userId: string,
   tier: Tier,
-  endpoint: 'analyses' | 'search'
+  endpoint: 'analyses' | 'search' | 'checkout'
 ): Promise<{ allowed: boolean; status: RateLimitStatus }> {
   const limitPerMinute = getRateLimit(tier);
 
@@ -399,7 +399,7 @@ export async function checkRateLimit(
  */
 export async function applyRateLimit(
   _request: NextRequest,
-  endpoint: 'analyses' | 'search',
+  endpoint: 'analyses' | 'search' | 'checkout',
   userId: string,
   tier: Tier
 ): Promise<{
@@ -447,7 +447,7 @@ export async function applyRateLimit(
 export async function getRateLimitStatus(
   userId: string,
   tier: Tier,
-  endpoint: 'analyses' | 'search'
+  endpoint: 'analyses' | 'search' | 'checkout'
 ): Promise<RateLimitStatus> {
   const { status } = await checkRateLimit(userId, tier, endpoint);
   return status;

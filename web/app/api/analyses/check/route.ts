@@ -39,16 +39,12 @@ export async function GET(request: NextRequest) {
     const userId = user?.id;
 
     if (!userId) {
-      const errorCode = ERROR_CODES.AUTH_UNAUTHORIZED;
-      Sentry.captureMessage('Pre-flight check: unauthorized', {
+      const authError = new Error('User authentication failed');
+      Sentry.captureException(authError, {
         level: 'warning',
-        tags: { code: errorCode }
+        tags: { code: ERROR_CODES.AUTH_UNAUTHORIZED }
       });
-      console.warn(`[analyses/check] Auth check failed [${errorCode}]`);
-      return NextResponse.json(
-        { error: 'Unauthorized', code: errorCode },
-        { status: 401 }
-      );
+      throw authError;
     }
 
     // Check if analysis exists for this user/video combination
