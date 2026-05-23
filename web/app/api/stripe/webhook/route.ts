@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, verifyWebhookSignature } from '@/lib/stripe';
 import { getSupabaseClient } from '@/lib/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
@@ -182,7 +183,11 @@ export async function POST(request: NextRequest) {
  * Handle subscription created/updated
  */
 async function handleSubscriptionEvent(
+<<<<<<< HEAD
+  supabase: SupabaseClient,
+=======
   supabase: ReturnType<typeof getSupabaseClient>,
+>>>>>>> origin/main
   subscription: Stripe.Subscription,
   status: 'success' | 'failed'
 ): Promise<void> {
@@ -262,7 +267,11 @@ async function handleSubscriptionEvent(
  * Handle subscription canceled
  */
 async function handleSubscriptionCanceled(
+<<<<<<< HEAD
+  supabase: SupabaseClient,
+=======
   supabase: ReturnType<typeof getSupabaseClient>,
+>>>>>>> origin/main
   subscription: Stripe.Subscription
 ): Promise<void> {
   try {
@@ -332,7 +341,11 @@ async function handleSubscriptionCanceled(
  * Handle invoice paid
  */
 async function handleInvoicePaid(
+<<<<<<< HEAD
+  supabase: SupabaseClient,
+=======
   supabase: ReturnType<typeof getSupabaseClient>,
+>>>>>>> origin/main
   invoice: Stripe.Invoice
 ): Promise<void> {
   try {
@@ -383,7 +396,11 @@ async function handleInvoicePaid(
  * Handle invoice payment failed
  */
 async function handleInvoiceFailed(
+<<<<<<< HEAD
+  supabase: SupabaseClient,
+=======
   supabase: ReturnType<typeof getSupabaseClient>,
+>>>>>>> origin/main
   invoice: Stripe.Invoice
 ): Promise<void> {
   try {

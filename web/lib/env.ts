@@ -11,7 +11,6 @@ const REQUIRED_ENV_VARS = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'OPENROUTER_API_KEY',
-  'NEXTAUTH_SECRET',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
 ] as const;
@@ -25,6 +24,8 @@ const OPTIONAL_ENV_VARS = [
   'SENTRY_AUTH_TOKEN',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
+  'UPSTASH_VECTOR_REST_URL',
+  'UPSTASH_VECTOR_REST_TOKEN',
   'QSTASH_TOKEN',
   'QSTASH_CURRENT_SIGNING_KEY',
   'QSTASH_NEXT_SIGNING_KEY',
@@ -53,6 +54,8 @@ interface EnvironmentConfig {
   upstash: {
     redisUrl?: string;
     redisToken?: string;
+    vectorUrl?: string;
+    vectorToken?: string;
   };
   app: {
     version: string;
@@ -275,6 +278,12 @@ export const env = {
   get upstashRedisToken(): string | undefined {
     return validateEnvVar('UPSTASH_REDIS_REST_TOKEN', false);
   },
+  get upstashVectorUrl(): string | undefined {
+    return validateEnvVar('UPSTASH_VECTOR_REST_URL', false);
+  },
+  get upstashVectorToken(): string | undefined {
+    return validateEnvVar('UPSTASH_VECTOR_REST_TOKEN', false);
+  },
   get isDevelopment(): boolean {
     return process.env.NODE_ENV === 'development';
   },
@@ -289,9 +298,6 @@ export const env = {
   },
   get qstashSigningKey(): string | undefined {
     return validateEnvVar('QSTASH_CURRENT_SIGNING_KEY', false);
-  },
-  get nextAuthSecret(): string {
-    return validateEnvVar('NEXTAUTH_SECRET', true)!;
   },
   get stripeSecretKey(): string {
     return validateEnvVar('STRIPE_SECRET_KEY', true)!;

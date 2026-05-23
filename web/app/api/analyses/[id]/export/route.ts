@@ -1,41 +1,69 @@
 export const dynamic = 'force-dynamic';
 
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
+import { ERROR_CODES } from '@/lib/error-codes';
 import PDFDocument from 'pdfkit';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
-  const supabase = await getSupabaseClientWithAuth();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return new Response('Unauthorized', { status: 401 });
+  try {
+    const { id } = await context.params;
+    const supabase = await getSupabaseClientWithAuth();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      const errorCode = ERROR_CODES.AUTH_UNAUTHORIZED;
+      Sentry.captureMessage('Export: unauthorized', {
+        level: 'warning',
+        tags: { code: errorCode }
+      });
+      return NextResponse.json(
+        { error: 'Unauthorized', code: errorCode },
+        { status: 401 }
+      );
+    }
+
+    const userId = user.id;
+    const searchParams = request.nextUrl.searchParams;
+    const format = searchParams.get('format') || 'pdf';
+
+    // Fetch analysis
+    const { data: analysis, error } = await supabase
+      .from('analyses')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error || !analysis) {
+      return NextResponse.json(
+        { error: 'Not found', code: ERROR_CODES.INTERNAL_SERVER_ERROR },
+        { status: 404 }
+      );
+    }
+
+    if (format === 'pdf') {
+      return exportPDF(analysis);
+    }
+
+    return NextResponse.json(
+      { error: 'Unsupported format', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
+      { status: 400 }
+    );
+  } catch (error) {
+    const errorCode = ERROR_CODES.UNHANDLED_EXCEPTION;
+    Sentry.captureException(error, {
+      tags: { operation: 'export', code: errorCode },
+      contexts: { api: { endpoint: '/api/analyses/[id]/export' } }
+    });
+    return NextResponse.json(
+      { error: 'Failed to export analysis', code: errorCode },
+      { status: 500 }
+    );
   }
-
-  const userId = user.id;
-  const searchParams = request.nextUrl.searchParams;
-  const format = searchParams.get('format') || 'pdf';
-
-  // Fetch analysis
-  const { data: analysis, error } = await supabase
-    .from('analyses')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (error || !analysis) {
-    return new Response('Not found', { status: 404 });
-  }
-
-  if (format === 'pdf') {
-    return exportPDF(analysis);
-  }
-
-  return new Response('Unsupported format', { status: 400 });
 }
 
 async function exportPDF(analysis: any) {
