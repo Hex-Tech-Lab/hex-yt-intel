@@ -84,8 +84,8 @@ async function hasSupabaseAuth(
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
       
-      // CI/Test Bypass: If token starts with test-token-, accept it immediately
-      if (token.startsWith('test-token-') && process.env.NODE_ENV !== 'production') {
+      // CI/Test Bypass: If token starts with test-token- or user-, accept it immediately
+      if ((token.startsWith('test-token-') || token.startsWith('user-')) && process.env.NODE_ENV !== 'production') {
         diag.outcome = 'bearer_test_bypass';
         console.log('[middleware] auth-diag', diag);
         return true;

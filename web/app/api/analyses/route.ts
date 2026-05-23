@@ -300,18 +300,18 @@ export async function POST(request: NextRequest) {
     const shouldAttemptBypass = !isProduction && hasValidBypassToken;
 
     if (shouldAttemptBypass) {
-      // Extract userId from Authorization header if present: "Bearer test-token-ID"
+      // Extract userId from Authorization header if present: "Bearer test-token-ID" or "Bearer user-ID"
       const authHeader = request.headers.get('Authorization');
-      const testTokenMatch = authHeader?.match(/test-token-(.+)/);
-      const testUserId = testTokenMatch ? testTokenMatch[1] : 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
-      userId = testUserId!;
+      const token = authHeader?.replace('Bearer ', '') || '';
+      const testUserId = token.startsWith('test-token-') ? token.replace('test-token-', '') : token;
+      userId = testUserId || 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
       
       userEmail = process.env.DEV_TEST_USER_EMAIL || 'test@example.com';
       
       // Extract tier from userId if it follows test user pattern: "user-tier-001"
-      if (testUserId!.includes('pro')) {
+      if (userId.includes('pro')) {
         userTierAuth = 'pro';
-      } else if (testUserId!.includes('enterprise') || testUserId!.includes('admin')) {
+      } else if (userId.includes('enterprise') || userId.includes('admin')) {
         userTierAuth = 'enterprise';
       } else {
         userTierAuth = 'free';
