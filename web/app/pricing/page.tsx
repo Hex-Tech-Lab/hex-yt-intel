@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { PricingTableClient } from '@/components/billing/pricing-table-client';
 
