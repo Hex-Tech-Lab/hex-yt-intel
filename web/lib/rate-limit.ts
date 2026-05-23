@@ -490,13 +490,6 @@ async function logRateLimitHit(
  * Helper function for middleware
  */
 export async function getUserTier(userId: string): Promise<Tier> {
-  // CI/Test Bypass: Handle test user IDs without network calls
-  if (process.env.NODE_ENV !== 'production') {
-    if (userId.includes('pro')) return 'pro';
-    if (userId.includes('enterprise') || userId.includes('admin')) return 'enterprise';
-    if (userId.includes('free') || userId === 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb') return 'free';
-  }
-
   try {
     const supabase = getSupabaseClient();
 
