@@ -10,14 +10,18 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {},
+    "metadata": {
+      "actualWorkers": 1
+    },
     "preserveOutput": "always",
     "projects": [
       {
         "outputDir": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 1
+        },
         "id": "chromium",
         "name": "chromium",
         "testDir": "/home/kellyb_dev/projects/hex-yt-intel/web/tests",
@@ -60,363 +64,20 @@
       "reuseExistingServer": true,
       "timeout": 180000,
       "env": {
-        "NODE_ENV": "test",
+        "NODE_ENV": "production",
         "CI": "true",
-        "ALLOW_DEV_BYPASS": "true",
-        "DEV_BYPASS_TOKEN": "test-token",
-        "DEV_TEST_USER_EMAIL": "kellybakri@gmail.com",
-        "NEXT_PUBLIC_SUPABASE_URL": "https://test_supabase_url.supabase.co",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY": "test_anon_key",
-        "SUPABASE_SERVICE_ROLE_KEY": "test_service_key"
+        "GITHUB_ACTIONS": "true",
+        "NEXT_PUBLIC_SUPABASE_URL": "http://127.0.0.1:54321",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpLW1vY2stcHJvamVjdCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNjIwMDAwMDAwLCJleHAiOjE5MzA3NjU5OTl9.mock_anon_key_string_long_enough_for_validation",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpLW1vY2stcHJvamVjdCIsInJvbGUiOiJzZXJ2aWNlX3JvbGUiLCJpYXQiOjE2MjAwMDAwMDAsImV4cCI6MTkzMDc2NTk5OX0.mock_service_role_key_string_long_enough_for_validation",
+        "OPENROUTER_API_KEY": "mock-openrouter-key-v1-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz5",
+        "NEXTAUTH_SECRET": "mock-nextauth-secret-32-characters-long-minimum-requirement",
+        "STRIPE_SECRET_KEY": "mock-stripe-secret-key-long-enough-for-validation-requirements",
+        "STRIPE_WEBHOOK_SECRET": "mock-webhook-secret-key-long-enough-for-validation-gates"
       }
     }
   },
   "suites": [
-    {
-      "title": "chunk-13-phase-b.spec.ts",
-      "file": "chunk-13-phase-b.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "1 · Rate-Limit Header Round-Trips",
-          "file": "chunk-13-phase-b.spec.ts",
-          "line": 40,
-          "column": 6,
-          "specs": [
-            {
-              "title": "1.1 — X-RateLimit-* headers emit on allowed requests",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-14e5a4f6c695a563f66a",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 47,
-              "column": 7
-            },
-            {
-              "title": "1.2 — remaining is never greater than limit",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-e058269111ffb2a3078a",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 77,
-              "column": 7
-            },
-            {
-              "title": "1.3 — remaining decrements under repeated fetches",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-e5e5451b6065c9777b3e",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 99,
-              "column": 7
-            }
-          ]
-        },
-        {
-          "title": "2 · Sliding-Window Concurrency Bursts",
-          "file": "chunk-13-phase-b.spec.ts",
-          "line": 130,
-          "column": 6,
-          "specs": [
-            {
-              "title": "2.1 — rapid parallel reads deplete the window",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-68079220bcdb99e0b182",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 131,
-              "column": 7
-            },
-            {
-              "title": "2.2 — exhausted window returns 429 with Retry-After",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-57f079ba934120dab59f",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 164,
-              "column": 7
-            },
-            {
-              "title": "2.3 — window recovery after boundary clears",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-5e745ad5ff574f03706e",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 194,
-              "column": 7
-            }
-          ]
-        },
-        {
-          "title": "3 · 429 Response Body Schema",
-          "file": "chunk-13-phase-b.spec.ts",
-          "line": 223,
-          "column": 6,
-          "specs": [
-            {
-              "title": "3.1 — shape contains error message and retryAfter",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-ed05755bf5f39ab1ac89",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 224,
-              "column": 7
-            }
-          ]
-        },
-        {
-          "title": "4 · OAuth 416 Prevention",
-          "file": "chunk-13-phase-b.spec.ts",
-          "line": 255,
-          "column": 6,
-          "specs": [
-            {
-              "title": "4.1 — redirects away on error_code=bad_oauth_callback",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-fb317530569d19b54589",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 256,
-              "column": 7
-            },
-            {
-              "title": "4.2 — no 416 issued on broken callback",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-5e68a7aeed072358cdb9",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 267,
-              "column": 7
-            }
-          ]
-        },
-        {
-          "title": "5 · OpenRouter Fallback Continuation",
-          "file": "chunk-13-phase-b.spec.ts",
-          "line": 282,
-          "column": 6,
-          "specs": [
-            {
-              "title": "5.1 — analyses route handler is callable (compile check)",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-f1c6fad931b16d572b4e",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 283,
-              "column": 7
-            },
-            {
-              "title": "5.2 — sentry breadcrumb shape on model errors",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-8244d2314610ac153912",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 308,
-              "column": 7
-            }
-          ]
-        },
-        {
-          "title": "6 · Adaptive Timeout Horizon",
-          "file": "chunk-13-phase-b.spec.ts",
-          "line": 329,
-          "column": 6,
-          "specs": [
-            {
-              "title": "6.1 — timeout ceiling stays within Vercel 25 s wall",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-4dc1e2c349d5ba8667d2",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 330,
-              "column": 7
-            }
-          ]
-        },
-        {
-          "title": "7 · Rate-Limit Status Endpoint Cycle",
-          "file": "chunk-13-phase-b.spec.ts",
-          "line": 353,
-          "column": 6,
-          "specs": [
-            {
-              "title": "7.1 — status endpoint returns shape on each read",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-a4c725d2b17f85eba294",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 354,
-              "column": 7
-            },
-            {
-              "title": "7.2 — tier accuracy in status response",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 15000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
-                }
-              ],
-              "id": "9ab0b47992a1c33ff23e-39ec343a86b201f77c68",
-              "file": "chunk-13-phase-b.spec.ts",
-              "line": 381,
-              "column": 7
-            }
-          ]
-        }
-      ]
-    },
     {
       "title": "pr1-fixes.spec.ts",
       "file": "pr1-fixes.spec.ts",
@@ -441,8 +102,29 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5990,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Starting app verification...\n"
+                        },
+                        {
+                          "text": "✓ Tailwind v4 styles applied correctly\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:22.285Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-6c15504403f71bfd062b",
@@ -461,8 +143,26 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2043,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ No critical console errors detected\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:29.591Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-4cda05623b0946b19965",
@@ -481,8 +181,26 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1726,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ Page loaded in 1680ms\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:31.665Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-d151b271c3a5df6664f1",
@@ -501,8 +219,29 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 99,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ /api/auth/session: 200\n"
+                        },
+                        {
+                          "text": "✓ /api/analyses: 401\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:33.403Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-dcf6bd1f2452b05d6964",
@@ -521,8 +260,26 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ Schema improvements verified in 20260519220000_complete_stabilization.sql\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:33.513Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-1cfd43b0fd1b30a0c41b",
@@ -541,13 +298,31 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 11,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ Found 11 migrations; cleanup logic present: false\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:33.552Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-c438619e31e8d2423cd4",
               "file": "pr1-fixes.spec.ts",
-              "line": 110,
+              "line": 106,
               "column": 7
             },
             {
@@ -561,13 +336,31 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ tsconfig.json correctly set to allowJs: false\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:33.587Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-3d18557bd1b4133c0efc",
               "file": "pr1-fixes.spec.ts",
-              "line": 132,
+              "line": 135,
               "column": 7
             },
             {
@@ -581,13 +374,31 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ Tailwind v4 directive (@import) verified\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:33.606Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-94b22820973d1b24fdad",
               "file": "pr1-fixes.spec.ts",
-              "line": 142,
+              "line": 145,
               "column": 7
             },
             {
@@ -601,13 +412,31 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1830,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ Tailwind CSS bundle detected in build artifacts\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:33.634Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-b7d7c087e7fbd14e0c01",
               "file": "pr1-fixes.spec.ts",
-              "line": 159,
+              "line": 162,
               "column": 7
             },
             {
@@ -621,13 +450,31 @@
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
-                  "results": [],
-                  "status": "skipped"
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2181,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ Sentry configuration verified (no errors)\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-05-23T09:14:35.482Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "0371a2b33e415d560231-f79e64a11adc324cd05d",
               "file": "pr1-fixes.spec.ts",
-              "line": 178,
+              "line": 181,
               "column": 7
             }
           ]
@@ -637,10 +484,10 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-05-22T22:17:56.633Z",
-    "duration": 48.870000000000005,
-    "expected": 0,
-    "skipped": 24,
+    "startTime": "2026-05-23T09:14:05.110Z",
+    "duration": 32752.810999999998,
+    "expected": 10,
+    "skipped": 0,
     "unexpected": 0,
     "flaky": 0
   }
