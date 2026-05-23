@@ -1,17 +1,16 @@
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth/nextauth-config';
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { PricingTableClient } from '@/components/billing/pricing-table-client';
 
-async function getUserTier() {
-  const session = await getServerSession(authConfig);
-  if (!session?.user) return null;
+async function getUserInfo() {
+  const supabase = await getSupabaseClientWithAuth();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !user.email) return null;
 
-  const userId = (session.user as any).id;
-  return { userId, userEmail: session.user.email };
+  return { userId: user.id, userEmail: user.email };
 }
 
 export default async function PricingPage() {
-  const userInfo = await getUserTier();
+  const userInfo = await getUserInfo();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">

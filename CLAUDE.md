@@ -24,19 +24,123 @@
 
 ---
 
-## THE FROZEN STACK PROTOCOL
+## THE FROZEN STACK PROTOCOL (GCT Aligned — 2026-05-23)
 
 **Package Management**: `pnpm` only  
 **CSS Framework**: Tailwind CSS + shadcn/ui exclusively  
 **Bundling Target**: 4.63 kB maximum envelope (gzipped production bundle)
+
+### Runtime & Build Infrastructure (EXACT PINNED VERSIONS)
+```bash
+Node.js:        24.16.0 LTS (strict pin for CI/deployment)
+pnpm:           11.1.3 (tested workspace isolation)
+Next.js:        16.2.6 (locked)
+TypeScript:     5.6.2 (locked)
+ESLint:         8.57.1 (locked)
+Prettier:       3.1.0 (locked)
+```
+
+### Production Dependencies (EXACT LOCK VERSIONS)
+```bash
+React:                      19.2.6
+React DOM:                  19.2.6
+Tailwind CSS:               4.0.0
+@tailwindcss/postcss:       4.3.0
+Zustand:                    5.0.13 (global state management)
+Zod:                        4.4.3 (validation — ALWAYS ALIGNED with Zustand)
+Supabase Client:            2.105.4
+Supabase SSR:               0.10.3
+Upstash Redis:              1.34.0
+Upstash QStash:             2.11.0
+Stripe:                     15.7.0
+Sentry:                     10.53.1
+PDFKit:                     0.18.0
+Lucide React:               1.16.0
+React Hot Toast:            2.6.0
+```
+
+### Dev Dependencies (MAJOR TYPES ONLY — Option B)
+```bash
+@types/node:                20.x.x (from lock)
+@types/react:               19.x.x (from lock)
+@playwright/test:           1.60.0
+TypeScript:                 5.6.2
+ESLint:                     8.57.1
+Prettier:                   3.1.0
+```
 
 ### Permanently Banned Dependencies
 - ❌ Material-UI (`@mui/material`)
 - ❌ Emotion styling (`@emotion/react`, `@emotion/styled`)
 - ❌ Any runtime CSS-in-JS injection engine
 - ❌ Manual CSS files (except Tailwind @directives)
+- ❌ `next-auth` (4.24.14 removed 2026-05-23 — Supabase auth only)
 
-**Rationale**: UI library freedom comes after bundle size stability. Runtime CSS engines add 50+ kB to the final bundle and introduce hydration mismatches on Edge Runtime.
+**Rationale**: UI library freedom comes after bundle size stability. Runtime CSS engines add 50+ kB to the final bundle and introduce hydration mismatches on Edge Runtime. Next-Auth removed in favor of native Supabase auth via `getSupabaseClientWithAuth()`.
+
+---
+
+## TACTICAL PHASING & EXECUTION ORDER (GCT Coordinated — 2026-05-23)
+
+### Phase 2a: Authentication Unification (BLOCKING — Must Complete First)
+**Must complete before opening worker/transcript layers**
+
+1. Remove dead `getAuthSession` import from `web/app/api/analyses/route.ts` (line 9)
+2. Verify `getSupabaseClientWithAuth()` is the ONLY auth pattern in all API routes
+3. Confirm server client (not browser client) used everywhere: **NO `createClient()` in API routes**
+4. Commit: "fix(auth): remove dead imports and confirm Supabase-only pattern"
+5. **Gate**: All integration tests must pass green before Phase 2b
+
+### Phase 2b: Frozen Tech Stack Documentation
+1. Update CLAUDE.md with exact versions (Node 24.16.0, pnpm 11.1.3, etc.) — THIS SECTION
+2. Document Next-Auth removal with explicit note
+3. Update GEMINI.md to align with CC authority on tech stack
+4. Commit: "docs(infra): freeze tech stack at Node 24.16.0 + pnpm 11.1.3, remove Next-Auth"
+
+### Phase 2c: Next-Auth Package Removal
+1. Delete `next-auth: 4.24.14` from `web/package.json`
+2. Run `pnpm install` to validate lock file
+3. **No `.npmrc` exclusion blocks needed** — pnpm 11 isolation handles it natively
+4. Verify `pnpm build` succeeds with zero errors
+5. Commit: "fix(deps): remove next-auth, migrate to Supabase auth only"
+
+### Phase 2d: Hydration-Safe Form State Caching (WSR Pattern)
+**Applies to**: `DashboardClient.tsx` (URL input) + `HomeContent.tsx` (unknown state)
+
+1. Initialize all form states as empty strings (server-safe rendering)
+2. Use `useEffect` on mount to hydrate from localStorage (client-side only)
+3. Never read localStorage in useState initializer (causes hydration mismatch)
+4. Implement WSR (Weighted Stale-While-Revalidate) pattern for persistent state across navigation
+5. Commit: "fix(ux): implement hydration-safe localStorage caching with useEffect"
+
+**Pattern Template**:
+```typescript
+const [inputUrl, setInputUrl] = useState('');
+
+useEffect(() => {
+  const cached = localStorage.getItem('hex_intel_saved_input');
+  if (cached) setInputUrl(cached);
+}, []);
+```
+
+### Verification Gate (All Phases Must Pass)
+- ✅ `pnpm build` → zero errors, all chunks <250KB, gzip <4.63KB
+- ✅ `pnpm type-check` → zero TypeScript errors
+- ✅ `pnpm lint` → zero linting violations
+- ✅ GitHub Actions `Deploy to Vercel` step → green
+- ✅ Target domain `https://yt-intel.getmytestdrive.com` → 200 OK with no hydration crashes
+- ✅ **Zero tolerance for headless layout crashes** before Phase 3+ advancement
+
+### Production Telemetry Pipeline Triggers
+- **Monitor**: GitHub Actions `Deploy to Vercel` worker logs (real-time)
+- **Target**: Main deployment domain `https://yt-intel.getmytestdrive.com`
+- **Criteria**: Headless browser rendering must pass without layout errors
+- **Decision**: Only proceed to Phase 3 (Cloudflare worker fixes) after all gates green
+
+### Type Declaration Granularity (Option B: Major Types Only)
+- ✅ `@types/node` (pinned from pnpm-lock.yaml)
+- ✅ `@types/react` (pinned from pnpm-lock.yaml)
+- ✅ Drop granular @types/* noise (too verbose, maintenance burden)
 
 ---
 

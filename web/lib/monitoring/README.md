@@ -98,7 +98,7 @@ trackEmbedding(userId, analysisId, tokensUsed, costUsd);
 Here's a complete example of a monitored API route:
 
 ```typescript
-import { getServerSession } from 'next-auth';
+import { getServerSession } from .supabase.;
 import { authConfig } from '@/lib/auth/nextauth-config';
 import { NextRequest, NextResponse } from 'next/server';
 import { 

@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
-  Loader2,
   AlertCircle,
   Heart,
   Trash2,
@@ -37,7 +35,6 @@ interface SavedSearch {
  * TODO: Implement persistence to database
  */
 export default function SavedSearchesPage() {
-  const { status } = useSession();
   const router = useRouter();
 
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
@@ -45,19 +42,10 @@ export default function SavedSearchesPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Redirect to signin if not authenticated
+  // Load saved searches on mount
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-    }
-  }, [status, router]);
-
-  // Load saved searches from database
-  useEffect(() => {
-    if (status === 'authenticated') {
-      loadSavedSearches();
-    }
-  }, [status]);
+    loadSavedSearches();
+  }, []);
 
   const loadSavedSearches = async () => {
     try {
@@ -104,17 +92,6 @@ export default function SavedSearchesPage() {
     search.channelTitle?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (status === 'loading') {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-blue-500" size={40} />
-      </div>
-    );
-  }
-
-  if (status === 'unauthenticated') {
-    return null; // Will redirect
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">

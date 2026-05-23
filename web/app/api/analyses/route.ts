@@ -5,7 +5,7 @@ import { createHash, randomUUID } from 'crypto';
 import { detectPersona, rankPersonas, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
-import { getSupabaseClient, getSupabaseServiceClient, getSupabaseClientWithAuth } from '@/lib/supabase';
+import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
 import { AnalysisCreateSchema } from '@/lib/schemas';
 import { fetchWorkerMetadata } from '@/lib/worker-client';
 import { ERROR_CODES, type ErrorCode } from '@/lib/error-codes';
@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
     console.log('[analyses] 3. Rate limit check passed', { userId });
 
     // 4. Supabase client (server-side)
-    const supabase = getSupabaseClient();
+    const supabase = await getSupabaseClientWithAuth();
 
     // 4.5 CACHE HIT CHECK: Query for existing analysis with this videoId
     console.log('[analyses] 4. Cache check starting', { videoId, userId });

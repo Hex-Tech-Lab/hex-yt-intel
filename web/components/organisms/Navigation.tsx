@@ -1,4 +1,4 @@
-import type { User } from 'next-auth';
+import type { User } from '@supabase/supabase-js';
 
 export async function Navigation({ user }: { user?: User | null }) {
   const safeUser = user ?? null;
@@ -15,7 +15,7 @@ export async function Navigation({ user }: { user?: User | null }) {
         {safeUser && (
           <>
             <span className="text-sm text-gray-600">{safeUser.email}</span>
-            <form action="/api/auth/signout" method="POST">
+            <form action="/auth/signout" method="POST">
               <button
                 type="submit"
                 className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded"

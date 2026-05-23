@@ -22,17 +22,27 @@
 
 ---
 
-## 2. THE FROZEN DESIGN SYSTEM & CODE QUALITY GATES
+## 2. THE FROZEN DESIGN SYSTEM & CODE QUALITY GATES (GCT Aligned — 2026-05-23)
 
-**Package Management**: `pnpm` only  
-**CSS Framework**: Tailwind CSS + shadcn/ui exclusively
+**Package Management**: `pnpm` only (exact version: 11.1.3)  
+**CSS Framework**: Tailwind CSS + shadcn/ui exclusively  
+**Runtime**: Node.js 24.16.0 LTS (pinned for CI/deployment)
+
+### Frozen Infrastructure Coordinates (CC Authority)
+- **Node.js**: 24.16.0 (strict pin)
+- **pnpm**: 11.1.3 (tested workspace isolation)
+- **Next.js**: 16.2.6 (locked)
+- **TypeScript**: 5.6.2 (locked)
+- **Zustand + Zod**: ALWAYS ALIGNED (5.0.13 + 4.4.3) — state & validation perimeter
+- **Supabase Auth**: Only auth pattern (`getSupabaseClientWithAuth()` server-side only)
 
 ### Permanently Banned Dependencies
 - ❌ Material-UI (`@mui/material`)
 - ❌ Emotion styling (`@emotion/react`, `@emotion/styled`)
 - ❌ Any runtime CSS-in-JS injection engine
+- ❌ `next-auth` (removed 2026-05-23 — Supabase only)
 
-**Rationale**: This absolute ban is strictly enforced to maintain the **89% production bundle compression ratio** achieved by our native Tailwind components and guarantees pure Edge Runtime compatibility.
+**Rationale**: This absolute ban is strictly enforced to maintain the **89% production bundle compression ratio** achieved by our native Tailwind components and guarantees pure Edge Runtime compatibility. Next-Auth removed in favor of native Supabase `getSupabaseClientWithAuth()` pattern.
 
 ### Root File Volume Restriction
 There is a strict maximum of **4 Markdown elements** allowed in the repository root directory:

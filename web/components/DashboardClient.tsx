@@ -5,19 +5,20 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
-import { useInputStore } from '@/store/useInputStore';
+
+const STORAGE_KEY = 'hex_intel_saved_input';
 
 export function DashboardClient() {
-  const inputStoreUrl = useInputStore((state) => state.url);
-  const setInputStoreUrl = useInputStore((state) => state.setUrl);
-  
   const [url, setUrl] = useState('');
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-    setUrl(inputStoreUrl);
-  }, [inputStoreUrl]);
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      setUrl(cached);
+    }
+  }, []);
 
   const [synthesis, setSynthesis] = useState<string | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
@@ -26,7 +27,7 @@ export function DashboardClient() {
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUrl = e.target.value;
     setUrl(newUrl);
-    setInputStoreUrl(newUrl);
+    localStorage.setItem(STORAGE_KEY, newUrl);
   };
 
   const handleFetch = async () => {

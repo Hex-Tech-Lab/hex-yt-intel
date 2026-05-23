@@ -1,12 +1,13 @@
-import { getServerSession } from 'next-auth';
-import { authConfig } from '@/lib/auth/nextauth-config';
 import { redirect } from 'next/navigation';
 import { stripe, STRIPE_PRICING } from '@/lib/stripe';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
 import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
 
 async function getBillingData(userId: string) {
-  const supabase = getSupabaseClient();
+  // Use service role for internal billing lookups to bypass RLS if needed,
+  // or use the auth client if RLS is correctly configured for the user.
+  // Here we use service role because we might need to check Stripe IDs.
+  const supabase = getSupabaseServiceClient();
 
   // Get user data
   const { data: userData, error: userError } = await supabase
@@ -40,7 +41,6 @@ async function getBillingData(userId: string) {
         limit: 10,
       });
       invoices = stripeInvoices.data.map((inv) => {
-        // Stripe Invoice uses created timestamp, not paid_date
         const paidAtTimestamp = inv.status === 'paid' ? inv.created : null;
         return {
           id: inv.id,
@@ -71,16 +71,15 @@ async function getBillingData(userId: string) {
 }
 
 export default async function BillingPage() {
-  const session = await getServerSession(authConfig);
+  const supabase = await getSupabaseClientWithAuth();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session?.user) {
+  if (!user) {
     redirect('/auth/signin');
   }
 
-  const userId = (session.user as any).id;
-
   try {
-    const billingData = await getBillingData(userId);
+    const billingData = await getBillingData(user.id);
 
     return (
       <div className="min-h-screen bg-slate-50">

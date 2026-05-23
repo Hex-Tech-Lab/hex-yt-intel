@@ -5,8 +5,8 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { testUsers } from '../fixtures/users';
-import { testVideos } from '../fixtures/videos';
+import { testUsers } from './fixtures/users';
+import { testVideos } from './fixtures/videos';
 
 test.describe('Error Handling Suite - Graceful Degradation', () => {
   test('PW1-002: Network failure with stale cache fallback', async () => {

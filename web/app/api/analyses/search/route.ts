@@ -36,7 +36,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbedding, extractSnippet } from '@/lib/embeddings';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
-import { getSupabaseClient, getSupabaseClientWithAuth } from '@/lib/supabase';
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { logUsage } from '@/lib/usage';
 import { SearchSchema } from '@/lib/schemas';
 import * as Sentry from '@sentry/nextjs';
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Create Supabase client (server-side)
-    const supabase = getSupabaseClient();
+    const supabase = await getSupabaseClientWithAuth();
 
     // 5. Execute pgvector semantic search natively in Postgres via RPC
     const analyses = await trackDatabaseQuery(
