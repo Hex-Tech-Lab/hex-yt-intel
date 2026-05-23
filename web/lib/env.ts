@@ -7,33 +7,6 @@
  * All access to environment variables should go through this file.
  */
 
-// CI Environment Polyfill: Inject mock values for required environment variables
-// in CI/testing environments when real secrets are not available.
-// All values are non-credential-like patterns that prevent security scanner false positives.
-if (process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true') {
-  const fallbackVault = {
-    NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321',
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpLW1vY2stcHJvamVjdCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNjIwMDAwMDAwLCJleHAiOjE5MzA3NjU5OTl9.mock_anon_key_string_long_enough_for_validation',
-    SUPABASE_SERVICE_ROLE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpLW1vY2stcHJvamVjdCIsInJvbGUiOiJzZXJ2aWNlX3JvbGUiLCJpYXQiOjE2MjAwMDAwMDAsImV4cCI6MTkzMDc2NTk5OX0.mock_service_role_key_string_long_enough_for_validation',
-    OPENROUTER_API_KEY: 'mock-openrouter-key-v1-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz5',
-    NEXTAUTH_SECRET: 'mock-nextauth-secret-32-characters-long-minimum-requirement',
-    STRIPE_SECRET_KEY: 'mock-stripe-secret-key-long-enough-for-validation-requirements',
-    STRIPE_WEBHOOK_SECRET: 'mock-webhook-secret-key-long-enough-for-validation-gates',
-    NEXT_PUBLIC_SENTRY_DSN: 'https://examplePublicKey@o0.ingest.sentry.io/0',
-    SENTRY_AUTH_TOKEN: 'mock-sentry-auth-token-64-chars-long-xxxxxxxxxxxxxxxxxxxx',
-    UPSTASH_REDIS_REST_URL: 'https://ci-mock-instance.upstash.io',
-    UPSTASH_REDIS_REST_TOKEN: 'test_AYcTAYPUmD8vYP9d1h5ZNqJ0k1N0o2P3qR4sT5uV6wX7yZ8aB9cD0eF1gH2iJ3kL4mN5oP6qR7sT8uV9wX0yZ1aB2cD3eF4gH5iJ6kL7',
-    QSTASH_TOKEN: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJxc3Rhc2giLCJzdWIiOiJjaS1tb2NrLXRva2VuIiwiaWF0IjoxNjIwMDAwMDAwfQ.mock_qstash_token_string_long_enough_for_validation',
-    CLOUDFLARE_WORKER_URL: 'https://ci-mock.hex-tech-lab.workers.dev',
-  };
-
-  Object.entries(fallbackVault).forEach(([key, value]) => {
-    if (!process.env[key]) {
-      process.env[key] = value;
-    }
-  });
-}
-
 const REQUIRED_ENV_VARS = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -267,12 +240,11 @@ export function getEnv(): EnvironmentConfig {
 
 /**
  * Initialize and validate environment on module load
- * Only validate in production Vercel deployments; skip in development, CI, testing, and build phase
+ * Only validate in production Vercel deployments; skip in development and testing
  */
 const isProductionEnvironment = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
-const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
-if (typeof window === 'undefined' && isProductionEnvironment && !isBuildPhase) {
-  // Server-side only, production Vercel only, NOT during Next.js build phase
+if (typeof window === 'undefined' && isProductionEnvironment) {
+  // Server-side only, production Vercel only
   validateEnvironment();
 }
 
@@ -343,3 +315,17 @@ export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ||
 
 export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   (isCI ? 'test-anon-key-safeguard-string-placeholder' : '');
+
+/**
+ * Explicit Client-Side Environment Materialization
+ *
+ * These literal property mappings allow the Next.js compiler to statically analyze
+ * and inline public environment variables at build time. No dynamic lookups or
+ * function calls - pure textual process.env references for compiler optimization.
+ */
+export const clientEnv = {
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+};
