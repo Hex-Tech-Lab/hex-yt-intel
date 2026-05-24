@@ -270,13 +270,10 @@ app.post("/fetch-transcript", async (c) => {
     const metadataController = new AbortController();
     const metadataTimeout = setTimeout(() => metadataController.abort(), 5000);
 
-    const [proxiedMetadataUrl, metadataInit] = buildProxiedFetchInit(
-      metadataUrl,
-      c.env.RESIDENTIAL_PROXY_URL,
-      metadataController.signal,
-    );
-
-    const metadataResponse = await fetch(proxiedMetadataUrl, metadataInit);
+    const metadataResponse = await fetch(metadataUrl, {
+      signal: metadataController.signal,
+      headers: { 'User-Agent': getRandomUserAgent() },
+    });
     clearTimeout(metadataTimeout);
 
     if (!metadataResponse.ok) {
