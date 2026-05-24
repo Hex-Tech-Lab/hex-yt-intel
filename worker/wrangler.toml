@@ -7,11 +7,25 @@ vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "producti
 [env.production]
 name = "yt-intel"
 vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }
+# Production secrets (deploy via wrangler secret put):
+# YOUTUBE_API_KEY - YouTube Data API key for transcript extraction
+# CLOUDFLARE_SECRET_TOKEN - Internal auth token for worker endpoints
+# RESIDENTIAL_PROXY_URL - Bright Data proxy endpoint (format: host:port)
 
 [build]
 command = "pnpm run build"
 
-# Secrets are bound via Wrangler CLI:
-# wrangler secret put YOUTUBE_API_KEY --env production
-# wrangler secret put CLOUDFLARE_SECRET_TOKEN --env production
-# wrangler secret put RESIDENTIAL_PROXY_URL --env production
+# Secrets Deployment Instructions:
+# ================================
+# Deploy worker secrets to production with:
+#   wrangler secret put YOUTUBE_API_KEY --env production
+#   wrangler secret put CLOUDFLARE_SECRET_TOKEN --env production
+#   wrangler secret put RESIDENTIAL_PROXY_URL --env production
+#
+# Current RESIDENTIAL_PROXY_URL value (Bright Data):
+#   brd.superproxy.io:33335
+#
+# This enables:
+# - YouTube transcript extraction with fallback proxy routing
+# - Geo-distributed request handling (bypass IP-based blocks)
+# - Resilient content retrieval for analysis pipeline

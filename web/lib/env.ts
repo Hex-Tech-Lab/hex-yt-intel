@@ -23,6 +23,7 @@ const OPTIONAL_ENV_VARS = [
   'NEXT_PUBLIC_APP_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
   'CLOUDFLARE_WORKER_URL',
+  'RESIDENTIAL_PROXY_URL',
   'SENTRY_AUTH_TOKEN',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
@@ -271,6 +272,9 @@ export const env = {
   get cloudflareWorkerUrl(): string {
     return validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
       'https://yt-intel.hex-tech-lab.workers.dev';
+  },
+  get residentialProxyUrl(): string | undefined {
+    return validateEnvVar('RESIDENTIAL_PROXY_URL', false);
   },
   get upstashRedisUrl(): string | undefined {
     return validateEnvVar('UPSTASH_REDIS_REST_URL', false);
