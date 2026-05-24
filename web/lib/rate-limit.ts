@@ -491,7 +491,8 @@ async function logRateLimitHit(
  */
 export async function getUserTier(userId: string): Promise<Tier> {
   try {
-    const supabase = getSupabaseClient();
+    const { getSupabaseClientWithAuth } = await import('./supabase');
+    const supabase = await getSupabaseClientWithAuth();
 
     const { data, error } = await supabase
       .from('users')
