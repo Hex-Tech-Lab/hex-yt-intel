@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 type Env = {
   YOUTUBE_API_KEY: string;
   CLOUDFLARE_SECRET_TOKEN: string;
+  RESIDENTIAL_PROXY_URL?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -25,6 +26,29 @@ const USER_AGENTS = [
 
 const getRandomUserAgent = (): string => {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+};
+
+// Proxy routing adapter for residential proxy support
+const buildProxiedFetchInit = (
+  targetUrl: string,
+  proxyUrl: string | undefined,
+  signal: AbortSignal,
+): [string, RequestInit] => {
+  const headers = {
+    'User-Agent': getRandomUserAgent(),
+  };
+
+  // If no proxy configured, fetch directly from target URL
+  if (!proxyUrl) {
+    return [targetUrl, { signal, headers }];
+  }
+
+  // Route through residential proxy endpoint
+  // Proxy endpoint expects the target URL as a query parameter
+  const encodedTarget = encodeURIComponent(targetUrl);
+  const proxiedUrl = `${proxyUrl}?url=${encodedTarget}`;
+
+  return [proxiedUrl, { signal, headers }];
 };
 
 const corsMiddleware = (origin: string | undefined): boolean => {
@@ -207,12 +231,13 @@ app.post("/fetch-transcript", async (c) => {
     const metadataController = new AbortController();
     const metadataTimeout = setTimeout(() => metadataController.abort(), 5000);
 
-    const metadataResponse = await fetch(metadataUrl, {
-      signal: metadataController.signal,
-      headers: {
-        'User-Agent': getRandomUserAgent(),
-      },
-    });
+    const [proxiedMetadataUrl, metadataInit] = buildProxiedFetchInit(
+      metadataUrl,
+      c.env.RESIDENTIAL_PROXY_URL,
+      metadataController.signal,
+    );
+
+    const metadataResponse = await fetch(proxiedMetadataUrl, metadataInit);
     clearTimeout(metadataTimeout);
 
     if (!metadataResponse.ok) {
@@ -243,12 +268,13 @@ app.post("/fetch-transcript", async (c) => {
     const transcriptController = new AbortController();
     const transcriptTimeout = setTimeout(() => transcriptController.abort(), 5000);
 
-    const transcriptResponse = await fetch(transcriptUrl, {
-      signal: transcriptController.signal,
-      headers: {
-        'User-Agent': getRandomUserAgent(),
-      },
-    });
+    const [proxiedTranscriptUrl, transcriptInit] = buildProxiedFetchInit(
+      transcriptUrl,
+      c.env.RESIDENTIAL_PROXY_URL,
+      transcriptController.signal,
+    );
+
+    const transcriptResponse = await fetch(proxiedTranscriptUrl, transcriptInit);
     clearTimeout(transcriptTimeout);
 
     if (!transcriptResponse.ok) {
