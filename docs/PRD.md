@@ -241,6 +241,25 @@ stripe_events
 - Team members cannot read each other's personal syntheses
 - Admin override for support
 
+### Dynamic SLA & QStash Queue Architecture
+To manage resource utilization and ensure predictable performance across tiers, the system utilizes a tiered queue architecture powered by Upstash QStash.
+
+| Load Profile | processing Window | Execution Mode | Priority |
+|---|---|---|---|
+| **Standard (<20 videos)** | 12 Hours | Scheduled / Batch | Low |
+| **Bulk (21-100 videos)** | 48 Hours | Throttled / Background | Background |
+| **Premium / Upsell** | Immediate | Real-time Streaming | Critical |
+
+**Rationale**: This stratified approach allows for aggressive cost-averaging during low-traffic periods while guaranteeing high-availability for paying users during peak bursts.
+
+### Modular Proxy Ingress
+To ensure resilient data collection and bypass anti-scraping measures, the system implements a modular proxy rotation layer.
+
+- **Primary Residential Vendor**: **Decodo** (formerly Smartproxy)
+- **Strategy**: Dynamic IP rotation per metadata request
+- **Economic Target**: Projected **79% gross margin ceiling** achieved through pay-per-GB optimization and selective data extraction.
+- **Failover**: Secondary datacenter proxies for non-gated metadata retrieval.
+
 ---
 
 ## SUCCESS METRICS (Month 1)
