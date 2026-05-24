@@ -23,7 +23,7 @@ export function useSSEStream() {
     }
   };
 
-  const startAnalysis = async (url: string, timezone: string) => {
+  const startAnalysis = async (url: string, timezone: string, forceRefresh: boolean = false) => {
     const videoId = extractTelemetryId(url);
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
 
@@ -31,7 +31,7 @@ export function useSSEStream() {
       {
         name: 'stream_analysis',
         op: 'http.client',
-        attributes: { videoId, timezone: safeTimezone },
+        attributes: { videoId, timezone: safeTimezone, forceRefresh },
       },
       async () => {
         try {
@@ -45,7 +45,7 @@ export function useSSEStream() {
               method: 'POST',
               credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url, timezone }),
+              body: JSON.stringify({ url, timezone, forceRefresh }),
             })
           );
 
