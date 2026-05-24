@@ -258,8 +258,11 @@ check_frontend_rendering() {
     return 0
   fi
 
+  # Inject secure bypass token for test authentication (allows Playwright to bypass auth middleware)
+  local bypass_token="hex-prod-verification-bypass-token-v1"
+
   # Run the dedicated Playwright test suite (non-fatal on failure)
-  if DEPLOYMENT_URL="$DEPLOYMENT_URL" "$script_dir/scripts/run-production-verification.sh" "$DEPLOYMENT_URL" > /tmp/playwright-output.txt 2>&1; then
+  if DEPLOYMENT_URL="$DEPLOYMENT_URL" DEV_BYPASS_TOKEN="$bypass_token" "$script_dir/scripts/run-production-verification.sh" "$DEPLOYMENT_URL" > /tmp/playwright-output.txt 2>&1; then
     log_pass "Frontend rendering verified (no hydration mismatches, client strings valid)"
     return 0
   else
