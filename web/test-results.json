@@ -10,14 +10,18 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {},
+    "metadata": {
+      "actualWorkers": 3
+    },
     "preserveOutput": "always",
     "projects": [
       {
         "outputDir": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {},
+        "metadata": {
+          "actualWorkers": 3
+        },
         "id": "chromium",
         "name": "chromium",
         "testDir": "/home/kellyb_dev/projects/hex-yt-intel/web/tests",
@@ -27,7 +31,7 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 15000
+        "timeout": 60000
       }
     ],
     "quiet": false,
@@ -52,37 +56,485 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.60.0",
-    "workers": 1,
+    "workers": 3,
     "webServer": {
-      "command": "pnpm run dev",
-      "cwd": ".",
+      "command": "pnpm dev",
       "url": "http://localhost:3000",
       "reuseExistingServer": true,
-      "timeout": 180000,
       "env": {
         "NODE_ENV": "production",
-        "CI": "true",
-        "GITHUB_ACTIONS": "true",
-        "NEXT_PUBLIC_SUPABASE_URL": "",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY": "",
-        "SUPABASE_SERVICE_ROLE_KEY": "",
-        "OPENROUTER_API_KEY": "",
-        "STRIPE_SECRET_KEY": "",
-        "STRIPE_WEBHOOK_SECRET": ""
-      }
+        "CI": "false",
+        "GITHUB_ACTIONS": "false",
+        "NEXT_PUBLIC_SUPABASE_URL": "https://placeholder-project.supabase.co",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key",
+        "SUPABASE_SERVICE_ROLE_KEY": "placeholder-service-role-key",
+        "OPENROUTER_API_KEY": "sk-or-v1-placeholder",
+        "STRIPE_SECRET_KEY": "sk_test_placeholder",
+        "STRIPE_WEBHOOK_SECRET": "whsec_test_placeholder",
+        "NEXT_PUBLIC_SENTRY_DSN": "",
+        "CLOUDFLARE_WORKER_URL": "https://yt-intel.hex-tech-lab.workers.dev",
+        "UPSTASH_REDIS_REST_URL": "",
+        "UPSTASH_REDIS_REST_TOKEN": "",
+        "UPSTASH_VECTOR_REST_URL": "",
+        "UPSTASH_VECTOR_REST_TOKEN": "",
+        "QSTASH_URL": "",
+        "QSTASH_TOKEN": "",
+        "QSTASH_CURRENT_SIGNING_KEY": "",
+        "QSTASH_NEXT_SIGNING_KEY": "",
+        "DEV_BYPASS_TOKEN": "test-token",
+        "VERCEL_TOKEN": "",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_placeholder"
+      },
+      "timeout": 180000
     }
   },
-  "suites": [],
-  "errors": [
+  "suites": [
     {
-      "message": "Error: Timed out waiting 180000ms from config.webServer.",
-      "stack": "Error: Timed out waiting 180000ms from config.webServer."
+      "title": "production-verification.spec.ts",
+      "file": "production-verification.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Production Verification Suite",
+          "file": "production-verification.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Frontend Rendering",
+              "file": "production-verification.spec.ts",
+              "line": 17,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "home page renders without hydration errors",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 6087,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:32.126Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-f9a2b3b3a5acd820c21d",
+                  "file": "production-verification.spec.ts",
+                  "line": 18,
+                  "column": 9
+                },
+                {
+                  "title": "home page client environment strings are materialized",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 5966,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:32.171Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-c29996f02a305ab3a4ea",
+                  "file": "production-verification.spec.ts",
+                  "line": 65,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Auth Routes",
+              "file": "production-verification.spec.ts",
+              "line": 92,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "auth signin page renders securely",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 3439,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:32.250Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-ba728ace986dfd194b52",
+                  "file": "production-verification.spec.ts",
+                  "line": 93,
+                  "column": 9
+                },
+                {
+                  "title": "auth callback page handles redirects gracefully",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 2707,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:37.012Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-1f4c30ffc39db23b4809",
+                  "file": "production-verification.spec.ts",
+                  "line": 123,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "API Endpoints",
+              "file": "production-verification.spec.ts",
+              "line": 133,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "health endpoint returns structured response",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3398,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:39.488Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-24d07e7160ba5d390f0e",
+                  "file": "production-verification.spec.ts",
+                  "line": 134,
+                  "column": 9
+                },
+                {
+                  "title": "metadata endpoint is accessible",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 987,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:39.626Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-835005daca9b806dbc42",
+                  "file": "production-verification.spec.ts",
+                  "line": 146,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Client Environment Validation",
+              "file": "production-verification.spec.ts",
+              "line": 156,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "clientEnv exports are present and non-empty",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 3643,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:39.766Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-e397c1e10a2abde86979",
+                  "file": "production-verification.spec.ts",
+                  "line": 157,
+                  "column": 9
+                },
+                {
+                  "title": "no uninitialized environment references in HTML",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2681,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:40.662Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-5810a864b4db4840b248",
+                  "file": "production-verification.spec.ts",
+                  "line": 179,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Navigation & Routing",
+              "file": "production-verification.spec.ts",
+              "line": 202,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "home page navigation is functional",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2699,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:42.923Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-738877f8588c2d4b2578",
+                  "file": "production-verification.spec.ts",
+                  "line": 203,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Performance & Accessibility",
+              "file": "production-verification.spec.ts",
+              "line": 220,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "page load completes within reasonable time",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2544,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:43.391Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-8676582dd055d6716060",
+                  "file": "production-verification.spec.ts",
+                  "line": 221,
+                  "column": 9
+                },
+                {
+                  "title": "page is not blank",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 2,
+                          "status": "passed",
+                          "duration": 2661,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-05-24T13:26:43.446Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a6fb233cbe174ccae771-dc283d27f6cf5b7415ea",
+                  "file": "production-verification.spec.ts",
+                  "line": 234,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
+  "errors": [],
   "stats": {
-    "startTime": "2026-05-23T16:23:25.085Z",
-    "duration": 180340.477,
-    "expected": 0,
+    "startTime": "2026-05-24T13:26:05.619Z",
+    "duration": 40781.475,
+    "expected": 11,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
