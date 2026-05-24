@@ -546,7 +546,7 @@ export async function POST(request: NextRequest) {
 
     // Check if increment succeeded (compare-and-swap succeeded)
     const quotaIncremented = (quotaResult as any)?.success === true;
-    if (!quotaIncremented) {
+    if (!quotaIncremented && userTierAuth !== 'enterprise') {
       const errorCode = ERROR_CODES.QUOTA_EXCEEDED;
       Sentry.captureMessage(`Quota exceeded (atomic enforcement)`, {
         level: 'warning',
