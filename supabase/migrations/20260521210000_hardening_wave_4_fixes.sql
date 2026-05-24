@@ -55,3 +55,87 @@ DO $$ BEGIN
   END IF;
 
 END $$;
+
+-- ============================================================================
+-- RE-CREATE HARDENED RPCs: Quota Management
+-- ============================================================================
+
+-- Atomic increment with quota check
+-- Hardened: Added search_path and explicit auth check
+CREATE OR REPLACE FUNCTION public.increment_user_quota_atomic(p_user_id uuid)
+RETURNS TABLE (
+  success boolean,
+  new_quota integer,
+  tier text,
+  quota_limit integer
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_new_quota integer;
+  v_tier text;
+  v_quota_limit integer;
+  v_rows_affected integer;
+BEGIN
+  -- Security: Only user or service_role can modify
+  IF auth.uid() IS NOT NULL AND auth.uid() != p_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: Cannot modify quota for another user';
+  END IF;
+
+  UPDATE public.users
+  SET analyses_used = analyses_used + 1,
+      updated_at = now()
+  WHERE id = p_user_id
+    AND (tier = 'pro' OR (tier = 'free' AND analyses_used < 3))
+  RETURNING analyses_used, "tier" INTO v_new_quota, v_tier;
+
+  GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
+
+  IF v_rows_affected = 1 THEN
+    v_quota_limit := CASE WHEN v_tier = 'free' THEN 3 ELSE NULL END;
+    RETURN QUERY SELECT true, v_new_quota, v_tier, v_quota_limit;
+  ELSE
+    SELECT analyses_used, users.tier INTO v_new_quota, v_tier
+    FROM public.users WHERE id = p_user_id;
+    
+    v_quota_limit := CASE WHEN v_tier = 'free' THEN 3 ELSE NULL END;
+    RETURN QUERY SELECT false, v_new_quota, v_tier, v_quota_limit;
+  END IF;
+END;
+$$;
+
+-- Atomic decrement (refund)
+-- Signature: p_user_id, p_decrement
+CREATE OR REPLACE FUNCTION public.decrement_user_quota(p_user_id uuid, p_decrement integer DEFAULT 1)
+RETURNS TABLE (
+  new_quota integer,
+  tier text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_new_quota integer;
+  v_tier text;
+BEGIN
+  -- Security: Only user or service_role can modify
+  IF auth.uid() IS NOT NULL AND auth.uid() != p_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: Cannot modify quota for another user';
+  END IF;
+
+  UPDATE public.users
+  SET analyses_used = GREATEST(0, analyses_used - p_decrement),
+      updated_at = now()
+  WHERE id = p_user_id
+  RETURNING analyses_used, users.tier INTO v_new_quota, v_tier;
+
+  IF FOUND THEN
+    RETURN QUERY SELECT v_new_quota, v_tier;
+  ELSE
+    RETURN QUERY SELECT 0, 'free'::text;
+  END IF;
+END;
+$$;
