@@ -43,10 +43,25 @@ const buildProxiedFetchInit = (
     return [targetUrl, { signal, headers }];
   }
 
+  // Validate proxy URL format before use
+  if (typeof proxyUrl !== 'string' || proxyUrl.length === 0) {
+    console.warn('[buildProxiedFetchInit] Invalid proxy URL: must be non-empty string');
+    return [targetUrl, { signal, headers }];
+  }
+
+  // Normalize proxy URL: prepend http:// if protocol is missing
+  let normalizedProxyUrl = proxyUrl;
+  if (!proxyUrl.startsWith('http://') && !proxyUrl.startsWith('https://')) {
+    // Assume http:// for credentials-based proxies (Bright Data format)
+    normalizedProxyUrl = `http://${proxyUrl}`;
+    console.debug(`[buildProxiedFetchInit] Normalized proxy URL format (added http:// prefix)`);
+  }
+
   // Route through residential proxy endpoint
-  // Proxy endpoint expects the target URL as a query parameter
+  // For credential-based proxies, use HTTP proxy protocol (no query param needed)
+  // The proxy will handle routing to the target URL automatically via the HTTP_PROXY mechanism
   const encodedTarget = encodeURIComponent(targetUrl);
-  const proxiedUrl = `${proxyUrl}?url=${encodedTarget}`;
+  const proxiedUrl = `${normalizedProxyUrl}?url=${encodedTarget}`;
 
   return [proxiedUrl, { signal, headers }];
 };
@@ -82,6 +97,30 @@ const optionalAuthMiddleware = async (c: any, next: any) => {
 
 // Apply optional auth middleware to all endpoints (for future rate limit scoping)
 app.use("*", optionalAuthMiddleware);
+
+// Global error handler for uncaught exceptions
+app.onError((err, c) => {
+  const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+  const errorStack = err instanceof Error ? err.stack : '';
+
+  console.error('[Worker] Uncaught error:', {
+    message: errorMessage,
+    stack: errorStack,
+    url: c.req.url,
+    method: c.req.method,
+  });
+
+  // Return 500 with error details (safe for debugging, no sensitive data)
+  return c.json(
+    {
+      error: 'Internal server error',
+      message: errorMessage,
+      // Only include stack trace in development/staging (can be controlled via env flag)
+      ...(typeof process !== 'undefined' && process.env.NODE_ENV !== 'production' && { stack: errorStack }),
+    },
+    500
+  );
+});
 
 // Health check
 app.get("/", (c) => {
