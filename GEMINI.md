@@ -175,19 +175,19 @@ All preflight checks executed MUST be logged:
 ### Cross-Agent Coordination Notes for GCW
 
 **Gemini responsibilities for Phase 2**:
-1. **Strategic Synthesis**: Document Phase 2 architecture decisions (Shopify integration, product schema, checkout flow)
-2. **Multi-Tool Orchestration**: Coordinate between GitHub, Vercel, Supabase, and Shopify APIs
+1. **Strategic Synthesis**: Document Phase 2 architecture decisions (Multi-channel analysis, advanced search filters, PDF offloading)
+2. **Multi-Tool Orchestration**: Coordinate between GitHub, Vercel, Supabase, and Upstash APIs
 3. **Handover Documentation**: Maintain Phase 2 progress reports + weekly syncs
-4. **Infographics**: Create visual product flow diagrams (catalog → cart → checkout → confirmation)
+4. **Infographics**: Create visual analysis flow diagrams (transcript → UCIS → vector index → search)
 
 **Reference**: `/ROADMAP.md` for full Phase 2 timeline and `/docs/history/HANDOVER_REPORT_2026-05-21.md` for strategic context
 
 ### Phase 1→2 Transition Gate
 
 **Do not proceed with Phase 2 until**:
-- ✅ Shopify API credentials obtained (SHOPIFY_STORE_ID, SHOPIFY_ACCESS_TOKEN)
-- ✅ Product schema approved (id, title, description, price, image_url, created_at, tags)
-- ✅ Payment processor selected (Stripe or Shopify Payments)
+- ✅ Upstash Vector Index verified (URL + TOKEN set)
+- ✅ Search schema approved (analysis_id, title, excerpt, score, created_at)
+- ✅ User feedback loop implemented (re-analyze button working)
 - ✅ All Phase 1 systems verified (Known Good State checklist)
 
 **See**: `/docs/ops/KNOWN_GOOD_STATE_CHECKLIST.md` (25-item verification)

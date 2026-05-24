@@ -80,15 +80,15 @@ Feature requirements for Phase 2 have not yet been defined. This roadmap serves 
 **Duration**: 2026-06-19+ (post-MVP 1.5)  
 **Status**: 🎯 PLANNED
 
-### Multi-Store Support
-- Connect multiple Shopify stores to a single hex-yt-intel account
-- Per-store analytics and rate limiting
-- Store-specific branding
+### Multi-Channel Analysis Support
+- Track multiple YouTube channels in a single hex-yt-intel account
+- Per-channel analytics and engagement tracking
+- Automated content gap analysis
 
-### Advanced Inventory Management
-- Real-time stock monitoring
-- Low-stock alerts
-- Inventory forecasting (predict demand based on search volume)
+### Advanced Content Management
+- Real-time video performance monitoring
+- Trend alerts based on niche keywords
+- Content forecasting (predict demand based on search volume)
 
 ### A/B Testing Framework
 - Test different product layouts, pricing, descriptions
@@ -154,5 +154,5 @@ Feature requirements for Phase 2 have not yet been defined. This roadmap serves 
 ---
 
 **Last Updated**: 2026-05-21  
-**Status**: 🚀 Phase 2 ready to start (awaiting Shopify credentials)  
+**Status**: 🚀 Phase 2 ready to start (Core infrastructure stabilized)  
 **Next Review**: 2026-05-22 (Phase 2 kickoff)
