@@ -229,6 +229,8 @@ export function getEnv(): EnvironmentConfig {
     upstash: {
       redisUrl: validateEnvVar('UPSTASH_REDIS_REST_URL', false),
       redisToken: validateEnvVar('UPSTASH_REDIS_REST_TOKEN', false),
+      vectorUrl: validateEnvVar('UPSTASH_VECTOR_REST_URL', false),
+      vectorToken: validateEnvVar('UPSTASH_VECTOR_REST_TOKEN', false),
     },
     app: {
       version: validateEnvVar('NEXT_PUBLIC_APP_VERSION', false) || '1.0.0',

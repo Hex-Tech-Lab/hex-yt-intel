@@ -4,5 +4,14 @@ compatibility_date = "2026-04-21"
 compatibility_flags = ["nodejs_compat"]
 vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }
 
+[env.production]
+name = "yt-intel"
+vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }
+
 [build]
 command = "pnpm run build"
+
+# Secrets are bound via Wrangler CLI:
+# wrangler secret put YOUTUBE_API_KEY --env production
+# wrangler secret put CLOUDFLARE_SECRET_TOKEN --env production
+# wrangler secret put RESIDENTIAL_PROXY_URL --env production
