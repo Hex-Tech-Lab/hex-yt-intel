@@ -619,23 +619,70 @@ export async function POST(request: NextRequest) {
     console.log('[analyses] 6. Metadata fetched', { videoId, title: metadata.title, channelTitle: metadata.channelTitle });
     addBreadcrumb('Metadata fetched from worker', { videoId, title: metadata.title });
 
-    // Handle transcript result (optional - graceful degradation on failure)
-    if (transcriptResult.status === 'fulfilled') {
-      transcript = transcriptResult.value;
-      console.log('[analyses] 6. Transcript fetched (parallel)', { videoId, length: transcript.length });
-      addBreadcrumb('Transcript fetched from worker', { videoId, length: transcript.length });
-    } else {
+    // Handle transcript result (mandatory - fail if unavailable)
+    if (transcriptResult.status === 'rejected') {
+      // Rollback quota increment since analysis cannot proceed without transcript
+      const { error: decrementError } = await supabase
+        .rpc('decrement_user_quota', { p_user_id: userId, p_decrement: 1 })
+        .maybeSingle();
+      if (decrementError) {
+        console.error('[analyses] Failed to decrement quota on transcript fetch failure', { userId, error: decrementError });
+        Sentry.captureException(decrementError, { tags: { operation: 'decrement_user_quota_on_transcript_failure' } });
+      }
+
       const errorCode = ERROR_CODES.CLOUDFLARE_TRANSCRIPT_NOT_FOUND;
-      Sentry.captureMessage('Transcript unavailable for video (proceeding with metadata-only analysis)', {
-        level: 'info',
+      Sentry.captureMessage('Transcript required but unavailable for video', {
+        level: 'warning',
         tags: { service: 'cloudflare-worker', operation: 'fetch-transcript', code: errorCode },
         contexts: { worker: { service: 'cloudflare-worker', operation: 'fetch-transcript', videoId }, video: { videoId } }
       });
-      console.warn(`[analyses] 6. Transcript fetch failed [${errorCode}] (non-blocking, proceeding with analysis)`, { videoId, error: String(transcriptResult.reason) });
-      addBreadcrumb('Transcript unavailable (proceeding with metadata-only analysis)', { videoId, error: String(transcriptResult.reason) }, 'external_service');
-      // Fallback: Use placeholder token to indicate unavailable captions
-      transcript = '[Transcript Unavailable: video lacks captions or is inaccessible]';
+      console.warn(`[analyses] 6. Transcript fetch failed [${errorCode}] (mandatory, rejecting analysis)`, { videoId, error: String(transcriptResult.reason) });
+      addBreadcrumb('Transcript unavailable - analysis rejected', { videoId, error: String(transcriptResult.reason) }, 'external_service');
+      return NextResponse.json(
+        {
+          error: 'Video transcript required for analysis',
+          code: errorCode,
+          videoId,
+          message: 'Captions are required but unavailable for this video. Try another video with captions enabled.'
+        },
+        { status: 422 }
+      );
     }
+
+    transcript = transcriptResult.value;
+
+    // Guard: Validate transcript is not empty (prevent empty token arrays reaching embedding engine)
+    if (!transcript || transcript.trim().length === 0) {
+      const errorCode = ERROR_CODES.CLOUDFLARE_TRANSCRIPT_NOT_FOUND;
+      Sentry.captureMessage('Transcript received but empty - rejecting analysis', {
+        level: 'warning',
+        tags: { service: 'cloudflare-worker', code: errorCode },
+        contexts: { transcript: { length: transcript?.length || 0, videoId } }
+      });
+      console.warn(`[analyses] 6. Transcript empty validation guard [${errorCode}]`, { videoId, transcriptLength: transcript?.length || 0 });
+      addBreadcrumb('Empty transcript rejected', { videoId }, 'validation');
+
+      // Rollback quota on empty transcript
+      const { error: decrementError } = await supabase
+        .rpc('decrement_user_quota', { p_user_id: userId, p_decrement: 1 })
+        .maybeSingle();
+      if (decrementError) {
+        console.error('[analyses] Failed to decrement quota on empty transcript', { userId, error: decrementError });
+      }
+
+      return NextResponse.json(
+        {
+          error: 'Video transcript is empty or invalid',
+          code: errorCode,
+          videoId,
+          message: 'The video has captions but they appear to be empty. Try another video.'
+        },
+        { status: 422 }
+      );
+    }
+
+    console.log('[analyses] 6. Transcript fetched and validated (parallel)', { videoId, length: transcript.length });
+    addBreadcrumb('Transcript fetched and validated from worker', { videoId, length: transcript.length });
 
     // 6.5 Persona selection (explicit param overrides auto-detection)
     if (!selectedPersona) {
@@ -649,8 +696,8 @@ export async function POST(request: NextRequest) {
     const personaConfig = rankPersonas(finalPersona);
     addBreadcrumb('Persona configured', { persona: selectedPersona, ranks: personaConfig.map((p) => `${p.personaId}:${p.weight}%`).join(' ') });
 
-    // 7. Call OpenRouter - stream response directly to client
-    console.log('[analyses] 7. OpenRouter call starting', { videoId, persona: finalPersona, timezone, duration: metadata.duration, transcriptAvailable: transcript !== '[Transcript Unavailable: video lacks captions or is inaccessible]' });
+    // 7. Call OpenRouter - stream response directly to client (transcript guaranteed valid)
+    console.log('[analyses] 7. OpenRouter call starting', { videoId, persona: finalPersona, timezone, duration: metadata.duration, transcriptLength: transcript!.length });
     let openrouterResponse: Response;
     try {
       openrouterResponse = await trackExternalCall(
