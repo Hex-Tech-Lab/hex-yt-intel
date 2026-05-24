@@ -18,6 +18,7 @@ import {
   setUserContext
 } from '@/lib/monitoring/sentry-utils';
 import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
+import { fetchTranscript } from '@/lib/services/transcript';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
 import { publishValidationTask } from '@/lib/qstash-client';
 import { parseSSELine } from '@/lib/streaming/decoder';
@@ -149,49 +150,6 @@ async function publishPdfToQStash(
   return false;
 }
 
-async function fetchTranscript(videoId: string): Promise<string> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-
-    try {
-      const response = await fetch('/api/transcript-proxy', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: videoUrl }),
-      });
-
-      const data = await response.json() as { success: boolean; transcript?: string; reason?: string };
-
-      if (!response.ok || !data.success) {
-        if (response.status === 404) {
-          throw new Error(`Video transcript not found (404): ${data.reason || 'captions unavailable or video inaccessible'}`);
-        }
-        throw new Error(`Failed to fetch transcript: ${data.reason || `HTTP ${response.status}`}`);
-      }
-
-      if (!data.transcript || typeof data.transcript !== 'string') {
-        throw new Error('Transcript proxy returned invalid format');
-      }
-
-      return data.transcript;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
-      throw new Error(`Transcript fetch failed: ${errorMsg}`);
-    }
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[fetchTranscript] CRITICAL:', errorMsg);
-    throw new Error(`Failed to fetch transcript: ${errorMsg}`);
-  } finally {
-    clearTimeout(timeout);
-  }
-}
 
 
 export async function POST(request: NextRequest) {
