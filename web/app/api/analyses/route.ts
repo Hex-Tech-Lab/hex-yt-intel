@@ -268,6 +268,7 @@ export async function POST(request: NextRequest) {
 
     const timezone = validation.data.timezone || 'Africa/Cairo';
     let selectedPersona: PersonaId | null = validation.data.persona as PersonaId | null;
+    const forceRefresh = validation.data.forceRefresh || false;
 
     // Validate YouTube URL and extract video ID at perimeter
     const videoId = extractVideoId(validation.data.url);
@@ -379,54 +380,64 @@ export async function POST(request: NextRequest) {
     const supabase = await getSupabaseClientWithAuth();
 
     // 4.5 CACHE HIT CHECK: Query for existing analysis with this videoId
-    console.log('[analyses] 4. Cache check starting', { videoId, userId });
-    const existingAnalysis = await trackDatabaseQuery(
-      'select',
-      'analyses',
-      async () => {
-        const { data, error } = await supabase
-          .from('analyses')
-          .select('id, title, analysis_markdown, model_used, created_at')
-          .eq('video_id', videoId)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (error) throw error;
-        return data;
-      },
-      { videoId, userId }
-    ).catch((err) => {
-      addBreadcrumb('Cache lookup failed (non-blocking)', { videoId, error: String(err) }, 'database');
-      return null; // Non-blocking: continue even if cache lookup fails
-    });
+    console.log('[analyses] 4. Cache check starting', { videoId, userId, forceRefresh });
 
-    // If found in cache with non-empty analysis_markdown, return immediately
-    // CRITICAL: Must have analysis_markdown to avoid returning empty content from incomplete analyses
-    if (existingAnalysis && existingAnalysis.analysis_markdown && existingAnalysis.analysis_markdown.length > 0) {
-      console.log('[analyses] 4. Cache HIT - returning cached analysis', { videoId, analysisId: existingAnalysis.id, markdownLength: existingAnalysis.analysis_markdown.length });
-      addBreadcrumb('Cache hit: analysis retrieved from DB', { videoId, analysisId: existingAnalysis.id }, 'cache');
-      const cacheResponse = NextResponse.json({
-        id: existingAnalysis.id,
-        analysisId: existingAnalysis.id,
-        videoId,
-        title: existingAnalysis.title,
-        analysis_markdown: existingAnalysis.analysis_markdown,
-        createdAt: existingAnalysis.created_at,
-        model_attempted: existingAnalysis.model_used,
-        model_used: existingAnalysis.model_used,
-        cacheHit: true,
-        message: 'Analysis compiled previously. Retrieved instantly from local architecture cache.'
+    let existingAnalysis = null;
+
+    // Skip cache lookup if forceRefresh is explicitly requested
+    if (forceRefresh) {
+      console.log('[analyses] 4. Cache BYPASS - forceRefresh flag detected, skipping cache lookup', { videoId });
+      addBreadcrumb('Cache bypass requested via forceRefresh flag', { videoId }, 'cache');
+    } else {
+      // Standard cache lookup flow
+      existingAnalysis = await trackDatabaseQuery(
+        'select',
+        'analyses',
+        async () => {
+          const { data, error } = await supabase
+            .from('analyses')
+            .select('id, title, analysis_markdown, model_used, created_at')
+            .eq('video_id', videoId)
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (error) throw error;
+          return data;
+        },
+        { videoId, userId }
+      ).catch((err) => {
+        addBreadcrumb('Cache lookup failed (non-blocking)', { videoId, error: String(err) }, 'database');
+        return null; // Non-blocking: continue even if cache lookup fails
       });
 
-      if (headers) {
-        for (const [key, value] of Object.entries(headers)) {
-          cacheResponse.headers.set(key, value);
+      // If found in cache with non-empty analysis_markdown, return immediately
+      // CRITICAL: Must have analysis_markdown to avoid returning empty content from incomplete analyses
+      if (existingAnalysis && existingAnalysis.analysis_markdown && existingAnalysis.analysis_markdown.length > 0) {
+        console.log('[analyses] 4. Cache HIT - returning cached analysis', { videoId, analysisId: existingAnalysis.id, markdownLength: existingAnalysis.analysis_markdown.length });
+        addBreadcrumb('Cache hit: analysis retrieved from DB', { videoId, analysisId: existingAnalysis.id }, 'cache');
+        const cacheResponse = NextResponse.json({
+          id: existingAnalysis.id,
+          analysisId: existingAnalysis.id,
+          videoId,
+          title: existingAnalysis.title,
+          analysis_markdown: existingAnalysis.analysis_markdown,
+          createdAt: existingAnalysis.created_at,
+          model_attempted: existingAnalysis.model_used,
+          model_used: existingAnalysis.model_used,
+          cacheHit: true,
+          message: 'Analysis compiled previously. Retrieved instantly from local architecture cache.'
+        });
+
+        if (headers) {
+          for (const [key, value] of Object.entries(headers)) {
+            cacheResponse.headers.set(key, value);
+          }
         }
+        return cacheResponse;
       }
-      return cacheResponse;
+      console.log('[analyses] 4. Cache MISS - proceeding with analysis', { videoId });
     }
-    console.log('[analyses] 4. Cache MISS - proceeding with analysis', { videoId });
 
     // 5. Check quota enforcement
     console.log('[analyses] 5. Quota check starting', { userId, tier: userTierAuth });
