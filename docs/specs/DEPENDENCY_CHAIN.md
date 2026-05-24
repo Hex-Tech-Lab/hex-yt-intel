@@ -212,7 +212,7 @@ MVP 1.5 and beyond will have feature-specific dependencies defined when those ph
 
 ### ❌ Don't start feature work before blockers are resolved
 - **Why**: Blocked work creates technical debt and rework
-- **Fix**: Follow the Critical Path. Wait for Shopify credentials + schema approval.
+- **Fix**: Follow the Critical Path. Complete native auth migration + vector sync validation.
 
 ---
 

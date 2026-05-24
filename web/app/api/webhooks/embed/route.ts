@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Index } from '@upstash/vector';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 import { generateEmbedding } from '@/lib/embeddings';
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { logUsage } from '@/lib/usage';
@@ -90,16 +90,29 @@ export async function POST(request: NextRequest) {
       costUsd: embeddingResult.costUsd,
     });
 
-    // 6. Fetch analysis metadata for vector metadata
-    const supabase = getSupabaseClient();
-    const { data: analysis, error: fetchError } = await supabase
-      .from('analyses')
-      .select('title, video_id')
-      .eq('id', analysisId)
-      .maybeSingle();
+    // 6. Fetch analysis metadata for vector metadata (using service role to bypass RLS)
+    let analysis;
+    try {
+      const supabase = getSupabaseServiceClient();
+      const { data, error: fetchError } = await supabase
+        .from('analyses')
+        .select('title, video_id')
+        .eq('id', analysisId)
+        .maybeSingle();
 
-    if (fetchError || !analysis) {
-      throw new Error(`Failed to fetch analysis metadata: ${fetchError?.message || 'Not found'}`);
+      if (fetchError || !data) {
+        throw new Error(`Failed to fetch analysis metadata: ${fetchError?.message || 'Not found'}`);
+      }
+      analysis = data;
+    } catch (metadataError) {
+      const message = metadataError instanceof Error ? metadataError.message : String(metadataError);
+      console.error('[embed-webhook] Metadata fetch failed', {
+        analysisId,
+        error: message,
+      });
+      addBreadcrumb('Metadata fetch failed (continuing with partial data)', { analysisId, error: message }, 'error');
+      // Continue without metadata rather than failing completely
+      analysis = { title: 'Analysis', video_id: 'unknown' };
     }
 
     // 7. Upsert embedding to Upstash Vector Index

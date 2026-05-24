@@ -601,24 +601,24 @@ curl https://hex-yt-intel.vercel.app/api/health
 
 ## 21. PHASE 2 READINESS 🚀 (Next: 2026-05-22)
 
-**Status**: Ready to start (blocked on Shopify API credentials)
+**Status**: Ready to start (MVP 1.5 Feature Expansion)
 
 ### What Phase 2 Requires
 
-| Week | Feature | Blocker |
-|------|---------|---------|
-| 1 | Shopify Integration | SHOPIFY_STORE_ID, SHOPIFY_ACCESS_TOKEN |
-| 2 | Catalog Search | Product schema approval |
-| 3 | Checkout Flow | Payment processor decision (Stripe vs Shopify Payments) |
-| 4 | Analytics + Polish | None (all prior weeks complete) |
+| Week | Feature | Key Milestone |
+|------|---------|---------------|
+| 1 | Auth Unification | Native Supabase patterns in UI |
+| 2 | Search Engine Sync | Upstash Vector ingest validation |
+| 3 | Batch Processing | Multi-video analysis queues |
+| 4 | Analytics + Polish | High-fidelity retention charts |
 
 ### Unblocking Actions
 
 Before Phase 2 kickoff:
-1. [ ] Obtain Shopify credentials from business stakeholder
-2. [ ] Add `SHOPIFY_STORE_ID` + `SHOPIFY_ACCESS_TOKEN` to Vercel env
-3. [ ] Approve `products` table schema (fields: id, title, description, price, image_url, created_at, tags)
-4. [ ] Decide on payment processor (Stripe or Shopify Payments)
+1. [ ] Finalize native Supabase auth migration across all UI components
+2. [ ] Add `UPSTASH_VECTOR_REST_URL` + `TOKEN` to Vercel env
+3. [ ] Approve `usage_logs` aggregation views
+4. [ ] Validate vector ingest synchronization in production
 
 ### Phase 2 Reference
 
@@ -639,7 +639,7 @@ Before Phase 2 kickoff:
 - ✅ All 7 CI/CD pipeline stages passing
 - ✅ Redis circuit breaker functional
 - ✅ Sentry integration logging events
-- ✅ Shopify credentials in Vercel env
+- ✅ Upstash Vector credentials in Vercel env
 
 **If ANY of these fail**, revert to Phase 1 troubleshooting and consult the Known Good State checklist.
 
