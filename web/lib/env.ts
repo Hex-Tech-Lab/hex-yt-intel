@@ -30,6 +30,7 @@ const OPTIONAL_ENV_VARS = [
   'QSTASH_TOKEN',
   'QSTASH_CURRENT_SIGNING_KEY',
   'QSTASH_NEXT_SIGNING_KEY',
+  'DECODO_API_KEY',
 ] as const;
 
 type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];
@@ -308,6 +309,9 @@ export const env = {
   },
   get stripeWebhookSecret(): string {
     return validateEnvVar('STRIPE_WEBHOOK_SECRET', true)!;
+  },
+  get decodoApiKey(): string | undefined {
+    return validateEnvVar('DECODO_API_KEY', false);
   },
 };
 
