@@ -136,7 +136,7 @@ export default function HomeContent() {
 
   const handleForceRefresh = () => {
     setCachedDialog({ ...cachedDialog, show: false });
-    startAnalysis(url, getUserTimezone());
+    startAnalysis(url, getUserTimezone(), true);
   };
 
   const handleClear = () => {
