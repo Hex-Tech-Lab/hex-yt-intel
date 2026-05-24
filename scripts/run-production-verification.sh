@@ -64,11 +64,15 @@ echo ""
 echo -e "${YELLOW}Running production verification tests...${NC}"
 echo ""
 
-# Run the tests with the deployment URL
+# Run the tests with the deployment URL and bypass token for secure auth bypass
 export DEPLOYMENT_URL
+
+# Generate deterministic bypass token (same value each test run for CI consistency)
+export DEV_BYPASS_TOKEN="hex-prod-verification-bypass-token-v1"
+
 cd web
 
-# Run Playwright test
+# Run Playwright test with bypass token injected
 $PKG_RUNNER playwright test tests/production-verification.spec.ts $HEADED_MODE --reporter=line
 
 TEST_RESULT=$?
