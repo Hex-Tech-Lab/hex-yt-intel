@@ -154,62 +154,41 @@ async function fetchTranscript(videoId: string): Promise<string> {
   const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const workerUrl = process.env.CLOUDFLARE_WORKER_URL || 'https://yt-intel.hex-tech-lab.workers.dev';
-
-    if (!workerUrl || workerUrl.includes('[build-time-placeholder')) {
-      throw new Error('Cloudflare Worker URL not configured in production environment');
-    }
-
-    // Validate worker URL against SSRF allowlist (exact hostname match only)
-    const allowedOrigins = new Set([
-      'yt-intel.hex-tech-lab.workers.dev',
-    ]);
-    const urlObj = new URL(workerUrl);
-    const isAllowedOrigin = urlObj.protocol === 'https:' && allowedOrigins.has(urlObj.hostname);
-
-    if (!isAllowedOrigin) {
-      console.error('[fetchTranscript] SECURITY: Rejected untrusted worker origin', { hostname: urlObj.hostname });
-      throw new Error(`Worker URL origin '${urlObj.hostname}' is not in approved allowlist. SSRF prevention enforced.`);
-    }
-
-    const transcriptUrl = new URL(`${workerUrl}/fetch-transcript`);
-    transcriptUrl.searchParams.set('video_id', videoId);
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
     try {
-      const response = await fetch(transcriptUrl.toString(), {
+      const response = await fetch('/api/transcript-proxy', {
         method: 'POST',
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ video_id: videoId }),
+        body: JSON.stringify({ url: videoUrl }),
       });
 
-      if (!response.ok) {
+      const data = await response.json() as { success: boolean; transcript?: string; reason?: string };
+
+      if (!response.ok || !data.success) {
         if (response.status === 404) {
-          throw new Error(`Video transcript not found (404): captions unavailable or video inaccessible`);
+          throw new Error(`Video transcript not found (404): ${data.reason || 'captions unavailable or video inaccessible'}`);
         }
-        throw new Error(`Worker returned ${response.status} for transcript fetch`);
+        throw new Error(`Failed to fetch transcript: ${data.reason || `HTTP ${response.status}`}`);
       }
 
-      const data = await response.json();
-
       if (!data.transcript || typeof data.transcript !== 'string') {
-        throw new Error('Worker returned invalid transcript format');
+        throw new Error('Transcript proxy returned invalid format');
       }
 
       return data.transcript;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
-      throw new Error(`Failed to fetch transcript: ${errorMsg}`);
+      throw new Error(`Transcript fetch failed: ${errorMsg}`);
     }
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error fetching transcript';
-    const fullError = new Error(`Failed to fetch transcript from Cloudflare Worker: ${errorMsg}`);
-    console.error('[fetchTranscript] CRITICAL:', fullError);
-    throw fullError;
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[fetchTranscript] CRITICAL:', errorMsg);
+    throw new Error(`Failed to fetch transcript: ${errorMsg}`);
   } finally {
-    // Guarantee timeout cleanup on both successful returns and unexpected exceptions
     clearTimeout(timeout);
   }
 }
