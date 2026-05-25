@@ -675,6 +675,44 @@ export async function POST(request: NextRequest) {
     // 8.5 Generate analysis ID (non-blocking, used for headers and background task)
     const analysisId = randomUUID();
 
+    // 8.6 CREATE EXPLICIT CONTEXT OBJECT (CRITICAL: Force context propagation into background task)
+    // Instead of relying on closure variable capture which can be lost, explicitly pass all required context
+    const backgroundContext = {
+      videoId: String(videoId),      // String coercion to guarantee non-undefined
+      userId: String(userId),        // String coercion to guarantee non-undefined
+      analysisId: String(analysisId),// String coercion to guarantee non-undefined
+      metadata: { ...metadata },     // Shallow copy to freeze metadata at this point in execution
+      transcript: transcript || '',   // Coerce null/undefined to empty string
+      finalPersona,
+      timezone,
+      transcriptWarning: transcriptWarning || undefined,
+      createdAtTimestamp: new Date().toISOString(), // Capture timestamp at context creation
+    };
+
+    // Verify context integrity before proceeding (fail-fast if critical fields missing)
+    if (!backgroundContext.videoId || backgroundContext.videoId === 'undefined') {
+      const errorCode = ERROR_CODES.DATABASE_ANALYSIS_INSERT_FAILED;
+      Sentry.captureMessage('CRITICAL: Context creation failed - videoId missing', {
+        level: 'error',
+        tags: { code: errorCode, operation: 'context-creation' },
+        contexts: {
+          background_context: {
+            videoId: backgroundContext.videoId,
+            userId: backgroundContext.userId,
+            analysisId: backgroundContext.analysisId,
+          }
+        }
+      });
+      console.error('CRITICAL_CONTEXT_FAILURE:', { backgroundContext, videoId, analysisId });
+      throw new Error('Failed to create background context - videoId missing at context creation');
+    }
+
+    console.log('[analyses] 8.6 Background context created and verified', {
+      videoId: backgroundContext.videoId,
+      userId: backgroundContext.userId,
+      analysisId: backgroundContext.analysisId
+    });
+
     // 9. Return streaming response with SSE normalization for Claude 4.5 compatibility
     // Transform raw OpenRouter stream to normalize Claude 4.5's delta format
     console.log('[analyses] 9. Setting up stream transformer for Claude 4.5 normalization', { videoId });
@@ -706,40 +744,44 @@ export async function POST(request: NextRequest) {
 
     // 10. Process blocking database inserts and stream parsing in background lifecycle
     after(async () => {
-      console.log('[analyses] 10. Background Task: Creating analysis record', { videoId, userId, analysisId });
+      // EXTRACT CONTEXT FROM PARAMETER INSTEAD OF CLOSURE (FORCE EXPLICIT PASSING)
+      const { videoId: ctxVideoId, userId: ctxUserId, analysisId: ctxAnalysisId, metadata: ctxMetadata } = backgroundContext;
+      console.log('[analyses] 10. Background Task: Creating analysis record (from explicit context)', { videoId: ctxVideoId, userId: ctxUserId, analysisId: ctxAnalysisId });
       try {
-        // PART 1: Critical field validation guards (10A)
+        // PART 1: Critical field validation guards (10A) - using explicit context variables
         const missingFields: string[] = [];
-        if (!videoId || videoId === undefined) missingFields.push('videoId');
-        if (!userId || userId === undefined) missingFields.push('userId');
-        if (!analysisId || analysisId === undefined) missingFields.push('analysisId');
+        if (!ctxVideoId || ctxVideoId === 'undefined') missingFields.push('videoId');
+        if (!ctxUserId || ctxUserId === 'undefined') missingFields.push('userId');
+        if (!ctxAnalysisId || ctxAnalysisId === 'undefined') missingFields.push('analysisId');
 
         if (missingFields.length > 0) {
           console.error('FORENSIC_CRITICAL_MISSING_FIELDS:', {
             timestamp: new Date().toISOString(),
             missingFields,
-            analysisId: String(analysisId),
-            videoId: String(videoId),
-            userId: String(userId),
-            metadata: JSON.stringify(metadata || {}),
+            analysisId: ctxAnalysisId,
+            videoId: ctxVideoId,
+            userId: ctxUserId,
+            metadata: JSON.stringify(ctxMetadata || {}),
+            contextObjectFull: JSON.stringify(backgroundContext, null, 2),
           });
 
           Sentry.withScope((scope) => {
             scope.setTag('operation', 'database-analysis-insert');
             scope.setTag('missingFieldCount', String(missingFields.length));
-            scope.setContext('missing_fields', { fields: missingFields, analysisId, videoId, userId });
+            scope.setContext('missing_fields', { fields: missingFields, analysisId: ctxAnalysisId, videoId: ctxVideoId, userId: ctxUserId });
+            scope.setContext('background_context', backgroundContext);
             Sentry.captureMessage('Critical database insert fields missing', 'error');
           });
 
-          throw new Error(`Cannot insert analysis: missing fields [${missingFields.join(', ')}]`);
+          throw new Error(`Cannot insert analysis: missing fields [${missingFields.join(', ')}]. Context: ${JSON.stringify({ ctxVideoId, ctxUserId, ctxAnalysisId })}`);
         }
 
-        // PART 2: Forensic payload logging (10B) - BEFORE insert attempt
+        // PART 2: Forensic payload logging (10B) - BEFORE insert attempt (using explicit context)
         const analysisInsertPayload = {
-          id: analysisId,
-          video_id: videoId,
-          user_id: userId,
-          title: metadata.title,
+          id: ctxAnalysisId,
+          video_id: ctxVideoId,
+          user_id: ctxUserId,
+          title: ctxMetadata?.title,
           analysis_markdown: '',
           model_attempted: 'anthropic/claude-haiku-4.5',
           model_used: 'anthropic/claude-haiku-4.5',
@@ -755,24 +797,31 @@ export async function POST(request: NextRequest) {
 
         console.log('FORENSIC_ANALYSIS_INSERT_PAYLOAD:', {
           timestamp: new Date().toISOString(),
-          analysisId: String(analysisId),
-          videoId: String(videoId),
-          userId: String(userId),
-          metadataTitle: String(metadata?.title || 'MISSING'),
+          analysisId: ctxAnalysisId,
+          videoId: ctxVideoId,
+          userId: ctxUserId,
+          metadataTitle: String(ctxMetadata?.title || 'MISSING'),
           nullOrUndefinedFields: nullFields.length > 0 ? nullFields : 'NONE',
           fullPayload: JSON.stringify(analysisInsertPayload, null, 2),
           payloadFieldTypes: Object.entries(analysisInsertPayload).reduce((acc: Record<string, any>, [k, v]) => {
             acc[k] = { value: String(v), type: typeof v, isNull: v === null, isUndefined: v === undefined };
             return acc;
           }, {} as Record<string, any>),
+          contextSourceVerification: {
+            ctxVideoId,
+            ctxUserId,
+            ctxAnalysisId,
+            contextCreatedAt: backgroundContext.createdAtTimestamp,
+          },
         });
 
         if (nullFields.length > 0) {
-          console.warn('FORENSIC_WARNING: Null/undefined fields detected in payload before insert', { nullFields, analysisId });
+          console.warn('FORENSIC_WARNING: Null/undefined fields detected in payload before insert', { nullFields, analysisId: ctxAnalysisId });
           Sentry.withScope((scope) => {
             scope.setTag('operation', 'database-analysis-insert');
             scope.setTag('nullFieldCount', String(nullFields.length));
             scope.setContext('null_fields', { fields: nullFields, payload: analysisInsertPayload });
+            scope.setContext('context_source', { ctxVideoId, ctxUserId, ctxAnalysisId });
             Sentry.captureMessage('Database insert contains null fields', 'warning');
           });
         }
@@ -822,9 +871,16 @@ export async function POST(request: NextRequest) {
         console.error('DB_INSERT_FAILURE:', util.inspect(insertErr, { depth: null }));
         console.error('FORENSIC_ERROR_SERIALIZATION:', {
           timestamp: new Date().toISOString(),
-          analysisId,
-          videoId,
-          userId,
+          analysisId: ctxAnalysisId,
+          videoId: ctxVideoId,
+          userId: ctxUserId,
+          contextVerification: {
+            ctxVideoId,
+            ctxUserId,
+            ctxAnalysisId,
+            backgroundContextExists: !!backgroundContext,
+            contextCreatedAt: backgroundContext?.createdAtTimestamp,
+          },
           errorSerialization,
         });
 
@@ -838,20 +894,26 @@ export async function POST(request: NextRequest) {
           contexts: {
             database: {
               operation: 'background-analysis-insert',
-              analysisId,
-              videoId,
-              userId,
+              analysisId: ctxAnalysisId,
+              videoId: ctxVideoId,
+              userId: ctxUserId,
               error: errorSerialization,
+            },
+            explicit_context: {
+              ctxVideoId,
+              ctxUserId,
+              ctxAnalysisId,
+              contextCreatedAt: backgroundContext?.createdAtTimestamp,
             },
           },
           level: 'error',
         });
 
-        console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId });
-        addBreadcrumb('Background analysis record creation failed after retries', { analysisId, errorCode: errorSerialization.code }, 'database');
+        console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId: ctxAnalysisId });
+        addBreadcrumb('Background analysis record creation failed after retries', { analysisId: ctxAnalysisId, errorCode: errorSerialization.code }, 'database');
       }
 
-      console.log('[analyses] 11. Background Task: Collecting markdown and publishing validation', { videoId, analysisId });
+      console.log('[analyses] 11. Background Task: Collecting markdown and publishing validation (from explicit context)', { videoId: ctxVideoId, analysisId: ctxAnalysisId });
       try {
         const reader = processorStream.getReader();
         const decoder = new TextDecoder();
@@ -885,49 +947,66 @@ export async function POST(request: NextRequest) {
               const { error } = await supabase
                 .from('analyses')
                 .update({ analysis_markdown: markdown, updated_at: new Date().toISOString() })
-                .eq('id', analysisId);
+                .eq('id', ctxAnalysisId);
               if (error) throw error;
             },
-            { analysisId }
+            { analysisId: ctxAnalysisId }
           ),
           'database-analysis-update',
           3
         );
 
-        // Publish to QStash for validation (only if transcript available)
-        if (transcript && transcript.length > 0) {
+        // Publish to QStash for validation (only if transcript available) - using explicit context
+        if (backgroundContext.transcript && backgroundContext.transcript.length > 0) {
           await publishValidationTask({
-            videoId,
+            videoId: ctxVideoId,
             markdown,
-            filename: `${videoId}.md`,
-            userId: userId || 'anonymous',
-            analysisId,
+            filename: `${ctxVideoId}.md`,
+            userId: ctxUserId || 'anonymous',
+            analysisId: ctxAnalysisId,
             metadata: {
-              title: metadata.title,
-              channelTitle: metadata.channelTitle,
-              duration: metadata.duration
+              title: ctxMetadata?.title,
+              channelTitle: ctxMetadata?.channelTitle,
+              duration: ctxMetadata?.duration
             }
           });
         } else {
-          console.info('[analyses] 11. Skipping QStash validation - no transcript available', { videoId, analysisId });
+          console.info('[analyses] 11. Skipping QStash validation - no transcript available', { videoId: ctxVideoId, analysisId: ctxAnalysisId });
         }
 
-        // Trigger PDF generation for PRO users after analysis completes
+        // Trigger PDF generation for PRO users after analysis completes - using explicit context
         if (userTierAuth === 'pro') {
-          console.log('[analyses] 12. Triggering PDF generation for PRO user', { analysisId, userId });
-          const pdfQueued = await publishPdfToQStash(markdown, metadata, videoId, analysisId);
+          console.log('[analyses] 12. Triggering PDF generation for PRO user', { analysisId: ctxAnalysisId, userId: ctxUserId });
+          const pdfQueued = await publishPdfToQStash(
+            markdown,
+            { title: ctxMetadata?.title || 'Analysis', duration: ctxMetadata?.duration },
+            ctxVideoId,
+            ctxAnalysisId
+          );
           if (!pdfQueued) {
-            console.warn('[analyses] PDF generation queue failed (non-blocking)', { analysisId });
+            console.warn('[analyses] PDF generation queue failed (non-blocking)', { analysisId: ctxAnalysisId });
           }
         }
       } catch (bgErr) {
         const errorCode = ERROR_CODES.ANALYSIS_STREAMING_FAILED;
         Sentry.captureException(bgErr, {
           tags: { operation: 'background-stream-processing', code: errorCode },
-          contexts: { database: { operation: 'background-stream-processing', analysisId, videoId, userId } }
+          contexts: {
+            database: {
+              operation: 'background-stream-processing',
+              analysisId: ctxAnalysisId,
+              videoId: ctxVideoId,
+              userId: ctxUserId
+            },
+            explicit_context: {
+              ctxVideoId,
+              ctxUserId,
+              ctxAnalysisId,
+            }
+          }
         });
-        console.error(`[analyses] Background processing failed [${errorCode}]`, { analysisId, error: String(bgErr) });
-        addBreadcrumb('Background stream processing failed', { analysisId }, 'database');
+        console.error(`[analyses] Background processing failed [${errorCode}]`, { analysisId: ctxAnalysisId, error: String(bgErr) });
+        addBreadcrumb('Background stream processing failed', { analysisId: ctxAnalysisId }, 'database');
       }
     });
 
