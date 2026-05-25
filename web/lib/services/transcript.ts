@@ -27,6 +27,8 @@ export async function fetchTranscript(videoId: string): Promise<string> {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const transcriptProxyUrl = `${baseUrl}/api/transcript-proxy`;
 
+    console.log(`[TranscriptAdapter] Targeting URL: ${transcriptProxyUrl}`);
+
     try {
       const response = await fetch(transcriptProxyUrl, {
         method: 'POST',
