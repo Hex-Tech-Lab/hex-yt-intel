@@ -728,13 +728,15 @@ export async function POST(request: NextRequest) {
         // No additional increment needed here
       } catch (insertErr) {
         const errorCode = ERROR_CODES.DATABASE_ANALYSIS_INSERT_FAILED;
-        const errorDetails = JSON.stringify(insertErr, Object.getOwnPropertyNames(insertErr), 2);
-        console.error('DB_INSERT_FAILURE:', errorDetails);
+        const errorMsg = (insertErr as Error).message;
+        const errorStack = (insertErr as Error).stack;
+        console.error('DB_INSERT_FAILURE: Msg:', errorMsg);
+        console.error('DB_INSERT_FAILURE: Stack:', errorStack);
         Sentry.captureException(insertErr, {
           tags: { operation: 'background-analysis-insert', code: errorCode },
-          contexts: { database: { operation: 'background-analysis-insert', analysisId, videoId, userId, errorDetails } }
+          contexts: { database: { operation: 'background-analysis-insert', analysisId, videoId, userId, errorMsg, errorStack } }
         });
-        console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId, error: errorDetails });
+        console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId, errorMsg });
         addBreadcrumb('Background analysis record creation failed after retries', { analysisId }, 'database');
       }
 
