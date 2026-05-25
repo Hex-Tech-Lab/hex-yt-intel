@@ -27,6 +27,8 @@ export interface TranscriptResponse {
 export async function fetchSubtitles(videoId: string): Promise<TranscriptResponse> {
   const apiKey = env.decodoApiKey;
 
+  console.log(`[DecodoAdapter] API key configured: ${apiKey ? 'yes' : 'no'}`);
+
   // Return early if API key not configured
   if (!apiKey) {
     return {
