@@ -567,70 +567,34 @@ export async function POST(request: NextRequest) {
     console.log('[analyses] 6. Metadata fetched', { videoId, title: metadata.title, channelTitle: metadata.channelTitle });
     addBreadcrumb('Metadata fetched from worker', { videoId, title: metadata.title });
 
-    // Handle transcript result (mandatory - fail if unavailable)
+    // Handle transcript result (optional - continue analysis with metadata only if unavailable)
+    let transcriptWarning: string | undefined;
     if (transcriptResult.status === 'rejected') {
-      // Rollback quota increment since analysis cannot proceed without transcript
-      const { error: decrementError } = await supabase
-        .rpc('decrement_user_quota', { p_user_id: userId, p_decrement: 1 })
-        .maybeSingle();
-      if (decrementError) {
-        console.error('[analyses] Failed to decrement quota on transcript fetch failure', { userId, error: decrementError });
-        Sentry.captureException(decrementError, { tags: { operation: 'decrement_user_quota_on_transcript_failure' } });
-      }
-
       const errorCode = ERROR_CODES.CLOUDFLARE_TRANSCRIPT_NOT_FOUND;
-      Sentry.captureMessage('Transcript required but unavailable for video', {
-        level: 'warning',
+      const reason = String(transcriptResult.reason);
+      console.warn(`[analyses] 6. Transcript fetch failed [${errorCode}] (optional, continuing with metadata only)`, { videoId, error: reason });
+      Sentry.captureMessage('Transcript unavailable for video - proceeding with metadata analysis', {
+        level: 'info',
         tags: { service: 'cloudflare-worker', operation: 'fetch-transcript', code: errorCode },
-        contexts: { worker: { service: 'cloudflare-worker', operation: 'fetch-transcript', videoId }, video: { videoId } }
+        contexts: { video: { videoId }, transcript: { reason } }
       });
-      console.warn(`[analyses] 6. Transcript fetch failed [${errorCode}] (mandatory, rejecting analysis)`, { videoId, error: String(transcriptResult.reason) });
-      addBreadcrumb('Transcript unavailable - analysis rejected', { videoId, error: String(transcriptResult.reason) }, 'external_service');
-      return NextResponse.json(
-        {
-          error: 'Video transcript required for analysis',
-          code: errorCode,
-          videoId,
-          message: 'Captions are required but unavailable for this video. Try another video with captions enabled.'
-        },
-        { status: 422 }
-      );
-    }
+      addBreadcrumb('Transcript unavailable - continuing with metadata only', { videoId, error: reason }, 'external_service');
+      transcript = '';
+      transcriptWarning = 'Captions unavailable for this video - analysis based on metadata only.';
+    } else {
+      transcript = transcriptResult.value;
 
-    transcript = transcriptResult.value;
-
-    // Guard: Validate transcript is not empty (prevent empty token arrays reaching embedding engine)
-    if (!transcript || transcript.trim().length === 0) {
-      const errorCode = ERROR_CODES.CLOUDFLARE_TRANSCRIPT_NOT_FOUND;
-      Sentry.captureMessage('Transcript received but empty - rejecting analysis', {
-        level: 'warning',
-        tags: { service: 'cloudflare-worker', code: errorCode },
-        contexts: { transcript: { length: transcript?.length || 0, videoId } }
-      });
-      console.warn(`[analyses] 6. Transcript empty validation guard [${errorCode}]`, { videoId, transcriptLength: transcript?.length || 0 });
-      addBreadcrumb('Empty transcript rejected', { videoId }, 'validation');
-
-      // Rollback quota on empty transcript
-      const { error: decrementError } = await supabase
-        .rpc('decrement_user_quota', { p_user_id: userId, p_decrement: 1 })
-        .maybeSingle();
-      if (decrementError) {
-        console.error('[analyses] Failed to decrement quota on empty transcript', { userId, error: decrementError });
+      // Guard: Handle empty transcript gracefully (continue with metadata only)
+      if (!transcript || transcript.trim().length === 0) {
+        console.info(`[analyses] 6. Transcript empty - continuing with metadata only`, { videoId, transcriptLength: transcript?.length || 0 });
+        addBreadcrumb('Empty transcript - continuing with metadata only', { videoId }, 'validation');
+        transcript = '';
+        transcriptWarning = 'No captions found - analysis based on metadata only.';
+      } else {
+        console.log('[analyses] 6. Transcript fetched and validated (parallel)', { videoId, length: transcript.length });
+        addBreadcrumb('Transcript fetched and validated from worker', { videoId, length: transcript.length });
       }
-
-      return NextResponse.json(
-        {
-          error: 'Video transcript is empty or invalid',
-          code: errorCode,
-          videoId,
-          message: 'The video has captions but they appear to be empty. Try another video.'
-        },
-        { status: 422 }
-      );
     }
-
-    console.log('[analyses] 6. Transcript fetched and validated (parallel)', { videoId, length: transcript.length });
-    addBreadcrumb('Transcript fetched and validated from worker', { videoId, length: transcript.length });
 
     // 6.5 Persona selection (explicit param overrides auto-detection)
     if (!selectedPersona) {
@@ -707,18 +671,24 @@ export async function POST(request: NextRequest) {
     const [clientStream, processorStream] = transformedStream.tee();
 
     // Inject persona header and wrap stream in response
+    const streamHeaders: Record<string, string> = {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Pragma': 'no-cache',
+      'X-Active-Persona': finalPersona,
+      'X-Persona-Config': JSON.stringify(personaConfig),
+      'X-Analysis-Id': analysisId,
+      'X-Title': encodeURIComponent(metadata.title || 'Analysis Result'),
+    };
+
+    if (transcriptWarning) {
+      streamHeaders['X-Transcript-Warning'] = transcriptWarning;
+    }
+
     const streamResponse = new Response(clientStream, {
-      headers: {
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-        'Connection': 'keep-alive',
-        'X-Accel-Buffering': 'no',
-        'Pragma': 'no-cache',
-        'X-Active-Persona': finalPersona,
-        'X-Persona-Config': JSON.stringify(personaConfig),
-        'X-Analysis-Id': analysisId,
-        'X-Title': encodeURIComponent(metadata.title || 'Analysis Result'),
-      },
+      headers: streamHeaders,
     });
 
     // 10. Process blocking database inserts and stream parsing in background lifecycle
