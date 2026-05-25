@@ -18,7 +18,7 @@ import {
   setUserContext
 } from '@/lib/monitoring/sentry-utils';
 import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
-import { fetchTranscript } from '@/lib/services/transcript';
+import { fetchSubtitles, type TranscriptResponse } from '@/lib/services/decodo';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
 import { publishValidationTask } from '@/lib/qstash-client';
 import { parseSSELine } from '@/lib/streaming/decoder';
@@ -532,9 +532,9 @@ export async function POST(request: NextRequest) {
         { videoId }
       ),
       trackExternalCall(
-        'cloudflare-worker',
+        'decodo-api',
         'fetch-transcript',
-        () => fetchTranscript(videoId),
+        () => fetchSubtitles(videoId),
         { videoId }
       ),
     ]);
@@ -575,24 +575,36 @@ export async function POST(request: NextRequest) {
       console.warn(`[analyses] 6. Transcript fetch failed [${errorCode}] (optional, continuing with metadata only)`, { videoId, error: reason });
       Sentry.captureMessage('Transcript unavailable for video - proceeding with metadata analysis', {
         level: 'info',
-        tags: { service: 'cloudflare-worker', operation: 'fetch-transcript', code: errorCode },
+        tags: { service: 'decodo-api', operation: 'fetch-transcript', code: errorCode },
         contexts: { video: { videoId }, transcript: { reason } }
       });
       addBreadcrumb('Transcript unavailable - continuing with metadata only', { videoId, error: reason }, 'external_service');
       transcript = '';
       transcriptWarning = 'Captions unavailable for this video - analysis based on metadata only.';
     } else {
-      transcript = transcriptResult.value;
+      // Extract transcript from TranscriptResponse object
+      const transcriptResponse = transcriptResult.value as TranscriptResponse;
 
-      // Guard: Handle empty transcript gracefully (continue with metadata only)
-      if (!transcript || transcript.trim().length === 0) {
-        console.info(`[analyses] 6. Transcript empty - continuing with metadata only`, { videoId, transcriptLength: transcript?.length || 0 });
-        addBreadcrumb('Empty transcript - continuing with metadata only', { videoId }, 'validation');
+      if (!transcriptResponse.success) {
+        const errorCode = ERROR_CODES.CLOUDFLARE_TRANSCRIPT_NOT_FOUND;
+        const reason = transcriptResponse.reason || 'unknown_error';
+        console.warn(`[analyses] 6. Transcript API error [${errorCode}] (optional, continuing with metadata only)`, { videoId, error: reason });
+        addBreadcrumb('Transcript API error - continuing with metadata only', { videoId, error: reason }, 'external_service');
         transcript = '';
-        transcriptWarning = 'No captions found - analysis based on metadata only.';
+        transcriptWarning = 'Captions unavailable for this video - analysis based on metadata only.';
       } else {
-        console.log('[analyses] 6. Transcript fetched and validated (parallel)', { videoId, length: transcript.length });
-        addBreadcrumb('Transcript fetched and validated from worker', { videoId, length: transcript.length });
+        transcript = transcriptResponse.transcript || '';
+
+        // Guard: Handle empty transcript gracefully (continue with metadata only)
+        if (!transcript || transcript.trim().length === 0) {
+          console.info(`[analyses] 6. Transcript empty - continuing with metadata only`, { videoId, transcriptLength: transcript.length });
+          addBreadcrumb('Empty transcript - continuing with metadata only', { videoId }, 'validation');
+          transcript = '';
+          transcriptWarning = 'No captions found - analysis based on metadata only.';
+        } else {
+          console.log('[analyses] 6. Transcript fetched and validated (parallel)', { videoId, length: transcript.length });
+          addBreadcrumb('Transcript fetched and validated from worker', { videoId, length: transcript.length });
+        }
       }
     }
 
@@ -728,15 +740,13 @@ export async function POST(request: NextRequest) {
         // No additional increment needed here
       } catch (insertErr) {
         const errorCode = ERROR_CODES.DATABASE_ANALYSIS_INSERT_FAILED;
-        const errorMsg = (insertErr as Error).message;
-        const errorStack = (insertErr as Error).stack;
-        console.error('DB_INSERT_FAILURE: Msg:', errorMsg);
-        console.error('DB_INSERT_FAILURE: Stack:', errorStack);
+        const util = await import('util');
+        console.error('DB_INSERT_FAILURE:', util.inspect(insertErr, { depth: null }));
         Sentry.captureException(insertErr, {
           tags: { operation: 'background-analysis-insert', code: errorCode },
-          contexts: { database: { operation: 'background-analysis-insert', analysisId, videoId, userId, errorMsg, errorStack } }
+          contexts: { database: { operation: 'background-analysis-insert', analysisId, videoId, userId, error: String(insertErr) } }
         });
-        console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId, errorMsg });
+        console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId });
         addBreadcrumb('Background analysis record creation failed after retries', { analysisId }, 'database');
       }
 
