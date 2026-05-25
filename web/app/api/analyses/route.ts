@@ -728,7 +728,8 @@ export async function POST(request: NextRequest) {
         // No additional increment needed here
       } catch (insertErr) {
         const errorCode = ERROR_CODES.DATABASE_ANALYSIS_INSERT_FAILED;
-        const errorDetails = JSON.stringify(insertErr, Object.getOwnPropertyNames(insertErr));
+        const errorDetails = JSON.stringify(insertErr, Object.getOwnPropertyNames(insertErr), 2);
+        console.error('DB_INSERT_FAILURE:', errorDetails);
         Sentry.captureException(insertErr, {
           tags: { operation: 'background-analysis-insert', code: errorCode },
           contexts: { database: { operation: 'background-analysis-insert', analysisId, videoId, userId, errorDetails } }
