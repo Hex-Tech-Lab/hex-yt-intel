@@ -4,7 +4,6 @@ import { cors } from "hono/cors";
 type Env = {
   YOUTUBE_API_KEY: string;
   CLOUDFLARE_SECRET_TOKEN: string;
-  RESIDENTIAL_PROXY_URL?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -26,44 +25,6 @@ const USER_AGENTS = [
 
 const getRandomUserAgent = (): string => {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-};
-
-// Proxy routing adapter for residential proxy support
-const buildProxiedFetchInit = (
-  targetUrl: string,
-  proxyUrl: string | undefined,
-  signal: AbortSignal,
-): [string, RequestInit] => {
-  const headers = {
-    'User-Agent': getRandomUserAgent(),
-  };
-
-  // If no proxy configured, fetch directly from target URL
-  if (!proxyUrl) {
-    return [targetUrl, { signal, headers }];
-  }
-
-  // Validate proxy URL format before use
-  if (typeof proxyUrl !== 'string' || proxyUrl.length === 0) {
-    console.warn('[buildProxiedFetchInit] Invalid proxy URL: must be non-empty string');
-    return [targetUrl, { signal, headers }];
-  }
-
-  // Normalize proxy URL: prepend http:// if protocol is missing
-  let normalizedProxyUrl = proxyUrl;
-  if (!proxyUrl.startsWith('http://') && !proxyUrl.startsWith('https://')) {
-    // Assume http:// for credentials-based proxies (Bright Data format)
-    normalizedProxyUrl = `http://${proxyUrl}`;
-    console.debug(`[buildProxiedFetchInit] Normalized proxy URL format (added http:// prefix)`);
-  }
-
-  // Route through residential proxy endpoint
-  // For credential-based proxies, use HTTP proxy protocol (no query param needed)
-  // The proxy will handle routing to the target URL automatically via the HTTP_PROXY mechanism
-  const encodedTarget = encodeURIComponent(targetUrl);
-  const proxiedUrl = `${normalizedProxyUrl}?url=${encodedTarget}`;
-
-  return [proxiedUrl, { signal, headers }];
 };
 
 const corsMiddleware = (origin: string | undefined): boolean => {
@@ -304,13 +265,10 @@ app.post("/fetch-transcript", async (c) => {
     const transcriptController = new AbortController();
     const transcriptTimeout = setTimeout(() => transcriptController.abort(), 5000);
 
-    const [proxiedTranscriptUrl, transcriptInit] = buildProxiedFetchInit(
-      transcriptUrl,
-      c.env.RESIDENTIAL_PROXY_URL,
-      transcriptController.signal,
-    );
-
-    const transcriptResponse = await fetch(proxiedTranscriptUrl, transcriptInit);
+    const transcriptResponse = await fetch(transcriptUrl, {
+      signal: transcriptController.signal,
+      headers: { 'User-Agent': getRandomUserAgent() },
+    });
     clearTimeout(transcriptTimeout);
 
     if (!transcriptResponse.ok) {
