@@ -60,16 +60,19 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
 
+    const payload = {
+      video_id: videoId,
+      format: 'json',
+    };
+    console.log('[fetchSubtitles] DEBUG: Sending payload to Decodo:', JSON.stringify(payload));
+
     const response = await fetch('https://api.decodo.com/api/v1/youtube_subtitles', {
       method: 'POST',
       headers: {
         'Authorization': authHeader,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        video_id: videoId,
-        format: 'json',
-      }),
+      body: JSON.stringify(payload),
       signal: controller.signal,
     });
 
