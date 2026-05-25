@@ -258,8 +258,8 @@ export async function POST(request: NextRequest) {
       console.info('[analyses] Secure validation bypass detected', { userId, tier: userTierAuth });
     } else {
       // 1. Auth check (unified to Supabase client)
-      const supabase = await getSupabaseClientWithAuth();
-      const { data: { user } } = await supabase.auth.getUser();
+      const tempClient = await getSupabaseClientWithAuth();
+      const { data: { user } } = await tempClient.auth.getUser();
       userId = user?.id;
       if (!userId) {
         const errorCode = ERROR_CODES.AUTH_UNAUTHORIZED;
@@ -313,7 +313,8 @@ export async function POST(request: NextRequest) {
     }
     console.log('[analyses] 3. Rate limit check passed', { userId });
 
-    // 4. Supabase client (server-side)
+    // 4. Single Supabase client instance (reused throughout route for all database operations)
+    // DB-1 Optimization: Consolidate client instantiation to eliminate 50-150ms latency waste
     const supabase = await getSupabaseClientWithAuth();
 
     // 4.5 CACHE HIT CHECK: Query for existing analysis with this videoId
@@ -707,6 +708,75 @@ export async function POST(request: NextRequest) {
     after(async () => {
       console.log('[analyses] 10. Background Task: Creating analysis record', { videoId, userId, analysisId });
       try {
+        // PART 1: Critical field validation guards (10A)
+        const missingFields: string[] = [];
+        if (!videoId || videoId === undefined) missingFields.push('videoId');
+        if (!userId || userId === undefined) missingFields.push('userId');
+        if (!analysisId || analysisId === undefined) missingFields.push('analysisId');
+
+        if (missingFields.length > 0) {
+          console.error('FORENSIC_CRITICAL_MISSING_FIELDS:', {
+            timestamp: new Date().toISOString(),
+            missingFields,
+            analysisId: String(analysisId),
+            videoId: String(videoId),
+            userId: String(userId),
+            metadata: JSON.stringify(metadata || {}),
+          });
+
+          Sentry.withScope((scope) => {
+            scope.setTag('operation', 'database-analysis-insert');
+            scope.setTag('missingFieldCount', String(missingFields.length));
+            scope.setContext('missing_fields', { fields: missingFields, analysisId, videoId, userId });
+            Sentry.captureMessage('Critical database insert fields missing', 'error');
+          });
+
+          throw new Error(`Cannot insert analysis: missing fields [${missingFields.join(', ')}]`);
+        }
+
+        // PART 2: Forensic payload logging (10B) - BEFORE insert attempt
+        const analysisInsertPayload = {
+          id: analysisId,
+          video_id: videoId,
+          user_id: userId,
+          title: metadata.title,
+          analysis_markdown: '',
+          model_attempted: 'anthropic/claude-haiku-4.5',
+          model_used: 'anthropic/claude-haiku-4.5',
+          validation_report: null,
+          validation_passed: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        const nullFields = Object.entries(analysisInsertPayload)
+          .filter(([_, value]) => value === null || value === undefined)
+          .map(([key, value]) => ({ key, value, type: typeof value }));
+
+        console.log('FORENSIC_ANALYSIS_INSERT_PAYLOAD:', {
+          timestamp: new Date().toISOString(),
+          analysisId: String(analysisId),
+          videoId: String(videoId),
+          userId: String(userId),
+          metadataTitle: String(metadata?.title || 'MISSING'),
+          nullOrUndefinedFields: nullFields.length > 0 ? nullFields : 'NONE',
+          fullPayload: JSON.stringify(analysisInsertPayload, null, 2),
+          payloadFieldTypes: Object.entries(analysisInsertPayload).reduce((acc: Record<string, any>, [k, v]) => {
+            acc[k] = { value: String(v), type: typeof v, isNull: v === null, isUndefined: v === undefined };
+            return acc;
+          }, {} as Record<string, any>),
+        });
+
+        if (nullFields.length > 0) {
+          console.warn('FORENSIC_WARNING: Null/undefined fields detected in payload before insert', { nullFields, analysisId });
+          Sentry.withScope((scope) => {
+            scope.setTag('operation', 'database-analysis-insert');
+            scope.setTag('nullFieldCount', String(nullFields.length));
+            scope.setContext('null_fields', { fields: nullFields, payload: analysisInsertPayload });
+            Sentry.captureMessage('Database insert contains null fields', 'warning');
+          });
+        }
+
         const supabaseService = getSupabaseServiceClient();
         await retryWithBackoff(
           () => trackDatabaseQuery(
@@ -715,19 +785,7 @@ export async function POST(request: NextRequest) {
             async () => {
               const { error } = await supabaseService
                 .from('analyses')
-                .insert({
-                  id: analysisId,
-                  video_id: videoId,
-                  user_id: userId,
-                  title: metadata.title,
-                  analysis_markdown: '', // Will be populated after streaming
-                  model_attempted: 'anthropic/claude-haiku-4.5',
-                  model_used: 'anthropic/claude-haiku-4.5',
-                  validation_report: null,
-                  validation_passed: false,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                });
+                .insert(analysisInsertPayload);
               if (error) throw error;
             },
             { analysisId, videoId, userId }
@@ -741,13 +799,56 @@ export async function POST(request: NextRequest) {
       } catch (insertErr) {
         const errorCode = ERROR_CODES.DATABASE_ANALYSIS_INSERT_FAILED;
         const util = await import('util');
+
+        // PART 3: Enhanced error serialization (10C) - Replace String(insertErr)
+        const err = insertErr as unknown as Record<string, any>;
+        const errorSerialization = {
+          message: (err?.message as string) || 'Unknown database error',
+          code: (err?.code as string) || (err?.status as string) || 'UNKNOWN',
+          details: (err?.details as any) || null,
+          hint: (err?.hint as string) || null,
+          context: (err?.context as any) || null,
+          allProperties: Object.getOwnPropertyNames(err || {}).reduce((acc: Record<string, any>, prop: string) => {
+            try {
+              const val = err?.[prop];
+              acc[prop] = typeof val === 'string' ? val : util.inspect(val, { depth: 2 });
+            } catch (e) {
+              acc[prop] = '[Circular or Unserializable]';
+            }
+            return acc;
+          }, {}),
+        };
+
         console.error('DB_INSERT_FAILURE:', util.inspect(insertErr, { depth: null }));
-        Sentry.captureException(insertErr, {
-          tags: { operation: 'background-analysis-insert', code: errorCode },
-          contexts: { database: { operation: 'background-analysis-insert', analysisId, videoId, userId, error: String(insertErr) } }
+        console.error('FORENSIC_ERROR_SERIALIZATION:', {
+          timestamp: new Date().toISOString(),
+          analysisId,
+          videoId,
+          userId,
+          errorSerialization,
         });
+
+        Sentry.captureException(insertErr, {
+          tags: {
+            operation: 'background-analysis-insert',
+            code: errorCode,
+            errorCode: errorSerialization.code,
+            errorMessage: errorSerialization.message,
+          },
+          contexts: {
+            database: {
+              operation: 'background-analysis-insert',
+              analysisId,
+              videoId,
+              userId,
+              error: errorSerialization,
+            },
+          },
+          level: 'error',
+        });
+
         console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId });
-        addBreadcrumb('Background analysis record creation failed after retries', { analysisId }, 'database');
+        addBreadcrumb('Background analysis record creation failed after retries', { analysisId, errorCode: errorSerialization.code }, 'database');
       }
 
       console.log('[analyses] 11. Background Task: Collecting markdown and publishing validation', { videoId, analysisId });
