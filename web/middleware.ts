@@ -139,6 +139,7 @@ export async function middleware(request: NextRequest) {
     '/api/webhooks',       // Generic webhooks
     '/api/health',         // Health check endpoint
     '/api/metadata',       // Public video metadata endpoint
+    '/api/transcript-proxy', // Transcript proxy (diagnostic bypass for routing validation)
   ];
 
   if (publicRoutes.some(route => pathname.startsWith(route))) {
