@@ -61,8 +61,8 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
     const timeout = setTimeout(() => controller.abort(), 10000);
 
     const payload = {
-      video_id: videoId,
-      format: 'json',
+      target: 'youtube_subtitles',
+      query: videoId,
     };
     console.log('[fetchSubtitles] DEBUG: Sending payload to Decodo:', JSON.stringify(payload));
 
