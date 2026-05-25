@@ -728,11 +728,12 @@ export async function POST(request: NextRequest) {
         // No additional increment needed here
       } catch (insertErr) {
         const errorCode = ERROR_CODES.DATABASE_ANALYSIS_INSERT_FAILED;
+        const errorDetails = JSON.stringify(insertErr, Object.getOwnPropertyNames(insertErr));
         Sentry.captureException(insertErr, {
           tags: { operation: 'background-analysis-insert', code: errorCode },
-          contexts: { database: { operation: 'background-analysis-insert', analysisId, videoId, userId } }
+          contexts: { database: { operation: 'background-analysis-insert', analysisId, videoId, userId, errorDetails } }
         });
-        console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId, error: insertErr instanceof Error ? insertErr.message : JSON.stringify(insertErr) });
+        console.error(`[analyses] Failed to create analysis record in background after retries [${errorCode}]`, { analysisId, error: errorDetails });
         addBreadcrumb('Background analysis record creation failed after retries', { analysisId }, 'database');
       }
 
@@ -779,19 +780,23 @@ export async function POST(request: NextRequest) {
           3
         );
 
-        // Publish to QStash for validation
-        await publishValidationTask({
-          videoId,
-          markdown,
-          filename: `${videoId}.md`,
-          userId: userId || 'anonymous',
-          analysisId,
-          metadata: {
-            title: metadata.title,
-            channelTitle: metadata.channelTitle,
-            duration: metadata.duration
-          }
-        });
+        // Publish to QStash for validation (only if transcript available)
+        if (transcript && transcript.length > 0) {
+          await publishValidationTask({
+            videoId,
+            markdown,
+            filename: `${videoId}.md`,
+            userId: userId || 'anonymous',
+            analysisId,
+            metadata: {
+              title: metadata.title,
+              channelTitle: metadata.channelTitle,
+              duration: metadata.duration
+            }
+          });
+        } else {
+          console.info('[analyses] 11. Skipping QStash validation - no transcript available', { videoId, analysisId });
+        }
 
         // Trigger PDF generation for PRO users after analysis completes
         if (userTierAuth === 'pro') {
