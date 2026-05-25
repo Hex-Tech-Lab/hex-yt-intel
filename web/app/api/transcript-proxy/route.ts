@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId } from '@/lib/youtube';
 import { AnalysisCreateSchema } from '@/lib/schemas';
+import { env } from '@/lib/env';
 
 interface TranscriptProxyResponse {
   success: boolean;
@@ -24,6 +25,49 @@ const USER_AGENTS = [
 
 const getRandomUserAgent = (): string => {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]!;
+};
+
+/**
+ * Build proxied fetch URL and headers for residential proxy routing.
+ * Routes requests through Bright Data residential proxy to bypass YouTube bot detection.
+ */
+const buildProxiedFetchInit = (
+  targetUrl: string,
+  proxyUrl: string | undefined,
+  signal: AbortSignal,
+): [string, RequestInit] => {
+  const headers = {
+    'User-Agent': getRandomUserAgent(),
+  };
+
+  // If no proxy configured, fetch directly from target URL
+  if (!proxyUrl) {
+    console.warn('[buildProxiedFetchInit] No proxy URL configured, falling back to direct fetch');
+    return [targetUrl, { signal, headers }];
+  }
+
+  // Validate proxy URL format before use
+  if (typeof proxyUrl !== 'string' || proxyUrl.length === 0) {
+    console.warn('[buildProxiedFetchInit] Invalid proxy URL: must be non-empty string');
+    return [targetUrl, { signal, headers }];
+  }
+
+  // Normalize proxy URL: prepend http:// if protocol is missing
+  let normalizedProxyUrl = proxyUrl;
+  if (!proxyUrl.startsWith('http://') && !proxyUrl.startsWith('https://')) {
+    // Assume http:// for credentials-based proxies (Bright Data format)
+    normalizedProxyUrl = `http://${proxyUrl}`;
+    console.debug(`[buildProxiedFetchInit] Normalized proxy URL format (added http:// prefix)`);
+  }
+
+  // Route through residential proxy endpoint
+  // For credential-based proxies, use HTTP proxy protocol (no query param needed)
+  // The proxy will handle routing to the target URL automatically via the HTTP_PROXY mechanism
+  const encodedTarget = encodeURIComponent(targetUrl);
+  const proxiedUrl = `${normalizedProxyUrl}?url=${encodedTarget}`;
+  console.log(`[buildProxiedFetchInit] Routing through proxy: ${normalizedProxyUrl}`);
+
+  return [proxiedUrl, { signal, headers }];
 };
 
 /**
@@ -61,15 +105,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<Transcrip
 
     console.log(`[transcript-proxy] Fetching transcript for video ${videoId}`);
 
+    // Get residential proxy URL from environment
+    const proxyUrl = env.residentialProxyUrl;
+    console.log(`[transcript-proxy] Residential proxy configured: ${proxyUrl ? 'yes' : 'no'}`);
+
     // Fetch caption tracks metadata
     const metadataUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&type=list`;
     const metadataController = new AbortController();
     const metadataTimeout = setTimeout(() => metadataController.abort(), 5000);
 
-    const metadataResponse = await fetch(metadataUrl, {
-      signal: metadataController.signal,
-      headers: { 'User-Agent': getRandomUserAgent() },
-    });
+    const [proxiedMetadataUrl, metadataInit] = buildProxiedFetchInit(
+      metadataUrl,
+      proxyUrl,
+      metadataController.signal,
+    );
+
+    const metadataResponse = await fetch(proxiedMetadataUrl, metadataInit);
     clearTimeout(metadataTimeout);
 
     if (!metadataResponse.ok) {
@@ -116,10 +167,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<Transcrip
     const transcriptController = new AbortController();
     const transcriptTimeout = setTimeout(() => transcriptController.abort(), 5000);
 
-    const transcriptResponse = await fetch(transcriptUrl, {
-      signal: transcriptController.signal,
-      headers: { 'User-Agent': getRandomUserAgent() },
-    });
+    const [proxiedTranscriptUrl, transcriptInit] = buildProxiedFetchInit(
+      transcriptUrl,
+      proxyUrl,
+      transcriptController.signal,
+    );
+
+    const transcriptResponse = await fetch(proxiedTranscriptUrl, transcriptInit);
     clearTimeout(transcriptTimeout);
 
     if (!transcriptResponse.ok) {
