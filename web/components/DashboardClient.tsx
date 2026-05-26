@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
+import styles from '@/app/dashboard.module.css';
 
 const STORAGE_KEY = 'hex_intel_saved_input';
 
@@ -185,81 +183,83 @@ export function DashboardClient() {
   };
 
   return (
-    <div className="grid grid-cols-12 gap-4 h-[calc(100vh-120px)] px-4 py-4 overflow-hidden">
-      {/* LEFT PANEL: 70-75% width (cols 1-9) */}
-      <div className="col-span-9 flex flex-col overflow-hidden">
-        <Card className="flex-1 overflow-y-auto p-6 bg-gray-50 border border-gray-200">
+    <div className={styles.panelContainer}>
+      {/* LEFT PANEL: Synthesis Output */}
+      <div className={styles.panelLeft}>
+        <div className={styles.synthesisOutput}>
           {synthesis ? (
-            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-gray-800">
+            <>
               {synthesis}
-              {loading && <span className="text-blue-500 animate-pulse ml-1">▌</span>}
-            </div>
+              {loading && <span className={styles.loadingSpinner} />}
+            </>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              <p className="text-center">
+            <div className={styles.synthesisEmpty}>
+              <p>
                 {loading
                   ? 'Generating synthesis...'
                   : 'Paste a YouTube URL and click "Create Synthesis" to see output here'}
               </p>
             </div>
           )}
-        </Card>
+        </div>
 
-        {/* Export + Share buttons (below synthesis) */}
+        {/* Export + Share buttons */}
         {synthesis && analysisId && (
-          <div className="flex gap-2 mt-4">
-            <Button onClick={handleExport} variant="outline" className="flex-1">
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            <button
+              onClick={handleExport}
+              className={styles.buttonSecondary}
+              style={{ flex: 1 }}
+            >
               📥 Export PDF
-            </Button>
-            <Button onClick={handleShare} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+            </button>
+            <button
+              onClick={handleShare}
+              className={styles.buttonPrimary}
+              style={{ flex: 1 }}
+            >
               🔗 Share Link
-            </Button>
+            </button>
           </div>
         )}
       </div>
 
-      {/* RIGHT PANEL: 25-30% width (cols 10-12) */}
-      <div className="col-span-3 flex flex-col gap-4">
-        {/* URL Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Paste YouTube URL
-          </label>
-          <Input
+      {/* RIGHT PANEL: URL Input + Action Buttons */}
+      <div className={styles.panelRight}>
+        <div className={styles.inputGroup}>
+          <label className={styles.inputLabel}>Paste YouTube URL</label>
+          <input
             type="text"
             placeholder="https://youtube.com/watch?v=..."
             value={isMounted ? url : ''}
             onChange={handleUrlChange}
-            className="w-full"
+            className={styles.input}
           />
         </div>
 
-        {/* 3 Action Buttons (stack vertically) */}
-        <Button
+        <button
           onClick={handleFetch}
           disabled={loading || !url}
-          variant="outline"
-          className="w-full"
+          className={`${styles.button} ${styles.buttonSecondary}`}
         >
           {loading ? 'Loading...' : 'Fetch Metadata'}
-        </Button>
+        </button>
 
-        <Button
+        <button
           onClick={handleAnalyze}
           disabled={loading || !url}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          className={`${styles.button} ${styles.buttonPrimary}`}
         >
           {loading ? 'Analyzing...' : 'Create Synthesis'}
-        </Button>
+        </button>
 
-        <Button
+        <button
           onClick={handleSearch}
           disabled={loading || !url}
-          variant="outline"
-          className="w-full"
+          className={`${styles.button} ${styles.buttonSecondary}`}
         >
           Semantic Search
-        </Button>
+        </button>
       </div>
     </div>
   );
