@@ -1,0 +1,377 @@
+/* ─── Design Tokens (From ai-platform-interface-1-DESIGN) ─────────────── */
+:root {
+  --primary: #06B6D4;
+  --primary-dark: #0891b2;
+  --surface: #1A1F2B;
+  --surface-dark: #11141D;
+  --text-primary: #FFFFFF;
+  --text-secondary: #a1a5b1;
+  --border: #252A38;
+  --border-light: rgba(255, 255, 255, 0.05);
+  --background-dark: #000000;
+  --cyan-glow: rgba(6, 182, 212, 0.4);
+  --teal-glow: rgba(0, 184, 148, 0.3);
+}
+
+/* ─── Grid Container ─────────────────────────────────────────────────── */
+.gridContainer {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .gridContainer {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+/* Grid overlay border */
+.gridContainer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  z-index: 0;
+}
+
+/* ─── Card Base Styles ────────────────────────────────────────────────── */
+.card {
+  position: relative;
+  padding: 1px;
+  border-radius: 2rem;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%);
+  group: 1;
+  z-index: 1;
+}
+
+.card:hover {
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.2);
+}
+
+.cardInner {
+  background: var(--surface-dark);
+  width: 100%;
+  height: 100%;
+  border-radius: calc(2rem - 1px);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Card Grid Spans ────────────────────────────────────────────────── */
+.cardSpan2 {
+  grid-column: span 1;
+}
+
+.cardSpan4 {
+  grid-column: span 1;
+}
+
+.cardSpan3 {
+  grid-column: span 1;
+}
+
+.cardRowSpan2 {
+  grid-row: span 1;
+}
+
+@media (min-width: 768px) {
+  .cardSpan2 {
+    grid-column: span 2;
+  }
+
+  .cardSpan4 {
+    grid-column: span 4;
+  }
+
+  .cardSpan3 {
+    grid-column: span 3;
+  }
+
+  .cardRowSpan2 {
+    grid-row: span 2;
+  }
+}
+
+/* ─── Glowing Effects ────────────────────────────────────────────────── */
+.glowBase {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.glowPrimary {
+  background: var(--cyan-glow);
+  filter: blur(60px);
+}
+
+.glowSecondary {
+  background: rgba(255, 255, 255, 0.2);
+  filter: blur(30px);
+  mix-blend-mode: overlay;
+}
+
+.glowLarge {
+  width: 400px;
+  height: 300px;
+  filter: blur(80px);
+  background: rgba(6, 182, 212, 0.2);
+}
+
+.glowMedium {
+  width: 200px;
+  height: 200px;
+  filter: blur(60px);
+  background: rgba(0, 184, 148, 0.2);
+  mix-blend-mode: screen;
+}
+
+/* ─── Input & Form Styles ────────────────────────────────────────────── */
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.inputLabel {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: rgba(6, 182, 212, 0.1);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ─── Button Styles ──────────────────────────────────────────────────── */
+.button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.buttonPrimary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #000;
+}
+
+.buttonPrimary:hover {
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.4);
+  transform: translateY(-2px);
+}
+
+.buttonSecondary {
+  background: rgba(6, 182, 212, 0.1);
+  color: var(--primary);
+  border: 1px solid var(--border);
+}
+
+.buttonSecondary:hover {
+  background: rgba(6, 182, 212, 0.2);
+  border-color: var(--primary);
+}
+
+.buttonTertiary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.buttonTertiary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.buttonDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Layout Sections ────────────────────────────────────────────────── */
+.dashboardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.headerTitle {
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.headerSubtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.dashboardContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  overflow-y: auto;
+}
+
+/* ─── Panel Layout ────────────────────────────────────────────────────── */
+.panelContainer {
+  display: flex;
+  gap: 2rem;
+  min-height: calc(100vh - 200px);
+}
+
+.panelLeft {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.panelRight {
+  width: 300px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ─── Synthesis Output ───────────────────────────────────────────────── */
+.synthesisOutput {
+  background: var(--surface-dark);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 1.5rem;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-y: auto;
+  min-height: 300px;
+}
+
+.synthesisEmpty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+/* ─── Loading State ──────────────────────────────────────────────────── */
+.loadingSpinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(6, 182, 212, 0.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Responsive Adjustments ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .panelContainer {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .panelRight {
+    width: 100%;
+  }
+
+  .card {
+    padding: 1px;
+  }
+
+  .cardInner {
+    padding: 1.5rem;
+  }
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slideInRight {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(6, 182, 212, 0.6);
+  }
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
