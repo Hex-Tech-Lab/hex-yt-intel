@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en" class="antialiased selection:bg-white/20">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Horizon | Deep Data Orchestration</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f4f4f5',
+                            900: '#18181b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Iconify -->
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
+    <!-- Three.js for WebGL Background -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body class="bg-[#050507] text-brand-50 min-h-screen relative overflow-x-hidden font-sans">
+
+    <!-- 1. Background Overlays -->
+    <div class="fixed inset-0 -z-30 bg-black">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#050507_100%)] opacity-90 z-10"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-[#050507]/20 via-transparent to-[#050507] opacity-90 z-10"></div>
+    </div>
+
+    <!-- 2. WebGL Canvas Directive (Black Hole) -->
+    <canvas id="webgl-canvas" class="fixed inset-0 -z-20 pointer-events-none opacity-90 mix-blend-screen"></canvas>
+
+    <!-- 3. Diagonal Texture Directive -->
+    <div class="fixed inset-0 pointer-events-none -z-10 opacity-[0.02]" style="background-image: repeating-linear-gradient(45deg, #ffffff 0, #ffffff 1px, transparent 1px, transparent 12px);"></div>
+
+    <!-- 4. Framed Grid Layout Directive -->
+    <div class="fixed inset-3 md:inset-6 border border-white/5 pointer-events-none z-50">
+        <!-- L-Shaped Corner Brackets -->
+        <div class="absolute -top-[1px] -left-[1px] w-4 h-4 border-t border-l border-white/30"></div>
+        <div class="absolute -top-[1px] -right-[1px] w-4 h-4 border-t border-r border-white/30"></div>
+        <div class="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b border-l border-white/30"></div>
+        <div class="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-white/30"></div>
+        
+        <!-- Subtle Alignment Guide Lines -->
+        <div class="absolute top-1/2 left-0 w-2 h-[1px] bg-white/10"></div>
+        <div class="absolute top-1/2 right-0 w-2 h-[1px] bg-white/10"></div>
+        <div class="absolute bottom-0 left-1/2 w-[1px] h-2 bg-white/10"></div>
+    </div>
+
+    <!-- Main Content Application -->
+    <main class="relative min-h-screen flex flex-col justify-between px-6 py-10 md:px-16 md:py-16 z-10 max-w-[1920px] mx-auto w-full">
+        
+        <!-- Top Navigation -->
+        <nav class="flex items-center justify-between w-full z-20">
+            <!-- Logo -->
+            <div class="flex items-center gap-2.5 text-white cursor-pointer group">
+                <iconify-icon icon="solar:record-circle-linear" class="text-xl md:text-2xl text-white/80 group-hover:text-white transition-colors" stroke-width="1.5"></iconify-icon>
+                <span class="font-medium tracking-wide text-sm md:text-base">Event Horizon</span>
+            </div>
+            
+            <!-- Center Links -->
+            <div class="hidden md:flex items-center gap-10 text-sm text-white/60 font-medium bg-white/[0.02] border border-white/5 backdrop-blur-md px-8 py-2.5 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
+                <a href="#" class="text-white relative after:content-[''] after:absolute after:left-0 after:-bottom-1.5 after:w-full after:h-[1px] after:bg-white/80 transition-colors">Ecosystem</a>
+                <a href="#" class="hover:text-white transition-colors">Framework</a>
+                <a href="#" class="hover:text-white transition-colors">Analytics</a>
+                <a href="#" class="hover:text-white transition-colors">Network</a>
+            </div>
+            
+            <!-- Right Action (Enhanced Glass) -->
+            <div class="hidden md:block">
+                <a href="#" class="relative overflow-hidden text-sm font-medium text-white/90 hover:text-white transition-all px-5 py-2.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] group flex items-center gap-2">
+                    Access Terminal
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                    <iconify-icon icon="solar:arrow-right-linear" class="text-base opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"></iconify-icon>
+                </a>
+            </div>
+            <!-- Mobile Menu Icon -->
+            <div class="md:hidden text-white/80 cursor-pointer">
+                <iconify-icon icon="solar:hamburger-menu-linear" class="text-2xl"></iconify-icon>
+            </div>
+        </nav>
+
+        <!-- Bottom Content Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-8 items-end w-full pb-8 md:pb-12 mt-32 lg:mt-0">
+            
+            <!-- Left Side: Hero Copy -->
+            <div class="lg:col-span-6 xl:col-span-5 flex flex-col gap-6 md:gap-8">
+                <!-- Masked Reveal Header -->
+                <h1 class="reveal-text text-4xl md:text-5xl lg:text-6xl leading-[1.05] text-white font-light tracking-tighter">
+                    Orchestrate complex intelligence into singular points of truth.
+                </h1>
+                
+                <p class="text-white/60 text-sm md:text-base max-w-md font-medium leading-relaxed">
+                    Event Horizon ingests chaotic data streams across your entire ecosystem, utilizing gravity-defying algorithms to extract actionable insights from the noise.
+                </p>
+                
+                <div class="flex flex-wrap items-center gap-4 pt-2">
+                    <!-- Border Gradient Button Directive (Enhanced Glass) -->
+                    <div class="relative p-[1px] inline-flex group rounded-lg overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-white/30 via-white/5 to-white/30 group-hover:from-white/60 group-hover:via-white/20 group-hover:to-white/60 transition-all duration-500 rounded-lg"></div>
+                        <a href="#" class="relative bg-[#050507]/60 backdrop-blur-2xl px-6 py-3.5 text-xs md:text-sm font-medium text-white/90 group-hover:text-white transition-colors w-full flex items-center justify-center rounded-lg shadow-[inset_0_1px_2px_rgba(255,255,255,0.15)]">
+                            Initialize Singularity
+                        </a>
+                    </div>
+                    
+                    <a href="#" class="px-6 py-3.5 text-xs md:text-sm font-medium text-white/60 hover:text-white transition-colors border border-white/5 hover:border-white/15 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] backdrop-blur-md">
+                        View Architecture
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right Side: Quote Box (Enhanced Glass UI) -->
+            <div class="lg:col-span-5 xl:col-span-4 lg:col-start-8 xl:col-start-9 w-full">
+                <div class="relative p-8 border border-white/10 bg-white/[0.02] backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] rounded-2xl overflow-hidden group">
+                    <!-- Subtle Internal Highlight -->
+                    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-transparent pointer-events-none"></div>
+
+                    <!-- Corner Pluses matching structure but refined -->
+                    <span class="absolute top-2 left-2 text-white/30 text-xs font-mono group-hover:text-white/60 transition-colors">+</span>
+                    <span class="absolute top-2 right-2 text-white/30 text-xs font-mono group-hover:text-white/60 transition-colors">+</span>
+                    <span class="absolute bottom-2 left-2 text-white/30 text-xs font-mono group-hover:text-white/60 transition-colors">+</span>
+                    <span class="absolute bottom-2 right-2 text-white/30 text-xs font-mono group-hover:text-white/60 transition-colors">+</span>
+
+                    <p class="relative text-white/70 text-sm leading-relaxed font-medium mb-6 z-10">
+                        "Fragmented data without centralized gravity is merely entropy. <span class="text-white font-semibold shadow-white/20 drop-shadow-md">Cohesive, unified intelligence</span> forms the dense core around which forward-thinking organizations orbit."
+                    </p>
+                    
+                    <div class="relative flex items-center justify-end gap-3 text-right z-10">
+                        <div class="flex flex-col">
+                            <span class="text-xs text-white/90 font-medium">Dr. Elena Vance</span>
+                            <span class="text-xs text-white/40">Head of Systems, VoidCorp</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Interactions & WebGL Logic -->
+    <script>
+        // --- 1. Masked Word Reveal Logic (GSAP ScrollTrigger Directive) ---
+        document.addEventListener("DOMContentLoaded", (event) => {
+            gsap.registerPlugin(ScrollTrigger);
+
+            const revealElements = document.querySelectorAll('.reveal-text');
+            
+            revealElements.forEach(el => {
+                const text = el.innerText;
+                const words = text.split(' ');
+                el.innerHTML = ''; // Clear original
+                
+                words.forEach(word => {
+                    // Outer span for masking (overflow hidden)
+                    const wrapper = document.createElement('span');
+                    wrapper.className = 'inline-flex overflow-hidden pb-1 -mb-1 mr-[0.25em] align-top';
+                    
+                    // Inner span for animating
+                    const inner = document.createElement('span');
+                    inner.className = 'reveal-word inline-block translate-y-[110%] opacity-0';
+                    inner.innerText = word;
+                    
+                    wrapper.appendChild(inner);
+                    el.appendChild(wrapper);
+                });
+            });
+
+            // Animate on load/scroll
+            gsap.to('.reveal-word', {
+                scrollTrigger: {
+                    trigger: '.reveal-text',
+                    start: 'top 95%',
+                },
+                y: '0%',
+                opacity: 1,
+                duration: 1.2,
+                stagger: 0.04,
+                ease: 'power4.out',
+                delay: 0.2 // Slight delay for smooth initial load perception
+            });
+        });
+
+        // --- 2. WebGL Black Hole Animation Directive ---
+        const initWebGL = () => {
+            const canvas = document.getElementById('webgl-canvas');
+            const scene = new THREE.Scene();
+            
+            // Camera setup
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 4, 12);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer setup
+            const renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas, 
+                alpha: true, 
+                antialias: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Create Black Hole Accretion Disk
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 25000;
+            const posArray = new Float32Array(particlesCount * 3);
+            const colorArray = new Float32Array(particlesCount * 3);
+            const color = new THREE.Color();
+
+            for(let i = 0; i < particlesCount; i++) {
+                // Inner radius empty (event horizon), dense near edge, tapering off
+                const r = 2.5 + Math.pow(Math.random(), 2) * 12;
+                const theta = Math.random() * Math.PI * 2;
+                
+                // Thickness of the disk
+                const ySpread = Math.max(0, (1 - (r - 2.5) / 12)) * 1.5;
+                const y = (Math.random() - 0.5) * ySpread;
+
+                posArray[i*3] = Math.cos(theta) * r;
+                posArray[i*3+1] = y;
+                posArray[i*3+2] = Math.sin(theta) * r;
+
+                // Color gradient from center (hot blue/cyan) to edge (deep purple/black)
+                const t = Math.max(0, 1.0 - (r - 2.5) / 10);
+                color.setHSL(0.6 - t * 0.15, 0.9, 0.1 + t * 0.7); 
+                
+                colorArray[i*3] = color.r;
+                colorArray[i*3+1] = color.g;
+                colorArray[i*3+2] = color.b;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.04,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, material);
+            
+            // Tilt the accretion disk
+            particlesMesh.rotation.x = Math.PI * 0.15;
+            scene.add(particlesMesh);
+
+            // Animation Loop
+            let mouseX = 0;
+            let mouseY = 0;
+
+            document.addEventListener('mousemove', (event) => {
+                mouseX = (event.clientX / window.innerWidth) - 0.5;
+                mouseY = (event.clientY / window.innerHeight) - 0.5;
+            });
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+
+                // Swirl the disk
+                particlesMesh.rotation.y -= 0.0015;
+
+                // Subtle parallax and gravitational shift on mouse move
+                camera.position.x += (mouseX * 3 - camera.position.x) * 0.05;
+                camera.position.y += (-mouseY * 3 + 4 - camera.position.y) * 0.05;
+                camera.lookAt(0, 0, 0);
+
+                renderer.render(scene, camera);
+            };
+
+            animate();
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // Initialize WebGL
+        initWebGL();
+    </script>
+
+</body>
+</html>

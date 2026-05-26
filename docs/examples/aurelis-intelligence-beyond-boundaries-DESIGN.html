@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en" class="antialiased text-gray-200 bg-[#050505]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurelis - Intelligence Beyond Boundaries</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Inter:wght@200;300;400&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #080808;
+            color: #d1c8b8;
+            /* Hide scrollbar but allow scrolling if absolutely necessary on tiny devices, though layout is designed to fit */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body::-webkit-scrollbar {
+            display: none;
+        }
+        .font-serif { font-family: 'Cinzel', serif; }
+
+        /* Premium Gradient Border Utilities */
+        .border-gradient-mask {
+            position: relative;
+            background: linear-gradient(#080808, #080808) padding-box,
+                        linear-gradient(135deg, rgba(212, 175, 55, 0.4), rgba(255, 255, 255, 0.05)) border-box;
+            border: 1px solid transparent;
+        }
+        .border-gradient-mask-subtle {
+            position: relative;
+            background: linear-gradient(#080808, #080808) padding-box,
+                        linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.02)) border-box;
+            border: 1px solid transparent;
+        }
+
+        /* Tech Crosshairs */
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .crosshair::before { width: 10px; height: 1px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .crosshair::after { width: 1px; height: 10px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        /* Responsive Fallbacks for Large Screens (1024px+) */
+        @media (min-width: 1024px) {
+            /* Show navigation menu */
+            header nav { display: flex !important; }
+            /* Stack footer cards horizontally */
+            footer { flex-direction: row !important; }
+            footer > * { flex: 1 1 0% !important; }
+            /* Show left/right edge indicators */
+            main > div.hidden { display: flex !important; }
+            /* Right panel visibility */
+            main > div > div[class*="opacity-10"] { opacity: 1 !important; pointer-events: auto !important; }
+            /* Show hidden lg elements */
+            .lg\:block { display: block !important; }
+        }
+
+        /* Sparkline animation */
+        @keyframes spark {
+            0% { stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .spark-path {
+            stroke-dasharray: 100;
+            animation: spark 3s ease-in-out infinite alternate;
+        }
+    </style>
+</head>
+<body class="h-[100dvh] w-full overflow-hidden flex flex-col relative selection:bg-[#D4AF37] selection:text-black">
+    <!-- WebGL Background Container -->
+    <canvas id="webgl-canvas" class="absolute inset-0 w-full h-full z-0 pointer-events-none opacity-90"></canvas>
+
+    <!-- Technical Background Grid Lines (CSS) -->
+    <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-30">
+        <!-- Center glowing orb backing -->
+        <div class="absolute w-[40vw] h-[40vw] rounded-full bg-[#D4AF37] blur-[120px] opacity-10 mix-blend-screen mix-blend-color-dodge"></div>
+        <div class="absolute w-[60vw] h-[60vw] rounded-full bg-[#1a1712] blur-[80px] opacity-40"></div>
+        <!-- Large Circle -->
+        <div class="absolute w-[45vw] h-[45vw] rounded-full border border-white/5 gs-spin-slow"></div>
+        <!-- Vertical/Horizontal Axis -->
+        <div class="absolute w-full h-[1px] bg-white/5 top-1/2 -translate-y-1/2"></div>
+        <div class="absolute h-full w-[1px] bg-white/5 left-1/2 -translate-x-1/2"></div>
+        <!-- Target boxes -->
+        <div class="absolute top-[20%] left-[30%] w-16 h-16 border border-white/10 opacity-50">
+            <div class="absolute -top-1 -left-1 w-2 h-2 border-t border-l border-white/40"></div>
+        </div>
+        <div class="absolute bottom-[25%] right-[32%] w-24 h-24 border border-white/5 opacity-50">
+            <div class="absolute -bottom-1 -right-1 w-2 h-2 border-b border-r border-white/40"></div>
+        </div>
+    </div>
+
+    <!-- UI Overlay -->
+    <div class="relative z-10 flex flex-col h-full w-full">
+        <!-- Top Navigation -->
+        <header class="gs-reveal flex justify-between items-center px-6 lg:px-12 py-6 shrink-0">
+            <div class="flex items-center gap-4">
+                <iconify-icon icon="solar:sun-2-linear" class="text-xl text-[#D4AF37]"></iconify-icon>
+                <div class="font-light text-base tracking-[0.25em] uppercase text-white">Aurelis</div>
+            </div>
+            <nav class="hidden lg:flex items-center gap-12 absolute left-1/2 -translate-x-1/2">
+                <a href="#" class="text-xs tracking-widest text-gray-400 hover:text-white transition-colors uppercase">Solutions</a>
+                <a href="#" class="text-xs tracking-widest text-gray-400 hover:text-white transition-colors uppercase">Research</a>
+                <a href="#" class="text-xs tracking-widest text-gray-400 hover:text-white transition-colors uppercase">Industries</a>
+                <a href="#" class="text-xs tracking-widest text-gray-400 hover:text-white transition-colors uppercase">Company</a>
+                <a href="#" class="text-xs tracking-widest text-gray-400 hover:text-white transition-colors uppercase">Insights</a>
+            </nav>
+            <div class="flex items-center gap-8">
+                <a href="#" class="hidden lg:flex items-center gap-3 text-xs tracking-widest text-gray-300 hover:text-white transition-colors uppercase">
+                    Private Access
+                    <iconify-icon icon="solar:play-circle-linear" class="text-lg text-white/50"></iconify-icon>
+                </a>
+                <button class="w-8 h-4 flex flex-col justify-between items-end group">
+                    <span class="w-full h-[1px] bg-white group-hover:w-3/4 transition-all duration-300"></span>
+                    <span class="w-3/4 h-[1px] bg-white group-hover:w-full transition-all duration-300"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex relative w-full overflow-visible">
+            <!-- Left Edge Indicator -->
+            <div class="hidden lg:flex w-12 flex-col items-center justify-between pb-24 pt-12 border-r border-white/5 shrink-0 gs-reveal">
+                <div class="flex flex-col gap-4">
+                    <div class="w-1 h-1 rounded-full border border-white/20"></div>
+                    <div class="w-1 h-1 rounded-full bg-[#D4AF37]"></div>
+                    <div class="w-1 h-1 rounded-full border border-white/20"></div>
+                    <div class="w-1 h-1 rounded-full bg-[#D4AF37] opacity-50"></div>
+                </div>
+                <div class="flex flex-col items-center gap-4">
+                    <span class="text-[10px] tracking-[0.2em] text-gray-500 uppercase -rotate-90 whitespace-nowrap origin-center translate-y-12">Scroll to discover</span>
+                    <iconify-icon icon="solar:arrow-down-linear" class="text-gray-500 mt-24"></iconify-icon>
+                </div>
+            </div>
+
+            <!-- Hero Left Content -->
+            <div class="flex-1 flex flex-col justify-center px-8 lg:px-16 z-10 max-w-2xl gs-stagger">
+                <div class="text-xs tracking-widest uppercase text-[#D4AF37] mb-6 flex items-center gap-2">
+                    <span class="font-light">+</span> Aurelis AI
+                </div>
+                <h1 class="font-serif text-5xl md:text-6xl lg:text-[5rem] leading-[0.9] tracking-tighter text-[#EAE2D3] mb-8 w-[120%]">
+                    INTELLIGENCE<br>BEYOND<br>BOUNDARIES
+                </h1>
+                <p class="text-sm md:text-base text-gray-400 font-light max-w-sm mb-12 leading-relaxed">
+                    We build sovereign AI systems<br>
+                    that reason, adapt, and <em class="font-serif italic text-gray-300">elevate</em><br>
+                    what's possible.
+                </p>
+                <div class="flex flex-wrap items-center gap-8">
+                    <!-- Gradient Border Button -->
+                    <div class="border-gradient-mask inline-flex group cursor-pointer">
+                        <div class="px-8 py-4 flex items-center gap-4 text-xs tracking-widest uppercase text-white hover:text-[#D4AF37] transition-colors">
+                            Explore Solutions
+                            <iconify-icon icon="solar:arrow-right-up-linear" class="text-lg opacity-70 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all"></iconify-icon>
+                        </div>
+                    </div>
+                    <button class="flex items-center gap-3 text-xs tracking-widest uppercase text-gray-300 hover:text-white transition-colors group">
+                        Watch Manifesto
+                        <iconify-icon icon="solar:play-circle-linear" class="text-xl text-white/50 group-hover:text-white transition-colors"></iconify-icon>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tech Details (Bottom left of center visual) -->
+            <div class="absolute bottom-24 left-[35%] text-[10px] tracking-widest text-gray-500 uppercase leading-relaxed gs-reveal hidden xl:block">
+                Model A7<br>
+                Nexus Architecture<br>
+                Ver. 3.2.1
+            </div>
+
+            <!-- Right Data Panel -->
+            <div class="w-full lg:w-[28%] flex flex-col justify-center items-end px-8 lg:pr-16 z-10 absolute right-0 top-1/2 -translate-y-1/2 lg:relative lg:top-0 lg:translate-y-0 gs-reveal pointer-events-none lg:pointer-events-auto opacity-10 lg:opacity-100 mix-blend-screen lg:mix-blend-normal">
+                <!-- Glassy Tech Card -->
+                <div class="border-gradient-mask-subtle w-full max-w-[280px] rounded-3xl backdrop-blur-md bg-[#0a0a0a]/60 relative overflow-hidden">
+                    <!-- Corner marks -->
+                    <div class="absolute top-4 left-4 w-1 h-1 border-t border-l border-white/30"></div>
+                    <div class="absolute top-4 right-4 w-1 h-1 border-t border-r border-white/30"></div>
+                    <div class="absolute bottom-4 left-4 w-1 h-1 border-b border-l border-white/30"></div>
+                    <div class="absolute bottom-4 right-4 w-1 h-1 border-b border-r border-white/30"></div>
+                    <div class="absolute bottom-8 right-8 crosshair w-4 h-4 opacity-50"></div>
+
+                    <div class="p-8 flex flex-col gap-8">
+                        <div>
+                            <div class="text-[10px] tracking-widest text-gray-500 uppercase mb-4">System Status</div>
+                            <div class="text-xs tracking-wider text-gray-300 uppercase border-b border-white/10 pb-4 flex items-center justify-between">
+                                Nexus Core Online
+                                <div class="w-1.5 h-1.5 rounded-full bg-green-900 animate-pulse"></div>
+                            </div>
+                            <!-- Sparkline -->
+                            <div class="h-8 w-full mt-4 flex items-center">
+                                <svg width="100%" height="100%" viewBox="0 0 100 20" preserveAspectRatio="none">
+                                    <path d="M0,10 L10,12 L20,8 L30,15 L40,5 L50,12 L60,8 L70,18 L80,10 L90,14 L100,6" fill="none" stroke="rgba(212, 175, 55, 0.3)" stroke-width="1" class="spark-path"/>
+                                    <!-- Dots -->
+                                    <circle cx="40" cy="5" r="1.5" fill="#D4AF37" opacity="0.5"/>
+                                    <circle cx="70" cy="18" r="1.5" fill="#D4AF37" opacity="0.5"/>
+                                    <circle cx="100" cy="6" r="1.5" fill="#D4AF37"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] tracking-widest text-gray-500 uppercase mb-2">Learning Velocity</div>
+                            <div class="font-serif text-4xl tracking-tight text-[#EAE2D3] mb-1">2.4x</div>
+                            <div class="text-[9px] tracking-widest text-gray-600 uppercase">Vs. Baseline</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] tracking-widest text-gray-500 uppercase mb-2">Alignment</div>
+                            <div class="font-serif text-4xl tracking-tight text-[#EAE2D3] mb-1">99.7%</div>
+                            <div class="text-[9px] tracking-widest text-gray-600 uppercase flex items-center gap-2">Stable</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Edge Indicator -->
+            <div class="hidden lg:flex w-16 flex-col items-center pt-24 border-l border-white/5 shrink-0 relative gs-reveal">
+                <div class="absolute top-12 crosshair w-6 h-6 border border-white/10 rounded-full flex items-center justify-center">
+                    <div class="w-1 h-1 bg-[#D4AF37] rounded-full"></div>
+                </div>
+                <span class="text-[10px] tracking-[0.3em] text-gray-400 uppercase rotate-90 whitespace-nowrap origin-center mt-32">Ethical By Design</span>
+            </div>
+        </main>
+
+        <!-- Bottom Cards Section -->
+        <footer class="border-t border-white/10 flex flex-col lg:flex-row w-full shrink-0 bg-[#080808]/80 backdrop-blur-sm z-20 gs-reveal">
+            <!-- Card 1 -->
+            <div class="flex-1 border-b lg:border-b-0 lg:border-r border-white/5 p-6 lg:p-8 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors relative">
+                <div class="text-[10px] text-gray-600 mb-6 font-serif italic">01</div>
+                <div>
+                    <h3 class="text-xs tracking-widest uppercase text-gray-300 mb-3">Enterprise AI</h3>
+                    <p class="text-[11px] text-gray-500 font-light leading-relaxed max-w-[200px]">Custom AI systems designed for complex, high-stakes environments.</p>
+                </div>
+                <button class="absolute bottom-6 right-6 w-8 h-8 border border-white/10 flex items-center justify-center text-gray-500 group-hover:text-[#D4AF37] group-hover:border-[#D4AF37]/50 transition-colors">
+                    <iconify-icon icon="solar:add-linear"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="flex-1 border-b lg:border-b-0 lg:border-r border-white/5 p-6 lg:p-8 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors relative">
+                <div class="text-[10px] text-gray-600 mb-6 font-serif italic">02</div>
+                <div>
+                    <h3 class="text-xs tracking-widest uppercase text-gray-300 mb-3">Research Labs</h3>
+                    <p class="text-[11px] text-gray-500 font-light leading-relaxed max-w-[200px]">Pioneering the next frontier in reasoning, memory, and autonomous learning.</p>
+                </div>
+                <button class="absolute bottom-6 right-6 w-8 h-8 border border-white/10 flex items-center justify-center text-gray-500 group-hover:text-[#D4AF37] group-hover:border-[#D4AF37]/50 transition-colors">
+                    <iconify-icon icon="solar:add-linear"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="flex-1 border-b lg:border-b-0 lg:border-r border-white/5 p-6 lg:p-8 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors relative">
+                <div class="text-[10px] text-gray-600 mb-6 font-serif italic">03</div>
+                <div>
+                    <h3 class="text-xs tracking-widest uppercase text-gray-300 mb-3">Sovereign Infrastructure</h3>
+                    <p class="text-[11px] text-gray-500 font-light leading-relaxed max-w-[200px]">Secure, compliant, and fully sovereign deployment for modern enterprises.</p>
+                </div>
+                <button class="absolute bottom-6 right-6 w-8 h-8 border border-white/10 flex items-center justify-center text-gray-500 group-hover:text-[#D4AF37] group-hover:border-[#D4AF37]/50 transition-colors">
+                    <iconify-icon icon="solar:add-linear"></iconify-icon>
+                </button>
+            </div>
+
+            <!-- Card 4 (CTA) -->
+            <div class="flex-1 p-6 lg:p-8 flex items-center gap-6 group cursor-pointer bg-gradient-to-br from-transparent to-white/[0.01] hover:to-white/[0.03] transition-colors">
+                <div class="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center shrink-0 group-hover:border-[#D4AF37] transition-colors">
+                    <div class="w-2 h-2 rounded-full bg-white/20 group-hover:bg-[#D4AF37] transition-colors"></div>
+                </div>
+                <div>
+                    <h3 class="text-xs tracking-widest uppercase text-gray-300 mb-2">Built for Visionaries</h3>
+                    <p class="text-[11px] text-gray-500 font-light leading-relaxed">Partner with Aurelis to shape the future—responsibly.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- WebGL Background & Center Object (Three.js) ---
+        const initWebGL = () => {
+            const canvas = document.getElementById('webgl-canvas');
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            const scene = new THREE.Scene();
+            // Center camera to match layout focal point
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.z = 10;
+            camera.position.x = window.innerWidth > 1024 ? 1 : 0; // Shift right on desktop to align with empty space
+
+            // 1. Ambient Particles
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 1000;
+            const posArray = new Float32Array(particlesCount * 3);
+            for (let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 20;
+            }
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.02,
+                color: 0x888888,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+
+            // 2. Central Complex Geometry (Mimicking the reference rock)
+            // Using a TorusKnot to get a complex, twisted, self-shadowing organic shape
+            const geo = new THREE.TorusKnotGeometry(2.5, 0.8, 256, 64, 2, 3);
+            // Premium Dark Bronze/Gold Material
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0x2a2118, // Very dark brown base
+                metalness: 0.9,
+                roughness: 0.4,
+                wireframe: false,
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            // Position adjustment to center visually between text and cards
+            mesh.position.y = 0.5;
+            scene.add(mesh);
+
+            // 3. Lighting (Crucial for the premium dark look)
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xd4af37, 2); // Gold tint light
+            dirLight.position.set(-5, 5, 5);
+            scene.add(dirLight);
+            const pointLight = new THREE.PointLight(0xffffff, 1); // Edge rim light
+            pointLight.position.set(5, -5, -5);
+            scene.add(pointLight);
+
+            // Resize Handler
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.position.x = window.innerWidth > 1024 ? 1 : 0;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Animation Loop
+            const clock = new THREE.Clock();
+            const animate = () => {
+                requestAnimationFrame(animate);
+                const elapsedTime = clock.getElapsedTime();
+                // Slow rotation for ambient feel (no rapid spinning/floating)
+                mesh.rotation.y = elapsedTime * 0.05;
+                mesh.rotation.x = elapsedTime * 0.02;
+                // Subtle particle movement
+                particlesMesh.rotation.y = elapsedTime * 0.01;
+                renderer.render(scene, camera);
+            };
+            animate();
+        };
+
+        // --- GSAP Animations ---
+        const initAnimations = () => {
+            gsap.set(".gs-reveal", { opacity: 0, y: 20 });
+            gsap.set(".gs-stagger > *", { opacity: 0, y: 30 });
+            const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+            // Ensure fonts/WebGL are somewhat ready before flashing UI
+            setTimeout(() => {
+                // Header & Edges
+                tl.to("header.gs-reveal", { opacity: 1, y: 0, duration: 1 })
+                  .to(".gs-reveal.w-12, .gs-reveal.w-16", { opacity: 1, y: 0, duration: 1 }, "-=0.8")
+                  // Hero Content Stagger
+                  .to(".gs-stagger > *", { opacity: 1, y: 0, duration: 1, stagger: 0.15 }, "-=0.5")
+                  // Right Panel & Bottom Cards
+                  .to(".gs-reveal.absolute.right-0, .gs-reveal.absolute.bottom-24", { opacity: 1, y: 0, duration: 1 }, "-=0.6")
+                  .to("footer.gs-reveal", { opacity: 1, y: 0, duration: 1 }, "-=0.8");
+                // Continuous subtle CSS rotation for background elements
+                gsap.to(".gs-spin-slow", {
+                    rotation: 360,
+                    duration: 100,
+                    repeat: -1,
+                    ease: "none"
+                });
+            }, 100);
+        };
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Debug: Log viewport width and nav visibility
+            const nav = document.querySelector('header nav');
+            const footer = document.querySelector('footer');
+            console.log('Viewport Width:', window.innerWidth);
+            console.log('Nav Display:', window.getComputedStyle(nav).display);
+            console.log('Footer Display:', window.getComputedStyle(footer).display);
+            console.log('Footer Flex Direction:', window.getComputedStyle(footer).flexDirection);
+
+            initWebGL();
+            initAnimations();
+        });
+
+        // Monitor responsive changes on resize
+        window.addEventListener('resize', () => {
+            const nav = document.querySelector('header nav');
+            const footer = document.querySelector('footer');
+            console.log('Viewport Width:', window.innerWidth);
+            console.log('Nav Display:', window.getComputedStyle(nav).display);
+            console.log('Footer Flex Direction:', window.getComputedStyle(footer).flexDirection);
+        });
+    </script>
+</body>
+</html>
