@@ -1,94 +1,190 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import HomeContent from '@/components/organisms/HomeContent';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import HomeContent from '@/components/organisms/HomeContent';
+import styles from './page.module.css';
 
 function LandingPage() {
-  const [mounted, setMounted] = useState(false);
-  const [headerBlurred, setHeaderBlurred] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [scrollY, setScrollY] = useState(0);
   const [fadeInElements, setFadeInElements] = useState<Set<string>>(new Set());
 
+  // Hero light beam animation
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  useEffect(() => {
-    if (!mounted) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    const handleScroll = () => {
-      setHeaderBlurred(window.scrollY > 50);
+    let animationId: number | null = null;
+    let isVisible = false;
+    let frame = 0;
+
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = canvas.parentElement?.clientHeight || 600;
     };
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const id = entry.target.id;
-          setFadeInElements((prev) => new Set([...prev, id]));
-          observer.unobserve(entry.target);
+    const draw = () => {
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx!.clearRect(0, 0, W, H);
+
+      const centerX = W / 2;
+      const beamTop = 100;
+      const beamWidth = 400;
+      const beamHalfWidth = beamWidth / 2;
+      const isMobile = W < 900;
+      const beamHeight = isMobile ? 500 : 600;
+      const landingRadius = isMobile ? 250 : 350;
+
+      // Animated light beam
+      const gradient = ctx!.createRadialGradient(
+        centerX, beamTop, 80,
+        centerX, beamTop + 300, landingRadius
+      );
+
+      const pulse = Math.sin(frame * 0.02) * 0.2 + 0.8;
+
+      gradient.addColorStop(0, `rgba(61, 127, 255, ${0.4 * pulse})`);
+      gradient.addColorStop(0.3, `rgba(61, 127, 255, ${0.15 * pulse})`);
+      gradient.addColorStop(0.6, `rgba(61, 127, 255, ${0.05 * pulse})`);
+      gradient.addColorStop(1, 'rgba(61, 127, 255, 0)');
+
+      ctx!.fillStyle = gradient;
+      ctx!.fillRect(centerX - beamHalfWidth, beamTop, beamWidth, beamHeight);
+
+      frame++;
+    };
+
+    const scheduleFrame = () => {
+      if (!isVisible) {
+        animationId = null;
+        return;
+      }
+      draw();
+      animationId = requestAnimationFrame(scheduleFrame);
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        const wasVisible = isVisible;
+        isVisible = entry.isIntersecting;
+        if (!wasVisible && isVisible && !animationId) {
+          scheduleFrame();
         }
-      });
-    }, { threshold: 0.1 });
+      },
+      { threshold: 0.01 }
+    );
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    observer.observe(canvas);
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      observer.disconnect();
+      if (animationId) cancelAnimationFrame(animationId);
+    };
+  }, []);
+
+  // Scroll handler for header effects
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Fade-in observer for sections
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            setFadeInElements((prev) => new Set([...prev, id]));
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
 
     document.querySelectorAll('[data-fade-in]').forEach((el) => {
       if (el.id) observer.observe(el);
     });
 
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      observer.disconnect();
-    };
-  }, [mounted]);
-
-  if (!mounted) return null;
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+    <div style={{ minHeight: '100vh', background: 'var(--grey-1)', color: '#fff', overflowX: 'hidden' }}>
+      {/* Hero Canvas Background */}
+      <canvas
+        ref={canvasRef}
+        className={styles.heroLightCanvas}
+      />
+
       {/* Header */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 px-6 transition-all duration-300 border-b border-cyan-500/10 ${
-          headerBlurred ? 'bg-black/80 backdrop-blur-md' : 'bg-transparent'
-        }`}
+        className={styles.header}
+        style={{
+          background: scrollY > 50 ? 'rgba(9, 10, 12, 0.8)' : 'transparent',
+          backdropFilter: scrollY > 50 ? 'blur(12px)' : 'none',
+          borderBottom: scrollY > 50 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+        }}
       >
-        <div className="max-w-7xl mx-auto h-16 flex items-center justify-between gap-8">
+        <div className={styles.headerInner}>
           {/* Logo */}
-          <div className="flex items-center gap-3 font-semibold text-cyan-500 flex-shrink-0">
-            <div className="w-6 h-6 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-sm" />
-            <span className="text-sm">hex-yt-intel</span>
+          <div className={styles.logo} style={{ color: '#fff' }}>
+            <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg, #3d7eff, #3d7eff)', borderRadius: '8px' }} />
+            <span>hex-yt-intel</span>
           </div>
 
           {/* Nav */}
-          <nav className="flex items-center gap-1 flex-1">
+          <nav className={styles.nav}>
             <a
               href="#"
               onClick={() => (window.location.href = '/dashboard')}
-              className="px-3 py-1.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              className={styles.navItem}
             >
               Analyze
             </a>
             <a
               href="#"
               onClick={() => (window.location.href = '/search')}
-              className="px-3 py-1.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              className={styles.navItem}
             >
               Learn
+            </a>
+            <a
+              href="#pricing"
+              className={styles.navItem}
+            >
+              Pricing
             </a>
             <a
               href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+              className={styles.navItem}
             >
               Docs
             </a>
           </nav>
 
           {/* CTA */}
-          <div className="flex-shrink-0">
+          <div className={styles.headerActions}>
             <button
               onClick={() => (window.location.href = '/dashboard')}
-              className="px-6 py-3 rounded-full text-sm font-semibold text-black bg-gradient-to-r from-cyan-500 to-blue-500 hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+              className={styles.btnPrimary}
             >
               Get Started
             </button>
@@ -97,38 +193,68 @@ function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center pt-20 px-6">
-        <div
-          id="hero-content"
-          data-fade-in
-          className={`text-center max-w-4xl mx-auto transition-all duration-1000 ${
-            fadeInElements.has('hero-content')
-              ? 'opacity-100 translate-y-0'
-              : 'opacity-0 translate-y-5'
-          }`}
-        >
-          <div className="text-sm font-semibold text-cyan-400 uppercase tracking-widest mb-6 opacity-80">
+      <section className={styles.hero}>
+        <div className={styles.heroContent}>
+          <div
+            id="hero-badge"
+            data-fade-in
+            className={`${styles.heroBadge} ${
+              fadeInElements.has('hero-badge') ? styles.visible : ''
+            }`}
+            style={{
+              opacity: fadeInElements.has('hero-badge') ? 1 : 0,
+              transform: fadeInElements.has('hero-badge') ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 1s ease, transform 1s ease',
+            }}
+          >
+            <div className={styles.dot} />
             YouTube Intelligence Platform
           </div>
 
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-semibold leading-tight mb-8 -tracking-wide">
-            Knowledge is more than<br />
-            <span className="bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">
-              data points.
-            </span>
+          <h1
+            id="hero-title"
+            data-fade-in
+            className={styles.heroH1}
+            style={{
+              opacity: fadeInElements.has('hero-title') ? 1 : 0,
+              transform: fadeInElements.has('hero-title') ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 1s ease, transform 1s ease',
+            }}
+          >
+            Knowledge is more than
+            <br />
+            data points.
             <br />
             Let there be light.
           </h1>
 
-          <p className="text-lg md:text-xl text-white/70 mb-12 max-w-2xl mx-auto leading-relaxed">
+          <p
+            id="hero-description"
+            data-fade-in
+            className={styles.heroP}
+            style={{
+              opacity: fadeInElements.has('hero-description') ? 1 : 0,
+              transform: fadeInElements.has('hero-description') ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 1s ease, transform 1s ease',
+            }}
+          >
             Transform YouTube content into actionable insights. Semantic analysis, real-time
             transcription, and intelligence synthesis — all in one platform.
           </p>
 
-          <div className="flex gap-4 justify-center flex-wrap">
+          <div
+            id="hero-cta"
+            data-fade-in
+            className={styles.heroCta}
+            style={{
+              opacity: fadeInElements.has('hero-cta') ? 1 : 0,
+              transform: fadeInElements.has('hero-cta') ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 1s ease, transform 1s ease',
+            }}
+          >
             <button
               onClick={() => (window.location.href = '/dashboard')}
-              className="px-8 py-3 rounded-full text-base font-semibold text-black bg-gradient-to-r from-cyan-500 to-blue-500 hover:shadow-lg hover:shadow-cyan-500/40 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+              className={styles.btnPrimary}
             >
               Start Analyzing Free
             </button>
@@ -136,7 +262,7 @@ function LandingPage() {
               href="https://github.com/Hex-Tech-Lab/hex-yt-intel/wiki"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-3 rounded-full text-base font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300"
+              className={styles.btnSecondary}
             >
               View Documentation
             </a>
@@ -144,40 +270,74 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* Stats Section */}
+      <section
+        id="stats"
+        data-fade-in
+        className={styles.section}
+        style={{
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+          opacity: fadeInElements.has('stats') ? 1 : 0,
+          transform: fadeInElements.has('stats') ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'opacity 1s ease, transform 1s ease',
+        }}
+      >
+        <div className={styles.sectionInner} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '32px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>1M+</div>
+            <div style={{ color: 'var(--grey-50)' }}>Videos Analyzed</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>500K+</div>
+            <div style={{ color: 'var(--grey-50)' }}>Active Users</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>99.9%</div>
+            <div style={{ color: 'var(--grey-50)' }}>Uptime Guaranteed</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>24/7</div>
+            <div style={{ color: 'var(--grey-50)' }}>Expert Support</div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
-      <section className="py-20 px-6 border-t border-cyan-500/10">
-        <div className="max-w-7xl mx-auto">
+      <section className={styles.section} style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+        <div className={styles.sectionInner}>
           <div
             id="features-header"
             data-fade-in
-            className={`text-center mb-16 transition-all duration-1000 ${
-              fadeInElements.has('features-header')
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-5'
-            }`}
+            style={{
+              textAlign: 'center',
+              marginBottom: '64px',
+              opacity: fadeInElements.has('features-header') ? 1 : 0,
+              transform: fadeInElements.has('features-header') ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 1s ease, transform 1s ease',
+            }}
           >
-            <h2 className="text-4xl md:text-5xl font-semibold mb-6">
+            <h2 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: '600', marginBottom: '24px' }}>
               Everything you need for YouTube intelligence
             </h2>
-            <p className="text-xl text-white/70 max-w-2xl mx-auto">
+            <p style={{ fontSize: '17px', color: 'var(--grey-50)', maxWidth: '520px', margin: '0 auto', lineHeight: '1.65' }}>
               Comprehensive tools to analyze, search, and synthesize YouTube content
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
             {[
               {
-                id: 'feature-1',
+                id: 'feature-semantic',
                 title: 'Semantic Analysis',
                 description: 'AI-powered content understanding and relationship mapping',
               },
               {
-                id: 'feature-2',
+                id: 'feature-transcription',
                 title: 'Real-time Transcription',
                 description: 'Accurate speech-to-text with multi-language support',
               },
               {
-                id: 'feature-3',
+                id: 'feature-synthesis',
                 title: 'Intelligence Synthesis',
                 description: 'Automated report generation and insight extraction',
               },
@@ -186,14 +346,18 @@ function LandingPage() {
                 key={feature.id}
                 id={feature.id}
                 data-fade-in
-                className={`p-8 border border-cyan-500/20 rounded-lg bg-cyan-500/5 hover:bg-cyan-500/10 transition-all duration-300 ${
-                  fadeInElements.has(feature.id)
-                    ? 'opacity-100 translate-y-0'
-                    : 'opacity-0 translate-y-5'
-                }`}
+                style={{
+                  padding: '32px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  opacity: fadeInElements.has(feature.id) ? 1 : 0,
+                  transform: fadeInElements.has(feature.id) ? 'translateY(0)' : 'translateY(20px)',
+                  transition: 'opacity 1s ease, transform 1s ease, background 0.3s',
+                }}
               >
-                <h3 className="text-xl font-semibold mb-4">{feature.title}</h3>
-                <p className="text-white/70">{feature.description}</p>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>{feature.title}</h3>
+                <p style={{ color: 'var(--grey-50)', lineHeight: '1.6' }}>{feature.description}</p>
               </div>
             ))}
           </div>
@@ -201,25 +365,30 @@ function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6 border-t border-cyan-500/10">
+      <section className={styles.section} style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
         <div
-          id="cta-section"
+          id="cta-final"
           data-fade-in
-          className={`max-w-4xl mx-auto text-center transition-all duration-1000 ${
-            fadeInElements.has('cta-section')
-              ? 'opacity-100 translate-y-0'
-              : 'opacity-0 translate-y-5'
-          }`}
+          style={{
+            maxWidth: '900px',
+            margin: '0 auto',
+            textAlign: 'center',
+            opacity: fadeInElements.has('cta-final') ? 1 : 0,
+            transform: fadeInElements.has('cta-final') ? 'translateY(0)' : 'translateY(20px)',
+            transition: 'opacity 1s ease, transform 1s ease',
+          }}
         >
-          <h2 className="text-4xl md:text-5xl font-semibold mb-6">
+          <h2 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: '600', marginBottom: '24px' }}>
             Ready to unlock YouTube intelligence?
           </h2>
-          <p className="text-xl text-white/70 mb-8 max-w-2xl mx-auto">
-            Join thousands of creators, researchers, and teams using hex-yt-intel to transform their content strategy.
+          <p style={{ fontSize: '17px', color: 'var(--grey-50)', marginBottom: '32px', maxWidth: '520px', margin: '0 auto 32px', lineHeight: '1.65' }}>
+            Join thousands of creators, researchers, and teams using hex-yt-intel to transform
+            their content strategy.
           </p>
           <button
             onClick={() => (window.location.href = '/dashboard')}
-            className="px-10 py-4 rounded-full text-lg font-semibold text-black bg-gradient-to-r from-cyan-500 to-blue-500 hover:shadow-lg hover:shadow-cyan-500/40 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+            className={styles.btnPrimary}
+            style={{ padding: '14px 28px', fontSize: '15px' }}
           >
             Start Free Trial
           </button>
@@ -227,24 +396,24 @@ function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-cyan-500/10 py-12 px-6 bg-black/50 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div className="flex flex-col gap-4">
-              <div className="text-xs font-semibold text-cyan-400 uppercase letter-spacing-wider">
+      <footer style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', padding: '48px 24px', background: 'rgba(9, 10, 12, 0.8)', backdropFilter: 'blur(12px)' }}>
+        <div className={styles.sectionInner}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '32px', marginBottom: '32px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 Product
               </div>
               <a
                 href="#"
                 onClick={() => (window.location.href = '/dashboard')}
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
+                style={{ fontSize: '14px', color: 'var(--grey-50)', cursor: 'pointer' }}
               >
                 Analyzer
               </a>
               <a
                 href="#"
                 onClick={() => (window.location.href = '/dashboard')}
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors cursor-pointer"
+                style={{ fontSize: '14px', color: 'var(--grey-50)', cursor: 'pointer' }}
               >
                 Dashboard
               </a>
@@ -252,21 +421,21 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 API
               </a>
             </div>
 
-            <div className="flex flex-col gap-4">
-              <div className="text-xs font-semibold text-cyan-400 uppercase letter-spacing-wider">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 Resources
               </div>
               <a
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel/wiki"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 Documentation
               </a>
@@ -274,7 +443,7 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 Blog
               </a>
@@ -282,21 +451,21 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 GitHub
               </a>
             </div>
 
-            <div className="flex flex-col gap-4">
-              <div className="text-xs font-semibold text-cyan-400 uppercase letter-spacing-wider">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 Company
               </div>
               <a
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 About
               </a>
@@ -304,7 +473,7 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel/blob/main/PRIVACY.md"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 Privacy
               </a>
@@ -312,21 +481,21 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel/blob/main/TERMS.md"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 Terms
               </a>
             </div>
 
-            <div className="flex flex-col gap-4">
-              <div className="text-xs font-semibold text-cyan-400 uppercase letter-spacing-wider">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 Social
               </div>
               <a
                 href="https://x.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 Twitter
               </a>
@@ -334,7 +503,7 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 GitHub
               </a>
@@ -342,20 +511,16 @@ function LandingPage() {
                 href="https://discord.gg"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-white/60 hover:text-cyan-400 transition-colors"
+                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
               >
                 Discord
               </a>
             </div>
           </div>
 
-          <div className="border-t border-cyan-500/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-xs text-white/50">
-              © 2026 hex-yt-intel. All rights reserved.
-            </div>
-            <div className="text-xs text-white/50">
-              Knowledge is more than data points. Let there be light.
-            </div>
+          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--grey-50)' }}>© 2026 hex-yt-intel. All rights reserved.</div>
+            <div style={{ fontSize: '12px', color: 'var(--grey-50)' }}>Knowledge is more than data points. Let there be light.</div>
           </div>
         </div>
       </footer>
