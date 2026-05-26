@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tailwind Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media (min-width: 1024px) {
+            .test-lg-show { display: flex !important; }
+            .test-lg-row { flex-direction: row !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <h1 class="text-2xl mb-4">Tailwind Responsive Test</h1>
+
+    <p class="mb-4">Window width: <span id="width"></span>px</p>
+
+    <h2 class="text-xl mb-2">Test 1: Hidden on mobile, shown on desktop (lg:)</h2>
+    <div class="hidden lg:flex bg-blue-600 p-4 mb-4">
+        ✓ This should be visible on desktop (1024px+)
+    </div>
+
+    <h2 class="text-xl mb-2">Test 2: Stack vertically on mobile, horizontally on desktop</h2>
+    <div class="flex flex-col lg:flex-row gap-4 mb-4">
+        <div class="flex-1 bg-green-600 p-4">Card 1</div>
+        <div class="flex-1 bg-green-600 p-4">Card 2</div>
+        <div class="flex-1 bg-green-600 p-4">Card 3</div>
+    </div>
+
+    <h2 class="text-xl mb-2">Test 3: Media query fallback test</h2>
+    <div class="hidden test-lg-show bg-red-600 p-4">
+        ✓ This should be visible via CSS media query on 1024px+
+    </div>
+
+    <script>
+        function updateWidth() {
+            document.getElementById('width').textContent = window.innerWidth;
+        }
+
+        window.addEventListener('load', () => {
+            updateWidth();
+            console.log('Page loaded. Viewport width:', window.innerWidth);
+
+            // Check Tailwind
+            const testDiv = document.querySelector('.hidden.lg\\:flex');
+            if (testDiv) {
+                const style = window.getComputedStyle(testDiv);
+                console.log('Hidden lg:flex element display:', style.display);
+            }
+        });
+
+        window.addEventListener('resize', updateWidth);
+    </script>
+</body>
+</html>

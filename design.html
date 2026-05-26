@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="hex-yt-intel Design System — Interactive specification of semantic tokens, typography, spacing, and component architecture">
+    <meta name="referrer" content="design.md">
+    <title>hex-yt-intel Design System</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js for WebGL particle background -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js"></script>
+
+    <!-- Iconify for icons -->
+    <script src="https://code.iconify.design/iconify-icon/1.0.8/iconify-icon.min.js"></script>
+
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #000000;
+            color: #FFFFFF;
+            overflow-x: hidden;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Semantic color variables */
+        :root {
+            --color-primary: #06B6D4;
+            --color-secondary: #FFFFFF;
+            --color-accent: #06B6D4;
+            --color-background: #FFFFFF;
+            --color-surface: #1A1F2B;
+            --color-text-primary: #111827;
+            --color-text-secondary: #4B5563;
+            --color-border: #252A38;
+
+            /* Persona colors */
+            --persona-p1: #00D9FF;
+            --persona-p2: #00D9FF;
+            --persona-p3: #FFFFFF;
+            --persona-p4: #FFFFFF;
+            --persona-p5: #FFFFFF;
+
+            /* Shadow tokens */
+            --shadow-1: 0 2px 4px rgba(0, 217, 255, 0.1);
+            --shadow-2: 0 4px 8px rgba(0, 217, 255, 0.15);
+            --shadow-3: 0 8px 16px rgba(0, 217, 255, 0.2);
+            --shadow-4: 0 16px 32px rgba(0, 217, 255, 0.25);
+        }
+
+        /* 4-layer shadow stack for P1/P2 elements */
+        .shadow-p1 {
+            box-shadow:
+                0 2px 4px rgba(0, 217, 255, 0.1),
+                0 4px 8px rgba(0, 217, 255, 0.15),
+                0 8px 16px rgba(0, 217, 255, 0.2),
+                0 16px 32px rgba(0, 217, 255, 0.25);
+        }
+
+        /* 4-layer shadow stack for P3/P4/P5 elements */
+        .shadow-p3 {
+            box-shadow:
+                0 2px 4px rgba(255, 255, 255, 0.08),
+                0 4px 8px rgba(255, 255, 255, 0.12),
+                0 8px 16px rgba(255, 255, 255, 0.16),
+                0 16px 32px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Gradient border technique (p-[1px] pattern) */
+        .gradient-border {
+            position: relative;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.3) 0%, rgba(0, 217, 255, 0.1) 100%);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .gradient-border-inner {
+            background: #000000;
+            border-radius: 15px;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Recursive tessellation (SVG clip-paths, NO rounded corners) */
+        .tessellate-clip {
+            clip-path: polygon(
+                0% 0%, 95% 0%, 100% 5%, 100% 95%, 95% 100%, 5% 100%, 0% 95%, 0% 5%
+            );
+        }
+
+        /* WebGL canvas */
+        #webgl-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* Content overlay on canvas */
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Animation classes */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .floating {
+            /* Will be animated by GSAP */
+        }
+
+        /* Typography scales */
+        .display-lg {
+            font-size: 64px;
+            font-weight: 500;
+            line-height: 1.04;
+            letter-spacing: 0;
+        }
+
+        .display-md {
+            font-size: 48px;
+            font-weight: 500;
+            line-height: 1.1;
+        }
+
+        .display-sm {
+            font-size: 36px;
+            font-weight: 500;
+            line-height: 1.15;
+        }
+
+        .heading-lg {
+            font-size: 28px;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .heading-md {
+            font-size: 24px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .body-lg {
+            font-size: 18px;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .body-md {
+            font-size: 16px;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .label-md {
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.2;
+            letter-spacing: 0.5px;
+        }
+
+        /* Card hover state */
+        .card-demo {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .card-demo:hover {
+            border-color: rgba(0, 217, 255, 0.5);
+            background-color: rgba(0, 217, 255, 0.03);
+        }
+
+        /* Cursor feedback */
+        .grabbable {
+            cursor: grab;
+        }
+
+        .grabbable.active {
+            cursor: grabbing;
+        }
+
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Grid for token demonstrations */
+        .token-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            padding: 40px 20px;
+        }
+
+        /* Focus states */
+        button:focus {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- WebGL Particle Canvas -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Content Wrapper -->
+    <div class="content-wrapper">
+        <!-- Header Navigation -->
+        <header class="fixed top-0 left-0 right-0 z-20 bg-black/80 backdrop-blur-md border-b border-cyan-500/20">
+            <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <iconify-icon icon="solar:star-linear" class="text-cyan-500 text-2xl"></iconify-icon>
+                    <h1 class="heading-md text-white">Design System</h1>
+                </div>
+                <div class="flex gap-4">
+                    <a href="design.md" class="body-md text-cyan-500 hover:text-cyan-400 transition-colors">Specification</a>
+                    <button onclick="scrollToSection('colors')" class="body-md text-gray-400 hover:text-white transition-colors">Colors</button>
+                    <button onclick="scrollToSection('typography')" class="body-md text-gray-400 hover:text-white transition-colors">Typography</button>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="min-h-screen flex items-center justify-center pt-20 px-6">
+            <div class="text-center max-w-3xl mx-auto fade-in-up">
+                <h1 class="display-lg text-white mb-6">
+                    <span style="background: linear-gradient(135deg, #00D9FF, #00BFFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                        hex-yt-intel
+                    </span>
+                </h1>
+                <p class="heading-lg text-gray-400 mb-8">Interactive Design System Specification</p>
+                <p class="body-lg text-gray-500 mb-12 max-w-2xl mx-auto">
+                    Complete semantic token architecture with persona-weighted demonstrations. All components built with production-ready patterns: 4-layer shadow stacks, recursive tessellation, dynamic entrance animations, and WebGL particle fields.
+                </p>
+                <div class="flex gap-4 justify-center">
+                    <button onclick="scrollToSection('tokens')" class="px-8 py-3 bg-cyan-500 text-black font-600 rounded-lg hover:bg-cyan-400 transition-colors shadow-p1">
+                        Explore Design System
+                    </button>
+                    <button onclick="location.href='design.md'" class="px-8 py-3 border border-cyan-500/50 text-cyan-400 font-600 rounded-lg hover:border-cyan-400 hover:bg-cyan-500/5 transition-colors">
+                        View Specification
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Color Palette Section -->
+        <section id="colors" class="py-20 px-6">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="display-md text-white mb-12">Color Palette</h2>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-20">
+                    <!-- Primary -->
+                    <div class="fade-in-up floating">
+                        <div class="w-full h-24 rounded-lg mb-4 border border-cyan-500/30 shadow-p1" style="background: #06B6D4;"></div>
+                        <p class="label-md text-cyan-400 mono">Primary</p>
+                        <p class="body-md text-gray-400">#06B6D4</p>
+                    </div>
+
+                    <!-- Secondary -->
+                    <div class="fade-in-up floating" style="animation-delay: 0.08s;">
+                        <div class="w-full h-24 rounded-lg mb-4 border border-white/30 shadow-p3" style="background: #FFFFFF;"></div>
+                        <p class="label-md text-white mono">Secondary</p>
+                        <p class="body-md text-gray-400">#FFFFFF</p>
+                    </div>
+
+                    <!-- Accent -->
+                    <div class="fade-in-up floating" style="animation-delay: 0.16s;">
+                        <div class="w-full h-24 rounded-lg mb-4 border border-cyan-500/30 shadow-p1" style="background: #06B6D4;"></div>
+                        <p class="label-md text-cyan-400 mono">Accent</p>
+                        <p class="body-md text-gray-400">#06B6D4</p>
+                    </div>
+
+                    <!-- Surface -->
+                    <div class="fade-in-up floating" style="animation-delay: 0.24s;">
+                        <div class="w-full h-24 rounded-lg mb-4 border border-gray-700" style="background: #1A1F2B;"></div>
+                        <p class="label-md text-gray-400 mono">Surface</p>
+                        <p class="body-md text-gray-500">#1A1F2B</p>
+                    </div>
+
+                    <!-- Status Colors -->
+                    <div class="fade-in-up floating" style="animation-delay: 0.32s;">
+                        <div class="w-full h-24 rounded-lg mb-4 flex items-center justify-center gap-2 bg-green-500/10 border border-green-500/30">
+                            <div class="w-8 h-8 rounded-full" style="background: #10B981;"></div>
+                        </div>
+                        <p class="label-md text-green-400 mono">Success</p>
+                        <p class="body-md text-gray-400">#10B981</p>
+                    </div>
+
+                    <div class="fade-in-up floating" style="animation-delay: 0.40s;">
+                        <div class="w-full h-24 rounded-lg mb-4 flex items-center justify-center gap-2 bg-yellow-500/10 border border-yellow-500/30">
+                            <div class="w-8 h-8 rounded-full" style="background: #F59E0B;"></div>
+                        </div>
+                        <p class="label-md text-yellow-400 mono">Warning</p>
+                        <p class="body-md text-gray-400">#F59E0B</p>
+                    </div>
+
+                    <div class="fade-in-up floating" style="animation-delay: 0.48s;">
+                        <div class="w-full h-24 rounded-lg mb-4 flex items-center justify-center gap-2 bg-red-500/10 border border-red-500/30">
+                            <div class="w-8 h-8 rounded-full" style="background: #EF4444;"></div>
+                        </div>
+                        <p class="label-md text-red-400 mono">Error</p>
+                        <p class="body-md text-gray-400">#EF4444</p>
+                    </div>
+
+                    <div class="fade-in-up floating" style="animation-delay: 0.56s;">
+                        <div class="w-full h-24 rounded-lg mb-4 flex items-center justify-center gap-2 bg-blue-500/10 border border-blue-500/30">
+                            <div class="w-8 h-8 rounded-full" style="background: #3B82F6;"></div>
+                        </div>
+                        <p class="label-md text-blue-400 mono">Info</p>
+                        <p class="body-md text-gray-400">#3B82F6</p>
+                    </div>
+                </div>
+
+                <!-- Persona Distribution -->
+                <div class="border-t border-cyan-500/20 pt-20">
+                    <h3 class="heading-lg text-white mb-8">Persona Weight Distribution</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                        <div class="fade-in-up floating gradient-border">
+                            <div class="gradient-border-inner p-6">
+                                <p class="label-md text-cyan-400 mono mb-2">P1 - Premium</p>
+                                <p class="heading-lg text-cyan-400 mb-2">25%</p>
+                                <p class="body-md text-gray-400">Decision makers</p>
+                            </div>
+                        </div>
+                        <div class="fade-in-up floating gradient-border" style="animation-delay: 0.08s;">
+                            <div class="gradient-border-inner p-6">
+                                <p class="label-md text-cyan-400 mono mb-2">P2 - Pro</p>
+                                <p class="heading-lg text-cyan-400 mb-2">25%</p>
+                                <p class="body-md text-gray-400">Power users</p>
+                            </div>
+                        </div>
+                        <div class="fade-in-up floating gradient-border" style="animation-delay: 0.16s;">
+                            <div class="gradient-border-inner p-6">
+                                <p class="label-md text-white mono mb-2">P3 - Standard</p>
+                                <p class="heading-lg text-white mb-2">25%</p>
+                                <p class="body-md text-gray-400">Regular users</p>
+                            </div>
+                        </div>
+                        <div class="fade-in-up floating gradient-border" style="animation-delay: 0.24s;">
+                            <div class="gradient-border-inner p-6">
+                                <p class="label-md text-white mono mb-2">P4 - Casual</p>
+                                <p class="heading-lg text-white mb-2">15%</p>
+                                <p class="body-md text-gray-400">Occasional users</p>
+                            </div>
+                        </div>
+                        <div class="fade-in-up floating gradient-border" style="animation-delay: 0.32s;">
+                            <div class="gradient-border-inner p-6">
+                                <p class="label-md text-white mono mb-2">P5 - Explore</p>
+                                <p class="heading-lg text-white mb-2">10%</p>
+                                <p class="body-md text-gray-400">Trial users</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography Section -->
+        <section id="typography" class="py-20 px-6">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="display-md text-white mb-12">Typography Scale</h2>
+
+                <div class="space-y-12">
+                    <!-- Display Level -->
+                    <div class="fade-in-up floating">
+                        <p class="label-md text-cyan-400 mono mb-4">DISPLAY LEVEL</p>
+                        <p class="display-lg text-white mb-2">The quick brown fox jumps over the lazy dog</p>
+                        <p class="body-md text-gray-500">64px / Inter / Weight 500 / Line Height 1.04</p>
+                    </div>
+
+                    <!-- Heading Level -->
+                    <div class="fade-in-up floating" style="animation-delay: 0.08s;">
+                        <p class="label-md text-cyan-400 mono mb-4">HEADING LEVEL</p>
+                        <p class="heading-lg text-white mb-2">The quick brown fox jumps over the lazy dog</p>
+                        <p class="body-md text-gray-500">28px / Inter / Weight 600 / Line Height 1.3</p>
+                    </div>
+
+                    <!-- Body Level -->
+                    <div class="fade-in-up floating" style="animation-delay: 0.16s;">
+                        <p class="label-md text-cyan-400 mono mb-4">BODY LEVEL</p>
+                        <p class="body-md text-white mb-2">The quick brown fox jumps over the lazy dog</p>
+                        <p class="body-md text-gray-500">16px / Inter / Weight 400 / Line Height 1.6</p>
+                    </div>
+
+                    <!-- Label Level -->
+                    <div class="fade-in-up floating" style="animation-delay: 0.24s;">
+                        <p class="label-md text-cyan-400 mono mb-4">LABEL LEVEL (MONO)</p>
+                        <p class="label-md text-white mono mb-2">The quick brown fox jumps over the lazy dog</p>
+                        <p class="body-md text-gray-500">12px / JetBrains Mono / Weight 600 / Line Height 1.2</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Spacing & Layout Section -->
+        <section id="tokens" class="py-20 px-6">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="display-md text-white mb-12">Spacing System</h2>
+
+                <div class="mb-20">
+                    <p class="body-md text-gray-400 mb-8">8px baseline grid with proportional scale (1x, 1.5x, 2x, 3x, 5x)</p>
+                    <div class="space-y-6">
+                        <div class="fade-in-up floating">
+                            <div class="flex items-center gap-4 mb-2">
+                                <div class="w-8 h-8 bg-cyan-500"></div>
+                                <p class="label-md text-gray-400 mono">8px (base)</p>
+                            </div>
+                        </div>
+                        <div class="fade-in-up floating" style="animation-delay: 0.08s;">
+                            <div class="flex items-center gap-4 mb-2">
+                                <div class="w-12 h-8 bg-cyan-500"></div>
+                                <p class="label-md text-gray-400 mono">12px (1.5x)</p>
+                            </div>
+                        </div>
+                        <div class="fade-in-up floating" style="animation-delay: 0.16s;">
+                            <div class="flex items-center gap-4 mb-2">
+                                <div class="w-16 h-8 bg-cyan-500"></div>
+                                <p class="label-md text-gray-400 mono">16px (2x gap)</p>
+                            </div>
+                        </div>
+                        <div class="fade-in-up floating" style="animation-delay: 0.24s;">
+                            <div class="flex items-center gap-4 mb-2">
+                                <div class="w-24 h-8 bg-cyan-500"></div>
+                                <p class="label-md text-gray-400 mono">24px (3x card-padding)</p>
+                            </div>
+                        </div>
+                        <div class="fade-in-up floating" style="animation-delay: 0.32s;">
+                            <div class="flex items-center gap-4 mb-2">
+                                <div class="w-40 h-8 bg-cyan-500"></div>
+                                <p class="label-md text-gray-400 mono">80px (section-padding)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Component Showcase Section -->
+        <section class="py-20 px-6">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="display-md text-white mb-12">Component Library</h2>
+
+                <!-- Buttons -->
+                <div class="mb-20">
+                    <h3 class="heading-md text-white mb-8">Buttons</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <button class="fade-in-up floating px-6 py-3 bg-cyan-500 text-black font-600 rounded-lg hover:bg-cyan-400 transition-colors shadow-p1">
+                            P1/P2 Primary
+                        </button>
+                        <button class="fade-in-up floating px-6 py-3 bg-white text-black font-600 rounded-lg hover:bg-gray-200 transition-colors shadow-p3" style="animation-delay: 0.08s;">
+                            P3/P4/P5 Secondary
+                        </button>
+                        <button class="fade-in-up floating px-6 py-3 border-2 border-cyan-500 text-cyan-400 font-600 rounded-lg hover:bg-cyan-500/10 transition-colors" style="animation-delay: 0.16s;">
+                            Ghost Button
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cards with Shadow Stacks -->
+                <div class="mb-20">
+                    <h3 class="heading-md text-white mb-8">Cards with 4-Layer Shadow Stacks</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- P1/P2 Card -->
+                        <div class="fade-in-up floating card-demo p-6 rounded-lg bg-black/40 border border-cyan-500/30 shadow-p1 grabbable">
+                            <div class="flex items-start gap-4 mb-4">
+                                <iconify-icon icon="solar:analysis-linear" class="text-cyan-500 text-2xl"></iconify-icon>
+                                <h4 class="heading-md text-cyan-400">Analysis Insight</h4>
+                            </div>
+                            <p class="body-md text-gray-400">Premium insight with 4-layer cyan shadow stack and 8px padding interior spacing.</p>
+                            <div class="flex gap-2 mt-6">
+                                <div class="w-2 h-2 rounded-full bg-cyan-500"></div>
+                                <div class="w-2 h-2 rounded-full bg-cyan-500/50"></div>
+                                <div class="w-2 h-2 rounded-full bg-cyan-500/20"></div>
+                            </div>
+                        </div>
+
+                        <!-- P3/P4/P5 Card -->
+                        <div class="fade-in-up floating card-demo p-6 rounded-lg bg-black/40 border border-white/30 shadow-p3 grabbable" style="animation-delay: 0.08s;">
+                            <div class="flex items-start gap-4 mb-4">
+                                <iconify-icon icon="solar:info-circle-linear" class="text-white text-2xl"></iconify-icon>
+                                <h4 class="heading-md text-white">Standard Info</h4>
+                            </div>
+                            <p class="body-md text-gray-400">Standard card with 4-layer white shadow stack and consistent 8px padding.</p>
+                            <div class="flex gap-2 mt-6">
+                                <div class="w-2 h-2 rounded-full bg-white"></div>
+                                <div class="w-2 h-2 rounded-full bg-white/50"></div>
+                                <div class="w-2 h-2 rounded-full bg-white/20"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid Demonstrations -->
+                <div class="mb-20">
+                    <h3 class="heading-md text-white mb-8">UCIS Analysis Grid (10-Cell)</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="fade-in-up floating h-24 bg-cyan-500/5 border border-cyan-500/20 rounded flex items-center justify-center">
+                            <p class="label-md text-cyan-400 mono">User</p>
+                        </div>
+                        <div class="fade-in-up floating h-24 bg-cyan-500/5 border border-cyan-500/20 rounded flex items-center justify-center" style="animation-delay: 0.08s;">
+                            <p class="label-md text-cyan-400 mono">Content</p>
+                        </div>
+                        <div class="fade-in-up floating h-24 bg-cyan-500/5 border border-cyan-500/20 rounded flex items-center justify-center" style="animation-delay: 0.16s;">
+                            <p class="label-md text-cyan-400 mono">Intent</p>
+                        </div>
+                        <div class="fade-in-up floating h-24 bg-cyan-500/5 border border-cyan-500/20 rounded flex items-center justify-center" style="animation-delay: 0.24s;">
+                            <p class="label-md text-cyan-400 mono">Search</p>
+                        </div>
+                        <div class="fade-in-up floating h-24 bg-cyan-500/5 border border-cyan-500/20 rounded flex items-center justify-center" style="animation-delay: 0.32s;">
+                            <p class="label-md text-cyan-400 mono">Summary</p>
+                        </div>
+                        <div class="fade-in-up floating h-24 bg-white/5 border border-white/20 rounded flex items-center justify-center" style="animation-delay: 0.40s;">
+                            <p class="label-md text-white mono">Analysis</p>
+                        </div>
+                        <div class="fade-in-up floating h-24 bg-white/5 border border-white/20 rounded flex items-center justify-center" style="animation-delay: 0.48s;">
+                            <p class="label-md text-white mono">Metrics</p>
+                        </div>
+                        <div class="fade-in-up floating h-24 bg-white/5 border border-white/20 rounded flex items-center justify-center" style="animation-delay: 0.56s;">
+                            <p class="label-md text-white mono">Export</p>
+                        </div>
+                        <div class="fade-in-up floating h-24 bg-white/5 border border-white/20 rounded flex items-center justify-center" style="animation-delay: 0.64s;">
+                            <p class="label-md text-white mono">Share</p>
+                        </div>
+                        <div class="fade-in-up floating h-24 bg-white/5 border border-white/20 rounded flex items-center justify-center" style="animation-delay: 0.72s;">
+                            <p class="label-md text-white mono">Settings</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="py-12 px-6 border-t border-cyan-500/20">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div>
+                        <p class="body-md text-gray-400">hex-yt-intel Design System v1.0</p>
+                        <p class="label-md text-gray-600 mono mt-2">Neuform Staff Featured Template — 2026-05-25</p>
+                    </div>
+                    <div class="flex gap-6">
+                        <a href="design.md" class="body-md text-cyan-400 hover:text-cyan-300 transition-colors">Specification</a>
+                        <a href="https://github.com/anthropics/hex-yt-intel" class="body-md text-cyan-400 hover:text-cyan-300 transition-colors">Repository</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // WebGL Particle Field Background
+        let scene, camera, renderer, particles;
+
+        function initWebGL() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('webgl-canvas'), alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            camera.position.z = 50;
+
+            // Create particle field
+            const geometry = new THREE.BufferGeometry();
+            const particleCount = 1600;
+            const positions = new Float32Array(particleCount * 3);
+            const offsets = new Float32Array(particleCount);
+
+            let index = 0;
+            for (let i = 0; i < 40; i++) {
+                for (let j = 0; j < 40; j++) {
+                    positions[index * 3] = (i - 20) * 2.5;
+                    positions[index * 3 + 1] = (j - 20) * 2.5;
+                    positions[index * 3 + 2] = Math.random() * 20;
+                    offsets[index] = Math.random() * Math.PI * 2;
+                    index++;
+                }
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('aOffset', new THREE.BufferAttribute(offsets, 1));
+
+            const material = new THREE.PointsMaterial({
+                color: 0x00D9FF,
+                size: 0.8,
+                sizeAttenuation: true,
+                transparent: true
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotate particles slightly
+            particles.rotation.x += 0.0001;
+            particles.rotation.y += 0.0002;
+
+            renderer.render(scene, camera);
+        }
+
+        // GSAP Animations
+        function initAnimations() {
+            // Entrance animations for elements with fade-in-up class
+            const fadeElements = document.querySelectorAll('.fade-in-up');
+            fadeElements.forEach((el, index) => {
+                gsap.from(el, {
+                    opacity: 0,
+                    y: 20,
+                    duration: 1.2,
+                    ease: "back.out(1.2)",
+                    delay: 0.2 + (index * 0.08)
+                });
+            });
+
+            // Floating animations
+            const floatingElements = document.querySelectorAll('.floating');
+            floatingElements.forEach((el, index) => {
+                const randomY = Math.random() * 8 - 4;
+                const randomRotation = Math.random() * 2 - 1;
+
+                el.floatAnim = gsap.to(el, {
+                    y: `+=${randomY}`,
+                    rotation: `+=${randomRotation}`,
+                    duration: 4 + Math.random() * 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut"
+                });
+            });
+
+            // Draggable cards with drag interaction
+            const grabbableCards = document.querySelectorAll('.grabbable');
+            Draggable.create(grabbableCards, {
+                type: "x,y",
+                bounds: window,
+                onPress: function() {
+                    this.target.classList.add('active');
+                    if (this.target.floatAnim) {
+                        this.target.floatAnim.pause();
+                    }
+                    this.target.style.zIndex = 1000;
+                },
+                onRelease: function() {
+                    this.target.classList.remove('active');
+                    if (this.target.floatAnim) {
+                        this.target.floatAnim.play();
+                    }
+                    this.target.style.zIndex = '';
+                }
+            });
+        }
+
+        // Utility function for scroll navigation
+        function scrollToSection(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Handle window resize for WebGL
+        window.addEventListener('resize', () => {
+            if (renderer && camera) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initWebGL();
+            initAnimations();
+        });
+    </script>
+</body>
+</html>

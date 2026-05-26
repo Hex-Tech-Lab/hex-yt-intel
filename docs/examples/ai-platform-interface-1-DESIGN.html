@@ -1,0 +1,504 @@
+<html lang="en" class="antialiased text-slate-50 selection:bg-cyan-500/30">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+      AI Platform Interface
+    </title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js">
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      /* Responsive Fallbacks for Medium+ Screens (768px+) and Large Screens (1024px+) */
+@media (min-width: 768px) {
+    .md\:grid-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+    .md\:col-span-2 { grid-column: span 2 / span 2 !important; }
+    .md\:col-span-4 { grid-column: span 4 / span 4 !important; }
+    .md\:col-span-3 { grid-column: span 3 / span 3 !important; }
+    .md\:row-span-2 { grid-row: span 2 / span 2 !important; }
+}
+    </style>
+  </head>
+  <body class="relative min-h-screen w-full bg-gradient-to-br from-[#e0f5f5] via-[#f1f8f8] to-[#e0f5f5] flex items-center justify-center py-20 px-4 sm:px-8 font-['Inter',sans-serif] m-0 overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 11px); background-color: #f0f4f8;">
+    <canvas id="webgl-canvas" class="fixed inset-0 w-full h-full pointer-events-none z-0" style="display: block;">
+    </canvas>
+    <main class="relative z-10 w-full max-w-6xl mx-auto">
+      <div class="absolute -top-4 -left-4 w-6 h-6 border-t border-l border-slate-400/30 z-20">
+      </div>
+      <div class="absolute -top-4 -right-4 w-6 h-6 border-t border-r border-slate-400/30 z-20">
+      </div>
+      <div class="absolute -bottom-4 -left-4 w-6 h-6 border-b border-l border-slate-400/30 z-20">
+      </div>
+      <div class="absolute -bottom-4 -right-4 w-6 h-6 border-b border-r border-slate-400/30 z-20">
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-4 sm:gap-6 w-full gs-grid-container relative">
+        <div class="absolute inset-0 pointer-events-none border border-slate-400/10 z-0">
+        </div>
+        <div class="md:col-span-2 relative p-[1px] rounded-[2rem] overflow-hidden group gs-card" style="background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);">
+          <div class="bg-[#11141D] w-full h-full rounded-[calc(2rem-1px)] p-8 flex flex-col relative overflow-hidden">
+            <div class="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-48 h-48 bg-cyan-500/40 rounded-full blur-[60px] pointer-events-none gs-glow">
+            </div>
+            <div class="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-24 h-24 bg-white/20 rounded-full blur-[30px] pointer-events-none mix-blend-overlay">
+            </div>
+            <div class="flex-grow flex flex-col items-center justify-start pt-4 relative z-10">
+              <div class="w-full max-w-[240px] bg-[#1A1F2B]/80 backdrop-blur-md rounded-2xl p-4 border border-white/5 shadow-2xl relative mb-12">
+                <p class="text-xs text-slate-300 mb-4 flex items-center gap-1">
+                  Hi james
+                    <span class="text-sm">
+                    👋
+                  </span>
+                  how can i help you today?
+                </p>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="bg-white/5 rounded-xl p-2.5 flex items-center gap-2 border border-white/5">
+                    <iconify-icon icon="solar:magnifer-linear" class="text-slate-400 text-base" stroke-width="1.5">
+                    </iconify-icon>
+                    <div class="flex flex-col gap-1 w-full">
+                      <div class="h-1 bg-white/20 rounded-full w-3/4">
+                      </div>
+                      <div class="h-1 bg-white/10 rounded-full w-1/2">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bg-white/5 rounded-xl p-2.5 flex items-center gap-2 border border-white/5">
+                    <iconify-icon icon="solar:document-text-linear" class="text-slate-400 text-base" stroke-width="1.5">
+                    </iconify-icon>
+                    <div class="flex flex-col gap-1 w-full">
+                      <div class="h-1 bg-white/20 rounded-full w-full">
+                      </div>
+                      <div class="h-1 bg-white/10 rounded-full w-2/3">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bg-white/5 rounded-xl p-2.5 flex items-center gap-2 border border-white/5">
+                    <iconify-icon icon="solar:pen-new-square-linear" class="text-slate-400 text-base" stroke-width="1.5">
+                    </iconify-icon>
+                    <div class="flex flex-col gap-1 w-full">
+                      <div class="h-1 bg-white/20 rounded-full w-2/3">
+                      </div>
+                      <div class="h-1 bg-white/10 rounded-full w-1/3">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bg-white/5 rounded-xl p-2.5 flex items-center gap-2 border border-white/5">
+                    <iconify-icon icon="solar:pen-2-linear" class="text-slate-400 text-base" stroke-width="1.5">
+                    </iconify-icon>
+                    <div class="flex flex-col gap-1 w-full">
+                      <div class="h-1 bg-white/20 rounded-full w-full">
+                      </div>
+                      <div class="h-1 bg-white/10 rounded-full w-1/2">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[1px] h-8 bg-gradient-to-b from-white/20 to-cyan-400/50">
+                </div>
+                <div class="absolute -bottom-[2px] left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white/50">
+                </div>
+              </div>
+              <div class="flex items-center gap-3 relative mt-2">
+                <div class="w-8 h-8 rounded-full border border-white/10 bg-white/5">
+                </div>
+                <div class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center relative shadow-[0_0_20px_rgba(6,182,212,0.4)] gs-pulse">
+                  <iconify-icon icon="solar:stars-minimalistic-linear" class="text-white text-lg" stroke-width="1.5">
+                  </iconify-icon>
+                  <div class="absolute inset-0 bg-white/20 rounded-full blur-[4px]">
+                  </div>
+                </div>
+                <div class="w-8 h-8 rounded-full border border-white/10 bg-white/5">
+                </div>
+                <div class="w-8 h-8 rounded-full border border-white/10 bg-white/5 opacity-50">
+                </div>
+              </div>
+            </div>
+            <div class="mt-auto relative z-10 pt-8">
+              <h3 class="text-lg font-medium text-white tracking-tight mb-2">
+                AI sidebar
+              </h3>
+              <p class="text-sm text-slate-400 leading-relaxed">
+                Just one-click to access all AI features from any web page.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="md:col-span-4 relative p-[1px] rounded-[2rem] overflow-hidden group gs-card" style="background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);">
+          <div class="bg-[#11141D] w-full h-full rounded-[calc(2rem-1px)] p-8 flex flex-col relative overflow-hidden">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[300px] bg-cyan-500/20 rounded-full blur-[80px] pointer-events-none">
+            </div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] bg-teal-500/20 rounded-full blur-[60px] pointer-events-none mix-blend-screen -ml-10">
+            </div>
+            <div class="absolute top-0 left-[40%] w-[150px] h-[300px] bg-white/10 blur-[40px] transform -rotate-45 pointer-events-none origin-bottom">
+            </div>
+            <div class="flex-grow flex items-center justify-center relative z-10 min-h-[280px]">
+              <svg class="absolute inset-0 w-full h-full pointer-events-none" style="filter: drop-shadow(0 0 4px rgba(255,255,255,0.1));">
+                <path d="M200,150 L350,150" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" fill="none" vector-effect="non-scaling-stroke" />
+                <path d="M600,150 L450,150" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" fill="none" vector-effect="non-scaling-stroke" />
+                <path d="M400,100 L400,50 L250,50" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" fill="none" vector-effect="non-scaling-stroke" />
+                <path d="M400,200 L400,250 L650,250" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" fill="none" vector-effect="non-scaling-stroke" />
+                <path d="M300,200 L300,220" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" fill="none" vector-effect="non-scaling-stroke" />
+                <path d="M550,100 L550,80" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" fill="none" vector-effect="non-scaling-stroke" />
+              </svg>
+              <div class="w-24 h-24 rounded-full bg-[#1A1F2B] border-4 border-[#252A38] flex items-center justify-center relative z-20 shadow-2xl">
+                <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-500/20 to-teal-500/20 opacity-50 blur-[2px]">
+                </div>
+                <iconify-icon icon="solar:stars-minimalistic-linear" class="text-white text-3xl drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" stroke-width="1.5">
+                </iconify-icon>
+              </div>
+              <div class="absolute left-[15%] top-[45%] w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm z-10">
+                <iconify-icon icon="solar:browser-linear" class="text-slate-300 text-xl" stroke-width="1.5">
+                </iconify-icon>
+              </div>
+              <div class="absolute left-[25%] top-[15%] w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm z-10">
+                <iconify-icon icon="solar:apple-linear" class="text-slate-300 text-xl" stroke-width="1.5">
+                </iconify-icon>
+              </div>
+              <div class="absolute left-[35%] bottom-[20%] w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm z-10 opacity-70">
+                <iconify-icon icon="solar:settings-linear" class="text-slate-300 text-base" stroke-width="1.5">
+                </iconify-icon>
+              </div>
+              <div class="absolute right-[15%] top-[30%] w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm z-10 bg-gradient-to-br from-white/10 to-transparent">
+                <iconify-icon icon="solar:windows-linear" class="text-slate-300 text-2xl" stroke-width="1.5">
+                </iconify-icon>
+              </div>
+              <div class="absolute right-[25%] bottom-[15%] w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm z-10">
+                <iconify-icon icon="solar:smartphone-linear" class="text-slate-300 text-base" stroke-width="1.5">
+                </iconify-icon>
+              </div>
+              <div class="absolute right-[35%] top-[10%] w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm z-10 opacity-70">
+                <iconify-icon icon="solar:refresh-circle-linear" class="text-slate-300 text-base" stroke-width="1.5">
+                </iconify-icon>
+              </div>
+            </div>
+            <div class="mt-auto relative z-10 pt-8 max-w-md">
+              <h3 class="text-lg font-medium text-white tracking-tight mb-2">
+                Available on all platforms
+              </h3>
+              <p class="text-sm text-slate-400 leading-relaxed">
+                Chat with your favorite assistant from browser, desktop and mobile phone.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="md:col-span-2 relative p-[1px] rounded-[2rem] overflow-hidden group gs-card" style="background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);">
+          <div class="bg-[#11141D] w-full h-full rounded-[calc(2rem-1px)] p-8 flex flex-col relative overflow-hidden">
+            <div class="absolute bottom-1/3 left-1/4 w-32 h-32 bg-teal-500/30 rounded-full blur-[50px] pointer-events-none">
+            </div>
+            <div class="absolute bottom-1/3 right-1/4 w-32 h-32 bg-cyan-500/30 rounded-full blur-[50px] pointer-events-none">
+            </div>
+            <div class="flex-grow flex flex-col items-center justify-center relative z-10 py-6">
+              <div class="bg-[#1A1F2B]/80 backdrop-blur-md rounded-2xl p-4 border border-white/5 shadow-xl w-full mb-6 relative">
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  Large language models are advanced ai system that
+          <span class="bg-white text-slate-900 px-1 rounded font-medium relative inline-block">
+          <span class="absolute inset-0 bg-cyan-400 opacity-20 blur-sm rounded">
+        </span>
+        understand
+      </span>
+      and generate human-like text.
+                </p>
+                <div class="absolute -bottom-2 left-10 w-4 h-4 bg-[#1A1F2B]/80 border-b border-r border-white/5 transform rotate-45 backdrop-blur-md">
+                </div>
+              </div>
+              <div class="bg-[#161A24] rounded-full px-4 py-2 border border-white/10 shadow-2xl flex items-center gap-4 relative z-20">
+                <button class="text-slate-400 hover:text-white transition-colors">
+                  <iconify-icon icon="solar:bookmark-linear" text-base stroke-width="1.5">
+                  </iconify-icon>
+                </button>
+                <button class="text-slate-400 hover:text-white transition-colors">
+                  <iconify-icon icon="solar:translate-linear" text-base stroke-width="1.5">
+                  </iconify-icon>
+                </button>
+                <button class="text-slate-400 hover:text-white transition-colors">
+                  <iconify-icon icon="solar:maximize-square-linear" text-base stroke-width="1.5">
+                  </iconify-icon>
+                </button>
+                <button class="text-slate-400 hover:text-white transition-colors">
+                  <iconify-icon icon="solar:text-align-left-linear" text-base stroke-width="1.5">
+                  </iconify-icon>
+                </button>
+                <div class="w-[1px] h-4 bg-white/10">
+                </div>
+                <button class="text-slate-400 hover:text-white transition-colors">
+                  <iconify-icon icon="solar:menu-dots-bold" text-base>
+                  </iconify-icon>
+                </button>
+                <button class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center ml-2 border border-white/20">
+                  <iconify-icon icon="solar:stars-minimalistic-linear" class="text-white text-xs" stroke-width="1.5">
+                  </iconify-icon>
+                </button>
+              </div>
+            </div>
+            <div class="mt-auto relative z-10 pt-4">
+              <h3 class="text-lg font-medium text-white tracking-tight mb-2">
+                Smart toolbar
+              </h3>
+              <p class="text-sm text-slate-400 leading-relaxed">
+                Seamlessly explain, translate or summarize any text you select.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="md:col-span-2 relative p-[1px] rounded-[2rem] overflow-hidden group gs-card" style="background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);">
+          <div class="bg-[#11141D] w-full h-full rounded-[calc(2rem-1px)] p-8 flex flex-col relative overflow-hidden">
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[60%] pointer-events-none z-0 overflow-hidden">
+              <div class="absolute -top-[10%] left-1/2 -translate-x-1/2 w-[150%] h-full bg-gradient-to-b from-cyan-400/80 via-cyan-500/20 to-transparent rounded-[100%] blur-[20px] mix-blend-screen gs-beam">
+              </div>
+              <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-full bg-gradient-to-b from-white/60 via-transparent to-transparent rounded-[100%] blur-[10px] mix-blend-overlay">
+              </div>
+            </div>
+            <div class="flex-grow flex items-end justify-center relative z-10 pb-6">
+              <div class="bg-[#1A1F2B]/90 backdrop-blur-xl rounded-xl border border-white/10 shadow-2xl w-full overflow-hidden">
+                <div class="p-4 border-b border-white/5">
+                  <div class="bg-white/5 rounded px-3 py-1.5 inline-block text-[10px] text-slate-300 border border-white/5">
+                    We've recived your email and will reply soon.
+                  </div>
+                </div>
+                <div class="p-4">
+                  <p class="text-xs text-slate-400 leading-relaxed mb-6">
+                    Thanks you for reaching out to us. we have recived your eamil and will ensure a prompt response.
+                  </p>
+                  <div class="flex items-center justify-between mt-2">
+                    <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-slate-300 hover:bg-white/10 transition-colors">
+                      <iconify-icon icon="solar:stars-minimalistic-linear" class="text-cyan-400" stroke-width="1.5">
+                      </iconify-icon>
+                      Ask follow up
+                    </button>
+                    <div class="flex items-center gap-3 text-slate-500">
+                      <iconify-icon icon="solar:copy-linear" class="hover:text-slate-300 cursor-pointer" stroke-width="1.5">
+                      </iconify-icon>
+                      <iconify-icon icon="solar:refresh-linear" class="hover:text-slate-300 cursor-pointer" stroke-width="1.5">
+                      </iconify-icon>
+                      <iconify-icon icon="solar:add-circle-linear" class="hover:text-slate-300 cursor-pointer" stroke-width="1.5">
+                      </iconify-icon>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-auto relative z-10 pt-4">
+              <h3 class="text-lg font-medium text-white tracking-tight mb-2">
+                Writing assistant
+              </h3>
+              <p class="text-sm text-slate-400 leading-relaxed">
+                Help you draft or rewrite any content in any web page.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="md:col-span-2 relative p-[1px] rounded-[2rem] overflow-hidden group gs-card" style="background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);">
+          <div class="bg-[#11141D] w-full h-full rounded-[calc(2rem-1px)] p-8 flex flex-col relative overflow-hidden">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-teal-500/20 rounded-full blur-[60px] pointer-events-none">
+            </div>
+            <div class="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-32 h-32 bg-cyan-500/20 rounded-full blur-[40px] pointer-events-none">
+            </div>
+            <div class="flex-grow flex flex-col items-center justify-start pt-6 relative z-10">
+              <div class="flex items-center gap-4 bg-[#1A1F2B]/50 rounded-full px-4 py-2 border border-white/5 backdrop-blur-sm relative z-20">
+                <iconify-icon icon="solar:global-linear" class="text-slate-400 text-lg" stroke-width="1.5">
+                </iconify-icon>
+                <div class="w-6 h-6 rounded bg-cyan-500/20 flex items-center justify-center relative shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                  <iconify-icon icon="solar:play-circle-linear" class="text-cyan-400 text-sm" stroke-width="1.5">
+                  </iconify-icon>
+                </div>
+                <iconify-icon icon="solar:letter-linear" class="text-slate-400 text-lg" stroke-width="1.5">
+                </iconify-icon>
+              </div>
+              <div class="w-[1px] h-6 bg-gradient-to-b from-white/20 to-transparent relative z-10">
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-white/50 border border-white">
+                </div>
+              </div>
+              <div class="bg-[#1A1F2B]/90 rounded-2xl p-4 border border-white/10 w-3/4 max-w-[180px] relative overflow-hidden shadow-2xl mt-1 h-24 flex flex-col gap-3">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded bg-white/10 flex-shrink-0">
+                  </div>
+                  <div class="flex flex-col gap-1.5 w-full mt-1">
+                    <div class="h-1.5 bg-white/20 rounded-full w-full">
+                    </div>
+                    <div class="h-1.5 bg-white/10 rounded-full w-2/3">
+                    </div>
+                  </div>
+                </div>
+                <div class="h-1.5 bg-white/10 rounded-full w-full mt-auto">
+                </div>
+                <div class="absolute top-0 left-0 w-full h-full pointer-events-none z-30 gs-scan-container">
+                  <div class="absolute top-0 left-0 w-full h-[2px] bg-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.8),0_0_5px_rgba(255,255,255,1)] gs-scan-line">
+                  </div>
+                  <div class="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-cyan-500/20 to-transparent gs-scan-trail">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-auto relative z-10 pt-8">
+              <h3 class="text-lg font-medium text-white tracking-tight mb-2">
+                Web enhancement
+              </h3>
+              <p class="text-sm text-slate-400 leading-relaxed">
+                Seamlessly explain, translate or summarize any text you select.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+// --- WebGL Dot Matrix Background ---
+const initWebGL = () => {
+const canvas = document.getElementById('webgl-canvas');
+if (!canvas) return;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 50;
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // DPR clamp
+renderer.setSize(window.innerWidth, window.innerHeight);
+// Custom Shader Material for Dots with soft depth fade
+const customShaderMaterial = new THREE.ShaderMaterial({
+uniforms: {
+uTime: { value: 0 },
+uMouse: { value: new THREE.Vector2(0, 0) },
+uColor: { value: new THREE.Color('#000000') } // Black color for dots as per requirement
+},
+vertexShader: `
+uniform float uTime;
+uniform vec2 uMouse;
+varying float vZ;
+void main() {
+vec3 pos = position;
+// Pointer parallax / drift effect
+pos.x += uMouse.x * 2.0 * (pos.z / 50.0);
+pos.y -= uMouse.y * 2.0 * (pos.z / 50.0);
+// Slow breathing pulse on Z
+pos.z += sin(pos.x * 0.1 + uTime * 0.5) * 2.0;
+vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+gl_PointSize = (15.0 / -mvPosition.z); // Size attenuation
+gl_Position = projectionMatrix * mvPosition;
+vZ = pos.z;
+}
+`,
+fragmentShader: `
+uniform vec3 uColor;
+varying float vZ;
+void main() {
+// Create soft dot shape
+vec2 xy = gl_PointCoord.xy - vec2(0.5);
+float ll = length(xy);
+if(ll > 0.5) discard;
+// Soft edge
+float alpha = smoothstep(0.5, 0.3, ll);
+// Depth fade (fade out particles further away or closer)
+// Scene Z range roughly -50 to 50
+float depthAlpha = smoothstep(50.0, 10.0, abs(vZ));
+// Overall sparse opacity
+alpha *= depthAlpha * 0.4;
+gl_FragColor = vec4(uColor, alpha);
+}
+`,
+transparent: true,
+depthWrite: false,
+blending: THREE.NormalBlending
+});
+// Create Particle Matrix
+const geometry = new THREE.BufferGeometry();
+const particlesCount = 2000; // Sparse spacing
+const posArray = new Float32Array(particlesCount * 3);
+const spread = 150;
+for(let i = 0; i
+  
+    {
+mouseX = (event.clientX - windowHalfX) * 0.001;
+mouseY = (event.clientY - windowHalfY) * 0.001;
+});
+// Animation Loop
+const clock = new THREE.Clock();
+const animate = () => {
+const elapsedTime = clock.getElapsedTime();
+// Smooth mouse target interpolation
+targetX = targetX + (mouseX - targetX) * 0.05;
+targetY = targetY + (mouseY - targetY) * 0.05;
+customShaderMaterial.uniforms.uTime.value = elapsedTime;
+customShaderMaterial.uniforms.uMouse.value.set(targetX, targetY);
+// Slight overall scene rotation for atmospheric drift
+particlesMesh.rotation.y = elapsedTime * 0.02;
+particlesMesh.rotation.x = elapsedTime * 0.01;
+renderer.render(scene, camera);
+requestAnimationFrame(animate);
+};
+animate();
+// Handle Resize
+window.addEventListener('resize', () => {
+camera.aspect = window.innerWidth / window.innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(window.innerWidth, window.innerHeight);
+});
+};
+initWebGL();
+// --- GSAP Animations ---
+gsap.registerPlugin(ScrollTrigger);
+// Initial Stagger Reveal
+gsap.fromTo('.gs-card',
+{ y: 60, opacity: 0 },
+{
+y: 0,
+opacity: 1,
+duration: 0.8,
+stagger: 0.1,
+ease: 'power3.out',
+scrollTrigger: {
+trigger: '.gs-grid-container',
+start: 'top 80%',
+}
+}
+);
+// Card 1: Pulse effect on central node
+gsap.to('.gs-pulse', {
+scale: 1.05,
+opacity: 0.8,
+duration: 2,
+repeat: -1,
+yoyo: true,
+ease: 'sine.inOut'
+});
+// Card 4: Light beam subtle wave
+gsap.to('.gs-beam', {
+opacity: 0.6,
+scaleX: 1.05,
+duration: 3,
+repeat: -1,
+yoyo: true,
+ease: 'sine.inOut'
+});
+// Card 5: Scanning line animation
+const scanTl = gsap.timeline({ repeat: -1 });
+scanTl.fromTo('.gs-scan-line',
+{ top: 0 },
+{ top: '100%', duration: 2, ease: 'linear' }
+);
+scanTl.fromTo('.gs-scan-trail',
+{ top: '-2rem' },
+{ top: '100%', duration: 2, ease: 'linear' },
+"
+    
+      {
+    console.log('Viewport Width:', window.innerWidth);
+    const gridContainer = document.querySelector('.gs-grid-container');
+    if (gridContainer) {
+        const style = window.getComputedStyle(gridContainer);
+        console.log('Grid Template Columns:', style.gridTemplateColumns);
+        console.log('Grid Display:', style.display);
+    }
+});
+
+window.addEventListener('resize', () => {
+    console.log('Viewport resized to:', window.innerWidth);
+});
+    </script>
+  </body>
+</html>
