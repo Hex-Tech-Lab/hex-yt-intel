@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 
 export async function Navigation({ user }: { user?: User | null }) {
@@ -6,8 +7,15 @@ export async function Navigation({ user }: { user?: User | null }) {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
       {/* Logo / Title (Left) */}
-      <div className="flex items-center gap-2">
-        <span className="text-xl font-bold text-gray-900">Hex-YT-Intel</span>
+      <div className="flex items-center gap-4">
+        <Link href="/" className="text-xl font-bold text-gray-900 hover:text-cyan-600 transition-colors">
+          Hex-YT-Intel
+        </Link>
+        {safeUser && (
+          <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+            Dashboard
+          </Link>
+        )}
       </div>
 
       {/* User Menu (Right) */}
