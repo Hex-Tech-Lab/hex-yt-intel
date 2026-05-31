@@ -255,10 +255,14 @@ if (typeof window === 'undefined' && isProductionEnvironment) {
 // Export individual getters for convenience
 export const env = {
   get supabaseUrl(): string {
-    return validateEnvVar('NEXT_PUBLIC_SUPABASE_URL', true)!;
+    // Fall back to CI mock if in CI environment and env var is missing
+    const val = validateEnvVar('NEXT_PUBLIC_SUPABASE_URL', true);
+    return val || (isCI ? 'https://test-project.supabase.co' : '');
   },
   get supabaseAnonKey(): string {
-    return validateEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY', true)!;
+    // Fall back to CI mock if in CI environment and env var is missing
+    const val = validateEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY', true);
+    return val || (isCI ? 'test-anon-key-safeguard-string-placeholder' : '');
   },
   get supabaseServiceRoleKey(): string | undefined {
     return validateEnvVar('SUPABASE_SERVICE_ROLE_KEY', false);
