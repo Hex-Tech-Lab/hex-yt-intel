@@ -595,11 +595,28 @@ export async function POST(request: NextRequest) {
     if (transcriptResult.status === 'rejected') {
       const errorCode = ERROR_CODES.CLOUDFLARE_TRANSCRIPT_NOT_FOUND;
       const reason = String(transcriptResult.reason);
+      const error = transcriptResult.reason as Error;
+
+      // DIAGNOSTIC: Detailed failure analysis for troubleshooting
+      console.error(`[analyses:diagnostic] Transcript fetch failed [${errorCode}]`, {
+        videoId,
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorStatus: (error as any)?.statusCode || (error as any)?.status,
+        errorBody: (error as any)?.body?.substring?.(0, 500) || String(error),
+        rawError: reason,
+        timestamp: new Date().toISOString(),
+      });
+
       console.warn(`[analyses] 6. Transcript fetch failed [${errorCode}] (optional, continuing with metadata only)`, { videoId, error: reason });
       Sentry.captureMessage('Transcript unavailable for video - proceeding with metadata analysis', {
         level: 'info',
-        tags: { service: 'decodo-api', operation: 'fetch-transcript', code: errorCode },
-        contexts: { video: { videoId }, transcript: { reason } }
+        tags: { service: 'decodo-api', operation: 'fetch-transcript', code: errorCode, diagnostic: 'enabled' },
+        contexts: { video: { videoId }, transcript: { reason }, error: {
+          name: error?.name,
+          status: (error as any)?.statusCode || (error as any)?.status,
+          message: error?.message
+        }}
       });
       addBreadcrumb('Transcript unavailable - continuing with metadata only', { videoId, error: reason }, 'external_service');
       transcript = '';
@@ -611,6 +628,15 @@ export async function POST(request: NextRequest) {
       if (!transcriptResponse.success) {
         const errorCode = ERROR_CODES.CLOUDFLARE_TRANSCRIPT_NOT_FOUND;
         const reason = transcriptResponse.reason || 'unknown_error';
+
+        // DIAGNOSTIC: API error details
+        console.error(`[analyses:diagnostic] Transcript API error [${errorCode}]`, {
+          videoId,
+          reason,
+          response: transcriptResponse,
+          timestamp: new Date().toISOString(),
+        });
+
         console.warn(`[analyses] 6. Transcript API error [${errorCode}] (optional, continuing with metadata only)`, { videoId, error: reason });
         addBreadcrumb('Transcript API error - continuing with metadata only', { videoId, error: reason }, 'external_service');
         transcript = '';

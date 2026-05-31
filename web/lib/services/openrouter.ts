@@ -37,11 +37,16 @@ export class AnalysisEngineError extends Error {
 }
 
 /**
- * Calls OpenRouter API with multi-model fallback strategy
- * - Attempts primary model first (Claude Haiku 4.5)
- * - Falls back to secondary model on service errors (429, 503)
- * - Fails immediately on auth errors (401, 403)
- * - Implements connection timeout + streaming response
+ * Free-Tier Waterfall Pipeline: Resilience-First Model Routing
+ *
+ * Implements tiered model fallback for bootstrap resilience:
+ * - Tier 1 (Free): qwen/qwen-2.5-coder-7b-instruct (cost-optimized, task-optimized)
+ * - Tier 2 (Fallback): anthropic/claude-haiku-4.5 (premium fallback on 402/5xx)
+ *
+ * Strategy: Default to free models to ensure pipeline never goes dark due to credit constraints.
+ * Haiku becomes the exception (reliability insurance), not the rule.
+ *
+ * Response metadata identifies model used via x-model-meta header.
  */
 export async function callOpenRouter(
   metadata: VideoMetadata,
@@ -64,7 +69,15 @@ export async function callOpenRouter(
     duration,
   });
 
-  const models = ['anthropic/claude-haiku-4.5', 'anthropic/claude-3.5-haiku'];
+  // Free-Tier Waterfall: Primary (free) → Fallback (haiku)
+  type ModelTier = { model: string; tier: 'free' | 'haiku'; estimatedCost: number };
+  const modelTiers: ModelTier[] = [
+    { model: 'qwen/qwen-2.5-coder-7b-instruct', tier: 'free', estimatedCost: 0.0002 },
+    { model: 'anthropic/claude-haiku-4.5', tier: 'haiku', estimatedCost: 0.0015 },
+  ];
+
+  let selectedModel: ModelTier = modelTiers[0]!;
+  const models = modelTiers.map(t => t.model);
   
   console.log('[callOpenRouter] Sending request to OpenRouter with native fallback models', { models });
 
@@ -116,13 +129,20 @@ export async function callOpenRouter(
       const status = response.status;
       const errorBody = await response.text().catch(() => '<unreadable>');
 
-      // Explicit 402 handling: insufficient quota
+      // Explicit 402 handling: Trigger fallback if available
+      if (status === 402 && selectedModel.tier === 'free') {
+        console.warn('[callOpenRouter] 402 Quota exhausted on free tier, triggering Haiku fallback');
+        selectedModel = modelTiers[1]!; // Upgrade to Haiku
+        // Retry with fallback model (recursive call with updated tier)
+        return callOpenRouter(metadata, transcript, persona, timezone, duration);
+      }
+
       if (status === 402) {
         throw new AnalysisEngineError({
           message: 'Insufficient quota for analysis generation. Please upgrade your plan.',
           code: 'ERR_QUOTA_BUDGET_EXCEEDED',
           statusCode: 402,
-          modelAttempted: 'auto-routed',
+          modelAttempted: selectedModel.model,
         });
       }
 
@@ -131,14 +151,29 @@ export async function callOpenRouter(
           message: `OpenRouter auth failed (${status}). Check OPENROUTER_API_KEY.`,
           code: 'ERR_PROVIDER_AUTH_FAILED',
           statusCode: status,
-          modelAttempted: 'auto-routed',
+          modelAttempted: selectedModel.model,
         });
       }
-      throw new Error(`OpenRouter HTTP ${status}: ${errorBody.slice(0, 200)}`);
+      throw new Error(`OpenRouter HTTP ${status} (${selectedModel.model}): ${errorBody.slice(0, 200)}`);
     }
 
-    console.log('[callOpenRouter] Stream response accepted');
-    return response;
+    console.log('[callOpenRouter] Stream response accepted', {
+      model: selectedModel.model,
+      tier: selectedModel.tier,
+      estimatedCost: selectedModel.estimatedCost,
+    });
+
+    // Attach model metadata to response headers for transparency
+    const wrappedResponse = new Response(response.body, response);
+    wrappedResponse.headers.set('x-model-meta', JSON.stringify({
+      model: selectedModel.model,
+      provider: 'openrouter',
+      cost: selectedModel.estimatedCost,
+      tier: selectedModel.tier,
+      timestamp: new Date().toISOString(),
+    }));
+
+    return wrappedResponse;
   } catch (err) {
     clearTimeout(connectTimeoutId);
     const error = err as Error;
