@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen" style={{ background: '#000000' }}>
       {/* Top Navigation Bar */}
       <Navigation user={user} />
 
