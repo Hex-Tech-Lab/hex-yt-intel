@@ -76,7 +76,7 @@ jobs:
 
       - name: Upload type check report
         if: always()
-        uses: actions/upload-artifact@4ced503f3750d52f35215978e74177d75ee70745 # v4.5.0
+        uses: actions/upload-artifact@v4
         with:
           name: type-check-report
           path: .turbo/coverage/
@@ -160,7 +160,7 @@ jobs:
           echo "✓ Build output verified"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@4ced503f3750d52f35215978e74177d75ee70745 # v4.5.0
+        uses: actions/upload-artifact@v4
         with:
           name: build-output
           path: |
