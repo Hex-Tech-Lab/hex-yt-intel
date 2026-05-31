@@ -395,10 +395,32 @@ export async function POST(request: NextRequest) {
           throw error;
         }
 
-        // If user doesn't exist in DB yet, return a default 'free' state
-        // This prevents the 'Null Tier Trap' and unhandled crashes downstream
+        // If user doesn't exist in DB yet, create them
+        // This ensures atomic quota increment RPC can find the user record
         if (!data) {
-          console.info('[analyses] User not found in database, defaulting to free tier state', { userId });
+          console.info('[analyses] User not found in database, auto-creating test user', { userId });
+          if (!userId) {
+            throw new Error('userId is undefined during user creation');
+          }
+          const { error: createError } = await supabase
+            .from('users')
+            .insert({
+              id: userId,
+              email: userEmail || `user-${userId.slice(0, 8)}@test.local`,
+              tier: 'free',
+              analyses_used: 0,
+              last_reset_date: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.warn(`[analyses] Failed to auto-create user [${createError.code || 'UNKNOWN'}]: ${createError.message} | Details: ${createError.details || 'none'}`, { userId });
+            // Fall back to default state if insert fails (RLS or other issue)
+          } else {
+            console.info('[analyses] User auto-created successfully', { userId });
+          }
+
           return {
             tier: 'free',
             analyses_used: 0,
