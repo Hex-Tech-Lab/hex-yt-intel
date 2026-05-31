@@ -88,9 +88,9 @@ export async function callOpenRouter(
 
   try {
     // Law #2: Dynamic token budget scales with transcript length
-    // Base 5000ms + 1000ms per 5000 transcript chars, capped at 25000ms
-    // max_tokens proportional: 4000 base + (transcript_length / 10) tokens, capped at 10000
-    const maxTokens = Math.min(10000, 4000 + Math.floor(transcript.length / 10));
+    // Hard cap at 3500 tokens to ensure all requests fit within 4000-token credit window
+    // This prevents 402 (insufficient quota) errors even with low credit balance
+    const maxTokens = Math.min(3500, 3000 + Math.floor(transcript.length / 50));
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -115,7 +115,17 @@ export async function callOpenRouter(
     if (!response.ok) {
       const status = response.status;
       const errorBody = await response.text().catch(() => '<unreadable>');
-      
+
+      // Explicit 402 handling: insufficient quota
+      if (status === 402) {
+        throw new AnalysisEngineError({
+          message: 'Insufficient quota for analysis generation. Please upgrade your plan.',
+          code: 'ERR_QUOTA_BUDGET_EXCEEDED',
+          statusCode: 402,
+          modelAttempted: 'auto-routed',
+        });
+      }
+
       if (status === 401 || status === 403) {
         throw new AnalysisEngineError({
           message: `OpenRouter auth failed (${status}). Check OPENROUTER_API_KEY.`,

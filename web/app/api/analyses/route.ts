@@ -674,8 +674,12 @@ export async function POST(request: NextRequest) {
       if (error instanceof AnalysisEngineError) {
         statusCode = error.statusCode;
         errorMessage = error.message;
+        errorCode = (error.code as ErrorCode) || ERROR_CODES.ANALYSIS_GENERATION_FAILED;
+
         // Map specific error types to error codes
-        if (error.message.includes('timeout')) {
+        if (error.code === 'ERR_QUOTA_BUDGET_EXCEEDED') {
+          errorCode = ERROR_CODES.OPENROUTER_RATE_LIMIT as ErrorCode;
+        } else if (error.message.includes('timeout')) {
           errorCode = ERROR_CODES.OPENROUTER_TIMEOUT as ErrorCode;
         } else if (error.message.includes('rate limit')) {
           errorCode = ERROR_CODES.OPENROUTER_RATE_LIMIT as ErrorCode;
