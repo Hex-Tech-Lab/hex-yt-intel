@@ -1,27 +1,24 @@
-import * as React from 'react';
-
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'outline';
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'default', ...props }, ref) => {
-    const baseStyles =
-      'inline-flex items-center justify-center rounded-md font-medium text-sm h-10 px-4 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-    const variantStyles =
-      variant === 'outline'
-        ? 'border border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
-        : 'bg-blue-600 text-white hover:bg-blue-700';
+const Button = ({ className = '', variant = 'default', ref, ...props }: ButtonProps) => {
+  const baseStyles =
+    'inline-flex items-center justify-center rounded-lg font-medium text-sm h-10 px-4 py-2 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#0A0E17] disabled:opacity-50 disabled:cursor-not-allowed';
+  const variantStyles =
+    variant === 'outline'
+      ? 'border border-slate-700 bg-slate-900/50 text-slate-200 hover:bg-slate-800 hover:border-slate-600'
+      : 'bg-cyan-600 text-black hover:bg-cyan-500 hover:shadow-[0_0_20px_rgba(34,211,238,0.3)]';
 
-    return (
-      <button
-        ref={ref}
-        className={`${baseStyles} ${variantStyles} ${className}`}
-        {...props}
-      />
-    );
-  }
-);
+  return (
+    <button
+      ref={ref}
+      className={`${baseStyles} ${variantStyles} ${className}`}
+      {...props}
+    />
+  );
+};
 Button.displayName = 'Button';
 
 export { Button };
