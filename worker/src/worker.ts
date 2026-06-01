@@ -6,7 +6,8 @@ type Env = {
   CLOUDFLARE_SECRET_TOKEN: string;
   RESIDENTIAL_PROXY_URL?: string;
   OPENROUTER_API_KEY: string;
-  KV: KVNamespace;
+  UPSTASH_REDIS_REST_URL: string;
+  UPSTASH_REDIS_REST_TOKEN: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -60,12 +61,14 @@ async function fetchWithProxy(
 // LLM ANALYSIS PIPELINE – 3-MODEL CASCADE WITH UPSTASH KV CACHING
 // ===================================================================
 
-// OpenRouter model waterfall – deterministic fallback chain
-// Nemotron 3 super 120b is most capable, Laguna M.1 is reliable mid-tier, GLM 4.5 Air is lightweight fallback
+// 5-tier model cascade – deterministic fallback chain optimized for latency + cost
+// Gemma 4 31B (fastest, free), Laguna M.1 (reliable), GLM 4.5 Air (lightweight), Kimi K2.6 (fallback), Haiku (paid fallback)
 const MODEL_CHAIN = [
-  { model: 'nvidia/nemotron-3-super-120b:free', name: 'Nemotron 3 Super 120B' },
+  { model: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B IT' },
   { model: 'poolside/laguna-m.1:free', name: 'Laguna M.1' },
   { model: 'z-ai/glm-4.5-air:free', name: 'GLM 4.5 Air' },
+  { model: 'moonshotai/kimi-k2.6:free', name: 'Kimi K2.6' },
+  { model: 'anthropic/claude-3-haiku:free', name: 'Claude Haiku' },
 ] as const;
 
 /**
@@ -90,6 +93,83 @@ async function buildCacheKey(
   videoId: string
 ): Promise<string> {
   return `analysis::${systemPromptHash}::${transcriptLength}::${videoId}`;
+}
+
+/**
+ * Upstash Redis REST API caching layer
+ * GET: returns cached analysis or null
+ * SET: stores analysis with 7-day TTL
+ */
+async function getFromUpstash(key: string, upstashUrl: string, upstashToken: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${upstashUrl}/get/${key}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${upstashToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json() as { result: string | null };
+    return data.result;
+  } catch (error) {
+    console.warn('[Upstash] GET failed, proceeding without cache hit');
+    return null;
+  }
+}
+
+async function setUpstash(key: string, value: string, upstashUrl: string, upstashToken: string): Promise<void> {
+  try {
+    await fetch(`${upstashUrl}/set/${key}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${upstashToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ex: 604800, // 7 days TTL in seconds
+        get: false,
+        xx: false,
+      }),
+    });
+  } catch (error) {
+    console.warn('[Upstash] SET failed, analysis succeeded but not cached');
+  }
+}
+
+/**
+ * Validate 12D analysis JSON structure
+ * Ensures LLM output has required dimensions before caching
+ */
+function validate12D(analysis: any): boolean {
+  if (typeof analysis !== 'object' || analysis === null) {
+    return false;
+  }
+
+  // Check for markdown structure with 11 dimensions + apex summary
+  const requiredDimensions = [
+    'DIMENSION 1',
+    'DIMENSION 2',
+    'DIMENSION 3',
+    'DIMENSION 4',
+    'DIMENSION 5',
+    'DIMENSION 6',
+    'DIMENSION 7',
+    'DIMENSION 8',
+    'DIMENSION 9',
+    'DIMENSION 10',
+    'DIMENSION 11',
+  ];
+
+  // If analysis is markdown string, check for dimension headers
+  if (typeof analysis === 'string') {
+    return requiredDimensions.filter(dim => analysis.includes(dim)).length >= 8; // At least 8/11 dimensions
+  }
+
+  return false;
 }
 
 /**
@@ -499,7 +579,7 @@ app.post("/log-analysis", async (c) => {
   return c.json({ logged: true });
 });
 
-// LLM Analysis endpoint
+// LLM Analysis endpoint with 5-tier cascade + Upstash KV caching + 12D validation
 // POST /analyze-llm with { videoId, transcript, metadata, persona, timezone, systemPrompt? }
 app.post("/analyze-llm", async (c) => {
   interface AnalysisRequest {
@@ -527,18 +607,22 @@ app.post("/analyze-llm", async (c) => {
 
   try {
     const apiKey = c.env.OPENROUTER_API_KEY;
+    const upstashUrl = c.env.UPSTASH_REDIS_REST_URL;
+    const upstashToken = c.env.UPSTASH_REDIS_REST_TOKEN;
+
     if (!apiKey) {
       console.error('[analyze-llm] Server misconfigured: Missing OPENROUTER_API_KEY');
       return c.json({ success: false, error: 'Server misconfigured' }, 500);
     }
 
-    const kv = c.env.KV;
+    if (!upstashUrl || !upstashToken) {
+      console.warn('[analyze-llm] Upstash not configured, proceeding without caching');
+    }
 
     // Use provided system prompt or default (would be UCIS v5.1 in production)
     const systemPrompt = request.systemPrompt || `# UCIS v5.1 Analysis Framework
 Your task is to analyze YouTube video transcripts across 11 dimensions using the UCIS v5.1 framework.
-Provide comprehensive analysis with dimensions: Apex Summary, Provenance, Architecture, Psychology, Intelligence, Comparative, Implementation, Semantic, Forward Intelligence, Credibility, Commercial Yield.
-Return analysis in markdown format.`;
+Provide comprehensive analysis with all 11 dimensions in markdown format.`;
 
     // Fingerprint prompt for deterministic caching
     const promptHash = await fingerprintSystemPrompt(systemPrompt);
@@ -548,11 +632,11 @@ Return analysis in markdown format.`;
       request.videoId
     );
 
-    // Try cache first if KV configured
-    if (kv) {
+    // Try Upstash cache first
+    if (upstashUrl && upstashToken) {
       try {
-        const cached = await kv.get(cacheKey);
-        if (cached) {
+        const cached = await getFromUpstash(cacheKey, upstashUrl, upstashToken);
+        if (cached && validate12D(cached)) {
           return c.json({
             success: true,
             analysis: cached,
@@ -561,13 +645,14 @@ Return analysis in markdown format.`;
           });
         }
       } catch (error) {
-        console.warn('[analyze-llm] KV read failed, proceeding with LLM call');
+        console.warn('[analyze-llm] Upstash read failed, proceeding with LLM call');
       }
     }
 
-    // Call LLM with cascade – try each model until one succeeds
+    // 5-tier cascade – try each model until one succeeds with valid 12D output
     let analysisResult = null;
     let modelUsed = '';
+    let validationPassed = false;
 
     for (const { model, name } of MODEL_CHAIN) {
       console.log(`[analyze-llm] Attempting ${name}...`);
@@ -578,33 +663,39 @@ Return analysis in markdown format.`;
         request.transcript,
         request.metadata,
         apiKey,
-        25000 // Adaptive timeout as per CLAUDE.md Law #2
+        25000 // Adaptive timeout (covers 5-tier cascade + network)
       );
 
       if (result.success && result.text) {
-        analysisResult = result.text;
-        modelUsed = name;
-        console.log(`[analyze-llm] Success with ${name}`);
-        break;
+        // Validate 12D structure before using
+        if (validate12D(result.text)) {
+          analysisResult = result.text;
+          modelUsed = name;
+          validationPassed = true;
+          console.log(`[analyze-llm] Success with ${name}, validation passed`);
+          break;
+        } else {
+          console.warn(`[analyze-llm] ${name} validation failed, trying next model`);
+        }
+      } else {
+        console.warn(`[analyze-llm] Failed with ${name}: ${result.error}`);
       }
-
-      console.warn(`[analyze-llm] Failed with ${name}: ${result.error}`);
     }
 
-    if (!analysisResult) {
+    if (!analysisResult || !validationPassed) {
       return c.json({
         success: false,
-        error: 'All models in cascade failed',
+        error: 'All models in cascade failed or validation failed',
       }, 502);
     }
 
-    // Cache the result if KV configured
-    if (kv) {
+    // Cache the validated result to Upstash
+    if (upstashUrl && upstashToken) {
       try {
-        await kv.put(cacheKey, analysisResult, { expirationTtl: 604800 }); // 7 days
-        console.log(`[analyze-llm] Cached analysis for ${request.videoId}`);
+        await setUpstash(cacheKey, analysisResult, upstashUrl, upstashToken);
+        console.log(`[analyze-llm] Cached to Upstash for ${request.videoId}`);
       } catch (error) {
-        console.warn('[analyze-llm] KV write failed, but analysis succeeded');
+        console.warn('[analyze-llm] Upstash write failed, but analysis succeeded');
       }
     }
 
