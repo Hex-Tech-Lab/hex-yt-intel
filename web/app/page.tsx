@@ -318,7 +318,7 @@ function LandingPage() {
                 key={feature.id}
                 id={feature.id}
                 data-fade-in
-                className={`p-8 border border-white/10 rounded-xl bg-white/[0.02] ${fade(feature.id)}`}
+                className={`p-8 border border-white/10 rounded-xl bg-surface/[0.02] ${fade(feature.id)}`}
               >
                 <h3 className="text-lg font-semibold mb-4">{feature.title}</h3>
                 <p className="text-[var(--grey-50)] leading-[1.6]">{feature.description}</p>

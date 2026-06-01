@@ -12,8 +12,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Hex-YT-Intel",
-  description: "YouTube synthesis engine",
+  title: "Hex YT Intel | YouTube Synthesis Engine",
+  description: "AI-powered intelligence for video content",
 }
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="bg-black text-white">
+      <body className="bg-surface text-primary antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

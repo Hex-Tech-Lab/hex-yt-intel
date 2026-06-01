@@ -57,7 +57,7 @@ const MetricCard = ({
   const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
 
   return (
-    <div className="bg-white p-4 rounded-lg border border-gray-200">
+    <div className="bg-surface p-4 rounded-lg border border-gray-200">
       <h3 className="text-sm font-medium text-gray-600">{title}</h3>
       <div className="mt-2 flex items-baseline justify-between">
         <span className="text-2xl font-bold text-gray-900">{value}</span>
@@ -151,7 +151,7 @@ export default function DashboardsPage() {
         {health && (
           <div className="mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">System Health</h2>
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-surface rounded-lg border border-gray-200 p-6">
               <div className="mb-4">
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-medium">Overall Status</span>
@@ -291,7 +291,7 @@ export default function DashboardsPage() {
         </div>
 
         {/* Troubleshooting Section */}
-        <div className="mt-8 bg-white rounded-lg border border-gray-200 p-6">
+        <div className="mt-8 bg-surface rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Troubleshooting</h3>
           <details className="mb-4 cursor-pointer">
             <summary className="font-medium text-gray-900">What do I do if a component shows &quot;Error&quot;?</summary>

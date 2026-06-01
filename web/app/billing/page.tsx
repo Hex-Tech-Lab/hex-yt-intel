@@ -92,7 +92,7 @@ export default async function BillingPage() {
     console.error('[/billing] Error:', error);
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow p-6 max-w-md">
+        <div className="bg-surface rounded-lg shadow p-6 max-w-md">
           <h1 className="text-xl font-bold text-red-600 mb-2">Error Loading Billing</h1>
           <p className="text-gray-700">Failed to load billing information. Please try again.</p>
         </div>

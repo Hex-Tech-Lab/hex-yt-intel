@@ -40,7 +40,7 @@ export default function SignInForm() {
           <p className="mt-2 text-gray-600">YouTube synthesis engine</p>
         </div>
 
-        <div className="rounded-lg bg-white p-8 shadow-md">
+        <div className="rounded-lg bg-surface p-8 shadow-md">
           <h2 className="mb-6 text-center text-2xl font-bold text-gray-900">Sign In</h2>
 
           {error && (
@@ -52,7 +52,7 @@ export default function SignInForm() {
           <button
             onClick={() => handleSupabaseAuth('google')}
             disabled={isLoading}
-            className="w-full rounded-lg bg-white px-4 py-2 text-gray-900 font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="w-full rounded-lg bg-surface px-4 py-2 text-gray-900 font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {isLoading ? 'Signing in...' : 'Sign in with Google'}
           </button>
