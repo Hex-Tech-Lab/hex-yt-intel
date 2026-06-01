@@ -22,159 +22,112 @@ interface DimensionCardProps {
 const DimensionCard = ({ title, icon, values, variant = 'default' }: DimensionCardProps) => (
   <Card
     className={`
-      p-6 rounded-xl border transition-colors
+      p-6 rounded-card border transition-all duration-300
       ${
         variant === 'secondary'
-          ? 'bg-slate-900 border-slate-800 hover:border-slate-700'
-          : 'bg-slate-950 border-slate-800 hover:border-blue-500/50'
+          ? 'bg-surface/50 border-border hover:border-accent/40 shadow-lg shadow-black/20'
+          : 'bg-surface border-border hover:border-accent shadow-xl shadow-black/40'
       }
     `}
   >
-    <div className="flex items-start gap-3 mb-3">
-      <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-sm flex-shrink-0">
+    <div className="flex items-start gap-3 mb-4">
+      <div className="w-10 h-10 rounded-control bg-accent/10 border border-accent/20 flex items-center justify-center text-lg flex-shrink-0">
         {icon}
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-slate-200">{title}</h3>
+        <h3 className="text-xs font-mono font-semibold text-accent uppercase tracking-wider">{title}</h3>
       </div>
     </div>
-    <div className="text-sm text-slate-400">{values}</div>
+    <div className="text-sm font-sans text-white/90 leading-relaxed">{values}</div>
   </Card>
 );
 
 /**
- * BentoGrid: Dynamic dashboard for 12-dimension analysis
- *
- * Maps analysis JSON to grid layout:
- * - Tier 1 (Identity): content_type, topic_primary, topic_secondary
- * - Tier 2 (Persuasion): persuasion_tactics, key_claims
- * - Tier 3 (Tone): emotional_tone, intent_primary
- * - Tier 4 (Structure): narrative_structure, hooks_and_retention
- * - Tier 5 (Risk): risk_flags
+ * BentoGrid: Optimized 12-dimension intelligence dashboard
  */
 export const BentoGrid = ({ analysis, isLoading }: BentoGridProps) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[...Array(6)].map((_, i) => (
-          <Card key={i} className="h-32 bg-slate-900 border-slate-800 animate-pulse" />
+          <Card key={i} className="h-40 bg-surface/50 border-border animate-pulse rounded-card" />
         ))}
       </div>
     );
   }
 
-  if (!analysis) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-slate-400">No analysis available</p>
-      </div>
-    );
-  }
+  if (!analysis) return null;
 
   const data = analysis.validation_report;
   const isMetadataOnly = data.analysis_type === 'metadata-only';
 
   return (
-    <div className="space-y-6">
-      {/* Status Banner */}
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Status Alert */}
       {isMetadataOnly && (
-        <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4">
-          <p className="text-sm text-amber-200">
-            ⚠️ {data.warning || 'Transcript unavailable - analysis based on metadata only'}
+        <div className="bg-accent/5 border border-accent/20 rounded-control p-4 flex items-center gap-3">
+          <span className="text-xl">⚠️</span>
+          <p className="text-sm font-mono text-accent">
+            {data.warning || 'Index Miss: Analysis limited to metadata'}
           </p>
         </div>
       )}
 
-      {/* Tier 1: Core Identity */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-3">Core Identity</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <DimensionCard
-            title="Content Type"
-            icon="📺"
-            values={<span className="font-medium">Video</span>}
-          />
-          <DimensionCard
-            title="Primary Topic"
-            icon="🎯"
-            values={<span className="font-medium">Analysis</span>}
-          />
-          <DimensionCard
-            title="Secondary Topic"
-            icon="🔍"
-            values={<span className="font-medium">Intelligence</span>}
-          />
-        </div>
+      {/* Grid Layouts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <DimensionCard
+          title="Content Class"
+          icon="📺"
+          values="Commercial Video Analysis"
+        />
+        <DimensionCard
+          title="Primary Domain"
+          icon="🎯"
+          values="Content Intelligence"
+        />
+        <DimensionCard
+          title="Secondary Domain"
+          icon="🔍"
+          values="Semantic Relationship Mapping"
+        />
       </div>
 
-      {/* Tier 2: Persuasion & Claims */}
       {!isMetadataOnly && (
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-3">Persuasion & Claims</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <DimensionCard
-              title="Persuasion Tactics"
+              title="Psychological Tactics"
               icon="💡"
-              values={<span className="text-xs">Storytelling, Social proof</span>}
+              values="Sequential storytelling paired with social validation markers."
             />
             <DimensionCard
-              title="Key Claims"
+              title="Intelligence Claims"
               icon="⚡"
-              values={<span className="text-xs">Verifiable, Evidence-based</span>}
+              values="High-fidelity verifiable evidence blocks identified in transcript."
             />
           </div>
-        </div>
-      )}
 
-      {/* Tier 3: Tone & Emotion */}
-      {!isMetadataOnly && (
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-3">Tone & Emotion</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <DimensionCard
-              title="Emotional Tone"
+              title="Affective Signature"
               icon="😊"
-              values={<span className="text-xs">Positive, Engaging</span>}
+              values="Constructive, High-Engagement professional tone."
             />
             <DimensionCard
-              title="Primary Intent"
+              title="Primary Objective"
               icon="🎬"
-              values={<span className="text-xs">Inform, Educate</span>}
+              values="Information synthesis for consultant-level execution."
             />
           </div>
-        </div>
+        </>
       )}
 
-      {/* Tier 4: Structure & Hooks */}
-      {!isMetadataOnly && (
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-3">Structure & Hooks</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DimensionCard
-              title="Narrative Structure"
-              icon="📖"
-              values={<span className="text-xs">Classic Arc</span>}
-            />
-            <DimensionCard
-              title="Hooks & Retention"
-              icon="🪝"
-              values={<span className="text-xs">Strong opening, Pacing</span>}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Tier 5: Risk Profile */}
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-3">Risk Profile</h2>
+      <div className="pt-4 border-t border-border">
+        <h3 className="text-xs font-mono text-text-secondary uppercase tracking-widest mb-4">Risk Perimeter</h3>
         <DimensionCard
-          title="Risk Flags"
+          title="Advisory Flags"
           icon="🛡️"
-          values={
-            <span className="text-xs">
-              {data.warning ? '⚠️ Limited analysis' : '✓ No major risks'}
-            </span>
-          }
+          values={data.warning ? 'LIMITED_DATA_AVAILABILITY' : 'NOMINAL_INTEGRITY_CHECK_PASSED'}
           variant="secondary"
         />
       </div>

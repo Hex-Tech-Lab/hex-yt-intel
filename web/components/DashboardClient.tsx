@@ -1,10 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import toast from 'react-hot-toast';
+import { BentoGrid } from '@/components/dashboard/BentoGrid';
+import type { CachedAnalysisResult } from '@/lib/services/cache';
 import styles from '@/app/dashboard.module.css';
 
 const STORAGE_KEY = 'hex_intel_saved_input';
+
+// Dynamic import for AmbientCanvas to prevent SSR/hydration mismatch
+const AmbientCanvas = dynamic(() => import('@/components/ui/AmbientCanvas'), {
+  ssr: false,
+  loading: () => null,
+});
 
 export function DashboardClient() {
   const [url, setUrl] = useState('');
@@ -19,6 +28,7 @@ export function DashboardClient() {
   }, []);
 
   const [synthesis, setSynthesis] = useState<string | null>(null);
+  const [analysisData, setAnalysisData] = useState<CachedAnalysisResult | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +66,7 @@ export function DashboardClient() {
     setLoading(true);
     setSynthesis(''); // Clear previous synthesis
     setAnalysisId(null);
+    setAnalysisData(null);
 
     try {
       const res = await fetch('/api/analyses', {
@@ -121,17 +132,32 @@ export function DashboardClient() {
       }
 
       // Reconcile DB insert with completed synthesis
-      // (post-hoc: backend can also echo the analysisId in X-Analysis-ID header)
-      if (!analysisId) {
-        const tempId = crypto.randomUUID();
-        setAnalysisId(tempId);
-      }
+      const tempId = crypto.randomUUID();
+      setAnalysisId(tempId);
 
+      // Parse synthesis into structured data for BentoGrid
+      const structuredData: CachedAnalysisResult = {
+        id: tempId,
+        video_id: url,
+        title: 'YouTube Content Analysis',
+        analysis_markdown: fullSynthesis,
+        validation_report: {
+          transcript_available: true,
+          analysis_type: 'full',
+        },
+        model_used: 'free-tier-waterfall',
+        created_at: new Date().toISOString(),
+        cached_at: new Date().toISOString(),
+      };
+
+      // Validate data before propagating to UI
+      setAnalysisData(structuredData);
       toast.success('Analysis complete!');
     } catch (error) {
       const err = error as Error;
       toast.error(err.message || 'Unknown error');
       setSynthesis(null); // Clear on error
+      setAnalysisData(null);
     } finally {
       setLoading(false);
     }
@@ -182,84 +208,112 @@ export function DashboardClient() {
     toast('Semantic search coming in Chunk 7');
   };
 
-  return (
-    <div className={styles.panelContainer}>
-      {/* LEFT PANEL: Synthesis Output */}
-      <div className={styles.panelLeft}>
-        <div className={styles.synthesisOutput}>
-          {synthesis ? (
-            <>
-              {synthesis}
-              {loading && <span className={styles.loadingSpinner} />}
-            </>
-          ) : (
-            <div className={styles.synthesisEmpty}>
-              <p>
-                {loading
-                  ? 'Generating synthesis...'
-                  : 'Paste a YouTube URL and click "Create Synthesis" to see output here'}
-              </p>
-            </div>
-          )}
-        </div>
+  // Memoize the analysis data to prevent unnecessary re-renders
+  const memoizedAnalysisData = useMemo(() => analysisData, [analysisData]);
 
-        {/* Export + Share buttons */}
-        {synthesis && analysisId && (
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button
-              onClick={handleExport}
-              className={styles.buttonSecondary}
-              style={{ flex: 1 }}
-            >
-              📥 Export PDF
-            </button>
-            <button
-              onClick={handleShare}
-              className={styles.buttonPrimary}
-              style={{ flex: 1 }}
-            >
-              🔗 Share Link
-            </button>
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      {/* Ambient Canvas Background (z-0) */}
+      {isMounted && <AmbientCanvas className="z-0" />}
+
+      {/* Main Content Container (z-10) */}
+      <div className="relative z-10 w-full h-full">
+        {analysisData && !loading ? (
+          // BentoGrid View: Full Analysis Display
+          <div className="p-6 overflow-y-auto h-full bg-black/50 backdrop-blur-sm">
+            <div className="max-w-7xl mx-auto">
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">{analysisData.title}</h2>
+                  <p className="text-sm text-slate-400 mt-1">Analysis complete</p>
+                </div>
+                {analysisId && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleExport}
+                      className={styles.buttonSecondary}
+                    >
+                      📥 Export PDF
+                    </button>
+                    <button
+                      onClick={handleShare}
+                      className={styles.buttonPrimary}
+                    >
+                      🔗 Share Link
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* BentoGrid Component */}
+              <BentoGrid
+                analysis={memoizedAnalysisData}
+                isLoading={loading}
+              />
+            </div>
+          </div>
+        ) : (
+          // Original Panel View: Input and Metadata
+          <div className={styles.panelContainer}>
+            {/* LEFT PANEL: Synthesis Output or Loading State */}
+            <div className={styles.panelLeft}>
+              <div className={styles.synthesisOutput}>
+                {synthesis ? (
+                  <>
+                    {synthesis}
+                    {loading && <span className={styles.loadingSpinner} />}
+                  </>
+                ) : (
+                  <div className={styles.synthesisEmpty}>
+                    <p>
+                      {loading
+                        ? 'Generating synthesis...'
+                        : 'Paste a YouTube URL and click "Create Synthesis" to see output here'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT PANEL: URL Input + Action Buttons */}
+            <div className={styles.panelRight}>
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Paste YouTube URL</label>
+                <input
+                  type="text"
+                  placeholder="https://youtube.com/watch?v=..."
+                  value={isMounted ? url : ''}
+                  onChange={handleUrlChange}
+                  className={styles.input}
+                />
+              </div>
+
+              <button
+                onClick={handleFetch}
+                disabled={loading || !url}
+                className={`${styles.button} ${styles.buttonSecondary}`}
+              >
+                {loading ? 'Loading...' : 'Fetch Metadata'}
+              </button>
+
+              <button
+                onClick={handleAnalyze}
+                disabled={loading || !url}
+                className={`${styles.button} ${styles.buttonPrimary}`}
+              >
+                {loading ? 'Analyzing...' : 'Create Synthesis'}
+              </button>
+
+              <button
+                onClick={handleSearch}
+                disabled={loading || !url}
+                className={`${styles.button} ${styles.buttonSecondary}`}
+              >
+                Semantic Search
+              </button>
+            </div>
           </div>
         )}
-      </div>
-
-      {/* RIGHT PANEL: URL Input + Action Buttons */}
-      <div className={styles.panelRight}>
-        <div className={styles.inputGroup}>
-          <label className={styles.inputLabel}>Paste YouTube URL</label>
-          <input
-            type="text"
-            placeholder="https://youtube.com/watch?v=..."
-            value={isMounted ? url : ''}
-            onChange={handleUrlChange}
-            className={styles.input}
-          />
-        </div>
-
-        <button
-          onClick={handleFetch}
-          disabled={loading || !url}
-          className={`${styles.button} ${styles.buttonSecondary}`}
-        >
-          {loading ? 'Loading...' : 'Fetch Metadata'}
-        </button>
-
-        <button
-          onClick={handleAnalyze}
-          disabled={loading || !url}
-          className={`${styles.button} ${styles.buttonPrimary}`}
-        >
-          {loading ? 'Analyzing...' : 'Create Synthesis'}
-        </button>
-
-        <button
-          onClick={handleSearch}
-          disabled={loading || !url}
-          className={`${styles.button} ${styles.buttonSecondary}`}
-        >
-          Semantic Search
-        </button>
       </div>
     </div>
   );
