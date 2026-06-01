@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
+import { parseUCISSections } from '@/lib/utils/ucis-parser';
 import type { CachedAnalysisResult } from '@/lib/services/cache';
 
 interface BentoGridProps {
@@ -16,9 +17,6 @@ interface DimensionCardProps {
   variant?: 'default' | 'secondary';
 }
 
-/**
- * DimensionCard: Individual grid cell for analysis dimensions
- */
 const DimensionCard = ({ title, icon, values, variant = 'default' }: DimensionCardProps) => (
   <Card
     className={`
@@ -42,10 +40,12 @@ const DimensionCard = ({ title, icon, values, variant = 'default' }: DimensionCa
   </Card>
 );
 
-/**
- * BentoGrid: Optimized 12-dimension intelligence dashboard
- */
 export const BentoGrid = ({ analysis, isLoading }: BentoGridProps) => {
+  const sections = useMemo(() => {
+    if (!analysis?.analysis_markdown) return null;
+    return parseUCISSections(analysis.analysis_markdown);
+  }, [analysis?.analysis_markdown]);
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -63,7 +63,6 @@ export const BentoGrid = ({ analysis, isLoading }: BentoGridProps) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Status Alert */}
       {isMetadataOnly && (
         <div className="bg-accent/5 border border-accent/20 rounded-control p-4 flex items-center gap-3">
           <span className="text-xl">⚠️</span>
@@ -73,22 +72,21 @@ export const BentoGrid = ({ analysis, isLoading }: BentoGridProps) => {
         </div>
       )}
 
-      {/* Grid Layouts */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <DimensionCard
-          title="Content Class"
-          icon="📺"
-          values="Commercial Video Analysis"
+          title="Apex Intelligence"
+          icon="🔬"
+          values={sections?.apex || 'Parsing...'}
         />
         <DimensionCard
-          title="Primary Domain"
-          icon="🎯"
-          values="Content Intelligence"
+          title="Source Profile"
+          icon="📡"
+          values={sections?.provenance || 'Parsing...'}
         />
         <DimensionCard
-          title="Secondary Domain"
-          icon="🔍"
-          values="Semantic Relationship Mapping"
+          title="Content Architecture"
+          icon="🏗️"
+          values={sections?.architecture || 'Parsing...'}
         />
       </div>
 
@@ -96,41 +94,37 @@ export const BentoGrid = ({ analysis, isLoading }: BentoGridProps) => {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <DimensionCard
-              title="Psychological Tactics"
-              icon="💡"
-              values="Sequential storytelling paired with social validation markers."
+              title="Psychological Layer"
+              icon="🧠"
+              values={sections?.psychological || 'Parsing...'}
             />
             <DimensionCard
-              title="Intelligence Claims"
+              title="Core Insights"
               icon="⚡"
-              values="High-fidelity verifiable evidence blocks identified in transcript."
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <DimensionCard
-              title="Affective Signature"
-              icon="😊"
-              values="Constructive, High-Engagement professional tone."
-            />
-            <DimensionCard
-              title="Primary Objective"
-              icon="🎬"
-              values="Information synthesis for consultant-level execution."
+              values={sections?.coreIntelligence || 'Parsing...'}
             />
           </div>
         </>
       )}
 
       <div className="pt-4 border-t border-border">
-        <h3 className="text-xs font-mono text-text-secondary uppercase tracking-widest mb-4">Risk Perimeter</h3>
+        <h3 className="text-xs font-mono text-text-secondary uppercase tracking-widest mb-4">Risk Profile</h3>
         <DimensionCard
-          title="Advisory Flags"
+          title="Risk & Credibility"
           icon="🛡️"
-          values={data.warning ? 'LIMITED_DATA_AVAILABILITY' : 'NOMINAL_INTEGRITY_CHECK_PASSED'}
+          values={sections?.risk || (data.warning ? 'LIMITED_DATA_AVAILABILITY' : 'NOMINAL_INTEGRITY_CHECK_PASSED')}
           variant="secondary"
         />
       </div>
+
+      <details className="mt-6 border-t border-border pt-4">
+        <summary className="text-xs font-mono text-text-secondary cursor-pointer hover:text-accent">
+          Full Report ↓
+        </summary>
+        <pre className="mt-4 text-xs text-white/60 whitespace-pre-wrap overflow-y-auto max-h-[50vh] font-mono bg-surface/30 p-4 rounded-control">
+          {analysis.analysis_markdown}
+        </pre>
+      </details>
     </div>
   );
 };

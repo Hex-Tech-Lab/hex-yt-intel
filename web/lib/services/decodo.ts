@@ -67,7 +67,7 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
     };
     console.log('[fetchSubtitles] DEBUG: Sending payload to Decodo:', JSON.stringify(payload));
 
-    const response = await fetch('https://api.decodo.com/api/v1/youtube_subtitles', {
+    const response = await fetch('https://scraper-api.decodo.com/v2/scrape', {
       method: 'POST',
       headers: {
         'Authorization': authHeader,
