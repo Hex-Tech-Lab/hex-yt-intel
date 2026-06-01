@@ -1,13 +1,11 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { ERROR_CODES } from '@/lib/error-codes';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
-
-const VideoIdValidator = z.string().regex(/^[a-zA-Z0-9_-]{11}$/, 'Invalid video ID format');
+import { VideoIdSchema } from '@/lib/types/contracts';
 
 export const runtime = 'nodejs';
 
@@ -17,7 +15,7 @@ export async function GET(request: NextRequest) {
     const videoId = searchParams.get('videoId');
 
     // Validate video ID parameter with Zod regex
-    const validation = VideoIdValidator.safeParse(videoId);
+    const validation = VideoIdSchema.safeParse(videoId);
     if (!validation.success) {
       const errorCode = ERROR_CODES.INVALID_VIDEO_ID;
       Sentry.captureMessage('Pre-flight check: invalid videoId format', {

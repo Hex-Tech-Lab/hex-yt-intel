@@ -8,7 +8,7 @@ import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { AnalysisCreateSchema } from '@/lib/schemas';
-import { fetchWorkerMetadata } from '@/lib/worker-client';
+import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { callOpenRouter } from '@/lib/services/openrouter';
 import { fetchSubtitles } from '@/lib/services/decodo';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validation = AnalysisCreateSchema.safeParse(body);
-    
+
     if (!validation.success) {
       return NextResponse.json({ error: 'Invalid request', details: validation.error.flatten() }, { status: 400 });
     }
@@ -29,15 +29,31 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Authentication & Tier Identification
-    const supabase = await getSupabaseClientWithAuth();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Development bypass for test bearer tokens (matches middleware pattern)
+    let userId: string | null = null;
+    let tier: 'free' | 'pro' | 'enterprise' = 'free';
+
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ') && process.env.NODE_ENV !== 'production') {
+      const token = authHeader.slice(7);
+      if (token.startsWith('test-token-')) {
+        // Use hardcoded test user ID for development
+        userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
+        tier = 'free';
+      }
     }
 
-    const userId = user.id;
-    const tier = (await getUserTier(userId)) ?? 'free';
+    const supabase = await getSupabaseClientWithAuth();
+
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      userId = user.id;
+      tier = (await getUserTier(userId)) ?? 'free';
+    }
 
     // 2. Rate Limiting
     const { allowed, response: limitResponse, headers: limitHeaders } = await applyRateLimit(request, 'analyses', userId, tier);
@@ -76,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     const metadata = metadataResult.value;
 
-    // Fail-fast: If transcript fetch fails, return 404 immediately (do not attempt LLM call with missing critical data)
+    // Fail-fast: If transcript fetch fails, return 404 immediately
     if (transcriptResult.status === 'rejected' || (transcriptResult.status === 'fulfilled' && !transcriptResult.value.success)) {
       return NextResponse.json({
         error: 'Transcript unavailable',

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId } from '@/lib/youtube';
-import { fetchWorkerMetadata } from '@/lib/worker-client';
+import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { AnalysisCreateSchema } from '@/lib/schemas';
 
 interface MetadataResponse {
