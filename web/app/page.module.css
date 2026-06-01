@@ -1,18 +1,6 @@
 /* ─── Fonts ─────────────────────────────────────────────── */
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('https://huly.io/_next/static/media/14d7ce3e41dcbb66-s.p.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('https://huly.io/_next/static/media/463dafcda517f24f-s.p.woff2') format('woff2');
-}
+/* Inter is self-hosted via next/font/google in app/layout.tsx (CSS var --font-inter).
+   The prior huly.io @font-face CDN remnants were purged 2026-06-01. */
 
 /* ─── Design System ─────────────────────────────────────── */
 :root {
@@ -813,4 +801,4 @@
 }
 
 /* Reset & Base (for module-based implementation) */
-body { background: var(--grey-1); color: #ffffff; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+body { background: var(--grey-1); color: #ffffff; font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
