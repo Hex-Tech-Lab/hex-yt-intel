@@ -14,9 +14,14 @@ export function useSSEStream() {
 
   const extractTelemetryId = (urlStr: string) => {
     try {
-      const parsed = new URL(urlStr);
-      if (parsed.hostname.includes('youtu.be')) return parsed.pathname.slice(1);
-      if (parsed.pathname.includes('/embed/') || parsed.pathname.includes('/v/')) return parsed.pathname.split('/')[2];
+      const normalized = urlStr.trim().startsWith('http')
+        ? urlStr.trim()
+        : `https://${urlStr.trim()}`;
+      const parsed = new URL(normalized);
+      if (parsed.hostname?.includes('youtu.be')) return parsed.pathname.slice(1);
+      if (parsed.pathname.includes('/shorts/')) return parsed.pathname.split('/')[2] || 'unknown';
+      if (parsed.pathname.includes('/live/')) return parsed.pathname.split('/')[2] || 'unknown';
+      if (parsed.pathname.includes('/embed/') || parsed.pathname.includes('/v/')) return parsed.pathname.split('/')[2] || 'unknown';
       return parsed.searchParams.get('v') || 'unknown';
     } catch {
       return 'unknown';
