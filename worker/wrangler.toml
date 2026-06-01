@@ -4,12 +4,6 @@ compatibility_date = "2026-04-21"
 compatibility_flags = ["nodejs_compat"]
 vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }
 
-# KV namespace bindings for LLM analysis caching (7-day TTL)
-[[kv_namespaces]]
-binding = "KV"
-id = "yt-intel-kv-cache"
-preview_id = "yt-intel-kv-cache-preview"
-
 [env.production]
 name = "yt-intel"
 vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production" }
@@ -29,13 +23,19 @@ command = "pnpm run build"
 #   wrangler secret put CLOUDFLARE_SECRET_TOKEN --env production
 #   wrangler secret put RESIDENTIAL_PROXY_URL --env production
 #   wrangler secret put OPENROUTER_API_KEY --env production
+#   wrangler secret put UPSTASH_REDIS_REST_URL --env production
+#   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env production
 #
 # Current RESIDENTIAL_PROXY_URL value (Bright Data - with authentication):
 #   brd-customer-hl_da92bd7c-zone-yt_intel_prx1:qa0ffc1kewsa@brd.superproxy.io:33335
 #
+# Upstash KV REST API endpoints (from Upstash console):
+#   UPSTASH_REDIS_REST_URL: https://your-project-region.upstash.io
+#   UPSTASH_REDIS_REST_TOKEN: Default::your-token-here
+#
 # This enables:
 # - YouTube metadata extraction with geo-distributed proxy routing
 # - YouTube transcript extraction with IP block bypass
-# - LLM analysis with 3-model cascade (Nemotron → Laguna → GLM) via OpenRouter
-# - 7-day KV caching for deterministic analysis results
-# - Resilient content retrieval for full analysis pipeline
+# - LLM analysis with 5-tier cascade (Gemma → Laguna → GLM → Kimi → Haiku) via OpenRouter
+# - 7-day Upstash KV caching for deterministic validated 12D analysis results
+# - Resilient distributed content retrieval across Vercel + Workers + Supabase
