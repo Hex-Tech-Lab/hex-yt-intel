@@ -27,7 +27,7 @@ export default async function SharePage(props: {
     if (expiryDate < new Date()) {
       return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
-          <div className="bg-white p-8 rounded-lg shadow max-w-md text-center">
+          <div className="bg-surface p-8 rounded-lg shadow max-w-md text-center">
             <h1 className="text-2xl font-bold text-gray-900">Link Expired</h1>
             <p className="text-gray-600 mt-2">This shared link has expired.</p>
             <Link href="/" className="mt-6 inline-block text-blue-600 hover:underline">Go to Hex-YT-Intel</Link>
@@ -38,7 +38,7 @@ export default async function SharePage(props: {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-surface min-h-screen">
       {/* Header */}
       <div className="border-b border-gray-200 px-6 py-8">
         <div className="max-w-4xl mx-auto">

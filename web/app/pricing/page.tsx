@@ -110,14 +110,14 @@ export default async function PricingPage() {
           {userInfo ? (
             <a
               href="/app"
-              className="inline-block bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
+              className="inline-block bg-surface text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
             >
               Go to Dashboard
             </a>
           ) : (
             <a
               href="/auth/signin"
-              className="inline-block bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
+              className="inline-block bg-surface text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
             >
               Sign Up Now
             </a>

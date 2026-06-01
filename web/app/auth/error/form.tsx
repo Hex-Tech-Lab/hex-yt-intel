@@ -30,7 +30,7 @@ export default function AuthErrorForm() {
           <p className="mt-2 text-gray-600">{message}</p>
         </div>
 
-        <div className="rounded-lg bg-white p-8 shadow-md text-center">
+        <div className="rounded-lg bg-surface p-8 shadow-md text-center">
           <Link href="/auth/signin" className="text-blue-600 hover:underline font-medium">
             Try again
           </Link>

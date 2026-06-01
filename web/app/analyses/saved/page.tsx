@@ -173,7 +173,7 @@ export default function SavedSearchesPage() {
                 {filteredSearches.map((search) => (
                   <div
                     key={search.id}
-                    className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                    className="p-4 bg-surface border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
                   >
                     {/* Header: Title + Badge */}
                     <div className="flex items-start justify-between gap-4 mb-3">
