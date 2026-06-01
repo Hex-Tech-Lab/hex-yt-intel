@@ -9,7 +9,7 @@ import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { AnalysisCreateSchema } from '@/lib/types/contracts';
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
-import { callOpenRouter } from '@/lib/services/openrouter';
+import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
 import { fetchSubtitles } from '@/lib/services/decodo';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
 import * as Sentry from '@sentry/nextjs';
@@ -137,6 +137,35 @@ export async function POST(request: NextRequest) {
     return new Response(clientStream, { headers: responseHeaders });
 
   } catch (error) {
+    // Analysis-engine failures (e.g. quota exhaustion) carry a human-readable
+    // message and a true HTTP status. Surface them in the `error` field — the one
+    // the client reads (useSSEStream) and renders inside the BentoGrid — instead
+    // of collapsing everything into a generic 500.
+    if (error instanceof AnalysisEngineError) {
+      Sentry.captureException(error, {
+        contexts: {
+          api: {
+            videoId: extractVideoId(body?.url || ''),
+            endpoint: '/api/analyses',
+            code: error.code,
+            modelAttempted: error.modelAttempted,
+          },
+        },
+      });
+
+      console.error('[analyses] Analysis engine failure:', {
+        code: error.code,
+        status: error.statusCode,
+        model: error.modelAttempted,
+        message: error.message,
+      });
+
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.statusCode }
+      );
+    }
+
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : '';
 
