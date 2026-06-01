@@ -10,7 +10,7 @@ runs:
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
-        node-version: 24
+        node-version: '24.x'
         cache: 'pnpm'
         cache-dependency-path: '**/pnpm-lock.yaml'
     - name: Install dependencies
