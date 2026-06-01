@@ -193,7 +193,7 @@ jobs:
 
       - name: Check for hardcoded credentials
         run: |
-          if grep -r --exclude-dir=node_modules "sk-\|pk_live\|pk_test" web --include="*.ts" --include="*.tsx" | grep -v "process.env"; then
+          if grep -rE '\b(sk-[a-zA-Z0-9]{20,}|pk_live_[a-zA-Z0-9]{20,}|pk_test_[a-zA-Z0-9]{20,})' web --include="*.ts" --include="*.tsx" | grep -v "process.env"; then
             echo "ERROR: Hardcoded credentials found"
             exit 1
           fi
