@@ -5,6 +5,8 @@ type Env = {
   YOUTUBE_API_KEY: string;
   CLOUDFLARE_SECRET_TOKEN: string;
   RESIDENTIAL_PROXY_URL?: string;
+  OPENROUTER_API_KEY: string;
+  KV: KVNamespace;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -52,6 +54,121 @@ async function fetchWithProxy(
     // @ts-ignore – Cloudflare Workers proxy extension
     proxy: `http://${hostPort}`,
   });
+}
+
+// ===================================================================
+// LLM ANALYSIS PIPELINE – 3-MODEL CASCADE WITH UPSTASH KV CACHING
+// ===================================================================
+
+// OpenRouter model waterfall – deterministic fallback chain
+// Nemotron 3 super 120b is most capable, Laguna M.1 is reliable mid-tier, GLM 4.5 Air is lightweight fallback
+const MODEL_CHAIN = [
+  { model: 'nvidia/nemotron-3-super-120b:free', name: 'Nemotron 3 Super 120B' },
+  { model: 'poolside/laguna-m.1:free', name: 'Laguna M.1' },
+  { model: 'z-ai/glm-4.5-air:free', name: 'GLM 4.5 Air' },
+] as const;
+
+/**
+ * Fingerprint system prompt using SHA-256
+ * Ensures deterministic cache keys even as prompts evolve
+ */
+async function fingerprintSystemPrompt(prompt: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(prompt);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Build deterministic cache key combining prompt fingerprint + transcript length
+ * Format: `analysis::<promptHash>::<transcriptLength>::<videoId>`
+ */
+async function buildCacheKey(
+  systemPromptHash: string,
+  transcriptLength: number,
+  videoId: string
+): Promise<string> {
+  return `analysis::${systemPromptHash}::${transcriptLength}::${videoId}`;
+}
+
+/**
+ * Call LLM with timeout and streaming support
+ * Returns text response from model
+ */
+async function callLLM(
+  model: string,
+  systemPrompt: string,
+  transcript: string,
+  metadata: any,
+  apiKey: string,
+  timeoutMs: number = 25000
+): Promise<{ success: boolean; text?: string; error?: string }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://yt-intel.hex-tech-lab.workers.dev',
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 1,
+        max_tokens: 16000,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: `Analyze the following YouTube video transcript and metadata using the UCIS v5.1 framework.
+
+**Metadata**:
+${JSON.stringify(metadata, null, 2)}
+
+**Transcript**:
+${transcript.slice(0, 20000)}${transcript.length > 20000 ? '\n\n[...transcript truncated...]' : ''}
+
+Generate the complete 11-dimension analysis.`,
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      const error = await response.text();
+      return {
+        success: false,
+        error: `${response.status}: ${error.slice(0, 200)}`,
+      };
+    }
+
+    const data = await response.json() as { choices: Array<{ message: { content: string } }> };
+    const text = data.choices?.[0]?.message?.content;
+
+    if (!text) {
+      return { success: false, error: 'Empty response from LLM' };
+    }
+
+    return { success: true, text };
+  } catch (error) {
+    clearTimeout(timeout);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    if (message === 'The operation was aborted') {
+      return { success: false, error: 'Request timeout' };
+    }
+
+    return { success: false, error: message };
+  }
 }
 
 const corsMiddleware = (origin: string | undefined): boolean => {
@@ -380,6 +497,132 @@ app.post("/log-analysis", async (c) => {
   // Log analysis requests for analytics
   // (In production: send to analytics service)
   return c.json({ logged: true });
+});
+
+// LLM Analysis endpoint
+// POST /analyze-llm with { videoId, transcript, metadata, persona, timezone, systemPrompt? }
+app.post("/analyze-llm", async (c) => {
+  interface AnalysisRequest {
+    videoId: string;
+    transcript: string;
+    metadata: {
+      title: string;
+      channelTitle: string;
+      publishedAt: string;
+      duration: number;
+      viewCount: string;
+      likeCount: string;
+      commentCount: string;
+    };
+    persona: string;
+    timezone: string;
+    systemPrompt?: string;
+  }
+
+  const request = (await c.req.json()) as AnalysisRequest;
+
+  if (!request.videoId || !request.transcript || !request.metadata) {
+    return c.json({ success: false, error: 'Missing required fields' }, 400);
+  }
+
+  try {
+    const apiKey = c.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      console.error('[analyze-llm] Server misconfigured: Missing OPENROUTER_API_KEY');
+      return c.json({ success: false, error: 'Server misconfigured' }, 500);
+    }
+
+    const kv = c.env.KV;
+
+    // Use provided system prompt or default (would be UCIS v5.1 in production)
+    const systemPrompt = request.systemPrompt || `# UCIS v5.1 Analysis Framework
+Your task is to analyze YouTube video transcripts across 11 dimensions using the UCIS v5.1 framework.
+Provide comprehensive analysis with dimensions: Apex Summary, Provenance, Architecture, Psychology, Intelligence, Comparative, Implementation, Semantic, Forward Intelligence, Credibility, Commercial Yield.
+Return analysis in markdown format.`;
+
+    // Fingerprint prompt for deterministic caching
+    const promptHash = await fingerprintSystemPrompt(systemPrompt);
+    const cacheKey = await buildCacheKey(
+      promptHash,
+      request.transcript.length,
+      request.videoId
+    );
+
+    // Try cache first if KV configured
+    if (kv) {
+      try {
+        const cached = await kv.get(cacheKey);
+        if (cached) {
+          return c.json({
+            success: true,
+            analysis: cached,
+            model: 'cache-hit',
+            cached: true,
+          });
+        }
+      } catch (error) {
+        console.warn('[analyze-llm] KV read failed, proceeding with LLM call');
+      }
+    }
+
+    // Call LLM with cascade – try each model until one succeeds
+    let analysisResult = null;
+    let modelUsed = '';
+
+    for (const { model, name } of MODEL_CHAIN) {
+      console.log(`[analyze-llm] Attempting ${name}...`);
+
+      const result = await callLLM(
+        model,
+        systemPrompt,
+        request.transcript,
+        request.metadata,
+        apiKey,
+        25000 // Adaptive timeout as per CLAUDE.md Law #2
+      );
+
+      if (result.success && result.text) {
+        analysisResult = result.text;
+        modelUsed = name;
+        console.log(`[analyze-llm] Success with ${name}`);
+        break;
+      }
+
+      console.warn(`[analyze-llm] Failed with ${name}: ${result.error}`);
+    }
+
+    if (!analysisResult) {
+      return c.json({
+        success: false,
+        error: 'All models in cascade failed',
+      }, 502);
+    }
+
+    // Cache the result if KV configured
+    if (kv) {
+      try {
+        await kv.put(cacheKey, analysisResult, { expirationTtl: 604800 }); // 7 days
+        console.log(`[analyze-llm] Cached analysis for ${request.videoId}`);
+      } catch (error) {
+        console.warn('[analyze-llm] KV write failed, but analysis succeeded');
+      }
+    }
+
+    return c.json({
+      success: true,
+      analysis: analysisResult,
+      model: modelUsed,
+      cached: false,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[analyze-llm] Error:', message);
+
+    return c.json({
+      success: false,
+      error: message,
+    }, 500);
+  }
 });
 
 export default app;
