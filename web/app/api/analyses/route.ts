@@ -9,9 +9,8 @@ import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { AnalysisCreateSchema } from '@/lib/types/contracts';
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
-import { callOpenRouter, AnalysisEngineError } from '@/lib/services/openrouter';
+import { callWorkerLLMAnalysis } from '@/lib/services/worker-llm';
 import { fetchSubtitles } from '@/lib/services/decodo';
-import { createClaudeStreamNormalizer } from '@/lib/streaming';
 import * as Sentry from '@sentry/nextjs';
 
 export async function POST(request: NextRequest) {
@@ -107,13 +106,50 @@ export async function POST(request: NextRequest) {
       transcript = transcriptResult.value.transcript ?? '';
     }
 
-    // 5. Analysis Generation (OpenRouter Waterfall)
+    // 5. Analysis Generation (Cloudflare Worker with 3-Model Cascade)
     const persona = (validation.data.persona as PersonaId) || detectPersona(metadata.title, metadata.channelTitle);
-    const openrouterResponse = await callOpenRouter(metadata, transcript, persona, validation.data.timezone || 'UTC', metadata.duration || 0);
+    const analysisMarkdown = await callWorkerLLMAnalysis(
+      videoId,
+      transcript,
+      {
+        title: metadata.title,
+        channelTitle: metadata.channelTitle,
+        publishedAt: metadata.publishedAt,
+        duration: metadata.duration || 0,
+        viewCount: String(metadata.viewCount),
+        likeCount: String(metadata.likeCount),
+        commentCount: String(metadata.commentCount),
+      },
+      persona,
+      validation.data.timezone || 'UTC'
+    );
 
     // 6. Response Streaming & Background Orchestration
-    const transformedStream = openrouterResponse.body!.pipeThrough(createClaudeStreamNormalizer());
-    const [clientStream, processorStream] = transformedStream.tee();
+    // Convert markdown analysis to SSE format for client streaming
+    const encoder = new TextEncoder();
+    const analysisStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        try {
+          const sseEvent = `data: ${JSON.stringify({
+            type: 'analysis_complete',
+            content: analysisMarkdown,
+          })}\n\n`;
+          controller.enqueue(encoder.encode(sseEvent));
+          controller.close();
+        } catch (error) {
+          controller.error(error);
+        }
+      },
+    });
+
+    // Create a tee'd stream for background processing
+    const [clientStream] = analysisStream.tee();
+    const processorStream = new ReadableStream<string>({
+      start(controller) {
+        controller.enqueue(analysisMarkdown);
+        controller.close();
+      },
+    });
 
     after(() => {
       AnalysisLifecycleService.handleBackgroundTasks(
@@ -139,60 +175,35 @@ export async function POST(request: NextRequest) {
     return new Response(clientStream, { headers: responseHeaders });
 
   } catch (error) {
-    // Analysis-engine failures (e.g. quota exhaustion) carry a human-readable
-    // message and a true HTTP status. Surface them in the `error` field — the one
-    // the client reads (useSSEStream) and renders inside the BentoGrid — instead
-    // of collapsing everything into a generic 500.
-    if (error instanceof AnalysisEngineError) {
-      Sentry.captureException(error, {
-        contexts: {
-          api: {
-            videoId: extractVideoId(body?.url || ''),
-            endpoint: '/api/analyses',
-            code: error.code,
-            modelAttempted: error.modelAttempted,
-          },
-        },
-      });
-
-      console.error('[analyses] Analysis engine failure:', {
-        code: error.code,
-        status: error.statusCode,
-        model: error.modelAttempted,
-        message: error.message,
-      });
-
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: error.statusCode }
-      );
-    }
-
+    // Worker LLM failures are returned as regular errors
+    // Capture in Sentry and return HTTP error with message
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : '';
+    const isWorkerError = errorMessage.includes('Worker') || errorMessage.includes('timeout');
+    const statusCode = isWorkerError ? 502 : 500;
 
     Sentry.captureException(error, {
       contexts: {
         api: {
           videoId: extractVideoId(body?.url || ''),
           endpoint: '/api/analyses',
+          workerError: isWorkerError,
         },
       },
     });
 
-    console.error('[analyses] Unhandled error:', {
+    console.error('[analyses] Analysis failed:', {
       message: errorMessage,
-      stack: errorStack,
+      status: statusCode,
+      workerError: isWorkerError,
       url: body?.url,
     });
 
     return NextResponse.json(
       {
-        error: 'Analysis failed',
-        message: errorMessage,
-        ...(process.env.NODE_ENV !== 'production' && { stack: errorStack }),
+        error: errorMessage,
+        code: isWorkerError ? 'ERR_WORKER_FAILURE' : 'ERR_ANALYSIS_FAILED',
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }
