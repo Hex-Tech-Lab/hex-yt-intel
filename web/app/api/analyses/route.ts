@@ -15,8 +15,9 @@ import { createClaudeStreamNormalizer } from '@/lib/streaming';
 import * as Sentry from '@sentry/nextjs';
 
 export async function POST(request: NextRequest) {
+  let body: any;
   try {
-    const body = await request.json();
+    body = await request.json();
     const validation = AnalysisCreateSchema.safeParse(body);
 
     if (!validation.success) {
@@ -136,7 +137,31 @@ export async function POST(request: NextRequest) {
     return new Response(clientStream, { headers: responseHeaders });
 
   } catch (error) {
-    Sentry.captureException(error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : '';
+
+    Sentry.captureException(error, {
+      contexts: {
+        api: {
+          videoId: extractVideoId(body?.url || ''),
+          endpoint: '/api/analyses',
+        },
+      },
+    });
+
+    console.error('[analyses] Unhandled error:', {
+      message: errorMessage,
+      stack: errorStack,
+      url: body?.url,
+    });
+
+    return NextResponse.json(
+      {
+        error: 'Analysis failed',
+        message: errorMessage,
+        ...(process.env.NODE_ENV !== 'production' && { stack: errorStack }),
+      },
+      { status: 500 }
+    );
   }
 }
