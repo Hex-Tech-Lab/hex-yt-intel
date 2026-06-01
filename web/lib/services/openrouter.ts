@@ -37,16 +37,18 @@ export class AnalysisEngineError extends Error {
 }
 
 /**
- * Free-Tier Waterfall Pipeline: Resilience-First Model Routing
+ * Free-Tier Waterfall Pipeline: Verified Free Models with Paid Fallback
  *
- * Implements tiered model fallback for bootstrap resilience:
- * - Tier 1 (Free): qwen/qwen-2.5-coder-7b-instruct (cost-optimized, task-optimized)
- * - Tier 2 (Fallback): anthropic/claude-haiku-4.5 (premium fallback on 402/5xx)
+ * Implements progressive model escalation:
+ * - Tier 1 (Free): nvidia/nemotron-3-super-120b-a12b:free (primary extraction)
+ * - Tier 2 (Free): poolside/laguna-m.1-20260312:free (secondary reasoning)
+ * - Tier 3 (Free): z-ai/glm-4.5-air:free (tertiary diversity)
+ * - Tier 4 (Paid): anthropic/claude-haiku-4.5 (reliability fallback)
  *
- * Strategy: Default to free models to ensure pipeline never goes dark due to credit constraints.
- * Haiku becomes the exception (reliability insurance), not the rule.
+ * Strategy: Cascade through free models to preserve paid quota. Only touch Haiku on exhaustion.
+ * All models use `:free` suffix for OpenRouter's free-tier routing.
  *
- * Response metadata identifies model used via x-model-meta header.
+ * Response metadata identifies model tier via x-model-meta header.
  */
 export async function callOpenRouter(
   metadata: VideoMetadata,
@@ -69,10 +71,12 @@ export async function callOpenRouter(
     duration,
   });
 
-  // Free-Tier Waterfall: Primary (OpenRouter free router) → Fallback (haiku)
+  // Free-Tier Waterfall: Verified free models with :free suffix → Paid fallback (haiku)
   type ModelTier = { model: string; tier: 'free' | 'haiku'; estimatedCost: number };
   const modelTiers: ModelTier[] = [
-    { model: 'openrouter/free', tier: 'free', estimatedCost: 0 },
+    { model: 'nvidia/nemotron-3-super-120b-a12b:free', tier: 'free', estimatedCost: 0 },
+    { model: 'poolside/laguna-m.1-20260312:free', tier: 'free', estimatedCost: 0 },
+    { model: 'z-ai/glm-4.5-air:free', tier: 'free', estimatedCost: 0 },
     { model: 'anthropic/claude-haiku-4.5', tier: 'haiku', estimatedCost: 0.0015 },
   ];
 
