@@ -82,9 +82,12 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
 
     clearTimeout(timeout);
 
+    // Read response body early for debugging (non-OK responses often have helpful error text)
+    const rawBody = await response.text();
+
     // Handle 403 Forbidden (unauthorized)
     if (response.status === 403) {
-      console.warn(`[fetchSubtitles] Decodo returned 403 Forbidden for video ${videoId}`);
+      console.warn(`[fetchSubtitles] Decodo returned 403 Forbidden for video ${videoId}. Body: ${rawBody.slice(0, 300)}`);
       return {
         success: false,
         reason: 'unauthorized',
@@ -93,16 +96,14 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
 
     // Handle other non-200 responses
     if (!response.ok) {
-      console.warn(`[fetchSubtitles] Decodo returned ${response.status} for video ${videoId}`);
+      console.warn(`[fetchSubtitles] Decodo returned ${response.status} for video ${videoId}. Body: ${rawBody.slice(0, 300)}`);
       return {
         success: false,
         reason: `http_${response.status}`,
       };
     }
 
-    // Read the raw body first so a non-JSON payload (HTML error page, empty body)
-    // never throws an unhandled SyntaxError out of response.json().
-    const rawBody = await response.text();
+    // Parse the raw body (already read above)
     let data: DecodoResponse;
     try {
       data = JSON.parse(rawBody) as DecodoResponse;
