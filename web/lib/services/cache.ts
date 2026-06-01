@@ -13,10 +13,28 @@
 import { Redis } from '@upstash/redis';
 import crypto from 'crypto';
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-});
+// Lazy-loaded Redis client (prevents build-time instantiation crash)
+let redisInstance: Redis | null = null;
+
+function getRedisClient(): Redis | null {
+  if (redisInstance) return redisInstance;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    console.warn('[cache] Upstash credentials not configured');
+    return null;
+  }
+
+  try {
+    redisInstance = new Redis({ url, token });
+    return redisInstance;
+  } catch (error) {
+    console.error('[cache] Failed to initialize Redis:', error);
+    return null;
+  }
+}
 
 export interface CachedAnalysisResult {
   id: string;
@@ -57,8 +75,9 @@ export function generateCacheKey(
  */
 export async function getAnalysisCache(cacheKey: string): Promise<CachedAnalysisResult | null> {
   try {
-    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-      console.warn('[cache] Upstash credentials missing, skipping cache read');
+    const redis = getRedisClient();
+    if (!redis) {
+      console.warn('[cache] Redis not available, skipping cache read');
       return null;
     }
 
@@ -87,8 +106,9 @@ export async function setAnalysisCache(
   result: CachedAnalysisResult
 ): Promise<void> {
   try {
-    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-      console.warn('[cache] Upstash credentials missing, skipping cache write');
+    const redis = getRedisClient();
+    if (!redis) {
+      console.warn('[cache] Redis not available, skipping cache write');
       return;
     }
 
@@ -113,7 +133,8 @@ export async function setAnalysisCache(
  */
 export async function clearAnalysisCache(cacheKey: string): Promise<void> {
   try {
-    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    const redis = getRedisClient();
+    if (!redis) {
       return;
     }
 
