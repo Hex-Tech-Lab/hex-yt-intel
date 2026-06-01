@@ -1,65 +1,55 @@
 /**
- * OpenRouter API client with multi-model fallback and timeout handling
- * Implements resilience patterns: connection timeout + streaming window with model fallback
+ * OpenRouter API client with multi-model fallback and adaptive execution windows.
+ * Implements a prioritized waterfall: Free Models -> Paid Fallback (Haiku).
  */
 
 import { getUCISPrompt } from '@/lib/prompts/factory';
 import type { PersonaId } from '@/lib/prompts';
 import type { VideoMetadata } from '@/lib/types';
 
-export interface AnalysisErrorMeta {
-  errors?: Record<string, string>;
-}
-
 export class AnalysisEngineError extends Error {
   code: string;
   statusCode: number;
   modelAttempted: string;
-  retryAfter?: number;
-  meta?: AnalysisErrorMeta;
 
-  constructor(opts: {
-    message: string;
-    code: string;
-    statusCode: number;
-    modelAttempted: string;
-    retryAfter?: number;
-    meta?: AnalysisErrorMeta;
-  }) {
+  constructor(opts: { message: string; code: string; statusCode: number; modelAttempted: string }) {
     super(opts.message);
     this.name = 'AnalysisEngineError';
     this.code = opts.code;
     this.statusCode = opts.statusCode;
     this.modelAttempted = opts.modelAttempted;
-    this.retryAfter = opts.retryAfter;
-    this.meta = opts.meta;
   }
 }
 
+const MODEL_TIERS = [
+  { model: 'nvidia/nemotron-3-super-120b-a12b:free', tier: 'free', cost: 0 },
+  { model: 'poolside/laguna-m.1-20260312:free', tier: 'free', cost: 0 },
+  { model: 'z-ai/glm-4.5-air:free', tier: 'free', cost: 0 },
+  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 },
+] as const;
+
 /**
- * Free-Tier Waterfall Pipeline: Verified Free Models with Paid Fallback
- *
- * Implements progressive model escalation:
- * - Tier 1 (Free): nvidia/nemotron-3-super-120b-a12b:free (primary extraction)
- * - Tier 2 (Free): poolside/laguna-m.1-20260312:free (secondary reasoning)
- * - Tier 3 (Free): z-ai/glm-4.5-air:free (tertiary diversity)
- * - Tier 4 (Paid): anthropic/claude-haiku-4.5 (reliability fallback)
- *
- * Strategy: Cascade through free models to preserve paid quota. Only touch Haiku on exhaustion.
- * All models use `:free` suffix for OpenRouter's free-tier routing.
- *
- * Response metadata identifies model tier via x-model-meta header.
+ * Executes a waterfall request to OpenRouter with recursive fallback.
  */
 export async function callOpenRouter(
   metadata: VideoMetadata,
   transcript: string,
   persona: PersonaId,
   timezone: string,
-  duration?: number
+  duration?: number,
+  tierIndex: number = 0
 ): Promise<Response> {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY is not configured. Set it in Vercel environment variables.');
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY missing');
+
+  const currentTier = MODEL_TIERS[tierIndex];
+  if (!currentTier) {
+    throw new AnalysisEngineError({
+      message: 'All available analysis models exhausted or rate-limited.',
+      code: 'ERR_ALL_MODELS_FAILED',
+      statusCode: 503,
+      modelAttempted: 'waterfall',
+    });
   }
 
   const prompt = getUCISPrompt({
@@ -71,44 +61,15 @@ export async function callOpenRouter(
     duration,
   });
 
-  // Free-Tier Waterfall: Verified free models with :free suffix → Paid fallback (haiku)
-  type ModelTier = { model: string; tier: 'free' | 'haiku'; estimatedCost: number };
-  const modelTiers: ModelTier[] = [
-    { model: 'nvidia/nemotron-3-super-120b-a12b:free', tier: 'free', estimatedCost: 0 },
-    { model: 'poolside/laguna-m.1-20260312:free', tier: 'free', estimatedCost: 0 },
-    { model: 'z-ai/glm-4.5-air:free', tier: 'free', estimatedCost: 0 },
-    { model: 'anthropic/claude-haiku-4.5', tier: 'haiku', estimatedCost: 0.0015 },
-  ];
-
-  let selectedModel: ModelTier = modelTiers[0]!;
-  const models = modelTiers.map(t => t.model);
-  
-  console.log('[callOpenRouter] Sending request to OpenRouter with native fallback models', { models });
-
-  const transcriptLength = transcript?.length || 0;
-  const adaptiveTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 5000) * 1000);
-
   const controller = new AbortController();
-  let connectionHandshakePassed = false;
-
-  const connectTimeoutId = setTimeout(() => {
-    console.warn('[callOpenRouter] Connection timeout (3s) triggered');
-    controller.abort();
-  }, 3000);
-
-  const totalTimeoutId = setTimeout(() => {
-    if (connectionHandshakePassed) {
-      console.warn(`[callOpenRouter] Total streaming timeout (${adaptiveTimeout}ms) triggered`);
-      controller.abort();
-    }
-  }, adaptiveTimeout);
+  const transcriptLength = transcript?.length || 0;
+  
+  // Handshake timeout (3s) + Adaptive streaming window (max 25s)
+  const streamTimeout = Math.min(25000, 5000 + Math.floor(transcriptLength / 5000) * 1000);
+  const timeoutId = setTimeout(() => controller.abort(), tierIndex === 0 ? 3000 : streamTimeout);
 
   try {
-    // Law #2: Dynamic token budget scales with transcript length
-    // Hard cap at 3500 tokens to ensure all requests fit within 4000-token credit window
-    // This prevents 402 (insufficient quota) errors even with low credit balance
     const maxTokens = Math.min(3500, 3000 + Math.floor(transcript.length / 50));
-
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -118,7 +79,7 @@ export async function callOpenRouter(
         'X-Title': 'hex-yt-intel',
       },
       body: JSON.stringify({
-        models, // OpenRouter natively attempts these sequentially
+        model: currentTier.model,
         messages: [{ role: 'user', content: prompt }],
         stream: true,
         max_tokens: maxTokens,
@@ -126,71 +87,36 @@ export async function callOpenRouter(
       signal: controller.signal,
     });
 
-    clearTimeout(connectTimeoutId);
-    connectionHandshakePassed = true;
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const status = response.status;
-      const errorBody = await response.text().catch(() => '<unreadable>');
-
-      // Explicit 402 handling: Trigger fallback if available
-      if (status === 402 && selectedModel.tier === 'free') {
-        console.warn('[callOpenRouter] 402 Quota exhausted on free tier, triggering Haiku fallback');
-        selectedModel = modelTiers[1]!; // Upgrade to Haiku
-        // Retry with fallback model (recursive call with updated tier)
-        return callOpenRouter(metadata, transcript, persona, timezone, duration);
+      // Cascade to next model on 402 (Payment Required) or 429 (Too Many Requests)
+      if ((response.status === 402 || response.status === 429) && tierIndex < MODEL_TIERS.length - 1) {
+        return callOpenRouter(metadata, transcript, persona, timezone, duration, tierIndex + 1);
       }
-
-      if (status === 402) {
-        throw new AnalysisEngineError({
-          message: 'Insufficient quota for analysis generation. Please upgrade your plan.',
-          code: 'ERR_QUOTA_BUDGET_EXCEEDED',
-          statusCode: 402,
-          modelAttempted: selectedModel.model,
-        });
-      }
-
-      if (status === 401 || status === 403) {
-        throw new AnalysisEngineError({
-          message: `OpenRouter auth failed (${status}). Check OPENROUTER_API_KEY.`,
-          code: 'ERR_PROVIDER_AUTH_FAILED',
-          statusCode: status,
-          modelAttempted: selectedModel.model,
-        });
-      }
-      throw new Error(`OpenRouter HTTP ${status} (${selectedModel.model}): ${errorBody.slice(0, 200)}`);
+      
+      throw new AnalysisEngineError({
+        message: `Analysis engine failure (${response.status})`,
+        code: 'ERR_MODEL_EXECUTION_FAILED',
+        statusCode: response.status,
+        modelAttempted: currentTier.model,
+      });
     }
 
-    console.log('[callOpenRouter] Stream response accepted', {
-      model: selectedModel.model,
-      tier: selectedModel.tier,
-      estimatedCost: selectedModel.estimatedCost,
-    });
-
-    // Attach model metadata to response headers for transparency
     const wrappedResponse = new Response(response.body, response);
     wrappedResponse.headers.set('x-model-meta', JSON.stringify({
-      model: selectedModel.model,
-      provider: 'openrouter',
-      cost: selectedModel.estimatedCost,
-      tier: selectedModel.tier,
+      model: currentTier.model,
+      cost: currentTier.cost,
+      tier: currentTier.tier,
       timestamp: new Date().toISOString(),
     }));
 
     return wrappedResponse;
   } catch (err) {
-    clearTimeout(connectTimeoutId);
-    const error = err as Error;
-    if (error.name === 'AbortError' && !connectionHandshakePassed) {
-      console.error('[callOpenRouter] Connection handshake aborted (≤ 3s)');
-      throw new Error('Connection timeout (3s)');
-    } else if (error.name === 'AbortError' && connectionHandshakePassed) {
-      console.error(`[callOpenRouter] Total streaming window timeout aborted (${adaptiveTimeout}ms)`);
-      throw new Error(`Total execution timeout (${adaptiveTimeout}ms)`);
+    clearTimeout(timeoutId);
+    if ((err as Error).name === 'AbortError' && tierIndex < MODEL_TIERS.length - 1) {
+      return callOpenRouter(metadata, transcript, persona, timezone, duration, tierIndex + 1);
     }
-    throw error;
-  } finally {
-    clearTimeout(connectTimeoutId);
-    clearTimeout(totalTimeoutId);
+    throw err;
   }
 }

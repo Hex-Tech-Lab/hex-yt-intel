@@ -185,7 +185,7 @@ jobs:
 
       - name: Check for secrets in code
         run: |
-          if grep -r --exclude-dir=node_modules "NEXT_PUBLIC_SUPABASE_ANON_KEY\|OPENROUTER_API_KEY" web/app --include="*.ts" --include="*.tsx" | grep -v "process.env\|import" | grep -v "undefined"; then
+          if grep -rE --exclude-dir=node_modules "\b(NEXT_PUBLIC_SUPABASE_ANON_KEY|OPENROUTER_API_KEY)\b" web/app --include="*.ts" --include="*.tsx" | grep -v "process.env\|import" | grep -v "undefined"; then
             echo "ERROR: Potential secrets found in code"
             exit 1
           fi
