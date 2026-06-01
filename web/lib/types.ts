@@ -29,10 +29,24 @@ export interface VideoMetadata {
 
 export type AnalysisStatus = 'idle' | 'downloading' | 'parsing' | 'analyzing' | 'complete' | 'error';
 
+/**
+ * Structured analysis error.
+ *
+ * Replaces the prior stringly-typed `"{status}:{message}"` encoding. Consumers
+ * branch on `code` (an ERR_* registry value) and `status` (HTTP status) instead
+ * of substring parsing, decoupling the producer (useSSEStream) from the
+ * renderer (AnalysisError).
+ */
+export interface AnalysisErrorState {
+  code: string;
+  status: number;
+  message: string;
+}
+
 export interface UseAnalysisStreamState {
   analysis: AnalysisResult | null;
   isLoading: boolean;
   status: AnalysisStatus;
-  error: string | null;
+  error: AnalysisErrorState | null;
   lockoutTimeRemaining: number;
 }

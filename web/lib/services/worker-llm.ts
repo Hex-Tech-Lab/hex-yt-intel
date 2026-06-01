@@ -115,8 +115,19 @@ export async function callWorkerLLMAnalysis(
       const error = await response.text();
       console.error('[callWorkerLLMAnalysis] Worker returned error', {
         status: response.status,
+        url: analysisUrl,
         error: error.slice(0, 200),
       });
+
+      // A 404 from a reachable worker host means the /analyze-llm port itself is
+      // absent — i.e. the deployed Worker predates this route (stale deployment),
+      // not a transient failure. Surface that precisely rather than as a generic 5xx.
+      if (response.status === 404) {
+        throw new Error(
+          `Worker analysis port not found (404) at ${analysisUrl}. The Cloudflare Worker is reachable but does not expose /analyze-llm — it likely needs to be redeployed with the current worker.ts.`
+        );
+      }
+
       throw new Error(`Worker LLM endpoint returned ${response.status}: ${error.slice(0, 100)}`);
     }
 

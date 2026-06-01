@@ -5,14 +5,14 @@
  */
 
 import { create } from 'zustand';
-import type { AnalysisResult, UseAnalysisStreamState, AnalysisStatus } from '@/lib/types';
+import type { AnalysisResult, UseAnalysisStreamState, AnalysisStatus, AnalysisErrorState } from '@/lib/types';
 
 export interface AnalysisState extends UseAnalysisStreamState {
   analysisHistory: AnalysisResult[];
   setAnalysis: (analysis: AnalysisResult | null) => void;
   setIsLoading: (loading: boolean) => void;
   setStatus: (status: AnalysisStatus) => void;
-  setError: (error: string | null) => void;
+  setError: (error: AnalysisErrorState | null) => void;
   setLockoutTimeRemaining: (time: number) => void;
   clearAnalysis: () => void;
   addToHistory: (analysis: AnalysisResult) => void;
