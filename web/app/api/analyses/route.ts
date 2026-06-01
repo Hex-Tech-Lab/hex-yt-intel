@@ -75,9 +75,18 @@ export async function POST(request: NextRequest) {
     }
 
     const metadata = metadataResult.value;
-    const transcript = transcriptResult.status === 'fulfilled' && transcriptResult.value.success 
-      ? transcriptResult.value.transcript ?? '' 
-      : '';
+
+    // Fail-fast: If transcript fetch fails, return 404 immediately (do not attempt LLM call with missing critical data)
+    if (transcriptResult.status === 'rejected' || (transcriptResult.status === 'fulfilled' && !transcriptResult.value.success)) {
+      return NextResponse.json({
+        error: 'Transcript unavailable',
+        message: 'YouTube video does not have subtitles or transcript extraction failed',
+        videoId,
+        suggestion: 'Please select a video with available subtitles'
+      }, { status: 404 });
+    }
+
+    const transcript = transcriptResult.value.transcript ?? '';
 
     // 5. Analysis Generation (OpenRouter Waterfall)
     const persona = (validation.data.persona as PersonaId) || detectPersona(metadata.title, metadata.channelTitle);
