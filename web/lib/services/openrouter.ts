@@ -69,10 +69,10 @@ export async function callOpenRouter(
     duration,
   });
 
-  // Free-Tier Waterfall: Primary (free) → Fallback (haiku)
+  // Free-Tier Waterfall: Primary (OpenRouter free router) → Fallback (haiku)
   type ModelTier = { model: string; tier: 'free' | 'haiku'; estimatedCost: number };
   const modelTiers: ModelTier[] = [
-    { model: 'qwen/qwen-2.5-coder-7b-instruct', tier: 'free', estimatedCost: 0.0002 },
+    { model: 'openrouter/free', tier: 'free', estimatedCost: 0 },
     { model: 'anthropic/claude-haiku-4.5', tier: 'haiku', estimatedCost: 0.0015 },
   ];
 
