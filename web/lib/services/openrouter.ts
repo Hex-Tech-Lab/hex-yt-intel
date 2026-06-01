@@ -22,10 +22,8 @@ export class AnalysisEngineError extends Error {
 }
 
 const MODEL_TIERS = [
-  { model: 'nvidia/nemotron-3-super-120b-a12b:free', tier: 'free', cost: 0 },
-  { model: 'poolside/laguna-m.1-20260312:free', tier: 'free', cost: 0 },
-  { model: 'z-ai/glm-4.5-air:free', tier: 'free', cost: 0 },
-  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 },
+  { model: 'openrouter/free', tier: 'free', cost: 0 }, // Primary: OpenRouter's free-tier router (guaranteed free routing)
+  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 }, // Fallback: Paid tier only if free exhausted
 ] as const;
 
 /**
