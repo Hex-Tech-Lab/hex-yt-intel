@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     // 1. Authentication & Tier Identification
     // Development bypass for test bearer tokens (matches middleware pattern)
     let userId: string | null = null;
+    let userEmail: string | undefined;
     let tier: 'free' | 'pro' | 'enterprise' = 'free';
 
     const authHeader = request.headers.get('authorization');
@@ -53,11 +54,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
       userId = user.id;
+      userEmail = user.email;
       tier = (await getUserTier(userId)) ?? 'free';
     }
 
     // 2. Rate Limiting
-    const { allowed, response: limitResponse, headers: limitHeaders } = await applyRateLimit(request, 'analyses', userId, tier);
+    const { allowed, response: limitResponse, headers: limitHeaders } = await applyRateLimit(request, 'analyses', userId, tier, userEmail);
     if (!allowed && limitResponse) {
       if (limitHeaders) Object.entries(limitHeaders).forEach(([k, v]) => limitResponse.headers.set(k, v));
       return limitResponse;

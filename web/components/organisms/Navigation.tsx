@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
+import { UserMenu } from '@/components/UserMenu';
 
 export async function Navigation({ user }: { user?: User | null }) {
   const safeUser = user ?? null;
@@ -20,18 +21,12 @@ export async function Navigation({ user }: { user?: User | null }) {
 
       {/* User Menu (Right) */}
       <div className="flex items-center gap-4">
-        {safeUser && (
-          <>
-            <span className="text-sm text-text-secondary">{safeUser.email}</span>
-            <form action="/auth/signout" method="POST">
-              <button
-                type="submit"
-                className="px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface/80 hover:text-accent transition-colors rounded"
-              >
-                Sign Out
-              </button>
-            </form>
-          </>
+        {safeUser ? (
+          <UserMenu user={safeUser} />
+        ) : (
+          <Link href="/auth/signin" className="text-sm font-medium text-text-secondary hover:text-accent transition-colors">
+            Sign In
+          </Link>
         )}
       </div>
     </nav>
