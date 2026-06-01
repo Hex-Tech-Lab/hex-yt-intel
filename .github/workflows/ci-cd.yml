@@ -43,13 +43,20 @@ jobs:
       - name: Check for changes that require build
         id: check-changes
         run: |
-          if git diff --quiet origin/main HEAD -- 'web/' 'packages/' '*.json' '*.ts'; then
+          # Determine base for comparison: HEAD~1 for pushes, origin/main for PRs
+          BASE_COMPARE="origin/main"
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            BASE_COMPARE="HEAD~1"
+          fi
+          echo "Comparing against $BASE_COMPARE"
+
+          if git diff --quiet $BASE_COMPARE HEAD -- 'web/' 'packages/' '*.json' '*.ts'; then
             echo "build-needed=false" >> $GITHUB_OUTPUT
           else
             echo "build-needed=true" >> $GITHUB_OUTPUT
           fi
 
-          if git diff --quiet origin/main HEAD -- 'supabase/migrations/'; then
+          if git diff --quiet $BASE_COMPARE HEAD -- 'supabase/migrations/'; then
             echo "db-migration-needed=false" >> $GITHUB_OUTPUT
           else
             echo "db-migration-needed=true" >> $GITHUB_OUTPUT

@@ -8,10 +8,11 @@ export interface UCISSections {
 }
 
 function extractSection(markdown: string, dimensionNumber: number): string {
-  // Match "### DIMENSION N –" or "### DIMENSION N -" with whitespace handling
+  // Match "### DIMENSION N – Title" then skip to content on next lines
+  // Pattern: header + title line, then capture content until next DIMENSION
   const dimensionRegex = new RegExp(
-    `^### DIMENSION ${dimensionNumber}\\s*[–-](.+?)(?=^### DIMENSION|$)`,
-    'msi'
+    `^### DIMENSION ${dimensionNumber}\\s*[–-][^\\n]*\\n([\\s\\S]*?)(?=\\n### DIMENSION|$)`,
+    'mi'
   );
 
   const match = markdown.match(dimensionRegex);
