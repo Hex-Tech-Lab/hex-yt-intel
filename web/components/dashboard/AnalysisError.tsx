@@ -4,13 +4,14 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import type { AnalysisErrorState } from '@/lib/types';
 
 const BentoGrid = dynamic(() => import('@/components/dashboard/BentoGrid'), {
   ssr: false,
 });
 
 interface AnalysisErrorProps {
-  error: string | null;
+  error: AnalysisErrorState | null;
   url: string;
 }
 
@@ -18,16 +19,13 @@ export function AnalysisError({ error, url }: AnalysisErrorProps) {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
-  // Parse encoded error format: "STATUS:MESSAGE"
-  const errorParts = error?.split(':') || [];
-  const statusCode = errorParts[0] ? parseInt(errorParts[0], 10) : 0;
-  const errorMessage = errorParts.length > 1 ? errorParts.slice(1).join(':') : error || 'An unexpected error occurred.';
+  // Structured error — branch on code/status, no string parsing.
+  const statusCode = error?.status ?? 0;
+  const errorMessage = error?.message || 'An unexpected error occurred.';
 
-  // Distinguish user quota errors from provider errors
-  // User quota: includes ERR_MONTHLY_QUOTA_EXHAUSTED in the message
-  // Provider quota: includes ERR_PROVIDER_QUOTA_EXHAUSTED or other provider errors
-  const isUserQuotaError = error?.includes('ERR_MONTHLY_QUOTA_EXHAUSTED') || error?.includes('Monthly quota');
-  const isProviderError = error?.includes('ERR_PROVIDER_QUOTA_EXHAUSTED') || statusCode === 502;
+  // Distinguish user quota (offer upgrade) from provider overload (transient).
+  const isUserQuotaError = error?.code === 'ERR_MONTHLY_QUOTA_EXHAUSTED';
+  const isProviderError = error?.code === 'ERR_PROVIDER_QUOTA_EXHAUSTED' || statusCode === 502;
 
   const handleUpgradeClick = async () => {
     setIsUpgrading(true);

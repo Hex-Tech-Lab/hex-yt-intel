@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AnalysisError } from '@/components/dashboard/AnalysisError';
 import { BentoGridLoading } from '@/components/dashboard/BentoGridLoading';
-import type { AnalysisResult, AnalysisStatus } from '@/lib/types';
+import type { AnalysisResult, AnalysisStatus, AnalysisErrorState } from '@/lib/types';
 import type { CachedAnalysisResult } from '@/lib/services/cache';
 import { useMemo } from 'react';
 
@@ -17,7 +17,7 @@ interface AnalysisStateProps {
   status: AnalysisStatus;
   analysis: AnalysisResult | null;
   isLoading: boolean;
-  error: string | null;
+  error: AnalysisErrorState | null;
   url: string;
 }
 

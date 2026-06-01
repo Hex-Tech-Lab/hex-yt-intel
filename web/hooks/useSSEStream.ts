@@ -56,11 +56,15 @@ export function useSSEStream() {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            let errorMsg = errorData.error || `HTTP ${response.status}`;
+            // Prefer the human-readable `message` (quota/provider errors carry it),
+            // fall back to the short `error` label, then a generic HTTP string.
+            let errorMsg = errorData.message || errorData.error || `HTTP ${response.status}`;
+            let errorCode = errorData.code || 'ERR_REQUEST_FAILED';
 
             // Handle Zod validation errors (400 Bad Request with fieldErrors)
             if (response.status === 400 && errorData.details?.fieldErrors) {
               const fieldErrors = errorData.details.fieldErrors;
+              errorCode = 'ERR_INVALID_REQUEST_SCHEMA';
               if (fieldErrors.url) {
                 errorMsg = 'Invalid YouTube URL';
               } else {
@@ -70,11 +74,8 @@ export function useSSEStream() {
               }
             }
 
-            // Encode HTTP status in error message for frontend state machine
-            // Format: "{STATUS}:{MESSAGE}" e.g., "402:Monthly quota exhausted"
-            const encodedError = `${response.status}:${errorMsg}`;
-
-            setError(encodedError);
+            // Structured error object — consumers branch on code/status, not substrings.
+            setError({ code: errorCode, status: response.status, message: errorMsg });
             setStatus('error');
             setIsLoading(false);
             return;
@@ -142,7 +143,8 @@ export function useSSEStream() {
           Sentry.captureMessage('Analysis completed successfully', 'info');
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
-          setError(errorMsg);
+          // Client-side / stream-consumption exception (status 0 = no HTTP response).
+          setError({ code: 'ERR_CLIENT_EXCEPTION', status: 0, message: errorMsg });
           setStatus('error');
           setIsLoading(false);
           Sentry.captureException(error);
