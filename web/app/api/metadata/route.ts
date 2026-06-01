@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId } from '@/lib/youtube';
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
-import { AnalysisCreateSchema } from '@/lib/schemas';
+import { AnalysisCreateSchema } from '@/lib/types/contracts';
 
 interface MetadataResponse {
   videoId: string;

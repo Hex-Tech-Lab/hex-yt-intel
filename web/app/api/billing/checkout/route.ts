@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession, getOrCreateStripeCustomer } from '@/lib/stripe';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { CheckoutSchema } from '@/lib/schemas';
+import { CheckoutSchema } from '@/lib/types/contracts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { ERROR_CODES } from '@/lib/error-codes';
 import * as Sentry from '@sentry/nextjs';

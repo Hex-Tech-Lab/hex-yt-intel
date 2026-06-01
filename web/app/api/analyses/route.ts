@@ -7,7 +7,7 @@ import { detectPersona, type PersonaId } from '@/lib/prompts';
 import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { AnalysisCreateSchema } from '@/lib/schemas';
+import { AnalysisCreateSchema } from '@/lib/types/contracts';
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { callOpenRouter } from '@/lib/services/openrouter';
 import { fetchSubtitles } from '@/lib/services/decodo';
