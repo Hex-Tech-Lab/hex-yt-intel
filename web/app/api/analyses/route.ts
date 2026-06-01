@@ -22,6 +22,7 @@ import { fetchSubtitles, type TranscriptResponse } from '@/lib/services/decodo';
 import { createClaudeStreamNormalizer } from '@/lib/streaming';
 import { publishValidationTask } from '@/lib/qstash-client';
 import { parseSSELine } from '@/lib/streaming/decoder';
+import { generateCacheKey, getAnalysisCache, setAnalysisCache, type CachedAnalysisResult } from '@/lib/services/cache';
 
 export const runtime = 'nodejs';
 
@@ -669,8 +670,37 @@ export async function POST(request: NextRequest) {
     const personaConfig = rankPersonas(finalPersona);
     addBreadcrumb('Persona configured', { persona: selectedPersona, ranks: personaConfig.map((p) => `${p.personaId}:${p.weight}%`).join(' ') });
 
-    // 7. Call OpenRouter - stream response directly to client (transcript guaranteed valid)
-    console.log('[analyses] 7. OpenRouter call starting', { videoId, persona: finalPersona, timezone, duration: metadata.duration, transcriptLength: transcript!.length });
+    // 6.6 Cache-Aside Check: Before calling OpenRouter, check Upstash KV
+    const cacheKey = generateCacheKey('free-tier-waterfall', transcript || '', '5.1');
+    const cachedResult = await getAnalysisCache(cacheKey);
+
+    if (cachedResult) {
+      console.log('[analyses] 6.6 Cache HIT - returning cached analysis', { videoId, cacheKey, analysisId: cachedResult.id });
+      addBreadcrumb('Cache HIT - skipping model inference', { videoId, cachedMs: 0 }, 'optimization');
+
+      // Return cached analysis immediately (stream the cached markdown)
+      const cachedStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(cachedResult.analysis_markdown);
+          controller.close();
+        }
+      });
+
+      const streamResponse = new Response(cachedStream, {
+        headers: {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          'X-Cache': 'HIT',
+          'X-Analysis-Id': cachedResult.id,
+          'X-Cached-At': cachedResult.cached_at,
+        }
+      });
+
+      return streamResponse;
+    }
+
+    // 7. Cache MISS - Call OpenRouter - stream response directly to client (transcript guaranteed valid)
+    console.log('[analyses] 7. OpenRouter call starting (cache miss)', { videoId, persona: finalPersona, timezone, duration: metadata.duration, transcriptLength: transcript!.length });
     let openrouterResponse: Response;
     try {
       openrouterResponse = await trackExternalCall(
@@ -1015,6 +1045,28 @@ export async function POST(request: NextRequest) {
           'database-analysis-update',
           3
         );
+
+        // 10. Cache the completed analysis result for future requests
+        const cacheKeyForWrite = generateCacheKey('free-tier-waterfall', backgroundContext.transcript || '', '5.1');
+        const transcriptAvailableForCache = !!(backgroundContext.transcript && backgroundContext.transcript.length > 0);
+        const cachedPayload: CachedAnalysisResult = {
+          id: ctxAnalysisId,
+          video_id: ctxVideoId,
+          title: ctxMetadata?.title || '',
+          analysis_markdown: markdown,
+          validation_report: {
+            transcript_available: transcriptAvailableForCache,
+            analysis_type: transcriptAvailableForCache ? 'full' : 'metadata-only',
+            warning: backgroundContext.transcriptWarning
+          },
+          model_used: 'free-tier-waterfall',
+          created_at: new Date().toISOString(),
+          cached_at: new Date().toISOString(),
+        };
+
+        await setAnalysisCache(cacheKeyForWrite, cachedPayload);
+        console.log('[analyses] 10. Analysis cached for future requests', { analysisId: ctxAnalysisId, cacheKey: cacheKeyForWrite });
+        addBreadcrumb('Analysis cached in Upstash', { analysisId: ctxAnalysisId, cacheKey: cacheKeyForWrite }, 'cache');
 
         // Publish to QStash for validation (only if transcript available) - using explicit context
         if (backgroundContext.transcript && backgroundContext.transcript.length > 0) {
