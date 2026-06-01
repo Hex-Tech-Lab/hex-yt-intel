@@ -286,6 +286,96 @@ function getRateLimit(tier: Tier): number {
 }
 
 /**
+ * Enforce atomic monthly quota using Postgres RPC.
+ * Returns success if user is under quota, false if limit exceeded.
+ * Free tier: 3 analyses/month. Pro tier: unlimited.
+ */
+async function enforceMonthlyQuota(userId: string, tier: Tier): Promise<{
+  allowed: boolean;
+  newQuota?: number;
+  quotaLimit?: number;
+  error?: string;
+}> {
+  try {
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase.rpc('increment_user_quota_atomic', {
+      p_user_id: userId,
+    });
+
+    if (error) {
+      console.error('[quota] RPC failed:', error);
+      return { allowed: false, error: 'Quota check failed' };
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn('[quota] Unexpected RPC response format:', data);
+      return { allowed: false, error: 'Invalid quota response' };
+    }
+
+    const result = data[0];
+    const success = result.success === true;
+
+    if (!success) {
+      console.warn(`[quota] Monthly quota exceeded for user ${userId}`, {
+        newQuota: result.new_quota,
+        quotaLimit: result.quota_limit,
+        tier: result.tier,
+      });
+
+      // Log quota hit for abuse detection (non-blocking)
+      try {
+        await supabase.from('usage_logs').insert({
+          user_id: userId,
+          action: 'monthly_quota_exceeded',
+          metadata: {
+            tier: result.tier,
+            usageCount: result.new_quota,
+            quotaLimit: result.quota_limit,
+            timestamp: new Date().toISOString(),
+          },
+          created_at: new Date().toISOString(),
+        });
+      } catch (logErr) {
+        console.warn('[quota] Failed to log quota hit:', logErr);
+      }
+
+      return {
+        allowed: false,
+        newQuota: result.new_quota,
+        quotaLimit: result.quota_limit,
+        error: 'Monthly quota exceeded',
+      };
+    }
+
+    return {
+      allowed: true,
+      newQuota: result.new_quota,
+      quotaLimit: result.quota_limit,
+    };
+  } catch (err) {
+    console.error('[quota] Quota enforcement exception:', err);
+    Sentry.captureException(err, {
+      level: 'error',
+      contexts: {
+        quota: {
+          userId,
+          tier,
+          stage: 'enforcement',
+        },
+      },
+      tags: {
+        component: 'quota-enforcement',
+        severity: 'high',
+      },
+    });
+
+    // Fail open: allow request if quota check fails (log the failure)
+    return { allowed: true };
+  }
+}
+
+/**
  * HTTP headers assignment utility (RFC 6585 compliance)
  */
 export function applyRateLimitHeaders(response: NextResponse, status: RateLimitStatus): void {
@@ -293,7 +383,7 @@ export function applyRateLimitHeaders(response: NextResponse, status: RateLimitS
   response.headers.set('X-RateLimit-Limit', String(status.limit));
   response.headers.set('X-RateLimit-Remaining', String(status.remaining));
   response.headers.set('X-RateLimit-Reset', String(resetAtSeconds));
-  
+
   // Backward compatibility for existing E2E tests
   response.headers.set('X-Quota-Remaining', String(status.remaining));
 }
@@ -427,7 +517,30 @@ export async function applyRateLimit(
     return { allowed: false, response };
   }
 
-  // For successful requests, return headers as object (caller will apply)
+  // Per-minute rate limit passed. Now enforce atomic monthly quota.
+  const quotaResult = await enforceMonthlyQuota(userId, tier);
+
+  if (!quotaResult.allowed) {
+    // Return 402 Payment Required for monthly quota exhaustion
+    const response = NextResponse.json(
+      {
+        error: 'Monthly quota exhausted',
+        code: 'ERR_MONTHLY_QUOTA_EXHAUSTED',
+        message:
+          tier === 'free'
+            ? `Free tier limited to ${quotaResult.quotaLimit || 3} analyses per month. Upgrade to Pro for unlimited access.`
+            : 'Monthly quota exceeded. Contact support for assistance.',
+        used: quotaResult.newQuota,
+        limit: quotaResult.quotaLimit,
+      },
+      { status: 402 }
+    );
+
+    response.headers.set('X-Quota-Status', 'exhausted');
+    return { allowed: false, response };
+  }
+
+  // Both per-minute and monthly quotas passed. Request allowed.
   const resetAtSeconds = Math.ceil(status.resetAt / 1000);
   return {
     allowed: true,
