@@ -829,10 +829,13 @@ export async function POST(request: NextRequest) {
         }
 
         // PART 2: Forensic payload logging (10B) - BEFORE insert attempt (using explicit context)
-        // Initialize validation_report based on transcript availability
-        const validationReport = backgroundContext.transcript && backgroundContext.transcript.length > 0
-          ? {} // Will be populated during streaming analysis
-          : { metadata_only: true, reason: backgroundContext.transcriptWarning || 'Transcript unavailable' };
+        // Initialize validation_report with transcript availability context
+        const transcriptAvailable = backgroundContext.transcript && backgroundContext.transcript.length > 0;
+        const validationReport = {
+          transcript_available: transcriptAvailable,
+          analysis_type: transcriptAvailable ? 'full' : 'metadata-only',
+          warning: transcriptAvailable ? undefined : (backgroundContext.transcriptWarning || 'Decodo index miss - analysis limited to metadata'),
+        };
 
         const analysisInsertPayload = {
           id: ctxAnalysisId,
@@ -840,8 +843,8 @@ export async function POST(request: NextRequest) {
           user_id: ctxUserId,
           title: ctxMetadata?.title,
           analysis_markdown: '',
-          model_attempted: 'anthropic/claude-haiku-4.5',
-          model_used: 'anthropic/claude-haiku-4.5',
+          model_attempted: 'free-tier-waterfall',
+          model_used: 'free-tier-waterfall',
           validation_report: validationReport,
           validation_passed: false,
           created_at: new Date().toISOString(),
