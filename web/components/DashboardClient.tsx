@@ -1,21 +1,28 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import toast from 'react-hot-toast';
-import { BentoGrid } from '@/components/dashboard/BentoGrid';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
+import { Card } from '@/components/ui/card';
 import type { CachedAnalysisResult } from '@/lib/services/cache';
-import styles from '@/app/dashboard.module.css';
 
 const STORAGE_KEY = 'hex_intel_saved_input';
 
-// Dynamic import for AmbientCanvas to prevent SSR/hydration mismatch
-const AmbientCanvas = dynamic(() => import('@/components/ui/AmbientCanvas'), {
+// Dynamic imports to prevent SSR/hydration mismatch
+const BentoGrid = dynamic(() => import('@/components/dashboard/BentoGrid'), {
   ssr: false,
-  loading: () => null,
+  loading: () => <BentoGridSkeleton />,
 });
+
+const BentoGridSkeleton = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {[...Array(6)].map((_, i) => (
+      <Card key={i} className="h-40 bg-surface/50 border-border animate-pulse rounded-lg" />
+    ))}
+  </div>
+);
 
 const getUserTimezone = (): string => {
   try {
@@ -29,40 +36,36 @@ export function DashboardClient() {
   const [url, setUrl] = useState('');
   const [isMounted, setIsMounted] = useState(false);
 
-  // Single source of truth: Zustand store + the shared SSE hook.
-  // No local analysis/synthesis/loading state, no manual fetch/SSE pipeline.
-  const { startAnalysis } = useSSEStream();
-  const { analysis, isLoading, status, error, clearAnalysis } = useAnalysisStore();
-
+  // Load from localStorage on mount
   useEffect(() => {
     setIsMounted(true);
     const cached = localStorage.getItem(STORAGE_KEY);
-    if (cached) setUrl(cached);
+    if (cached) {
+      setUrl(cached);
+    }
   }, []);
 
-  // Surface store errors to the user without holding a parallel error state.
-  useEffect(() => {
-    if (status === 'error' && error) toast.error(error);
-  }, [status, error]);
+  // Zustand store for analysis state
+  const { analysis, status, error, isLoading } = useAnalysisStore();
+  const { startAnalysis } = useSSEStream();
 
+  // URL change handler with localStorage persistence
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUrl = e.target.value;
     setUrl(newUrl);
     localStorage.setItem(STORAGE_KEY, newUrl);
   };
 
-  const handleAnalyze = async () => {
+  // Analyze handler
+  const handleAnalyze = useCallback(async () => {
     if (!url) {
       toast.error('Please paste a URL first');
       return;
     }
     await startAnalysis(url, getUserTimezone());
-  };
+  }, [url, startAnalysis]);
 
-  const handleReset = () => {
-    clearAnalysis();
-  };
-
+  // Export handler
   const handleExport = async () => {
     if (!analysis?.id) {
       toast.error('No analysis to export');
@@ -79,29 +82,32 @@ export function DashboardClient() {
       a.click();
       window.URL.revokeObjectURL(downloadUrl);
       toast.success('PDF exported!');
-    } catch (err) {
-      toast.error('Export failed: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } catch (error) {
+      toast.error('Export failed: ' + (error instanceof Error ? error.message : 'Unknown'));
     }
   };
 
+  // Share handler
   const handleShare = async () => {
     if (!analysis?.id) {
       toast.error('No analysis to share');
       return;
     }
     try {
-      const res = await fetch(`/api/analyses/${analysis.id}/share`, { method: 'POST' });
+      const res = await fetch(`/api/analyses/${analysis.id}/share`, {
+        method: 'POST',
+      });
       if (!res.ok) throw new Error('Failed to generate share link');
       const data = await res.json();
       await navigator.clipboard.writeText(data.shareUrl);
       toast.success('Share link copied to clipboard!');
-    } catch (err) {
-      toast.error('Share failed: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } catch (error) {
+      toast.error('Share failed: ' + (error instanceof Error ? error.message : 'Unknown'));
     }
   };
 
-  // Bridge the store's lean AnalysisResult into BentoGrid's CachedAnalysisResult view shape.
-  const analysisData = useMemo<CachedAnalysisResult | null>(() => {
+  // Adapt AnalysisResult to CachedAnalysisResult for BentoGrid
+  const bentoCachedAnalysis = useMemo<CachedAnalysisResult | null>(() => {
     if (!analysis) return null;
     return {
       id: analysis.id,
@@ -112,90 +118,122 @@ export function DashboardClient() {
         transcript_available: true,
         analysis_type: 'full',
       },
-      model_used: 'free-tier-waterfall',
+      model_used: 'analysis',
       created_at: new Date().toISOString(),
       cached_at: new Date().toISOString(),
     };
   }, [analysis, url]);
 
-  // BentoGrid shows during streaming and on completion; the input panel shows otherwise.
-  const isStreaming = isLoading && (!analysis || analysis.analysis_markdown.length === 0);
-
   return (
-    <div className="relative w-full h-full overflow-hidden">
-      {/* Ambient Canvas Background (z-0) */}
-      {isMounted && <AmbientCanvas className="z-0" />}
+    <div className="flex w-full h-full bg-black/50 backdrop-blur-sm">
+      {/* LEFT SIDEBAR: URL Input & Actions (320px) */}
+      <div className="w-80 flex-shrink-0 flex flex-col gap-6 p-6 border-r border-border overflow-y-auto">
+        <div>
+          <label className="text-xs font-mono font-semibold text-text-secondary uppercase tracking-wider">
+            Paste YouTube URL
+          </label>
+          <input
+            type="text"
+            placeholder="https://youtube.com/watch?v=..."
+            value={isMounted ? url : ''}
+            onChange={handleUrlChange}
+            className="w-full mt-3 bg-surface/30 border border-border rounded-control px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-accent focus:bg-accent/10 text-sm font-sans transition-all"
+          />
+        </div>
 
-      {/* Main Content Container (z-10) */}
-      <div className="relative z-10 w-full h-full">
-        {analysisData ? (
-          // Analysis view — driven entirely by the store
-          <div className="p-6 overflow-y-auto h-full bg-black/50 backdrop-blur-sm">
-            <div className="max-w-7xl mx-auto">
-              <div className="mb-6 flex items-center justify-between">
+        <button
+          onClick={handleAnalyze}
+          disabled={isLoading || !url}
+          className="w-full bg-primary text-black font-medium rounded-control py-3 hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'Analyzing...' : 'Analyze'}
+        </button>
+
+        <button
+          disabled={isLoading || !url}
+          className="w-full bg-primary/10 text-accent border border-border rounded-control py-2.5 hover:bg-primary/20 hover:border-accent transition-all text-sm disabled:opacity-50"
+        >
+          Semantic Search
+        </button>
+
+        <hr className="border-border" />
+
+        <div className="space-y-2">
+          <a
+            href="/analyses/saved"
+            className="block text-sm text-text-secondary hover:text-accent transition-colors"
+          >
+            Saved Analyses
+          </a>
+          <a
+            href="/pricing"
+            className="block text-sm text-text-secondary hover:text-accent transition-colors"
+          >
+            Pricing
+          </a>
+        </div>
+      </div>
+
+      {/* RIGHT AREA: Results (flex-1) */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-7xl mx-auto">
+          {status === 'idle' ? (
+            // Empty state
+            <Card className="border border-border bg-surface/30 rounded-lg p-12 text-center">
+              <div className="text-text-secondary space-y-2">
+                <p className="text-lg font-medium">Paste a YouTube URL and click Analyze</p>
+                <p className="text-sm">to see content analysis, transcript extraction, and structured intelligence here</p>
+              </div>
+            </Card>
+          ) : status === 'downloading' || status === 'parsing' || status === 'analyzing' ? (
+            // Loading skeleton
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <div className="h-8 bg-surface/50 rounded animate-pulse w-1/3" />
+                  <div className="h-4 bg-surface/30 rounded animate-pulse w-1/4 mt-2" />
+                </div>
+              </div>
+              <BentoGridSkeleton />
+            </div>
+          ) : status === 'complete' && bentoCachedAnalysis ? (
+            // Results display
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-white">{analysisData.title}</h2>
-                  <p className="text-sm text-slate-400 mt-1">
-                    {status === 'complete' ? 'Analysis complete' : 'Synthesizing…'}
-                  </p>
+                  <h2 className="text-2xl font-bold text-white">{bentoCachedAnalysis.title}</h2>
+                  <p className="text-sm text-slate-400 mt-1">Analysis complete</p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleReset} className={styles.buttonSecondary}>
-                    ← New
+                  <button
+                    onClick={handleExport}
+                    className="px-4 py-2 bg-primary/10 text-accent border border-border rounded-control hover:bg-primary/20 text-sm transition-all"
+                  >
+                    📥 Export PDF
                   </button>
-                  {status === 'complete' && (
-                    <>
-                      <button onClick={handleExport} className={styles.buttonSecondary}>
-                        📥 Export PDF
-                      </button>
-                      <button onClick={handleShare} className={styles.buttonPrimary}>
-                        🔗 Share Link
-                      </button>
-                    </>
-                  )}
+                  <button
+                    onClick={handleShare}
+                    className="px-4 py-2 bg-primary text-black font-medium rounded-control hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] text-sm transition-all"
+                  >
+                    🔗 Share Link
+                  </button>
                 </div>
               </div>
-
-              <BentoGrid analysis={analysisData} isLoading={isStreaming} />
+              <BentoGrid analysis={bentoCachedAnalysis} isLoading={false} />
             </div>
-          </div>
-        ) : (
-          // Input panel
-          <div className={styles.panelContainer}>
-            <div className={styles.panelLeft}>
-              <div className={styles.synthesisOutput}>
-                <div className={styles.synthesisEmpty}>
-                  <p>
-                    {isLoading
-                      ? 'Generating synthesis…'
-                      : 'Paste a YouTube URL and click "Create Synthesis" to see output here'}
-                  </p>
+          ) : status === 'error' ? (
+            // Error state
+            <Card className="border border-red-500/50 bg-red-500/10 rounded-lg p-8">
+              <div className="flex items-start gap-4">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <h3 className="font-semibold text-white mb-2">Analysis Failed</h3>
+                  <p className="text-sm text-white/70">{error || 'An unknown error occurred'}</p>
                 </div>
               </div>
-            </div>
-
-            <div className={styles.panelRight}>
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>Paste YouTube URL</label>
-                <input
-                  type="text"
-                  placeholder="https://youtube.com/watch?v=..."
-                  value={isMounted ? url : ''}
-                  onChange={handleUrlChange}
-                  className={styles.input}
-                />
-              </div>
-
-              <button
-                onClick={handleAnalyze}
-                disabled={isLoading || !url}
-                className={`${styles.button} ${styles.buttonPrimary}`}
-              >
-                {isLoading ? 'Analyzing…' : 'Create Synthesis'}
-              </button>
-            </div>
-          </div>
-        )}
+            </Card>
+          ) : null}
+        </div>
       </div>
     </div>
   );
