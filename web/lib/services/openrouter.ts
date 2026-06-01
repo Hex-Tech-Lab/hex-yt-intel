@@ -27,6 +27,19 @@ const MODEL_TIERS = [
 ] as const;
 
 /**
+ * Read a failed response body for diagnostics without ever throwing.
+ * OpenRouter error bodies are small JSON blobs; we cap the captured length.
+ */
+async function safeReadBody(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    return text ? text.slice(0, 500) : '<empty body>';
+  } catch {
+    return '<unreadable body>';
+  }
+}
+
+/**
  * Executes a waterfall request to OpenRouter with recursive fallback.
  */
 export async function callOpenRouter(
@@ -88,11 +101,38 @@ export async function callOpenRouter(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      // Cascade to next model on 402 (Payment Required) or 429 (Too Many Requests)
-      if ((response.status === 402 || response.status === 429) && tierIndex < MODEL_TIERS.length - 1) {
+      // Drain the body for diagnostics (never throws) before deciding routing.
+      const errorBody = await safeReadBody(response);
+      // 402 (Payment Required) and 429 (Too Many Requests) both signal that this
+      // tier's quota/rate budget is exhausted — the cue to cascade or give up.
+      const isQuotaSignal = response.status === 402 || response.status === 429;
+
+      // Cascade to the next model while tiers remain.
+      if (isQuotaSignal && tierIndex < MODEL_TIERS.length - 1) {
+        console.warn(
+          `[OpenRouter] Tier ${tierIndex} (${currentTier.model}) returned ${response.status}; cascading to next tier. Detail: ${errorBody}`
+        );
         return callOpenRouter(metadata, transcript, persona, timezone, duration, tierIndex + 1);
       }
-      
+
+      // Waterfall exhausted on a quota/rate signal → emit a clean, UI-renderable
+      // quota error instead of a raw 402 propagating up the stack.
+      if (isQuotaSignal) {
+        console.error(
+          `[OpenRouter] Quota exhausted across all tiers. Last: ${currentTier.model} (${response.status}). Detail: ${errorBody}`
+        );
+        throw new AnalysisEngineError({
+          message:
+            'All analysis models are currently at capacity (free quota exhausted). Please try again in a few minutes, or upgrade for dedicated throughput.',
+          code: 'ERR_QUOTA_EXHAUSTED',
+          statusCode: 402,
+          modelAttempted: currentTier.model,
+        });
+      }
+
+      console.error(
+        `[OpenRouter] Tier ${tierIndex} (${currentTier.model}) failed with ${response.status}. Detail: ${errorBody}`
+      );
       throw new AnalysisEngineError({
         message: `Analysis engine failure (${response.status})`,
         code: 'ERR_MODEL_EXECUTION_FAILED',

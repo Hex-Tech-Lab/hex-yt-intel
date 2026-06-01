@@ -18,6 +18,25 @@ export interface TranscriptResponse {
 }
 
 /**
+ * Safely coerce an unknown error/payload into a human-readable string.
+ *
+ * Decodo intermittently returns non-string `error` fields (objects/arrays) and
+ * the fetch layer can throw non-Error values. Logging or storing those directly
+ * is what produced the "[object Object]"/`undefined` entries seen in production
+ * logs. This helper guarantees a stable, finite string for every input.
+ */
+function safeStringify(value: unknown): string {
+  if (value === null || value === undefined) return 'unknown';
+  if (typeof value === 'string') return value;
+  if (value instanceof Error) return value.message || value.name || 'Error';
+  try {
+    return JSON.stringify(value).slice(0, 500);
+  } catch {
+    return String(value);
+  }
+}
+
+/**
  * Fetch subtitles/transcript from a YouTube video using Decodo API.
  * Sends a REST POST request to Decodo's youtube_subtitles endpoint.
  *
@@ -81,14 +100,29 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
       };
     }
 
-    const data = (await response.json()) as DecodoResponse;
-
-    // Check for error field in response
-    if (data.error || !data.success) {
-      console.warn(`[fetchSubtitles] Decodo error for ${videoId}:`, data.error);
+    // Read the raw body first so a non-JSON payload (HTML error page, empty body)
+    // never throws an unhandled SyntaxError out of response.json().
+    const rawBody = await response.text();
+    let data: DecodoResponse;
+    try {
+      data = JSON.parse(rawBody) as DecodoResponse;
+    } catch {
+      console.warn(
+        `[fetchSubtitles] Decodo returned non-JSON body for ${videoId}: ${rawBody.slice(0, 200)}`
+      );
       return {
         success: false,
-        reason: data.error || 'decodo_error',
+        reason: 'invalid_response',
+      };
+    }
+
+    // Check for error field in response (may be a non-string payload at runtime).
+    if (data.error || !data.success) {
+      const reason = safeStringify(data.error ?? 'decodo_error');
+      console.warn(`[fetchSubtitles] Decodo error for ${videoId}: ${reason}`);
+      return {
+        success: false,
+        reason,
       };
     }
 
@@ -110,10 +144,13 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
       length: transcript.length,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = safeStringify(error);
 
-    // Handle timeout
-    if (message === 'The operation was aborted' || error instanceof Error && error.name === 'AbortError') {
+    // Handle timeout (AbortError is thrown when the controller aborts)
+    if (
+      message === 'The operation was aborted' ||
+      (error instanceof Error && error.name === 'AbortError')
+    ) {
       console.error(`[fetchSubtitles] Timeout fetching transcript for ${videoId}`);
       return {
         success: false,
@@ -121,7 +158,7 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
       };
     }
 
-    console.error(`[fetchSubtitles] Error for ${videoId}:`, message);
+    console.error(`[fetchSubtitles] Error for ${videoId}: ${message}`);
     return {
       success: false,
       reason: 'request_failed',
