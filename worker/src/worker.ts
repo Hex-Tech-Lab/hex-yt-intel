@@ -251,9 +251,13 @@ Generate the complete 11-dimension analysis.`,
   }
 }
 
-const corsMiddleware = (origin: string | undefined): boolean => {
-  if (!origin) return false;
-  return allowedOrigins.some(allowed => origin.startsWith(allowed));
+// Return the request origin (not a boolean) when allowlisted, so Hono emits a
+// valid `Access-Control-Allow-Origin: <origin>` header. Returning a boolean made
+// Hono serialize the header literally as "true", which browsers reject. Server-
+// to-server calls (no Origin) skip CORS entirely and are unaffected.
+const corsMiddleware = (origin: string | undefined): string | null => {
+  if (!origin) return null;
+  return allowedOrigins.some(allowed => origin.startsWith(allowed)) ? origin : null;
 };
 
 app.use("*", cors({

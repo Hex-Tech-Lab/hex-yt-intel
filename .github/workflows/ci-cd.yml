@@ -251,7 +251,9 @@ jobs:
 
       - name: Comment deployment status
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        if: always()
+        # PR-only: on direct pushes to main there is no PR, so context.issue.number
+        # is blank → POST to issues//comments → pipeline crash. Skip on push.
+        if: always() && github.event_name == 'pull_request'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -359,7 +361,9 @@ jobs:
         run: ./scripts/verify-production.sh ${{ env.PRODUCTION_URL }}
 
       - name: Notify on failure
-        if: failure()
+        # PR-only: same issues//comments crash guard as the deploy comment step —
+        # this job runs on push to main where there is no PR to annotate.
+        if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
