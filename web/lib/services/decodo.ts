@@ -38,24 +38,9 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
   }
 
   try {
-    // Encode API key for Basic auth if it contains a colon (username:password format)
-    // Otherwise, treat it as a bearer token or direct API key
-    let authHeader: string;
-    if (apiKey.includes(':')) {
-      // Already in username:password format, just base64 encode
-      const encoded = btoa(apiKey);
-      authHeader = `Basic ${encoded}`;
-    } else {
-      // Check if it looks like already base64 encoded (roughly)
-      // If it starts with uppercase letters and contains = or is longer than 50 chars, assume base64
-      if (/^[A-Za-z0-9+/=]+$/.test(apiKey) && (apiKey.includes('=') || apiKey.length > 50)) {
-        // Already looks like base64, use as-is
-        authHeader = `Basic ${apiKey}`;
-      } else {
-        // Use as bearer token
-        authHeader = `Bearer ${apiKey}`;
-      }
-    }
+    // Decodo v2 API expects Basic auth header
+    // The apiKey is already in base64-encoded format from the dashboard (username:password)
+    const authHeader = `Basic ${apiKey}`;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
