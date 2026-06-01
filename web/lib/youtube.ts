@@ -21,6 +21,8 @@ const youtubeUrlSchema = z
     let id = '';
     if (parsed.hostname === 'youtu.be') {
       id = parsed.pathname.slice(1);
+    } else if (parsed.pathname.startsWith('/shorts/')) {
+      id = parsed.pathname.split('/')[2] ?? '';
     } else if (parsed.pathname.startsWith('/embed/')) {
       id = parsed.pathname.split('/')[2] ?? '';
     } else if (parsed.pathname.startsWith('/v/')) {
@@ -37,4 +39,17 @@ const youtubeUrlSchema = z
 export function extractVideoId(urlStr: string): string {
   const result = youtubeUrlSchema.safeParse(urlStr);
   return result.success ? result.data : 'unknown';
+}
+
+/**
+ * Normalize any YouTube URL format to standard watch?v= format
+ * Handles: shorts, youtu.be, embed, v, and standard watch?v= URLs
+ * Returns normalized URL or the original if extraction fails
+ */
+export function normalizeYoutubeUrl(urlStr: string): string {
+  const videoId = extractVideoId(urlStr);
+  if (videoId === 'unknown') {
+    return urlStr;
+  }
+  return `https://www.youtube.com/watch?v=${videoId}`;
 }
