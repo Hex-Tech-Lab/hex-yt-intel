@@ -138,7 +138,7 @@ jobs:
         uses: ./
 
       - name: Cache Next.js build
-        uses: actions/cache@d4323d4df104b026a6aa633f9c4b77615317652b # v4.2.2
+        uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/web/.next/cache
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('web/app/**', 'web/components/**') }}
