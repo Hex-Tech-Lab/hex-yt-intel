@@ -58,10 +58,12 @@ export const AmbientCanvas = ({ className = '', reducedMotion = false }: Ambient
       ctx.fillStyle = 'rgba(15, 23, 42, 0.1)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw and update particles
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
-      ctx.shadowColor = 'rgba(59, 130, 246, 0.4)';
-      ctx.shadowBlur = 8;
+      // Draw and update particles.
+      // Note: per-particle canvas shadowBlur was removed — it forced a full blur
+      // composite on every arc every frame and was the dominant jank source when
+      // BentoGrid rendered concurrently. A slightly higher fill alpha preserves
+      // perceived brightness without the compositing cost.
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.75)';
 
       particlesRef.current.forEach((particle) => {
         // Update position
@@ -86,6 +88,9 @@ export const AmbientCanvas = ({ className = '', reducedMotion = false }: Ambient
       ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)';
       ctx.lineWidth = 0.5;
       const connectionDistance = 120;
+      // Compare squared distances to avoid ~n² Math.sqrt calls per frame.
+      // Output is mathematically identical to the prior sqrt comparison.
+      const connectionDistanceSq = connectionDistance * connectionDistance;
       const particles = particlesRef.current;
 
       for (let i = 0; i < particles.length; i++) {
@@ -95,9 +100,9 @@ export const AmbientCanvas = ({ className = '', reducedMotion = false }: Ambient
           if (p1 && p2) {
             const dx = p2.x - p1.x;
             const dy = p2.y - p1.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distanceSq = dx * dx + dy * dy;
 
-            if (distance < connectionDistance) {
+            if (distanceSq < connectionDistanceSq) {
               ctx.beginPath();
               ctx.moveTo(p1.x, p1.y);
               ctx.lineTo(p2.x, p2.y);
