@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
       request,
       'search',
       userId,
-      userTier
+      userTier,
+      user?.email
     );
 
     if (!rateLimitResponse && !allowed) {

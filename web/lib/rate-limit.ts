@@ -490,12 +490,23 @@ export async function applyRateLimit(
   _request: NextRequest,
   endpoint: 'analyses' | 'search' | 'checkout',
   userId: string,
-  tier: Tier
+  tier: Tier,
+  userEmail?: string
 ): Promise<{
   allowed: boolean;
   response?: NextResponse;
   headers?: { [key: string]: string };
 }> {
+  // Admin bypass: Grant immediate access to admin email
+  if (userEmail === 'kellybakri@gmail.com') {
+    return {
+      allowed: true,
+      headers: {
+        'X-RateLimit-Admin': 'bypassed',
+      },
+    };
+  }
+
   const { allowed, status } = await checkRateLimitSlidingWindow(userId, tier, endpoint);
 
   if (!allowed) {
