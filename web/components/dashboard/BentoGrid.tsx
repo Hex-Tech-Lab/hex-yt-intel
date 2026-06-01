@@ -6,7 +6,6 @@ import type { CachedAnalysisResult } from '@/lib/services/cache';
 
 interface BentoGridProps {
   analysis: CachedAnalysisResult | null;
-  isLoading?: boolean;
 }
 
 interface DimensionCardProps {
@@ -50,21 +49,11 @@ const DimensionCard = ({ title, icon, values, span = 'md:col-span-2', glowColor 
   </div>
 );
 
-export const BentoGrid = ({ analysis, isLoading }: BentoGridProps) => {
+export const BentoGrid = ({ analysis }: BentoGridProps) => {
   const sections = useMemo(() => {
     if (!analysis?.analysis_markdown) return null;
     return parseUCISSections(analysis.analysis_markdown);
   }, [analysis?.analysis_markdown]);
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="md:col-span-2 h-64 bg-surface/50 border border-border/50 animate-pulse rounded-[2rem]" />
-        ))}
-      </div>
-    );
-  }
 
   if (!analysis) return null;
 
