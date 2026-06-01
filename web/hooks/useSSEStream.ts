@@ -65,7 +65,11 @@ export function useSSEStream() {
               }
             }
 
-            setError(errorMsg);
+            // Encode HTTP status in error message for frontend state machine
+            // Format: "{STATUS}:{MESSAGE}" e.g., "402:Monthly quota exhausted"
+            const encodedError = `${response.status}:${errorMsg}`;
+
+            setError(encodedError);
             setStatus('error');
             setIsLoading(false);
             return;
