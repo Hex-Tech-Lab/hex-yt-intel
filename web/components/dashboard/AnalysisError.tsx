@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 const BentoGrid = dynamic(() => import('@/components/dashboard/BentoGrid'), {
@@ -74,10 +75,11 @@ export function AnalysisError({ error, url }: AnalysisErrorProps) {
           </div>
 
           <div className="space-y-3">
-            <button
+            <Button
               onClick={handleUpgradeClick}
               disabled={isUpgrading}
-              className="w-full bg-primary text-black font-semibold rounded-control py-3 hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              variant="default"
+              className="w-full justify-center gap-2"
             >
               {isUpgrading ? (
                 <>
@@ -87,7 +89,7 @@ export function AnalysisError({ error, url }: AnalysisErrorProps) {
               ) : (
                 <>✨ Upgrade to Pro</>
               )}
-            </button>
+            </Button>
 
             {upgradeError && (
               <p className="text-sm text-red-400">

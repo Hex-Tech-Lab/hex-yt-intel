@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AnalysisError } from '@/components/dashboard/AnalysisError';
 import { BentoGridLoading } from '@/components/dashboard/BentoGridLoading';
@@ -79,18 +80,20 @@ export function AnalysisState({
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              className="px-4 py-2 bg-primary/10 text-accent border border-border rounded-control hover:bg-primary/20 text-sm transition-all disabled:opacity-30"
+            <Button
+              variant="outline"
               disabled={!analysis?.id}
+              className="text-sm"
             >
               📥 Export PDF
-            </button>
-            <button
-              className="px-4 py-2 bg-primary text-black font-medium rounded-control hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] text-sm transition-all disabled:opacity-30"
+            </Button>
+            <Button
+              variant="default"
               disabled={!analysis?.id}
+              className="text-sm"
             >
               🔗 Share Link
-            </button>
+            </Button>
           </div>
         </div>
         <BentoGrid analysis={bentoCachedAnalysis} />

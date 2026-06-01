@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import { AnalysisState } from '@/components/dashboard/AnalysisState';
@@ -55,32 +57,32 @@ export function DashboardClient() {
       {/* LEFT SIDEBAR: URL Input & Actions (320px) */}
       <div className="w-80 flex-shrink-0 flex flex-col gap-6 p-6 border-r border-border overflow-y-auto">
         <div>
-          <label className="text-xs font-mono font-semibold text-text-secondary uppercase tracking-wider">
+          <label className="text-xs font-mono font-semibold text-slate-300 uppercase tracking-wider">
             Paste YouTube URL
           </label>
-          <input
+          <Input
             type="text"
             placeholder="https://youtube.com/watch?v=..."
             value={isMounted ? url : ''}
             onChange={handleUrlChange}
-            className="w-full mt-3 bg-surface/30 border border-border rounded-control px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-accent focus:bg-accent/10 text-sm font-sans transition-all"
+            className="mt-3"
           />
         </div>
 
-        <button
+        <Button
           onClick={handleAnalyze}
           disabled={isLoading || !url}
-          className="w-full bg-primary text-black font-medium rounded-control py-3 hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="default"
         >
           {isLoading ? 'Analyzing...' : 'Analyze'}
-        </button>
+        </Button>
 
-        <button
+        <Button
           disabled={isLoading || !url}
-          className="w-full bg-primary/10 text-accent border border-border rounded-control py-2.5 hover:bg-primary/20 hover:border-accent transition-all text-sm disabled:opacity-50"
+          variant="outline"
         >
           Semantic Search
-        </button>
+        </Button>
 
         <hr className="border-border" />
 
