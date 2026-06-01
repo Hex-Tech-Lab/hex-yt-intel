@@ -124,8 +124,15 @@ function LandingPage() {
     return () => observer.disconnect();
   }, []);
 
+  // Scroll-reveal helper — translates the prior inline opacity/transform fade 1:1 to Tailwind.
+  // Module classes (.heroBadge/.heroH1/.heroP/.heroCta) do not set opacity/transform, so no cascade conflict.
+  const fade = (id: string) =>
+    `transition-[opacity,transform] duration-1000 [transition-timing-function:ease] ${
+      fadeInElements.has(id) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
+    }`;
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--grey-1)', color: '#fff', overflowX: 'hidden' }}>
+    <div className="min-h-screen bg-[var(--grey-1)] text-white overflow-x-hidden">
       {/* Hero Canvas Background */}
       <canvas
         ref={canvasRef}
@@ -134,17 +141,16 @@ function LandingPage() {
 
       {/* Header */}
       <header
-        className={styles.header}
-        style={{
-          background: scrollY > 50 ? 'rgba(9, 10, 12, 0.8)' : 'transparent',
-          backdropFilter: scrollY > 50 ? 'blur(12px)' : 'none',
-          borderBottom: scrollY > 50 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
-        }}
+        className={`${styles.header} ${
+          scrollY > 50
+            ? 'bg-[rgba(9,10,12,0.8)] backdrop-blur-[12px] border-b border-white/5'
+            : 'bg-transparent'
+        }`}
       >
         <div className={styles.headerInner}>
           {/* Logo */}
-          <div className={styles.logo} style={{ color: '#fff' }}>
-            <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg, #3d7eff, #3d7eff)', borderRadius: '8px' }} />
+          <div className={`${styles.logo} text-white`}>
+            <div className="w-7 h-7 rounded-control bg-[linear-gradient(135deg,#3d7eff,#3d7eff)]" />
             <span>hex-yt-intel</span>
           </div>
 
@@ -198,14 +204,7 @@ function LandingPage() {
           <div
             id="hero-badge"
             data-fade-in
-            className={`${styles.heroBadge} ${
-              fadeInElements.has('hero-badge') ? styles.visible : ''
-            }`}
-            style={{
-              opacity: fadeInElements.has('hero-badge') ? 1 : 0,
-              transform: fadeInElements.has('hero-badge') ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 1s ease, transform 1s ease',
-            }}
+            className={`${styles.heroBadge} ${fade('hero-badge')}`}
           >
             <div className={styles.dot} />
             YouTube Intelligence Platform
@@ -214,12 +213,7 @@ function LandingPage() {
           <h1
             id="hero-title"
             data-fade-in
-            className={styles.heroH1}
-            style={{
-              opacity: fadeInElements.has('hero-title') ? 1 : 0,
-              transform: fadeInElements.has('hero-title') ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 1s ease, transform 1s ease',
-            }}
+            className={`${styles.heroH1} ${fade('hero-title')}`}
           >
             Knowledge is more than
             <br />
@@ -231,12 +225,7 @@ function LandingPage() {
           <p
             id="hero-description"
             data-fade-in
-            className={styles.heroP}
-            style={{
-              opacity: fadeInElements.has('hero-description') ? 1 : 0,
-              transform: fadeInElements.has('hero-description') ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 1s ease, transform 1s ease',
-            }}
+            className={`${styles.heroP} ${fade('hero-description')}`}
           >
             Transform YouTube content into actionable insights. Semantic analysis, real-time
             transcription, and intelligence synthesis — all in one platform.
@@ -245,12 +234,7 @@ function LandingPage() {
           <div
             id="hero-cta"
             data-fade-in
-            className={styles.heroCta}
-            style={{
-              opacity: fadeInElements.has('hero-cta') ? 1 : 0,
-              transform: fadeInElements.has('hero-cta') ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 1s ease, transform 1s ease',
-            }}
+            className={`${styles.heroCta} ${fade('hero-cta')}`}
           >
             <button
               onClick={() => (window.location.href = '/dashboard')}
@@ -274,57 +258,45 @@ function LandingPage() {
       <section
         id="stats"
         data-fade-in
-        className={styles.section}
-        style={{
-          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-          opacity: fadeInElements.has('stats') ? 1 : 0,
-          transform: fadeInElements.has('stats') ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'opacity 1s ease, transform 1s ease',
-        }}
+        className={`${styles.section} border-t border-white/5 ${fade('stats')}`}
       >
-        <div className={styles.sectionInner} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '32px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>1M+</div>
-            <div style={{ color: 'var(--grey-50)' }}>Videos Analyzed</div>
+        <div className={`${styles.sectionInner} grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-8`}>
+          <div className="text-center">
+            <div className="text-[32px] font-bold mb-2">1M+</div>
+            <div className="text-[var(--grey-50)]">Videos Analyzed</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>500K+</div>
-            <div style={{ color: 'var(--grey-50)' }}>Active Users</div>
+          <div className="text-center">
+            <div className="text-[32px] font-bold mb-2">500K+</div>
+            <div className="text-[var(--grey-50)]">Active Users</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>99.9%</div>
-            <div style={{ color: 'var(--grey-50)' }}>Uptime Guaranteed</div>
+          <div className="text-center">
+            <div className="text-[32px] font-bold mb-2">99.9%</div>
+            <div className="text-[var(--grey-50)]">Uptime Guaranteed</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>24/7</div>
-            <div style={{ color: 'var(--grey-50)' }}>Expert Support</div>
+          <div className="text-center">
+            <div className="text-[32px] font-bold mb-2">24/7</div>
+            <div className="text-[var(--grey-50)]">Expert Support</div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className={styles.section} style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+      <section className={`${styles.section} border-t border-white/5`}>
         <div className={styles.sectionInner}>
           <div
             id="features-header"
             data-fade-in
-            style={{
-              textAlign: 'center',
-              marginBottom: '64px',
-              opacity: fadeInElements.has('features-header') ? 1 : 0,
-              transform: fadeInElements.has('features-header') ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 1s ease, transform 1s ease',
-            }}
+            className={`text-center mb-16 ${fade('features-header')}`}
           >
-            <h2 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: '600', marginBottom: '24px' }}>
+            <h2 className="text-[clamp(32px,5vw,48px)] font-semibold mb-6">
               Everything you need for YouTube intelligence
             </h2>
-            <p style={{ fontSize: '17px', color: 'var(--grey-50)', maxWidth: '520px', margin: '0 auto', lineHeight: '1.65' }}>
+            <p className="text-[17px] text-[var(--grey-50)] max-w-[520px] mx-auto leading-[1.65]">
               Comprehensive tools to analyze, search, and synthesize YouTube content
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-8">
             {[
               {
                 id: 'feature-semantic',
@@ -346,18 +318,10 @@ function LandingPage() {
                 key={feature.id}
                 id={feature.id}
                 data-fade-in
-                style={{
-                  padding: '32px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  opacity: fadeInElements.has(feature.id) ? 1 : 0,
-                  transform: fadeInElements.has(feature.id) ? 'translateY(0)' : 'translateY(20px)',
-                  transition: 'opacity 1s ease, transform 1s ease, background 0.3s',
-                }}
+                className={`p-8 border border-white/10 rounded-xl bg-white/[0.02] ${fade(feature.id)}`}
               >
-                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>{feature.title}</h3>
-                <p style={{ color: 'var(--grey-50)', lineHeight: '1.6' }}>{feature.description}</p>
+                <h3 className="text-lg font-semibold mb-4">{feature.title}</h3>
+                <p className="text-[var(--grey-50)] leading-[1.6]">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -365,30 +329,22 @@ function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className={styles.section} style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+      <section className={`${styles.section} border-t border-white/5`}>
         <div
           id="cta-final"
           data-fade-in
-          style={{
-            maxWidth: '900px',
-            margin: '0 auto',
-            textAlign: 'center',
-            opacity: fadeInElements.has('cta-final') ? 1 : 0,
-            transform: fadeInElements.has('cta-final') ? 'translateY(0)' : 'translateY(20px)',
-            transition: 'opacity 1s ease, transform 1s ease',
-          }}
+          className={`max-w-[900px] mx-auto text-center ${fade('cta-final')}`}
         >
-          <h2 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: '600', marginBottom: '24px' }}>
+          <h2 className="text-[clamp(32px,5vw,48px)] font-semibold mb-6">
             Ready to unlock YouTube intelligence?
           </h2>
-          <p style={{ fontSize: '17px', color: 'var(--grey-50)', marginBottom: '32px', maxWidth: '520px', margin: '0 auto 32px', lineHeight: '1.65' }}>
+          <p className="text-[17px] text-[var(--grey-50)] max-w-[520px] mx-auto mb-8 leading-[1.65]">
             Join thousands of creators, researchers, and teams using hex-yt-intel to transform
             their content strategy.
           </p>
           <button
             onClick={() => (window.location.href = '/dashboard')}
-            className={styles.btnPrimary}
-            style={{ padding: '14px 28px', fontSize: '15px' }}
+            className={`${styles.btnPrimary} px-7 py-[14px] text-[15px]`}
           >
             Start Free Trial
           </button>
@@ -396,24 +352,24 @@ function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', padding: '48px 24px', background: 'rgba(9, 10, 12, 0.8)', backdropFilter: 'blur(12px)' }}>
+      <footer className="border-t border-white/5 px-6 py-12 bg-[rgba(9,10,12,0.8)] backdrop-blur-[12px]">
         <div className={styles.sectionInner}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '32px', marginBottom: '32px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-8 mb-8">
+            <div className="flex flex-col gap-4">
+              <div className="text-xs font-semibold text-[var(--blue)] uppercase tracking-[1px]">
                 Product
               </div>
               <a
                 href="#"
                 onClick={() => (window.location.href = '/dashboard')}
-                style={{ fontSize: '14px', color: 'var(--grey-50)', cursor: 'pointer' }}
+                className="text-sm text-[var(--grey-50)] cursor-pointer"
               >
                 Analyzer
               </a>
               <a
                 href="#"
                 onClick={() => (window.location.href = '/dashboard')}
-                style={{ fontSize: '14px', color: 'var(--grey-50)', cursor: 'pointer' }}
+                className="text-sm text-[var(--grey-50)] cursor-pointer"
               >
                 Dashboard
               </a>
@@ -421,21 +377,21 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 API
               </a>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <div className="flex flex-col gap-4">
+              <div className="text-xs font-semibold text-[var(--blue)] uppercase tracking-[1px]">
                 Resources
               </div>
               <a
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel/wiki"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 Documentation
               </a>
@@ -443,7 +399,7 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 Blog
               </a>
@@ -451,21 +407,21 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 GitHub
               </a>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <div className="flex flex-col gap-4">
+              <div className="text-xs font-semibold text-[var(--blue)] uppercase tracking-[1px]">
                 Company
               </div>
               <a
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 About
               </a>
@@ -473,7 +429,7 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel/blob/main/PRIVACY.md"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 Privacy
               </a>
@@ -481,21 +437,21 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel/blob/main/TERMS.md"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 Terms
               </a>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <div className="flex flex-col gap-4">
+              <div className="text-xs font-semibold text-[var(--blue)] uppercase tracking-[1px]">
                 Social
               </div>
               <a
                 href="https://x.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 Twitter
               </a>
@@ -503,7 +459,7 @@ function LandingPage() {
                 href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 GitHub
               </a>
@@ -511,16 +467,16 @@ function LandingPage() {
                 href="https://discord.gg"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: '14px', color: 'var(--grey-50)' }}
+                className="text-sm text-[var(--grey-50)]"
               >
                 Discord
               </a>
             </div>
           </div>
 
-          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--grey-50)' }}>© 2026 hex-yt-intel. All rights reserved.</div>
-            <div style={{ fontSize: '12px', color: 'var(--grey-50)' }}>Knowledge is more than data points. Let there be light.</div>
+          <div className="border-t border-white/5 pt-8 flex flex-col justify-between items-center gap-4">
+            <div className="text-xs text-[var(--grey-50)]">© 2026 hex-yt-intel. All rights reserved.</div>
+            <div className="text-xs text-[var(--grey-50)]">Knowledge is more than data points. Let there be light.</div>
           </div>
         </div>
       </footer>
