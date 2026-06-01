@@ -22,8 +22,9 @@ export class AnalysisEngineError extends Error {
 }
 
 const MODEL_TIERS = [
-  { model: 'openrouter/free', tier: 'free', cost: 0 }, // Primary: OpenRouter's free-tier router (guaranteed free routing)
-  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 }, // Fallback: Paid tier only if free exhausted
+  { model: 'google/gemini-2.0-flash-lite-preview-02-05:free', tier: 'free', cost: 0 }, // Tier 0: Google Gemini 2.0 Flash (massive rate limits, high reliability)
+  { model: 'google/gemini-2.0-pro-exp-02-05:free', tier: 'free', cost: 0 }, // Tier 1: Google Gemini 2.0 Pro (fallback free tier)
+  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 }, // Tier 2: Paid fallback only if free exhausted
 ] as const;
 
 /**
@@ -116,16 +117,16 @@ export async function callOpenRouter(
       }
 
       // Waterfall exhausted on a quota/rate signal → emit a clean, UI-renderable
-      // quota error instead of a raw 402 propagating up the stack.
+      // error distinguishing provider exhaustion from user quota.
       if (isQuotaSignal) {
         console.error(
-          `[OpenRouter] Quota exhausted across all tiers. Last: ${currentTier.model} (${response.status}). Detail: ${errorBody}`
+          `[OpenRouter] Provider quota exhausted across all tiers. Last: ${currentTier.model} (${response.status}). Detail: ${errorBody}`
         );
         throw new AnalysisEngineError({
           message:
-            'All analysis models are currently at capacity (free quota exhausted). Please try again in a few minutes, or upgrade for dedicated throughput.',
-          code: 'ERR_QUOTA_EXHAUSTED',
-          statusCode: 402,
+            'AI providers are currently overloaded. Please try again in a few minutes.',
+          code: 'ERR_PROVIDER_QUOTA_EXHAUSTED',
+          statusCode: 502,
           modelAttempted: currentTier.model,
         });
       }

@@ -22,8 +22,11 @@ export function AnalysisError({ error, url }: AnalysisErrorProps) {
   const statusCode = errorParts[0] ? parseInt(errorParts[0], 10) : 0;
   const errorMessage = errorParts.length > 1 ? errorParts.slice(1).join(':') : error || 'An unexpected error occurred.';
 
-  // Check if this is a quota exhaustion error (402 Payment Required)
-  const isQuotaError = statusCode === 402;
+  // Distinguish user quota errors from provider errors
+  // User quota: includes ERR_MONTHLY_QUOTA_EXHAUSTED in the message
+  // Provider quota: includes ERR_PROVIDER_QUOTA_EXHAUSTED or other provider errors
+  const isUserQuotaError = error?.includes('ERR_MONTHLY_QUOTA_EXHAUSTED') || error?.includes('Monthly quota');
+  const isProviderError = error?.includes('ERR_PROVIDER_QUOTA_EXHAUSTED') || statusCode === 502;
 
   const handleUpgradeClick = async () => {
     setIsUpgrading(true);
@@ -58,8 +61,8 @@ export function AnalysisError({ error, url }: AnalysisErrorProps) {
     }
   };
 
-  // Render quota-specific error with upgrade CTA
-  if (isQuotaError) {
+  // Render user quota-specific error with upgrade CTA
+  if (isUserQuotaError) {
     return (
       <div className="space-y-6">
         <Card className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-8 space-y-6">
@@ -102,6 +105,22 @@ export function AnalysisError({ error, url }: AnalysisErrorProps) {
                 <p>Unlimited analyses</p>
               </div>
             </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Render provider error without upgrade CTA
+  if (isProviderError) {
+    return (
+      <div className="space-y-6">
+        <Card className="border border-red-500/30 bg-red-500/5 rounded-lg p-8 space-y-4">
+          <div>
+            <h3 className="text-lg font-bold text-red-400 mb-2">System Degraded</h3>
+            <p className="text-sm text-red-100/80">
+              AI providers are currently overloaded. Please try again in a few minutes.
+            </p>
           </div>
         </Card>
       </div>
