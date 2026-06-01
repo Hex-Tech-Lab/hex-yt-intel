@@ -93,17 +93,17 @@ export async function POST(request: NextRequest) {
 
     const metadata = metadataResult.value;
 
-    // Fail-fast: If transcript fetch fails, return 404 immediately
-    if (transcriptResult.status === 'rejected' || (transcriptResult.status === 'fulfilled' && !transcriptResult.value.success)) {
-      return NextResponse.json({
-        error: 'Transcript unavailable',
-        message: 'YouTube video does not have subtitles or transcript extraction failed',
-        videoId,
-        suggestion: 'Please select a video with available subtitles'
-      }, { status: 404 });
-    }
+    // Graceful Degradation: If transcript fetch fails, proceed with metadata-only analysis
+    let transcript = '';
+    let transcriptWarning = undefined;
 
-    const transcript = transcriptResult.value.transcript ?? '';
+    if (transcriptResult.status === 'rejected' || (transcriptResult.status === 'fulfilled' && !transcriptResult.value.success)) {
+      console.warn('[analyses] Transcript fetch failed, falling back to metadata-only analysis', { videoId });
+      transcript = '';
+      transcriptWarning = 'Transcript unavailable: YouTube video does not have subtitles or extraction failed. Analysis is limited to metadata and visual profile.';
+    } else {
+      transcript = transcriptResult.value.transcript ?? '';
+    }
 
     // 5. Analysis Generation (OpenRouter Waterfall)
     const persona = (validation.data.persona as PersonaId) || detectPersona(metadata.title, metadata.channelTitle);
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
           transcript,
           persona,
           timezone: validation.data.timezone || 'UTC',
-          transcriptWarning: transcript ? undefined : 'Analysis limited to metadata',
+          transcriptWarning: transcriptWarning,
         },
         processorStream
       );

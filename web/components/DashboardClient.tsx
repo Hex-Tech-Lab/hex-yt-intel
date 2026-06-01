@@ -17,9 +17,9 @@ const BentoGrid = dynamic(() => import('@/components/dashboard/BentoGrid'), {
 });
 
 const BentoGridSkeleton = () => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
     {[...Array(6)].map((_, i) => (
-      <Card key={i} className="h-40 bg-surface/50 border-border animate-pulse rounded-lg" />
+      <div key={i} className="md:col-span-2 h-64 bg-surface/50 border border-border/50 animate-pulse rounded-[2rem]" />
     ))}
   </div>
 );
@@ -48,6 +48,11 @@ export function DashboardClient() {
   // Zustand store for analysis state
   const { analysis, status, error, isLoading } = useAnalysisStore();
   const { startAnalysis } = useSSEStream();
+
+  // Determine if we should show the dashboard view (anything other than idle)
+  const showDashboard = useMemo(() => {
+    return status !== 'idle' || isLoading || !!analysis || !!error;
+  }, [status, isLoading, analysis, error]);
 
   // URL change handler with localStorage persistence
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,7 +182,7 @@ export function DashboardClient() {
       {/* RIGHT AREA: Results (flex-1) */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-7xl mx-auto">
-          {status === 'idle' ? (
+          {!showDashboard ? (
             // Empty state
             <Card className="border border-border bg-surface/30 rounded-lg p-12 text-center">
               <div className="text-text-secondary space-y-2">
@@ -185,7 +190,7 @@ export function DashboardClient() {
                 <p className="text-sm">to see content analysis, transcript extraction, and structured intelligence here</p>
               </div>
             </Card>
-          ) : status === 'downloading' || status === 'parsing' || status === 'analyzing' ? (
+          ) : (status === 'downloading' || status === 'parsing' || status === 'analyzing' || (isLoading && !analysis)) ? (
             // Loading skeleton
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -196,42 +201,66 @@ export function DashboardClient() {
               </div>
               <BentoGridSkeleton />
             </div>
-          ) : status === 'complete' && bentoCachedAnalysis ? (
+          ) : (status === 'complete' || analysis) ? (
             // Results display
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-white">{bentoCachedAnalysis.title}</h2>
-                  <p className="text-sm text-slate-400 mt-1">Analysis complete</p>
+                  <h2 className="text-2xl font-bold text-white">{analysis?.title || 'Video Analysis'}</h2>
+                  <p className="text-sm text-slate-400 mt-1">
+                    {status === 'complete' ? 'Analysis complete' : 'Analyzing content...'}
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={handleExport}
-                    className="px-4 py-2 bg-primary/10 text-accent border border-border rounded-control hover:bg-primary/20 text-sm transition-all"
+                    disabled={!analysis?.id}
+                    className="px-4 py-2 bg-primary/10 text-accent border border-border rounded-control hover:bg-primary/20 text-sm transition-all disabled:opacity-30"
                   >
                     📥 Export PDF
                   </button>
                   <button
                     onClick={handleShare}
-                    className="px-4 py-2 bg-primary text-black font-medium rounded-control hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] text-sm transition-all"
+                    disabled={!analysis?.id}
+                    className="px-4 py-2 bg-primary text-black font-medium rounded-control hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] text-sm transition-all disabled:opacity-30"
                   >
                     🔗 Share Link
                   </button>
                 </div>
               </div>
               <BentoGrid analysis={bentoCachedAnalysis} isLoading={false} />
+              
+              {status === 'error' && (
+                <div className="mt-8">
+                   <h3 className="text-sm font-mono text-red-400 uppercase tracking-widest mb-4">System Resilience Intercept</h3>
+                   <BentoGrid analysis={{
+                    id: 'error',
+                    video_id: url,
+                    title: 'Processing Exception Intercepted',
+                    analysis_markdown: `### DIMENSION 1 – ERROR_REPORT\n${error || 'An unexpected error occurred during processing.'}\n\n### DIMENSION 10 – RISK_ASSESSMENT\nSYSTEM_STATE: RECOVERED_VIA_DEGRADATION\nMITIGATION: USER_RETAINED_IN_DASHBOARD`,
+                    validation_report: { transcript_available: false, analysis_type: 'metadata-only', warning: error || 'Analysis failed' },
+                    model_used: 'error-handler',
+                    created_at: new Date().toISOString(),
+                    cached_at: new Date().toISOString()
+                  }} />
+                </div>
+              )}
             </div>
           ) : status === 'error' ? (
-            // Error state
-            <Card className="border border-red-500/50 bg-red-500/10 rounded-lg p-8">
-              <div className="flex items-start gap-4">
-                <span className="text-2xl">⚠️</span>
-                <div>
-                  <h3 className="font-semibold text-white mb-2">Analysis Failed</h3>
-                  <p className="text-sm text-white/70">{error || 'An unknown error occurred'}</p>
-                </div>
-              </div>
-            </Card>
+            // Fallback Error state if no analysis started at all
+            <div className="space-y-6">
+               <h2 className="text-2xl font-bold text-white">Analysis Failed</h2>
+               <BentoGrid analysis={{
+                    id: 'error',
+                    video_id: url,
+                    title: 'Initialization Error',
+                    analysis_markdown: `### DIMENSION 1 – ERROR_DETAILS\n${error || 'Failed to initialize analysis sequence.'}\n\n### DIMENSION 10 – RISK_ASSESSMENT\nCRITICAL_FAILURE: EJECTION_PREVENTED`,
+                    validation_report: { transcript_available: false, analysis_type: 'metadata-only', warning: error || 'Initialization failed' },
+                    model_used: 'error-handler',
+                    created_at: new Date().toISOString(),
+                    cached_at: new Date().toISOString()
+                  }} />
+            </div>
           ) : null}
         </div>
       </div>
