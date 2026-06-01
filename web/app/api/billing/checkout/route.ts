@@ -111,11 +111,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 6. Create checkout session
+    // 6. Create checkout session with userId in metadata
     const checkoutUrl = await createCheckoutSession(
       customerId,
       validation.data.successUrl,
-      validation.data.cancelUrl
+      validation.data.cancelUrl,
+      userId
     );
 
     if (!checkoutUrl) {

@@ -96,7 +96,8 @@ export async function getOrCreateStripeCustomer(
 export async function createCheckoutSession(
   customerId: string,
   successUrl: string,
-  cancelUrl: string
+  cancelUrl: string,
+  userId?: string
 ): Promise<string> {
   if (!STRIPE_PRICING.pro.priceId) {
     throw new Error('STRIPE_PRICE_ID_PRO environment variable is required');
@@ -114,6 +115,7 @@ export async function createCheckoutSession(
     ],
     success_url: successUrl,
     cancel_url: cancelUrl,
+    metadata: userId ? { userId } : undefined,
     subscription_data: {
       metadata: {
         upgradeAt: new Date().toISOString(),
