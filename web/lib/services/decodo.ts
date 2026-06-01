@@ -48,6 +48,7 @@ export async function fetchSubtitles(videoId: string): Promise<TranscriptRespons
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const payload = {
       target: 'youtube_subtitles',
+      source: 'youtube',
       url: youtubeUrl,
     };
     console.log('[fetchSubtitles] DEBUG: Sending payload to Decodo:', JSON.stringify(payload));
