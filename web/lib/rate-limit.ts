@@ -19,7 +19,6 @@
 
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { Redis } from '@upstash/redis';
 import { getSupabaseClient } from '@/lib/supabase';
 import {
   getRedisValue,
@@ -738,13 +737,8 @@ export async function incrementQuotaCounterAtomic(userId: string): Promise<numbe
     }
     const ttl = Math.max(60, secondsUntilMonthEnd);
 
-    // Execute Lua script atomically via Upstash Redis
-    const redisClient = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    });
-
-    const result = await redisClient.eval(QUOTA_INCREMENT_LUA, [redisKey], [String(1), String(ttl)]);
+    // Execute Lua script atomically via lazy-loaded Redis helper
+    const result = await executeRedisScript(QUOTA_INCREMENT_LUA, [redisKey], [String(1), String(ttl)]);
     const newCount = parseRedisNumber(result);
 
     return newCount;

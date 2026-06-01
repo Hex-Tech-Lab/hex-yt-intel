@@ -51,7 +51,20 @@ export function useSSEStream() {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const errorMsg = errorData.error || `HTTP ${response.status}`;
+            let errorMsg = errorData.error || `HTTP ${response.status}`;
+
+            // Handle Zod validation errors (400 Bad Request with fieldErrors)
+            if (response.status === 400 && errorData.details?.fieldErrors) {
+              const fieldErrors = errorData.details.fieldErrors;
+              if (fieldErrors.url) {
+                errorMsg = 'Invalid YouTube URL';
+              } else {
+                errorMsg = Object.entries(fieldErrors)
+                  .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors[0] : errors}`)
+                  .join('; ') || 'Invalid request';
+              }
+            }
+
             setError(errorMsg);
             setStatus('error');
             setIsLoading(false);
