@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 type Env = {
   YOUTUBE_API_KEY: string;
   CLOUDFLARE_SECRET_TOKEN: string;
+  RESIDENTIAL_PROXY_URL?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -26,6 +27,32 @@ const USER_AGENTS = [
 const getRandomUserAgent = (): string => {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 };
+
+async function fetchWithProxy(
+  targetUrl: string,
+  init: RequestInit = {},
+  proxyUrl?: string
+): Promise<Response> {
+  if (!proxyUrl) return fetch(targetUrl, init);
+
+  const atIndex = proxyUrl.lastIndexOf('@');
+  if (atIndex === -1) return fetch(targetUrl, init);
+
+  const credentials = proxyUrl.slice(0, atIndex);
+  const hostPort = proxyUrl.slice(atIndex + 1);
+
+  return fetch(targetUrl, {
+    ...init,
+    headers: {
+      ...(typeof init.headers === 'object' && init.headers !== null
+        ? (init.headers as Record<string, string>)
+        : {}),
+      'Proxy-Authorization': `Basic ${btoa(credentials)}`,
+    },
+    // @ts-ignore – Cloudflare Workers proxy extension
+    proxy: `http://${hostPort}`,
+  });
+}
 
 const corsMiddleware = (origin: string | undefined): boolean => {
   if (!origin) return false;
@@ -117,12 +144,19 @@ app.get("/fetch-metadata", async (c) => {
       );
     }
 
-    // Fetch video metadata from YouTube API with timeout
+    // Fetch video metadata from YouTube API with timeout (optionally through proxy)
     const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${videoId}&key=${apiKey}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetchWithProxy(
+      url,
+      {
+        signal: controller.signal,
+        headers: { 'User-Agent': getRandomUserAgent() },
+      },
+      c.env.RESIDENTIAL_PROXY_URL
+    );
     clearTimeout(timeout);
 
     if (!response.ok) {
@@ -226,15 +260,19 @@ app.post("/fetch-transcript", async (c) => {
   }
 
   try {
-    // Fetch caption tracks with timeout protection
+    // Fetch caption tracks with timeout protection (optionally through proxy)
     const metadataUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&type=list`;
     const metadataController = new AbortController();
     const metadataTimeout = setTimeout(() => metadataController.abort(), 5000);
 
-    const metadataResponse = await fetch(metadataUrl, {
-      signal: metadataController.signal,
-      headers: { 'User-Agent': getRandomUserAgent() },
-    });
+    const metadataResponse = await fetchWithProxy(
+      metadataUrl,
+      {
+        signal: metadataController.signal,
+        headers: { 'User-Agent': getRandomUserAgent() },
+      },
+      c.env.RESIDENTIAL_PROXY_URL
+    );
     clearTimeout(metadataTimeout);
 
     if (!metadataResponse.ok) {
@@ -260,15 +298,19 @@ app.post("/fetch-transcript", async (c) => {
       langCode = englishMatch[1];
     }
 
-    // Fetch the actual transcript with timeout
+    // Fetch the actual transcript with timeout (optionally through proxy)
     const transcriptUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${langCode}&fmt=json`;
     const transcriptController = new AbortController();
     const transcriptTimeout = setTimeout(() => transcriptController.abort(), 5000);
 
-    const transcriptResponse = await fetch(transcriptUrl, {
-      signal: transcriptController.signal,
-      headers: { 'User-Agent': getRandomUserAgent() },
-    });
+    const transcriptResponse = await fetchWithProxy(
+      transcriptUrl,
+      {
+        signal: transcriptController.signal,
+        headers: { 'User-Agent': getRandomUserAgent() },
+      },
+      c.env.RESIDENTIAL_PROXY_URL
+    );
     clearTimeout(transcriptTimeout);
 
     if (!transcriptResponse.ok) {
