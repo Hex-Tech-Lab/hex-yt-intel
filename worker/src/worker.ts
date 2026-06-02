@@ -61,14 +61,19 @@ async function fetchWithProxy(
 // LLM ANALYSIS PIPELINE – 3-MODEL CASCADE WITH UPSTASH KV CACHING
 // ===================================================================
 
-// 5-tier model cascade – deterministic fallback chain optimized for latency + cost
-// Gemma 4 31B (fastest, free), Laguna M.1 (reliable), GLM 4.5 Air (lightweight), Kimi K2.6 (fallback), Haiku (paid fallback)
+// 4-free + 1-paid model cascade – deterministic fallback chain optimized for cost.
+// Tiers 1-4 are $0 free models (no credit reservation, work regardless of balance);
+// tier 5 is the paid Claude Haiku last-resort fallback.
+// NOTE: ":free" IDs require their serving providers to be enabled in the OpenRouter
+// account provider allowlist, otherwise they 404 with "no allowed providers". The
+// paid fallback must NOT carry a ":free" suffix (Anthropic has no free tier) — that
+// was the prior bug. Transient 429s on a free tier simply fall through to the next.
 const MODEL_CHAIN = [
   { model: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B IT' },
   { model: 'poolside/laguna-m.1:free', name: 'Laguna M.1' },
   { model: 'z-ai/glm-4.5-air:free', name: 'GLM 4.5 Air' },
   { model: 'moonshotai/kimi-k2.6:free', name: 'Kimi K2.6' },
-  { model: 'anthropic/claude-3-haiku:free', name: 'Claude Haiku' },
+  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (paid fallback)' },
 ] as const;
 
 /**
