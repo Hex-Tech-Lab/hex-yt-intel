@@ -19,7 +19,7 @@
 
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 import {
   getRedisValue,
   incrementRedisValue,
@@ -297,7 +297,7 @@ async function enforceMonthlyQuota(userId: string, tier: Tier): Promise<{
   error?: string;
 }> {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServiceClient();
 
     const { data, error } = await supabase.rpc('increment_user_quota_atomic', {
       p_user_id: userId,
@@ -588,7 +588,7 @@ async function logRateLimitHit(
   limit: number
 ): Promise<void> {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServiceClient();
 
     await supabase.from('usage_logs').insert({
       user_id: userId,
