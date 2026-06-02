@@ -102,8 +102,11 @@ check_health_endpoint() {
       echo "  Worker: $worker_status"
       echo "  Sentry: $sentry_configured"
 
-      if [ "$status" = "healthy" ]; then
-        log_pass "System healthy (all components operational)"
+      # /api/health is an intentionally lightweight routing check that returns
+      # status "ok" (no components{} block). Accept "ok" as healthy alongside the
+      # richer "healthy"/"degraded" values in case the endpoint is expanded later.
+      if [ "$status" = "healthy" ] || [ "$status" = "ok" ]; then
+        log_pass "System healthy (routing functional)"
         return 0
       elif [ "$status" = "degraded" ]; then
         log_warn "System degraded (one or more components degraded)"
