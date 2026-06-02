@@ -1,6 +1,12 @@
 import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
-import { parseSSELine } from '@/lib/streaming/decoder';
+
+// Polling cadence for the async 202 + poll flow. A full free-model analysis takes
+// ~41-47s, so poll every 3s for up to ~150s before giving up.
+const POLL_INTERVAL_MS = 3000;
+const POLL_MAX_ATTEMPTS = 50;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function useSSEStream() {
   const {
@@ -8,15 +14,12 @@ export function useSSEStream() {
     setStatus,
     setError,
     initializeAnalysis,
-    appendMarkdown,
     archiveCurrentAnalysis,
   } = useAnalysisStore();
 
   const extractTelemetryId = (urlStr: string) => {
     try {
-      const normalized = urlStr.trim().startsWith('http')
-        ? urlStr.trim()
-        : `https://${urlStr.trim()}`;
+      const normalized = urlStr.trim().startsWith('http') ? urlStr.trim() : `https://${urlStr.trim()}`;
       const parsed = new URL(normalized);
       if (parsed.hostname?.includes('youtu.be')) return parsed.pathname.slice(1);
       if (parsed.pathname.includes('/shorts/')) return parsed.pathname.split('/')[2] || 'unknown';
@@ -34,7 +37,7 @@ export function useSSEStream() {
 
     return Sentry.startSpan(
       {
-        name: 'stream_analysis',
+        name: 'analyze_async_poll',
         op: 'http.client',
         attributes: { videoId, timezone: safeTimezone, forceRefresh },
       },
@@ -44,6 +47,7 @@ export function useSSEStream() {
           setStatus('downloading');
           setError(null);
 
+          // 1. Kick off the job. Returns 202 {status:'processing'} or 200 {status:'done'} (cache hit).
           const response = await Sentry.startSpan(
             { name: 'POST /api/analyses', op: 'http.client' },
             async () => fetch('/api/analyses', {
@@ -56,94 +60,74 @@ export function useSSEStream() {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            // Prefer the human-readable `message` (quota/provider errors carry it),
-            // fall back to the short `error` label, then a generic HTTP string.
             let errorMsg = errorData.message || errorData.error || `HTTP ${response.status}`;
             let errorCode = errorData.code || 'ERR_REQUEST_FAILED';
 
-            // Handle Zod validation errors (400 Bad Request with fieldErrors)
             if (response.status === 400 && errorData.details?.fieldErrors) {
               const fieldErrors = errorData.details.fieldErrors;
               errorCode = 'ERR_INVALID_REQUEST_SCHEMA';
-              if (fieldErrors.url) {
-                errorMsg = 'Invalid YouTube URL';
-              } else {
-                errorMsg = Object.entries(fieldErrors)
-                  .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors[0] : errors}`)
-                  .join('; ') || 'Invalid request';
-              }
+              errorMsg = fieldErrors.url
+                ? 'Invalid YouTube URL'
+                : Object.entries(fieldErrors)
+                    .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors[0] : errors}`)
+                    .join('; ') || 'Invalid request';
             }
 
-            // Structured error object — consumers branch on code/status, not substrings.
             setError({ code: errorCode, status: response.status, message: errorMsg });
             setStatus('error');
             setIsLoading(false);
             return;
           }
 
-          setStatus('parsing');
+          const job = await response.json();
+          const pollVideoId = job.videoId || videoId;
 
-          const contentType = response.headers.get('content-type') || '';
-          const isSSEStream = contentType.includes('text/event-stream');
-
-          if (isSSEStream) {
-            const reader = response.body?.getReader();
-            if (!reader) throw new Error('Response body not readable');
-
-            // Hydrate true native identifiers from endpoint
-            const analysisId = response.headers.get('X-Analysis-Id') || url;
-            const encodedTitle = response.headers.get('X-Title');
-            const title = encodedTitle ? decodeURIComponent(encodedTitle) : 'Analysis Result';
-
-            initializeAnalysis(analysisId, title);
-            setStatus('analyzing');
-
-            await Sentry.startSpan(
-              { name: 'consume SSE stream', op: 'stream.parse' },
-              async () => {
-                const decoder = new TextDecoder();
-                let buffer = '';
-
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) {
-                    if (buffer.trim()) {
-                      const token = parseSSELine(buffer);
-                      if (token) appendMarkdown(token);
-                    }
-                    break;
-                  }
-
-                  buffer += decoder.decode(value, { stream: true });
-                  const lines = buffer.split('\n');
-                  buffer = lines.pop() || ''; 
-
-                  for (const line of lines) {
-                    const token = parseSSELine(line);
-                    if (token) appendMarkdown(token);
-                  }
-                }
-              }
-            );
-          } else {
-            setStatus('analyzing');
-            const jsonData = await response.json();
-            if (jsonData.markdown) {
-              initializeAnalysis(jsonData.analysisId || jsonData.id, jsonData.title || 'Analysis Result', jsonData.markdown);
-            } else if (jsonData.error) {
-              throw new Error(jsonData.error);
-            } else {
-              throw new Error('Invalid response format');
-            }
+          // 2. Cache hit — analysis already complete, render immediately.
+          if (job.status === 'done' && job.markdown) {
+            initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result', job.markdown);
+            setStatus('complete');
+            setIsLoading(false);
+            archiveCurrentAnalysis();
+            return;
           }
 
-          setStatus('complete');
-          setIsLoading(false);
-          archiveCurrentAnalysis();
-          Sentry.captureMessage('Analysis completed successfully', 'info');
+          // 3. Processing — poll the status endpoint until done/error/timeout.
+          setStatus('analyzing');
+          await Sentry.startSpan(
+            { name: 'poll /api/analyses/check', op: 'http.poll' },
+            async () => {
+              for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
+                await sleep(POLL_INTERVAL_MS);
+                const pollRes = await fetch(`/api/analyses/check?videoId=${encodeURIComponent(pollVideoId)}`, {
+                  credentials: 'include',
+                });
+                if (!pollRes.ok) continue; // transient; keep polling
+                const data = await pollRes.json();
+
+                if (data.status === 'done' && data.markdown) {
+                  initializeAnalysis(data.analysisId || job.id, data.title || job.title || 'Analysis Result', data.markdown);
+                  setStatus('complete');
+                  setIsLoading(false);
+                  archiveCurrentAnalysis();
+                  return;
+                }
+                if (data.status === 'error') {
+                  setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: data.error || 'Analysis failed' });
+                  setStatus('error');
+                  setIsLoading(false);
+                  return;
+                }
+                // status === 'processing' | 'none' → keep waiting
+              }
+
+              // Exhausted attempts without a terminal status.
+              setError({ code: 'ERR_POLL_TIMEOUT', status: 0, message: 'Analysis is taking longer than expected. Please check back shortly.' });
+              setStatus('error');
+              setIsLoading(false);
+            }
+          );
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
-          // Client-side / stream-consumption exception (status 0 = no HTTP response).
           setError({ code: 'ERR_CLIENT_EXCEPTION', status: 0, message: errorMsg });
           setStatus('error');
           setIsLoading(false);

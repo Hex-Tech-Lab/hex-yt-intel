@@ -60,7 +60,7 @@ ${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.we
 **Timezone**: ${timezone}${shortFormNotice}
 
 **Transcript**:
-${transcript.slice(0, 20000)}${transcript.length > 20000 ? '\n\n[...transcript truncated to 20K characters...]' : ''}
+${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}
 
 ---
 
