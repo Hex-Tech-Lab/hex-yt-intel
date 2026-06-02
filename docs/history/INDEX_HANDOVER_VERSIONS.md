@@ -7,7 +7,18 @@
 
 ## Current State (LATEST)
 
-### 📌 HANDOVER_REPORT_2026-05-21.md (CURRENT ✅)
+### 📌 HANDOVER_REPORT_2026-06-01.md (CURRENT ✅)
+- **Type**: Strategic State Snapshot (ADR 005 Alignment)
+- **Date**: 2026-06-01
+- **Scope**: Hybrid Edge Architecture (Vercel/CF Symphony)
+- **Content**:
+  - Finalized "Bouncer" vs "Streaming Engine" role separation.
+  - Implemented HMAC-signed server-to-server `/persist` route.
+  - Documented ADR 005: Cryptographic Isolation and Quota Fortress.
+  - Updated Agent runbooks for Vertical Execution (CCT1).
+- **Use For**: Phase 2 implementation, security audits, and multi-cloud orchestration.
+
+### 📌 HANDOVER_REPORT_2026-05-21.md (STABILIZED)
 - **Type**: Strategic State Snapshot (10x THOS)
 - **Date**: 2026-05-21
 - **Scope**: Database Stabilization Sprint Complete (Phase 1 Final)
