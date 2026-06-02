@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseServiceClient();
 
       // Update user tier to 'pro'
       const { error: updateError } = await supabase

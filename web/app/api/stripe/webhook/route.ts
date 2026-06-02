@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, verifyWebhookSignature } from '@/lib/stripe';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Initialize Supabase
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServiceClient();
 
     // 4. Handle events
     switch (event.type) {
@@ -444,7 +444,7 @@ async function getUserIdFromEvent(event: Stripe.Event): Promise<string | null> {
       return null;
     }
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServiceClient();
 
     const { data: users } = await supabase
       .from('users')
