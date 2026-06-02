@@ -1,5 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+// Built INSIDE the worker so the UCIS prompt IP never reaches the browser. esbuild
+// bundles this pure-TS tree (factory -> ucis-v5.1/v5 strings + rankPersonas) inline.
+import { getUCISPrompt } from "../../web/lib/prompts/factory";
 
 type Env = {
   YOUTUBE_API_KEY: string;
@@ -8,6 +11,12 @@ type Env = {
   OPENROUTER_API_KEY: string;
   UPSTASH_REDIS_REST_URL: string;
   UPSTASH_REDIS_REST_TOKEN: string;
+  // Shared HMAC secret with Vercel: gates direct browser->worker streaming (token
+  // bound to videoId+analysisId+expiry) and signs the final markdown so Vercel can
+  // persist it tamper-proof — the worker never holds the Supabase service key.
+  STREAM_HMAC_SECRET: string;
+  // Vercel app origin the worker calls server-to-server (in waitUntil) to persist.
+  APP_URL?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -15,6 +24,7 @@ const app = new Hono<{ Bindings: Env }>();
 // Restrict CORS to approved origins only
 const allowedOrigins = [
   'https://hex-yt-intel.vercel.app',
+  'https://yt-intel.getmytestdrive.com',
   'http://localhost:3000',
   'http://localhost:3005',
 ];
@@ -260,6 +270,116 @@ Generate the complete 11-dimension analysis.`,
     }
 
     return { success: false, error: message };
+  }
+}
+
+// --- HMAC (Web Crypto) ----------------------------------------------------
+// Shared-secret signing for the direct-streaming gate + tamper-proof persistence.
+async function hmacHex(secret: string, message: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Constant-time hex compare (avoids early-exit timing leaks).
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * Stream an OpenRouter chat completion, invoking onDelta for each content chunk.
+ * Returns { started } = whether any token arrived (used for cascade fallback: we
+ * only fall through to the next model if the current one never produced output).
+ */
+async function callLLMStream(
+  model: string,
+  systemPrompt: string,
+  transcript: string,
+  metadata: any,
+  apiKey: string,
+  onDelta: (text: string) => void,
+  timeoutMs = 90000
+): Promise<{ started: boolean; text: string; error?: string }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let text = '';
+  let started = false;
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://yt-intel.hex-tech-lab.workers.dev',
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 1,
+        max_tokens: 16000,
+        stream: true,
+        // The system prompt (getUCISPrompt) already embeds the metadata + transcript
+        // in its ACTIVE ANALYSIS SESSION block. Re-sending them here made the model
+        // echo the prompt header instead of analyzing — so the user turn is just a
+        // clean execution nudge.
+        messages: [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'user',
+            content: 'Begin the analysis now. Output only the structured UCIS v5.1 report starting at "### DIMENSION 1". Do not echo the metadata, transcript, or framework instructions.',
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok || !response.body) {
+      clearTimeout(timeout);
+      const errBody = await response.text().catch(() => '');
+      return { started: false, text: '', error: `${response.status}: ${errBody.slice(0, 160)}` };
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === '[DONE]') continue;
+        try {
+          const json = JSON.parse(payload);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) {
+            started = true;
+            text += delta;
+            onDelta(delta);
+          }
+        } catch {
+          // ignore keep-alive / partial frames
+        }
+      }
+    }
+    clearTimeout(timeout);
+    return { started, text };
+  } catch (error) {
+    clearTimeout(timeout);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { started, text, error: message === 'The operation was aborted' ? 'Request timeout' : message };
   }
 }
 
@@ -730,6 +850,152 @@ Provide comprehensive analysis with all 11 dimensions in markdown format.`;
       error: message,
     }, 500);
   }
+});
+
+/**
+ * Direct browser->worker SSE streaming. Vercel mints the HMAC token (after auth +
+ * quota) and the browser connects here directly, so the slow LLM stream never goes
+ * through Vercel's 60s function ceiling. The worker holds the connection open (no
+ * Cloudflare duration limit while the client is connected), builds the UCIS prompt
+ * internally (IP stays server-side), streams tokens, and signs the final markdown.
+ */
+app.post("/analyze-llm-stream", async (c) => {
+  interface StreamRequest {
+    videoId: string;
+    analysisId: string;
+    transcript: string;
+    metadata: {
+      title: string;
+      channelTitle: string;
+      publishedAt: string;
+      duration: number;
+      viewCount: string | number;
+      likeCount: string | number;
+      commentCount: string | number;
+    };
+    persona: string;
+    timezone: string;
+    sig: string;
+    exp: number;
+  }
+
+  const req = (await c.req.json()) as StreamRequest;
+  const secret = c.env.STREAM_HMAC_SECRET;
+  const apiKey = c.env.OPENROUTER_API_KEY;
+
+  if (!req.videoId || !req.analysisId || !req.metadata || !req.sig || !req.exp) {
+    return c.json({ error: 'Missing required fields' }, 400);
+  }
+  if (!secret || !apiKey) {
+    console.error('[analyze-llm-stream] Server misconfigured: missing STREAM_HMAC_SECRET or OPENROUTER_API_KEY');
+    return c.json({ error: 'Server misconfigured' }, 500);
+  }
+
+  // Verify the Vercel-minted token: bound to videoId + analysisId + expiry. Without
+  // this anyone could hit the worker directly and burn OpenRouter quota.
+  if (Date.now() > req.exp) {
+    return c.json({ error: 'Token expired' }, 401);
+  }
+  const expected = await hmacHex(secret, `${req.videoId}.${req.analysisId}.${req.exp}`);
+  if (!timingSafeEqualHex(expected, req.sig)) {
+    return c.json({ error: 'Invalid token' }, 401);
+  }
+
+  // Build the UCIS v5.1 system prompt server-side (never sent to the browser).
+  const systemPrompt = getUCISPrompt({
+    version: '5.1',
+    metadata: {
+      title: req.metadata.title,
+      channelTitle: req.metadata.channelTitle,
+      viewCount: String(req.metadata.viewCount ?? ''),
+      likeCount: String(req.metadata.likeCount ?? ''),
+      commentCount: String(req.metadata.commentCount ?? ''),
+      publishedAt: req.metadata.publishedAt,
+    },
+    transcript: req.transcript || '',
+    persona: (req.persona as any) || 'p1',
+    timezone: req.timezone || 'UTC',
+    duration: req.metadata.duration || 0,
+  });
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: any) => {
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`)); } catch { /* client gone */ }
+      };
+      try {
+        send({ type: 'status', stage: 'starting', videoId: req.videoId });
+
+        let finalText = '';
+        let modelUsed = '';
+        let produced = false;
+
+        // Stream the cascade. We only fall through to the next model if the current
+        // one never produced a token (cold 429/error) — once tokens are streamed we
+        // commit to that model.
+        for (const { model, name } of MODEL_CHAIN) {
+          send({ type: 'status', stage: 'model', model: name });
+          const result = await callLLMStream(
+            model,
+            systemPrompt,
+            req.transcript || '',
+            req.metadata,
+            apiKey,
+            (delta) => send({ type: 'delta', content: delta }),
+            90000
+          );
+          if (result.started && result.text) {
+            finalText = result.text;
+            modelUsed = name;
+            produced = true;
+            break;
+          }
+          send({ type: 'status', stage: 'fallback', from: name, error: result.error });
+        }
+
+        if (!produced) {
+          send({ type: 'error', error: 'All models in cascade failed to produce output' });
+          controller.close();
+          return;
+        }
+
+        const valid = validate12D(finalText);
+        // Persist server-to-server (worker -> Vercel) so it doesn't depend on the
+        // browser staying connected. Runs in waitUntil: a quick POST well within the
+        // 30s post-disconnect grace. Vercel holds the Supabase service key, not us.
+        const contentSig = await hmacHex(secret, finalText);
+        const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
+        c.executionCtx.waitUntil(
+          fetch(`${appUrl}/api/analyses/persist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              analysisId: req.analysisId,
+              videoId: req.videoId,
+              markdown: finalText,
+              model: modelUsed,
+              valid,
+              contentSig,
+            }),
+          }).catch((e) => console.error('[analyze-llm-stream] persist failed', e))
+        );
+        send({ type: 'done', model: modelUsed, valid, videoId: req.videoId, analysisId: req.analysisId });
+        controller.close();
+      } catch (error) {
+        send({ type: 'error', error: error instanceof Error ? error.message : 'stream failed' });
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'X-Accel-Buffering': 'no',
+    },
+  });
 });
 
 export default app;
