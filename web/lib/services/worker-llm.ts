@@ -52,7 +52,7 @@ export async function callWorkerLLMAnalysis(
   timezone: string
 ): Promise<string> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout (includes model cascade time)
+  const timeout = setTimeout(() => controller.abort(), 55000); // 55s budget (under route maxDuration=60); covers nemotron lead + one fallback
 
   try {
     const workerUrl = env.cloudflareWorkerUrl;

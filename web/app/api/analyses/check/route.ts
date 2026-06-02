@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .select('id, title, analysis_markdown, created_at, model_used')
+          .select('id, title, analysis_markdown, created_at, model_used, validation_report')
           .eq('video_id', normalizedVideoId)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
@@ -68,26 +68,64 @@ export async function GET(request: NextRequest) {
       return null;
     });
 
-    // If analysis exists and has content, return cached record metadata
+    // A processing row this old means its background generator was killed (Vercel
+    // maxDuration) or crashed; surface it as a terminal error so the client stops polling.
+    const PROCESSING_STALE_MS = 120_000;
+
+    // 1. Completed analysis → return the markdown for the poller to render.
     if (existingAnalysis && existingAnalysis.analysis_markdown && existingAnalysis.analysis_markdown.length > 0) {
-      console.log('[analyses/check] Cache HIT - analysis found', { videoId: normalizedVideoId, analysisId: existingAnalysis.id });
-      addBreadcrumb('Pre-flight check: cache hit', { videoId: normalizedVideoId, analysisId: existingAnalysis.id }, 'cache');
+      console.log('[analyses/check] DONE - analysis found', { videoId: normalizedVideoId, analysisId: existingAnalysis.id });
+      addBreadcrumb('Poll: done', { videoId: normalizedVideoId, analysisId: existingAnalysis.id }, 'cache');
 
       return NextResponse.json({
+        status: 'done',
         exists: true,
         cached: true,
         analysisId: existingAnalysis.id,
         title: existingAnalysis.title,
+        markdown: existingAnalysis.analysis_markdown,
         createdAt: existingAnalysis.created_at,
         modelUsed: existingAnalysis.model_used,
       }, { status: 200 });
     }
 
-    // No cached analysis found
-    console.log('[analyses/check] Cache MISS - no existing analysis', { videoId: normalizedVideoId });
-    addBreadcrumb('Pre-flight check: cache miss', { videoId: normalizedVideoId }, 'cache');
+    // 2. A job row exists but has no markdown yet → processing / error / stale.
+    if (existingAnalysis) {
+      const report = (existingAnalysis.validation_report as any) || {};
+      const ageMs = Date.now() - new Date(existingAnalysis.created_at).getTime();
+
+      if (report.status === 'error') {
+        return NextResponse.json({
+          status: 'error',
+          exists: true,
+          analysisId: existingAnalysis.id,
+          error: report.error || 'Analysis generation failed',
+        }, { status: 200 });
+      }
+
+      if (ageMs >= PROCESSING_STALE_MS) {
+        return NextResponse.json({
+          status: 'error',
+          exists: true,
+          analysisId: existingAnalysis.id,
+          error: 'Analysis generation timed out. Please try again.',
+        }, { status: 200 });
+      }
+
+      return NextResponse.json({
+        status: 'processing',
+        exists: true,
+        analysisId: existingAnalysis.id,
+        title: existingAnalysis.title,
+      }, { status: 200 });
+    }
+
+    // 3. No row at all → nothing in flight.
+    console.log('[analyses/check] NONE - no existing analysis', { videoId: normalizedVideoId });
+    addBreadcrumb('Poll: none', { videoId: normalizedVideoId }, 'cache');
 
     return NextResponse.json({
+      status: 'none',
       exists: false,
       cached: false,
       analysisId: null,

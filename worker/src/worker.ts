@@ -61,18 +61,21 @@ async function fetchWithProxy(
 // LLM ANALYSIS PIPELINE – 3-MODEL CASCADE WITH UPSTASH KV CACHING
 // ===================================================================
 
-// 4-free + 1-paid model cascade – deterministic fallback chain optimized for cost.
-// Tiers 1-4 are $0 free models (no credit reservation, work regardless of balance);
-// tier 5 is the paid Claude Haiku last-resort fallback.
-// NOTE: ":free" IDs require their serving providers to be enabled in the OpenRouter
-// account provider allowlist, otherwise they 404 with "no allowed providers". The
-// paid fallback must NOT carry a ":free" suffix (Anthropic has no free tier) — that
-// was the prior bug. Transient 429s on a free tier simply fall through to the next.
+// 3-free + 1-paid model cascade – ordered best-first by a real latency+quality
+// benchmark (2026-06-02) against the full v5.1 prompt. Under the ~55s request budget
+// only ~1-2 attempts realistically complete, so tier 1 must be the proven performer.
+//   - nemotron-3-nano-30b: ONLY free model that reliably produced valid 11-dim output
+//     (3s first-token, 19-33s total). Lead model.
+//   - glm-4.5-air / gemma-4-26b: $0 fallbacks, but volatile (429 / slow) — best effort.
+//   - claude-haiku-4.5: paid last resort (needs OpenRouter credit; 402 while overdrawn).
+// Models that FAILED the benchmark and were removed: gemma-4-31b (429), laguna-m.1
+// (>120s), kimi-k2.6 (429), gpt-oss-120b / nemotron-120b (>120s — too slow for budget).
+// NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
+// or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
 const MODEL_CHAIN = [
-  { model: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B IT' },
-  { model: 'poolside/laguna-m.1:free', name: 'Laguna M.1' },
+  { model: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 3 Nano 30B' },
   { model: 'z-ai/glm-4.5-air:free', name: 'GLM 4.5 Air' },
-  { model: 'moonshotai/kimi-k2.6:free', name: 'Kimi K2.6' },
+  { model: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B' },
   { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (paid fallback)' },
 ] as const;
 
@@ -187,7 +190,7 @@ async function callLLM(
   transcript: string,
   metadata: any,
   apiKey: string,
-  timeoutMs: number = 25000
+  timeoutMs: number = 45000
 ): Promise<{ success: boolean; text?: string; error?: string }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -203,6 +206,10 @@ async function callLLM(
       body: JSON.stringify({
         model,
         temperature: 1,
+        // 16000 (not lower): nemotron-3-nano is a REASONING model that spends
+        // ~4000 tokens on reasoning before the answer. An 8000 cap truncated the
+        // 11-dimension output mid-stream and failed validation. Free models reserve
+        // no credit, so this large cap costs nothing.
         max_tokens: 16000,
         messages: [
           {
@@ -217,7 +224,7 @@ async function callLLM(
 ${JSON.stringify(metadata, null, 2)}
 
 **Transcript**:
-${transcript.slice(0, 20000)}${transcript.length > 20000 ? '\n\n[...transcript truncated...]' : ''}
+${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated...]' : ''}
 
 Generate the complete 11-dimension analysis.`,
           },
@@ -672,7 +679,7 @@ Provide comprehensive analysis with all 11 dimensions in markdown format.`;
         request.transcript,
         request.metadata,
         apiKey,
-        25000 // Adaptive timeout (covers 5-tier cascade + network)
+        45000 // Per-model timeout; absorbs nemotron 19-33s variance + headroom
       );
 
       if (result.success && result.text) {
