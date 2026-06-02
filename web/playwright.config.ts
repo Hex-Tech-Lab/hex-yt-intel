@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Production verification runs against a live deployment (DEPLOYMENT_URL), so it
+// must NOT boot a local `pnpm dev` server. Booting one is slow and fragile and
+// was the cause of the "frontend rendering check" hang/failure. When DEPLOYMENT_URL
+// is set we skip the webServer entirely and target the deployment directly.
+const deploymentUrl = process.env.DEPLOYMENT_URL;
+
 export default defineConfig({
   testDir: './tests',
   testIgnore: process.env.RUN_PAIRWISE === 'true' ? [] : ['**/pairwise_matrix/**'],
@@ -9,12 +15,14 @@ export default defineConfig({
   workers: process.env.CI ? 4 : undefined,
   reporter: [['list'], ['json', { outputFile: 'test-results.json' }]],
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: deploymentUrl || process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     video: 'on-first-retry',
   },
 
-  webServer: {
+  // Only spin up a local dev server for local/CI suites that target localhost.
+  // Skipped for production verification (DEPLOYMENT_URL set).
+  webServer: deploymentUrl ? undefined : {
     command: 'pnpm dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
