@@ -1,0 +1,44 @@
+import { createHmac, timingSafeEqual } from 'crypto';
+
+/**
+ * Shared-secret HMAC for the direct browser->worker streaming flow.
+ *
+ * - signStreamToken: Vercel mints a token bound to videoId + expiry. The worker
+ *   refuses to stream without a matching token, so the public worker endpoint can't
+ *   be abused to burn OpenRouter quota.
+ * - verifyContentSig: the worker signs the final markdown with the same secret;
+ *   Vercel /complete verifies it before persisting, so the saved record is
+ *   tamper-proof even though the content arrives via client JS.
+ *
+ * Must use the exact same algorithm/encoding as the worker (HMAC-SHA256, hex).
+ */
+const TOKEN_TTL_MS = 120_000;
+
+function secret(): string {
+  const s = process.env.STREAM_HMAC_SECRET;
+  if (!s) throw new Error('STREAM_HMAC_SECRET is not configured');
+  return s;
+}
+
+function hmacHex(message: string): string {
+  return createHmac('sha256', secret()).update(message).digest('hex');
+}
+
+export function signStreamToken(videoId: string, analysisId: string): { sig: string; exp: number } {
+  const exp = Date.now() + TOKEN_TTL_MS;
+  // Bind analysisId so the browser can't swap it to overwrite another row.
+  return { sig: hmacHex(`${videoId}.${analysisId}.${exp}`), exp };
+}
+
+function safeEqualHex(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
+  } catch {
+    return false;
+  }
+}
+
+export function verifyContentSig(markdown: string, sig: string): boolean {
+  return safeEqualHex(hmacHex(markdown), sig);
+}

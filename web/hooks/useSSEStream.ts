@@ -1,19 +1,13 @@
 import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 
-// Polling cadence for the async 202 + poll flow. A full free-model analysis takes
-// ~41-47s, so poll every 3s for up to ~150s before giving up.
-const POLL_INTERVAL_MS = 3000;
-const POLL_MAX_ATTEMPTS = 50;
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 export function useSSEStream() {
   const {
     setIsLoading,
     setStatus,
     setError,
     initializeAnalysis,
+    appendMarkdown,
     archiveCurrentAnalysis,
   } = useAnalysisStore();
 
@@ -37,7 +31,7 @@ export function useSSEStream() {
 
     return Sentry.startSpan(
       {
-        name: 'analyze_async_poll',
+        name: 'analyze_edge_stream',
         op: 'http.client',
         attributes: { videoId, timezone: safeTimezone, forceRefresh },
       },
@@ -47,8 +41,8 @@ export function useSSEStream() {
           setStatus('downloading');
           setError(null);
 
-          // 1. Kick off the job. Returns 202 {status:'processing'} or 200 {status:'done'} (cache hit).
-          const response = await Sentry.startSpan(
+          // 1. Bouncer: auth + quota + ingestion. Returns 200 (cache) or 202 (job + token).
+          const prepRes = await Sentry.startSpan(
             { name: 'POST /api/analyses', op: 'http.client' },
             async () => fetch('/api/analyses', {
               method: 'POST',
@@ -58,12 +52,11 @@ export function useSSEStream() {
             })
           );
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            let errorMsg = errorData.message || errorData.error || `HTTP ${response.status}`;
+          if (!prepRes.ok) {
+            const errorData = await prepRes.json().catch(() => ({}));
+            let errorMsg = errorData.message || errorData.error || `HTTP ${prepRes.status}`;
             let errorCode = errorData.code || 'ERR_REQUEST_FAILED';
-
-            if (response.status === 400 && errorData.details?.fieldErrors) {
+            if (prepRes.status === 400 && errorData.details?.fieldErrors) {
               const fieldErrors = errorData.details.fieldErrors;
               errorCode = 'ERR_INVALID_REQUEST_SCHEMA';
               errorMsg = fieldErrors.url
@@ -72,17 +65,15 @@ export function useSSEStream() {
                     .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors[0] : errors}`)
                     .join('; ') || 'Invalid request';
             }
-
-            setError({ code: errorCode, status: response.status, message: errorMsg });
+            setError({ code: errorCode, status: prepRes.status, message: errorMsg });
             setStatus('error');
             setIsLoading(false);
             return;
           }
 
-          const job = await response.json();
-          const pollVideoId = job.videoId || videoId;
+          const job = await prepRes.json();
 
-          // 2. Cache hit — analysis already complete, render immediately.
+          // 2. Cache hit — render immediately.
           if (job.status === 'done' && job.markdown) {
             initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result', job.markdown);
             setStatus('complete');
@@ -91,39 +82,84 @@ export function useSSEStream() {
             return;
           }
 
-          // 3. Processing — poll the status endpoint until done/error/timeout.
-          setStatus('analyzing');
-          await Sentry.startSpan(
-            { name: 'poll /api/analyses/check', op: 'http.poll' },
-            async () => {
-              for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
-                await sleep(POLL_INTERVAL_MS);
-                const pollRes = await fetch(`/api/analyses/check?videoId=${encodeURIComponent(pollVideoId)}`, {
-                  credentials: 'include',
-                });
-                if (!pollRes.ok) continue; // transient; keep polling
-                const data = await pollRes.json();
+          // 3. Stream directly from the Cloudflare Worker (no Vercel in the LLM path).
+          if (!job.stream?.url) {
+            setError({ code: 'ERR_STREAM_UNCONFIGURED', status: 0, message: 'Streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).' });
+            setStatus('error');
+            setIsLoading(false);
+            return;
+          }
 
-                if (data.status === 'done' && data.markdown) {
-                  initializeAnalysis(data.analysisId || job.id, data.title || job.title || 'Analysis Result', data.markdown);
+          initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result');
+          setStatus('analyzing');
+
+          await Sentry.startSpan(
+            { name: 'stream worker /analyze-llm-stream', op: 'stream.parse' },
+            async () => {
+              const res = await fetch(job.stream.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  videoId: job.videoId,
+                  analysisId: job.analysisId || job.id,
+                  transcript: job.transcript || '',
+                  metadata: job.metadata,
+                  persona: job.persona,
+                  timezone: job.timezone || safeTimezone,
+                  sig: job.stream.sig,
+                  exp: job.stream.exp,
+                }),
+              });
+
+              if (!res.ok || !res.body) {
+                const errText = await res.text().catch(() => '');
+                throw new Error(`Worker stream failed (${res.status}): ${errText.slice(0, 160)}`);
+              }
+
+              const reader = res.body.getReader();
+              const decoder = new TextDecoder();
+              let buffer = '';
+              let finished = false;
+
+              const handleEvent = (raw: string) => {
+                const line = raw.trim();
+                if (!line.startsWith('data:')) return;
+                const payload = line.slice(5).trim();
+                if (!payload) return;
+                let evt: any;
+                try { evt = JSON.parse(payload); } catch { return; }
+
+                if (evt.type === 'delta' && evt.content) {
+                  appendMarkdown(evt.content);
+                } else if (evt.type === 'done') {
+                  finished = true;
                   setStatus('complete');
                   setIsLoading(false);
                   archiveCurrentAnalysis();
-                  return;
-                }
-                if (data.status === 'error') {
-                  setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: data.error || 'Analysis failed' });
+                } else if (evt.type === 'error') {
+                  finished = true;
+                  setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: evt.error || 'Analysis failed' });
                   setStatus('error');
                   setIsLoading(false);
-                  return;
                 }
-                // status === 'processing' | 'none' → keep waiting
-              }
+              };
 
-              // Exhausted attempts without a terminal status.
-              setError({ code: 'ERR_POLL_TIMEOUT', status: 0, message: 'Analysis is taking longer than expected. Please check back shortly.' });
-              setStatus('error');
-              setIsLoading(false);
+              for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const events = buffer.split('\n\n');
+                buffer = events.pop() || '';
+                for (const e of events) handleEvent(e);
+              }
+              if (buffer.trim()) handleEvent(buffer);
+
+              // Stream closed without an explicit done/error event.
+              if (!finished) {
+                setError({ code: 'ERR_STREAM_INCOMPLETE', status: 0, message: 'The analysis stream ended unexpectedly. Please try again.' });
+                setStatus('error');
+                setIsLoading(false);
+              }
             }
           );
         } catch (error) {
