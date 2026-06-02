@@ -241,13 +241,21 @@ jobs:
         with:
           persist-credentials: true
 
+      # Composite setup so `pnpm dlx vercel` is available (this job didn't need
+      # pnpm/node before — the amondnet action bundled its own runtime).
+      - name: Setup environment
+        uses: ./
+
+      # Deploy via the official Vercel CLI. Replaces the unmaintained
+      # amondnet/vercel-action, eliminating its deprecated `set-output` and
+      # Node-20-runtime warnings. The CLI reads VERCEL_ORG_ID/VERCEL_PROJECT_ID
+      # from env to target the project non-interactively.
       - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v20
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
+        run: pnpm dlx vercel deploy --prod --token="$VERCEL_TOKEN" --yes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Comment deployment status
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1

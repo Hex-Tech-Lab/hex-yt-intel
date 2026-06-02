@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
 
   // Static env vars baked into the build bundle
   env: {
-    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || "1.3.7",
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || "1.3.8",
   },
 
   // ============================================================================
