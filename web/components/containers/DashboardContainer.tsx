@@ -31,7 +31,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { url, setUrl } = useInputStore();
   const { startAnalysis } = useSSEStream();
   const { projection, analysis } = useSynthesisNucleus();
-  const { graph, ready: graphReady } = useKnowledgeGraph();
+  const { graph } = useKnowledgeGraph();
   const [search, setSearch] = useState('');
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
@@ -169,22 +169,19 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               <div style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 12, border: '1px solid var(--line)', background: 'rgb(11 14 20 / 0.5)', alignSelf: 'flex-start' }}>
                 {([
                   { key: 'synthesis', label: 'Synthesis', icon: 'solar:widget-5-linear' },
-                  { key: 'graph', label: 'Knowledge Graph', icon: 'solar:share-circle-linear', disabled: !graphReady },
+                  { key: 'graph', label: 'Knowledge Graph', icon: 'solar:share-circle-linear' },
                 ] as const).map((t) => {
                   const active = consoleTab === t.key;
-                  const disabled = 'disabled' in t && t.disabled;
                   return (
                     <button
                       key={t.key}
-                      disabled={disabled}
                       onClick={() => setConsoleTab(t.key as 'synthesis' | 'graph')}
-                      title={disabled ? 'Available once ≥2 dimensions are synthesized' : undefined}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 9,
-                        border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+                        border: 'none', cursor: 'pointer',
                         background: active ? 'var(--accent)' : 'transparent',
-                        color: active ? 'var(--void)' : disabled ? 'var(--ink-muted)' : 'var(--ink-secondary)',
-                        fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, opacity: disabled ? 0.5 : 1,
+                        color: active ? 'var(--void)' : 'var(--ink-secondary)',
+                        fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600,
                         transition: 'background 0.15s, color 0.15s',
                       }}
                     >
@@ -209,10 +206,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     />
                   </div>
 
-                  {graphReady && (
-                    <aside style={{ width: 340, flexShrink: 0, position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--ink-secondary)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Intelligence</span>
+                  {/* Persistent intelligence rail — present whenever an analysis is
+                      active/done; populates live as dimensions arrive (no 2-dim gate). */}
+                  <aside style={{ width: 340, flexShrink: 0, position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--ink-secondary)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Intelligence</span>
+                      {graph.nodes.length > 0 && (
                         <button
                           onClick={() => setConsoleTab('graph')}
                           title="Open full graph"
@@ -220,16 +219,28 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                         >
                           <Icon icon="solar:maximize-square-linear" size={13} /> expand
                         </button>
-                      </div>
+                      )}
+                    </div>
+                    {graph.nodes.length > 0 ? (
                       <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} compact height={260} />
-                      <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
-                    </aside>
-                  )}
+                    ) : (
+                      <div style={{ height: 260, borderRadius: 14, border: '1px dashed var(--line)', display: 'grid', placeItems: 'center', textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11, padding: 16, lineHeight: 1.6 }}>
+                        {status === 'complete' ? 'No relational structure for this analysis.' : 'Synthesizing… the graph populates as dimensions arrive.'}
+                      </div>
+                    )}
+                    <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
+                  </aside>
                 </div>
-              ) : graphReady ? (
+              ) : (
                 <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={580} />
+                    {graph.nodes.length > 0 ? (
+                      <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={580} />
+                    ) : (
+                      <div style={{ height: 580, borderRadius: 14, border: '1px dashed var(--line)', display: 'grid', placeItems: 'center', textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 12.5, padding: 24, lineHeight: 1.6 }}>
+                        {status === 'complete' ? 'No graph relations were synthesized for this analysis.' : 'The knowledge graph builds live as dimensions arrive…'}
+                      </div>
+                    )}
                     <p style={{ marginTop: 10, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.6 }}>
                       Left-click to inspect · right-click to pin &amp; focus · drag to reposition · scroll to zoom
                     </p>
@@ -237,10 +248,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   <aside style={{ width: 360, flexShrink: 0, position: 'sticky', top: 16 }}>
                     <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
                   </aside>
-                </div>
-              ) : (
-                <div style={{ padding: 64, textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 12.5, border: '1px dashed var(--line)', borderRadius: 14 }}>
-                  The knowledge graph builds once at least two dimensions are synthesized.
                 </div>
               )}
             </>

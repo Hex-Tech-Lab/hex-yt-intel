@@ -24,7 +24,6 @@ const synthesizer = new KnowledgeGraphSynthesizer(new TfIdfSimilarityEngine());
 export function useKnowledgeGraph(): { graph: KnowledgeGraph; ready: boolean } {
   const analysis = useSynthesisNucleus((s) => s.analysis);
   const activePersona = useSynthesisNucleus((s) => s.activePersona);
-  const isStreaming = useSynthesisNucleus((s) => s.isStreaming);
 
   // Stable list of dimensions with non-trivial content.
   const dimensions = useMemo(() => {
@@ -44,15 +43,15 @@ export function useKnowledgeGraph(): { graph: KnowledgeGraph; ready: boolean } {
   const lastFingerprint = useRef<string>('');
 
   useEffect(() => {
-    // Need at least 2 nodes to form a relationship; don't thrash while streaming
-    // unless we already have a meaningful set.
-    if (dimensions.length < 2) {
+    // Build incrementally from whatever the CURRENT analysis has — a single dimension
+    // yields a 1-node graph; edges appear once ≥2 dimensions exist. No streaming gate,
+    // so the rail/graph populate live as each dimension arrives.
+    if (dimensions.length < 1) {
       setGraph(EMPTY);
       lastFingerprint.current = '';
       return;
     }
     if (fingerprint === lastFingerprint.current) return;
-    if (isStreaming && dimensions.length < 3) return;
 
     let cancelled = false;
     synthesizer
@@ -69,7 +68,7 @@ export function useKnowledgeGraph(): { graph: KnowledgeGraph; ready: boolean } {
     return () => {
       cancelled = true;
     };
-  }, [fingerprint, dimensions, activePersona, isStreaming]);
+  }, [fingerprint, dimensions, activePersona]);
 
-  return { graph, ready: graph.nodes.length >= 2 };
+  return { graph, ready: graph.nodes.length >= 1 };
 }
