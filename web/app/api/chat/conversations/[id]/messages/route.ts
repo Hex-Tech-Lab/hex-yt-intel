@@ -206,6 +206,16 @@ function sse(producer: (send: (obj: unknown) => void) => void | Promise<void>): 
   });
 }
 
+// Chat is fast grounded Q&A, NOT deep analysis — favor a snappy, high-TPS, free model
+// with no heavy reasoning. Gemini 2.0 Flash leads (fast, huge context, implicit prompt
+// caching on the resent grounding). Nemotron is the resilient fallback, capped to LOW
+// reasoning effort so it stays responsive. (Reasoning param is ignored by models that
+// don't support it.) Requires the Google provider enabled in the OpenRouter allowlist.
+const CHAT_MODELS = [
+  'google/gemini-2.0-flash-exp:free',
+  'nvidia/nemotron-3-nano-30b-a3b:free',
+] as const;
+
 async function streamOpenRouter(
   apiKey: string,
   grounding: string,
@@ -216,45 +226,58 @@ async function streamOpenRouter(
   if (grounding) messages.push({ role: 'system', content: grounding });
   for (const m of history) messages.push({ role: m.role, content: m.content });
 
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 50000);
-  let full = '';
-  try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://yt-intel.getmytestdrive.com' },
-      body: JSON.stringify({ model: 'nvidia/nemotron-3-nano-30b-a3b:free', temperature: 0.6, max_tokens: 1200, stream: true, messages }),
-      signal: controller.signal,
-    });
-    if (!res.ok || !res.body) return '';
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
-        const payload = trimmed.slice(5).trim();
-        if (payload === '[DONE]') continue;
-        try {
-          const json = JSON.parse(payload);
-          const delta = json.choices?.[0]?.delta?.content;
-          if (delta) {
-            full += delta;
-            onDelta(delta);
+  // Try models in order; commit to the first that produces tokens.
+  for (const model of CHAT_MODELS) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 50000);
+    let full = '';
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://yt-intel.getmytestdrive.com' },
+        body: JSON.stringify({
+          model,
+          temperature: 0.6,
+          max_tokens: 1200,
+          stream: true,
+          reasoning: { effort: 'low' },
+          messages,
+        }),
+        signal: controller.signal,
+      });
+      if (!res.ok || !res.body) continue; // try next model
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const payload = trimmed.slice(5).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const json = JSON.parse(payload);
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) {
+              full += delta;
+              onDelta(delta);
+            }
+          } catch {
+            /* keep-alive / partial */
           }
-        } catch {
-          /* keep-alive / partial */
         }
       }
+      if (full) return full; // committed to this model
+    } catch {
+      /* timeout / network — fall through to next model */
+    } finally {
+      clearTimeout(t);
     }
-    return full;
-  } finally {
-    clearTimeout(t);
   }
+  return '';
 }
