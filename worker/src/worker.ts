@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 // Built INSIDE the worker so the UCIS prompt IP never reaches the browser. esbuild
 // bundles this pure-TS tree (factory -> ucis-v5.1/v5 strings + rankPersonas) inline.
 import { getUCISPrompt } from "../../web/lib/prompts/factory";
+import { StreamingDimensionParser } from "./dimension-parser";
 
 type Env = {
   YOUTUBE_API_KEY: string;
@@ -929,12 +930,11 @@ app.post("/analyze-llm-stream", async (c) => {
   });
 
   const encoder = new TextEncoder();
-  const secret = c.env.STREAM_HMAC_SECRET;
-  const apiKey = c.env.OPENROUTER_API_KEY;
 
   let finalText = '';
   let modelUsedUsed = '';
   let persisted = false;
+  const dimensionParser = new StreamingDimensionParser();
 
   const persist = async (status: 'completed' | 'interrupted') => {
     if (persisted || !finalText) return;
@@ -993,7 +993,9 @@ app.post("/analyze-llm-stream", async (c) => {
             apiKey,
             (delta) => {
               finalText += delta;
-              send({ type: 'delta', content: delta });
+              // Parse the delta into dimensions and emit JSON fragments
+              const fragments = dimensionParser.feed(delta);
+              fragments.forEach(frag => send(frag));
             },
             90000
           );
@@ -1012,7 +1014,11 @@ app.post("/analyze-llm-stream", async (c) => {
         }
 
         const valid = validate12D(finalText);
-        send({ type: 'done', model: modelUsedUsed, valid, videoId: req.videoId, analysisId: req.analysisId });
+        // Emit any remaining partial dimensions
+        const finalFragments = dimensionParser.finalize();
+        finalFragments.forEach(frag => send(frag));
+        // Mark stream complete
+        send({ type: 'complete', model: modelUsedUsed, valid, videoId: req.videoId, analysisId: req.analysisId });
       } catch (error) {
         send({ type: 'error', error: error instanceof Error ? error.message : 'stream failed' });
       } finally {
