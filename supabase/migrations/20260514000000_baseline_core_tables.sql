@@ -84,6 +84,27 @@ create table if not exists public.stripe_events (
   created_at   timestamptz default current_timestamp
 );
 
+-- Bootstrap trigger functions (also created out-of-band on prod — no migration makes
+-- them, yet 20260602 REVOKEs EXECUTE on them, which fails on a fresh DB). Definitions
+-- introspected from prod. CREATE OR REPLACE → idempotent no-op on prod.
+create or replace function public.update_updated_at_column()
+returns trigger language plpgsql set search_path to 'public', 'pg_temp' as $$
+begin
+  new.updated_at = current_timestamp;
+  return new;
+end;
+$$;
+
+create or replace function public.delete_old_free_analyses()
+returns trigger language plpgsql set search_path to 'public', 'pg_temp' as $$
+begin
+  delete from analyses
+  where user_id in (select id from users where tier = 'free')
+    and created_at < now() - interval '30 days';
+  return null;
+end;
+$$;
+
 -- Match prod RLS posture (policies are added by later migrations).
 alter table public.users        enable row level security;
 alter table public.analyses     enable row level security;
