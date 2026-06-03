@@ -1,0 +1,60 @@
+name: Deploy Worker
+
+# Prevents worker drift: the Cloudflare Worker is a separate artifact from the Vercel
+# app, so merging worker code never deployed it (3x "stale worker" incidents — deployed
+# worker emitted `done` while main emitted `complete`). This deploys it automatically on
+# every push to main that touches the worker OR the web/lib trees it bundles in.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - 'web/lib/prompts/**'        # bundled into the worker (UCIS prompt IP)
+      - 'web/lib/intelligence/**'   # worker re-exports the KG synthesizer
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy-worker:
+    name: Deploy Cloudflare Worker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+        with:
+          version: 11.1.3
+
+      - name: Setup Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `wrangler deploy` runs the esbuild build (wrangler.toml [build]) which bundles
+      # the web/lib imports, then uploads. Secrets already on the worker persist.
+      - name: Deploy worker
+        run: pnpm --filter youtube-intelligence-worker run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Verify health
+        run: |
+          sleep 5
+          code=$(curl -s -o /dev/null -w "%{http_code}" https://yt-intel.hex-tech-lab.workers.dev/)
+          echo "worker GET / → $code"
+          test "$code" = "200"
