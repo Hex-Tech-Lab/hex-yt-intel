@@ -61,7 +61,10 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, error, quota
                 onKeyDown={(e) => { if (e.key === "Enter" && !disabled) onAnalyze(); }}
                 placeholder="https://youtube.com/watch?v=..."
                 aria-label="YouTube video URL"
-                style={{ 
+                aria-invalid={status === "error"}
+                aria-describedby={status === "error" ? "hero-error" : undefined}
+                className="hx-field"
+                style={{
                   minWidth: 0, 
                   flex: 1, 
                   background: "transparent", 
@@ -108,8 +111,8 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, error, quota
       </div>
 
       <div style={{ marginTop: 12, display: "flex", minHeight: 20, maxWidth: 640, alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
-        <span style={{ fontFamily: "var(--font-mono)", color: "var(--err)", fontWeight: 500 }}>{status === "error" ? error : ""}</span>
-        {quota && <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-muted)", opacity: 0.8 }}>{quota}</span>}
+        <span id="hero-error" role="alert" aria-live="assertive" style={{ fontFamily: "var(--font-mono)", color: "var(--err)", fontWeight: 500 }}>{status === "error" ? error : ""}</span>
+        {quota && <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-secondary)" }}>{quota}</span>}
       </div>
     </section>
   );

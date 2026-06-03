@@ -7,6 +7,7 @@
 
 ## Current State (LATEST)
 
+- **2026-06-03 · web 1.4.4 · `fix(a11y): console keyboard/focus/responsive hardening`** — Audited GCT2 global `@/` alias refactor (commit a0eb778: pure import churn, no logic mutations, web+worker builds verified). Fixed pre-existing console a11y debt: focus-visible rings on inputs, keyboard-operable dimension cards (role/tabIndex/Enter-Space), responsive `.hx-dim-grid` breakpoints, `role="alert"` live errors, contrast on muted text. Reduced-motion already global-safe. Deferred: inline-styles→Tailwind migration (strategic, not a defect).
 - **2026-06-03 · web 1.4.3 · `feat(ui): finalize v5.1 console integration`** — Synthesis Console (stateless TSX design system) live at `/` + `/dashboard`; dynamic session/quota wiring; legacy dashboard cluster excised; Decodo v2 transcript extraction fixed (live-verified) + transcript-required policy with quota refund on ingestion failure (`decrement_user_quota`, live-verified).
 
 ### 📌 HANDOVER_REPORT_2026-06-03_INTEGRATION.md (prior)

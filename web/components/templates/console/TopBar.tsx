@@ -35,6 +35,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, tier, account }
           onKeyDown={(e) => { if (e.key === "Enter") onSearchSubmit?.(); }}
           placeholder="Search your knowledge graph"
           aria-label="Search syntheses"
+          className="hx-field"
           style={{
             minWidth: 0,
             flex: 1,
