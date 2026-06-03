@@ -30,7 +30,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { status, error, videoMetadata, analysisHistory } = useAnalysisStore();
   const { url, setUrl } = useInputStore();
   const { startAnalysis } = useSSEStream();
-  const { projection } = useSynthesisNucleus();
+  const { projection, analysis } = useSynthesisNucleus();
   const { graph, ready: graphReady } = useKnowledgeGraph();
   const [search, setSearch] = useState('');
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
@@ -254,7 +254,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       )}
 
       {/* Persistent chat dock — mounted once, survives tab switches */}
-      <ChatDock context={{ title: videoMetadata?.title }} />
+      <ChatDock analysisId={analysis?.id ?? null} analysisTitle={videoMetadata?.title} />
     </DashboardLayout>
   );
 }
