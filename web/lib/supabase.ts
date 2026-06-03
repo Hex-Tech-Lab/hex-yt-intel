@@ -1,5 +1,5 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { env } from './env';
 import { cookies } from 'next/headers';
 
@@ -33,15 +33,33 @@ export async function getSupabaseClientWithAuth() {
   }
 
   const cookieStore = await cookies();
-  
+
   return createServerClient(
     supabaseUrl,
     supabaseKey,
     {
       cookies: {
-        get(name: string) { return cookieStore.get(name)?.value; },
-        set(name: string, value: string, options: CookieOptions) { cookieStore.set(name, value, options); },
-        remove(name: string, options: CookieOptions) { cookieStore.set(name, '', { ...options, maxAge: 0 }); },
+        getAll() {
+          return cookieStore.getAll().map((c) => ({ name: c.name, value: c.value }));
+        },
+        setAll(cookiesToSet) {
+          // Supabase calls setAll when it auto-refreshes an expired access token
+          // on read. In a Server Component render, cookie writes are illegal and
+          // Next.js throws "Cookies can only be modified in a Server Action or
+          // Route Handler" — the source of the fatal 500 for returning authed
+          // users. Swallow it: the refreshed session is valid for THIS request,
+          // and the new token is persisted on the next request that runs through
+          // middleware (/api/*) or a Route Handler. This is the official
+          // @supabase/ssr Next.js pattern; in Route Handlers the writes succeed
+          // (no throw), in RSC they are safely ignored.
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Called from a Server Component; ignored (middleware refreshes the session).
+          }
+        },
       },
     }
   );
