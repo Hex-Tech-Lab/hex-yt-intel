@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { Icon } from '../_shared/primitives';
+import { Icon } from '@/components/templates/_shared/primitives';
 
 export interface TopBarProps {
   search: string;

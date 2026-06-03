@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Icon, MonoLabel } from '../_shared/primitives';
+import { Icon, MonoLabel } from '@/components/templates/_shared/primitives';
 
 export interface BentoMetadataProps {
   title: string;

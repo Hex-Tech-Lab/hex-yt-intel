@@ -1,6 +1,6 @@
 'use client';
 
-import { MonoLabel, StatusBadge, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '../_shared/primitives';
+import { MonoLabel, StatusBadge, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
 
 export interface AnalysisHeroProps {
   url: string;

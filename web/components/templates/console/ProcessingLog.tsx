@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { MonoLabel } from '../_shared/primitives';
+import { MonoLabel } from '@/components/templates/_shared/primitives';
 
 export interface LogLine {
   timestamp: string;

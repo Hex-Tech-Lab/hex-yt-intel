@@ -1,13 +1,13 @@
 'use client';
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { DashboardLayout } from '../templates/console/DashboardLayout';
-import { Sidebar, SidebarItem } from '../templates/console/Sidebar';
-import { TopBar } from '../templates/console/TopBar';
-import { AnalysisHero } from '../templates/console/AnalysisHero';
-import { BentoMetadata } from '../templates/console/BentoMetadata';
-import { StreamingGrid, Dimension } from '../templates/console/StreamingGrid';
-import { ProcessingLog, LogLine } from '../templates/console/ProcessingLog';
+import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
+import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
+import { TopBar } from '@/components/templates/console/TopBar';
+import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
+import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
+import { StreamingGrid, Dimension } from '@/components/templates/console/StreamingGrid';
+import { ProcessingLog, LogLine } from '@/components/templates/console/ProcessingLog';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
