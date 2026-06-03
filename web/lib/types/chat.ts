@@ -22,4 +22,6 @@ export interface ChatMessage {
   role: ChatRole;
   content: string;
   createdAt: string;
+  /** Client idempotency key (user messages only); lets the outbox reconcile retries. */
+  clientMsgId?: string | null;
 }

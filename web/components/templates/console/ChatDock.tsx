@@ -21,12 +21,17 @@ const OPEN_KEY = 'hx-chatdock-open';
 export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   const {
     conversations, activeId, messagesByConv, sending,
-    loadConversations, selectConversation, newConversation, sendMessage, deleteConversation,
+    loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
   } = useChatStore();
 
   const [open, setOpen] = useState(false);
   const [showThreads, setShowThreads] = useState(false);
   const [input, setInput] = useState('');
+
+  // Bind the offline-outbox reconnect listener once (replays queued messages).
+  useEffect(() => {
+    bindNetwork();
+  }, [bindNetwork]);
 
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -68,10 +73,9 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   const handleSend = async () => {
     const text = input.trim();
     if (!text || sending) return;
-    // Lazily create a thread grounded in the current analysis if none is active.
-    if (!activeId) await newConversation({ analysisId: analysisId ?? null });
     setInput('');
-    await sendMessage(text);
+    // sendMessage lazily creates a thread grounded in the active analysis if needed.
+    await sendMessage(text, { analysisId: analysisId ?? null });
   };
 
   const handleNew = async () => {
