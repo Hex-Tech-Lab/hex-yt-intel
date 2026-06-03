@@ -15,6 +15,7 @@
  */
 
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
+import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { validateFragment, validateDimension } from '@/lib/validators/synthesis';
 import type { UCISDimension } from '@/lib/types/synthesis-nucleus';
 
@@ -25,7 +26,8 @@ export interface StreamAdapterOptions {
 }
 
 export class SynthesisStreamAdapter {
-  private store = useSynthesisNucleus;
+  private synthStore = useSynthesisNucleus;
+  private analysisStore = useAnalysisStore;
   private options: StreamAdapterOptions;
 
   constructor(options: StreamAdapterOptions = {}) {
@@ -65,6 +67,9 @@ export class SynthesisStreamAdapter {
       case 'status':
         this.handleStatus(fragment);
         break;
+      case 'delta':
+        this.handleDelta(fragment);
+        break;
       case 'dimension':
         this.handleDimension(fragment);
         break;
@@ -100,6 +105,18 @@ export class SynthesisStreamAdapter {
   }
 
   /**
+   * Handle a delta fragment: raw LLM text chunk for terminal display
+   */
+  private handleDelta(fragment: {
+    type: 'delta';
+    content: string;
+  }) {
+    const store = this.analysisStore.getState();
+    store.appendTerminalLine(fragment.content);
+    console.debug('[Adapter] Delta received:', fragment.content.slice(0, 100));
+  }
+
+  /**
    * Handle a dimension fragment: convert to domain entity + add to store
    */
   private handleDimension(fragment: {
@@ -122,12 +139,12 @@ export class SynthesisStreamAdapter {
     if (!entityValidation.success) return;
 
     // Feed into store
-    const store = this.store.getState();
+    const store = this.synthStore.getState();
     store.addDimension(entityValidation.data);
 
     // Notify progress
     if (this.options.onProgress) {
-      const state = this.store.getState();
+      const state = this.synthStore.getState();
       const proj = state.projection;
       if (proj) {
         this.options.onProgress(proj.progress.received, proj.progress.expected);
@@ -158,7 +175,7 @@ export class SynthesisStreamAdapter {
     videoId: string;
     analysisId: string;
   }) {
-    const store = this.store.getState();
+    const store = this.synthStore.getState();
     store.completeAnalysis();
 
     // Notify completion
@@ -181,7 +198,7 @@ export class SynthesisStreamAdapter {
     error: string;
     code?: string;
   }) {
-    const store = this.store.getState();
+    const store = this.synthStore.getState();
     store.setStreamError(fragment.error);
 
     // Notify error
@@ -196,7 +213,8 @@ export class SynthesisStreamAdapter {
    * Reset adapter state for new stream
    */
   reset() {
-    this.store.getState().reset();
+    this.synthStore.getState().reset();
+    this.analysisStore.getState().clearTerminal();
   }
 }
 

@@ -25,6 +25,21 @@ const config: Config = {
         sans: ["Inter", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
+      keyframes: {
+        flare: {
+          "0%": { boxShadow: "0 0 0 1px rgba(6, 182, 212, 0.2)" },
+          "50%": { boxShadow: "0 0 0 3px rgba(6, 182, 212, 0.4)" },
+          "100%": { boxShadow: "0 0 0 1px rgba(6, 182, 212, 0.2)" },
+        },
+        slideInDown: {
+          from: { opacity: "0", transform: "translateY(-12px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        flare: "flare 2s ease-in-out infinite",
+        slideInDown: "slideInDown 0.3s ease-out forwards",
+      },
     },
   },
   plugins: [],
