@@ -1,16 +1,249 @@
 @import "tailwindcss";
 
+@theme {
+  --color-void: var(--void);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-card: var(--card);
+  --color-card-quiet: var(--card-quiet);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-line-faint: var(--line-faint);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-glow: var(--accent-glow);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-err: var(--err);
+  --color-info: var(--info);
+  
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  
+  --radius-control: var(--radius-control);
+  --radius-card: var(--radius-card);
+  --radius-pill: var(--radius-pill);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
+:root {
+  /* --- Surface ramp (obsidian → slate). Deepest to most elevated. -------- */
+  --void: #0B0E14;            /* page backdrop, behind the canvas           */
+  --bg: #11141D;              /* app canvas base                            */
+  --surface: #1A1F2B;         /* PRIMARY surface (locked token)             */
+  --surface-raised: #1F2533;
+  --card: rgb(15 23 42 / 0.5);     /* slate-900/50 — elevated cards         */
+  --card-quiet: rgb(15 23 42 / 0.4); /* slate-900/40                        */
+
+  /* --- Hairlines --------------------------------------------------------- */
+  --line: #1E293B;            /* slate-800 — default border                 */
+  --line-strong: #334155;     /* slate-700 — emphasized border              */
+  --line-faint: rgb(148 163 184 / 0.10); /* scope / grid framing            */
+
+  /* --- Ink (text) -------------------------------------------------------- */
+  --ink: #E2E8F0;             /* slate-200 — primary text (AAA ~11.9:1)     */
+  --ink-secondary: #94A3B8;   /* slate-400 — secondary text (AA 5.8:1)      */
+  --ink-muted: #64748B;       /* slate-500 — captions, labels, disabled     */
+
+  /* --- Accent (cyan) — the single brand hue, used sparingly -------------- */
+  --accent: #06B6D4;          /* cyan-500 — primary accent                  */
+  --accent-strong: #0891B2;   /* cyan-600 — pressed / CTA base              */
+  --accent-ink: #67E8F9;      /* cyan-300 — accent text on dark (AAA 9.2:1) */
+  --accent-glow: rgb(6 182 212 / 0.40); /* ambient glow blob                */
+
+  /* --- Semantic status (data states, never decoration) ------------------- */
+  --ok: #22C55E;
+  --warn: #F59E0B;
+  --err: #EF4444;
+  --info: #06B6D4;            /* aliases accent — info == processing hue    */
+
+  /* --- Radii (capped at 16px on cards; pill for tags/controls) ----------- */
+  --radius-control: 8px;
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+
+  /* --- Type families ----------------------------------------------------- */
+  --font-sans: var(--inter-font), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--mono-font), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- Type scale (px). Major-third-ish; clamp display max ~60px --------- */
+  --text-11: 11px;   /* mono micro-label                                    */
+  --text-12: 12px;   /* mono label / caption                                */
+  --text-14: 14px;   /* small UI text                                       */
+  --text-16: 16px;   /* body (floor on mobile)                              */
+  --text-18: 18px;   /* large body / lead                                   */
+  --text-24: 24px;   /* h3                                                  */
+  --text-30: 30px;   /* h2                                                  */
+  --text-36: 36px;   /* h1 (app)                                            */
+  --text-48: 48px;   /* display                                            */
+  --text-60: 60px;   /* hero display (max)                                  */
+
+  /* --- Spacing (8px grid; 4px only for hairline insets) ------------------ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* --- Motion (ease-out exponential family; no bounce/elastic) ----------- */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 160ms;   /* hover, color                                      */
+  --dur-base: 280ms;   /* transforms, reveals                               */
+  --dur-slow: 520ms;   /* hero entrance                                     */
+
+  /* --- Z-index (semantic scale only; never 999/9999) --------------------- */
+  --z-canvas: 1;
+  --z-content: 10;
+  --z-sticky: 20;
+  --z-dropdown: 30;
+  --z-modal: 40;
+  --z-toast: 50;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+:root {
+  --primary: var(--ink);
+}
+
+/* ============================================================================
+   SEMANTIC TYPE ROLES
+   ========================================================================= */
+
+.hx-display {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: clamp(2.25rem, 5vw, 3.75rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--ink);
+}
+
+.hx-h1 {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--ink);
+}
+
+.hx-h2 {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--text-30);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--ink);
+}
+
+.hx-body {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: var(--text-16);
   line-height: 1.6;
+  text-wrap: pretty;
+  color: var(--ink);
+  max-width: 72ch;
+}
+
+.hx-body-lg {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: var(--text-18);
+  line-height: 1.6;
+  text-wrap: pretty;
+  color: var(--ink-secondary);
+}
+
+.hx-body-secondary { color: var(--ink-secondary); }
+
+.hx-mono-label {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--text-11);
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hx-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-secondary);
+}
+
+.hx-mono-index { color: rgb(6 182 212 / 0.7); }
+
+::selection { background: rgb(6 182 212 / 0.30); }
+
+/* ============================================================================
+   MOTION & UI COMPONENTS
+   ========================================================================= */
+@property --hx-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes hx-rotate-ring { to { --hx-angle: 360deg; } }
+@keyframes hx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes hx-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes hx-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hx-anispin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.hx-rise   { animation: hx-rise var(--dur-slow) var(--ease-out-quint) both; }
+.hx-rise-1 { animation-delay: 60ms; }
+.hx-rise-2 { animation-delay: 120ms; }
+.hx-rise-3 { animation-delay: 180ms; }
+.hx-rise-4 { animation-delay: 240ms; }
+
+.hx-anispin { animation: hx-anispin 2s linear infinite; }
+
+/* Custom component classes */
+.hx-navitem:hover {
+  background: rgb(6 182 212 / 0.06) !important;
+  color: var(--ink) !important;
+}
+
+.hx-liftcard:hover {
+  transform: translateY(-4px);
+  background: var(--surface-raised) !important;
+  border-color: var(--accent-glow) !important;
+}
+
+/* Glow Border & Spin */
+.hx-glow[data-active="true"] {
+  background: transparent !important;
+}
+
+.hx-spin {
+  position: absolute;
+  inset: -40%;
+  background: conic-gradient(from var(--hx-angle), transparent 55%, var(--accent) 78%, transparent 92%);
+  animation: hx-rotate-ring 3s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

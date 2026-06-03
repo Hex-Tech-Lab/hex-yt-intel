@@ -9,6 +9,7 @@ export function useSSEStream() {
     initializeAnalysis,
     appendMarkdown,
     archiveCurrentAnalysis,
+    setVideoMetadata,
   } = useAnalysisStore();
 
   const extractTelemetryId = (urlStr: string) => {
@@ -73,7 +74,12 @@ export function useSSEStream() {
 
           const job = await prepRes.json();
 
-          // 2. Cache hit — render immediately.
+          // 2. Metadata extraction
+          if (job.metadata) {
+            setVideoMetadata(job.metadata);
+          }
+
+          // 3. Cache hit — render immediately.
           if (job.status === 'done' && job.markdown) {
             initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result', job.markdown);
             setStatus('complete');

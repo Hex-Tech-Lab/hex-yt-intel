@@ -30,6 +30,7 @@ const OPTIONAL_ENV_VARS = [
   'QSTASH_CURRENT_SIGNING_KEY',
   'QSTASH_NEXT_SIGNING_KEY',
   'DECODO_API_KEY',
+  'STREAM_HMAC_SECRET',
 ] as const;
 
 type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];
@@ -312,6 +313,10 @@ export const env = {
   },
   get decodoApiKey(): string | undefined {
     return validateEnvVar('DECODO_API_KEY', false);
+  },
+  get streamHmacSecret(): string | undefined {
+    return validateEnvVar('STREAM_HMAC_SECRET', false) || 
+      (process.env.NODE_ENV === 'development' ? 'dev-hmac-secret-123' : undefined);
   },
 };
 

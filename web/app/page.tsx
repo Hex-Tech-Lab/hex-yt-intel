@@ -1,23 +1,17 @@
-import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { DashboardShell } from '@/components/DashboardShell';
-import { DashboardClient } from '@/components/DashboardClient';
+import { loadConsoleProfile } from '@/lib/services/console-profile';
+import { DashboardContainer } from '@/components/containers/DashboardContainer';
 import { LandingPage } from './landing-page';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const supabase = await getSupabaseClientWithAuth();
-  const { data: { user } } = await supabase.auth.getUser();
+  const profile = await loadConsoleProfile();
 
-  if (user) {
-    // Authenticated users see DashboardShell (dark design system) — hardwired
-    return (
-      <DashboardShell user={user}>
-        <DashboardClient />
-      </DashboardShell>
-    );
+  if (profile) {
+    // Authenticated users see the new Synthesis Console
+    return <DashboardContainer profile={profile} />;
   }
 
-  // Unauthenticated users see landing page
+  // Unauthenticated users see landing page (replica with Three.js)
   return <LandingPage />;
 }

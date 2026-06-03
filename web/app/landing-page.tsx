@@ -1,479 +1,143 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import styles from './page.module.css';
+import { useState, useEffect } from 'react';
+import { LandingThree } from '@/components/LandingThree';
 
 export function LandingPage() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [scrollY, setScrollY] = useState(0);
-  const [fadeInElements, setFadeInElements] = useState<Set<string>>(new Set());
 
-  // Hero light beam animation
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animationId: number | null = null;
-    let isVisible = false;
-    let frame = 0;
-
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = canvas.parentElement?.clientHeight || 600;
-    };
-
-    const draw = () => {
-      const W = canvas.width;
-      const H = canvas.height;
-      ctx!.clearRect(0, 0, W, H);
-
-      const centerX = W / 2;
-      const beamTop = 100;
-      const beamWidth = 400;
-      const beamHalfWidth = beamWidth / 2;
-      const isMobile = W < 900;
-      const beamHeight = isMobile ? 500 : 600;
-      const landingRadius = isMobile ? 250 : 350;
-
-      // Animated light beam
-      const gradient = ctx!.createRadialGradient(
-        centerX, beamTop, 80,
-        centerX, beamTop + 300, landingRadius
-      );
-
-      const pulse = Math.sin(frame * 0.02) * 0.2 + 0.8;
-
-      gradient.addColorStop(0, `rgba(61, 127, 255, ${0.4 * pulse})`);
-      gradient.addColorStop(0.3, `rgba(61, 127, 255, ${0.15 * pulse})`);
-      gradient.addColorStop(0.6, `rgba(61, 127, 255, ${0.05 * pulse})`);
-      gradient.addColorStop(1, 'rgba(61, 127, 255, 0)');
-
-      ctx!.fillStyle = gradient;
-      ctx!.fillRect(centerX - beamHalfWidth, beamTop, beamWidth, beamHeight);
-
-      frame++;
-    };
-
-    const scheduleFrame = () => {
-      if (!isVisible) {
-        animationId = null;
-        return;
-      }
-      draw();
-      animationId = requestAnimationFrame(scheduleFrame);
-    };
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-        const wasVisible = isVisible;
-        isVisible = entry.isIntersecting;
-        if (!wasVisible && isVisible && !animationId) {
-          scheduleFrame();
-        }
-      },
-      { threshold: 0.01 }
-    );
-
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    observer.observe(canvas);
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      observer.disconnect();
-      if (animationId) cancelAnimationFrame(animationId);
-    };
-  }, []);
-
-  // Scroll handler for header effects
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Fade-in observer for sections
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const id = entry.target.id;
-            setFadeInElements((prev) => new Set([...prev, id]));
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    document.querySelectorAll('[data-fade-in]').forEach((el) => {
-      if (el.id) observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Scroll-reveal helper — translates the prior inline opacity/transform fade 1:1 to Tailwind.
-  // Module classes (.heroBadge/.heroH1/.heroP/.heroCta) do not set opacity/transform, so no cascade conflict.
-  const fade = (id: string) =>
-    `transition-[opacity,transform] duration-1000 [transition-timing-function:ease] ${
-      fadeInElements.has(id) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
-    }`;
-
   return (
-    <div className="min-h-screen bg-[var(--grey-1)] text-white overflow-x-hidden">
-      {/* Hero Canvas Background */}
-      <canvas
-        ref={canvasRef}
-        className={styles.heroLightCanvas}
-      />
+    <div className="min-h-screen bg-black text-white selection:bg-cyan-500/30 overflow-x-hidden">
+      {/* WebGL Particle Background */}
+      <LandingThree />
 
-      {/* Header */}
-      <header
-        className={`${styles.header} ${
-          scrollY > 50
-            ? 'bg-[rgba(9,10,12,0.8)] backdrop-blur-[12px] border-b border-white/5'
-            : 'bg-transparent'
-        }`}
-      >
-        <div className={styles.headerInner}>
-          {/* Logo */}
-          <div className={`${styles.logo} text-white`}>
-            <div className="w-7 h-7 rounded-control bg-[linear-gradient(135deg,#3d7eff,#3d7eff)]" />
-            <span>hex-yt-intel</span>
-          </div>
-
-          {/* Nav */}
-          <nav className={styles.nav}>
-            <a
-              href="/dashboard"
-              className={styles.navItem}
-            >
-              Analyze
-            </a>
-            <a
-              href="/search"
-              className={styles.navItem}
-            >
-              Learn
-            </a>
-            <a
-              href="#pricing"
-              className={styles.navItem}
-            >
-              Pricing
-            </a>
-            <a
-              href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.navItem}
-            >
-              Docs
-            </a>
-          </nav>
-
-          {/* CTA */}
-          <div className={styles.headerActions}>
-            <button
-              onClick={() => (window.location.href = '/dashboard')}
-              className={styles.btnPrimary}
-            >
-              Get Started
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className={styles.hero}>
-        <div className={styles.heroContent}>
-          <div
-            id="hero-badge"
-            data-fade-in
-            className={`${styles.heroBadge} ${fade('hero-badge')}`}
-          >
-            <div className={styles.dot} />
-            YouTube Intelligence Platform
-          </div>
-
-          <h1
-            id="hero-title"
-            data-fade-in
-            className={`${styles.heroH1} ${fade('hero-title')}`}
-          >
-            Knowledge is more than
-            <br />
-            data points.
-            <br />
-            Let there be light.
-          </h1>
-
-          <p
-            id="hero-description"
-            data-fade-in
-            className={`${styles.heroP} ${fade('hero-description')}`}
-          >
-            Transform YouTube content into actionable insights. Semantic analysis, real-time
-            transcription, and intelligence synthesis — all in one platform.
-          </p>
-
-          <div
-            id="hero-cta"
-            data-fade-in
-            className={`${styles.heroCta} ${fade('hero-cta')}`}
-          >
-            <button
-              onClick={() => (window.location.href = '/dashboard')}
-              className={styles.btnPrimary}
-            >
-              Start Analyzing Free
-            </button>
-            <a
-              href="https://github.com/Hex-Tech-Lab/hex-yt-intel/wiki"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.btnSecondary}
-            >
-              View Documentation
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section
-        id="stats"
-        data-fade-in
-        className={`${styles.section} border-t border-white/5 ${fade('stats')}`}
-      >
-        <div className={`${styles.sectionInner} grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-8`}>
-          <div className="text-center">
-            <div className="text-[32px] font-bold mb-2">1M+</div>
-            <div className="text-[var(--grey-50)]">Videos Analyzed</div>
-          </div>
-          <div className="text-center">
-            <div className="text-[32px] font-bold mb-2">500K+</div>
-            <div className="text-[var(--grey-50)]">Active Users</div>
-          </div>
-          <div className="text-center">
-            <div className="text-[32px] font-bold mb-2">99.9%</div>
-            <div className="text-[var(--grey-50)]">Uptime Guaranteed</div>
-          </div>
-          <div className="text-center">
-            <div className="text-[32px] font-bold mb-2">24/7</div>
-            <div className="text-[var(--grey-50)]">Expert Support</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className={`${styles.section} border-t border-white/5`}>
-        <div className={styles.sectionInner}>
-          <div
-            id="features-header"
-            data-fade-in
-            className={`text-center mb-16 ${fade('features-header')}`}
-          >
-            <h2 className="text-[clamp(32px,5vw,48px)] font-semibold mb-6">
-              Everything you need for YouTube intelligence
-            </h2>
-            <p className="text-[17px] text-[var(--grey-50)] max-w-[520px] mx-auto leading-[1.65]">
-              Comprehensive tools to analyze, search, and synthesize YouTube content
-            </p>
-          </div>
-
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-8">
-            {[
-              {
-                id: 'feature-semantic',
-                title: 'Semantic Analysis',
-                description: 'AI-powered content understanding and relationship mapping',
-              },
-              {
-                id: 'feature-transcription',
-                title: 'Real-time Transcription',
-                description: 'Accurate speech-to-text with multi-language support',
-              },
-              {
-                id: 'feature-synthesis',
-                title: 'Intelligence Synthesis',
-                description: 'Automated report generation and insight extraction',
-              },
-            ].map((feature) => (
-              <div
-                key={feature.id}
-                id={feature.id}
-                data-fade-in
-                className={`p-8 border border-white/10 rounded-xl bg-surface/[0.02] ${fade(feature.id)}`}
-              >
-                <h3 className="text-lg font-semibold mb-4">{feature.title}</h3>
-                <p className="text-[var(--grey-50)] leading-[1.6]">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className={`${styles.section} border-t border-white/5`}>
-        <div
-          id="cta-final"
-          data-fade-in
-          className={`max-w-[900px] mx-auto text-center ${fade('cta-final')}`}
+      {/* Content Wrapper */}
+      <div className="relative z-10">
+        {/* Header */}
+        <header
+          className={`fixed top-0 left-0 right-0 z-50 px-6 transition-all duration-300 ${
+            scrollY > 50 ? 'bg-black/70 backdrop-blur-md border-b border-cyan-500/10' : 'bg-transparent'
+          }`}
         >
-          <h2 className="text-[clamp(32px,5vw,48px)] font-semibold mb-6">
-            Ready to unlock YouTube intelligence?
-          </h2>
-          <p className="text-[17px] text-[var(--grey-50)] max-w-[520px] mx-auto mb-8 leading-[1.65]">
-            Join thousands of creators, researchers, and teams using hex-yt-intel to transform
-            their content strategy.
-          </p>
-          <button
-            onClick={() => (window.location.href = '/dashboard')}
-            className={`${styles.btnPrimary} px-7 py-[14px] text-[15px]`}
-          >
-            Start Free Trial
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-white/5 px-6 py-12 bg-[rgba(9,10,12,0.8)] backdrop-blur-[12px]">
-        <div className={styles.sectionInner}>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-8 mb-8">
-            <div className="flex flex-col gap-4">
-              <div className="text-xs font-semibold text-[var(--blue)] uppercase tracking-[1px]">
-                Product
-              </div>
-              <a
-                href="/dashboard"
-                className="text-sm text-[var(--grey-50)] cursor-pointer"
-              >
-                Analyzer
-              </a>
-              <a
-                href="/dashboard"
-                className="text-sm text-[var(--grey-50)] cursor-pointer"
-              >
-                Dashboard
-              </a>
-              <a
-                href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
-              >
-                API
-              </a>
+          <div className="max-w-[1200px] mx-auto h-16 flex items-center justify-between gap-8">
+            <div className="flex items-center gap-3 text-lg font-semibold tracking-tight text-cyan-500">
+              <div className="w-6 h-6 bg-gradient-to-br from-cyan-500 to-sky-400 rounded-md" />
+              <span>hex-yt-intel</span>
             </div>
+            
+            <nav className="hidden md:flex items-center gap-1 flex-1">
+              {['Analyze', 'Learn', 'Docs'].map((item) => (
+                <a
+                  key={item}
+                  href="#"
+                  className="px-3 py-1.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                >
+                  {item}
+                </a>
+              ))}
+            </nav>
 
-            <div className="flex flex-col gap-4">
-              <div className="text-xs font-semibold text-[var(--blue)] uppercase tracking-[1px]">
-                Resources
-              </div>
-              <a
-                href="https://github.com/Hex-Tech-Lab/hex-yt-intel/wiki"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => (window.location.href = '/dashboard')}
+                className="px-6 py-3 rounded-full text-sm font-semibold bg-gradient-to-br from-cyan-500 to-sky-400 text-black shadow-[0_4px_8px_rgba(6,182,212,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(6,182,212,0.4)] transition-all active:translate-y-0"
               >
-                Documentation
-              </a>
-              <a
-                href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
-              >
-                Blog
-              </a>
-              <a
-                href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
-              >
-                GitHub
-              </a>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="text-xs font-semibold text-[var(--blue)] uppercase tracking-[1px]">
-                Company
-              </div>
-              <a
-                href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
-              >
-                About
-              </a>
-              <a
-                href="https://github.com/Hex-Tech-Lab/hex-yt-intel/blob/main/PRIVACY.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
-              >
-                Privacy
-              </a>
-              <a
-                href="https://github.com/Hex-Tech-Lab/hex-yt-intel/blob/main/TERMS.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
-              >
-                Terms
-              </a>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="text-xs font-semibold text-[var(--blue)] uppercase tracking-[1px]">
-                Social
-              </div>
-              <a
-                href="https://x.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
-              >
-                Twitter
-              </a>
-              <a
-                href="https://github.com/Hex-Tech-Lab/hex-yt-intel"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
-              >
-                GitHub
-              </a>
-              <a
-                href="https://discord.gg"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--grey-50)]"
-              >
-                Discord
-              </a>
+                Get Started
+              </button>
             </div>
           </div>
+        </header>
 
-          <div className="border-t border-white/5 pt-8 flex flex-col justify-between items-center gap-4">
-            <div className="text-xs text-[var(--grey-50)]">© 2026 hex-yt-intel. All rights reserved.</div>
-            <div className="text-xs text-[var(--grey-50)]">Knowledge is more than data points. Let there be light.</div>
+        {/* Hero Section */}
+        <section className="min-h-screen flex items-center justify-center p-5 pt-32">
+          <div className="max-w-[900px] text-center animate-[fadeInUp_1.2s_ease-out]">
+            <div className="text-sm font-medium text-cyan-500 tracking-[1px] uppercase mb-6 opacity-80">
+              YouTube Intelligence Platform
+            </div>
+
+            <h1 className="text-[clamp(36px,8vw,72px)] font-semibold leading-[1.1] mb-8 tracking-tight">
+              Knowledge is more than<br />
+              <span className="bg-gradient-to-br from-cyan-500 to-sky-400 bg-clip-text text-transparent">
+                data points.
+              </span><br />
+              Let there be light.
+            </h1>
+
+            <p className="text-lg md:text-xl text-white/70 mb-12 max-w-[600px] mx-auto leading-relaxed">
+              Transform YouTube content into actionable insights. Semantic analysis, real-time transcription, and intelligence synthesis — all in one platform.
+            </p>
+
+            <div className="flex flex-wrap gap-4 justify-center">
+              <button
+                onClick={() => (window.location.href = '/dashboard')}
+                className="px-8 py-4 rounded-full text-sm font-semibold bg-gradient-to-br from-cyan-500 to-sky-400 text-black shadow-[0_4px_8px_rgba(6,182,212,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(6,182,212,0.4)] transition-all"
+              >
+                Start Analyzing Free
+              </button>
+              <button
+                className="px-8 py-4 rounded-full text-sm font-semibold bg-cyan-500/10 border border-cyan-500/30 text-cyan-500 hover:bg-cyan-500/20 transition-all"
+              >
+                View Documentation
+              </button>
+            </div>
           </div>
-        </div>
-      </footer>
+        </section>
+
+        {/* Footer */}
+        <footer className="relative z-10 border-t border-cyan-500/10 px-6 py-12 bg-black/50 backdrop-blur-md">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+              <div className="flex flex-col gap-4">
+                <div className="text-sm font-semibold text-cyan-500 uppercase tracking-wider">Product</div>
+                {['Analyzer', 'Dashboard', 'API'].map((item) => (
+                  <a key={item} href="#" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">
+                    {item}
+                  </a>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="text-sm font-semibold text-cyan-500 uppercase tracking-wider">Resources</div>
+                {['Documentation', 'Blog', 'GitHub'].map((item) => (
+                  <a key={item} href="#" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">
+                    {item}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-cyan-500/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/50">
+              <div>© 2026 hex-yt-intel. All rights reserved.</div>
+              <div className="flex gap-4">
+                {['Twitter', 'GitHub', 'Discord'].map((item) => (
+                  <a key={item} href="#" className="hover:text-cyan-500 transition-colors">{item}</a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+
+      <style jsx global>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

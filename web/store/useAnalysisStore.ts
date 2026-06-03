@@ -3,16 +3,17 @@
  * Manages streaming analysis state with full production observability
  * Wraps all async operations in Sentry transactions for end-to-end tracing
  */
-
 import { create } from 'zustand';
-import type { AnalysisResult, UseAnalysisStreamState, AnalysisStatus, AnalysisErrorState } from '@/lib/types';
+import type { AnalysisResult, UseAnalysisStreamState, AnalysisStatus, AnalysisErrorState, VideoMetadata } from '@/lib/types';
 
 export interface AnalysisState extends UseAnalysisStreamState {
   analysisHistory: AnalysisResult[];
+  videoMetadata: VideoMetadata | null;
   setAnalysis: (analysis: AnalysisResult | null) => void;
   setIsLoading: (loading: boolean) => void;
   setStatus: (status: AnalysisStatus) => void;
   setError: (error: AnalysisErrorState | null) => void;
+  setVideoMetadata: (metadata: VideoMetadata | null) => void;
   setLockoutTimeRemaining: (time: number) => void;
   clearAnalysis: () => void;
   addToHistory: (analysis: AnalysisResult) => void;
@@ -28,6 +29,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   isLoading: false,
   status: 'idle',
   error: null,
+  videoMetadata: null,
   lockoutTimeRemaining: 0,
   analysisHistory: [],
 
@@ -36,12 +38,12 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   setIsLoading: (loading) => set({ isLoading: loading }),
   setStatus: (status) => set({ status }),
   setError: (error) => set({ error }),
+  setVideoMetadata: (metadata) => set({ videoMetadata: metadata }),
   setLockoutTimeRemaining: (time) => set({ lockoutTimeRemaining: time }),
 
   clearAnalysis: () =>
     set({
       analysis: null,
-      isLoading: false,
       status: 'idle',
       error: null,
     }),

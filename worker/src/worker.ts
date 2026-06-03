@@ -886,6 +886,16 @@ app.post("/analyze-llm-stream", async (c) => {
   if (!req.videoId || !req.analysisId || !req.metadata || !req.sig || !req.exp) {
     return c.json({ error: 'Missing required fields' }, 400);
   }
+
+  // Edge Hardening: Defensive check for empty transcript to prevent prompt collapse
+  if (!req.transcript || req.transcript.trim().length === 0) {
+    console.error('[analyze-llm-stream] Empty transcript received at edge');
+    return c.json({ 
+      error: 'Empty transcript payload. The edge worker requires a source transcript to generate a synthesis.',
+      code: 'ERR_EDGE_EMPTY_SOURCE' 
+    }, 400);
+  }
+
   if (!secret || !apiKey) {
     console.error('[analyze-llm-stream] Server misconfigured: missing STREAM_HMAC_SECRET or OPENROUTER_API_KEY');
     return c.json({ error: 'Server misconfigured' }, 500);

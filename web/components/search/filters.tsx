@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, X } from 'lucide-react';
+import { Icon } from '@/components/templates/_shared/primitives';
 import type { SearchFilters } from '@/hooks/useSearch';
 
 interface FiltersProps {
@@ -38,9 +38,6 @@ const SearchFilters: React.FC<FiltersProps> = ({
     (filters.channels && filters.channels.length > 0) ||
     filters.minEngagement;
 
-  /**
-   * Handle date range change
-   */
   const handleDateChange = (type: 'from' | 'to', value: string) => {
     if (type === 'from') {
       onFilterChange({ dateFrom: value || undefined });
@@ -49,9 +46,6 @@ const SearchFilters: React.FC<FiltersProps> = ({
     }
   };
 
-  /**
-   * Handle channel selection toggle
-   */
   const toggleChannel = (channel: string) => {
     const newChannels = new Set(selectedChannels);
     if (newChannels.has(channel)) {
@@ -65,16 +59,10 @@ const SearchFilters: React.FC<FiltersProps> = ({
     });
   };
 
-  /**
-   * Handle engagement filter change
-   */
   const handleEngagementChange = (level: 'low' | 'medium' | 'high' | undefined) => {
     onFilterChange({ minEngagement: level });
   };
 
-  /**
-   * Clear all filters
-   */
   const handleClearAll = () => {
     setSelectedChannels(new Set());
     onClear();
@@ -85,12 +73,12 @@ const SearchFilters: React.FC<FiltersProps> = ({
       {/* Filter Header - Collapsible */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-2 bg-surface border border-line rounded-lg hover:bg-surface-raised transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Filters</span>
+          <span className="text-sm font-medium text-ink">Filters</span>
           {hasActiveFilters && (
-            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+            <span className="inline-block px-2 py-0.5 bg-accent/10 text-accent-ink border border-accent/20 rounded text-[10px] font-bold uppercase tracking-wider">
               {[
                 filters.dateFrom || filters.dateTo ? 1 : 0,
                 filters.channels?.length || 0,
@@ -100,18 +88,19 @@ const SearchFilters: React.FC<FiltersProps> = ({
             </span>
           )}
         </div>
-        <ChevronDown
+        <Icon
+          icon="solar:alt-arrow-down-linear"
           size={18}
-          className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`transition-transform text-ink-muted ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
       {/* Filter Panel - Collapsible Content */}
       {isOpen && (
-        <div className="space-y-4 p-4 bg-white border border-gray-200 rounded-lg">
+        <div className="space-y-4 p-4 bg-surface border border-line rounded-lg hx-rise">
           {/* Date Range Filter */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider">
               Date Range
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -119,14 +108,14 @@ const SearchFilters: React.FC<FiltersProps> = ({
                 type="date"
                 value={filters.dateFrom || ''}
                 onChange={(e) => handleDateChange('from', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 bg-void border border-line rounded-lg text-xs text-ink focus:outline-none focus:border-accent"
                 placeholder="From"
               />
               <input
                 type="date"
                 value={filters.dateTo || ''}
                 onChange={(e) => handleDateChange('to', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 bg-void border border-line rounded-lg text-xs text-ink focus:outline-none focus:border-accent"
                 placeholder="To"
               />
             </div>
@@ -135,22 +124,22 @@ const SearchFilters: React.FC<FiltersProps> = ({
           {/* Channel Filter */}
           {allChannels.length > 0 && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider">
                 Channels
               </label>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                 {allChannels.map((channel) => (
                   <label
                     key={channel}
-                    className="flex items-center gap-2 cursor-pointer"
+                    className="flex items-center gap-2 cursor-pointer group"
                   >
                     <input
                       type="checkbox"
                       checked={selectedChannels.has(channel)}
                       onChange={() => toggleChannel(channel)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                      className="rounded border-line bg-void text-accent focus:ring-accent/20"
                     />
-                    <span className="text-sm text-gray-700">{channel}</span>
+                    <span className="text-xs text-ink-secondary group-hover:text-ink transition-colors">{channel}</span>
                   </label>
                 ))}
               </div>
@@ -159,7 +148,7 @@ const SearchFilters: React.FC<FiltersProps> = ({
 
           {/* Engagement Level Filter */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider">
               Minimum Engagement
             </label>
             <div className="space-y-2">
@@ -171,16 +160,16 @@ const SearchFilters: React.FC<FiltersProps> = ({
               ].map(({ value, label }) => (
                 <label
                   key={value || 'all'}
-                  className="flex items-center gap-2 cursor-pointer"
+                  className="flex items-center gap-2 cursor-pointer group"
                 >
                   <input
                     type="radio"
                     name="engagement"
                     checked={filters.minEngagement === value}
                     onChange={() => handleEngagementChange(value)}
-                    className="rounded-full border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                    className="rounded-full border-line bg-void text-accent focus:ring-accent/20"
                   />
-                  <span className="text-sm text-gray-700">{label}</span>
+                  <span className="text-xs text-ink-secondary group-hover:text-ink transition-colors">{label}</span>
                 </label>
               ))}
             </div>
@@ -190,10 +179,10 @@ const SearchFilters: React.FC<FiltersProps> = ({
           {hasActiveFilters && (
             <button
               onClick={handleClearAll}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-void text-ink-secondary border border-line rounded-lg hover:bg-err/10 hover:text-err hover:border-err/20 transition-all text-xs font-bold uppercase tracking-widest"
             >
-              <X size={16} />
-              Clear All Filters
+              <Icon icon="solar:refresh-linear" size={14} />
+              Clear Filters
             </button>
           )}
         </div>

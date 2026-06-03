@@ -4,14 +4,21 @@ export interface UCISSections {
   architecture: string;
   psychological: string;
   coreIntelligence: string;
-  risk: string;
+  comparative: string;
+  implementation: string;
+  semantic: string;
+  forward: string;
+  credibility: string;
+  monetization: string;
+  risk: string; // Alias for credibility (Dimension 10)
 }
 
 function extractSection(markdown: string, dimensionNumber: number): string {
   // Match "### DIMENSION N – Title" then skip to content on next lines
   // Pattern: header + title line, then capture content until next DIMENSION
+  // Uses a space/boundary after the number to avoid matching "1" in "11"
   const dimensionRegex = new RegExp(
-    `^### DIMENSION ${dimensionNumber}\\s*[–-][^\\n]*\\n([\\s\\S]*?)(?=\\n### DIMENSION|$)`,
+    `^### DIMENSION ${dimensionNumber}\\s+[–-][^\\n]*\\n([\\s\\S]*?)(?=\\n### DIMENSION|$)`,
     'mi'
   );
 
@@ -48,22 +55,36 @@ function extractSection(markdown: string, dimensionNumber: number): string {
 
 export function parseUCISSections(markdown: string): UCISSections {
   if (!markdown || typeof markdown !== 'string') {
+    const placeholder = 'Parsing...';
     return {
-      apex: 'Parsing...',
-      provenance: 'Parsing...',
-      architecture: 'Parsing...',
-      psychological: 'Parsing...',
-      coreIntelligence: 'Parsing...',
-      risk: 'Parsing...',
+      apex: placeholder,
+      provenance: placeholder,
+      architecture: placeholder,
+      psychological: placeholder,
+      coreIntelligence: placeholder,
+      comparative: placeholder,
+      implementation: placeholder,
+      semantic: placeholder,
+      forward: placeholder,
+      credibility: placeholder,
+      monetization: placeholder,
+      risk: placeholder,
     };
   }
 
+  const cred = extractSection(markdown, 10);
   return {
     apex: extractSection(markdown, 1),
     provenance: extractSection(markdown, 2),
     architecture: extractSection(markdown, 3),
     psychological: extractSection(markdown, 4),
     coreIntelligence: extractSection(markdown, 5),
-    risk: extractSection(markdown, 10),
+    comparative: extractSection(markdown, 6),
+    implementation: extractSection(markdown, 7),
+    semantic: extractSection(markdown, 8),
+    forward: extractSection(markdown, 9),
+    credibility: cred,
+    monetization: extractSection(markdown, 11),
+    risk: cred,
   };
 }

@@ -1,21 +1,17 @@
 import { redirect } from 'next/navigation';
-import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { DashboardShell } from '@/components/DashboardShell';
-import { DashboardClient } from '@/components/DashboardClient';
+import { loadConsoleProfile } from '@/lib/services/console-profile';
+import { DashboardContainer } from '@/components/containers/DashboardContainer';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const supabase = await getSupabaseClientWithAuth();
-  const { data: { user } } = await supabase.auth.getUser();
+  const profile = await loadConsoleProfile();
 
-  if (!user) {
+  if (!profile) {
     redirect('/auth/signin');
   }
 
-  return (
-    <DashboardShell user={user}>
-      <DashboardClient />
-    </DashboardShell>
-  );
+  // /dashboard is an alias for the Synthesis Console (landing CTAs + nav link
+  // point here); the root route serves the same console to authenticated users.
+  return <DashboardContainer profile={profile} />;
 }

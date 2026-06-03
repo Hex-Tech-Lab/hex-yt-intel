@@ -376,6 +376,36 @@ async function enforceMonthlyQuota(userId: string, tier: Tier): Promise<{
 }
 
 /**
+ * Refund a single monthly quota unit previously consumed by enforceMonthlyQuota.
+ *
+ * The atomic increment happens at ingestion (before we know a generation can
+ * actually run). When ingestion fails — no transcript, metadata fetch error —
+ * the user must not be charged for an analysis that never produced output.
+ * Call this on every post-charge failure exit.
+ *
+ * No-op for the admin bypass (admin requests are never charged, so there is
+ * nothing to refund). Best-effort: a refund failure is logged, never thrown,
+ * so it cannot mask the original error being returned to the client.
+ */
+export async function refundMonthlyQuota(userId: string, userEmail?: string): Promise<void> {
+  if (userEmail === 'kellybakri@gmail.com') return; // admin path never incremented
+  try {
+    const supabase = getSupabaseServiceClient();
+    const { error } = await supabase.rpc('decrement_user_quota', { p_user_id: userId });
+    if (error) {
+      console.warn('[quota] Refund failed:', error);
+      Sentry.captureException(error, {
+        tags: { component: 'quota-refund' },
+        contexts: { quota: { userId } },
+      });
+    }
+  } catch (err) {
+    console.warn('[quota] Refund exception:', err);
+    Sentry.captureException(err, { tags: { component: 'quota-refund' } });
+  }
+}
+
+/**
  * HTTP headers assignment utility (RFC 6585 compliance)
  */
 export function applyRateLimitHeaders(response: NextResponse, status: RateLimitStatus): void {
