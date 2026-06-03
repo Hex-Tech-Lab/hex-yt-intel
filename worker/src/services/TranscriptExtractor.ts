@@ -170,7 +170,7 @@ export class TranscriptExtractor {
     return captionData.events
       .filter((event) => event && Array.isArray(event.segs) && event.segs.length > 0)
       .map((event) => {
-        return event.segs.map((seg) => seg?.utf8 || '').join('');
+        return (event.segs || []).map((seg) => seg?.utf8 || '').join('');
       })
       .join(' ')
       .replace(/\s+/g, ' ')

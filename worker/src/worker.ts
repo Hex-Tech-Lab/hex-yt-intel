@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-// Built INSIDE the worker so the UCIS prompt IP never reaches the browser. esbuild
-// bundles this pure-TS tree (factory -> ucis-v5.1/v5 strings + rankPersonas) inline.
-import { getUCISPrompt } from "../../web/lib/prompts/factory";
-import { StreamingDimensionParser } from "./dimension-parser";
+// Ingestion + reasoning services. The ReasoningEngine bundles the UCIS prompt IP
+// (getUCISPrompt) and dimension parser internally via esbuild, so neither ever
+// reaches the browser. worker.ts is the orchestrator: it wires these services to
+// the HTTP/SSE transport and owns auth, HMAC, and persistence.
 import { TranscriptExtractor } from "./services/TranscriptExtractor";
 import { MetadataScraper } from "./services/MetadataScraper";
+import { ReasoningEngine } from "./services/ReasoningEngine";
 
 type Env = {
   YOUTUBE_API_KEY: string;
@@ -32,250 +33,6 @@ const allowedOrigins = [
   'http://localhost:3005',
 ];
 
-// User-Agent rotation to bypass YouTube API restrictions
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
-];
-
-const getRandomUserAgent = (): string => {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-};
-
-async function fetchWithProxy(
-  targetUrl: string,
-  init: RequestInit = {},
-  proxyUrl?: string
-): Promise<Response> {
-  if (!proxyUrl) return fetch(targetUrl, init);
-
-  const atIndex = proxyUrl.lastIndexOf('@');
-  if (atIndex === -1) return fetch(targetUrl, init);
-
-  const credentials = proxyUrl.slice(0, atIndex);
-  const hostPort = proxyUrl.slice(atIndex + 1);
-
-  return fetch(targetUrl, {
-    ...init,
-    headers: {
-      ...(typeof init.headers === 'object' && init.headers !== null
-        ? (init.headers as Record<string, string>)
-        : {}),
-      'Proxy-Authorization': `Basic ${btoa(credentials)}`,
-    },
-    // @ts-ignore – Cloudflare Workers proxy extension
-    proxy: `http://${hostPort}`,
-  });
-}
-
-// ===================================================================
-// LLM ANALYSIS PIPELINE – 3-MODEL CASCADE WITH UPSTASH KV CACHING
-// ===================================================================
-
-// 3-free + 1-paid model cascade – ordered best-first by a real latency+quality
-// benchmark (2026-06-02) against the full v5.1 prompt. Under the ~55s request budget
-// only ~1-2 attempts realistically complete, so tier 1 must be the proven performer.
-//   - nemotron-3-nano-30b: ONLY free model that reliably produced valid 11-dim output
-//     (3s first-token, 19-33s total). Lead model.
-//   - glm-4.5-air / gemma-4-26b: $0 fallbacks, but volatile (429 / slow) — best effort.
-//   - claude-haiku-4.5: paid last resort (needs OpenRouter credit; 402 while overdrawn).
-// Models that FAILED the benchmark and were removed: gemma-4-31b (429), laguna-m.1
-// (>120s), kimi-k2.6 (429), gpt-oss-120b / nemotron-120b (>120s — too slow for budget).
-// NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
-// or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
-const MODEL_CHAIN = [
-  { model: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 3 Nano 30B' },
-  { model: 'z-ai/glm-4.5-air:free', name: 'GLM 4.5 Air' },
-  { model: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B' },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (paid fallback)' },
-] as const;
-
-/**
- * Fingerprint system prompt using SHA-256
- * Ensures deterministic cache keys even as prompts evolve
- */
-async function fingerprintSystemPrompt(prompt: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(prompt);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-/**
- * Build deterministic cache key combining prompt fingerprint + transcript length
- * Format: `analysis::<promptHash>::<transcriptLength>::<videoId>`
- */
-async function buildCacheKey(
-  systemPromptHash: string,
-  transcriptLength: number,
-  videoId: string
-): Promise<string> {
-  return `analysis::${systemPromptHash}::${transcriptLength}::${videoId}`;
-}
-
-/**
- * Upstash Redis REST API caching layer
- * GET: returns cached analysis or null
- * SET: stores analysis with 7-day TTL
- */
-async function getFromUpstash(key: string, upstashUrl: string, upstashToken: string): Promise<string | null> {
-  try {
-    const response = await fetch(`${upstashUrl}/get/${key}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${upstashToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json() as { result: string | null };
-    return data.result;
-  } catch (error) {
-    console.warn('[Upstash] GET failed, proceeding without cache hit');
-    return null;
-  }
-}
-
-async function setUpstash(key: string, value: string, upstashUrl: string, upstashToken: string): Promise<void> {
-  try {
-    await fetch(`${upstashUrl}/set/${key}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${upstashToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ex: 604800, // 7 days TTL in seconds
-        get: false,
-        xx: false,
-      }),
-    });
-  } catch (error) {
-    console.warn('[Upstash] SET failed, analysis succeeded but not cached');
-  }
-}
-
-/**
- * Validate 12D analysis JSON structure
- * Ensures LLM output has required dimensions before caching
- */
-function validate12D(analysis: any): boolean {
-  if (typeof analysis !== 'object' || analysis === null) {
-    return false;
-  }
-
-  // Check for markdown structure with 11 dimensions + apex summary
-  const requiredDimensions = [
-    'DIMENSION 1',
-    'DIMENSION 2',
-    'DIMENSION 3',
-    'DIMENSION 4',
-    'DIMENSION 5',
-    'DIMENSION 6',
-    'DIMENSION 7',
-    'DIMENSION 8',
-    'DIMENSION 9',
-    'DIMENSION 10',
-    'DIMENSION 11',
-  ];
-
-  // If analysis is markdown string, check for dimension headers
-  if (typeof analysis === 'string') {
-    return requiredDimensions.filter(dim => analysis.includes(dim)).length >= 8; // At least 8/11 dimensions
-  }
-
-  return false;
-}
-
-/**
- * Call LLM with timeout and streaming support
- * Returns text response from model
- */
-async function callLLM(
-  model: string,
-  systemPrompt: string,
-  transcript: string,
-  metadata: any,
-  apiKey: string,
-  timeoutMs: number = 45000
-): Promise<{ success: boolean; text?: string; error?: string }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://yt-intel.hex-tech-lab.workers.dev',
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 1,
-        // 16000 (not lower): nemotron-3-nano is a REASONING model that spends
-        // ~4000 tokens on reasoning before the answer. An 8000 cap truncated the
-        // 11-dimension output mid-stream and failed validation. Free models reserve
-        // no credit, so this large cap costs nothing.
-        max_tokens: 16000,
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: `Analyze the following YouTube video transcript and metadata using the UCIS v5.1 framework.
-
-**Metadata**:
-${JSON.stringify(metadata, null, 2)}
-
-**Transcript**:
-${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated...]' : ''}
-
-Generate the complete 11-dimension analysis.`,
-          },
-        ],
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const error = await response.text();
-      return {
-        success: false,
-        error: `${response.status}: ${error.slice(0, 200)}`,
-      };
-    }
-
-    const data = await response.json() as { choices: Array<{ message: { content: string } }> };
-    const text = data.choices?.[0]?.message?.content;
-
-    if (!text) {
-      return { success: false, error: 'Empty response from LLM' };
-    }
-
-    return { success: true, text };
-  } catch (error) {
-    clearTimeout(timeout);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-
-    if (message === 'The operation was aborted') {
-      return { success: false, error: 'Request timeout' };
-    }
-
-    return { success: false, error: message };
-  }
-}
-
 // --- HMAC (Web Crypto) ----------------------------------------------------
 // Shared-secret signing for the direct-streaming gate + tamper-proof persistence.
 async function hmacHex(secret: string, message: string): Promise<string> {
@@ -296,94 +53,6 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
-}
-
-/**
- * Stream an OpenRouter chat completion, invoking onDelta for each content chunk.
- * Returns { started } = whether any token arrived (used for cascade fallback: we
- * only fall through to the next model if the current one never produced output).
- */
-async function callLLMStream(
-  model: string,
-  systemPrompt: string,
-  transcript: string,
-  metadata: any,
-  apiKey: string,
-  onDelta: (text: string) => void,
-  timeoutMs = 90000
-): Promise<{ started: boolean; text: string; error?: string }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  let text = '';
-  let started = false;
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://yt-intel.hex-tech-lab.workers.dev',
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 1,
-        max_tokens: 16000,
-        stream: true,
-        // The system prompt (getUCISPrompt) already embeds the metadata + transcript
-        // in its ACTIVE ANALYSIS SESSION block. Re-sending them here made the model
-        // echo the prompt header instead of analyzing — so the user turn is just a
-        // clean execution nudge.
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: 'Begin the analysis now. Output only the structured UCIS v5.1 report starting at "### DIMENSION 1". Do not echo the metadata, transcript, or framework instructions.',
-          },
-        ],
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok || !response.body) {
-      clearTimeout(timeout);
-      const errBody = await response.text().catch(() => '');
-      return { started: false, text: '', error: `${response.status}: ${errBody.slice(0, 160)}` };
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
-        const payload = trimmed.slice(5).trim();
-        if (payload === '[DONE]') continue;
-        try {
-          const json = JSON.parse(payload);
-          const delta = json.choices?.[0]?.delta?.content;
-          if (delta) {
-            started = true;
-            text += delta;
-            onDelta(delta);
-          }
-        } catch {
-          // ignore keep-alive / partial frames
-        }
-      }
-    }
-    clearTimeout(timeout);
-    return { started, text };
-  } catch (error) {
-    clearTimeout(timeout);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return { started, text, error: message === 'The operation was aborted' ? 'Request timeout' : message };
-  }
 }
 
 // Return the request origin (not a boolean) when allowlisted, so Hono emits a
@@ -585,91 +254,30 @@ app.post("/analyze-llm", async (c) => {
       console.warn('[analyze-llm] Upstash not configured, proceeding without caching');
     }
 
-    // Use provided system prompt or default (would be UCIS v5.1 in production)
-    const systemPrompt = request.systemPrompt || `# UCIS v5.1 Analysis Framework
-Your task is to analyze YouTube video transcripts across 11 dimensions using the UCIS v5.1 framework.
-Provide comprehensive analysis with all 11 dimensions in markdown format.`;
-
-    // Fingerprint prompt for deterministic caching
-    const promptHash = await fingerprintSystemPrompt(systemPrompt);
-    const cacheKey = await buildCacheKey(
-      promptHash,
-      request.transcript.length,
-      request.videoId
+    // Orchestrate: delegate cascade + caching to the ReasoningEngine.
+    const engine = new ReasoningEngine(
+      apiKey,
+      upstashUrl && upstashToken ? { url: upstashUrl, token: upstashToken } : undefined
     );
 
-    // Try Upstash cache first
-    if (upstashUrl && upstashToken) {
-      try {
-        const cached = await getFromUpstash(cacheKey, upstashUrl, upstashToken);
-        if (cached && validate12D(cached)) {
-          return c.json({
-            success: true,
-            analysis: cached,
-            model: 'cache-hit',
-            cached: true,
-          });
-        }
-      } catch (error) {
-        console.warn('[analyze-llm] Upstash read failed, proceeding with LLM call');
-      }
-    }
+    const result = await engine.execute({
+      metadata: request.metadata,
+      transcript: request.transcript,
+      persona: request.persona,
+      timezone: request.timezone,
+      videoId: request.videoId,
+      systemPrompt: request.systemPrompt,
+    });
 
-    // 5-tier cascade – try each model until one succeeds with valid 12D output
-    let analysisResult = null;
-    let modelUsed = '';
-    let validationPassed = false;
-
-    for (const { model, name } of MODEL_CHAIN) {
-      console.log(`[analyze-llm] Attempting ${name}...`);
-
-      const result = await callLLM(
-        model,
-        systemPrompt,
-        request.transcript,
-        request.metadata,
-        apiKey,
-        45000 // Per-model timeout; absorbs nemotron 19-33s variance + headroom
-      );
-
-      if (result.success && result.text) {
-        // Validate 12D structure before using
-        if (validate12D(result.text)) {
-          analysisResult = result.text;
-          modelUsed = name;
-          validationPassed = true;
-          console.log(`[analyze-llm] Success with ${name}, validation passed`);
-          break;
-        } else {
-          console.warn(`[analyze-llm] ${name} validation failed, trying next model`);
-        }
-      } else {
-        console.warn(`[analyze-llm] Failed with ${name}: ${result.error}`);
-      }
-    }
-
-    if (!analysisResult || !validationPassed) {
-      return c.json({
-        success: false,
-        error: 'All models in cascade failed or validation failed',
-      }, 502);
-    }
-
-    // Cache the validated result to Upstash
-    if (upstashUrl && upstashToken) {
-      try {
-        await setUpstash(cacheKey, analysisResult, upstashUrl, upstashToken);
-        console.log(`[analyze-llm] Cached to Upstash for ${request.videoId}`);
-      } catch (error) {
-        console.warn('[analyze-llm] Upstash write failed, but analysis succeeded');
-      }
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 502);
     }
 
     return c.json({
       success: true,
-      analysis: analysisResult,
-      model: modelUsed,
-      cached: false,
+      analysis: result.analysis,
+      model: result.model,
+      cached: result.cached,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -741,36 +349,25 @@ app.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: 'Invalid token' }, 401);
   }
 
-  // Build the UCIS v5.1 system prompt server-side (never sent to the browser).
-  const systemPrompt = getUCISPrompt({
-    version: '5.1',
-    metadata: {
-      title: req.metadata.title,
-      channelTitle: req.metadata.channelTitle,
-      viewCount: String(req.metadata.viewCount ?? ''),
-      likeCount: String(req.metadata.likeCount ?? ''),
-      commentCount: String(req.metadata.commentCount ?? ''),
-      publishedAt: req.metadata.publishedAt,
-    },
-    transcript: req.transcript || '',
-    persona: (req.persona as any) || 'p1',
-    timezone: req.timezone || 'UTC',
-    duration: req.metadata.duration || 0,
-  });
+  // Instantiate the reasoning engine. It builds the UCIS prompt server-side and
+  // runs the model cascade — the orchestrator only wires its domain events to SSE.
+  const engine = new ReasoningEngine(apiKey);
 
   const encoder = new TextEncoder();
 
+  // The orchestrator keeps its own copy of the accumulating markdown + model name so
+  // it can persist partial progress on browser disconnect (the engine is transport-
+  // and persistence-agnostic by design).
   let finalText = '';
-  let modelUsedUsed = '';
+  let modelUsed = '';
   let persisted = false;
-  const dimensionParser = new StreamingDimensionParser();
 
   const persist = async (status: 'completed' | 'interrupted') => {
     if (persisted || !finalText) return;
     persisted = true;
 
     // We sign the partial markdown so the server can verify it came from us.
-    const valid = validate12D(finalText);
+    const valid = engine.validate12D(finalText);
     const contentSig = await hmacHex(secret, finalText);
     const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
 
@@ -781,7 +378,7 @@ app.post("/analyze-llm-stream", async (c) => {
         analysisId: req.analysisId,
         videoId: req.videoId,
         markdown: finalText,
-        model: modelUsedUsed,
+        model: modelUsed,
         valid,
         contentSig,
         status,
@@ -805,51 +402,38 @@ app.post("/analyze-llm-stream", async (c) => {
       try {
         send({ type: 'status', stage: 'starting', videoId: req.videoId });
 
-        let produced = false;
-
-        // Stream the cascade. We only fall through to the next model if the current
-        // one never produced a token (cold 429/error) — once tokens are streamed we
-        // commit to that model.
-        for (const { model, name } of MODEL_CHAIN) {
-          send({ type: 'status', stage: 'model', model: name });
-          modelUsedUsed = name;
-
-          const result = await callLLMStream(
-            model,
-            systemPrompt,
-            req.transcript || '',
-            req.metadata,
-            apiKey,
-            (delta) => {
+        // Delegate reasoning to the engine. It emits domain events; we map them to
+        // SSE fragments and mirror finalText/modelUsed for abort-time persistence.
+        const result = await engine.executeAndStream(
+          {
+            metadata: req.metadata,
+            transcript: req.transcript || '',
+            persona: req.persona,
+            timezone: req.timezone,
+          },
+          {
+            onDelta: (delta) => {
               finalText += delta;
-              // Emit raw delta for terminal/processing log
               send({ type: 'delta', content: delta });
-              // Parse the delta into dimensions and emit JSON fragments
-              const fragments = dimensionParser.feed(delta);
-              fragments.forEach(frag => send(frag));
             },
-            90000
-          );
-
-          if (result.started && finalText) {
-            produced = true;
-            break;
+            onFragment: (fragment) => send(fragment),
+            onStatus: (statusEvent) => {
+              if (statusEvent.stage === 'model' && statusEvent.model) {
+                modelUsed = statusEvent.model;
+              }
+              send({ type: 'status', ...statusEvent });
+            },
           }
-          send({ type: 'status', stage: 'fallback', from: name, error: result.error });
-        }
+        );
 
-        if (!produced && !finalText) {
+        if (!result.produced && !result.finalText) {
           send({ type: 'error', error: 'All models in cascade failed to produce output' });
           controller.close();
           return;
         }
 
-        const valid = validate12D(finalText);
-        // Emit any remaining partial dimensions
-        const finalFragments = dimensionParser.finalize();
-        finalFragments.forEach(frag => send(frag));
         // Mark stream complete
-        send({ type: 'complete', model: modelUsedUsed, valid, videoId: req.videoId, analysisId: req.analysisId });
+        send({ type: 'complete', model: result.modelUsed, valid: result.valid, videoId: req.videoId, analysisId: req.analysisId });
       } catch (error) {
         send({ type: 'error', error: error instanceof Error ? error.message : 'stream failed' });
       } finally {
