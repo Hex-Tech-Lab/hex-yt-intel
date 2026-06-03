@@ -6,7 +6,6 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from 'next/server';
-import { randomUUID } from 'crypto';
 import { detectPersona, type PersonaId } from '@/lib/prompts';
 import { guardTraffic, getUserTier } from '@/lib/services/traffic';
 import { chargeMonthlyQuota, refundMonthlyQuota } from '@/lib/services/billing';
@@ -133,32 +132,41 @@ export async function POST(request: NextRequest) {
     const timezone = validation.data.timezone || 'UTC';
 
     // 5. Processing job row (filled by the worker via /api/analyses/persist).
-    const analysisId = randomUUID();
     const service = getSupabaseServiceClient();
-    const { error: insertError } = await service.from('analyses').insert({
-      id: analysisId,
-      video_id: videoId,
-      user_id: userId,
-      title: metadata.title,
-      analysis_markdown: '',
-      model_used: 'edge-stream',
-      validation_report: {
-        status: 'processing',
-        transcript_available: true,
-        analysis_type: 'full',
-        stale_after: new Date(Date.now() + PROCESSING_STALE_MS).toISOString(),
-      },
-      validation_passed: false,
-      created_at: new Date().toISOString(),
-    });
+    // UPSERT on (user_id, video_id): the analyses table has a UNIQUE(user_id, video_id)
+    // index, so a user has at most one row per video. A plain INSERT 23505'd whenever a
+    // video was re-analyzed after an incomplete prior attempt (empty markdown → cache
+    // miss above), which silently orphaned the stream (persist then 404'd). Re-analysis
+    // now reuses + resets the existing row; the RETURNED id is the canonical analysisId
+    // the worker persists back to.
+    const { data: prepared, error: insertError } = await service
+      .from('analyses')
+      .upsert(
+        {
+          video_id: videoId,
+          user_id: userId,
+          title: metadata.title,
+          analysis_markdown: '',
+          model_used: 'edge-stream',
+          validation_report: {
+            status: 'processing',
+            transcript_available: true,
+            analysis_type: 'full',
+            stale_after: new Date(Date.now() + PROCESSING_STALE_MS).toISOString(),
+          },
+          validation_passed: false,
+        },
+        { onConflict: 'user_id,video_id' }
+      )
+      .select('id')
+      .single();
 
-    // Hard-fail if the processing row didn't land: otherwise the worker streams and
-    // then S2S-persist 404s (orphan analysis, lost result). Was previously unchecked.
-    if (insertError) {
-      Sentry.captureException(insertError, { tags: { operation: 'analysis-prepare-insert' }, extra: { analysisId, videoId, userId } });
-      console.error('[analyses] processing-row insert failed:', insertError.message);
+    if (insertError || !prepared?.id) {
+      Sentry.captureException(insertError ?? new Error('upsert returned no row'), { tags: { operation: 'analysis-prepare-upsert' }, extra: { videoId, userId } });
+      console.error('[analyses] processing-row upsert failed:', insertError?.message);
       return NextResponse.json({ error: 'Failed to initialize analysis', code: 'ERR_ANALYSIS_ROW_INSERT' }, { status: 500 });
     }
+    const analysisId = prepared.id as string;
 
     // 6. Mint the token (bound to videoId+analysisId) and return the stream payload.
     //    The system prompt is NOT included — the worker builds it server-side.
