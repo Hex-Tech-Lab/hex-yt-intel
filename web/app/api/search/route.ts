@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { Index } from '@upstash/vector';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
+import { guardTraffic, getUserTier } from '@/lib/services/traffic';
 import { ERROR_CODES } from '@/lib/error-codes';
 import { generateEmbedding } from '@/lib/embeddings';
 import * as Sentry from '@sentry/nextjs';
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Rate limiting check
     const userTier = (await getUserTier(userId)) || 'free';
-    const { allowed, response: rateLimitResponse } = await applyRateLimit(
+    const { allowed: trafficAllowed, response: trafficResponse, headers: trafficHeaders } = await guardTraffic(
       request,
       'search',
       userId,
@@ -84,15 +84,8 @@ export async function POST(request: NextRequest) {
       user?.email
     );
 
-    if (!rateLimitResponse && !allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded' },
-        { status: 429 }
-      );
-    }
-
-    if (rateLimitResponse && !allowed) {
-      return rateLimitResponse;
+    if (!trafficAllowed && trafficResponse) {
+      return trafficResponse;
     }
 
     console.log('[search] 1. Request validated and auth passed', { userId, query: query.substring(0, 50) });
@@ -171,9 +164,9 @@ export async function POST(request: NextRequest) {
       tier: userTier,
     });
 
-    // Apply rate limit headers if allowed
-    if (rateLimitResponse?.headers) {
-      for (const [key, value] of Object.entries(rateLimitResponse.headers)) {
+    // Apply rate limit headers if present
+    if (trafficHeaders) {
+      for (const [key, value] of Object.entries(trafficHeaders)) {
         response.headers.set(key, value);
       }
     }

@@ -4,8 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession, getOrCreateStripeCustomer } from '@/lib/stripe';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { CheckoutSchema } from '@/lib/types/contracts';
-import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
-import { ERROR_CODES } from '@/lib/error-codes';
+import { guardTraffic, getUserTier } from '@/lib/services/traffic';
 import * as Sentry from '@sentry/nextjs';
 
 interface CheckoutResponse {
@@ -34,24 +33,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1b. Check rate limits and quotas
+    // 1b. Check rate limits (no quota charge for checkout flow)
     const userTier = (await getUserTier(userId)) || 'free';
-    const { allowed: rateLimitAllowed, response: rateLimitResponse } = await applyRateLimit(
+    const { allowed: trafficAllowed, response: trafficResponse } = await guardTraffic(
       request,
       'checkout',
       userId,
-      userTier
+      userTier,
+      userEmail
     );
 
-    if (rateLimitResponse && !rateLimitAllowed) {
-      return rateLimitResponse;
-    }
-
-    if (!rateLimitAllowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', code: ERROR_CODES.RATE_LIMIT_EXCEEDED },
-        { status: 429 }
-      );
+    if (!trafficAllowed && trafficResponse) {
+      return trafficResponse;
     }
 
     // 2. Parse and validate request
