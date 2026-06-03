@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     // 5. Processing job row (filled by the worker via /api/analyses/persist).
     const analysisId = randomUUID();
     const service = getSupabaseServiceClient();
-    await service.from('analyses').insert({
+    const { error: insertError } = await service.from('analyses').insert({
       id: analysisId,
       video_id: videoId,
       user_id: userId,
@@ -151,6 +151,14 @@ export async function POST(request: NextRequest) {
       validation_passed: false,
       created_at: new Date().toISOString(),
     });
+
+    // Hard-fail if the processing row didn't land: otherwise the worker streams and
+    // then S2S-persist 404s (orphan analysis, lost result). Was previously unchecked.
+    if (insertError) {
+      Sentry.captureException(insertError, { tags: { operation: 'analysis-prepare-insert' }, extra: { analysisId, videoId, userId } });
+      console.error('[analyses] processing-row insert failed:', insertError.message);
+      return NextResponse.json({ error: 'Failed to initialize analysis', code: 'ERR_ANALYSIS_ROW_INSERT' }, { status: 500 });
+    }
 
     // 6. Mint the token (bound to videoId+analysisId) and return the stream payload.
     //    The system prompt is NOT included — the worker builds it server-side.
