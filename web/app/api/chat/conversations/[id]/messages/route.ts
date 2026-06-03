@@ -40,7 +40,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     .eq('conversation_id', id)
     .order('created_at', { ascending: true });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[chat] load messages failed:', error.message);
+    return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 });
+  }
   return NextResponse.json({ messages: (data as Row[]).map(toMsg) });
 }
 
@@ -71,7 +74,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let isRetry = false;
 
   if (clientMsgId) {
-    const { data: existing } = await supabase.from('chat_messages').select(COLS).eq('client_msg_id', clientMsgId).maybeSingle();
+    const { data: existing } = await supabase.from('chat_messages').select(COLS).eq('conversation_id', id).eq('client_msg_id', clientMsgId).maybeSingle();
     if (existing) {
       userRow = existing as Row;
       isRetry = true;
@@ -86,11 +89,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (error) {
       // 23505 = unique violation: a concurrent retry won the race; fetch theirs.
       if (error.code === '23505' && clientMsgId) {
-        const { data: raced } = await supabase.from('chat_messages').select(COLS).eq('client_msg_id', clientMsgId).single();
+        const { data: raced } = await supabase.from('chat_messages').select(COLS).eq('conversation_id', id).eq('client_msg_id', clientMsgId).single();
         userRow = raced as Row;
         isRetry = true;
       } else {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('[chat] user message insert failed:', error.message);
+        return NextResponse.json({ error: 'Failed to save message' }, { status: 500 });
       }
     } else {
       userRow = data as Row;

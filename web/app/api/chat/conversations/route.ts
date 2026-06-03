@@ -35,7 +35,10 @@ export async function GET() {
     .order('last_message_at', { ascending: false })
     .limit(100);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[chat] list conversations failed:', error.message);
+    return NextResponse.json({ error: 'Failed to load conversations' }, { status: 500 });
+  }
   return NextResponse.json({ conversations: (data as Row[]).map(toConversation) });
 }
 
@@ -55,6 +58,9 @@ export async function POST(request: NextRequest) {
     .select('id, title, analysis_id, created_at, updated_at, last_message_at')
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[chat] create conversation failed:', error.message);
+    return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
+  }
   return NextResponse.json({ conversation: toConversation(data as Row) }, { status: 201 });
 }

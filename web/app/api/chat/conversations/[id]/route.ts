@@ -17,7 +17,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   // RLS scopes the update to the owner.
   const { error } = await supabase.from('chat_conversations').update({ title }).eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[chat] rename conversation failed:', error.message);
+    return NextResponse.json({ error: 'Failed to rename conversation' }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -29,6 +32,9 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { error } = await supabase.from('chat_conversations').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[chat] delete conversation failed:', error.message);
+    return NextResponse.json({ error: 'Failed to delete conversation' }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
