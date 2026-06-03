@@ -60,7 +60,7 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion('type', [
     dimension: z.number().int().min(1).max(11),
     name: z.string().min(1),
     content: z.string().min(10),
-    metadata: DimensionMetadataSchema,
+    metadata: DimensionMetadataSchema.optional(),
   }).strict(),
 
   z.object({
