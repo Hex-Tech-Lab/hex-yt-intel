@@ -194,3 +194,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: errorMessage, code: 'ERR_ANALYSIS_PREPARE_FAILED' }, { status: 500 });
   }
 }
+
+export async function GET() {
+  try {
+    // 1. Auth: Get user from session
+    const supabase = await getSupabaseClientWithAuth();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 2. Fetch user's analyses from Supabase (most recent first)
+    const { data: analyses, error } = await supabase
+      .from('analyses')
+      .select('id, video_id, title, created_at, validation_passed, validation_report')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('[analyses GET] Database query failed:', error);
+      return NextResponse.json({ error: 'Failed to fetch analyses', code: 'ERR_DB_QUERY' }, { status: 500 });
+    }
+
+    // 3. Transform response to match frontend schema
+    const historyItems = (analyses || []).map(analysis => ({
+      id: analysis.id,
+      videoId: analysis.video_id,
+      title: analysis.title || 'Untitled Analysis',
+      createdAt: analysis.created_at,
+      status: analysis.validation_passed ? 'completed' :
+              (analysis.validation_report?.status === 'processing' ? 'processing' : 'incomplete'),
+    }));
+
+    return NextResponse.json({ analyses: historyItems }, { status: 200 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[analyses GET] Exception:', { message: errorMessage });
+    Sentry.captureException(error, { contexts: { api: { endpoint: '/api/analyses (GET)' } } });
+    return NextResponse.json({ error: errorMessage, code: 'ERR_ANALYSIS_FETCH_FAILED' }, { status: 500 });
+  }
+}
