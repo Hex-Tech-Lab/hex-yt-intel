@@ -49,18 +49,23 @@ export async function POST(request: NextRequest) {
       .eq('video_id', videoId)
       .maybeSingle();
 
-    if (fetchError || !row) {
-      // The worker authenticated (valid content sig) but no matching row exists here.
-      // Usual cause: the bouncer wrote the processing row to a DIFFERENT environment's
-      // DB (e.g. a preview branch) while the worker's APP_URL points at prod. Capture
-      // it so the orphan is visible instead of a silent data loss.
+    // Don't mask a DB failure as a 404 — they need different handling/alerting.
+    if (fetchError) {
+      Sentry.captureException(fetchError, { tags: { operation: 'analysis-persist', reason: 'fetch-error' }, extra: { analysisId, videoId } });
+      console.error('[analyses/persist] Row fetch failed:', fetchError.message);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+    if (!row) {
+      // Authenticated (valid content sig) but no matching row. Usual cause: the bouncer
+      // wrote the processing row to a DIFFERENT environment's DB (e.g. a preview branch)
+      // while the worker's APP_URL points at prod. Capture so the orphan is visible.
       Sentry.captureMessage('analysis-persist: row not found', {
         level: 'warning',
         tags: { operation: 'analysis-persist', reason: 'row-not-found' },
-        extra: { analysisId, videoId, status, fetchError: fetchError?.message },
+        extra: { analysisId, videoId, status },
       });
       console.warn('[analyses/persist] Row not found (env mismatch?)', { analysisId, videoId });
-      return NextResponse.json({ error: 'Analysis row not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
     }
 
     const priorReport = (row.validation_report as any) || {};

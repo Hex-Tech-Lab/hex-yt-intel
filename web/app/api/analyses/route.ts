@@ -164,6 +164,8 @@ export async function POST(request: NextRequest) {
     if (insertError || !prepared?.id) {
       Sentry.captureException(insertError ?? new Error('upsert returned no row'), { tags: { operation: 'analysis-prepare-upsert' }, extra: { videoId, userId } });
       console.error('[analyses] processing-row upsert failed:', insertError?.message);
+      // Quota was already charged (line ~94); refund it so a failed init doesn't leak a credit.
+      try { await refundMonthlyQuota(userId, userEmail); } catch (e) { Sentry.captureException(e); }
       return NextResponse.json({ error: 'Failed to initialize analysis', code: 'ERR_ANALYSIS_ROW_INSERT' }, { status: 500 });
     }
     const analysisId = prepared.id as string;
