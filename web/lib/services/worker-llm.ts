@@ -1,6 +1,6 @@
-import { env } from '../env';
-import { getUCISPrompt } from '../prompts/factory';
-import { PersonaId } from '../prompts';
+import { env } from '@/lib/env';
+import { getUCISPrompt } from '@/lib/prompts/factory';
+import { PersonaId } from '@/lib/prompts';
 
 export interface WorkerLLMRequest {
   videoId: string;

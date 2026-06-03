@@ -1,4 +1,4 @@
-import { UCISValidator } from '../ucis-v5-validator';
+import { UCISValidator } from '@/lib/ucis-v5-validator';
 
 describe('UCISValidator', () => {
   describe('Structural Checks', () => {

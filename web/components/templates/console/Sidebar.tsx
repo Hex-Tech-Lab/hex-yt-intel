@@ -1,6 +1,6 @@
 'use client';
 
-import { Icon } from '../_shared/primitives';
+import { Icon } from '@/components/templates/_shared/primitives';
 
 export interface SidebarItem {
   key: string;

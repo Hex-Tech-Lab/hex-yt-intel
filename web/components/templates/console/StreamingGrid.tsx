@@ -1,6 +1,6 @@
 'use client';
 
-import { MonoLabel, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '../_shared/primitives';
+import { MonoLabel, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
 
 export interface Dimension {
   key: string;

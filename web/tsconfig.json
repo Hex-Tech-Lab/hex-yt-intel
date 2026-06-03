@@ -15,14 +15,15 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "baseUrl": "./",
+    "baseUrl": "../",
     "paths": {
+      "@/*": ["./web/*"],
       "@types/*": ["./packages/types/src/*"],
       "@lib/*": ["./web/lib/*"],
       "@components/*": ["./web/components/*"],
       "@hooks/*": ["./web/hooks/*"],
-      "@api/*": ["./web/app/api/*"],
-      "@/*": ["./*"]
+      "@store/*": ["./web/store/*"],
+      "@api/*": ["./web/app/api/*"]
     },
     "noEmit": true,
     "incremental": true,

@@ -1,7 +1,7 @@
 import { UCIS_V5_SYSTEM } from './ucis-v5';
 import { UCIS_V5_1_SYSTEM } from './ucis-v5.1';
-import type { PersonaId } from '../prompts';
-import { rankPersonas } from '../prompts';
+import type { PersonaId } from '@/lib/prompts';
+import { rankPersonas } from '@/lib/prompts';
 
 type UCISVersion = '5.0' | '5.1';
 
