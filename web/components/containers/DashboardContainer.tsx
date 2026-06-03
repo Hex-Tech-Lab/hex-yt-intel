@@ -173,16 +173,20 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
           {status === 'complete' && <PersonaSelector />}
 
-          <StreamingGrid
-            dimensions={dimensions}
-            progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
-            onOpenDimension={(key) => console.log('Open dimension', key)}
-          />
+          {status !== 'idle' && (
+            <>
+              <StreamingGrid
+                dimensions={dimensions}
+                progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
+                onOpenDimension={(key) => console.log('Open dimension', key)}
+              />
 
-          <ProcessingLog
-            lines={logLines}
-            status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
-          />
+              <ProcessingLog
+                lines={logLines}
+                status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
+              />
+            </>
+          )}
         </div>
       ) : activeNav === 'history' ? (
         <AnalysisHistory />

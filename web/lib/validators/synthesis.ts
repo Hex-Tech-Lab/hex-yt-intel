@@ -56,6 +56,15 @@ export const UCISPayloadSchema = z.object({
  */
 export const UCISStreamFragmentSchema = z.discriminatedUnion('type', [
   z.object({
+    type: z.literal('status'),
+    stage: z.enum(['starting', 'model', 'fallback']),
+    videoId: z.string().optional(),
+    model: z.string().optional(),
+    from: z.string().optional(),
+    error: z.string().optional(),
+  }).strict(),
+
+  z.object({
     type: z.literal('dimension'),
     dimension: z.number().int().min(1).max(11),
     name: z.string().min(1),

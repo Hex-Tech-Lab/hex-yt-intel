@@ -62,6 +62,9 @@ export class SynthesisStreamAdapter {
 
     // Route to handler
     switch (fragment.type) {
+      case 'status':
+        this.handleStatus(fragment);
+        break;
       case 'dimension':
         this.handleDimension(fragment);
         break;
@@ -75,6 +78,25 @@ export class SynthesisStreamAdapter {
         this.handleError(fragment);
         break;
     }
+  }
+
+  /**
+   * Handle a status fragment: lifecycle updates (starting, model, fallback)
+   */
+  private handleStatus(fragment: {
+    type: 'status';
+    stage: 'starting' | 'model' | 'fallback';
+    videoId?: string;
+    model?: string;
+    from?: string;
+    error?: string;
+  }) {
+    // Status messages are lifecycle events; log them for debugging
+    console.debug('[Adapter] Status update:', {
+      stage: fragment.stage,
+      model: fragment.model || fragment.from,
+      error: fragment.error,
+    });
   }
 
   /**
