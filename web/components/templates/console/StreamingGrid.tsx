@@ -20,7 +20,6 @@ export interface DimensionCardProps {
 
 // Maps 1, 2, 3 spans to CSS grid spans (2, 3, 4 columns out of 6)
 const SPAN_MAP: Record<number, string> = { 1: "span 2", 2: "span 3", 3: "span 4" };
-const ROWSPAN_MAP: Record<number, string> = { 1: "span 1", 2: "span 1", 3: "span 2" };
 
 export function DimensionCard({ dimension, index, onOpen, delayClass }: DimensionCardProps) {
   const { key, label, icon, status, content, span = 1 } = dimension;
@@ -32,9 +31,9 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
       active={streaming}
       radius="card"
       className={delayClass}
-      style={{ gridColumn: SPAN_MAP[span], gridRow: ROWSPAN_MAP[span] }}
+      style={{ gridColumn: SPAN_MAP[span] }}
     >
-      <CornerFrame tone={streaming ? "accent" : "line"} style={{ height: "100%" }}>
+      <CornerFrame tone={streaming ? "accent" : "line"}>
         <article
           onClick={interactive ? () => onOpen?.(key) : undefined}
           onKeyDown={interactive ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen?.(key); } } : undefined}
@@ -46,7 +45,7 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
           style={{
             display: "flex",
             flexDirection: "column",
-            height: "100%",
+            minHeight: 180,
             background: "var(--surface)",
             padding: 24,
             borderRadius: 15,
@@ -74,7 +73,7 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
             </span>
           </header>
 
-          <div style={{ minHeight: 0, flex: 1, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, overflowY: "auto", maxHeight: 320, paddingRight: 4 }} className="hx-custom-scrollbar">
             {status === "done" && content ? (
               <div className="hx-body-secondary" style={{ fontSize: 13.5, lineHeight: 1.6 }}>
                 {content}

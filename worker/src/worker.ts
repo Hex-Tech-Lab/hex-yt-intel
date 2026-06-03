@@ -929,16 +929,53 @@ app.post("/analyze-llm-stream", async (c) => {
   });
 
   const encoder = new TextEncoder();
+  const secret = c.env.STREAM_HMAC_SECRET;
+  const apiKey = c.env.OPENROUTER_API_KEY;
+
+  let finalText = '';
+  let modelUsedUsed = '';
+  let persisted = false;
+
+  const persist = async (status: 'completed' | 'interrupted') => {
+    if (persisted || !finalText) return;
+    persisted = true;
+
+    // We sign the partial markdown so the server can verify it came from us.
+    const valid = validate12D(finalText);
+    const contentSig = await hmacHex(secret, finalText);
+    const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
+
+    await fetch(`${appUrl}/api/analyses/persist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        analysisId: req.analysisId,
+        videoId: req.videoId,
+        markdown: finalText,
+        model: modelUsedUsed,
+        valid,
+        contentSig,
+        status,
+      }),
+    }).catch((e) => console.error(`[analyze-llm-stream] ${status} persist failed`, e));
+  };
+
+  // Detect browser disconnect immediately and save partial progress.
+  c.req.raw.signal.addEventListener('abort', () => {
+    if (!persisted) {
+      c.executionCtx.waitUntil(persist('interrupted'));
+    }
+  });
+
   const stream = new ReadableStream({
     async start(controller) {
       const send = (obj: any) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`)); } catch { /* client gone */ }
       };
+
       try {
         send({ type: 'status', stage: 'starting', videoId: req.videoId });
 
-        let finalText = '';
-        let modelUsed = '';
         let produced = false;
 
         // Stream the cascade. We only fall through to the next model if the current
@@ -946,54 +983,43 @@ app.post("/analyze-llm-stream", async (c) => {
         // commit to that model.
         for (const { model, name } of MODEL_CHAIN) {
           send({ type: 'status', stage: 'model', model: name });
+          modelUsedUsed = name;
+
           const result = await callLLMStream(
             model,
             systemPrompt,
             req.transcript || '',
             req.metadata,
             apiKey,
-            (delta) => send({ type: 'delta', content: delta }),
+            (delta) => {
+              finalText += delta;
+              send({ type: 'delta', content: delta });
+            },
             90000
           );
-          if (result.started && result.text) {
-            finalText = result.text;
-            modelUsed = name;
+
+          if (result.started && finalText) {
             produced = true;
             break;
           }
           send({ type: 'status', stage: 'fallback', from: name, error: result.error });
         }
 
-        if (!produced) {
+        if (!produced && !finalText) {
           send({ type: 'error', error: 'All models in cascade failed to produce output' });
           controller.close();
           return;
         }
 
         const valid = validate12D(finalText);
-        // Persist server-to-server (worker -> Vercel) so it doesn't depend on the
-        // browser staying connected. Runs in waitUntil: a quick POST well within the
-        // 30s post-disconnect grace. Vercel holds the Supabase service key, not us.
-        const contentSig = await hmacHex(secret, finalText);
-        const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
-        c.executionCtx.waitUntil(
-          fetch(`${appUrl}/api/analyses/persist`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              analysisId: req.analysisId,
-              videoId: req.videoId,
-              markdown: finalText,
-              model: modelUsed,
-              valid,
-              contentSig,
-            }),
-          }).catch((e) => console.error('[analyze-llm-stream] persist failed', e))
-        );
-        send({ type: 'done', model: modelUsed, valid, videoId: req.videoId, analysisId: req.analysisId });
-        controller.close();
+        send({ type: 'done', model: modelUsedUsed, valid, videoId: req.videoId, analysisId: req.analysisId });
       } catch (error) {
         send({ type: 'error', error: error instanceof Error ? error.message : 'stream failed' });
+      } finally {
+        // Last-ditch persistence on success or crash (if not already triggered by abort).
+        if (finalText && !persisted) {
+          c.executionCtx.waitUntil(persist('completed'));
+        }
         controller.close();
       }
     },

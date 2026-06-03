@@ -15,11 +15,6 @@ export interface UCISSections {
 
 function extractSection(markdown: string, dimensionNumber: number): string {
   // Match "### DIMENSION N <sep> Title" then skip to content on next lines.
-  // Separator is tolerant of LLM typography: hyphen, en-dash, em-dash, or colon
-  // ([-–—:]). \s* (not \s+) lets "DIMENSION 1: Title" (no space before colon)
-  // match while the separator class — which contains no digit — still prevents
-  // dimension 1 from matching "DIMENSION 11" (the char after "1" would be "1",
-  // not a separator).
   const dimensionRegex = new RegExp(
     `^### DIMENSION ${dimensionNumber}\\s*[-–—:][^\\n]*\\n([\\s\\S]*?)(?=\\n### DIMENSION|$)`,
     'mi'
@@ -32,28 +27,20 @@ function extractSection(markdown: string, dimensionNumber: number): string {
 
   const content = match[1] || '';
 
-  // Strip markdown syntax and clean up
+  // Strip markdown syntax and clean up dimension numbering artifacts (e.g., 8.1, 10.1)
   let cleaned = content
     .replace(/\*\*([^*]+)\*\*/g, '$1')           // Remove **bold**
     .replace(/__([^_]+)__/g, '$1')                // Remove __bold__
     .replace(/`([^`]+)`/g, '$1')                  // Remove `code`
     .replace(/^#+\s+/gm, '')                      // Remove heading markers
+    .replace(/\b\d+\.\d+\s/g, '')                 // Strip artifacts like "8.1 ", "10.2 "
     .replace(/\|\s*[^|]+\s*\|/g, '')              // Remove table pipes
     .replace(/^---+$/gm, '')                      // Remove horizontal rules
     .replace(/^\s*[-*]\s+/gm, '')                 // Remove bullet points
     .replace(/\n\n+/g, '\n')                      // Collapse multiple blank lines
     .trim();
 
-  // Extract first ~200 non-empty characters
-  const lines = cleaned.split('\n').filter(line => line.trim());
-  let snippet = '';
-  for (const line of lines) {
-    if (snippet.length >= 200) break;
-    if (snippet) snippet += ' ';
-    snippet += line.trim();
-  }
-
-  return snippet.slice(0, 200) || 'Parsing...';
+  return cleaned || 'Parsing...';
 }
 
 export function parseUCISSections(markdown: string): UCISSections {

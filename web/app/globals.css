@@ -228,6 +228,20 @@
   border-color: var(--accent-glow) !important;
 }
 
+.hx-custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.hx-custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hx-custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 10px;
+}
+.hx-custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
 /* Glow Border & Spin */
 .hx-glow[data-active="true"] {
   background: transparent !important;

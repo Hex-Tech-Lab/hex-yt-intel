@@ -3,24 +3,27 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { verifyContentSig } from '@/lib/stream-token';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
 import { publishValidationTask } from '@/lib/qstash-client';
+import { env } from '@/lib/env';
 import * as Sentry from '@sentry/nextjs';
 
 /**
  * Server-to-server persistence endpoint. The Cloudflare Worker calls this (from
- * ctx.waitUntil, after the stream completes) with the generated markdown and an
- * HMAC content signature. We verify the signature with the shared secret — only the
- * worker (which holds STREAM_HMAC_SECRET) can produce it — then write the canonical
- * record using the Supabase service key, which never leaves Vercel.
+ * ctx.waitUntil, after the stream completes or is interrupted) with the generated 
+ * markdown and an HMAC content signature. 
+ * 
+ * FIX: We use the raw @supabase/supabase-js client here because the SSR wrapper
+ * (@supabase/ssr) expects cookies to establish a session, which causes 401 errors
+ * in Server-to-Server calls.
  */
 export async function POST(request: NextRequest) {
   let body: any;
   try {
     body = await request.json();
-    const { analysisId, videoId, markdown, model, valid, contentSig } = body || {};
+    const { analysisId, videoId, markdown, model, valid, contentSig, status = 'completed' } = body || {};
 
     if (!analysisId || !videoId || typeof markdown !== 'string' || !contentSig) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -32,7 +35,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    const service = getSupabaseServiceClient();
+    // Instantiate RAW client with service role to bypass RLS and avoid cookie dependencies.
+    const service = createClient(
+      env.supabaseUrl,
+      env.supabaseServiceRoleKey!
+    );
 
     // Fetch the processing row to recover its context (user, transcript availability).
     const { data: row, error: fetchError } = await service
@@ -47,14 +54,20 @@ export async function POST(request: NextRequest) {
     }
 
     const priorReport = (row.validation_report as any) || {};
+    const isInterrupted = status === 'interrupted';
 
     const { error: updateError } = await service
       .from('analyses')
       .update({
         analysis_markdown: markdown,
         model_used: model || 'edge-stream',
-        validation_passed: !!valid,
-        validation_report: { ...priorReport, status: 'done', model_used: model, valid: !!valid },
+        validation_passed: isInterrupted ? false : !!valid,
+        validation_report: { 
+          ...priorReport, 
+          status: isInterrupted ? 'interrupted' : 'done', 
+          model_used: model, 
+          valid: isInterrupted ? false : !!valid 
+        },
         updated_at: new Date().toISOString(),
       })
       .eq('id', analysisId);
@@ -62,6 +75,11 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       Sentry.captureException(updateError, { tags: { operation: 'analysis-persist' } });
       return NextResponse.json({ error: 'Failed to persist analysis' }, { status: 500 });
+    }
+
+    // Skip cache and validation for interrupted/partial streams.
+    if (isInterrupted) {
+      return NextResponse.json({ ok: true, analysisId, status: 'interrupted' });
     }
 
     // Best-effort cache + validation task (never block the persist response on these).
