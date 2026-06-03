@@ -1,5 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
+import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
+import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 
 export function useSSEStream() {
   const {
@@ -7,10 +9,11 @@ export function useSSEStream() {
     setStatus,
     setError,
     initializeAnalysis,
-    appendMarkdown,
     archiveCurrentAnalysis,
     setVideoMetadata,
   } = useAnalysisStore();
+
+  const { initializeAnalysis: initSynthesis } = useSynthesisNucleus();
 
   const extractTelemetryId = (urlStr: string) => {
     try {
@@ -82,6 +85,7 @@ export function useSSEStream() {
           // 3. Cache hit — render immediately.
           if (job.status === 'done' && job.markdown) {
             initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result', job.markdown);
+            initSynthesis(job);
             setStatus('complete');
             setIsLoading(false);
             archiveCurrentAnalysis();
@@ -97,7 +101,21 @@ export function useSSEStream() {
           }
 
           initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result');
+          initSynthesis(job);
           setStatus('analyzing');
+
+          const adapter = new SynthesisStreamAdapter({
+            onError: (error) => {
+              setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: error });
+              setStatus('error');
+              setIsLoading(false);
+            },
+            onComplete: () => {
+              setStatus('complete');
+              setIsLoading(false);
+              archiveCurrentAnalysis();
+            },
+          });
 
           await Sentry.startSpan(
             { name: 'stream worker /analyze-llm-stream', op: 'stream.parse' },
@@ -127,26 +145,24 @@ export function useSSEStream() {
               let buffer = '';
               let finished = false;
 
-              const handleEvent = (raw: string) => {
-                const line = raw.trim();
-                if (!line.startsWith('data:')) return;
-                const payload = line.slice(5).trim();
-                if (!payload) return;
-                let evt: any;
-                try { evt = JSON.parse(payload); } catch { return; }
+              const handleEvent = (line: string) => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
 
-                if (evt.type === 'delta' && evt.content) {
-                  appendMarkdown(evt.content);
-                } else if (evt.type === 'done') {
+                // Parse SSE format: "data: {...}"
+                if (trimmed.startsWith('data:')) {
+                  const jsonStr = trimmed.slice(5).trim();
+                  adapter.processLine(jsonStr);
                   finished = true;
-                  setStatus('complete');
-                  setIsLoading(false);
-                  archiveCurrentAnalysis();
-                } else if (evt.type === 'error') {
+                  return;
+                }
+
+                // Also handle raw JSON (if worker emits JSON directly)
+                try {
+                  adapter.processLine(trimmed);
                   finished = true;
-                  setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: evt.error || 'Analysis failed' });
-                  setStatus('error');
-                  setIsLoading(false);
+                } catch {
+                  // Not JSON, skip
                 }
               };
 
@@ -160,7 +176,7 @@ export function useSSEStream() {
               }
               if (buffer.trim()) handleEvent(buffer);
 
-              // Stream closed without an explicit done/error event.
+              // Stream closed without an explicit complete/error event.
               if (!finished) {
                 setError({ code: 'ERR_STREAM_INCOMPLETE', status: 0, message: 'The analysis stream ended unexpectedly. Please try again.' });
                 setStatus('error');

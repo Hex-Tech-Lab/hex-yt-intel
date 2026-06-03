@@ -7,11 +7,12 @@ import { TopBar } from '@/components/templates/console/TopBar';
 import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import { StreamingGrid, Dimension } from '@/components/templates/console/StreamingGrid';
+import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { ProcessingLog, LogLine } from '@/components/templates/console/ProcessingLog';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
-import { parseUCISSections } from '@/lib/utils/ucis-parser';
+import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 
 export interface DashboardContainerProps {
@@ -20,9 +21,10 @@ export interface DashboardContainerProps {
 }
 
 export function DashboardContainer({ profile }: DashboardContainerProps) {
-  const { analysis, status, error, videoMetadata, analysisHistory } = useAnalysisStore();
+  const { status, error, videoMetadata, analysisHistory } = useAnalysisStore();
   const { url, setUrl } = useInputStore();
   const { startAnalysis } = useSSEStream();
+  const { projection } = useSynthesisNucleus();
   const [search, setSearch] = useState('');
 
   const tierLabel = profile.tier === 'pro' ? 'Pro' : profile.tier === 'free' ? 'Free' : profile.tier;
@@ -52,72 +54,62 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     { key: 'settings', label: 'Settings', icon: 'solar:settings-linear' },
   ], [historyBadge]);
 
-  const sections = useMemo(() => parseUCISSections(analysis?.analysis_markdown || ''), [analysis]);
-
   const dimensions: Dimension[] = useMemo(() => {
-    // Explicit order mapping for UCIS v5.1 dimensions
-    const order: (keyof typeof sections)[] = [
-      'apex', 'provenance', 'architecture', 'psychological', 'coreIntelligence',
-      'comparative', 'implementation', 'semantic', 'forward', 'credibility', 'monetization'
-    ];
+    if (!projection) return [];
 
-    const labels: Record<string, string> = {
-      apex: "Apex Intelligence",
-      provenance: "Provenance & Metadata",
-      architecture: "Content Architecture",
-      psychological: "Psychological Layer",
-      coreIntelligence: "Core Intelligence",
-      comparative: "Quantitative Analysis",
-      implementation: "Implementation Systems",
-      semantic: "Semantic Foundation",
-      forward: "Forward Foresight",
-      credibility: "Credibility & Risk",
-      monetization: "Commercial Yield",
+    const DIMENSION_LABELS: Record<number, string> = {
+      1: "Apex Intelligence",
+      2: "Provenance & Metadata",
+      3: "Content Architecture",
+      4: "Psychological Layer",
+      5: "Core Intelligence",
+      6: "Quantitative Analysis",
+      7: "Implementation Systems",
+      8: "Semantic Foundation",
+      9: "Forward Foresight",
+      10: "Credibility & Risk",
+      11: "Commercial Yield",
     };
 
-    const icons: Record<string, string> = {
-      apex: "solar:graph-up-linear",
-      provenance: "solar:link-round-angle-linear",
-      architecture: "solar:folder-with-files-linear",
-      psychological: "solar:user-linear",
-      coreIntelligence: "solar:bolt-linear",
-      comparative: "solar:magnifer-linear",
-      implementation: "solar:refresh-linear",
-      semantic: "solar:crown-minimalistic-linear",
-      forward: "solar:graph-up-linear",
-      credibility: "solar:shield-check-linear",
-      monetization: "solar:wad-of-money-linear",
+    const DIMENSION_ICONS: Record<number, string> = {
+      1: "solar:graph-up-linear",
+      2: "solar:link-round-angle-linear",
+      3: "solar:folder-with-files-linear",
+      4: "solar:user-linear",
+      5: "solar:bolt-linear",
+      6: "solar:magnifer-linear",
+      7: "solar:refresh-linear",
+      8: "solar:crown-minimalistic-linear",
+      9: "solar:graph-up-linear",
+      10: "solar:shield-check-linear",
+      11: "solar:wad-of-money-linear",
     };
 
-    const spans: Record<string, 1 | 2 | 3> = {
-      apex: 3,             // Takes 4 columns (out of 6)
-      coreIntelligence: 2, // Takes 3 columns
-      monetization: 2,     // Takes 3 columns
+    const DIMENSION_SPANS: Record<number, 1 | 2 | 3> = {
+      1: 3, 5: 2, 11: 2
     };
 
-    return order.map((key) => {
-      const content = sections[key];
-      const isParsing = content === 'Parsing...';
-      
+    return projection.visibleDimensions.map((dim) => {
+      const isPending = projection.pendingDimensions.has(dim.number);
       let dimStatus: 'idle' | 'streaming' | 'done' | 'error' = 'idle';
       if (status === 'complete') {
-        dimStatus = isParsing ? 'idle' : 'done';
+        dimStatus = isPending ? 'idle' : 'done';
       } else if (status === 'analyzing' || status === 'downloading') {
-        dimStatus = isParsing ? 'idle' : 'streaming';
+        dimStatus = isPending ? 'idle' : 'streaming';
       } else if (status === 'error') {
         dimStatus = 'error';
       }
 
       return {
-        key,
-        label: labels[key] || String(key),
-        icon: icons[key] || "solar:bolt-linear",
+        key: `dim-${dim.number}`,
+        label: DIMENSION_LABELS[dim.number] || `Dimension ${dim.number}`,
+        icon: DIMENSION_ICONS[dim.number] || "solar:bolt-linear",
         status: dimStatus,
-        content: isParsing ? undefined : content,
-        span: (spans[key] || 1) as 1 | 2 | 3,
+        content: dim.content,
+        span: (DIMENSION_SPANS[dim.number] || 1) as 1 | 2 | 3,
       };
     });
-  }, [sections, status]);
+  }, [projection, status]);
 
   // Handle log lines from streaming status
   const [logLines, setLogLines] = useState<LogLine[]>([]);
@@ -175,6 +167,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             publishedAt={videoMetadata.publishedAt}
           />
         )}
+
+        {status === 'complete' && <PersonaSelector />}
 
         <StreamingGrid
           dimensions={dimensions}
