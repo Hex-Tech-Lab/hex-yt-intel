@@ -37,6 +37,10 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
       <CornerFrame tone={streaming ? "accent" : "line"} style={{ height: "100%" }}>
         <article
           onClick={interactive ? () => onOpen?.(key) : undefined}
+          onKeyDown={interactive ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen?.(key); } } : undefined}
+          role={interactive ? "button" : undefined}
+          tabIndex={interactive ? 0 : undefined}
+          aria-label={interactive ? `Open ${label} dimension` : undefined}
           data-status={status}
           className={interactive ? "hx-liftcard" : ""}
           style={{
@@ -91,7 +95,7 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
 
           {status === "done" && (
             <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-              <Icon icon="solar:alt-arrow-right-linear" size={14} style={{ color: "var(--accent)", opacity: 0.5 }} />
+              <Icon icon="solar:alt-arrow-right-linear" size={14} style={{ color: "var(--accent)", opacity: 0.7 }} />
             </div>
           )}
         </article>
@@ -117,12 +121,7 @@ export function StreamingGrid({ dimensions, onOpenDimension, progress }: Streami
           </span>
         )}
       </div>
-      <div style={{ 
-        display: "grid", 
-        gridTemplateColumns: "repeat(6, 1fr)", 
-        gridAutoRows: "minmax(160px, auto)", 
-        gap: 16 
-      }}>
+      <div className="hx-dim-grid">
         {dimensions.map((d, i) => (
           <DimensionCard
             key={d.key}

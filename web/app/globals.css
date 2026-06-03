@@ -247,3 +247,38 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Focus visibility (a11y): on-brand cyan ring for keyboard users. Inputs set
+   outline:none inline for aesthetics, so they opt in via .hx-field which uses a
+   box-shadow ring (not blocked by inline outline). Buttons/cards use outline. */
+.hx-field:focus-visible {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent) !important;
+  border-radius: 6px;
+}
+button:focus-visible,
+[role="button"]:focus-visible,
+.hx-navitem:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+
+/* Responsive semantic-dimension grid. 6 cols desktop → collapses on smaller
+   viewports; cards' inline gridColumn spans are overridden with !important so
+   they stack instead of overflowing horizontally. */
+.hx-dim-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-auto-rows: minmax(160px, auto);
+  gap: 16px;
+}
+@media (max-width: 1024px) {
+  .hx-dim-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 768px) {
+  .hx-dim-grid { grid-template-columns: repeat(2, 1fr); }
+  .hx-dim-grid > * { grid-column: auto / span 2 !important; grid-row: auto !important; }
+}
+@media (max-width: 480px) {
+  .hx-dim-grid { grid-template-columns: 1fr; }
+  .hx-dim-grid > * { grid-column: 1 / -1 !important; }
+}
