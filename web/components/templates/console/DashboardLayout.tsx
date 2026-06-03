@@ -6,9 +6,11 @@ export interface DashboardLayoutProps {
   sidebar: ReactNode;
   topbar: ReactNode;
   children: ReactNode;
+  /** Bottom-anchored dock spanning the main content column (e.g. the chat sheet). */
+  dock?: ReactNode;
 }
 
-export function DashboardLayout({ sidebar, topbar, children }: DashboardLayoutProps) {
+export function DashboardLayout({ sidebar, topbar, children, dock }: DashboardLayoutProps) {
   return (
     <div style={{
       display: "grid",
@@ -35,6 +37,7 @@ export function DashboardLayout({ sidebar, topbar, children }: DashboardLayoutPr
       </aside>
 
       <main style={{
+        position: "relative",
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -53,13 +56,17 @@ export function DashboardLayout({ sidebar, topbar, children }: DashboardLayoutPr
         <div style={{
           flex: 1,
           overflowY: "auto",
-          padding: "32px 40px",
+          // Bottom padding clears the collapsed chat dock bar on every tab.
+          padding: "32px 40px 72px",
           scrollBehavior: "smooth"
         }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             {children}
           </div>
         </div>
+
+        {/* Bottom-anchored dock — spans the main column between the side panels */}
+        {dock}
       </main>
     </div>
   );

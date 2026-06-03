@@ -83,8 +83,19 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion('type', [
     persona: z.enum(['creator', 'critic', 'analyst', 'educator', 'philosopher']).optional(),
   }).strict(),
 
+  // 'complete' and 'done' are the same terminal fragment under different names —
+  // the deployed worker emits 'done', newer builds emit 'complete'. Accept both so
+  // the stream's final state is never discarded regardless of worker version.
   z.object({
     type: z.literal('complete'),
+    model: z.string(),
+    valid: z.boolean(),
+    videoId: z.string(),
+    analysisId: z.string(),
+  }).strict(),
+
+  z.object({
+    type: z.literal('done'),
     model: z.string(),
     valid: z.boolean(),
     videoId: z.string(),

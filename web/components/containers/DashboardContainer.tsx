@@ -139,9 +139,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           account={<div title={profile.email} style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--accent)', display: 'grid', placeItems: 'center', color: 'var(--void)', fontWeight: 'bold', fontSize: 12 }}>{profile.initials}</div>}
         />
       }
+      dock={<ChatDock analysisId={analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 32, paddingBottom: 112 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 32, paddingBottom: 16 }}>
           <AnalysisHero
             url={url}
             status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
@@ -253,8 +254,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         </div>
       )}
 
-      {/* Persistent chat dock — mounted once, survives tab switches */}
-      <ChatDock analysisId={analysis?.id ?? null} analysisTitle={videoMetadata?.title} />
     </DashboardLayout>
   );
 }

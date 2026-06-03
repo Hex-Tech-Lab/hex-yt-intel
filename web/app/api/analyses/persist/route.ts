@@ -50,6 +50,16 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (fetchError || !row) {
+      // The worker authenticated (valid content sig) but no matching row exists here.
+      // Usual cause: the bouncer wrote the processing row to a DIFFERENT environment's
+      // DB (e.g. a preview branch) while the worker's APP_URL points at prod. Capture
+      // it so the orphan is visible instead of a silent data loss.
+      Sentry.captureMessage('analysis-persist: row not found', {
+        level: 'warning',
+        tags: { operation: 'analysis-persist', reason: 'row-not-found' },
+        extra: { analysisId, videoId, status, fetchError: fetchError?.message },
+      });
+      console.warn('[analyses/persist] Row not found (env mismatch?)', { analysisId, videoId });
       return NextResponse.json({ error: 'Analysis row not found' }, { status: 404 });
     }
 
