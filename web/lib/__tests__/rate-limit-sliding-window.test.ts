@@ -3,7 +3,7 @@
  * Validates atomicity, boundary conditions, and edge cases
  */
 
-import { checkRateLimitSlidingWindow, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkRateLimitSlidingWindow, RATE_LIMITS } from '@/lib/services/traffic';
 
 describe('Sliding Window Rate Limiting', () => {
   const tier = 'free';
