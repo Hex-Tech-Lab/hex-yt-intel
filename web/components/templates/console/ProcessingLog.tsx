@@ -1,27 +1,22 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { MonoLabel } from '@/components/templates/_shared/primitives';
 
-export interface LogLine {
-  timestamp: string;
-  type: 'info' | 'ok' | 'warn' | 'error';
-  message: string;
-}
-
 export interface ProcessingLogProps {
-  lines: LogLine[];
   status: 'idle' | 'streaming' | 'done' | 'error';
 }
 
-export function ProcessingLog({ lines, status }: ProcessingLogProps) {
+export function ProcessingLog({ status }: ProcessingLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { terminalLines } = useAnalysisStore();
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [lines]);
+  }, [terminalLines]);
 
   return (
     <div style={{ marginTop: 24 }}>
@@ -77,12 +72,11 @@ export function ProcessingLog({ lines, status }: ProcessingLogProps) {
             scrollBehavior: "smooth"
           }}
         >
-          {lines.map((line, i) => (
+          {terminalLines.map((line, i) => (
             <div key={i} style={{ display: "flex", gap: 12 }}>
               <span style={{ color: "var(--ink-muted)" }}>{line.timestamp}</span>
               <span style={{
                 color: line.type === 'ok' ? "var(--ok)" :
-                       line.type === 'warn' ? "var(--warn)" :
                        line.type === 'error' ? "var(--err)" :
                        "var(--ink-secondary)"
               }}>

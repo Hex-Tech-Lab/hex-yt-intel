@@ -4,6 +4,8 @@ import { cors } from "hono/cors";
 // bundles this pure-TS tree (factory -> ucis-v5.1/v5 strings + rankPersonas) inline.
 import { getUCISPrompt } from "../../web/lib/prompts/factory";
 import { StreamingDimensionParser } from "./dimension-parser";
+import { TranscriptExtractor } from "./services/TranscriptExtractor";
+import { MetadataScraper } from "./services/MetadataScraper";
 
 type Env = {
   YOUTUBE_API_KEY: string;
@@ -458,117 +460,29 @@ app.get("/fetch-metadata", async (c) => {
   const videoId = c.req.query("video_id");
 
   if (!videoId) {
-    console.warn("[fetch-metadata] Missing video_id parameter");
     return c.json({ error: "Missing video_id parameter" }, 400);
-  }
-
-  // Validate video ID format (11 characters, alphanumeric + - _)
-  if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-    console.warn(`[fetch-metadata] Invalid video_id format: ${videoId}`);
-    return c.json({ error: "Invalid video_id format" }, 400);
   }
 
   try {
     const apiKey = c.env.YOUTUBE_API_KEY;
     if (!apiKey) {
       console.error("[fetch-metadata] Server misconfigured: Missing YOUTUBE_API_KEY");
-      return c.json(
-        { error: "Server misconfigured" },
-        500
-      );
+      return c.json({ error: "Server misconfigured" }, 500);
     }
 
-    // Fetch video metadata from YouTube API with timeout (optionally through proxy)
-    const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${videoId}&key=${apiKey}`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const scraper = new MetadataScraper(apiKey, c.env.RESIDENTIAL_PROXY_URL);
+    const metadata = await scraper.fetch(videoId);
 
-    const response = await fetchWithProxy(
-      url,
-      {
-        signal: controller.signal,
-        headers: { 'User-Agent': getRandomUserAgent() },
-      },
-      c.env.RESIDENTIAL_PROXY_URL
-    );
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      console.warn(`[fetch-metadata] YouTube API returned ${response.status} for video ${videoId}`);
-      return c.json({ error: "Video not found" }, 404);
-    }
-
-    const data = (await response.json()) as {
-      items?: Array<{ snippet?: any; statistics?: any; contentDetails?: any }>;
-      error?: any;
-    };
-
-    if (data.error) {
-      console.warn(`[fetch-metadata] YouTube API error for ${videoId}:`, data.error);
-      return c.json({ error: "Video not found" }, 404);
-    }
-
-    if (!data.items || data.items.length === 0) {
-      console.warn(`[fetch-metadata] No items returned for ${videoId}`);
-      return c.json({ error: "Video not found" }, 404);
-    }
-
-    const video = data.items[0];
-    const snippet = video.snippet || {};
-    const stats = video.statistics || {};
-    const details = video.contentDetails || {};
-
-    // Parse ISO 8601 duration to seconds
-    const parseDuration = (duration: any): number => {
-      if (!duration || typeof duration !== "string") return 0;
-      const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-      if (!match) return 0;
-      const hours = (parseInt(match[1] || "0") || 0) * 3600;
-      const minutes = (parseInt(match[2] || "0") || 0) * 60;
-      const seconds = parseInt(match[3] || "0") || 0;
-      return hours + minutes + seconds;
-    };
-
-    // Get thumbnail URL with fallback chain: high → medium → default
-    const getThumbnailUrl = (thumbnails: any): string => {
-      if (!thumbnails || typeof thumbnails !== "object") return "";
-      return (
-        thumbnails.high?.url ||
-        thumbnails.medium?.url ||
-        thumbnails.default?.url ||
-        ""
-      );
-    };
-
-    return c.json(
-      {
-        videoId: videoId,
-        title: String(snippet.title || ""),
-        description: String(snippet.description || ""),
-        channelTitle: String(snippet.channelTitle || ""),
-        channelId: String(snippet.channelId || ""),
-        publishedAt: String(snippet.publishedAt || ""),
-        duration: parseDuration(details.duration),
-        viewCount: parseInt(String(stats.viewCount || "0"), 10),
-        likeCount: parseInt(String(stats.likeCount || "0"), 10),
-        commentCount: parseInt(String(stats.commentCount || "0"), 10),
-        thumbnailUrl: getThumbnailUrl(snippet.thumbnails),
-      },
-      200,
-      {
-        "Cache-Control": "public, max-age=3600",
-      }
-    );
+    return c.json(metadata, 200, {
+      "Cache-Control": "public, max-age=3600",
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
-    if (errorMessage === "The operation was aborted" || errorMessage === "AbortError") {
+    if (errorMessage.includes("Timeout") || errorMessage === "AbortError") {
       console.error(`[fetch-metadata] Timeout for video ${videoId}`);
-      return c.json(
-        { error: "Request timeout" },
-        504
-      );
+      return c.json({ error: "Request timeout" }, 504);
     }
 
     console.error(`[fetch-metadata] Error for video ${videoId}:`, errorMessage);
@@ -588,100 +502,14 @@ app.post("/fetch-transcript", async (c) => {
     return c.json({ error: "Missing videoId parameter" }, 400);
   }
 
-  // Validate video ID format (11 characters, alphanumeric + - _)
-  if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-    return c.json({ error: "Invalid video_id format" }, 400);
-  }
-
   try {
-    // Fetch caption tracks with timeout protection (optionally through proxy)
-    const metadataUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&type=list`;
-    const metadataController = new AbortController();
-    const metadataTimeout = setTimeout(() => metadataController.abort(), 5000);
-
-    const metadataResponse = await fetchWithProxy(
-      metadataUrl,
-      {
-        signal: metadataController.signal,
-        headers: { 'User-Agent': getRandomUserAgent() },
-      },
-      c.env.RESIDENTIAL_PROXY_URL
-    );
-    clearTimeout(metadataTimeout);
-
-    if (!metadataResponse.ok) {
-      console.warn(`[fetch-transcript] Caption metadata fetch failed for ${videoId}: ${metadataResponse.status}`);
-      return c.json({ error: "No transcript available for this video" }, 404);
-    }
-
-    const metadataText = await metadataResponse.text();
-
-    // Parse XML response to find caption tracks - try English first, fallback to first available
-    const captionRegex = /lang_code="([^"]+)"/g;
-    const matches = Array.from(metadataText.matchAll(captionRegex));
-
-    if (matches.length === 0) {
-      console.warn(`[fetch-transcript] No captions found for ${videoId}`);
-      return c.json({ error: "No captions available for this video" }, 404);
-    }
-
-    // Prioritize English, fallback to first available language
-    let langCode = matches[0][1];
-    const englishMatch = matches.find(m => m[1].startsWith('en'));
-    if (englishMatch) {
-      langCode = englishMatch[1];
-    }
-
-    // Fetch the actual transcript with timeout (optionally through proxy)
-    const transcriptUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${langCode}&fmt=json`;
-    const transcriptController = new AbortController();
-    const transcriptTimeout = setTimeout(() => transcriptController.abort(), 5000);
-
-    const transcriptResponse = await fetchWithProxy(
-      transcriptUrl,
-      {
-        signal: transcriptController.signal,
-        headers: { 'User-Agent': getRandomUserAgent() },
-      },
-      c.env.RESIDENTIAL_PROXY_URL
-    );
-    clearTimeout(transcriptTimeout);
-
-    if (!transcriptResponse.ok) {
-      console.warn(`[fetch-transcript] Transcript content fetch failed for ${videoId}: ${transcriptResponse.status}`);
-      return c.json({ error: "Failed to fetch transcript content" }, 500);
-    }
-
-    const captionData = (await transcriptResponse.json()) as {
-      events?: Array<{ tStartMs?: string; dur?: string; segs?: Array<{ utf8?: string }> }>;
-    };
-
-    if (!captionData.events || !Array.isArray(captionData.events)) {
-      console.warn(`[fetch-transcript] No transcript events for ${videoId}`);
-      return c.json({ error: "No transcript events found" }, 404);
-    }
-
-    // Reconstruct transcript from events
-    const transcript = captionData.events
-      .filter((event) => event && Array.isArray(event.segs) && event.segs.length > 0)
-      .map((event) => {
-        return event.segs.map((seg) => seg?.utf8 || "").join("");
-      })
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (transcript.length === 0) {
-      console.warn(`[fetch-transcript] Empty transcript after parsing for ${videoId}`);
-      return c.json({ error: "Transcript is empty" }, 404);
-    }
+    const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL);
+    const result = await extractor.fetch(videoId);
 
     return c.json(
       {
-        videoId,
-        transcript,
-        language: langCode,
-        length: transcript.length,
+        ...result,
+        length: result.transcript.length,
       },
       200,
       {
@@ -692,12 +520,13 @@ app.post("/fetch-transcript", async (c) => {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
-    if (errorMessage === "The operation was aborted" || errorMessage === "AbortError") {
+    if (errorMessage.includes("Timeout") || errorMessage === "AbortError") {
       console.error(`[fetch-transcript] Timeout fetching transcript for ${videoId}`);
-      return c.json(
-        { error: "Transcript fetch timeout" },
-        504
-      );
+      return c.json({ error: "Transcript fetch timeout" }, 504);
+    }
+
+    if (errorMessage.includes("No captions") || errorMessage.includes("empty")) {
+      return c.json({ error: errorMessage }, 404);
     }
 
     console.error(`[fetch-transcript] Error for ${videoId}:`, errorMessage);

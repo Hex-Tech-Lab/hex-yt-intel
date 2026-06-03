@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
 import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
@@ -8,7 +8,7 @@ import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import { StreamingGrid, Dimension } from '@/components/templates/console/StreamingGrid';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
-import { ProcessingLog, LogLine } from '@/components/templates/console/ProcessingLog';
+import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
@@ -113,23 +113,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     });
   }, [projection, status]);
 
-  // Handle log lines from streaming status
-  const [logLines, setLogLines] = useState<LogLine[]>([]);
-
-  useEffect(() => {
-    if (status === 'downloading') {
-      setLogLines([{ timestamp: new Date().toLocaleTimeString(), type: 'info', message: 'Initializing ingestion engine...' }]);
-    } else if (status === 'analyzing') {
-      setLogLines(prev => [...prev, { timestamp: new Date().toLocaleTimeString(), type: 'ok', message: 'Stream established. Parsing UCIS dimensions...' }]);
-    } else if (status === 'complete') {
-      setLogLines(prev => [...prev, { timestamp: new Date().toLocaleTimeString(), type: 'ok', message: 'Synthesis complete. Knowledge graph updated.' }]);
-    } else if (status === 'error') {
-      setLogLines(prev => [...prev, { timestamp: new Date().toLocaleTimeString(), type: 'error', message: error?.message || 'Synthesis aborted.' }]);
-    } else if (status === 'idle') {
-      setLogLines([]);
-    }
-  }, [status, error]);
-
   return (
     <DashboardLayout
       sidebar={
@@ -182,7 +165,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               />
 
               <ProcessingLog
-                lines={logLines}
                 status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
               />
             </>
