@@ -44,13 +44,19 @@ export class SynthesisStreamAdapter {
     try {
       data = JSON.parse(line);
     } catch (err) {
-      console.error('[Adapter] JSON parse failed:', err, 'line:', line);
+      console.error('[Adapter] JSON parse failed:', err, 'line:', line.slice(0, 200));
       return;
     }
 
     // Validate against union type
     const validation = validateFragment(data);
-    if (!validation.success) return;
+    if (!validation.success) {
+      console.error('[Adapter] Fragment validation failed, skipping:', {
+        errors: validation.error.flatten(),
+        data: JSON.stringify(data).slice(0, 200),
+      });
+      return;
+    }
 
     const fragment = validation.data;
 
