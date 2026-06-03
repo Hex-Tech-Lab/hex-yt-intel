@@ -8,7 +8,8 @@ export const maxDuration = 30;
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { detectPersona, type PersonaId } from '@/lib/prompts';
-import { applyRateLimit, getUserTier, refundMonthlyQuota } from '@/lib/rate-limit';
+import { guardTraffic, getUserTier } from '@/lib/services/traffic';
+import { chargeMonthlyQuota, refundMonthlyQuota } from '@/lib/services/billing';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
 import { AnalysisCreateSchema } from '@/lib/types/contracts';
@@ -84,11 +85,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Rate limit / quota (consumed once we authorize a generation)
-    const { allowed, response: limitResponse, headers: limitHeaders } = await applyRateLimit(request, 'analyses', userId, tier, userEmail);
-    if (!allowed && limitResponse) {
-      if (limitHeaders) Object.entries(limitHeaders).forEach(([k, v]) => limitResponse.headers.set(k, v));
-      return limitResponse;
+    // 3a. Traffic guard: per-minute rate limit (DDoS protection)
+    const { allowed: trafficAllowed, response: trafficResponse, headers: trafficHeaders } = await guardTraffic(request, 'analyses', userId, tier, userEmail);
+    if (!trafficAllowed && trafficResponse) {
+      return trafficResponse;
+    }
+
+    // 3b. Billing charge: monthly quota enforcement
+    const { allowed: quotaAllowed, response: quotaResponse } = await chargeMonthlyQuota(userId, tier, userEmail);
+    if (!quotaAllowed && quotaResponse) {
+      return quotaResponse;
     }
 
     // 4. Ingestion (parallel metadata + transcript)
@@ -150,7 +156,7 @@ export async function POST(request: NextRequest) {
     //    The system prompt is NOT included — the worker builds it server-side.
     const { sig, exp } = signStreamToken(videoId, analysisId);
     const responseHeaders = new Headers({ 'X-Active-Persona': persona });
-    if (limitHeaders) Object.entries(limitHeaders).forEach(([k, v]) => responseHeaders.set(k, v));
+    if (trafficHeaders) Object.entries(trafficHeaders).forEach(([k, v]) => responseHeaders.set(k, v));
 
     return NextResponse.json(
       {
