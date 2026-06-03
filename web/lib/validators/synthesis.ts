@@ -65,6 +65,11 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion('type', [
   }).strict(),
 
   z.object({
+    type: z.literal('delta'),
+    content: z.string(),
+  }).strict(),
+
+  z.object({
     type: z.literal('dimension'),
     dimension: z.number().int().min(1).max(11),
     name: z.string().min(1),

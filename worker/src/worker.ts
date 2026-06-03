@@ -993,6 +993,8 @@ app.post("/analyze-llm-stream", async (c) => {
             apiKey,
             (delta) => {
               finalText += delta;
+              // Emit raw delta for terminal/processing log
+              send({ type: 'delta', content: delta });
               // Parse the delta into dimensions and emit JSON fragments
               const fragments = dimensionParser.feed(delta);
               fragments.forEach(frag => send(frag));

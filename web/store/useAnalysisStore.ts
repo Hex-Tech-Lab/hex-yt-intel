@@ -6,9 +6,16 @@
 import { create } from 'zustand';
 import type { AnalysisResult, UseAnalysisStreamState, AnalysisStatus, AnalysisErrorState, VideoMetadata } from '@/lib/types';
 
+export interface LogLine {
+  timestamp: string;
+  type: 'info' | 'ok' | 'error' | 'debug';
+  message: string;
+}
+
 export interface AnalysisState extends UseAnalysisStreamState {
   analysisHistory: AnalysisResult[];
   videoMetadata: VideoMetadata | null;
+  terminalLines: LogLine[];
   setAnalysis: (analysis: AnalysisResult | null) => void;
   setIsLoading: (loading: boolean) => void;
   setStatus: (status: AnalysisStatus) => void;
@@ -20,6 +27,8 @@ export interface AnalysisState extends UseAnalysisStreamState {
   archiveCurrentAnalysis: () => void;
   clearHistory: () => void;
   appendMarkdown: (token: string) => void;
+  appendTerminalLine: (content: string) => void;
+  clearTerminal: () => void;
   initializeAnalysis: (id: string, title: string, initialMarkdown?: string) => void;
 }
 
@@ -32,6 +41,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   videoMetadata: null,
   lockoutTimeRemaining: 0,
   analysisHistory: [],
+  terminalLines: [],
 
   // Synchronous actions
   setAnalysis: (analysis) => set({ analysis }),
@@ -46,6 +56,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
       analysis: null,
       status: 'idle',
       error: null,
+      terminalLines: [],
     }),
 
   addToHistory: (analysis) =>
@@ -72,8 +83,21 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
         : null,
     })),
 
+  appendTerminalLine: (content) =>
+    set((state) => {
+      const newLine: LogLine = {
+        timestamp: new Date().toLocaleTimeString(),
+        type: 'info',
+        message: content,
+      };
+      return { terminalLines: [...state.terminalLines, newLine] };
+    }),
+
+  clearTerminal: () => set({ terminalLines: [] }),
+
   initializeAnalysis: (id, title, initialMarkdown = '') =>
     set({
       analysis: { id, title, analysis_markdown: initialMarkdown },
+      terminalLines: [],
     }),
 }));
