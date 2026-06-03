@@ -156,7 +156,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (!apiKey) {
         full =
           "I'm saving this thread to your history, but no model key is configured here yet. " +
-          'Once `OPENROUTER_API_KEY` is set, replies stream in live, grounded in the linked analysis.';
+          'Once a model key is set on the server, replies stream in live, grounded in the linked analysis.';
         send({ type: 'delta', content: full });
       } else {
         full = await streamOpenRouter(apiKey, grounding, history, (chunk) => send({ type: 'delta', content: chunk }));
