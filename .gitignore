@@ -17,3 +17,10 @@ test-results/
 playwright-report/
 docs/specs/.env_*
 .env*
+
+# Windows/WSL filesystem metadata
+*:Zone.Identifier
+# Cloudflare Wrangler local build artifacts
+.wrangler/
+# Binary design-system exports (source-of-truth lives as extracted .tsx/.css)
+design-system/*.zip

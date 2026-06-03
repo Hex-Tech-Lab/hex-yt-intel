@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Icon } from '@/components/templates/_shared/primitives';
 import { useSearch } from '@/hooks/useSearch';
 import SearchFilters from '@/components/search/filters';
 import ResultCard from '@/components/search/result-card';
@@ -19,8 +19,6 @@ import ResultCard from '@/components/search/result-card';
  * - Results grid with pagination
  * - Save searches (saved searches UI)
  * - Performance metrics
- *
- * Integrates with Chunk 7 API (/api/analyses/search)
  */
 export default function SearchPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -77,12 +75,6 @@ export default function SearchPage() {
       newSaved.add(resultId);
     }
     setSavedSearches(newSaved);
-
-    // TODO: Persist saved searches to database
-    // await fetch('/api/analyses/saved', {
-    //   method: 'POST',
-    //   body: JSON.stringify({ analysisId: resultId, isSaved: newSaved.has(resultId) }),
-    // });
   };
 
   const handleShareSearch = async (resultId: string) => {
@@ -107,7 +99,7 @@ export default function SearchPage() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-blue-500" size={40} />
+        <Icon icon="solar:refresh-linear" size={40} className="hx-anispin text-accent" />
       </div>
     );
   }
@@ -117,23 +109,23 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-void text-ink">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="hx-h1 mb-2">
             Search Your Analyses
           </h1>
-          <p className="text-gray-600">
+          <p className="hx-body-secondary">
             Find insights across your YouTube content intelligence reports
           </p>
         </div>
 
         {/* Search Input */}
         <div className="mb-6">
-          <div className="relative">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-              <Search size={20} />
+          <div className="relative hx-rise">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted">
+              <Icon icon="solar:magnifer-linear" size={20} />
             </div>
 
             <input
@@ -141,14 +133,14 @@ export default function SearchPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search semantically... (e.g., 'video production tips', 'marketing trends')"
-              className="w-full pl-12 pr-12 py-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              className="w-full pl-12 pr-12 py-4 bg-surface border-2 border-line rounded-lg focus:outline-none focus:border-accent transition-all text-ink"
               autoFocus
             />
 
             {/* Loading State */}
             {isLoading && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <Loader2 size={20} className="animate-spin text-blue-500" />
+                <Icon icon="solar:refresh-linear" size={20} className="hx-anispin text-accent" />
               </div>
             )}
 
@@ -156,7 +148,7 @@ export default function SearchPage() {
             {query && !isLoading && (
               <button
                 onClick={() => setQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink transition-colors"
                 aria-label="Clear search"
               >
                 ✕
@@ -167,11 +159,11 @@ export default function SearchPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="mb-6 p-4 bg-err/10 border border-err/20 rounded-lg flex items-start gap-3">
+            <Icon icon="solar:danger-circle-linear" size={20} className="text-err flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-red-900">Search Error</p>
-              <p className="text-sm text-red-700">{error}</p>
+              <p className="font-medium text-err">Search Error</p>
+              <p className="text-sm text-err/80">{error}</p>
             </div>
           </div>
         )}
@@ -196,13 +188,13 @@ export default function SearchPage() {
             {query && (
               <div className="mb-6 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-xl font-semibold text-ink">
                     Results
                   </h2>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-ink-muted">
                     {totalResults} found
                     {queryTime > 0 && (
-                      <span className="ml-2 text-gray-500">
+                      <span className="ml-2 text-ink-muted/60">
                         ({queryTime}ms)
                       </span>
                     )}
@@ -213,14 +205,14 @@ export default function SearchPage() {
 
             {/* Empty State */}
             {!query && !isLoading && (
-              <div className="text-center py-16">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                  <Search size={32} className="text-blue-600" />
+              <div className="text-center py-16 hx-rise">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-surface border border-line rounded-full mb-4">
+                  <Icon icon="solar:magnifer-linear" size={32} className="text-accent" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-semibold text-ink mb-2">
                   Start Searching
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-ink-muted">
                   Enter a search query to find insights across your analyses
                 </p>
               </div>
@@ -231,19 +223,19 @@ export default function SearchPage() {
               !isLoading &&
               results.length === 0 &&
               !error && (
-                <div className="text-center py-16">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-                    <Search size={32} className="text-gray-400" />
+                <div className="text-center py-16 hx-rise">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-surface border border-line rounded-full mb-4">
+                    <Icon icon="solar:magnifer-linear" size={32} className="text-ink-muted" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="text-xl font-semibold text-ink mb-2">
                     No Results Found
                   </h3>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-ink-muted mb-4">
                     Try adjusting your search query or filters
                   </p>
                   <button
                     onClick={handleClearAll}
-                    className="text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-accent hover:text-accent-ink font-medium"
                   >
                     Clear all filters
                   </button>
@@ -272,13 +264,13 @@ export default function SearchPage() {
                 <button
                   onClick={prevPage}
                   disabled={currentPage === 1}
-                  className="flex items-center gap-2 px-4 py-2 bg-surface border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-surface border border-line rounded-lg hover:bg-surface-raised disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-ink-secondary"
                 >
-                  <ChevronLeft size={18} />
+                  <Icon icon="solar:alt-arrow-left-linear" size={18} />
                   Previous
                 </button>
 
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-ink-muted">
                   Page {currentPage}
                   {hasNextPage && ' (more results available)'}
                 </div>
@@ -286,10 +278,10 @@ export default function SearchPage() {
                 <button
                   onClick={nextPage}
                   disabled={!hasNextPage}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-accent text-void rounded-lg hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
                 >
                   Next
-                  <ChevronRight size={18} />
+                  <Icon icon="solar:alt-arrow-right-linear" size={18} />
                 </button>
               </div>
             )}
@@ -299,7 +291,7 @@ export default function SearchPage() {
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <div key={i} className="animate-pulse">
-                    <div className="h-32 bg-gray-200 rounded-lg" />
+                    <div className="h-32 bg-surface rounded-lg border border-line" />
                   </div>
                 ))}
               </div>

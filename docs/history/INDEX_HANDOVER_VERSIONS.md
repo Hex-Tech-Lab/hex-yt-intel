@@ -7,16 +7,22 @@
 
 ## Current State (LATEST)
 
-### 📌 HANDOVER_REPORT_2026-06-01.md (CURRENT ✅)
-- **Type**: Strategic State Snapshot (ADR 005 Alignment)
-- **Date**: 2026-06-01
-- **Scope**: Hybrid Edge Architecture (Vercel/CF Symphony)
+- **2026-06-03 · web 1.4.3 · `feat(ui): finalize v5.1 console integration`** — Synthesis Console (stateless TSX design system) live at `/` + `/dashboard`; dynamic session/quota wiring; legacy dashboard cluster excised; Decodo v2 transcript extraction fixed (live-verified) + transcript-required policy with quota refund on ingestion failure (`decrement_user_quota`, live-verified).
+
+### 📌 HANDOVER_REPORT_2026-06-03_INTEGRATION.md (prior)
+- **Type**: Integration Restoration Snapshot (Auth + Edge Hardening)
+- **Date**: 2026-06-03
+- **Scope**: Fixed OAuth redirect loops, blocked zero-length transcripts at bouncer, and hardened edge worker.
 - **Content**:
-  - Finalized "Bouncer" vs "Streaming Engine" role separation.
-  - Implemented HMAC-signed server-to-server `/persist` route.
-  - Documented ADR 005: Cryptographic Isolation and Quota Fortress.
-  - Updated Agent runbooks for Vertical Execution (CCT1).
-- **Use For**: Phase 2 implementation, security audits, and multi-cloud orchestration.
+  - Dynamicized Supabase OAuth redirect to honor local client origin.
+  - Implemented strict transcript validation in `/api/analyses` (halt on empty).
+  - Hardened Cloudflare Worker against socket crashes on empty payloads.
+  - Verified full quality gate stack (type-check, build) across workspaces.
+- **Use For**: Local development stabilization and production resilience.
+
+### 📌 HANDOVER_REPORT_2026-06-03.md (STABILIZED)
+
+### 📌 HANDOVER_REPORT_2026-06-01.md (STABILIZED)
 
 ### 📌 HANDOVER_REPORT_2026-05-21.md (STABILIZED)
 - **Type**: Strategic State Snapshot (10x THOS)

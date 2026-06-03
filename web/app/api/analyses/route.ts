@@ -8,7 +8,7 @@ export const maxDuration = 30;
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { detectPersona, type PersonaId } from '@/lib/prompts';
-import { applyRateLimit, getUserTier } from '@/lib/rate-limit';
+import { applyRateLimit, getUserTier, refundMonthlyQuota } from '@/lib/rate-limit';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
 import { AnalysisCreateSchema } from '@/lib/types/contracts';
@@ -98,17 +98,29 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (metadataResult.status === 'rejected') {
+      // Quota was charged at step 3; ingestion failed before any generation ran. Refund it.
+      await refundMonthlyQuota(userId, userEmail);
       return NextResponse.json({ error: 'Failed to fetch video metadata', code: 'ERR_METADATA_FETCH' }, { status: 502 });
     }
     const metadata = metadataResult.value;
 
     let transcript = '';
-    let transcriptWarning: string | undefined;
-    if (transcriptResult.status === 'rejected' || (transcriptResult.status === 'fulfilled' && !transcriptResult.value.success)) {
-      console.warn('[analyses] Transcript fetch failed, metadata-only analysis', { videoId });
-      transcriptWarning = 'Transcript unavailable: video has no subtitles or extraction failed. Analysis limited to metadata.';
-    } else {
+    if (transcriptResult.status === 'fulfilled' && transcriptResult.value.success) {
       transcript = transcriptResult.value.transcript ?? '';
+    }
+
+    if (!transcript || transcript.trim().length === 0) {
+      console.warn('[analyses] Empty transcript, halting analysis', { videoId });
+      // Transcript Absolutism: no usable source means no analysis can run. The quota
+      // unit charged at step 3 must be refunded so a subtitle-less video costs nothing.
+      await refundMonthlyQuota(userId, userEmail);
+      return NextResponse.json(
+        {
+          error: 'Transcript unavailable: video has no subtitles or extraction failed. Full synthesis requires a textual source.',
+          code: 'ERR_TRANSCRIPT_REQUIRED'
+        },
+        { status: 400 }
+      );
     }
 
     const persona = (validation.data.persona as PersonaId) || detectPersona(metadata.title, metadata.channelTitle);
@@ -126,9 +138,8 @@ export async function POST(request: NextRequest) {
       model_used: 'edge-stream',
       validation_report: {
         status: 'processing',
-        transcript_available: !!transcript,
-        analysis_type: transcript ? 'full' : 'metadata-only',
-        warning: transcriptWarning,
+        transcript_available: true,
+        analysis_type: 'full',
         stale_after: new Date(Date.now() + PROCESSING_STALE_MS).toISOString(),
       },
       validation_passed: false,
@@ -151,7 +162,6 @@ export async function POST(request: NextRequest) {
         persona,
         timezone,
         transcript,
-        transcriptWarning,
         metadata: {
           title: metadata.title,
           channelTitle: metadata.channelTitle,

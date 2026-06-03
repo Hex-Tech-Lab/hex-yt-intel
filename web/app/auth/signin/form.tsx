@@ -1,12 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 
 export default function SignInForm() {
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +15,7 @@ export default function SignInForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: oauthProvider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackUrl)}`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (error) {

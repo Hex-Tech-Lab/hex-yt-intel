@@ -1,31 +1,40 @@
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Providers } from "./providers"
+import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
+import "./globals.css";
+import { Providers } from "./providers";
 
-// Self-hosted Inter (Next.js inlines the woff2 at build — no runtime CDN dependency).
-// Replaces the prior huly.io @font-face remnants in page.module.css.
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
-})
+  variable: "--inter-font",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--mono-font",
+});
 
 export const metadata: Metadata = {
   title: "Hex YT Intel | YouTube Synthesis Engine",
   description: "AI-powered intelligence for video content",
-}
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="bg-surface text-primary antialiased">
         <Providers>{children}</Providers>
+        <Script
+          src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"
+          strategy="beforeInteractive"
+        />
       </body>
     </html>
-  )
+  );
 }
