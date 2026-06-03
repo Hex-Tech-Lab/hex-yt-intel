@@ -136,15 +136,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .limit(HISTORY_TURNS);
   const history = ((histRows as Row[]) || []).reverse();
 
-  // Optional grounding from the linked analysis.
+  // Grounding from the linked analysis. If the markdown is ready, ground fully; if the
+  // analysis is still streaming (row exists but markdown empty), still tell the model
+  // which video it is + that the analysis is in progress — so it never asks "what video?"
+  // and can answer from the title/metadata instead of giving a clueless generic reply.
   let grounding = '';
   if (conv.analysis_id) {
-    const { data: a } = await supabase.from('analyses').select('title, analysis_markdown').eq('id', conv.analysis_id).maybeSingle();
-    if (a?.analysis_markdown) {
-      grounding =
-        `You are grounded in this YouTube analysis titled "${a.title ?? ''}". ` +
-        `Answer using its content; be concise and cite dimension names where relevant.\n\n` +
-        String(a.analysis_markdown).slice(0, 12000);
+    const { data: a } = await supabase
+      .from('analyses')
+      .select('title, channel_title, analysis_markdown, validation_report')
+      .eq('id', conv.analysis_id)
+      .maybeSingle();
+    if (a) {
+      const md = typeof a.analysis_markdown === 'string' ? a.analysis_markdown : '';
+      const status = (a.validation_report as any)?.status;
+      if (md.trim().length > 0) {
+        grounding =
+          `You are the analyst for the YouTube video "${a.title ?? ''}"${a.channel_title ? ` by ${a.channel_title}` : ''}. ` +
+          `Answer the user's questions using the structured analysis below; be concise and cite dimension names where relevant. ` +
+          `Do not ask which video — you have it.\n\n--- ANALYSIS ---\n` +
+          md.slice(0, 12000);
+      } else {
+        grounding =
+          `You are the analyst for the YouTube video "${a.title ?? ''}"${a.channel_title ? ` by ${a.channel_title}` : ''}. ` +
+          `The full ${status === 'processing' ? 'analysis is still being generated' : 'analysis is not available yet'} — answer from the title/topic ` +
+          `and let the user know richer answers will be available once the synthesis finishes. Never claim you don't know which video this is.`;
+      }
     }
   }
 
