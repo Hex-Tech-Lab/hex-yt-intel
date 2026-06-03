@@ -57,7 +57,12 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   }, [open, activeId, selectConversation]);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+    const el = listRef.current;
+    if (!el) return;
+    // Only autoscroll if the user is already near the bottom — don't yank them down
+    // when they've scrolled up to read earlier messages.
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, sending, open]);
 
   const handleSend = async () => {
