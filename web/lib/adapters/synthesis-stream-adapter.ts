@@ -77,6 +77,7 @@ export class SynthesisStreamAdapter {
         this.handleMetadata(fragment);
         break;
       case 'complete':
+      case 'done':
         this.handleComplete(fragment);
         break;
       case 'error':
@@ -169,7 +170,7 @@ export class SynthesisStreamAdapter {
    * Handle completion fragment: mark stream as complete
    */
   private handleComplete(fragment: {
-    type: 'complete';
+    type: 'complete' | 'done';
     model: string;
     valid: boolean;
     videoId: string;
