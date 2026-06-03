@@ -9,6 +9,7 @@ import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import { StreamingGrid, Dimension } from '@/components/templates/console/StreamingGrid';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { ProcessingLog, LogLine } from '@/components/templates/console/ProcessingLog';
+import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
@@ -26,6 +27,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { startAnalysis } = useSSEStream();
   const { projection } = useSynthesisNucleus();
   const [search, setSearch] = useState('');
+  const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
 
   const tierLabel = profile.tier === 'pro' ? 'Pro' : profile.tier === 'free' ? 'Free' : profile.tier;
   const quotaLabel =
@@ -133,8 +135,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       sidebar={
         <Sidebar
           items={sidebarItems}
-          activeKey="console"
-          onNavigate={(key) => console.log('Navigate to', key)}
+          activeKey={activeNav}
+          onNavigate={(key) => setActiveNav(key as 'console' | 'history' | 'settings')}
           repoScope={{ label: 'Main Graph', onClick: () => {} }}
         />
       }
@@ -147,40 +149,48 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         />
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 48, paddingBottom: 80 }}>
-        <AnalysisHero
-          url={url}
-          status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
-          onUrlChange={setUrl}
-          onAnalyze={handleAnalyze}
-          error={error?.message}
-          quota={quotaLabel}
-        />
-
-        {videoMetadata && (
-          <BentoMetadata
-            title={videoMetadata.title}
-            channelTitle={videoMetadata.channelTitle}
-            viewCount={videoMetadata.viewCount}
-            likeCount={videoMetadata.likeCount}
-            duration={videoMetadata.duration || 0}
-            publishedAt={videoMetadata.publishedAt}
+      {activeNav === 'console' ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 48, paddingBottom: 80 }}>
+          <AnalysisHero
+            url={url}
+            status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
+            onUrlChange={setUrl}
+            onAnalyze={handleAnalyze}
+            error={error?.message}
+            quota={quotaLabel}
           />
-        )}
 
-        {status === 'complete' && <PersonaSelector />}
+          {videoMetadata && (
+            <BentoMetadata
+              title={videoMetadata.title}
+              channelTitle={videoMetadata.channelTitle}
+              viewCount={videoMetadata.viewCount}
+              likeCount={videoMetadata.likeCount}
+              duration={videoMetadata.duration || 0}
+              publishedAt={videoMetadata.publishedAt}
+            />
+          )}
 
-        <StreamingGrid
-          dimensions={dimensions}
-          progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
-          onOpenDimension={(key) => console.log('Open dimension', key)}
-        />
+          {status === 'complete' && <PersonaSelector />}
 
-        <ProcessingLog
-          lines={logLines}
-          status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
-        />
-      </div>
+          <StreamingGrid
+            dimensions={dimensions}
+            progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
+            onOpenDimension={(key) => console.log('Open dimension', key)}
+          />
+
+          <ProcessingLog
+            lines={logLines}
+            status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
+          />
+        </div>
+      ) : activeNav === 'history' ? (
+        <AnalysisHistory />
+      ) : (
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--ink-secondary)' }}>
+          Settings coming soon...
+        </div>
+      )}
     </DashboardLayout>
   );
 }
