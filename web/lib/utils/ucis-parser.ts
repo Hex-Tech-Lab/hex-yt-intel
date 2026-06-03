@@ -14,11 +14,14 @@ export interface UCISSections {
 }
 
 function extractSection(markdown: string, dimensionNumber: number): string {
-  // Match "### DIMENSION N – Title" then skip to content on next lines
-  // Pattern: header + title line, then capture content until next DIMENSION
-  // Uses a space/boundary after the number to avoid matching "1" in "11"
+  // Match "### DIMENSION N <sep> Title" then skip to content on next lines.
+  // Separator is tolerant of LLM typography: hyphen, en-dash, em-dash, or colon
+  // ([-–—:]). \s* (not \s+) lets "DIMENSION 1: Title" (no space before colon)
+  // match while the separator class — which contains no digit — still prevents
+  // dimension 1 from matching "DIMENSION 11" (the char after "1" would be "1",
+  // not a separator).
   const dimensionRegex = new RegExp(
-    `^### DIMENSION ${dimensionNumber}\\s+[–-][^\\n]*\\n([\\s\\S]*?)(?=\\n### DIMENSION|$)`,
+    `^### DIMENSION ${dimensionNumber}\\s*[-–—:][^\\n]*\\n([\\s\\S]*?)(?=\\n### DIMENSION|$)`,
     'mi'
   );
 

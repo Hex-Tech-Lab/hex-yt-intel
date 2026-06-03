@@ -140,6 +140,12 @@ export async function middleware(request: NextRequest) {
     '/api/health',         // Health check endpoint
     '/api/metadata',       // Public video metadata endpoint
     '/api/transcript-proxy', // Transcript proxy (diagnostic bypass for routing validation)
+    // S2S persist: the Cloudflare Worker posts here from ctx.waitUntil with NO
+    // cookies. It is gated by an HMAC content signature inside the handler, not
+    // by session auth — so it must bypass the cookie-based middleware gate.
+    // Without this it matches the '/api/analyses' protected prefix and the
+    // worker's call dies with a 401 ("Auth session missing!").
+    '/api/analyses/persist',
   ];
 
   if (publicRoutes.some(route => pathname.startsWith(route))) {
