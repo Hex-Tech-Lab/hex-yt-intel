@@ -25,4 +25,8 @@ ON CONFLICT (id) DO UPDATE SET
   tier = 'free',
   updated_at = NOW();
 
-RAISE NOTICE 'Test user seeded: kellybakri@gmail.com (free tier, 0/3 analyses used)';
+-- RAISE is plpgsql-only; a bare top-level RAISE is invalid SQL and broke fresh-DB
+-- replay (Supabase preview branches). Wrapped in a DO block.
+DO $$ BEGIN
+  RAISE NOTICE 'Test user seeded: kellybakri@gmail.com (free tier, 0/3 analyses used)';
+END $$;

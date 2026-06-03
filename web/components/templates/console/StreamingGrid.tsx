@@ -41,7 +41,7 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
           tabIndex={interactive ? 0 : undefined}
           aria-label={interactive ? `Open ${label} dimension` : undefined}
           data-status={status}
-          className={interactive ? "hx-liftcard" : ""}
+          className={`${interactive ? "hx-liftcard" : ""} ${streaming ? "animate-flare" : ""}`}
           style={{
             display: "flex",
             flexDirection: "column",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
 import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
@@ -8,12 +8,17 @@ import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import { StreamingGrid, Dimension } from '@/components/templates/console/StreamingGrid';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
-import { ProcessingLog, LogLine } from '@/components/templates/console/ProcessingLog';
+import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
+import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
+import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
+import { ChatDock } from '@/components/templates/console/ChatDock';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
+import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
+import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 
 export interface DashboardContainerProps {
@@ -25,9 +30,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { status, error, videoMetadata, analysisHistory } = useAnalysisStore();
   const { url, setUrl } = useInputStore();
   const { startAnalysis } = useSSEStream();
-  const { projection } = useSynthesisNucleus();
+  const { projection, analysis } = useSynthesisNucleus();
+  const { graph, ready: graphReady } = useKnowledgeGraph();
   const [search, setSearch] = useState('');
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
+  const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const tierLabel = profile.tier === 'pro' ? 'Pro' : profile.tier === 'free' ? 'Free' : profile.tier;
   const quotaLabel =
@@ -113,23 +121,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     });
   }, [projection, status]);
 
-  // Handle log lines from streaming status
-  const [logLines, setLogLines] = useState<LogLine[]>([]);
-
-  useEffect(() => {
-    if (status === 'downloading') {
-      setLogLines([{ timestamp: new Date().toLocaleTimeString(), type: 'info', message: 'Initializing ingestion engine...' }]);
-    } else if (status === 'analyzing') {
-      setLogLines(prev => [...prev, { timestamp: new Date().toLocaleTimeString(), type: 'ok', message: 'Stream established. Parsing UCIS dimensions...' }]);
-    } else if (status === 'complete') {
-      setLogLines(prev => [...prev, { timestamp: new Date().toLocaleTimeString(), type: 'ok', message: 'Synthesis complete. Knowledge graph updated.' }]);
-    } else if (status === 'error') {
-      setLogLines(prev => [...prev, { timestamp: new Date().toLocaleTimeString(), type: 'error', message: error?.message || 'Synthesis aborted.' }]);
-    } else if (status === 'idle') {
-      setLogLines([]);
-    }
-  }, [status, error]);
-
   return (
     <DashboardLayout
       sidebar={
@@ -150,7 +141,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       }
     >
       {activeNav === 'console' ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 48, paddingBottom: 80 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 32, paddingBottom: 112 }}>
           <AnalysisHero
             url={url}
             status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
@@ -171,20 +162,86 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             />
           )}
 
-          {status === 'complete' && <PersonaSelector />}
-
           {status !== 'idle' && (
             <>
-              <StreamingGrid
-                dimensions={dimensions}
-                progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
-                onOpenDimension={(key) => console.log('Open dimension', key)}
-              />
+              {/* Tab bar: Synthesis grid vs. Knowledge graph */}
+              <div style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 12, border: '1px solid var(--line)', background: 'rgb(11 14 20 / 0.5)', alignSelf: 'flex-start' }}>
+                {([
+                  { key: 'synthesis', label: 'Synthesis', icon: 'solar:widget-5-linear' },
+                  { key: 'graph', label: 'Knowledge Graph', icon: 'solar:share-circle-linear', disabled: !graphReady },
+                ] as const).map((t) => {
+                  const active = consoleTab === t.key;
+                  const disabled = 'disabled' in t && t.disabled;
+                  return (
+                    <button
+                      key={t.key}
+                      disabled={disabled}
+                      onClick={() => setConsoleTab(t.key as 'synthesis' | 'graph')}
+                      title={disabled ? 'Available once ≥2 dimensions are synthesized' : undefined}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 9,
+                        border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+                        background: active ? 'var(--accent)' : 'transparent',
+                        color: active ? 'var(--void)' : disabled ? 'var(--ink-muted)' : 'var(--ink-secondary)',
+                        fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, opacity: disabled ? 0.5 : 1,
+                        transition: 'background 0.15s, color 0.15s',
+                      }}
+                    >
+                      <Icon icon={t.icon} size={15} />
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
 
-              <ProcessingLog
-                lines={logLines}
-                status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
-              />
+              {consoleTab === 'synthesis' ? (
+                <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 32 }}>
+                    {status === 'complete' && <PersonaSelector />}
+                    <StreamingGrid
+                      dimensions={dimensions}
+                      progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
+                      onOpenDimension={(key) => setSelectedNodeId(`dim-${key.replace('dim-', '')}`)}
+                    />
+                    <ProcessingLog
+                      status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
+                    />
+                  </div>
+
+                  {graphReady && (
+                    <aside style={{ width: 340, flexShrink: 0, position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--ink-secondary)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Intelligence</span>
+                        <button
+                          onClick={() => setConsoleTab('graph')}
+                          title="Open full graph"
+                          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent', color: 'var(--accent-ink)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}
+                        >
+                          <Icon icon="solar:maximize-square-linear" size={13} /> expand
+                        </button>
+                      </div>
+                      <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} compact height={260} />
+                      <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
+                    </aside>
+                  )}
+                </div>
+              ) : graphReady ? (
+                <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={580} />
+                    <p style={{ marginTop: 10, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.6 }}>
+                      Left-click to inspect · right-click to pin &amp; focus · drag to reposition · scroll to zoom
+                    </p>
+                  </div>
+                  <aside style={{ width: 360, flexShrink: 0, position: 'sticky', top: 16 }}>
+                    <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
+                  </aside>
+                </div>
+              ) : (
+                <div style={{ padding: 64, textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 12.5, border: '1px dashed var(--line)', borderRadius: 14 }}>
+                  The knowledge graph builds once at least two dimensions are synthesized.
+                </div>
+              )}
             </>
           )}
         </div>
@@ -195,6 +252,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           Settings coming soon...
         </div>
       )}
+
+      {/* Persistent chat dock — mounted once, survives tab switches */}
+      <ChatDock analysisId={analysis?.id ?? null} analysisTitle={videoMetadata?.title} />
     </DashboardLayout>
   );
 }
