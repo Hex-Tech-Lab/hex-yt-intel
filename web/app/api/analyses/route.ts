@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       title: metadata.title,
       channelTitle: metadata.channelTitle,
       publishedAt: metadata.publishedAt,
-      duration: metadata.duration || 0,
+      duration: metadata.duration ?? 0,
       viewCount: String(metadata.viewCount),
       likeCount: String(metadata.likeCount),
       commentCount: String(metadata.commentCount),
