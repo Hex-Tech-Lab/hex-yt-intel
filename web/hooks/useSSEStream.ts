@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
+import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
 
 export function useSSEStream() {
@@ -83,10 +84,24 @@ export function useSSEStream() {
             setVideoMetadata(job.metadata);
           }
 
-          // 3. Cache hit — render immediately.
+          // 3. Cache hit — render immediately with full rehydration.
           if (job.status === 'done' && job.markdown) {
+            // Parse cached markdown back into UCIS dimensions for synthesis nucleus
+            const parsedDimensions = parseToUCISDimensions(job.markdown);
+
             initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result', job.markdown);
-            initSynthesis(job);
+
+            // Rehydrate synthesis nucleus with parsed dimensions + cache-hit metadata
+            initSynthesis({
+              ...job,
+              dimensions: parsedDimensions,
+              streaming: {
+                started: job.analysisAt || new Date().toISOString(),
+                interrupted: false,
+                dimensionsReceived: Object.keys(parsedDimensions).map(Number),
+              },
+            });
+
             setStatus('complete');
             setIsLoading(false);
             archiveCurrentAnalysis();

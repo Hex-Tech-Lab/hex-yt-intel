@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (!validation.data.forceRefresh) {
       const { data: existing } = await supabase
         .from('analyses')
-        .select('id, title, analysis_markdown, created_at, validation_report')
+        .select('id, title, analysis_markdown, created_at, validation_report, validation_passed')
         .eq('video_id', videoId)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -66,11 +66,16 @@ export async function POST(request: NextRequest) {
         const cachedReport = (existing.validation_report ?? {}) as { metadata?: AnalysisJobMetadata; persona?: string; timezone?: string };
         const cachedPersona = cachedReport.persona || 'analyst';
 
-        // CRITICAL FIX: Shield against poisoned empty caches (see PR #40 context)
+        // CRITICAL FIX: Shield against poisoned empty caches and failed validations
+        // Only cache-hit on rows where: (1) markdown exists and is not empty, (2) validation_passed = true
         const hasMarkdown = existing.analysis_markdown.trim().length > 0;
-        
-        if (!hasMarkdown) {
-          console.warn(`[Bouncer] Poisoned cache detected for analysis ${existing.id}. Purging row and re-running.`);
+        const isValidated = existing.validation_passed === true;
+
+        if (!hasMarkdown || !isValidated) {
+          console.warn(`[Bouncer] Poisoned cache detected for analysis ${existing.id}. Purging row and re-running.`, {
+            hasMarkdown,
+            isValidated
+          });
           // Delete the corrupted row so the next step creates a fresh one
           await supabase.from('analyses').delete().eq('id', existing.id);
         } else {
