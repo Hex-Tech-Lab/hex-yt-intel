@@ -30,6 +30,7 @@ interface ChatState {
   deleteConversation: (id: string) => Promise<void>;
   bindNetwork: () => void;
   flushOutbox: () => Promise<void>;
+  reset: () => void;
 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -295,6 +296,15 @@ export const useChatStore = create<ChatState>((set, get) => {
       } finally {
         set({ sending: false });
       }
+    },
+
+    reset: () => {
+      set({
+        activeId: null,
+        messagesByConv: {},
+        error: null,
+        sending: false,
+      });
     },
   };
 });
