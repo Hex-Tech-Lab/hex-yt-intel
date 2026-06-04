@@ -7,6 +7,7 @@ import { cors } from "hono/cors";
 import { TranscriptExtractor } from "./services/TranscriptExtractor";
 import { MetadataScraper } from "./services/MetadataScraper";
 import { ReasoningEngine } from "./services/ReasoningEngine";
+import { handleChatStream } from "./chat-stream";
 
 type Env = {
   YOUTUBE_API_KEY: string;
@@ -454,5 +455,9 @@ app.post("/analyze-llm-stream", async (c) => {
     },
   });
 });
+
+// Direct browser->worker chat streaming (HMAC-gated; persists S2S). Keeps
+// conversational tokens off the Vercel function path. See ./chat-stream.
+app.post("/chat-stream", handleChatStream);
 
 export default app;

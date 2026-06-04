@@ -5,7 +5,7 @@ export const maxDuration = 60;
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import type { ChatMessage, ChatRole } from '@/lib/types/chat';
-import { CHAT_PROTOCOL, CHAT_MODELS } from '@/lib/config/prompts';
+import { signChatToken } from '@/lib/stream-token';
 
 type Row = {
   id: string;
@@ -114,10 +114,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .limit(1)
       .maybeSingle();
     if (laterAssistant) {
-      return sse((send) => {
-        send({ type: 'user', message: toMsg(userRow!) });
-        send({ type: 'done', message: toMsg(laterAssistant as Row) });
-      });
+      // Already answered on a prior attempt — return both turns, no regeneration.
+      return NextResponse.json({ user: toMsg(userRow!), assistant: toMsg(laterAssistant as Row) });
     }
   }
 
@@ -166,126 +164,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   }
 
-  const userMsg = toMsg(userRow);
-  const apiKey = process.env.OPENROUTER_API_KEY;
-
-  return sse(async (send) => {
-    send({ type: 'user', message: userMsg });
-    if (newTitle) send({ type: 'title', title: newTitle });
-
-    let full = '';
-    try {
-      if (!apiKey) {
-        full =
-          "I'm saving this thread to your history, but no model key is configured here yet. " +
-          'Once a model key is set on the server, replies stream in live, grounded in the linked analysis.';
-        send({ type: 'delta', content: full });
-      } else {
-        full = await streamOpenRouter(apiKey, grounding, history, (chunk) => send({ type: 'delta', content: chunk }));
-        if (!full) full = 'No response generated.';
-      }
-    } catch {
-      full = 'The model request failed. Your message is saved — please try again.';
-      send({ type: 'delta', content: full });
-    }
-
-    const { data: aRow } = await supabase
-      .from('chat_messages')
-      .insert({ conversation_id: id, user_id: user.id, role: 'assistant', content: full })
-      .select(COLS)
-      .single();
-    if (aRow) send({ type: 'done', message: toMsg(aRow as Row) });
-    else send({ type: 'error', error: 'Failed to persist reply' });
-  });
-}
-
-// --- SSE helpers -----------------------------------------------------------
-
-function sse(producer: (send: (obj: unknown) => void) => void | Promise<void>): Response {
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (obj: unknown) => {
-        try {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
-        } catch {
-          /* client gone */
-        }
-      };
-      try {
-        await producer(send);
-      } finally {
-        controller.close();
-      }
+  // Bouncer: mint an HMAC token and hand the browser everything it needs to stream the
+  // reply directly from the worker (/chat-stream). The LLM tokens never traverse this
+  // Vercel function; the worker persists the assistant turn S2S via /api/chat/persist.
+  const { sig, exp } = signChatToken(id, user.id);
+  return NextResponse.json({
+    user: toMsg(userRow),
+    ...(newTitle ? { title: newTitle } : {}),
+    stream: {
+      url: `${process.env.NEXT_PUBLIC_WORKER_URL || ''}/chat-stream`,
+      sig,
+      exp,
+    },
+    payload: {
+      conversationId: id,
+      userId: user.id,
+      grounding,
+      history: history.map((m) => ({ role: m.role, content: m.content })),
     },
   });
-  return new Response(stream, {
-    headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' },
-  });
-}
-
-async function streamOpenRouter(
-  apiKey: string,
-  grounding: string,
-  history: Row[],
-  onDelta: (chunk: string) => void
-): Promise<string> {
-  const messages: Array<{ role: string; content: string }> = [{ role: 'system', content: CHAT_PROTOCOL }];
-  if (grounding) messages.push({ role: 'system', content: grounding });
-  for (const m of history) messages.push({ role: m.role, content: m.content });
-
-  // Try models in order; commit to the first that produces tokens.
-  for (const model of CHAT_MODELS) {
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 50000);
-    let full = '';
-    try {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://yt-intel.getmytestdrive.com' },
-        body: JSON.stringify({
-          model,
-          temperature: 0.6,
-          max_tokens: 1200,
-          stream: true,
-          reasoning: { effort: 'low' },
-          messages,
-        }),
-        signal: controller.signal,
-      });
-      if (!res.ok || !res.body) continue; // try next model
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith('data:')) continue;
-          const payload = trimmed.slice(5).trim();
-          if (payload === '[DONE]') continue;
-          try {
-            const json = JSON.parse(payload);
-            const delta = json.choices?.[0]?.delta?.content;
-            if (delta) {
-              full += delta;
-              onDelta(delta);
-            }
-          } catch {
-            /* keep-alive / partial */
-          }
-        }
-      }
-      if (full) return full; // committed to this model
-    } catch {
-      /* timeout / network — fall through to next model */
-    } finally {
-      clearTimeout(t);
-    }
-  }
-  return '';
 }

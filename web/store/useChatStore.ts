@@ -88,25 +88,62 @@ export const useChatStore = create<ChatState>((set, get) => {
       };
     });
 
+    // 1. Bouncer (Vercel): persists the user turn to Postgres, mints an HMAC token, and
+    //    returns a descriptor for streaming the reply directly from the worker. Returns
+    //    JSON (not SSE) — the LLM tokens no longer traverse this Vercel function.
     const res = await fetch(`/api/chat/conversations/${convId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content, clientMsgId }),
     });
     if (!res.ok) throw new Error(`${res.status}`);
+    const job = await res.json();
 
-    await readSSE(res, (e) => {
-      if (e.type === 'user') {
-        const real = e.message as ChatMessage;
-        set((s) => ({
-          messagesByConv: {
-            ...s.messagesByConv,
-            [convId]: (s.messagesByConv[convId] || []).map((m) => (m.clientMsgId === clientMsgId ? { ...real, clientMsgId } : m)),
-          },
-        }));
-      } else if (e.type === 'title') {
-        set((s) => ({ conversations: s.conversations.map((c) => (c.id === convId ? { ...c, title: e.title } : c)) }));
-      } else if (e.type === 'delta') {
+    // Reconcile the optimistic user bubble with the persisted row.
+    if (job.user) {
+      const real = job.user as ChatMessage;
+      set((s) => ({
+        messagesByConv: {
+          ...s.messagesByConv,
+          [convId]: (s.messagesByConv[convId] || []).map((m) => (m.clientMsgId === clientMsgId ? { ...real, clientMsgId } : m)),
+        },
+      }));
+    }
+    if (job.title) {
+      set((s) => ({ conversations: s.conversations.map((c) => (c.id === convId ? { ...c, title: job.title } : c)) }));
+    }
+
+    // Retry that already produced a reply on a prior attempt — finalize, no streaming.
+    if (job.assistant) {
+      const real = job.assistant as ChatMessage;
+      set((s) => ({
+        messagesByConv: {
+          ...s.messagesByConv,
+          [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? real : m)),
+        },
+      }));
+      outbox.remove(clientMsgId);
+      return;
+    }
+
+    if (!job.stream?.url) {
+      set({ error: 'Chat streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).' });
+      outbox.remove(clientMsgId);
+      return;
+    }
+
+    // 2. Stream the reply directly from the worker. It persists the assistant turn S2S
+    //    (/api/chat/persist), so the optimistic bubble below just holds the streamed
+    //    text and reconciles against Postgres on the next thread load.
+    const streamRes = await fetch(job.stream.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...job.payload, sig: job.stream.sig, exp: job.stream.exp }),
+    });
+    if (!streamRes.ok) throw new Error(`worker ${streamRes.status}`);
+
+    await readSSE(streamRes, (e) => {
+      if (e.type === 'delta') {
         set((s) => ({
           messagesByConv: {
             ...s.messagesByConv,
@@ -114,11 +151,11 @@ export const useChatStore = create<ChatState>((set, get) => {
           },
         }));
       } else if (e.type === 'done') {
-        const real = e.message as ChatMessage;
+        // Promote the optimistic bubble to a stable id (worker already persisted it).
         set((s) => ({
           messagesByConv: {
             ...s.messagesByConv,
-            [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? real : m)),
+            [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? { ...m, id: `assistant-${clientMsgId}` } : m)),
           },
         }));
       } else if (e.type === 'error') {

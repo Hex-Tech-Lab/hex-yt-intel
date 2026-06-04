@@ -206,7 +206,7 @@ async function handleSubscriptionEvent(
     // Find user by email
     const { data: users, error: queryError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, stripe_customer_id')
       .eq('email', userEmail)
       .maybeSingle();
 
@@ -216,6 +216,20 @@ async function handleSubscriptionEvent(
     }
 
     const userId = (users as any).id;
+
+    // SECURITY: Verify customer ownership (prevent cross-account pollution)
+    const existingCustomerId = (users as any).stripe_customer_id;
+    if (existingCustomerId && existingCustomerId !== customerId) {
+      console.error('[handleSubscriptionEvent] Customer ID mismatch for user:', userId, {
+        event: customerId,
+        stored: existingCustomerId,
+      });
+      Sentry.captureMessage('Stripe customer ID mismatch detected', {
+        level: 'error',
+        tags: { security: 'customer_ownership' },
+      });
+      return;
+    }
 
     // Update user tier and subscription
     const updateData: Record<string, any> = {
@@ -278,7 +292,7 @@ async function handleSubscriptionCanceled(
     // Find user by email
     const { data: users, error: queryError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, stripe_customer_id')
       .eq('email', customer.email)
       .maybeSingle();
 
@@ -288,6 +302,20 @@ async function handleSubscriptionCanceled(
     }
 
     const userId = (users as any).id;
+
+    // SECURITY: Verify customer ownership
+    const existingCustomerId = (users as any).stripe_customer_id;
+    if (existingCustomerId && existingCustomerId !== customerId) {
+      console.error('[handleSubscriptionCanceled] Customer ID mismatch for user:', userId, {
+        event: customerId,
+        stored: existingCustomerId,
+      });
+      Sentry.captureMessage('Stripe customer ID mismatch on cancellation', {
+        level: 'error',
+        tags: { security: 'customer_ownership' },
+      });
+      return;
+    }
 
     // Downgrade user to free tier
     const downgradeData: Record<string, any> = {
@@ -348,12 +376,26 @@ async function handleInvoicePaid(
     // Find user
     const { data: users } = await supabase
       .from('users')
-      .select('id')
+      .select('id, stripe_customer_id')
       .eq('email', customer.email)
       .maybeSingle();
 
     if (users && typeof users === 'object' && 'id' in users) {
       const userId = (users as any).id;
+
+      // SECURITY: Verify customer ownership
+      const existingCustomerId = (users as any).stripe_customer_id;
+      if (existingCustomerId && existingCustomerId !== customerId) {
+        console.error('[handleInvoicePaid] Customer ID mismatch for user:', userId, {
+          event: customerId,
+          stored: existingCustomerId,
+        });
+        Sentry.captureMessage('Stripe customer ID mismatch on invoice payment', {
+          level: 'error',
+          tags: { security: 'customer_ownership' },
+        });
+        return;
+      }
       // Log payment
       const paymentData: Record<string, any> = {
         user_id: userId,
@@ -399,12 +441,26 @@ async function handleInvoiceFailed(
     // Find user
     const { data: users } = await supabase
       .from('users')
-      .select('id')
+      .select('id, stripe_customer_id')
       .eq('email', customer.email)
       .maybeSingle();
 
     if (users && typeof users === 'object' && 'id' in users) {
       const userId = (users as any).id;
+
+      // SECURITY: Verify customer ownership
+      const existingCustomerId = (users as any).stripe_customer_id;
+      if (existingCustomerId && existingCustomerId !== customerId) {
+        console.error('[handleInvoiceFailed] Customer ID mismatch for user:', userId, {
+          event: customerId,
+          stored: existingCustomerId,
+        });
+        Sentry.captureMessage('Stripe customer ID mismatch on invoice failure', {
+          level: 'error',
+          tags: { security: 'customer_ownership' },
+        });
+        return;
+      }
       // Log failure
       const failureData: Record<string, any> = {
         user_id: userId,
