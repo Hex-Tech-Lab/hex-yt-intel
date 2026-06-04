@@ -233,13 +233,22 @@ const CHAT_MODELS = [
   'nvidia/nemotron-3-nano-30b-a3b:free',
 ] as const;
 
+// Interaction protocol — keeps replies short and PING-PONG, never a wall-of-text dump.
+const CHAT_PROTOCOL = [
+  'You are a concise, interactive analyst. NEVER dump. Hard rules:',
+  '1) Answer in at most 5 short bullet points (or 2-3 sentences). No headings, no tables, no section numbers.',
+  '2) Lead with the substance immediately.',
+  '3) ALWAYS finish with a final line that is EXACTLY: OPTIONS: ["...","...","..."] — three short, specific next-step suggestions tailored to what was just discussed (e.g. "Executive summary", "Elaborate on <X>", "Explore <Y>"). The user can also just type their own.',
+  'Output nothing after the OPTIONS line.',
+].join('\n');
+
 async function streamOpenRouter(
   apiKey: string,
   grounding: string,
   history: Row[],
   onDelta: (chunk: string) => void
 ): Promise<string> {
-  const messages: Array<{ role: string; content: string }> = [];
+  const messages: Array<{ role: string; content: string }> = [{ role: 'system', content: CHAT_PROTOCOL }];
   if (grounding) messages.push({ role: 'system', content: grounding });
   for (const m of history) messages.push({ role: m.role, content: m.content });
 

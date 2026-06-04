@@ -28,8 +28,10 @@ export function useKnowledgeGraph(): { graph: KnowledgeGraph; ready: boolean } {
   // Stable list of dimensions with non-trivial content.
   const dimensions = useMemo(() => {
     if (!analysis) return [];
+    // Low threshold: any dimension with real content becomes a node. (40 was too
+    // aggressive — parsed dimension bodies can be short, leaving the graph empty.)
     return Object.values(analysis.dimensions)
-      .filter((d) => d && d.content && d.content.trim().length >= 40)
+      .filter((d) => d && d.content && d.content.trim().length >= 12)
       .map((d) => ({ number: d.number, name: d.name, content: d.content }));
   }, [analysis]);
 
