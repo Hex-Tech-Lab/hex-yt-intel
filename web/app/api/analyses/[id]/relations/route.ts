@@ -99,7 +99,7 @@ export async function GET(
         const insights: RelationInsight[] = [];
         let modelUsed = 'unknown';
 
-        for await (const chunk of computeStanceRelationsStream(dimensions, apiKey)) {
+        for await (const chunk of computeStanceRelationsStream(dimensions, apiKey, handshakeController.signal)) {
           if (chunk.type === 'model') {
             modelUsed = chunk.model;
             send({ type: 'status', stage: 'computing', model: chunk.model });

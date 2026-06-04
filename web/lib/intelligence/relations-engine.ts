@@ -48,11 +48,18 @@ async function* callStanceModelStream(
   model: string,
   prompt: string,
   apiKey: string,
-  handshakeTimeoutMs: number = 3000
+  handshakeTimeoutMs: number = 3000,
+  externalSignal?: AbortSignal
 ): AsyncGenerator<string> {
   const controller = new AbortController();
   const handshakeTimer = setTimeout(() => controller.abort(), handshakeTimeoutMs);
-  
+
+  // Listen to external signal (e.g., from route handler) and abort if signaled
+  const abortListener = () => controller.abort();
+  if (externalSignal) {
+    externalSignal.addEventListener('abort', abortListener);
+  }
+
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -100,12 +107,17 @@ async function* callStanceModelStream(
     }
   } catch (err) {
     console.error(`[relations/engine] Model ${model} failed:`, err);
+  } finally {
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', abortListener);
+    }
   }
 }
 
 export async function* computeStanceRelationsStream(
   dims: StanceDimension[],
-  apiKey: string
+  apiKey: string,
+  handshakeSignal?: AbortSignal
 ): AsyncGenerator<{ type: 'insight', insight: RelationInsight } | { type: 'model', model: string }> {
   const usable = dims.filter((d) => d.content && d.content.trim().length >= 12);
   if (usable.length < 2 || !apiKey) return;
@@ -116,8 +128,8 @@ export async function* computeStanceRelationsStream(
   for (const model of STANCE_MODELS) {
     yield { type: 'model', model };
     let fullText = '';
-    
-    for await (const delta of callStanceModelStream(model, prompt, apiKey)) {
+
+    for await (const delta of callStanceModelStream(model, prompt, apiKey, 3000, handshakeSignal)) {
       fullText += delta;
     }
 
