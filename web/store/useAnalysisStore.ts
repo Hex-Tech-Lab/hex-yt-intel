@@ -96,8 +96,15 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   clearTerminal: () => set({ terminalLines: [] }),
 
   initializeAnalysis: (id, title, initialMarkdown = '') =>
-    set({
-      analysis: { id, title, analysis_markdown: initialMarkdown },
+    set((state) => ({
+      analysis: { 
+        id, 
+        title, 
+        analysis_markdown: initialMarkdown || state.analysis?.analysis_markdown || '' 
+      },
       terminalLines: [],
-    }),
+      status: initialMarkdown ? 'complete' : 'idle',
+      error: null,
+      isLoading: false,
+    })),
 }));

@@ -51,29 +51,39 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set, get) => (
   initializeAnalysis: (payload: Partial<UCISPayload>) => {
     set((state) => {
       const now = new Date().toISOString();
+      
+      // If we're initializing the SAME analysis, don't wipe dimensions if payload is empty
+      const isSameAnalysis = state.analysis?.id === payload.id && payload.id !== '';
+      const incomingDimensions = payload.dimensions && Object.keys(payload.dimensions).length > 0
+        ? payload.dimensions
+        : (isSameAnalysis ? state.analysis?.dimensions : {});
+
       const newAnalysis: UCISPayload = {
-        id: payload.id || '',
-        videoId: payload.videoId || '',
-        title: payload.title || '',
-        analysisAt: payload.analysisAt || now,
-        model: payload.model || 'edge-stream',
-        detectedPersona: payload.detectedPersona || 'analyst',
-        dimensions: payload.dimensions || {},
-        validation: payload.validation || {
+        id: payload.id || state.analysis?.id || '',
+        videoId: payload.videoId || state.analysis?.videoId || '',
+        title: payload.title || state.analysis?.title || '',
+        analysisAt: payload.analysisAt || state.analysis?.analysisAt || now,
+        model: payload.model || state.analysis?.model || 'edge-stream',
+        detectedPersona: payload.detectedPersona || state.analysis?.detectedPersona || 'analyst',
+        dimensions: incomingDimensions || {},
+        validation: payload.validation || state.analysis?.validation || {
           passed: false,
           errors: [],
           warnings: [],
         },
-        streaming: payload.streaming || {
+        streaming: payload.streaming || state.analysis?.streaming || {
           started: now,
           interrupted: false,
           dimensionsReceived: [],
         },
       };
 
+      const hasDimensions = Object.keys(newAnalysis.dimensions).length > 0;
+
       return {
         analysis: newAnalysis,
-        isStreaming: !payload.id || !payload.dimensions || Object.keys(payload.dimensions).length === 0,
+        // If it has dimensions and an ID, it's likely a restoration or complete
+        isStreaming: !payload.id || !hasDimensions,
         streamError: null,
         projection: computePersonaProjection(newAnalysis, state.activePersona),
       };

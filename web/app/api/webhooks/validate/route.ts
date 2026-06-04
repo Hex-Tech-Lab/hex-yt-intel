@@ -35,7 +35,13 @@ export async function POST(request: NextRequest) {
     console.log('[validate-webhook] QStash signature verified');
 
     // Safely parse the structural payload straight from the verified cloned text string
-    const payload: ValidationPayload = JSON.parse(bodyText);
+    let payload: ValidationPayload;
+    try {
+      payload = JSON.parse(bodyText);
+    } catch (err) {
+      console.error('[validate-webhook] Malformed JSON payload:', err);
+      return NextResponse.json({ error: 'Malformed JSON' }, { status: 400 });
+    }
     const { videoId, markdown, filename, userId, analysisId } = payload;
 
     console.log('[validate-webhook] Processing validation', {

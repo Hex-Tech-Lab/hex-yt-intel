@@ -152,6 +152,7 @@ export class ReasoningEngine {
     let produced = false;
 
     for (const { model, name } of MODEL_CHAIN) {
+      console.log(`[ReasoningEngine] Attempting model: ${name} (${model})`);
       handlers.onStatus?.({ stage: 'model', model: name });
       modelUsed = name;
 
@@ -169,10 +170,14 @@ export class ReasoningEngine {
       );
 
       if (result.started && finalText) {
+        console.log(`[ReasoningEngine] Model ${name} started successfully. Committed.`);
         produced = true;
         break;
       }
-      handlers.onStatus?.({ stage: 'fallback', from: name, error: result.error });
+
+      const errorMsg = result.error || 'No tokens produced';
+      console.warn(`[ReasoningEngine] Model ${name} failed/skipped. Error: ${errorMsg}`);
+      handlers.onStatus?.({ stage: 'fallback', from: name, error: errorMsg });
     }
 
     // Flush any trailing partial dimension

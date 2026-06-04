@@ -77,7 +77,15 @@ export async function POST(request: NextRequest) {
           status: 'done',
           title: existing.title,
           markdown: existing.analysis_markdown,
+          analysis_markdown: existing.analysis_markdown,
           createdAt: existing.created_at,
+          analysisAt: existing.created_at,
+          detectedPersona: 'analyst', // Default fallback for legacy cache
+          streaming: {
+            started: existing.created_at,
+            interrupted: false,
+            dimensionsReceived: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+          },
           cacheHit: true,
           message: 'Retrieved from persistent cache.',
         });
@@ -184,6 +192,8 @@ export async function POST(request: NextRequest) {
         status: 'processing',
         title: metadata.title,
         persona,
+        detectedPersona: persona,
+        analysisAt: new Date().toISOString(),
         timezone,
         transcript,
         metadata: {
@@ -194,6 +204,11 @@ export async function POST(request: NextRequest) {
           viewCount: String(metadata.viewCount),
           likeCount: String(metadata.likeCount),
           commentCount: String(metadata.commentCount),
+        },
+        streaming: {
+          started: new Date().toISOString(),
+          interrupted: false,
+          dimensionsReceived: [],
         },
         stream: {
           url: `${process.env.NEXT_PUBLIC_WORKER_URL || ''}/analyze-llm-stream`,
