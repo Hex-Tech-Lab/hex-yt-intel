@@ -3,36 +3,39 @@
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { PersonaId } from '@/lib/types/synthesis-nucleus';
 
+// The PRD's primary 5 personas (UCIS P1–P5). The Content Creator (P1) is the apex
+// persona and consumes ALL 11 dimensions. Underlying ids are kept stable to avoid
+// churning the prompt/validator plumbing; only labels + dimension projections change.
 export const PERSONAS: { id: PersonaId; label: string; icon: string; description: string }[] = [
   {
     id: 'creator',
-    label: 'Creator',
-    icon: 'solar:pen-bold-linear',
-    description: 'Production & monetization insights'
+    label: 'Content Creator',
+    icon: 'solar:videocamera-record-linear',
+    description: 'P1 · the full picture — all 11 dimensions'
   },
   {
     id: 'critic',
-    label: 'Critic',
-    icon: 'solar:shield-check-linear',
-    description: 'Flaws & improvement areas'
+    label: 'Indie Maker',
+    icon: 'solar:rocket-2-linear',
+    description: 'P2 · build, ship & monetize'
   },
   {
     id: 'analyst',
-    label: 'Analyst',
-    icon: 'solar:magnifer-linear',
-    description: 'Data & quantitative breakdown'
+    label: 'Consultant',
+    icon: 'solar:case-round-linear',
+    description: 'P3 · positioning & credibility'
   },
   {
     id: 'educator',
-    label: 'Educator',
+    label: 'Researcher',
     icon: 'solar:graduation-cap-linear',
-    description: 'Learning & teaching potential'
+    description: 'P4 · evidence & forward signals'
   },
   {
     id: 'philosopher',
-    label: 'Philosopher',
-    icon: 'solar:crown-minimalistic-linear',
-    description: 'Ideas & deeper meaning'
+    label: 'Product Manager',
+    icon: 'solar:widget-add-linear',
+    description: 'P5 · architecture & roadmap'
   }
 ];
 

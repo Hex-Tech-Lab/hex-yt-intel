@@ -65,12 +65,20 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, sending, open]);
 
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text || sending) return;
-    setInput('');
-    await sendMessage(text, { analysisId: analysisId ?? null });
+  const scrollToBottom = () => {
+    const el = listRef.current;
+    if (el) requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }));
   };
+
+  const submit = async (text: string) => {
+    const t = text.trim();
+    if (!t || sending) return;
+    setInput('');
+    scrollToBottom(); // user just sent — always follow to the bottom
+    await sendMessage(t, { analysisId: analysisId ?? null });
+  };
+
+  const handleSend = () => submit(input);
 
   const handleNew = async () => {
     setShowThreads(false);
@@ -176,20 +184,45 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
               <div>this thread is saved to your history.</div>
             </div>
           )}
-          {messages.map((m) => (
-            <div key={m.id} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div style={{
-                maxWidth: '80%', padding: '9px 13px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.55,
-                background: m.role === 'user' ? 'var(--accent)' : 'rgb(26 31 43 / 0.85)',
-                color: m.role === 'user' ? 'var(--void)' : 'var(--ink-secondary)',
-                border: m.role === 'user' ? 'none' : '1px solid var(--line)',
-                borderBottomRightRadius: m.role === 'user' ? 4 : 12, borderBottomLeftRadius: m.role === 'user' ? 12 : 4,
-                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-              }}>
-                {m.content}
+          {messages.map((m) => {
+            const { body, options } = m.role === 'assistant' ? parseAssistant(m.content) : { body: m.content, options: [] as string[] };
+            const isUser = m.role === 'user';
+            return (
+              <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', gap: 6 }}>
+                <div style={{
+                  maxWidth: '80%', padding: '9px 13px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.55,
+                  background: isUser ? 'var(--accent)' : 'rgb(26 31 43 / 0.85)',
+                  color: isUser ? 'var(--void)' : 'var(--ink-secondary)',
+                  border: isUser ? 'none' : '1px solid var(--line)',
+                  borderBottomRightRadius: isUser ? 4 : 12, borderBottomLeftRadius: isUser ? 12 : 4,
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                }}>
+                  {body}
+                </div>
+                {!isUser && body && (
+                  <div style={{ display: 'flex', gap: 6, marginLeft: 2 }}>
+                    <button onClick={() => navigator.clipboard?.writeText(body).catch(() => {})} title="Copy" style={turnIconBtn}>
+                      <Icon icon="solar:copy-linear" size={13} />
+                    </button>
+                  </div>
+                )}
+                {!isUser && options.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxWidth: '92%' }}>
+                    {options.map((opt, i) => (
+                      <button key={i} onClick={() => void submit(opt)} disabled={sending}
+                        style={{
+                          padding: '6px 11px', borderRadius: 9999, border: '1px solid var(--accent)',
+                          background: 'rgb(6 182 212 / 0.10)', color: 'var(--accent-ink)', cursor: sending ? 'not-allowed' : 'pointer',
+                          fontFamily: 'var(--font-mono)', fontSize: 11.5, textAlign: 'left',
+                        }}>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
           {sending && (
             <div style={{ display: 'flex', gap: 5, padding: '9px 13px', alignSelf: 'flex-start' }}>
               {[0, 1, 2].map((i) => (
@@ -238,3 +271,23 @@ const iconBtn: React.CSSProperties = {
   display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 7,
   border: '1px solid var(--line)', background: 'transparent', color: 'var(--ink-muted)', cursor: 'pointer',
 };
+
+const turnIconBtn: React.CSSProperties = {
+  display: 'grid', placeItems: 'center', width: 24, height: 24, borderRadius: 6,
+  border: '1px solid var(--line)', background: 'transparent', color: 'var(--ink-muted)', cursor: 'pointer',
+};
+
+/** Split an assistant reply into its body and the trailing OPTIONS chips. */
+function parseAssistant(content: string): { body: string; options: string[] } {
+  const m = content.match(/OPTIONS:\s*(\[[\s\S]*\])\s*$/);
+  if (!m || m.index === undefined) return { body: content.trim(), options: [] };
+  let options: string[] = [];
+  try {
+    const arr = JSON.parse(m[1] ?? '[]');
+    if (Array.isArray(arr)) options = arr.filter((x) => typeof x === 'string').slice(0, 4);
+  } catch {
+    /* malformed / still streaming */
+  }
+  const body = content.slice(0, m.index).trim();
+  return { body: body || content.trim(), options };
+}

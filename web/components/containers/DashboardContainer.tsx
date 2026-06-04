@@ -26,6 +26,20 @@ export interface DashboardContainerProps {
   profile: ConsoleProfile;
 }
 
+/**
+ * Presentation transform for dimension cards: the full synthesis is stored verbatim,
+ * but cards should lead with substance — strip leading markdown headers, "DIMENSION N"
+ * lines and "8.1"-style section numbers so the content starts immediately.
+ */
+function cleanDimensionContent(raw: string): string {
+  return (raw || '')
+    .replace(/^\s*#{1,6}\s+.*$/gm, '')          // markdown headers
+    .replace(/^\s*DIMENSION\s+\d+\b.*$/gim, '')  // "DIMENSION 8 – ..." lines
+    .replace(/^\s*\d+(?:\.\d+)*[.)]?\s+(?=\S)/gm, '') // leading "8.1 " section numbers
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { status, error, videoMetadata, analysisHistory } = useAnalysisStore();
   const { url, setUrl } = useInputStore();
@@ -115,7 +129,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         label: DIMENSION_LABELS[dim.number] || `Dimension ${dim.number}`,
         icon: DIMENSION_ICONS[dim.number] || "solar:bolt-linear",
         status: dimStatus,
-        content: dim.content,
+        content: cleanDimensionContent(dim.content),
         span: (DIMENSION_SPANS[dim.number] || 1) as 1 | 2 | 3,
       };
     });
