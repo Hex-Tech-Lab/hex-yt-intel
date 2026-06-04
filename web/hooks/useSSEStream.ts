@@ -2,10 +2,10 @@ import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
+import type { WorkerStreamRequest } from '@/lib/types/contracts';
 
 export function useSSEStream() {
   const {
-    status,
     setIsLoading,
     setStatus,
     setError,
@@ -123,19 +123,22 @@ export function useSSEStream() {
           await Sentry.startSpan(
             { name: 'stream worker /analyze-llm-stream', op: 'stream.parse' },
             async () => {
+              // Typed against the worker contract: a missing/renamed field is now a
+              // compile error rather than a silent runtime stream failure.
+              const streamPayload: WorkerStreamRequest = {
+                videoId: job.videoId,
+                analysisId: job.analysisId || job.id,
+                transcript: job.transcript || '',
+                metadata: job.metadata,
+                persona: job.persona,
+                timezone: job.timezone || safeTimezone,
+                sig: job.stream.sig,
+                exp: job.stream.exp,
+              };
               const res = await fetch(job.stream.url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  videoId: job.videoId,
-                  analysisId: job.analysisId || job.id,
-                  transcript: job.transcript || '',
-                  metadata: job.metadata,
-                  persona: job.persona,
-                  timezone: job.timezone || safeTimezone,
-                  sig: job.stream.sig,
-                  exp: job.stream.exp,
-                }),
+                body: JSON.stringify(streamPayload),
               });
 
               if (!res.ok || !res.body) {
@@ -176,8 +179,11 @@ export function useSSEStream() {
               }
               if (buffer.trim()) handleEvent(buffer);
 
-              // Stream closed without an explicit complete/error event.
-              if (!streamCompleted && status !== 'error') {
+              // Stream closed without an explicit complete/error event. Read the LIVE
+              // status from the store (not the stale render-time closure) so a partial
+              // interruption is classified correctly and never leaves the action button
+              // wedged in a loading state.
+              if (!streamCompleted && useAnalysisStore.getState().status !== 'error') {
                 setError({ code: 'ERR_STREAM_INCOMPLETE', status: 0, message: 'The analysis stream ended unexpectedly. Please try again.' });
                 setStatus('error');
                 setIsLoading(false);
@@ -188,8 +194,12 @@ export function useSSEStream() {
           const errorMsg = error instanceof Error ? error.message : String(error);
           setError({ code: 'ERR_CLIENT_EXCEPTION', status: 0, message: errorMsg });
           setStatus('error');
-          setIsLoading(false);
           Sentry.captureException(error);
+        } finally {
+          // Terminal cleanup: all async work has settled by here. Guarantees the main
+          // action button is never left disabled after a partial/interrupted stream,
+          // regardless of which exit path ran.
+          setIsLoading(false);
         }
       }
     );
