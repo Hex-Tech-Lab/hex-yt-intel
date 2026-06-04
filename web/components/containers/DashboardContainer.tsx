@@ -20,6 +20,7 @@ import { useSSEStream } from '@/hooks/useSSEStream';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
+import { useChatStore } from '@/store/useChatStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 
@@ -50,6 +51,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
+
+  // Clear the sticky localStorage chat session when navigating to a new analysis
+  useEffect(() => {
+    if (analysis?.id) {
+      useChatStore.getState().reset();
+    }
+  }, [analysis?.id]);
 
   useEffect(() => {
     if (activeNav !== 'console') {

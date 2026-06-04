@@ -1,0 +1,284 @@
+[
+  {
+    "name": "hex-yt-intel",
+    "version": "1.4.1",
+    "path": "/home/kellyb_dev/projects/hex-yt-intel",
+    "private": true,
+    "devDependencies": {
+      "pnpm": {
+        "from": "pnpm",
+        "version": "11.1.3",
+        "resolved": "https://registry.npmjs.org/pnpm/-/pnpm-11.1.3.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/pnpm@11.1.3/node_modules/pnpm"
+      }
+    }
+  },
+  {
+    "name": "@hex-yt-intel/web",
+    "version": "1.4.6",
+    "path": "/home/kellyb_dev/projects/hex-yt-intel/web",
+    "private": true,
+    "dependencies": {
+      "@sentry/nextjs": {
+        "from": "@sentry/nextjs",
+        "version": "10.53.1",
+        "resolved": "https://registry.npmjs.org/@sentry/nextjs/-/nextjs-10.53.1.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@sentry+nextjs@10.53.1_@opentelemetry+core@2.7.1_@opentelemetry+api@1.9.1__@opentelemet_78ccf36a5d9805a33d5aa965f8f6f58e/node_modules/@sentry/nextjs"
+      },
+      "@supabase/ssr": {
+        "from": "@supabase/ssr",
+        "version": "0.10.3",
+        "resolved": "https://registry.npmjs.org/@supabase/ssr/-/ssr-0.10.3.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@supabase+ssr@0.10.3_@supabase+supabase-js@2.107.0/node_modules/@supabase/ssr"
+      },
+      "@supabase/supabase-js": {
+        "from": "@supabase/supabase-js",
+        "version": "2.107.0",
+        "resolved": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.107.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@supabase+supabase-js@2.107.0/node_modules/@supabase/supabase-js"
+      },
+      "@upstash/qstash": {
+        "from": "@upstash/qstash",
+        "version": "2.11.0",
+        "resolved": "https://registry.npmjs.org/@upstash/qstash/-/qstash-2.11.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@upstash+qstash@2.11.0/node_modules/@upstash/qstash"
+      },
+      "@upstash/ratelimit": {
+        "from": "@upstash/ratelimit",
+        "version": "2.0.8",
+        "resolved": "https://registry.npmjs.org/@upstash/ratelimit/-/ratelimit-2.0.8.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@upstash+ratelimit@2.0.8_@upstash+redis@1.34.0/node_modules/@upstash/ratelimit"
+      },
+      "@upstash/redis": {
+        "from": "@upstash/redis",
+        "version": "1.34.0",
+        "resolved": "https://registry.npmjs.org/@upstash/redis/-/redis-1.34.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@upstash+redis@1.34.0/node_modules/@upstash/redis"
+      },
+      "@upstash/vector": {
+        "from": "@upstash/vector",
+        "version": "1.2.3",
+        "resolved": "https://registry.npmjs.org/@upstash/vector/-/vector-1.2.3.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@upstash+vector@1.2.3/node_modules/@upstash/vector"
+      },
+      "framer-motion": {
+        "from": "framer-motion",
+        "version": "12.40.0",
+        "resolved": "https://registry.npmjs.org/framer-motion/-/framer-motion-12.40.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/framer-motion@12.40.0_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/framer-motion"
+      },
+      "nanoid": {
+        "from": "nanoid",
+        "version": "5.1.11",
+        "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-5.1.11.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/nanoid@5.1.11/node_modules/nanoid"
+      },
+      "pdfkit": {
+        "from": "pdfkit",
+        "version": "0.18.0",
+        "resolved": "https://registry.npmjs.org/pdfkit/-/pdfkit-0.18.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/pdfkit@0.18.0/node_modules/pdfkit"
+      },
+      "react": {
+        "from": "react",
+        "version": "19.2.6",
+        "resolved": "https://registry.npmjs.org/react/-/react-19.2.6.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/react@19.2.6/node_modules/react"
+      },
+      "react-dom": {
+        "from": "react-dom",
+        "version": "19.2.6",
+        "resolved": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.6.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/react-dom@19.2.6_react@19.2.6/node_modules/react-dom"
+      },
+      "react-force-graph-2d": {
+        "from": "react-force-graph-2d",
+        "version": "1.29.1",
+        "resolved": "https://registry.npmjs.org/react-force-graph-2d/-/react-force-graph-2d-1.29.1.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/react-force-graph-2d@1.29.1_react@19.2.6/node_modules/react-force-graph-2d"
+      },
+      "react-hot-toast": {
+        "from": "react-hot-toast",
+        "version": "2.6.0",
+        "resolved": "https://registry.npmjs.org/react-hot-toast/-/react-hot-toast-2.6.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/react-hot-toast@2.6.0_react-dom@19.2.6_react@19.2.6__react@19.2.6/node_modules/react-hot-toast"
+      },
+      "stripe": {
+        "from": "stripe",
+        "version": "15.7.0",
+        "resolved": "https://registry.npmjs.org/stripe/-/stripe-15.7.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/stripe@15.7.0/node_modules/stripe"
+      },
+      "three": {
+        "from": "three",
+        "version": "0.184.0",
+        "resolved": "https://registry.npmjs.org/three/-/three-0.184.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/three@0.184.0/node_modules/three"
+      },
+      "zod": {
+        "from": "zod",
+        "version": "4.4.3",
+        "resolved": "https://registry.npmjs.org/zod/-/zod-4.4.3.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/zod@4.4.3/node_modules/zod"
+      },
+      "zustand": {
+        "from": "zustand",
+        "version": "5.0.13",
+        "resolved": "https://registry.npmjs.org/zustand/-/zustand-5.0.13.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/zustand@5.0.13_@types+react@19.0.0_react@19.2.6/node_modules/zustand"
+      }
+    },
+    "devDependencies": {
+      "@playwright/test": {
+        "from": "@playwright/test",
+        "version": "1.60.0",
+        "resolved": "https://registry.npmjs.org/@playwright/test/-/test-1.60.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@playwright+test@1.60.0/node_modules/@playwright/test"
+      },
+      "@tailwindcss/postcss": {
+        "from": "@tailwindcss/postcss",
+        "version": "4.3.0",
+        "resolved": "https://registry.npmjs.org/@tailwindcss/postcss/-/postcss-4.3.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@tailwindcss+postcss@4.3.0/node_modules/@tailwindcss/postcss"
+      },
+      "@types/jest": {
+        "from": "@types/jest",
+        "version": "29.5.0",
+        "resolved": "https://registry.npmjs.org/@types/jest/-/jest-29.5.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@types+jest@29.5.0/node_modules/@types/jest"
+      },
+      "@types/node": {
+        "from": "@types/node",
+        "version": "20.0.0",
+        "resolved": "https://registry.npmjs.org/@types/node/-/node-20.0.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@types+node@20.0.0/node_modules/@types/node"
+      },
+      "@types/pdfkit": {
+        "from": "@types/pdfkit",
+        "version": "0.17.6",
+        "resolved": "https://registry.npmjs.org/@types/pdfkit/-/pdfkit-0.17.6.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@types+pdfkit@0.17.6/node_modules/@types/pdfkit"
+      },
+      "@types/react": {
+        "from": "@types/react",
+        "version": "19.0.0",
+        "resolved": "https://registry.npmjs.org/@types/react/-/react-19.0.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@types+react@19.0.0/node_modules/@types/react"
+      },
+      "@types/react-dom": {
+        "from": "@types/react-dom",
+        "version": "19.0.0",
+        "resolved": "https://registry.npmjs.org/@types/react-dom/-/react-dom-19.0.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@types+react-dom@19.0.0/node_modules/@types/react-dom"
+      },
+      "@types/three": {
+        "from": "@types/three",
+        "version": "0.184.1",
+        "resolved": "https://registry.npmjs.org/@types/three/-/three-0.184.1.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@types+three@0.184.1/node_modules/@types/three"
+      },
+      "eslint": {
+        "from": "eslint",
+        "version": "8.57.1",
+        "resolved": "https://registry.npmjs.org/eslint/-/eslint-8.57.1.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/eslint@8.57.1/node_modules/eslint"
+      },
+      "eslint-config-next": {
+        "from": "eslint-config-next",
+        "version": "15.5.18",
+        "resolved": "https://registry.npmjs.org/eslint-config-next/-/eslint-config-next-15.5.18.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/eslint-config-next@15.5.18_eslint@8.57.1_typescript@5.6.2/node_modules/eslint-config-next"
+      },
+      "next": {
+        "from": "next",
+        "version": "16.2.6",
+        "resolved": "https://registry.npmjs.org/next/-/next-16.2.6.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/next@16.2.6_@babel+core@7.29.0_@opentelemetry+api@1.9.1_@playwright+test@1.60.0_react-d_4bf5b4b14d040418a5d185e834a0e125/node_modules/next"
+      },
+      "postcss": {
+        "from": "postcss",
+        "version": "8.4.0",
+        "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.4.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/postcss@8.4.0/node_modules/postcss"
+      },
+      "prettier": {
+        "from": "prettier",
+        "version": "3.1.0",
+        "resolved": "https://registry.npmjs.org/prettier/-/prettier-3.1.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/prettier@3.1.0/node_modules/prettier"
+      },
+      "tailwindcss": {
+        "from": "tailwindcss",
+        "version": "4.0.0",
+        "resolved": "https://registry.npmjs.org/tailwindcss/-/tailwindcss-4.0.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/tailwindcss@4.0.0/node_modules/tailwindcss"
+      },
+      "tsx": {
+        "from": "tsx",
+        "version": "4.22.3",
+        "resolved": "https://registry.npmjs.org/tsx/-/tsx-4.22.3.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/tsx@4.22.3/node_modules/tsx"
+      },
+      "typescript": {
+        "from": "typescript",
+        "version": "5.6.2",
+        "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.6.2.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/typescript@5.6.2/node_modules/typescript"
+      }
+    },
+    "unsavedDependencies": {
+      "pnpm": {
+        "from": "pnpm",
+        "version": "link:../node_modules/.pnpm/pnpm@11.1.3/node_modules/pnpm",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/pnpm@11.1.3/node_modules/pnpm"
+      }
+    }
+  },
+  {
+    "name": "youtube-intelligence-worker",
+    "version": "1.5.1",
+    "path": "/home/kellyb_dev/projects/hex-yt-intel/worker",
+    "private": false,
+    "dependencies": {
+      "hono": {
+        "from": "hono",
+        "version": "4.12.22",
+        "resolved": "https://registry.npmjs.org/hono/-/hono-4.12.22.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/hono@4.12.22/node_modules/hono"
+      }
+    },
+    "devDependencies": {
+      "@cloudflare/workers-types": {
+        "from": "@cloudflare/workers-types",
+        "version": "4.20260522.1",
+        "resolved": "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-4.20260522.1.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/@cloudflare+workers-types@4.20260522.1/node_modules/@cloudflare/workers-types"
+      },
+      "esbuild": {
+        "from": "esbuild",
+        "version": "0.24.2",
+        "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.24.2.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/esbuild@0.24.2/node_modules/esbuild"
+      },
+      "typescript": {
+        "from": "typescript",
+        "version": "5.9.3",
+        "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/typescript@5.9.3/node_modules/typescript"
+      },
+      "wrangler": {
+        "from": "wrangler",
+        "version": "4.94.0",
+        "resolved": "https://registry.npmjs.org/wrangler/-/wrangler-4.94.0.tgz",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/wrangler@4.94.0_@cloudflare+workers-types@4.20260522.1/node_modules/wrangler"
+      }
+    },
+    "unsavedDependencies": {
+      "pnpm": {
+        "from": "pnpm",
+        "version": "link:../node_modules/.pnpm/pnpm@11.1.3/node_modules/pnpm",
+        "path": "/home/kellyb_dev/projects/hex-yt-intel/node_modules/.pnpm/pnpm@11.1.3/node_modules/pnpm"
+      }
+    }
+  }
+]
