@@ -41,7 +41,7 @@ export async function GET(
 
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (data: any) => {
+      const send = (data: unknown) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 

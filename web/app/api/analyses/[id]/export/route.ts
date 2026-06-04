@@ -121,17 +121,24 @@ export async function GET(
   }
 }
 
-function drawHeader(doc: PDFKit.PDFDocument, analysis: any, subtitle: string) {
+interface ExportableAnalysis {
+  title?: string | null;
+  channel_title?: string | null;
+  created_at?: string | null;
+  analysis_markdown?: string | null;
+}
+
+function drawHeader(doc: PDFKit.PDFDocument, analysis: ExportableAnalysis, subtitle: string) {
   doc.fontSize(18).font('Helvetica-Bold').fillColor('black').text(analysis.title || 'YouTube Analysis');
   doc.fontSize(10).fillColor('#666666').text(`Channel: ${analysis.channel_title || 'Unknown'}`);
   doc.fontSize(9).fillColor('#06b6d4').text(subtitle);
-  doc.fontSize(9).fillColor('#999999').text(`Generated: ${new Date(analysis.created_at).toLocaleString()}`);
+  doc.fontSize(9).fillColor('#999999').text(`Generated: ${new Date(analysis.created_at ?? Date.now()).toLocaleString()}`);
   doc.moveDown(0.5);
   doc.fillColor('black').moveTo(50, doc.y).lineTo(550, doc.y).stroke();
   doc.moveDown();
 }
 
-async function exportSummaryPDF(analysis: any) {
+async function exportSummaryPDF(analysis: ExportableAnalysis) {
   const doc = new PDFDocument({ margin: 50, bufferPages: true });
   drawHeader(doc, analysis, 'Executive Summary');
 
@@ -167,7 +174,7 @@ async function exportSummaryPDF(analysis: any) {
   return finishPdf(doc, `${analysis.title || 'synthesis'}-summary.pdf`);
 }
 
-async function exportFullPDF(analysis: any) {
+async function exportFullPDF(analysis: ExportableAnalysis) {
   const doc = new PDFDocument({ margin: 50, bufferPages: true });
   drawHeader(doc, analysis, 'Full Synthesis Report');
 
