@@ -3,6 +3,7 @@
   "version": "1.4.1",
   "private": true,
   "description": "YouTube Content Intelligence Platform",
+  "packageManager": "pnpm@11.5.1",
   "scripts": {
     "type-check": "pnpm -r type-check",
     "lint": "pnpm -r lint",
