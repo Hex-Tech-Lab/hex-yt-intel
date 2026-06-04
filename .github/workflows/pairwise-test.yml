@@ -20,6 +20,7 @@ jobs:
     timeout-minutes: 30
 
     env:
+      PNPM_VERSION: "11.5.1"
       AUTH_PROVIDER: supabase
       CI: true
       NODE_ENV: test

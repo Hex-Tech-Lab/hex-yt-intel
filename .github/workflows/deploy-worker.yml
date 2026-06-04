@@ -18,6 +18,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PNPM_VERSION: "11.5.1"
+
 concurrency:
   group: deploy-worker
   cancel-in-progress: false
