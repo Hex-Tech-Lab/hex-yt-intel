@@ -452,7 +452,7 @@ Generate the complete 11-dimension analysis.`,
           Authorization: `Bearer ${this.cache.token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ex: 604800, get: false, xx: false }),
+        body: JSON.stringify({ value, ex: 604800, get: false, xx: false }),
       });
     } catch {
       console.warn('[ReasoningEngine] Upstash SET failed, analysis succeeded but not cached');
