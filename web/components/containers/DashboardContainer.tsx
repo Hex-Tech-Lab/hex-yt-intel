@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
 import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
@@ -23,21 +23,17 @@ import { useRelations } from '@/hooks/useRelations';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 
+// See /docs/ui/dashboard-container.md
+
 export interface DashboardContainerProps {
-  /** Authenticated user + quota snapshot, resolved server-side at route entry. */
   profile: ConsoleProfile;
 }
 
-/**
- * Presentation transform for dimension cards: the full synthesis is stored verbatim,
- * but cards should lead with substance — strip leading markdown headers, "DIMENSION N"
- * lines and "8.1"-style section numbers so the content starts immediately.
- */
 function cleanDimensionContent(raw: string): string {
   return (raw || '')
-    .replace(/^\s*#{1,6}\s+.*$/gm, '')          // markdown headers
-    .replace(/^\s*DIMENSION\s+\d+\b.*$/gim, '')  // "DIMENSION 8 – ..." lines
-    .replace(/^\s*\d+(?:\.\d+)*[.)]?\s+(?=\S)/gm, '') // leading "8.1 " section numbers
+    .replace(/^\s*#{1,6}\s+.*$/gm, '')
+    .replace(/^\s*DIMENSION\s+\d+\b.*$/gim, '')
+    .replace(/^\s*\d+(?:\.\d+)*[.)]?\s+(?=\S)/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
@@ -54,6 +50,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeNav !== 'console') {
+      setSelectedDimensionKey(null);
+    }
+  }, [activeNav]);
 
   const tierLabel = profile.tier === 'pro' ? 'Pro' : profile.tier === 'free' ? 'Free' : profile.tier;
   const quotaLabel =
@@ -75,7 +77,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     await startAnalysis(url, getUserTimezone());
   }, [url, startAnalysis]);
 
-  // Sidebar navigation items
   const sidebarItems: SidebarItem[] = useMemo(() => [
     { key: 'console', label: 'Synthesis Console', icon: 'solar:graph-up-linear' },
     { key: 'history', label: 'Analysis History', icon: 'solar:folder-with-files-linear', badge: historyBadge },
@@ -155,19 +156,19 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           search={search}
           onSearchChange={setSearch}
           tier={tierLabel}
-          account={<div title={profile.email} style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--accent)', display: 'grid', placeItems: 'center', color: 'var(--void)', fontWeight: 'bold', fontSize: 12 }}>{profile.initials}</div>}
+          account={<div title={profile.email} className="w-8 h-8 rounded-lg bg-[var(--accent)] grid place-items-center text-[var(--void)] font-bold text-xs">{profile.initials}</div>}
         />
       }
       rightPanel={
         status !== 'idle' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--ink-secondary)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Intelligence</span>
+          <div className="flex flex-col gap-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--ink-secondary)] font-mono text-[11px] tracking-[0.08em] uppercase">Intelligence</span>
               {graph.nodes.length > 0 && consoleTab === 'synthesis' && (
                 <button
                   onClick={() => setConsoleTab('graph')}
                   title="Open full graph"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent', color: 'var(--accent-ink)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}
+                  className="flex items-center gap-1.25 px-2.5 py-1 rounded-lg border border-[var(--line)] bg-transparent text-[var(--accent-ink)] cursor-pointer font-mono text-[10.5px]"
                 >
                   <Icon icon="solar:maximize-square-linear" size={13} /> expand
                 </button>
@@ -178,7 +179,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 {graph.nodes.length > 0 ? (
                   <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} compact height={200} />
                 ) : (
-                  <div style={{ height: 200, borderRadius: 14, border: '1px dashed var(--line)', display: 'grid', placeItems: 'center', textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 10.5, padding: 12, lineHeight: 1.6 }}>
+                  <div className="h-[200px] rounded-2xl border border-dashed border-[var(--line)] grid place-items-center text-center text-[var(--ink-muted)] font-mono text-[10.5px] p-3 leading-relaxed">
                     {status === 'complete' ? 'No relational structure for this analysis.' : 'Synthesizing… the graph populates as dimensions arrive.'}
                   </div>
                 )}
@@ -193,7 +194,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       dock={<ChatDock analysisId={analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 32, paddingBottom: 16 }}>
+        <div className="flex flex-col gap-8 pb-4">
           <AnalysisHero
             url={url}
             status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
@@ -216,8 +217,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
           {status !== 'idle' && (
             <>
-              {/* Tab bar: Synthesis grid vs. Knowledge graph */}
-              <div style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 12, border: '1px solid var(--line)', background: 'rgb(11 14 20 / 0.5)', alignSelf: 'flex-start' }}>
+              <div className="flex gap-1 p-1 rounded-xl border border-[var(--line)] bg-[rgb(11_14_20_/_0.5)] self-start">
                 {([
                   { key: 'synthesis', label: 'Synthesis', icon: 'solar:widget-5-linear' },
                   { key: 'graph', label: 'Knowledge Graph', icon: 'solar:share-circle-linear' },
@@ -227,14 +227,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     <button
                       key={t.key}
                       onClick={() => setConsoleTab(t.key as 'synthesis' | 'graph')}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 9,
-                        border: 'none', cursor: 'pointer',
-                        background: active ? 'var(--accent)' : 'transparent',
-                        color: active ? 'var(--void)' : 'var(--ink-secondary)',
-                        fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600,
-                        transition: 'background 0.15s, color 0.15s',
-                      }}
+                      className={`flex items-center gap-1.75 px-3.5 py-1.75 rounded-lg border-none cursor-pointer font-mono text-xs font-semibold transition-colors ${
+                        active ? 'bg-[var(--accent)] text-[var(--void)]' : 'bg-transparent text-[var(--ink-secondary)]'
+                      }`}
                     >
                       <Icon icon={t.icon} size={15} />
                       {t.label}
@@ -244,7 +239,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               </div>
 
               {consoleTab === 'synthesis' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                <div className="flex flex-col gap-8">
                   {status === 'complete' && <PersonaSelector />}
                   <StreamingGrid
                     dimensions={dimensions}
@@ -260,11 +255,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   {graph.nodes.length > 0 ? (
                     <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={580} />
                   ) : (
-                    <div style={{ height: 580, borderRadius: 14, border: '1px dashed var(--line)', display: 'grid', placeItems: 'center', textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 12.5, padding: 24, lineHeight: 1.6 }}>
+                    <div className="h-[580px] rounded-2xl border border-dashed border-[var(--line)] grid place-items-center text-center text-[var(--ink-muted)] font-mono text-[12.5px] p-6 leading-relaxed">
                       {status === 'complete' ? 'No graph relations were synthesized for this analysis.' : 'The knowledge graph builds live as dimensions arrive…'}
                     </div>
                   )}
-                  <p style={{ marginTop: 10, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.6 }}>
+                  <p className="mt-2.5 text-[var(--ink-muted)] font-mono text-[11px] leading-relaxed">
                     Left-click to inspect · right-click to pin &amp; focus · drag to reposition · scroll to zoom
                   </p>
                 </div>
@@ -275,22 +270,23 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       ) : activeNav === 'history' ? (
         <AnalysisHistory onSelectAnalysis={() => setActiveNav('console')} />
       ) : (
-        <div style={{ padding: 48, textAlign: 'center', color: 'var(--ink-secondary)' }}>
+        <div className="p-12 text-center text-[var(--ink-secondary)]">
           Settings coming soon...
         </div>
       )}
 
     </DashboardLayout>
 
-      {/* Dimension detail drawer */}
-      <DimensionDrawer
-        dimension={
-          selectedDimensionKey
-            ? dimensions.find(d => d.key === selectedDimensionKey) || null
-            : null
-        }
-        onClose={() => setSelectedDimensionKey(null)}
-      />
+      {activeNav === 'console' && (
+        <DimensionDrawer
+          dimension={
+            selectedDimensionKey
+              ? dimensions.find(d => d.key === selectedDimensionKey) || null
+              : null
+          }
+          onClose={() => setSelectedDimensionKey(null)}
+        />
+      )}
     </>
   );
 }

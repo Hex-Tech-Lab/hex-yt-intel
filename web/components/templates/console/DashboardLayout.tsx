@@ -2,89 +2,41 @@
 
 import { ReactNode } from 'react';
 
+// See /docs/ui/dashboard-layout.md
+
 export interface DashboardLayoutProps {
   sidebar: ReactNode;
   topbar: ReactNode;
   children: ReactNode;
-  /** Right-side panel (Intelligence rail, graph, etc.) — full-height sticky column. */
   rightPanel?: ReactNode;
-  /** Bottom-anchored dock spanning the main content column (between left nav and right panel). */
   dock?: ReactNode;
 }
 
 export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }: DashboardLayoutProps) {
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: rightPanel ? "260px 1fr 390px" : "260px 1fr",
-      width: "100%",
-      minWidth: 1024,
-      height: "100vh",
-      background: "var(--bg)",
-      color: "var(--ink)",
-      overflow: "hidden"
-    }}>
-      <aside style={{
-        borderRight: "1px solid var(--line)",
-        background: "var(--void)",
-        height: "100%",
-        width: 260,
-        minWidth: 260,
-        flexShrink: 0,
-        overflowY: "auto",
-        display: "flex",
-        flexDirection: "column"
-      }}>
+    <div className={`grid h-screen w-full min-w-[1024px] bg-[var(--bg)] text-[var(--ink)] overflow-hidden ${
+      rightPanel ? "grid-cols-[260px_1fr_390px]" : "grid-cols-[260px_1fr]"
+    }`}>
+      <aside className="border-r border-[var(--line)] bg-[var(--void)] h-full w-[260px] flex-shrink-0 overflow-y-auto flex flex-col">
         {sidebar}
       </aside>
 
-      <main style={{
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minWidth: 0,
-        overflow: "hidden"
-      }}>
-        <header style={{
-          borderBottom: "1px solid var(--line)",
-          background: "rgb(17 20 29 / 0.8)",
-          backdropFilter: "blur(12px)",
-          zIndex: 20
-        }}>
+      <main className="relative flex flex-col h-full min-w-0 overflow-hidden">
+        <header className="border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.8)] backdrop-blur-md z-20">
           {topbar}
         </header>
 
-        <div style={{
-          flex: 1,
-          overflowY: "auto",
-          // Bottom padding clears the collapsed chat dock bar on every tab.
-          padding: "32px 40px 72px",
-          scrollBehavior: "smooth"
-        }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div className="flex-1 overflow-y-auto p-8 px-10 pb-[72px] scroll-smooth">
+          <div className="max-w-[1200px] mx-auto">
             {children}
           </div>
         </div>
 
-        {/* Bottom-anchored dock — trapped between left nav and right panel */}
         {dock}
       </main>
 
-      {/* Right panel: full-height, sticky (Intelligence rail, graph, etc.) */}
       {rightPanel && (
-        <aside style={{
-          borderLeft: "1px solid var(--line)",
-          background: "var(--surface)",
-          height: "100%",
-          width: 390,
-          minWidth: 390,
-          flexShrink: 0,
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          padding: "16px 20px"
-        }}>
+        <aside className="border-l border-[var(--line)] bg-[var(--surface)] h-full w-[390px] flex-shrink-0 overflow-y-auto flex flex-col p-4 px-5">
           {rightPanel}
         </aside>
       )}

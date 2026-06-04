@@ -15,120 +15,45 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
       {/* Backdrop */}
       <div
         onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgb(0 0 0 / 0.4)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 100,
-          animation: 'fadeIn 0.2s ease-out',
-        }}
+        className="fixed inset-0 bg-black/40 backdrop-blur-[4px] z-[100] animate-in fade-in duration-200"
       />
 
       {/* Drawer panel */}
       <div
-        style={{
-          position: 'fixed',
-          right: 0,
-          top: 0,
-          bottom: 0,
-          width: 'min(90vw, 480px)',
-          background: 'var(--bg)',
-          borderLeft: '1px solid var(--line)',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 101,
-          animation: 'slideInRight 0.3s ease-out',
-        }}
+        className="fixed right-0 top-0 bottom-0 w-[min(90vw,480px)] bg-[var(--bg)] border-l border-[var(--line)] flex flex-col z-[101] animate-in slide-in-from-right duration-300 ease-out"
       >
         {/* Header */}
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--line)',
-            background: 'rgb(17 20 29 / 0.6)',
-          }}
+          className="flex items-center justify-between p-4 px-5 border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.6)]"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="flex items-center gap-2">
             <Icon icon={dimension.icon} size={16} />
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 13,
-                fontWeight: 600,
-                color: 'var(--ink)',
-              }}
-            >
+            <span className="font-mono text-[13px] font-semibold text-[var(--ink)]">
               {dimension.label}
             </span>
           </div>
           <button
             onClick={onClose}
             title="Close"
-            style={{
-              display: 'grid',
-              placeItems: 'center',
-              width: 32,
-              height: 32,
-              borderRadius: 6,
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--ink-secondary)',
-              cursor: 'pointer',
-              transition: 'color 0.15s',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--ink)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--ink-secondary)')}
+            className="grid place-items-center w-8 h-8 rounded-lg border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-colors hover:text-[var(--ink)]"
           >
             <Icon icon="solar:close-circle-linear" size={18} />
           </button>
         </div>
 
         {/* Content */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-          }}
-        >
+        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 hx-custom-scrollbar">
           {dimension.content ? (
-            <div
-              className="hx-body-secondary"
-              style={{
-                fontSize: 13.5,
-                lineHeight: 1.7,
-                color: 'var(--ink-secondary)',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-              }}
-            >
+            <div className="hx-body-secondary text-[13.5px] leading-relaxed text-[var(--ink-secondary)] whitespace-pre-wrap break-words">
               {dimension.content}
             </div>
           ) : (
-            <div style={{ color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+            <div className="text-[var(--ink-muted)] font-mono text-xs">
               No content available.
             </div>
           )}
         </div>
       </div>
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideInRight {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-      `}</style>
     </>
   );
 }
