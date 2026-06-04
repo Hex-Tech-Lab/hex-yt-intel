@@ -20,7 +20,7 @@ import * as Sentry from '@sentry/nextjs';
  * in Server-to-Server calls.
  */
 export async function POST(request: NextRequest) {
-  let body: any;
+  let body: { analysisId?: string; videoId?: string; markdown?: string; model?: string; valid?: boolean; contentSig?: string; status?: string } | undefined;
   try {
     body = await request.json();
     const { analysisId, videoId, markdown, model, valid, contentSig, status = 'completed' } = body || {};
