@@ -15,8 +15,6 @@ import { AnalysisCreateSchema, type AnalysisJobMetadata } from '@/lib/types/cont
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { fetchSubtitles } from '@/lib/services/decodo';
 import { signStreamToken } from '@/lib/stream-token';
-import { deleteRedisKey } from '@/lib/redis';
-import { generateCacheKey } from '@/lib/services/cache';
 import * as Sentry from '@sentry/nextjs';
 
 const PROCESSING_STALE_MS = 180_000;
