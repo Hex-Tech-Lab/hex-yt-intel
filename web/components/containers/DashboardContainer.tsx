@@ -268,7 +268,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           )}
         </div>
       ) : activeNav === 'history' ? (
-        <AnalysisHistory />
+        <AnalysisHistory onSelectAnalysis={() => setActiveNav('console')} />
       ) : (
         <div style={{ padding: 48, textAlign: 'center', color: 'var(--ink-secondary)' }}>
           Settings coming soon...

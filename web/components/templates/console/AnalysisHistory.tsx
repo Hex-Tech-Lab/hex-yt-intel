@@ -2,17 +2,55 @@
 
 import { useState, useMemo } from 'react';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
+import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 type SortOrder = 'date-desc' | 'date-asc';
 type FilterStatus = 'all' | 'completed' | 'processing' | 'incomplete';
 
-export function AnalysisHistory() {
+export interface AnalysisHistoryProps {
+  /** Called when user selects an analysis from the history list; parent should switch to console view. */
+  onSelectAnalysis?: () => void;
+}
+
+export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const { items, isLoading, error } = useAnalysisHistory();
+  const { initializeAnalysis } = useSynthesisNucleus();
   const [sortBy, setSortBy] = useState<SortOrder>('date-desc');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [currentPage, setCurrentPage] = useState(0);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 10;
+
+  const restoreAnalysis = async (analysisId: string) => {
+    setLoadingId(analysisId);
+    try {
+      const token = localStorage.getItem('auth_token') || '';
+      const res = await fetch(`/api/analyses/${analysisId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        console.error('Failed to restore analysis:', res.status);
+        return;
+      }
+      const data = await res.json();
+      initializeAnalysis({
+        id: data.id,
+        videoId: data.videoId,
+        title: data.title,
+        channelTitle: data.channelTitle,
+        model: data.model,
+        dimensions: {},
+        validation: data.validation_report,
+        streaming: data.streaming,
+      });
+      onSelectAnalysis?.();
+    } catch (err) {
+      console.error('Error restoring analysis:', err);
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   // Filter and sort the items
   const filteredAndSorted = useMemo(() => {
@@ -139,6 +177,7 @@ export function AnalysisHistory() {
               {paginatedItems.map((item, idx) => (
                 <div
                   key={item.id}
+                  onClick={() => restoreAnalysis(item.id)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -147,15 +186,18 @@ export function AnalysisHistory() {
                     borderRadius: 8,
                     border: '1px solid var(--line)',
                     background: 'var(--surface)',
-                    cursor: 'pointer',
+                    cursor: loadingId === item.id ? 'wait' : 'pointer',
+                    opacity: loadingId === item.id ? 0.6 : 1,
                     transition: 'all var(--dur-base)',
                     animation: `slideInDown 0.3s ease-out forwards`,
                     animationDelay: `${idx * 40}ms`,
                   }}
                   onMouseEnter={e => {
-                    const elem = e.currentTarget;
-                    elem.style.borderColor = 'var(--accent)';
-                    elem.style.background = 'rgb(6 182 212 / 0.05)';
+                    if (loadingId !== item.id) {
+                      const elem = e.currentTarget;
+                      elem.style.borderColor = 'var(--accent)';
+                      elem.style.background = 'rgb(6 182 212 / 0.05)';
+                    }
                   }}
                   onMouseLeave={e => {
                     const elem = e.currentTarget;
