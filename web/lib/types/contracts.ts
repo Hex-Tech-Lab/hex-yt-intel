@@ -126,6 +126,51 @@ export interface WorkerStreamRequest {
   exp: number;
 }
 
+// ─── Admin Stats ─────────────────────────────────────────────────────────────
+export interface UsageLogEntry {
+  id: string;
+  user_id: string;
+  action: string;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+}
+
+// ─── Analysis Export ─────────────────────────────────────────────────────────
+export interface AnalysisExportRecord {
+  id: string;
+  video_id: string;
+  title: string;
+  channel_title: string;
+  analysis_markdown: string;
+  validation_report?: Record<string, unknown>;
+  model_used?: string;
+  created_at: string;
+}
+
+// ─── Relations Stream ─────────────────────────────────────────────────────────
+export interface RelationsStreamData extends Record<string, unknown> {
+  type: 'status' | 'insight' | 'complete' | 'error';
+  stage?: 'computing' | 'cached';
+  model?: string;
+  insight?: unknown;
+  insights?: unknown[];
+  cached?: boolean;
+  analysisId?: string;
+  generatedAt?: string;
+  error?: string;
+}
+
+// ─── Persist Request ─────────────────────────────────────────────────────────
+export interface PersistRequestBody {
+  analysisId: string;
+  videoId: string;
+  markdown: string;
+  model?: string;
+  valid?: boolean;
+  contentSig: string;
+  status?: 'completed' | 'interrupted';
+}
+
 // ─── Inferred Types ──────────────────────────────────────────────────────────
 export type AnalysisCreateInput = z.infer<typeof AnalysisCreateSchema>;
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;

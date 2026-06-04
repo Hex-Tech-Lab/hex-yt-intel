@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       pnpm:
-        specifier: '>=9.0.0'
-        version: 11.1.3
+        specifier: 11.5.1
+        version: 11.5.1
 
   web:
     dependencies:
@@ -3434,8 +3434,8 @@ packages:
   png-js@1.1.0:
     resolution: {integrity: sha512-PM/uYGzGdNSzqeOgly68+6wKQDL1SY0a/N+OEa/+br6LnHWOAJB0Npiamnodfq3jd2LS/i2fMeOKSAILjA+m5Q==}
 
-  pnpm@11.1.3:
-    resolution: {integrity: sha512-yFNX/hfKEt0j3XBxgiZm39fjy3b+IU4zcLXqL7NPKiMRhVCbY+cX880KyzjdP42CvNXoFyQArmeLcOpPvtCJbQ==}
+  pnpm@11.5.1:
+    resolution: {integrity: sha512-k/e1dCLqcGglcjW0wW62B2LraOHcI3IxmcxzkEPqm+LEFDJ0o5nYxt76KxF2Im2cocS2NILWIAwaj7qnjB0UhQ==}
     engines: {node: '>=22.13'}
     hasBin: true
 
@@ -7335,7 +7335,7 @@ snapshots:
     dependencies:
       browserify-zlib: 0.2.0
 
-  pnpm@11.1.3: {}
+  pnpm@11.5.1: {}
 
   possible-typed-array-names@1.1.0: {}
 

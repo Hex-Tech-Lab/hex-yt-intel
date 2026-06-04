@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { getUserTier } from '@/lib/services/traffic';
 import { ERROR_CODES } from '@/lib/error-codes';
+import type { AnalysisExportRecord } from '@/lib/types/contracts';
 import PDFDocument from 'pdfkit';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
@@ -121,7 +122,7 @@ export async function GET(
   }
 }
 
-function drawHeader(doc: PDFKit.PDFDocument, analysis: any, subtitle: string) {
+function drawHeader(doc: PDFKit.PDFDocument, analysis: AnalysisExportRecord, subtitle: string) {
   doc.fontSize(18).font('Helvetica-Bold').fillColor('black').text(analysis.title || 'YouTube Analysis');
   doc.fontSize(10).fillColor('#666666').text(`Channel: ${analysis.channel_title || 'Unknown'}`);
   doc.fontSize(9).fillColor('#06b6d4').text(subtitle);
@@ -131,7 +132,7 @@ function drawHeader(doc: PDFKit.PDFDocument, analysis: any, subtitle: string) {
   doc.moveDown();
 }
 
-async function exportSummaryPDF(analysis: any) {
+async function exportSummaryPDF(analysis: AnalysisExportRecord) {
   const doc = new PDFDocument({ margin: 50, bufferPages: true });
   drawHeader(doc, analysis, 'Executive Summary');
 
@@ -167,7 +168,7 @@ async function exportSummaryPDF(analysis: any) {
   return finishPdf(doc, `${analysis.title || 'synthesis'}-summary.pdf`);
 }
 
-async function exportFullPDF(analysis: any) {
+async function exportFullPDF(analysis: AnalysisExportRecord) {
   const doc = new PDFDocument({ margin: 50, bufferPages: true });
   drawHeader(doc, analysis, 'Full Synthesis Report');
 

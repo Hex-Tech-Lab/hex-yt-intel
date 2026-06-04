@@ -8,6 +8,7 @@ import { verifyContentSig } from '@/lib/stream-token';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
 import { publishValidationTask } from '@/lib/qstash-client';
 import { env } from '@/lib/env';
+import type { PersistRequestBody } from '@/lib/types/contracts';
 import * as Sentry from '@sentry/nextjs';
 
 /**
@@ -20,7 +21,7 @@ import * as Sentry from '@sentry/nextjs';
  * in Server-to-Server calls.
  */
 export async function POST(request: NextRequest) {
-  let body: any;
+  let body: PersistRequestBody | undefined;
   try {
     body = await request.json();
     const { analysisId, videoId, markdown, model, valid, contentSig, status = 'completed' } = body || {};

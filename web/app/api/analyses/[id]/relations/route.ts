@@ -6,6 +6,7 @@ import { getRedisValue, setRedisValue, deleteRedisKey } from '@/lib/redis';
 import { computeStanceRelationsStream, type StanceDimension } from '@/lib/intelligence/relations-engine';
 import { DIMENSION_NAMES } from '@/lib/types/synthesis-nucleus';
 import type { RelationsResult, RelationInsight } from '@/lib/types/knowledge-graph';
+import type { RelationsStreamData } from '@/lib/types/contracts';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 
@@ -41,7 +42,7 @@ export async function GET(
 
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (data: any) => {
+      const send = (data: RelationsStreamData) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
