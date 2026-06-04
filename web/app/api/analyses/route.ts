@@ -15,6 +15,7 @@ import { AnalysisCreateSchema, type AnalysisJobMetadata } from '@/lib/types/cont
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { fetchSubtitles } from '@/lib/services/decodo';
 import { signStreamToken } from '@/lib/stream-token';
+import { parseDimensions, hasSufficientDimensions } from '@/lib/utils/dimension-parser';
 import * as Sentry from '@sentry/nextjs';
 
 const PROCESSING_STALE_MS = 180_000;
@@ -66,15 +67,18 @@ export async function POST(request: NextRequest) {
         const cachedReport = (existing.validation_report ?? {}) as { metadata?: AnalysisJobMetadata; persona?: string; timezone?: string };
         const cachedPersona = cachedReport.persona || 'analyst';
 
-        // CRITICAL FIX: Shield against poisoned empty caches and failed validations
-        // Only cache-hit on rows where: (1) markdown exists and is not empty, (2) validation_passed = true
+        // CRITICAL SHIELD: Validate cache integrity before returning
+        // Checks: (1) markdown exists and is not empty, (2) validation_passed = true, (3) sufficient dimensions parsed
         const hasMarkdown = existing.analysis_markdown.trim().length > 0;
         const isValidated = existing.validation_passed === true;
+        const parsedDims = parseDimensions(existing.analysis_markdown);
+        const hasSufficientDims = hasSufficientDimensions(parsedDims);
 
-        if (!hasMarkdown || !isValidated) {
+        if (!hasMarkdown || !isValidated || !hasSufficientDims) {
           console.warn(`[Bouncer] Poisoned cache detected for analysis ${existing.id}. Purging row and re-running.`, {
             hasMarkdown,
-            isValidated
+            isValidated,
+            dimensionCount: Object.keys(parsedDims).length,
           });
           // Delete the corrupted row so the next step creates a fresh one
           await supabase.from('analyses').delete().eq('id', existing.id);
