@@ -5,6 +5,7 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 
 export function useSSEStream() {
   const {
+    status,
     setIsLoading,
     setStatus,
     setError,
@@ -104,6 +105,7 @@ export function useSSEStream() {
           initSynthesis(job);
           setStatus('analyzing');
 
+          let streamCompleted = false;
           const adapter = new SynthesisStreamAdapter({
             onError: (error) => {
               setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: error });
@@ -111,6 +113,7 @@ export function useSSEStream() {
               setIsLoading(false);
             },
             onComplete: () => {
+              streamCompleted = true;
               setStatus('complete');
               setIsLoading(false);
               archiveCurrentAnalysis();
@@ -143,7 +146,6 @@ export function useSSEStream() {
               const reader = res.body.getReader();
               const decoder = new TextDecoder();
               let buffer = '';
-              let finished = false;
 
               const handleEvent = (line: string) => {
                 const trimmed = line.trim();
@@ -153,14 +155,12 @@ export function useSSEStream() {
                 if (trimmed.startsWith('data:')) {
                   const jsonStr = trimmed.slice(5).trim();
                   adapter.processLine(jsonStr);
-                  finished = true;
                   return;
                 }
 
                 // Also handle raw JSON (if worker emits JSON directly)
                 try {
                   adapter.processLine(trimmed);
-                  finished = true;
                 } catch {
                   // Not JSON, skip
                 }
@@ -177,7 +177,7 @@ export function useSSEStream() {
               if (buffer.trim()) handleEvent(buffer);
 
               // Stream closed without an explicit complete/error event.
-              if (!finished) {
+              if (!streamCompleted && status !== 'error') {
                 setError({ code: 'ERR_STREAM_INCOMPLETE', status: 0, message: 'The analysis stream ended unexpectedly. Please try again.' });
                 setStatus('error');
                 setIsLoading(false);
