@@ -1,11 +1,7 @@
-/**
- * useRelations — lazily fetches the LLM-derived stance relations (tangent/contrarian)
- * for a completed analysis. Server-cached, so this is a single cheap GET that the
- * IntelligencePanel renders alongside the lexical Related/Similar lists.
- */
-
 import { useEffect, useState } from 'react';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
+
+// See /docs/hooks/use-relations.md
 
 interface RelationsState {
   insights: RelationInsight[];
@@ -21,19 +17,26 @@ export function useRelations(analysisId: string | null, enabled: boolean): Relat
       setState({ insights: [], loading: false, error: null });
       return;
     }
-    let cancelled = false;
+
+    const controller = new AbortController();
     setState((s) => ({ ...s, loading: true, error: null }));
 
-    fetch(`/api/analyses/${analysisId}/relations`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+    fetch(`/api/analyses/${analysisId}/relations`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
-        if (!cancelled) setState({ insights: data.insights ?? [], loading: false, error: null });
+        setState({ insights: data.insights ?? [], loading: false, error: null });
       })
       .catch((err) => {
-        if (!cancelled) setState({ insights: [], loading: false, error: String(err?.message ?? err) });
+        if (err.name === 'AbortError') return;
+        setState({ insights: [], loading: false, error: String(err?.message ?? err) });
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      controller.abort();
+    };
   }, [analysisId, enabled]);
 
   return state;

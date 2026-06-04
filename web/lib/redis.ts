@@ -244,6 +244,25 @@ export async function executeRedisScript(
 }
 
 /**
+ * Delete a key from Redis
+ */
+export async function deleteRedisKey(key: string): Promise<void> {
+  const redis = initializeRedis();
+
+  try {
+    if (redis && redisAvailable) {
+      await redis.del(key);
+      return;
+    }
+  } catch (error) {
+    console.warn(`[redis.ts] Failed to delete key ${key}:`, error);
+    redisAvailable = false;
+  }
+
+  memoryCache.delete(key);
+}
+
+/**
  * Get current Redis status
  * Used for health checks and diagnostics
  */

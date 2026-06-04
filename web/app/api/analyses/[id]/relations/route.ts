@@ -1,17 +1,16 @@
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { getRedisValue, setRedisValue } from '@/lib/redis';
-import { computeStanceRelations, type StanceDimension } from '@/lib/intelligence/relations-engine';
+import { getRedisValue, setRedisValue, deleteRedisKey } from '@/lib/redis';
+import { computeStanceRelationsStream, type StanceDimension } from '@/lib/intelligence/relations-engine';
 import { DIMENSION_NAMES } from '@/lib/types/synthesis-nucleus';
-import type { RelationsResult } from '@/lib/types/knowledge-graph';
-import { createHash } from 'crypto';
+import type { RelationsResult, RelationInsight } from '@/lib/types/knowledge-graph';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 
 const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
-/** Parse the stored synthesis markdown into dimensions ("### DIMENSION N – Name\n…"). */
 function parseDimensions(markdown: string): StanceDimension[] {
   const out: StanceDimension[] = [];
   const re = /#{1,4}\s*DIMENSION\s+(\d+)\s*[–\-:]?\s*([^\n]*)\n([\s\S]*?)(?=#{1,4}\s*DIMENSION\s+\d+|$)/gi;
@@ -26,64 +25,112 @@ function parseDimensions(markdown: string): StanceDimension[] {
   return out;
 }
 
+async function hashContent(text: string): Promise<string> {
+  const msgUint8 = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await context.params;
-    const supabase = await getSupabaseClientWithAuth();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { id } = await context.params;
+  const encoder = new TextEncoder();
+  
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (data: any) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
+
+      const timeoutTimer = setTimeout(() => {
+        send({ type: 'error', error: 'Request timed out (25s window exceeded)' });
+        controller.close();
+      }, 25000);
+
+      try {
+        const supabase = await getSupabaseClientWithAuth();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          send({ type: 'error', error: 'Unauthorized' });
+          controller.close();
+          return;
+        }
+
+        const { data: analysis, error } = await supabase
+          .from('analyses')
+          .select('id, analysis_markdown')
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error || !analysis) {
+          send({ type: 'error', error: 'Analysis not found' });
+          controller.close();
+          return;
+        }
+
+        const markdown: string = analysis.analysis_markdown || '';
+        const dimensions = parseDimensions(markdown);
+        const contentHash = await hashContent(markdown);
+        const cacheKey = `relations:${id}:${contentHash}`;
+
+        const cached = await getRedisValue(cacheKey);
+        if (cached) {
+          try {
+            const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+            send({ ...parsed, cached: true, type: 'complete' });
+            controller.close();
+            return;
+          } catch (e) {
+            console.error('[relations/route] Malformed cache, purging:', cacheKey, e);
+            await deleteRedisKey(cacheKey).catch(() => {});
+          }
+        }
+
+        const apiKey = process.env.OPENROUTER_API_KEY || '';
+        const insights: RelationInsight[] = [];
+        let modelUsed = 'unknown';
+
+        for await (const chunk of computeStanceRelationsStream(dimensions, apiKey)) {
+          if (chunk.type === 'model') {
+            modelUsed = chunk.model;
+            send({ type: 'status', stage: 'computing', model: chunk.model });
+          } else if (chunk.type === 'insight') {
+            insights.push(chunk.insight);
+            send({ type: 'insight', insight: chunk.insight });
+          }
+        }
+
+        const result: RelationsResult = {
+          analysisId: id,
+          generatedAt: new Date().toISOString(),
+          model: modelUsed,
+          insights,
+        };
+
+        if (insights.length > 0) {
+          await setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).catch(() => {});
+        }
+
+        send({ ...result, type: 'complete' });
+      } catch (err) {
+        Sentry.captureException(err, { tags: { operation: 'relations', reason: 'unhandled' } });
+        send({ type: 'error', error: 'Failed to compute relations' });
+      } finally {
+        clearTimeout(timeoutTimer);
+        controller.close();
+      }
     }
+  });
 
-    const { data: analysis, error } = await supabase
-      .from('analyses')
-      .select('id, analysis_markdown')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (error) {
-      Sentry.captureException(error, { tags: { operation: 'relations', reason: 'fetch' } });
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  return new NextResponse(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
     }
-    if (!analysis) {
-      return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
-    }
-
-    const markdown: string = analysis.analysis_markdown || '';
-    const dimensions = parseDimensions(markdown);
-
-    // Cache key is content-addressed so re-analysis invalidates automatically.
-    const contentHash = createHash('sha256').update(markdown).digest('hex').slice(0, 16);
-    const cacheKey = `relations:${id}:${contentHash}`;
-
-    const cached = await getRedisValue(cacheKey);
-    if (cached) {
-      const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-      return NextResponse.json({ ...parsed, cached: true } as RelationsResult);
-    }
-
-    const apiKey = process.env.OPENROUTER_API_KEY || '';
-    const { insights, model } = await computeStanceRelations(dimensions, apiKey);
-
-    const result: RelationsResult = {
-      analysisId: id,
-      generatedAt: new Date().toISOString(),
-      model,
-      insights,
-    };
-
-    // Only cache a genuine result (don't pin an empty failure for 7 days).
-    if (insights.length > 0) {
-      await setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS);
-    }
-
-    return NextResponse.json(result);
-  } catch (err) {
-    Sentry.captureException(err, { tags: { operation: 'relations', reason: 'unhandled' } });
-    return NextResponse.json({ error: 'Failed to compute relations' }, { status: 500 });
-  }
+  });
 }

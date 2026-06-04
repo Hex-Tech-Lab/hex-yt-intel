@@ -5,17 +5,16 @@ import { MonoLabel, Icon } from '@/components/templates/_shared/primitives';
 import { nodeIntelligence } from '@/lib/intelligence/knowledge-graph';
 import type { KnowledgeGraph, RelatedRef, RelationInsight } from '@/lib/types/knowledge-graph';
 
+// See /docs/ui/intelligence-panel.md
+
 export interface IntelligencePanelProps {
   graph: KnowledgeGraph;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
-  /** LLM-derived stance relations (tangent/contrarian). Optional; shown when present. */
   insights?: RelationInsight[];
-  /** True while the stance relations are being fetched. */
   insightsLoading?: boolean;
 }
 
-/** LLM stance insights — rationale-bearing tangent/contrarian cards. */
 function StanceSection({
   insights,
   loading,
@@ -34,29 +33,44 @@ function StanceSection({
   if (!loading && shown.length === 0) return null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--accent-ink)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+    <div className="flex flex-col gap-2">
+      <span className="flex items-center gap-1.75 text-[var(--accent-ink)] font-mono text-[11px] tracking-[0.06em] uppercase">
         <Icon icon="solar:branching-paths-up-linear" size={14} />
         Stance intelligence
       </span>
       {loading ? (
-        <div style={{ color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>analyzing tensions…</div>
+        <div className="text-[var(--ink-muted)] font-mono text-[11px]">analyzing tensions…</div>
       ) : (
-        shown.map((i, idx) => {
+        shown.map((i) => {
           const contra = i.kind === 'contrarian';
-          const color = contra ? 'var(--warn)' : 'var(--ink-secondary)';
+          const colorClass = contra ? "text-[var(--warn)]" : "text-[var(--ink-secondary)]";
+          const borderClass = contra ? "border-l-[var(--warn)]" : "border-l-[var(--ink-secondary)]";
+          
           return (
-            <div key={idx} style={{ border: '1px solid var(--line)', borderLeft: `2px solid ${color}`, borderRadius: 10, padding: '8px 11px', background: 'rgb(11 14 20 / 0.5)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-                <Icon icon={contra ? 'solar:bolt-circle-linear' : 'solar:arrow-right-up-linear'} size={13} style={{ color }} />
-                <span style={{ color, fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{i.kind}</span>
+            <div 
+              key={`${i.kind}-${i.source}-${i.target}`} 
+              className={`border border-[var(--line)] ${borderClass} border-l-2 rounded-xl p-2 px-3 bg-[rgb(11_14_20_/_0.5)]`}
+            >
+              <div className="flex items-center gap-1.5 mb-1.25">
+                <Icon icon={contra ? 'solar:bolt-circle-linear' : 'solar:arrow-right-up-linear'} size={13} className={colorClass} />
+                <span className={`font-mono text-[10px] uppercase tracking-[0.05em] ${colorClass}`}>{i.kind}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
-                <button onClick={() => onSelect(`dim-${i.source}`)} style={{ background: 'transparent', border: 'none', color: 'var(--ink)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>{i.sourceLabel}</button>
-                <Icon icon="solar:arrow-right-linear" size={12} style={{ color: 'var(--ink-muted)' }} />
-                <button onClick={() => onSelect(`dim-${i.target}`)} style={{ background: 'transparent', border: 'none', color: 'var(--ink)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>{i.targetLabel}</button>
+              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                <button 
+                  onClick={() => onSelect(`dim-${i.source}`)} 
+                  className="bg-transparent border-none text-[var(--ink)] text-xs font-semibold cursor-pointer p-0 hover:text-[var(--accent)] transition-colors"
+                >
+                  {i.sourceLabel}
+                </button>
+                <Icon icon="solar:arrow-right-linear" size={12} className="text-[var(--ink-muted)]" />
+                <button 
+                  onClick={() => onSelect(`dim-${i.target}`)} 
+                  className="bg-transparent border-none text-[var(--ink)] text-xs font-semibold cursor-pointer p-0 hover:text-[var(--accent)] transition-colors"
+                >
+                  {i.targetLabel}
+                </button>
               </div>
-              <p style={{ margin: 0, color: 'var(--ink-secondary)', fontSize: 11.5, lineHeight: 1.5 }}>{i.rationale}</p>
+              <p className="m-0 text-[var(--ink-secondary)] text-[11.5px] leading-relaxed">{i.rationale}</p>
             </div>
           );
         })
@@ -74,8 +88,8 @@ const CARD = {
 
 function StrengthBar({ value, color }: { value: number; color: string }) {
   return (
-    <span style={{ display: 'inline-block', width: 42, height: 4, borderRadius: 2, background: 'rgb(51 65 85 / 0.4)', overflow: 'hidden' }}>
-      <span style={{ display: 'block', height: '100%', width: `${Math.round(Math.min(1, value) * 100)}%`, background: color }} />
+    <span className="inline-block w-[42px] h-1 rounded-sm bg-[rgb(51_65_85_/_0.4)] overflow-hidden">
+      <span className="block h-full transition-all duration-500" style={{ width: `${Math.round(Math.min(1, value) * 100)}%`, background: color }} />
     </span>
   );
 }
@@ -84,35 +98,11 @@ function RefRow({ r, color, onSelect }: { r: RelatedRef; color: string; onSelect
   return (
     <button
       onClick={() => onSelect(r.nodeId)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
-        gap: 8,
-        padding: '6px 8px',
-        borderRadius: 8,
-        border: '1px solid transparent',
-        background: 'transparent',
-        color: 'var(--ink-secondary)',
-        cursor: 'pointer',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 12,
-        textAlign: 'left',
-        transition: 'background 0.15s, border-color 0.15s',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgb(26 31 43 / 0.6)';
-        e.currentTarget.style.borderColor = 'var(--line)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'transparent';
-        e.currentTarget.style.borderColor = 'transparent';
-      }}
+      className="flex items-center justify-between w-full gap-2 p-1.5 px-2 rounded-lg border border-transparent bg-transparent text-[var(--ink-secondary)] cursor-pointer font-mono text-xs text-left transition-all hover:bg-[rgb(26_31_43_/_0.6)] hover:border-[var(--line)]"
     >
-      <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-        <span style={{ color: 'var(--ink-muted)', fontSize: 10 }}>{String(r.dimension).padStart(2, '0')}</span>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
+      <span className="flex items-center gap-1.75 min-w-0">
+        <span className="text-[var(--ink-muted)] text-[10px]">{String(r.dimension).padStart(2, '0')}</span>
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{r.label}</span>
       </span>
       <StrengthBar value={r.strength} color={color} />
     </button>
@@ -130,18 +120,18 @@ function Card({
 }) {
   const meta = CARD[kind];
   return (
-    <div style={{ border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', background: 'rgb(11 14 20 / 0.5)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 11px', borderBottom: '1px solid var(--line)' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 7, color: meta.color, fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+    <div className="border border-[var(--line)] rounded-xl overflow-hidden bg-[rgb(11_14_20_/_0.5)]">
+      <div className="flex items-center justify-between p-2 px-3 border-b border-[var(--line)]">
+        <span className="flex items-center gap-1.75 text-[11.5px] font-mono tracking-[0.06em] uppercase" style={{ color: meta.color }}>
           <Icon icon={meta.icon} size={14} />
           {meta.label}
         </span>
-        <span style={{ color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}>{refs.length}</span>
+        <span className="text-[var(--ink-muted)] font-mono text-[10.5px]">{refs.length}</span>
       </div>
       {refs.length === 0 ? (
-        <div style={{ padding: '10px 11px', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{meta.hint} — none</div>
+        <div className="p-2.5 px-3 text-[var(--ink-muted)] font-mono text-[11px]">{meta.hint} — none</div>
       ) : (
-        <div style={{ padding: 5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div className="p-1 flex flex-col gap-0.5">
           {refs.map((r) => (
             <RefRow key={r.nodeId} r={r} color={meta.color} onSelect={onSelect} />
           ))}
@@ -156,35 +146,34 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
   const intel = useMemo(() => (selectedId ? nodeIntelligence(graph, selectedId) : null), [graph, selectedId]);
   const rootNode = useMemo(() => graph.nodes.find((n) => n.id === graph.rootId) || null, [graph.nodes, graph.rootId]);
 
-  // Overview when nothing is selected.
   if (!selectedNode || !intel) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="flex flex-col gap-3">
         <MonoLabel index="//">graph intelligence</MonoLabel>
         {rootNode && (
-          <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 12, background: 'rgb(6 182 212 / 0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--accent-ink)', fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <div className="border border-[var(--line)] rounded-xl p-3 bg-[rgb(6_182_212_/_0.06)]">
+            <div className="flex items-center gap-1.75 text-[var(--accent-ink)] font-mono text-[11.5px] tracking-[0.06em] uppercase">
               <Icon icon="solar:crown-minimalistic-linear" size={14} />
               Foundational dimension
             </div>
             <button
               onClick={() => onSelect(rootNode.id)}
-              style={{ marginTop: 8, background: 'transparent', border: 'none', color: 'var(--ink)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'left' }}
+              className="mt-2 bg-transparent border-none text-[var(--ink)] text-sm font-semibold cursor-pointer p-0 text-left hover:text-[var(--accent)] transition-colors"
             >
               {String(rootNode.dimension).padStart(2, '0')} · {rootNode.label}
             </button>
-            <p style={{ marginTop: 6, color: 'var(--ink-muted)', fontSize: 11.5, lineHeight: 1.5 }}>
+            <p className="mt-1.5 text-[var(--ink-muted)] text-[11.5px] leading-relaxed">
               The most connected node — the conceptual anchor the rest of the analysis leans on.
             </p>
           </div>
         )}
-        <div style={{ color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11.5, lineHeight: 1.6 }}>
-          Select a node to see its <span style={{ color: 'var(--accent-ink)' }}>related</span>,{' '}
-          <span style={{ color: 'var(--accent-ink)' }}>similar</span>, <span style={{ color: 'var(--ink-secondary)' }}>tangent</span> and{' '}
-          <span style={{ color: 'var(--warn)' }}>contrarian</span> connections.
+        <div className="text-[var(--ink-muted)] font-mono text-[11.5px] leading-relaxed">
+          Select a node to see its <span className="text-[var(--accent-ink)]">related</span>,{' '}
+          <span className="text-[var(--accent-ink)]">similar</span>, <span className="text-[var(--ink-secondary)]">tangent</span> and{' '}
+          <span className="text-[var(--warn)]">contrarian</span> connections.
         </div>
         <StanceSection insights={insights} loading={insightsLoading} selectedDim={null} onSelect={onSelect} />
-        <div style={{ borderTop: '1px solid var(--line)', paddingTop: 10, display: 'flex', flexWrap: 'wrap', gap: 10, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}>
+        <div className="border-t border-[var(--line)] pt-2.5 flex flex-wrap gap-2.5 text-[var(--ink-muted)] font-mono text-[10.5px]">
           <span>{graph.nodes.length} nodes</span>
           <span>·</span>
           <span>{graph.edges.length} relations</span>
@@ -196,30 +185,28 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Selected node header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[var(--ink-muted)] font-mono text-[10.5px]">
             DIMENSION {String(selectedNode.dimension).padStart(2, '0')}
-            {intel.isFoundational && <span style={{ color: 'var(--accent-ink)', marginLeft: 8 }}>● foundational</span>}
+            {intel.isFoundational && <span className="text-[var(--accent-ink)] ml-2">● foundational</span>}
           </div>
-          <div style={{ color: 'var(--ink)', fontSize: 16, fontWeight: 600, marginTop: 2 }}>{selectedNode.label}</div>
+          <div className="text-[var(--ink)] text-base font-semibold mt-0.5">{selectedNode.label}</div>
         </div>
         <button
           onClick={() => onSelect(null)}
           title="Clear selection"
-          style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 7, border: '1px solid var(--line)', background: 'transparent', color: 'var(--ink-muted)', cursor: 'pointer' }}
+          className="flex-shrink-0 w-[26px] h-[26px] rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer hover:text-[var(--ink)] transition-colors"
         >
           <Icon icon="solar:close-circle-linear" size={14} />
         </button>
       </div>
 
-      {/* Key terms */}
       {selectedNode.keyTerms.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+        <div className="flex flex-wrap gap-1.25">
           {selectedNode.keyTerms.map((t) => (
-            <span key={t} style={{ padding: '2px 8px', borderRadius: 9999, border: '1px solid var(--line)', color: 'var(--ink-secondary)', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}>
+            <span key={t} className="p-0.5 px-2 rounded-full border border-[var(--line)] text-[var(--ink-secondary)] font-mono text-[10.5px]">
               {t}
             </span>
           ))}
