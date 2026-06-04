@@ -25,10 +25,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const restoreAnalysis = async (analysisId: string) => {
     setLoadingId(analysisId);
     try {
-      const token = localStorage.getItem('auth_token') || '';
-      const res = await fetch(`/api/analyses/${analysisId}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const res = await fetch(`/api/analyses/${analysisId}`);
       if (!res.ok) {
         console.error('Failed to restore analysis:', res.status);
         return;

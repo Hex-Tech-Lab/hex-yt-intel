@@ -89,7 +89,7 @@ export async function GET(
 }
 
 /** Renders a finished PDFDocument into an attachment Response. */
-function finishPdf(doc: PDFKit.PDFDocument, filename: string): Promise<Response> {
+function finishPdf(doc: typeof PDFDocument, filename: string): Promise<Response> {
   const chunks: Buffer[] = [];
   doc.on('data', (chunk) => chunks.push(chunk as Buffer));
   return new Promise<Response>((resolve) => {
