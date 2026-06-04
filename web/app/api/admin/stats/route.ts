@@ -111,9 +111,9 @@ export async function GET(): Promise<NextResponse<AdminStats | { error: string }
 
     if (latencyData && latencyData.length > 0) {
       const latencies = latencyData
-        .map((log: any) => {
+        .map((log: { metadata: Record<string, unknown> | null }) => {
           try {
-            return parseInt((log.metadata as any)?.latency_ms || '0');
+            return parseInt(String(log.metadata?.latency_ms ?? '0'), 10);
           } catch {
             return 0;
           }
@@ -155,7 +155,7 @@ export async function GET(): Promise<NextResponse<AdminStats | { error: string }
       .gte('created_at', sevenDaysAgo);
 
     const uniqueActiveUsers = new Set(
-      activeUsersData?.map((log: any) => log.user_id) || []
+      activeUsersData?.map((log: { user_id: string }) => log.user_id) || []
     ).size;
     stats.retention_7d =
       stats.active_users > 0 ? Math.round((uniqueActiveUsers / stats.active_users) * 100) : 0;
