@@ -12,6 +12,7 @@ import { chargeMonthlyQuota, refundMonthlyQuota } from '@/lib/services/billing';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
 import { AnalysisCreateSchema, type AnalysisJobMetadata } from '@/lib/types/contracts';
+import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { fetchSubtitles } from '@/lib/services/decodo';
 import { signStreamToken } from '@/lib/stream-token';
@@ -66,14 +67,17 @@ export async function POST(request: NextRequest) {
         const cachedReport = (existing.validation_report ?? {}) as { metadata?: AnalysisJobMetadata; persona?: string; timezone?: string };
         const cachedPersona = cachedReport.persona || 'analyst';
 
-        // CRITICAL FIX: Shield against poisoned empty caches (see PR #40 context)
-        const hasMarkdown = existing.analysis_markdown.trim().length > 0;
-        
-        if (!hasMarkdown) {
-          console.warn(`[Bouncer] Poisoned cache detected for analysis ${existing.id}. Purging row and re-running.`);
-          // Delete the corrupted row so the next step creates a fresh one
-          await supabase.from('analyses').delete().eq('id', existing.id);
-        } else {
+        // Parse the cached markdown into dimensions. A genuine analysis yields >=8 of
+        // 11 dimensions (the worker's validate12D threshold). Fewer = empty/stub/
+        // degraded cache → DON'T serve it as 'done' (that was the "hollow done state":
+        // a 101-char stub returned green with an empty grid). Fall through to a fresh
+        // run instead. We do NOT delete the row: the upsert on (user_id, video_id)
+        // below overwrites it, and deleting would risk losing a partial result or
+        // misclassifying a good row via a stale validation_passed flag.
+        const dimensions = parseUcisDimensions(existing.analysis_markdown);
+        const dimensionCount = Object.keys(dimensions).length;
+
+        if (dimensionCount >= 8) {
           return NextResponse.json({
             id: existing.id,
             analysisId: existing.id,
@@ -89,15 +93,19 @@ export async function POST(request: NextRequest) {
             timezone: cachedReport.timezone || validation.data.timezone || 'UTC',
             // Restored from the persisted job context; absent only for legacy pre-contract rows.
             metadata: cachedReport.metadata,
+            // Rehydrate the grid: initSynthesis(job) consumes payload.dimensions, so a
+            // cache hit renders identically to a fresh stream (fixes the hollow cards).
+            dimensions,
             streaming: {
               started: existing.created_at,
               interrupted: false,
-              dimensionsReceived: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+              dimensionsReceived: Object.keys(dimensions).map(Number),
             },
             cacheHit: true,
             message: 'Retrieved from persistent cache.',
           });
         }
+        console.warn(`[Bouncer] Cache for ${existing.id} has ${dimensionCount} dimensions (<8) — treating as a miss and re-running fresh.`);
       }
     }
 
