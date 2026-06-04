@@ -183,3 +183,10 @@ The system is transitioning to a triple-redundant hybrid model (ADR 005) to solv
 - ✅ All Phase 1 systems verified (Known Good State checklist)
 
 **See**: `/docs/ops/KNOWN_GOOD_STATE_CHECKLIST.md` (25-item verification)
+
+---
+
+## 8. MASTER CHANGELOG LEDGER
+
+- **2026-06-04**: Fix (review): Processed structural UX epic recommendations; resolved PDFKit type issues and secured analysis route via getSupabaseClientWithAuth().
+- **2026-06-04**: Feat (ux): Complete 5-part structural epic (layout trapping, history restoration, dimension drawers, tier-gated PDFs, stance relations engine) and merge to main.
