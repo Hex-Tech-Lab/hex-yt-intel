@@ -15,6 +15,7 @@
 
 import { fetchWithProxy } from './http-utils';
 import { getRandomUserAgent } from './user-agent';
+import type { ITranscriptProvider } from '../ports/ITranscriptProvider';
 
 export interface TranscriptResult {
   videoId: string;
@@ -22,7 +23,7 @@ export interface TranscriptResult {
   language: string;
 }
 
-export class TranscriptExtractor {
+export class TranscriptExtractor implements ITranscriptProvider {
   private residentialProxyUrl?: string;
 
   constructor(residentialProxyUrl?: string) {
