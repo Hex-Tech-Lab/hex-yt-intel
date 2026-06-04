@@ -20,6 +20,9 @@ docs/specs/.env_*
 
 # Windows/WSL filesystem metadata
 *:Zone.Identifier
+# Claude Code agent worktrees / local state (never commit agent scratch space)
+.claude/
+.kilo/
 # Cloudflare Wrangler local build artifacts
 .wrangler/
 # Binary design-system exports (source-of-truth lives as extracted .tsx/.css)
