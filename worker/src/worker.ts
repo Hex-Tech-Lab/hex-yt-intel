@@ -8,6 +8,11 @@ import { TranscriptExtractor } from "./services/TranscriptExtractor";
 import { MetadataScraper } from "./services/MetadataScraper";
 import { ReasoningEngine } from "./services/ReasoningEngine";
 import { handleChatStream } from "./chat-stream";
+import { PromptBuilder } from "./services/PromptBuilder";
+import { LLMCascade } from "./services/LLMCascade";
+import { ValidationService } from "./services/ValidationService";
+import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
+import type { IReasoningEngine } from "./ports/IReasoningEngine";
 
 type Env = {
   YOUTUBE_API_KEY: string;
@@ -255,10 +260,16 @@ app.post("/analyze-llm", async (c) => {
       console.warn('[analyze-llm] Upstash not configured, proceeding without caching');
     }
 
-    // Orchestrate: delegate cascade + caching to the ReasoningEngine.
-    const engine = new ReasoningEngine(
-      apiKey,
-      upstashUrl && upstashToken ? { url: upstashUrl, token: upstashToken } : undefined
+    // Orchestrate: delegate cascade + caching to the ReasoningEngine via DI.
+    const cache =
+      upstashUrl && upstashToken
+        ? new UpstashCacheAdapter({ url: upstashUrl, token: upstashToken })
+        : undefined;
+    const engine: IReasoningEngine = new ReasoningEngine(
+      new PromptBuilder(),
+      new LLMCascade(apiKey),
+      new ValidationService(),
+      cache
     );
 
     const result = await engine.execute({
@@ -350,9 +361,15 @@ app.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: 'Invalid token' }, 401);
   }
 
-  // Instantiate the reasoning engine. It builds the UCIS prompt server-side and
-  // runs the model cascade — the orchestrator only wires its domain events to SSE.
-  const engine = new ReasoningEngine(apiKey);
+  // Instantiate the reasoning engine via DI. It builds the UCIS prompt server-side
+  // and runs the model cascade — the orchestrator only wires domain events to SSE.
+  // No cache on the streaming path (partial-progress persistence handled by worker).
+  const engine: IReasoningEngine = new ReasoningEngine(
+    new PromptBuilder(),
+    new LLMCascade(apiKey),
+    new ValidationService(),
+    undefined
+  );
 
   const encoder = new TextEncoder();
 
