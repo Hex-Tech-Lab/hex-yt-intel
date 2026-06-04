@@ -73,19 +73,13 @@ export async function GET(request: NextRequest) {
       const validationReport = (existingAnalysis.validation_report as any) || {};
       const metadataPayload = validationReport.metadata || (existingAnalysis as any).metadata || {};
 
-      if (existingAnalysis.status === 'complete' || existingAnalysis.status === 'success' || (existingAnalysis.analysis_markdown && existingAnalysis.analysis_markdown.length > 0)) {
-        console.log('[analyses/check] DONE - analysis found', { videoId: normalizedVideoId, analysisId: existingAnalysis.id });
-        addBreadcrumb('Poll: done', { videoId: normalizedVideoId, analysisId: existingAnalysis.id }, 'cache');
-
+      if (existingAnalysis.status === 'complete' || existingAnalysis.status === 'success') {
         return NextResponse.json({
           exists: true,
           status: 'complete',
           analysisId: existingAnalysis.id,
           title: existingAnalysis.title,
           channelTitle: existingAnalysis.channel_title,
-          markdown: existingAnalysis.analysis_markdown,
-          createdAt: existingAnalysis.created_at,
-          modelUsed: existingAnalysis.model_used,
           metadata: metadataPayload
         }, { status: 200 });
       }
