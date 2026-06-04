@@ -5,6 +5,7 @@ export const maxDuration = 60;
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import type { ChatMessage, ChatRole } from '@/lib/types/chat';
+import { CHAT_PROTOCOL, CHAT_MODELS } from '@/lib/config/prompts';
 
 type Row = {
   id: string;
@@ -222,25 +223,6 @@ function sse(producer: (send: (obj: unknown) => void) => void | Promise<void>): 
     headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' },
   });
 }
-
-// Chat is fast grounded Q&A, NOT deep analysis — favor a snappy, high-TPS, free model
-// with no heavy reasoning. Gemini 2.0 Flash leads (fast, huge context, implicit prompt
-// caching on the resent grounding). Nemotron is the resilient fallback, capped to LOW
-// reasoning effort so it stays responsive. (Reasoning param is ignored by models that
-// don't support it.) Requires the Google provider enabled in the OpenRouter allowlist.
-const CHAT_MODELS = [
-  'google/gemini-2.0-flash-exp:free',
-  'nvidia/nemotron-3-nano-30b-a3b:free',
-] as const;
-
-// Interaction protocol — keeps replies short and PING-PONG, never a wall-of-text dump.
-const CHAT_PROTOCOL = [
-  'You are a concise, interactive analyst. NEVER dump. Hard rules:',
-  '1) Answer in at most 5 short bullet points (or 2-3 sentences). No headings, no tables, no section numbers.',
-  '2) Lead with the substance immediately.',
-  '3) ALWAYS finish with a final line that is EXACTLY: OPTIONS: ["...","...","..."] — three short, specific next-step suggestions tailored to what was just discussed (e.g. "Executive summary", "Elaborate on <X>", "Explore <Y>"). The user can also just type their own.',
-  'Output nothing after the OPTIONS line.',
-].join('\n');
 
 async function streamOpenRouter(
   apiKey: string,

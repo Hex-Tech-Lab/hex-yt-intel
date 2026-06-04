@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSupabaseServiceClient, getSupabaseClientWithAuth } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
@@ -21,64 +21,43 @@ interface AdminStats {
  * Admin-only endpoint for observability stats
  * Returns aggregated usage and performance metrics
  */
-export async function GET(request: NextRequest): Promise<NextResponse<AdminStats | { error: string }>> {
+export async function GET(): Promise<NextResponse<AdminStats | { error: string }>> {
   try {
-    // Dev bypass for CI testing
-    const bypassSecret = request.headers.get('X-Hex-Test-Secret');
-    const isProduction = process.env.NODE_ENV === 'production';
-    const devBypassToken = process.env.DEV_BYPASS_TOKEN;
+    // 1. Auth check - must be authenticated using unified Supabase client
+    const authClient = await getSupabaseClientWithAuth();
+    const { data: { user } } = await authClient.auth.getUser();
 
-    const hasValidBypassToken = devBypassToken && bypassSecret === devBypassToken;
-    const shouldAttemptBypass = !isProduction && hasValidBypassToken;
-
-    let userId: string;
-
-    if (shouldAttemptBypass) {
-      // Extract userId from Authorization header if present: "Bearer test-token-ID" or "Bearer user-ID"
-      const authHeader = request.headers.get('Authorization');
-      const token = authHeader?.replace('Bearer ', '') || '';
-      const testUserId = token.startsWith('test-token-') ? token.replace('test-token-', '') : token;
-      userId = testUserId || 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
-    } else {
-      // 1. Auth check - must be authenticated using unified Supabase client
-      const supabase = await getSupabaseClientWithAuth();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      userId = user.id;
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
+    const userId = user.id;
 
-
-    // 2. Initialize Supabase early for role check
+    // 2. Initialize Supabase service client for data queries
     const supabase = getSupabaseServiceClient();
 
-    // 3. Role check - bypass for dev, otherwise query database
-    if (!shouldAttemptBypass) {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', userId)
-        .maybeSingle();
+    // 3. Role check - verify user is admin
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
 
-      if (userError) {
-        Sentry.captureException(userError, {
-          tags: { operation: 'admin_role_check' },
-          contexts: { admin: { userId, operation: 'role_check' } }
-        });
-        return NextResponse.json(
-          { error: 'Failed to verify admin status' },
-          { status: 500 }
-        );
-      }
+    if (userError) {
+      Sentry.captureException(userError, {
+        tags: { operation: 'admin_role_check' },
+        contexts: { admin: { userId, operation: 'role_check' } }
+      });
+      return NextResponse.json(
+        { error: 'Failed to verify admin status' },
+        { status: 500 }
+      );
+    }
 
-      if (!userData || userData.role !== 'admin') {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+    if (!userData || userData.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // 4. Fetch stats from database
