@@ -10,6 +10,7 @@ import { StreamingGrid, Dimension } from '@/components/templates/console/Streami
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
+import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
@@ -50,6 +51,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
 
   const tierLabel = profile.tier === 'pro' ? 'Pro' : profile.tier === 'free' ? 'Free' : profile.tier;
   const quotaLabel =
@@ -136,6 +138,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [projection, status]);
 
   return (
+    <>
     <DashboardLayout
       sidebar={
         <Sidebar
@@ -244,7 +247,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   <StreamingGrid
                     dimensions={dimensions}
                     progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
-                    onOpenDimension={(key) => setSelectedNodeId(`dim-${key.replace('dim-', '')}`)}
+                    onOpenDimension={(key) => setSelectedDimensionKey(key)}
                   />
                   <ProcessingLog
                     status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
@@ -276,5 +279,16 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       )}
 
     </DashboardLayout>
+
+      {/* Dimension detail drawer */}
+      <DimensionDrawer
+        dimension={
+          selectedDimensionKey
+            ? dimensions.find(d => d.key === selectedDimensionKey) || null
+            : null
+        }
+        onClose={() => setSelectedDimensionKey(null)}
+      />
+    </>
   );
 }
