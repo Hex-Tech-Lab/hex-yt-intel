@@ -28,6 +28,7 @@ function finishPdf(doc: PDFKit.PDFDocument, filename: string): Promise<Response>
     doc.on('data', (chunk) => chunks.push(chunk as Buffer));
     doc.on('error', (err) => {
       console.error('[export/pdf] Stream error:', err);
+      Sentry.captureException(err, { tags: { operation: 'export-pdf-stream', relations: 'true' } });
       reject(new Error('PDF generation failed'));
     });
     doc.on('end', () => {

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
+import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
@@ -16,7 +17,8 @@ export interface AnalysisHistoryProps {
 
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const { items, isLoading, error } = useAnalysisHistory();
-  const { initializeAnalysis } = useSynthesisNucleus();
+  const { initializeAnalysis, setIsLoading, setStatus, setVideoMetadata } = useAnalysisStore();
+  const { initializeAnalysis: initSynthesis } = useSynthesisNucleus();
   const [sortBy, setSortBy] = useState<SortOrder>('date-desc');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [currentPage, setCurrentPage] = useState(0);
@@ -27,6 +29,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const restoreAnalysis = async (analysisId: string) => {
     setLoadingId(analysisId);
     setRestoreError(null);
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/analyses/${analysisId}`);
       if (!res.ok) {
@@ -36,7 +39,20 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       
       const dimensions = parseToUCISDimensions(data.analysis_markdown || '');
       
-      initializeAnalysis({
+      // Update Global Store (for header/metadata/button)
+      initializeAnalysis(data.id, data.title, data.analysis_markdown);
+      setVideoMetadata({
+        id: data.videoId,
+        title: data.title,
+        channelTitle: data.channelTitle || 'Unknown',
+        publishedAt: data.analysisAt || data.created_at || new Date().toISOString(),
+        duration: data.duration || 0,
+        viewCount: data.viewCount || 0,
+        likeCount: data.likeCount || 0,
+      } as any);
+
+      // Update Nucleus Store (for grid/graph/relations)
+      initSynthesis({
         id: data.id,
         videoId: data.videoId,
         title: data.title,
@@ -48,12 +64,16 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         validation: data.validation_report,
         streaming: data.streaming,
       });
+
+      setStatus('complete');
       onSelectAnalysis?.();
     } catch (err) {
       console.error('Error restoring analysis:', err);
       setRestoreError(err instanceof Error ? err.message : 'Unknown restoration error');
+      setStatus('error');
     } finally {
       setLoadingId(null);
+      setIsLoading(false);
     }
   };
 
