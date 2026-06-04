@@ -50,7 +50,7 @@ export class LLMCascade implements ILLMCascade {
     let produced = false;
 
     for (const { model, name } of MODEL_CHAIN) {
-      console.log(`[ReasoningEngine] Attempting model: ${name} (${model})`);
+      console.log(`[LLMCascade] Attempting model: ${name} (${model})`);
       onStatus?.({ stage: 'model', model: name });
       modelUsed = name;
 
@@ -60,13 +60,13 @@ export class LLMCascade implements ILLMCascade {
       });
 
       if (result.started && finalText) {
-        console.log(`[ReasoningEngine] Model ${name} started successfully. Committed.`);
+        console.log(`[LLMCascade] Model ${name} started successfully. Committed.`);
         produced = true;
         break;
       }
 
       const errorMsg = result.error || 'No tokens produced';
-      console.warn(`[ReasoningEngine] Model ${name} failed/skipped. Error: ${errorMsg}`);
+      console.warn(`[LLMCascade] Model ${name} failed/skipped. Error: ${errorMsg}`);
       onStatus?.({ stage: 'fallback', from: name, error: errorMsg });
     }
 
