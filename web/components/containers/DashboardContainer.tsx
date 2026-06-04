@@ -19,6 +19,7 @@ import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
+import { useRelations } from '@/hooks/useRelations';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 
@@ -47,6 +48,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { startAnalysis } = useSSEStream();
   const { projection, analysis } = useSynthesisNucleus();
   const { graph } = useKnowledgeGraph();
+  const { insights, loading: insightsLoading } = useRelations(analysis?.id ?? null, status === 'complete');
   const [search, setSearch] = useState('');
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
@@ -180,10 +182,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     {status === 'complete' ? 'No relational structure for this analysis.' : 'Synthesizing… the graph populates as dimensions arrive.'}
                   </div>
                 )}
-                <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
+                <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
               </>
             ) : (
-              <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
+              <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
             )}
           </div>
         ) : undefined

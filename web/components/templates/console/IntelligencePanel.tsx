@@ -3,12 +3,66 @@
 import { useMemo } from 'react';
 import { MonoLabel, Icon } from '@/components/templates/_shared/primitives';
 import { nodeIntelligence } from '@/lib/intelligence/knowledge-graph';
-import type { KnowledgeGraph, RelatedRef } from '@/lib/types/knowledge-graph';
+import type { KnowledgeGraph, RelatedRef, RelationInsight } from '@/lib/types/knowledge-graph';
 
 export interface IntelligencePanelProps {
   graph: KnowledgeGraph;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** LLM-derived stance relations (tangent/contrarian). Optional; shown when present. */
+  insights?: RelationInsight[];
+  /** True while the stance relations are being fetched. */
+  insightsLoading?: boolean;
+}
+
+/** LLM stance insights — rationale-bearing tangent/contrarian cards. */
+function StanceSection({
+  insights,
+  loading,
+  selectedDim,
+  onSelect,
+}: {
+  insights: RelationInsight[];
+  loading: boolean;
+  selectedDim: number | null;
+  onSelect: (id: string | null) => void;
+}) {
+  const shown = selectedDim
+    ? insights.filter((i) => i.source === selectedDim || i.target === selectedDim)
+    : insights;
+
+  if (!loading && shown.length === 0) return null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--accent-ink)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <Icon icon="solar:branching-paths-up-linear" size={14} />
+        Stance intelligence
+      </span>
+      {loading ? (
+        <div style={{ color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>analyzing tensions…</div>
+      ) : (
+        shown.map((i, idx) => {
+          const contra = i.kind === 'contrarian';
+          const color = contra ? 'var(--warn)' : 'var(--ink-secondary)';
+          return (
+            <div key={idx} style={{ border: '1px solid var(--line)', borderLeft: `2px solid ${color}`, borderRadius: 10, padding: '8px 11px', background: 'rgb(11 14 20 / 0.5)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                <Icon icon={contra ? 'solar:bolt-circle-linear' : 'solar:arrow-right-up-linear'} size={13} style={{ color }} />
+                <span style={{ color, fontFamily: 'var(--font-mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{i.kind}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+                <button onClick={() => onSelect(`dim-${i.source}`)} style={{ background: 'transparent', border: 'none', color: 'var(--ink)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>{i.sourceLabel}</button>
+                <Icon icon="solar:arrow-right-linear" size={12} style={{ color: 'var(--ink-muted)' }} />
+                <button onClick={() => onSelect(`dim-${i.target}`)} style={{ background: 'transparent', border: 'none', color: 'var(--ink)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>{i.targetLabel}</button>
+              </div>
+              <p style={{ margin: 0, color: 'var(--ink-secondary)', fontSize: 11.5, lineHeight: 1.5 }}>{i.rationale}</p>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
 }
 
 const CARD = {
@@ -97,7 +151,7 @@ function Card({
   );
 }
 
-export function IntelligencePanel({ graph, selectedId, onSelect }: IntelligencePanelProps) {
+export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], insightsLoading = false }: IntelligencePanelProps) {
   const selectedNode = useMemo(() => graph.nodes.find((n) => n.id === selectedId) || null, [graph.nodes, selectedId]);
   const intel = useMemo(() => (selectedId ? nodeIntelligence(graph, selectedId) : null), [graph, selectedId]);
   const rootNode = useMemo(() => graph.nodes.find((n) => n.id === graph.rootId) || null, [graph.nodes, graph.rootId]);
@@ -129,6 +183,7 @@ export function IntelligencePanel({ graph, selectedId, onSelect }: IntelligenceP
           <span style={{ color: 'var(--accent-ink)' }}>similar</span>, <span style={{ color: 'var(--ink-secondary)' }}>tangent</span> and{' '}
           <span style={{ color: 'var(--warn)' }}>contrarian</span> connections.
         </div>
+        <StanceSection insights={insights} loading={insightsLoading} selectedDim={null} onSelect={onSelect} />
         <div style={{ borderTop: '1px solid var(--line)', paddingTop: 10, display: 'flex', flexWrap: 'wrap', gap: 10, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}>
           <span>{graph.nodes.length} nodes</span>
           <span>·</span>
@@ -175,6 +230,7 @@ export function IntelligencePanel({ graph, selectedId, onSelect }: IntelligenceP
       <Card kind="similar" refs={intel.similar} onSelect={onSelect} />
       <Card kind="contrarian" refs={intel.contrarian} onSelect={onSelect} />
       <Card kind="tangents" refs={intel.tangents} onSelect={onSelect} />
+      <StanceSection insights={insights} loading={insightsLoading} selectedDim={selectedNode.dimension} onSelect={onSelect} />
     </div>
   );
 }

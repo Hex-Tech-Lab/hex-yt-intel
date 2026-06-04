@@ -83,3 +83,29 @@ export interface SynthesisInput {
   personaDimensions?: number[];
   persona?: PersonaId;
 }
+
+/**
+ * LLM-derived stance relation. Where lexical edges (RelationKind) classify by
+ * surface similarity, these are judged by a model: tangent = an adjacent thread the
+ * video opens but doesn't resolve; contrarian = an internal tension / counter-thesis.
+ * Cross-corpus variants ("vs what you already know") slot in here later unchanged.
+ */
+export interface RelationInsight {
+  kind: 'tangent' | 'contrarian';
+  /** Source dimension number (1-11). */
+  source: number;
+  /** Target dimension number (1-11). */
+  target: number;
+  sourceLabel: string;
+  targetLabel: string;
+  /** One-line model rationale (≤ ~25 words). */
+  rationale: string;
+}
+
+/** Cached output of the stance-relations engine for one analysis. */
+export interface RelationsResult {
+  analysisId: string;
+  generatedAt: string;
+  model: string;
+  insights: RelationInsight[];
+}
