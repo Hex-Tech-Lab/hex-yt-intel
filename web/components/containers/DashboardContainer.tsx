@@ -10,6 +10,7 @@ import { StreamingGrid, Dimension } from '@/components/templates/console/Streami
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
+import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
@@ -18,6 +19,7 @@ import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
+import { useRelations } from '@/hooks/useRelations';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 
@@ -46,10 +48,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { startAnalysis } = useSSEStream();
   const { projection, analysis } = useSynthesisNucleus();
   const { graph } = useKnowledgeGraph();
+  const { insights, loading: insightsLoading } = useRelations(analysis?.id ?? null, status === 'complete');
   const [search, setSearch] = useState('');
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
 
   const tierLabel = profile.tier === 'pro' ? 'Pro' : profile.tier === 'free' ? 'Free' : profile.tier;
   const quotaLabel =
@@ -136,6 +140,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [projection, status]);
 
   return (
+    <>
     <DashboardLayout
       sidebar={
         <Sidebar
@@ -152,6 +157,38 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           tier={tierLabel}
           account={<div title={profile.email} style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--accent)', display: 'grid', placeItems: 'center', color: 'var(--void)', fontWeight: 'bold', fontSize: 12 }}>{profile.initials}</div>}
         />
+      }
+      rightPanel={
+        status !== 'idle' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--ink-secondary)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Intelligence</span>
+              {graph.nodes.length > 0 && consoleTab === 'synthesis' && (
+                <button
+                  onClick={() => setConsoleTab('graph')}
+                  title="Open full graph"
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent', color: 'var(--accent-ink)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}
+                >
+                  <Icon icon="solar:maximize-square-linear" size={13} /> expand
+                </button>
+              )}
+            </div>
+            {consoleTab === 'synthesis' ? (
+              <>
+                {graph.nodes.length > 0 ? (
+                  <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} compact height={200} />
+                ) : (
+                  <div style={{ height: 200, borderRadius: 14, border: '1px dashed var(--line)', display: 'grid', placeItems: 'center', textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 10.5, padding: 12, lineHeight: 1.6 }}>
+                    {status === 'complete' ? 'No relational structure for this analysis.' : 'Synthesizing… the graph populates as dimensions arrive.'}
+                  </div>
+                )}
+                <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
+              </>
+            ) : (
+              <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
+            )}
+          </div>
+        ) : undefined
       }
       dock={<ChatDock analysisId={analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
@@ -207,68 +244,36 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               </div>
 
               {consoleTab === 'synthesis' ? (
-                <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 32 }}>
-                    {status === 'complete' && <PersonaSelector />}
-                    <StreamingGrid
-                      dimensions={dimensions}
-                      progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
-                      onOpenDimension={(key) => setSelectedNodeId(`dim-${key.replace('dim-', '')}`)}
-                    />
-                    <ProcessingLog
-                      status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
-                    />
-                  </div>
-
-                  {/* Persistent intelligence rail — present whenever an analysis is
-                      active/done; populates live as dimensions arrive (no 2-dim gate). */}
-                  <aside style={{ width: 340, flexShrink: 0, position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--ink-secondary)', fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Intelligence</span>
-                      {graph.nodes.length > 0 && (
-                        <button
-                          onClick={() => setConsoleTab('graph')}
-                          title="Open full graph"
-                          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent', color: 'var(--accent-ink)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 10.5 }}
-                        >
-                          <Icon icon="solar:maximize-square-linear" size={13} /> expand
-                        </button>
-                      )}
-                    </div>
-                    {graph.nodes.length > 0 ? (
-                      <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} compact height={260} />
-                    ) : (
-                      <div style={{ height: 260, borderRadius: 14, border: '1px dashed var(--line)', display: 'grid', placeItems: 'center', textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11, padding: 16, lineHeight: 1.6 }}>
-                        {status === 'complete' ? 'No relational structure for this analysis.' : 'Synthesizing… the graph populates as dimensions arrive.'}
-                      </div>
-                    )}
-                    <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
-                  </aside>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                  {status === 'complete' && <PersonaSelector />}
+                  <StreamingGrid
+                    dimensions={dimensions}
+                    progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
+                    onOpenDimension={(key) => setSelectedDimensionKey(key)}
+                  />
+                  <ProcessingLog
+                    status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
+                  />
                 </div>
               ) : (
-                <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {graph.nodes.length > 0 ? (
-                      <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={580} />
-                    ) : (
-                      <div style={{ height: 580, borderRadius: 14, border: '1px dashed var(--line)', display: 'grid', placeItems: 'center', textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 12.5, padding: 24, lineHeight: 1.6 }}>
-                        {status === 'complete' ? 'No graph relations were synthesized for this analysis.' : 'The knowledge graph builds live as dimensions arrive…'}
-                      </div>
-                    )}
-                    <p style={{ marginTop: 10, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.6 }}>
-                      Left-click to inspect · right-click to pin &amp; focus · drag to reposition · scroll to zoom
-                    </p>
-                  </div>
-                  <aside style={{ width: 360, flexShrink: 0, position: 'sticky', top: 16 }}>
-                    <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
-                  </aside>
+                <div>
+                  {graph.nodes.length > 0 ? (
+                    <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={580} />
+                  ) : (
+                    <div style={{ height: 580, borderRadius: 14, border: '1px dashed var(--line)', display: 'grid', placeItems: 'center', textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 12.5, padding: 24, lineHeight: 1.6 }}>
+                      {status === 'complete' ? 'No graph relations were synthesized for this analysis.' : 'The knowledge graph builds live as dimensions arrive…'}
+                    </div>
+                  )}
+                  <p style={{ marginTop: 10, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.6 }}>
+                    Left-click to inspect · right-click to pin &amp; focus · drag to reposition · scroll to zoom
+                  </p>
                 </div>
               )}
             </>
           )}
         </div>
       ) : activeNav === 'history' ? (
-        <AnalysisHistory />
+        <AnalysisHistory onSelectAnalysis={() => setActiveNav('console')} />
       ) : (
         <div style={{ padding: 48, textAlign: 'center', color: 'var(--ink-secondary)' }}>
           Settings coming soon...
@@ -276,5 +281,16 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       )}
 
     </DashboardLayout>
+
+      {/* Dimension detail drawer */}
+      <DimensionDrawer
+        dimension={
+          selectedDimensionKey
+            ? dimensions.find(d => d.key === selectedDimensionKey) || null
+            : null
+        }
+        onClose={() => setSelectedDimensionKey(null)}
+      />
+    </>
   );
 }

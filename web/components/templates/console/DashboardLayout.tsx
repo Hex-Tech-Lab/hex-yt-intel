@@ -6,15 +6,17 @@ export interface DashboardLayoutProps {
   sidebar: ReactNode;
   topbar: ReactNode;
   children: ReactNode;
-  /** Bottom-anchored dock spanning the main content column (e.g. the chat sheet). */
+  /** Right-side panel (Intelligence rail, graph, etc.) — full-height sticky column. */
+  rightPanel?: ReactNode;
+  /** Bottom-anchored dock spanning the main content column (between left nav and right panel). */
   dock?: ReactNode;
 }
 
-export function DashboardLayout({ sidebar, topbar, children, dock }: DashboardLayoutProps) {
+export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }: DashboardLayoutProps) {
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "260px 1fr",
+      gridTemplateColumns: rightPanel ? "260px 1fr 390px" : "260px 1fr",
       width: "100%",
       minWidth: 1024,
       height: "100vh",
@@ -65,9 +67,27 @@ export function DashboardLayout({ sidebar, topbar, children, dock }: DashboardLa
           </div>
         </div>
 
-        {/* Bottom-anchored dock — spans the main column between the side panels */}
+        {/* Bottom-anchored dock — trapped between left nav and right panel */}
         {dock}
       </main>
+
+      {/* Right panel: full-height, sticky (Intelligence rail, graph, etc.) */}
+      {rightPanel && (
+        <aside style={{
+          borderLeft: "1px solid var(--line)",
+          background: "var(--surface)",
+          height: "100%",
+          width: 390,
+          minWidth: 390,
+          flexShrink: 0,
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          padding: "16px 20px"
+        }}>
+          {rightPanel}
+        </aside>
+      )}
     </div>
   );
 }
