@@ -38,12 +38,17 @@ export async function GET(
 ) {
   const { id } = await context.params;
   const encoder = new TextEncoder();
-  
+
   const stream = new ReadableStream({
     async start(controller) {
       const send = (data: any) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
+
+      const handshakeController = new AbortController();
+      const handshakeTimer = setTimeout(() => {
+        handshakeController.abort();
+      }, 3000);
 
       const timeoutTimer = setTimeout(() => {
         send({ type: 'error', error: 'Request timed out (25s window exceeded)' });
@@ -120,6 +125,7 @@ export async function GET(
         Sentry.captureException(err, { tags: { operation: 'relations', reason: 'unhandled' } });
         send({ type: 'error', error: 'Failed to compute relations' });
       } finally {
+        clearTimeout(handshakeTimer);
         clearTimeout(timeoutTimer);
         controller.close();
       }

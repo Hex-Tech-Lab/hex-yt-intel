@@ -44,13 +44,9 @@ function extractJson(text: string): string | null {
   return text.slice(start, end + 1);
 }
 
-/** 
- * Calls the model and yields chunks of text. 
- * Implements handshake timeout (3s) and token timeout. 
- */
 async function* callStanceModelStream(
-  model: string, 
-  prompt: string, 
+  model: string,
+  prompt: string,
   apiKey: string,
   handshakeTimeoutMs: number = 3000
 ): AsyncGenerator<string> {
