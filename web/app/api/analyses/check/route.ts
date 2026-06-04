@@ -7,7 +7,7 @@ import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
 import { VideoIdSchema } from '@/lib/types/contracts';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .select('id, title, analysis_markdown, created_at, model_used, validation_report')
+          .select('id, title, channel_title, analysis_markdown, created_at, model_used, validation_report, status')
           .eq('video_id', normalizedVideoId)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
@@ -68,38 +68,39 @@ export async function GET(request: NextRequest) {
       return null;
     });
 
-    // A processing row this old means its background generator was killed (Vercel
-    // maxDuration) or crashed; surface it as a terminal error so the client stops polling.
-    const PROCESSING_STALE_MS = 120_000;
-
-    // 1. Completed analysis → return the markdown for the poller to render.
-    if (existingAnalysis && existingAnalysis.analysis_markdown && existingAnalysis.analysis_markdown.length > 0) {
-      console.log('[analyses/check] DONE - analysis found', { videoId: normalizedVideoId, analysisId: existingAnalysis.id });
-      addBreadcrumb('Poll: done', { videoId: normalizedVideoId, analysisId: existingAnalysis.id }, 'cache');
-
-      return NextResponse.json({
-        status: 'done',
-        exists: true,
-        cached: true,
-        analysisId: existingAnalysis.id,
-        title: existingAnalysis.title,
-        markdown: existingAnalysis.analysis_markdown,
-        createdAt: existingAnalysis.created_at,
-        modelUsed: existingAnalysis.model_used,
-      }, { status: 200 });
-    }
-
-    // 2. A job row exists but has no markdown yet → processing / error / stale.
     if (existingAnalysis) {
-      const report = (existingAnalysis.validation_report as any) || {};
+      // Enforce compatibility with the PR #36 / PR #40 serialization structures
+      const validationReport = (existingAnalysis.validation_report as any) || {};
+      const metadataPayload = validationReport.metadata || (existingAnalysis as any).metadata || {};
+
+      if (existingAnalysis.status === 'complete' || existingAnalysis.status === 'success' || (existingAnalysis.analysis_markdown && existingAnalysis.analysis_markdown.length > 0)) {
+        console.log('[analyses/check] DONE - analysis found', { videoId: normalizedVideoId, analysisId: existingAnalysis.id });
+        addBreadcrumb('Poll: done', { videoId: normalizedVideoId, analysisId: existingAnalysis.id }, 'cache');
+
+        return NextResponse.json({
+          exists: true,
+          status: 'complete',
+          analysisId: existingAnalysis.id,
+          title: existingAnalysis.title,
+          channelTitle: existingAnalysis.channel_title,
+          markdown: existingAnalysis.analysis_markdown,
+          createdAt: existingAnalysis.created_at,
+          modelUsed: existingAnalysis.model_used,
+          metadata: metadataPayload
+        }, { status: 200 });
+      }
+
+      // A processing row this old means its background generator was killed (Vercel
+      // maxDuration) or crashed; surface it as a terminal error so the client stops polling.
+      const PROCESSING_STALE_MS = 120_000;
       const ageMs = Date.now() - new Date(existingAnalysis.created_at).getTime();
 
-      if (report.status === 'error') {
+      if (validationReport.status === 'error' || existingAnalysis.status === 'failed') {
         return NextResponse.json({
           status: 'error',
           exists: true,
           analysisId: existingAnalysis.id,
-          error: report.error || 'Analysis generation failed',
+          error: validationReport.error || 'Analysis generation failed',
         }, { status: 200 });
       }
 

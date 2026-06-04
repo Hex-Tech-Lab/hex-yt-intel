@@ -15,6 +15,8 @@ import { AnalysisCreateSchema, type AnalysisJobMetadata } from '@/lib/types/cont
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { fetchSubtitles } from '@/lib/services/decodo';
 import { signStreamToken } from '@/lib/stream-token';
+import { deleteRedisKey } from '@/lib/redis';
+import { generateCacheKey } from '@/lib/services/cache';
 import * as Sentry from '@sentry/nextjs';
 
 const PROCESSING_STALE_MS = 180_000;
@@ -65,29 +67,39 @@ export async function POST(request: NextRequest) {
       if (existing?.analysis_markdown) {
         const cachedReport = (existing.validation_report ?? {}) as { metadata?: AnalysisJobMetadata; persona?: string; timezone?: string };
         const cachedPersona = cachedReport.persona || 'analyst';
-        return NextResponse.json({
-          id: existing.id,
-          analysisId: existing.id,
-          videoId,
-          status: 'done',
-          title: existing.title,
-          markdown: existing.analysis_markdown,
-          analysis_markdown: existing.analysis_markdown,
-          createdAt: existing.created_at,
-          analysisAt: existing.created_at,
-          persona: cachedPersona,
-          detectedPersona: cachedPersona,
-          timezone: cachedReport.timezone || validation.data.timezone || 'UTC',
-          // Restored from the persisted job context; absent only for legacy pre-contract rows.
-          metadata: cachedReport.metadata,
-          streaming: {
-            started: existing.created_at,
-            interrupted: false,
-            dimensionsReceived: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-          },
-          cacheHit: true,
-          message: 'Retrieved from persistent cache.',
-        });
+
+        // CRITICAL FIX: Shield against poisoned empty caches (see PR #40 context)
+        const hasMarkdown = existing.analysis_markdown.trim().length > 0;
+        
+        if (!hasMarkdown) {
+          console.warn(`[Bouncer] Poisoned cache detected for analysis ${existing.id}. Purging row and re-running.`);
+          // Delete the corrupted row so the next step creates a fresh one
+          await supabase.from('analyses').delete().eq('id', existing.id);
+        } else {
+          return NextResponse.json({
+            id: existing.id,
+            analysisId: existing.id,
+            videoId,
+            status: 'done',
+            title: existing.title,
+            markdown: existing.analysis_markdown,
+            analysis_markdown: existing.analysis_markdown,
+            createdAt: existing.created_at,
+            analysisAt: existing.created_at,
+            persona: cachedPersona,
+            detectedPersona: cachedPersona,
+            timezone: cachedReport.timezone || validation.data.timezone || 'UTC',
+            // Restored from the persisted job context; absent only for legacy pre-contract rows.
+            metadata: cachedReport.metadata,
+            streaming: {
+              started: existing.created_at,
+              interrupted: false,
+              dimensionsReceived: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            },
+            cacheHit: true,
+            message: 'Retrieved from persistent cache.',
+          });
+        }
       }
     }
 
