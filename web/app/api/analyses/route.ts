@@ -11,7 +11,7 @@ import { guardTraffic, getUserTier } from '@/lib/services/traffic';
 import { chargeMonthlyQuota, refundMonthlyQuota } from '@/lib/services/billing';
 import { extractVideoId } from '@/lib/youtube';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
-import { AnalysisCreateSchema } from '@/lib/types/contracts';
+import { AnalysisCreateSchema, type AnalysisJobMetadata } from '@/lib/types/contracts';
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { fetchSubtitles } from '@/lib/services/decodo';
 import { signStreamToken } from '@/lib/stream-token';
@@ -20,7 +20,9 @@ import * as Sentry from '@sentry/nextjs';
 const PROCESSING_STALE_MS = 180_000;
 
 export async function POST(request: NextRequest) {
-  let body: any;
+  // Typed at the perimeter — no `any` enters the controller. Only `url` is read in the
+  // catch handler for telemetry, so a minimal shape is sufficient and explicit.
+  let body: { url?: string } | undefined;
   try {
     body = await request.json();
     const validation = AnalysisCreateSchema.safeParse(body);
@@ -33,36 +35,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
     }
 
-    // 1. Auth & tier
-    let userId: string | null = null;
-    let userEmail: string | undefined;
-    let tier: 'free' | 'pro' | 'enterprise' = 'free';
-
-    const authHeader = request.headers.get('authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.slice(7);
-      if (token.startsWith('test-token-')) {
-        userId = 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb';
-        tier = 'free';
-      }
-    }
-
+    // 1. Auth & tier — STRICT tenant isolation. Identity is derived ONLY from the
+    // verified Supabase session; there is no static/bearer test bypass on this route.
+    // A forged token must never resolve to a real tenant's quota or data. (Dev/CI E2E
+    // authenticates via the NODE_ENV-gated X-Hex-Test-Secret path in middleware.ts.)
     const supabase = await getSupabaseClientWithAuth();
-    if (!userId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      userId = user.id;
-      userEmail = user.email;
-      tier = (await getUserTier(userId)) ?? 'free';
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const userId: string = user.id;
+    const userEmail = user.email;
+    const tier: 'free' | 'pro' | 'enterprise' = (await getUserTier(userId)) ?? 'free';
 
-    // 2. Cache hit
+    // 2. Cache hit — must return the SAME contract shape as the fresh-job path so the
+    // client treats both interchangeably. We pull validation_report to recover the
+    // metadata persisted at job creation (see step 5), eliminating the prior gap where
+    // cache hits returned no `metadata`/`persona`/`timezone` and the UI rendered blank.
     if (!validation.data.forceRefresh) {
       const { data: existing } = await supabase
         .from('analyses')
-        .select('id, title, analysis_markdown, created_at')
+        .select('id, title, analysis_markdown, created_at, validation_report')
         .eq('video_id', videoId)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -70,6 +63,8 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (existing?.analysis_markdown) {
+        const cachedReport = (existing.validation_report ?? {}) as { metadata?: AnalysisJobMetadata; persona?: string; timezone?: string };
+        const cachedPersona = cachedReport.persona || 'analyst';
         return NextResponse.json({
           id: existing.id,
           analysisId: existing.id,
@@ -80,7 +75,11 @@ export async function POST(request: NextRequest) {
           analysis_markdown: existing.analysis_markdown,
           createdAt: existing.created_at,
           analysisAt: existing.created_at,
-          detectedPersona: 'analyst', // Default fallback for legacy cache
+          persona: cachedPersona,
+          detectedPersona: cachedPersona,
+          timezone: cachedReport.timezone || validation.data.timezone || 'UTC',
+          // Restored from the persisted job context; absent only for legacy pre-contract rows.
+          metadata: cachedReport.metadata,
           streaming: {
             started: existing.created_at,
             interrupted: false,
@@ -139,6 +138,19 @@ export async function POST(request: NextRequest) {
     const persona = (validation.data.persona as PersonaId) || detectPersona(metadata.title, metadata.channelTitle);
     const timezone = validation.data.timezone || 'UTC';
 
+    // Single typed metadata object — the contract source of truth reused by the upsert
+    // (persisted into validation_report for cache-hit parity) AND the response/worker
+    // payload. Counts are stringified here to satisfy WorkerStreamRequest.
+    const jobMetadata: AnalysisJobMetadata = {
+      title: metadata.title,
+      channelTitle: metadata.channelTitle,
+      publishedAt: metadata.publishedAt,
+      duration: metadata.duration ?? 0,
+      viewCount: String(metadata.viewCount),
+      likeCount: String(metadata.likeCount),
+      commentCount: String(metadata.commentCount),
+    };
+
     // 5. Processing job row (filled by the worker via /api/analyses/persist).
     const service = getSupabaseServiceClient();
     // UPSERT on (user_id, video_id): the analyses table has a UNIQUE(user_id, video_id)
@@ -161,6 +173,11 @@ export async function POST(request: NextRequest) {
             transcript_available: true,
             analysis_type: 'full',
             stale_after: new Date(Date.now() + PROCESSING_STALE_MS).toISOString(),
+            // Persisted for cache-hit contract parity (see step 2). The persist route
+            // preserves this via `...priorReport`, so it survives stream completion.
+            metadata: jobMetadata,
+            persona,
+            timezone,
           },
           validation_passed: false,
         },
@@ -196,15 +213,7 @@ export async function POST(request: NextRequest) {
         analysisAt: new Date().toISOString(),
         timezone,
         transcript,
-        metadata: {
-          title: metadata.title,
-          channelTitle: metadata.channelTitle,
-          publishedAt: metadata.publishedAt,
-          duration: metadata.duration || 0,
-          viewCount: String(metadata.viewCount),
-          likeCount: String(metadata.likeCount),
-          commentCount: String(metadata.commentCount),
-        },
+        metadata: jobMetadata,
         streaming: {
           started: new Date().toISOString(),
           interrupted: false,

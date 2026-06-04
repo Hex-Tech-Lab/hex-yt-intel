@@ -95,6 +95,37 @@ export const CheckoutSchema = z.object({
   { message: 'URLs must be on this domain' }
 );
 
+// ─── Analysis Job Contract (bouncer → client → worker) ────────────────────────
+// The bouncer (/api/analyses) returns this shape; the client (useSSEStream) forwards
+// the `metadata`/`transcript`/`stream` fields to the Cloudflare Worker. Both the
+// cache-hit (200) and fresh-job (202) paths MUST satisfy this so the client can treat
+// them interchangeably. viewCount/likeCount/commentCount are strings to match the
+// worker's StreamRequest contract (YouTube returns them as numeric strings).
+export const AnalysisJobMetadataSchema = z.object({
+  title: z.string(),
+  channelTitle: z.string(),
+  publishedAt: z.string(),
+  duration: z.number(),
+  viewCount: z.string(),
+  likeCount: z.string(),
+  commentCount: z.string(),
+});
+export type AnalysisJobMetadata = z.infer<typeof AnalysisJobMetadataSchema>;
+
+// The exact payload the client POSTs to the worker's /analyze-llm-stream. Kept in
+// lockstep with the worker's StreamRequest interface (worker/src/worker.ts) so a
+// missing/loose field is a compile error rather than a runtime stream failure.
+export interface WorkerStreamRequest {
+  videoId: string;
+  analysisId: string;
+  transcript: string;
+  metadata: AnalysisJobMetadata;
+  persona: string;
+  timezone: string;
+  sig: string;
+  exp: number;
+}
+
 // ─── Inferred Types ──────────────────────────────────────────────────────────
 export type AnalysisCreateInput = z.infer<typeof AnalysisCreateSchema>;
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
