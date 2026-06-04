@@ -10,6 +10,41 @@ import * as Sentry from '@sentry/nextjs';
 /** Tiers permitted to export the FULL report (TOC + all 11 dimensions). */
 const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
 
+/** Sanitize filename to prevent header injection and ensure system compatibility. */
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/[\\/:"*?<>|]/g, '_') // Strip path separators and invalid chars
+    .replace(/["';\n\r]/g, '')     // Prevent Content-Disposition injection
+    .trim()
+    .slice(0, 120);              // Constraint for safe header length
+}
+
+/** Renders a finished PDFDocument into an attachment Response. */
+function finishPdf(doc: PDFKit.PDFDocument, filename: string): Promise<Response> {
+  const chunks: Buffer[] = [];
+  const safeName = sanitizeFilename(filename);
+
+  return new Promise<Response>((resolve, reject) => {
+    doc.on('data', (chunk) => chunks.push(chunk as Buffer));
+    doc.on('error', (err) => {
+      console.error('[export/pdf] Stream error:', err);
+      reject(new Error('PDF generation failed'));
+    });
+    doc.on('end', () => {
+      const pdf = Buffer.concat(chunks);
+      resolve(
+        new Response(pdf, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${safeName}"`,
+          },
+        })
+      );
+    });
+    doc.end();
+  });
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -33,10 +68,8 @@ export async function GET(
     const userId = user.id;
     const searchParams = request.nextUrl.searchParams;
     const format = searchParams.get('format') || 'pdf';
-    // 'summary' (default, all tiers, ≤2 pages) | 'full' (TOC + all sections, higher tier).
     const scope = searchParams.get('scope') || 'summary';
 
-    // Fetch analysis
     const { data: analysis, error } = await supabase
       .from('analyses')
       .select('*')
@@ -46,7 +79,7 @@ export async function GET(
 
     if (error || !analysis) {
       return NextResponse.json(
-        { error: 'Not found', code: ERROR_CODES.INTERNAL_SERVER_ERROR },
+        { error: 'Not found', code: ERROR_CODES.NOT_FOUND },
         { status: 404 }
       );
     }
@@ -58,7 +91,6 @@ export async function GET(
       );
     }
 
-    // Full report is a paid feature; everyone else gets the 2-page executive summary.
     if (scope === 'full') {
       const tier = await getUserTier(userId);
       if (!FULL_REPORT_TIERS.has(tier)) {
@@ -88,26 +120,6 @@ export async function GET(
   }
 }
 
-/** Renders a finished PDFDocument into an attachment Response. */
-function finishPdf(doc: typeof PDFDocument, filename: string): Promise<Response> {
-  const chunks: Buffer[] = [];
-  doc.on('data', (chunk) => chunks.push(chunk as Buffer));
-  return new Promise<Response>((resolve) => {
-    doc.on('end', () => {
-      const pdf = Buffer.concat(chunks);
-      resolve(
-        new Response(pdf, {
-          headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename="${filename}"`,
-          },
-        })
-      );
-    });
-    doc.end();
-  });
-}
-
 function drawHeader(doc: PDFKit.PDFDocument, analysis: any, subtitle: string) {
   doc.fontSize(18).font('Helvetica-Bold').fillColor('black').text(analysis.title || 'YouTube Analysis');
   doc.fontSize(10).fillColor('#666666').text(`Channel: ${analysis.channel_title || 'Unknown'}`);
@@ -118,19 +130,13 @@ function drawHeader(doc: PDFKit.PDFDocument, analysis: any, subtitle: string) {
   doc.moveDown();
 }
 
-/**
- * Executive summary — capped at ~2 pages. Pulls the Apex Intelligence / overview block
- * and the leading content of each dimension, truncated, so it stays scannable. The full
- * synthesis is always stored verbatim; this is just a delivery-format projection.
- */
 async function exportSummaryPDF(analysis: any) {
   const doc = new PDFDocument({ margin: 50, bufferPages: true });
   drawHeader(doc, analysis, 'Executive Summary');
 
   const content: string = analysis.analysis_markdown || '';
-  // Split into "### Dimension" sections; keep the lead of each so the summary is broad but short.
   const sections = content.split(/\n(?=#{1,3}\s)/).filter((s) => s.trim().length > 0);
-  const MAX_CHARS = 2400; // keeps the body within ~2 pages
+  const MAX_CHARS = 2400;
   let used = 0;
 
   doc.fontSize(11).font('Helvetica-Bold').text('Overview', { underline: false });
@@ -160,7 +166,6 @@ async function exportSummaryPDF(analysis: any) {
   return finishPdf(doc, `${analysis.title || 'synthesis'}-summary.pdf`);
 }
 
-/** Full report — table of contents + every section, verbatim. Gated to paid tiers. */
 async function exportFullPDF(analysis: any) {
   const doc = new PDFDocument({ margin: 50, bufferPages: true });
   drawHeader(doc, analysis, 'Full Synthesis Report');
@@ -168,7 +173,6 @@ async function exportFullPDF(analysis: any) {
   const content: string = analysis.analysis_markdown || '';
   const sections = content.split(/\n(?=#{1,3}\s)/).filter((s) => s.trim().length > 0);
 
-  // Table of contents
   doc.fontSize(13).font('Helvetica-Bold').text('Table of Contents');
   doc.moveDown(0.3);
   sections.forEach((section, i) => {
@@ -177,7 +181,6 @@ async function exportFullPDF(analysis: any) {
   });
   doc.addPage();
 
-  // Full sections
   const lines = content.split('\n');
   for (const line of lines) {
     if (line.trim() === '') {

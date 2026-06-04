@@ -1,6 +1,8 @@
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,8 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
     }
 
-    // Parse the stored analysis markdown back into structured data
-    const analysisMarkdown = analysis.analysis_markdown || '';
+    const report = analysis.validation_report || {};
 
     return NextResponse.json({
       id: analysis.id,
@@ -35,9 +36,15 @@ export async function GET(
       title: analysis.title || 'Untitled',
       channelTitle: analysis.channel_title,
       model: analysis.model_used || 'unknown',
-      analysis_markdown: analysisMarkdown,
-      validation_report: analysis.validation_report || { passed: true },
-      streaming: { started: analysis.created_at, dimensionsReceived: [] },
+      analysis_markdown: analysis.analysis_markdown || '',
+      validation_report: report,
+      analysisAt: analysis.analysis_at || analysis.created_at,
+      detectedPersona: analysis.detected_persona || null,
+      streaming: { 
+        started: analysis.created_at, 
+        interrupted: analysis.streaming_interrupted || false,
+        dimensionsReceived: [] 
+      },
     });
   } catch (err) {
     console.error('[analyses/[id]] GET error:', err);

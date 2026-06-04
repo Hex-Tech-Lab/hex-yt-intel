@@ -1,26 +1,13 @@
-/**
- * Stance relations engine — the LLM half of the knowledge-graph intelligence.
- *
- * Related/Similar stay lexical (cheap, deterministic, TF-IDF in knowledge-graph.ts).
- * Tangent/Contrarian are judged here by a fast, non-reasoning model: which dimensions
- * open an adjacent-but-unresolved thread (tangent) vs sit in tension with the video's
- * core thesis (contrarian). Computed post-analysis and cached — never on the hot path.
- *
- * Today the candidate set is the analysis's own dimensions (intra-analysis). When a
- * corpus + vector store exist, the SAME judge runs over cross-corpus neighbours ("vs
- * what you already know"); only `buildCandidates` widens — the prompt/contract is stable.
- */
-
 import { z } from 'zod';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
 
+// See /docs/intelligence/relations-engine.md
 export interface StanceDimension {
   number: number;
   name: string;
   content: string;
 }
 
-// Fast, free, non-reasoning models. Gemini Flash leads; nemotron is the resilient fallback.
 const STANCE_MODELS = [
   'google/gemini-2.0-flash-exp:free',
   'nvidia/nemotron-3-nano-30b-a3b:free',
@@ -41,31 +28,35 @@ function buildPrompt(dims: StanceDimension[]): string {
   return [
     'You analyse the relationships BETWEEN the dimensions of a single video analysis.',
     'Identify up to 6 of the most insightful relationships of two kinds:',
-    '- "tangent": dimension A opens an adjacent thread that dimension B leaves unresolved or pulls away from (novel/divergent, not opposed).',
-    '- "contrarian": dimensions A and B sit in genuine tension — a claim vs a risk/limitation/counter-point.',
-    'Only include relationships supported by the text. Prefer contrarian tensions when they exist.',
-    '',
+    '- "tangent": dimension A opens an adjacent thread that dimension B leaves unresolved or pulls away from.',
+    '- "contrarian": dimensions A and B sit in genuine tension — a claim vs a risk/limitation.',
     'DIMENSIONS:',
     roster,
-    '',
-    'Respond with ONLY minified JSON, no prose, no markdown fences:',
+    'Respond with ONLY minified JSON, no prose:',
     '{"insights":[{"kind":"tangent|contrarian","source":<D#>,"target":<D#>,"rationale":"<= 22 words"}]}',
   ].join('\n');
 }
 
-/** Strip code fences / leading prose and pull the first JSON object. */
 function extractJson(text: string): string | null {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const body = fenced?.[1] ?? text;
-  const start = body.indexOf('{');
-  const end = body.lastIndexOf('}');
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
   if (start === -1 || end === -1 || end < start) return null;
-  return body.slice(start, end + 1);
+  return text.slice(start, end + 1);
 }
 
-async function callStanceModel(model: string, prompt: string, apiKey: string): Promise<string | null> {
+/** 
+ * Calls the model and yields chunks of text. 
+ * Implements handshake timeout (3s) and token timeout. 
+ */
+async function* callStanceModelStream(
+  model: string, 
+  prompt: string, 
+  apiKey: string,
+  handshakeTimeoutMs: number = 3000
+): AsyncGenerator<string> {
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 20000);
+  const handshakeTimer = setTimeout(() => controller.abort(), handshakeTimeoutMs);
+  
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -79,65 +70,87 @@ async function callStanceModel(model: string, prompt: string, apiKey: string): P
         model,
         temperature: 0.3,
         max_tokens: 700,
-        reasoning: { effort: 'low' },
+        stream: true,
         messages: [{ role: 'user', content: prompt }],
       }),
       signal: controller.signal,
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content;
-    return typeof content === 'string' ? content : null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(t);
+
+    clearTimeout(handshakeTimer);
+    if (!res.ok || !res.body) return;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') break;
+        try {
+          const parsed = JSON.parse(data);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) yield content;
+        } catch { /* ignore parse errors in chunks */ }
+      }
+    }
+  } catch (err) {
+    console.error(`[relations/engine] Model ${model} failed:`, err);
   }
 }
 
-/**
- * Run the stance pass over the analysis dimensions. Returns validated insights with
- * labels resolved. Returns [] on any failure (caller treats it as "no insights yet").
- */
-export async function computeStanceRelations(
+export async function* computeStanceRelationsStream(
   dims: StanceDimension[],
   apiKey: string
-): Promise<{ insights: RelationInsight[]; model: string }> {
+): AsyncGenerator<{ type: 'insight', insight: RelationInsight } | { type: 'model', model: string }> {
   const usable = dims.filter((d) => d.content && d.content.trim().length >= 12);
-  if (usable.length < 2 || !apiKey) return { insights: [], model: 'none' };
+  if (usable.length < 2 || !apiKey) return;
 
   const labelOf = new Map(usable.map((d) => [d.number, d.name]));
   const prompt = buildPrompt(usable);
 
   for (const model of STANCE_MODELS) {
-    const raw = await callStanceModel(model, prompt, apiKey);
-    if (!raw) continue;
-    const json = extractJson(raw);
-    if (!json) continue;
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(json);
-    } catch {
-      continue;
+    yield { type: 'model', model };
+    let fullText = '';
+    
+    for await (const delta of callStanceModelStream(model, prompt, apiKey)) {
+      fullText += delta;
     }
-    const result = LLMResponseSchema.safeParse(parsed);
-    if (!result.success) continue;
 
-    const insights: RelationInsight[] = result.data.insights
-      // keep only edges whose endpoints exist and aren't self-loops
-      .filter((i) => i.source !== i.target && labelOf.has(i.source) && labelOf.has(i.target))
-      .slice(0, 6)
-      .map((i) => ({
-        kind: i.kind,
-        source: i.source,
-        target: i.target,
-        sourceLabel: labelOf.get(i.source)!,
-        targetLabel: labelOf.get(i.target)!,
-        rationale: i.rationale.trim(),
-      }));
+    const json = extractJson(fullText);
+    if (!json) continue;
 
-    return { insights, model };
+    try {
+      const parsed = JSON.parse(json);
+      const result = LLMResponseSchema.safeParse(parsed);
+      if (result.success) {
+        const insights = result.data.insights
+          .filter((i) => i.source !== i.target && labelOf.has(i.source) && labelOf.has(i.target))
+          .slice(0, 6);
+        
+        for (const i of insights) {
+          yield {
+            type: 'insight',
+            insight: {
+              kind: i.kind,
+              source: i.source,
+              target: i.target,
+              sourceLabel: labelOf.get(i.source)!,
+              targetLabel: labelOf.get(i.target)!,
+              rationale: i.rationale.trim(),
+            }
+          };
+        }
+        return; // Success, stop cascade
+      }
+    } catch { continue; }
   }
-
-  return { insights: [], model: 'none' };
 }

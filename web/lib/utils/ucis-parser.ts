@@ -1,3 +1,5 @@
+import { type UCISDimension, DIMENSION_NAMES } from '@/lib/types/synthesis-nucleus';
+
 export interface UCISSections {
   apex: string;
   provenance: string;
@@ -11,6 +13,29 @@ export interface UCISSections {
   credibility: string;
   monetization: string;
   risk: string; // Alias for credibility (Dimension 10)
+}
+
+/**
+ * Parses raw analysis markdown into structured UCISDimension objects.
+ * Useful for restoring analyses from the database.
+ */
+export function parseToUCISDimensions(markdown: string): Record<number, UCISDimension> {
+  const dimensions: Record<number, UCISDimension> = {};
+  
+  if (!markdown) return dimensions;
+
+  for (let i = 1; i <= 11; i++) {
+    const content = extractSection(markdown, i);
+    if (content && content !== 'Parsing...') {
+      dimensions[i] = {
+        number: i,
+        name: DIMENSION_NAMES[i] || `Dimension ${i}`,
+        content,
+      };
+    }
+  }
+
+  return dimensions;
 }
 
 function extractSection(markdown: string, dimensionNumber: number): string {

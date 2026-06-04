@@ -58,13 +58,13 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set, get) => (
         analysisAt: payload.analysisAt || now,
         model: payload.model || 'edge-stream',
         detectedPersona: payload.detectedPersona || 'analyst',
-        dimensions: {}, // Will be filled as dimensions arrive
-        validation: {
+        dimensions: payload.dimensions || {},
+        validation: payload.validation || {
           passed: false,
           errors: [],
           warnings: [],
         },
-        streaming: {
+        streaming: payload.streaming || {
           started: now,
           interrupted: false,
           dimensionsReceived: [],
@@ -73,9 +73,8 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set, get) => (
 
       return {
         analysis: newAnalysis,
-        isStreaming: true,
+        isStreaming: !payload.id || !payload.dimensions || Object.keys(payload.dimensions).length === 0,
         streamError: null,
-        // Recompute projection with new analysis + current persona
         projection: computePersonaProjection(newAnalysis, state.activePersona),
       };
     });
