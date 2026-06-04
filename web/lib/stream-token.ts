@@ -30,6 +30,21 @@ export function signStreamToken(videoId: string, analysisId: string): { sig: str
   return { sig: hmacHex(`${videoId}.${analysisId}.${exp}`), exp };
 }
 
+/**
+ * Chat streaming token: gates the direct browser->worker /chat-stream flow so the
+ * public worker endpoint can't be driven to burn OpenRouter quota. Bound to the
+ * conversation + owner + expiry. The worker verifies with the identical message format.
+ */
+export function signChatToken(conversationId: string, userId: string): { sig: string; exp: number } {
+  const exp = Date.now() + TOKEN_TTL_MS;
+  return { sig: hmacHex(`chat.${conversationId}.${userId}.${exp}`), exp };
+}
+
+export function verifyChatToken(conversationId: string, userId: string, exp: number, sig: string): boolean {
+  if (Date.now() > exp) return false;
+  return safeEqualHex(hmacHex(`chat.${conversationId}.${userId}.${exp}`), sig);
+}
+
 function safeEqualHex(a: string, b: string): boolean {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
   try {
