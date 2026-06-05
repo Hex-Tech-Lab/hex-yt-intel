@@ -1,6 +1,8 @@
 'use client';
 
 import { MonoLabel, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export interface Dimension {
   key: string;
@@ -75,8 +77,10 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
 
           <div style={{ flex: 1, overflowY: "auto", maxHeight: 320, paddingRight: 4 }} className="hx-custom-scrollbar">
             {status === "done" && content ? (
-              <div className="hx-body-secondary" style={{ fontSize: 13.5, lineHeight: 1.6 }}>
-                {content}
+              <div className="prose prose-sm prose-invert p-2">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {content}
+                </ReactMarkdown>
               </div>
             ) : status === "error" ? (
               <p style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--err)", opacity: 0.8 }}>
