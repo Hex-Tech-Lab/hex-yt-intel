@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import type { ChatMessage, ChatRole } from '@/lib/types/chat';
 import { signChatToken } from '@/lib/stream-token';
+import { getUserTier } from '@/lib/services/traffic';
+import { resolveModelCascade } from '@/lib/services/settings';
 
 type Row = {
   id: string;
@@ -167,7 +169,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // Bouncer: mint an HMAC token and hand the browser everything it needs to stream the
   // reply directly from the worker (/chat-stream). The LLM tokens never traverse this
   // Vercel function; the worker persists the assistant turn S2S via /api/chat/persist.
-  const { sig, exp } = signChatToken(id, user.id);
+  // Resolve the per-tier chat cascade (app_settings; falls back to hardcoded) and bind
+  // it into the token so the worker runs exactly this list and it can't be escalated.
+  const tier = (await getUserTier(user.id)) ?? 'free';
+  const chatModels = await resolveModelCascade(tier, 'chat');
+  const { sig, exp } = signChatToken(id, user.id, chatModels);
   return NextResponse.json({
     user: toMsg(userRow),
     ...(newTitle ? { title: newTitle } : {}),
@@ -181,6 +187,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       userId: user.id,
       grounding,
       history: history.map((m) => ({ role: m.role, content: m.content })),
+      models: chatModels,
     },
   });
 }
