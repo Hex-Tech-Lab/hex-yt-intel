@@ -3,7 +3,12 @@ import type { UCISDimension } from '@/lib/types/synthesis-nucleus';
 // Matches "### DIMENSION N - NAME" headers (en/em dash, hyphen, or colon separator),
 // mirroring the worker's StreamingDimensionParser so a persisted report rehydrates
 // identically to a live stream.
-const DIMENSION_HEADER = /###\s+DIMENSION\s+(\d+)\s*[-–—:]\s*([^\n]+)/g;
+// Tolerates:
+//   - optional surrounding whitespace
+//   - optional **bold** markers around the heading name
+//   - any of: - – — : as the separator
+const DIMENSION_HEADER =
+  /###\s+DIMENSION\s+(\d+)\s*[-–—:]\s*\*{0,2}([^\n*]+?)\*{0,2}\s*$/gm;
 
 /**
  * Parse a persisted UCIS markdown report into the dimension map the synthesis nucleus
@@ -15,7 +20,9 @@ const DIMENSION_HEADER = /###\s+DIMENSION\s+(\d+)\s*[-–—:]\s*([^\n]+)/g;
  * state"). Returns {} for empty/unparseable input; callers gate on the count (>=8
  * dimensions = a genuine analysis, matching the worker's validate12D threshold).
  */
-export function parseUcisDimensions(markdown: string): Record<number, UCISDimension> {
+export function parseUcisDimensions(
+  markdown: string | null | undefined,
+): Record<number, UCISDimension> {
   const out: Record<number, UCISDimension> = {};
   if (!markdown || !markdown.trim()) return out;
 
