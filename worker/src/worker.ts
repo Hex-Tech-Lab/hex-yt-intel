@@ -359,11 +359,12 @@ app.post("/analyze-llm-stream", async (c) => {
   if (Date.now() > req.exp) {
     return c.json({ error: 'Token expired' }, 401);
   }
-  // The models list is bound into the signature (same join the bouncer used): the
-  // token authorizes THIS exact cascade, so the model selection is tamper-proof.
+  // The models list is bound into the signature (byte-identical JSON.stringify the
+  // bouncer used): the token authorizes THIS exact cascade, so model selection is
+  // tamper-proof. JSON (not join) avoids comma-in-id aliasing.
   const expected = await hmacHex(
     secret,
-    `${req.videoId}.${req.analysisId}.${req.exp}.${(req.models ?? []).join(',')}`
+    `${req.videoId}.${req.analysisId}.${req.exp}.${JSON.stringify(req.models ?? [])}`
   );
   if (!timingSafeEqualHex(expected, req.sig)) {
     return c.json({ error: 'Invalid token' }, 401);
