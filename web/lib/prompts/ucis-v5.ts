@@ -248,6 +248,7 @@ Key assumptions – Base case – Optimistic – Pessimistic – Tail risk.
 #### 8.1 Primary Knowledge Graph Nodes
 
 3–5 core concepts to become dedicated KG nodes.
+CRITICAL: Do NOT extract structural document headers (e.g., 'Apex Intelligence', 'Semantic Foundation') as entities. You must extract ONLY domain-specific semantic nodes (People, Concepts, Frameworks, Tools).
 
 #### 8.2 Semantic Keyword Layer
 

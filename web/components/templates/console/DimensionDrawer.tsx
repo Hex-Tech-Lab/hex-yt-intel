@@ -1,6 +1,8 @@
 'use client';
 
 import { Icon } from '@/components/templates/_shared/primitives';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export interface DimensionDrawerProps {
   dimension: { label: string; content?: string; icon: string } | null;
@@ -32,10 +34,12 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
             <Icon icon="solar:close-circle-linear" size={18} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 hx-custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 hx-custom-scrollbar">
           {dimension.content ? (
-            <div className="hx-body-secondary text-[13.5px] leading-relaxed text-[var(--ink-secondary)] whitespace-pre-wrap break-words">
-              {dimension.content}
+            <div className="prose prose-sm prose-invert max-w-prose mx-auto">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {dimension.content}
+              </ReactMarkdown>
             </div>
           ) : (
             <div className="text-[var(--ink-muted)] font-mono text-xs">
