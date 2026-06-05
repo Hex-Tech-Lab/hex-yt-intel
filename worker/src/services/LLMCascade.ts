@@ -30,9 +30,17 @@ const HTTP_REFERER = 'https://yt-intel.hex-tech-lab.workers.dev';
 
 export class LLMCascade implements ILLMCascade {
   private apiKey: string;
+  // The ordered cascade actually used. Defaults to the hardcoded MODEL_CHAIN, but the
+  // bouncer may inject a per-tier list (resolved from app_settings) — the DB config is
+  // the override source of truth; MODEL_CHAIN is the safety-net fallback.
+  private chain: ReadonlyArray<{ model: string; name: string }>;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, models?: string[]) {
     this.apiKey = apiKey;
+    this.chain =
+      models && models.length > 0
+        ? models.map((model) => ({ model, name: model }))
+        : MODEL_CHAIN;
   }
 
   /**
@@ -49,7 +57,7 @@ export class LLMCascade implements ILLMCascade {
     let modelUsed = '';
     let produced = false;
 
-    for (const { model, name } of MODEL_CHAIN) {
+    for (const { model, name } of this.chain) {
       console.log(`[LLMCascade] Attempting model: ${name} (${model})`);
       onStatus?.({ stage: 'model', model: name });
       modelUsed = name;
@@ -84,7 +92,7 @@ export class LLMCascade implements ILLMCascade {
     metadata: EngineMetadata,
     accept?: (text: string) => boolean
   ): Promise<{ text: string; modelUsed: string } | null> {
-    for (const { model, name } of MODEL_CHAIN) {
+    for (const { model, name } of this.chain) {
       const result = await this.callLLM(model, systemPrompt, transcript, metadata);
       if (result.success && result.text) {
         if (!accept || accept(result.text)) {

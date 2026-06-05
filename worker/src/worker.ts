@@ -325,6 +325,9 @@ app.post("/analyze-llm-stream", async (c) => {
     };
     persona: string;
     timezone: string;
+    // Per-tier model cascade resolved by the bouncer (app_settings). Bound into the
+    // HMAC below so a client can't swap in expensive models. Absent → worker default.
+    models?: string[];
     sig: string;
     exp: number;
   }
@@ -356,7 +359,12 @@ app.post("/analyze-llm-stream", async (c) => {
   if (Date.now() > req.exp) {
     return c.json({ error: 'Token expired' }, 401);
   }
-  const expected = await hmacHex(secret, `${req.videoId}.${req.analysisId}.${req.exp}`);
+  // The models list is bound into the signature (same join the bouncer used): the
+  // token authorizes THIS exact cascade, so the model selection is tamper-proof.
+  const expected = await hmacHex(
+    secret,
+    `${req.videoId}.${req.analysisId}.${req.exp}.${(req.models ?? []).join(',')}`
+  );
   if (!timingSafeEqualHex(expected, req.sig)) {
     return c.json({ error: 'Invalid token' }, 401);
   }
@@ -366,7 +374,7 @@ app.post("/analyze-llm-stream", async (c) => {
   // No cache on the streaming path (partial-progress persistence handled by worker).
   const engine: IReasoningEngine = new ReasoningEngine(
     new PromptBuilder(),
-    new LLMCascade(apiKey),
+    new LLMCascade(apiKey, req.models),
     new ValidationService(),
     undefined
   );
