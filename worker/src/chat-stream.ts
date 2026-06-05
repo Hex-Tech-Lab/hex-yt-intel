@@ -24,6 +24,8 @@ interface ChatStreamRequest {
   userId: string;
   grounding: string;
   history: Array<{ role: string; content: string }>;
+  // Per-tier chat cascade resolved by the bouncer (app_settings); bound into the HMAC.
+  models?: string[];
   sig: string;
   exp: number;
 }
@@ -52,18 +54,21 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Run the CHAT_MODELS cascade, committing to the first model that produces tokens. */
+/** Run the chat cascade, committing to the first model that produces tokens. The model
+ *  list comes from the bouncer (per-tier app_settings); falls back to CHAT_MODELS. */
 async function streamChatCascade(
   apiKey: string,
   grounding: string,
   history: Array<{ role: string; content: string }>,
   onDelta: (chunk: string) => void,
+  models?: string[],
 ): Promise<string> {
   const messages: Array<{ role: string; content: string }> = [{ role: "system", content: CHAT_PROTOCOL }];
   if (grounding) messages.push({ role: "system", content: grounding });
   for (const m of history) messages.push({ role: m.role, content: m.content });
 
-  for (const model of CHAT_MODELS) {
+  const chain = models && models.length > 0 ? models : CHAT_MODELS;
+  for (const model of chain) {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 50000);
     let full = "";
@@ -137,7 +142,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   if (Date.now() > req.exp) {
     return c.json({ error: "Token expired" }, 401);
   }
-  const expected = await hmacHex(secret, `chat.${req.conversationId}.${req.userId}.${req.exp}`);
+  const expected = await hmacHex(secret, `chat.${req.conversationId}.${req.userId}.${req.exp}.${(req.models ?? []).join(',')}`);
   if (!timingSafeEqualHex(expected, req.sig)) {
     return c.json({ error: "Invalid token" }, 401);
   }
@@ -160,7 +165,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       try {
         full = await streamChatCascade(apiKey, grounding, history, (chunk) => {
           send({ type: "delta", content: chunk });
-        });
+        }, req.models);
         if (!full) {
           full = "No response generated.";
           send({ type: "delta", content: full });

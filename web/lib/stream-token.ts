@@ -37,14 +37,15 @@ export function signStreamToken(videoId: string, analysisId: string, models: str
  * public worker endpoint can't be driven to burn OpenRouter quota. Bound to the
  * conversation + owner + expiry. The worker verifies with the identical message format.
  */
-export function signChatToken(conversationId: string, userId: string): { sig: string; exp: number } {
+export function signChatToken(conversationId: string, userId: string, models: string[] = []): { sig: string; exp: number } {
   const exp = Date.now() + TOKEN_TTL_MS;
-  return { sig: hmacHex(`chat.${conversationId}.${userId}.${exp}`), exp };
+  // Bind the per-tier chat model cascade so the worker runs exactly this list.
+  return { sig: hmacHex(`chat.${conversationId}.${userId}.${exp}.${models.join(',')}`), exp };
 }
 
-export function verifyChatToken(conversationId: string, userId: string, exp: number, sig: string): boolean {
+export function verifyChatToken(conversationId: string, userId: string, exp: number, sig: string, models: string[] = []): boolean {
   if (Date.now() > exp) return false;
-  return safeEqualHex(hmacHex(`chat.${conversationId}.${userId}.${exp}`), sig);
+  return safeEqualHex(hmacHex(`chat.${conversationId}.${userId}.${exp}.${models.join(',')}`), sig);
 }
 
 function safeEqualHex(a: string, b: string): boolean {
