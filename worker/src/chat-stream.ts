@@ -142,7 +142,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   if (Date.now() > req.exp) {
     return c.json({ error: "Token expired" }, 401);
   }
-  const expected = await hmacHex(secret, `chat.${req.conversationId}.${req.userId}.${req.exp}.${(req.models ?? []).join(',')}`);
+  const expected = await hmacHex(secret, `chat.${req.conversationId}.${req.userId}.${req.exp}.${JSON.stringify(req.models ?? [])}`);
   if (!timingSafeEqualHex(expected, req.sig)) {
     return c.json({ error: "Invalid token" }, 401);
   }

@@ -42,7 +42,9 @@ const TTL_MS = 60_000;
 let cache: { value: ModelConfig | null; at: number } | null = null;
 
 function isNonEmptyStringArray(v: unknown): v is string[] {
-  return Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string');
+  // Reject empty/whitespace entries: a malformed DB config (e.g. ["", "x"]) must fall
+  // through to the next precedence tier, never emit a blank model id to OpenRouter.
+  return Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string' && x.trim().length > 0);
 }
 
 async function readModelConfig(): Promise<ModelConfig | null> {
