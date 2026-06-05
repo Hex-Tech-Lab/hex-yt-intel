@@ -24,10 +24,12 @@ function hmacHex(message: string): string {
   return createHmac('sha256', secret()).update(message).digest('hex');
 }
 
-export function signStreamToken(videoId: string, analysisId: string): { sig: string; exp: number } {
+export function signStreamToken(videoId: string, analysisId: string, models: string[] = []): { sig: string; exp: number } {
   const exp = Date.now() + TOKEN_TTL_MS;
-  // Bind analysisId so the browser can't swap it to overwrite another row.
-  return { sig: hmacHex(`${videoId}.${analysisId}.${exp}`), exp };
+  // Bind analysisId so the browser can't swap it to overwrite another row, and the
+  // model cascade so the browser can't escalate to expensive models. The worker
+  // verifies the identical `videoId.analysisId.exp.models` message.
+  return { sig: hmacHex(`${videoId}.${analysisId}.${exp}.${models.join(',')}`), exp };
 }
 
 /**
