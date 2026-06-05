@@ -62,6 +62,7 @@ function extractSection(markdown: string, dimensionNumber: number): string {
     .replace(/\|\s*[^|]+\s*\|/g, '')              // Remove table pipes
     .replace(/^---+$/gm, '')                      // Remove horizontal rules
     .replace(/^\s*[-*]\s+/gm, '')                 // Remove bullet points
+    .replace(/End of UCIS.*Report/gim, '')       // Strip completion tags
     .replace(/\n\n+/g, '\n')                      // Collapse multiple blank lines
     .trim();
 

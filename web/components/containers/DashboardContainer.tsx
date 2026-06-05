@@ -40,24 +40,24 @@ function cleanDimensionContent(raw: string): string {
 }
 
 export function DashboardContainer({ profile }: DashboardContainerProps) {
-  const { status, error, videoMetadata, analysisHistory } = useAnalysisStore();
+  const store = useAnalysisStore();
   const { url, setUrl } = useInputStore();
   const { startAnalysis } = useSSEStream();
-  const { projection, analysis } = useSynthesisNucleus();
+  const nucleus = useSynthesisNucleus();
   const { graph } = useKnowledgeGraph();
-  const { insights, loading: insightsLoading } = useRelations(analysis?.id ?? null, status === 'complete');
+  const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, store.status === 'complete');
   const [search, setSearch] = useState('');
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
 
-  // Clear the sticky localStorage chat session when navigating to a new analysis
+  // Clear the sticky localStorage chat session when starting a new analysis or navigating away
   useEffect(() => {
-    if (analysis?.id) {
+    if (nucleus.analysis?.id || url) {
       useChatStore.getState().reset();
     }
-  }, [analysis?.id]);
+  }, [nucleus.analysis?.id, url]);
 
   useEffect(() => {
     if (activeNav !== 'console') {
@@ -70,7 +70,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     profile.monthlyLimit === null
       ? `${profile.analysesUsed} analyses · Unlimited`
       : `${profile.analysesUsed} / ${profile.monthlyLimit} monthly analyses`;
-  const historyBadge = analysisHistory.length > 0 ? String(analysisHistory.length) : undefined;
+  const historyBadge = store.analysisHistory.length > 0 ? String(store.analysisHistory.length) : undefined;
 
   const getUserTimezone = (): string => {
     try {
@@ -85,6 +85,24 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     await startAnalysis(url, getUserTimezone());
   }, [url, startAnalysis]);
 
+  const handleExport = useCallback((format: 'pdf' | 'markdown') => {
+    if (!nucleus.analysis?.id) return;
+    if (format === 'pdf') {
+      window.open(`/api/analyses/${nucleus.analysis.id}/export?format=pdf&scope=full`, '_blank');
+    } else {
+      const content = store.analysis?.analysis_markdown || '';
+      const blob = new Blob([content], { type: 'text/markdown' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `${nucleus.analysis.title || 'synthesis'}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    }
+  }, [nucleus.analysis?.id, nucleus.analysis?.title, store.analysis?.analysis_markdown]);
+
   const sidebarItems: SidebarItem[] = useMemo(() => [
     { key: 'console', label: 'Synthesis Console', icon: 'solar:graph-up-linear' },
     { key: 'history', label: 'Analysis History', icon: 'solar:folder-with-files-linear', badge: historyBadge },
@@ -92,7 +110,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   ], [historyBadge]);
 
   const dimensions: Dimension[] = useMemo(() => {
-    if (!projection) return [];
+    if (!nucleus.projection) return [];
 
     const DIMENSION_LABELS: Record<number, string> = {
       1: "Apex Intelligence",
@@ -126,14 +144,14 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       1: 3, 5: 2, 11: 2
     };
 
-    return projection.visibleDimensions.map((dim) => {
-      const isPending = projection.pendingDimensions.has(dim.number);
+    return nucleus.projection.visibleDimensions.map((dim) => {
+      const isPending = nucleus.projection?.pendingDimensions.has(dim.number);
       let dimStatus: 'idle' | 'streaming' | 'done' | 'error' = 'idle';
-      if (status === 'complete') {
+      if (store.status === 'complete') {
         dimStatus = isPending ? 'idle' : 'done';
-      } else if (status === 'analyzing' || status === 'downloading') {
+      } else if (store.status === 'analyzing' || store.status === 'downloading') {
         dimStatus = isPending ? 'idle' : 'streaming';
-      } else if (status === 'error') {
+      } else if (store.status === 'error') {
         dimStatus = 'error';
       }
 
@@ -146,7 +164,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         span: (DIMENSION_SPANS[dim.number] || 1) as 1 | 2 | 3,
       };
     });
-  }, [projection, status]);
+  }, [nucleus.projection, store.status]);
 
   return (
     <>
@@ -163,12 +181,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         <TopBar
           search={search}
           onSearchChange={setSearch}
+          onExport={handleExport}
           tier={tierLabel}
           account={<div title={profile.email} className="w-8 h-8 rounded-lg bg-[var(--accent)] grid place-items-center text-[var(--void)] font-bold text-xs">{profile.initials}</div>}
         />
       }
       rightPanel={
-        status !== 'idle' ? (
+        store.status !== 'idle' ? (
           <div className="flex flex-col gap-3.5">
             <div className="flex items-center justify-between">
               <span className="text-[var(--ink-secondary)] font-mono text-[11px] tracking-[0.08em] uppercase">Intelligence</span>
@@ -188,7 +207,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} compact height={200} />
                 ) : (
                   <div className="h-[200px] rounded-2xl border border-dashed border-[var(--line)] grid place-items-center text-center text-[var(--ink-muted)] font-mono text-[10.5px] p-3 leading-relaxed">
-                    {status === 'complete' ? 'No relational structure for this analysis.' : 'Synthesizing… the graph populates as dimensions arrive.'}
+                    {store.status === 'complete' ? 'No relational structure for this analysis.' : 'Synthesizing… the graph populates as dimensions arrive.'}
                   </div>
                 )}
                 <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
@@ -199,31 +218,31 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           </div>
         ) : undefined
       }
-      dock={<ChatDock analysisId={analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
+      dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={store.videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
         <div className="flex flex-col gap-8 pb-4">
           <AnalysisHero
             url={url}
-            status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
+            status={store.status === 'analyzing' || store.status === 'downloading' ? 'streaming' : store.status === 'complete' ? 'done' : store.status === 'error' ? 'error' : 'idle'}
             onUrlChange={setUrl}
             onAnalyze={handleAnalyze}
-            error={error?.message}
+            error={store.error?.message}
             quota={quotaLabel}
           />
 
-          {videoMetadata && (
+          {store.videoMetadata && (
             <BentoMetadata
-              title={videoMetadata.title}
-              channelTitle={videoMetadata.channelTitle}
-              viewCount={videoMetadata.viewCount}
-              likeCount={videoMetadata.likeCount}
-              duration={videoMetadata.duration || 0}
-              publishedAt={videoMetadata.publishedAt}
+              title={store.videoMetadata.title}
+              channelTitle={store.videoMetadata.channelTitle}
+              viewCount={store.videoMetadata.viewCount}
+              likeCount={store.videoMetadata.likeCount}
+              duration={store.videoMetadata.duration || 0}
+              publishedAt={store.videoMetadata.publishedAt}
             />
           )}
 
-          {status !== 'idle' && (
+          {store.status !== 'idle' && (
             <>
               <div className="flex gap-1 p-1 rounded-xl border border-[var(--line)] bg-[rgb(11_14_20_/_0.5)] self-start">
                 {([
@@ -248,14 +267,21 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
               {consoleTab === 'synthesis' ? (
                 <div className="flex flex-col gap-8">
-                  {status === 'complete' && <PersonaSelector />}
-                  <StreamingGrid
-                    dimensions={dimensions}
-                    progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
-                    onOpenDimension={(key) => setSelectedDimensionKey(key)}
-                  />
+                  {store.status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
+                  {dimensions.length > 0 ? (
+                    <StreamingGrid
+                      dimensions={dimensions}
+                      progress={store.status === 'analyzing' ? 'Processing...' : store.status === 'complete' ? '100% complete' : undefined}
+                      onOpenDimension={(key) => setSelectedDimensionKey(key)}
+                    />
+                  ) : store.status !== 'idle' ? (
+                    <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
+                      <Icon icon="solar:refresh-linear" size={32} className="hx-anispin text-[var(--accent)] mb-4 inline-block" />
+                      <p className="text-[var(--ink-secondary)] font-mono text-sm">Preparing synthesis dimensions…</p>
+                    </div>
+                  ) : null}
                   <ProcessingLog
-                    status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
+                    status={store.status === 'analyzing' || store.status === 'downloading' ? 'streaming' : store.status === 'complete' ? 'done' : store.status === 'error' ? 'error' : 'idle'}
                   />
                 </div>
               ) : (
@@ -264,7 +290,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={580} />
                   ) : (
                     <div className="h-[580px] rounded-2xl border border-dashed border-[var(--line)] grid place-items-center text-center text-[var(--ink-muted)] font-mono text-[12.5px] p-6 leading-relaxed">
-                      {status === 'complete' ? 'No graph relations were synthesized for this analysis.' : 'The knowledge graph builds live as dimensions arrive…'}
+                      {store.status === 'complete' ? 'No graph relations were synthesized for this analysis.' : 'The knowledge graph builds live as dimensions arrive…'}
                     </div>
                   )}
                   <p className="mt-2.5 text-[var(--ink-muted)] font-mono text-[11px] leading-relaxed">
@@ -275,7 +301,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             </>
           )}
         </div>
-      ) : activeNav === 'history' ? (
+      ) : (activeNav as string) === 'history' ? (
         <AnalysisHistory onSelectAnalysis={() => setActiveNav('console')} />
       ) : (
         <div className="p-12 text-center text-[var(--ink-secondary)]">

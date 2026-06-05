@@ -112,13 +112,40 @@
   --z-canvas: 1;
   --z-content: 10;
   --z-sticky: 20;
-  --z-dropdown: 30;
-  --z-modal: 40;
-  --z-toast: 50;
+  --z-dock: 40;       /* Chat dock, sits above processing log */
+  --z-dropdown: 50;
+  --z-modal: 60;
+  --z-toast: 70;
 }
 
 :root {
   --primary: var(--ink);
+}
+
+/* Global Dark Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+/* Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--line-strong);
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ink-muted);
 }
 
 /* ============================================================================

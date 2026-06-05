@@ -300,6 +300,7 @@ export const useChatStore = create<ChatState>((set, get) => {
 
     reset: () => {
       set({
+        conversations: [],
         activeId: null,
         messagesByConv: {},
         error: null,

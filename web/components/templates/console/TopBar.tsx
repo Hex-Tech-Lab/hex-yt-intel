@@ -1,17 +1,20 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 export interface TopBarProps {
   search: string;
   onSearchChange: (value: string) => void;
   onSearchSubmit?: () => void;
+  onExport?: (format: 'pdf' | 'markdown') => void;
   tier?: string;
   account?: ReactNode;
 }
 
-export function TopBar({ search, onSearchChange, onSearchSubmit, tier, account }: TopBarProps) {
+export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier, account }: TopBarProps) {
+  const [exportOpen, setExportOpen] = useState(false);
+
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 24px" }}>
       <label
@@ -53,6 +56,73 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, tier, account }
       </label>
 
       <span style={{ flex: 1 }} />
+
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => setExportOpen(!exportOpen)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--line)',
+            background: 'var(--surface)',
+            color: 'var(--ink-secondary)',
+            cursor: 'pointer',
+            fontSize: 12,
+            fontFamily: 'var(--font-mono)',
+            transition: 'all 0.2s'
+          }}
+          className="hx-navitem"
+        >
+          <Icon icon="solar:download-minimalistic-linear" size={14} />
+          Export
+          <Icon icon="solar:alt-arrow-down-linear" size={12} style={{ transform: exportOpen ? 'rotate(180deg)' : 'none' }} />
+        </button>
+
+        {exportOpen && (
+          <>
+            <div 
+              style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+              onClick={() => setExportOpen(false)}
+            />
+            <div 
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: 0,
+                width: 160,
+                background: 'var(--surface-raised)',
+                border: '1px solid var(--line-strong)',
+                borderRadius: 10,
+                padding: 4,
+                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
+                zIndex: 50,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2
+              }}
+              className="hx-rise"
+            >
+              <button
+                onClick={() => { onExport?.('pdf'); setExportOpen(false); }}
+                style={dropdownItem}
+              >
+                <Icon icon="solar:file-text-linear" size={14} />
+                Export as PDF
+              </button>
+              <button
+                onClick={() => { onExport?.('markdown'); setExportOpen(false); }}
+                style={dropdownItem}
+              >
+                <Icon icon="solar:document-text-linear" size={14} />
+                Export as Markdown
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
       {tier && (
         <span
@@ -96,3 +166,20 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, tier, account }
     </div>
   );
 }
+
+const dropdownItem: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  width: '100%',
+  padding: '8px 10px',
+  borderRadius: 6,
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--ink-secondary)',
+  cursor: 'pointer',
+  fontSize: 12,
+  fontFamily: 'var(--font-mono)',
+  textAlign: 'left',
+  transition: 'all 0.2s',
+};

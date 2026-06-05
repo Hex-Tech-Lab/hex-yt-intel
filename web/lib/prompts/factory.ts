@@ -64,5 +64,7 @@ ${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript t
 
 ---
 
-**Execution**: Generate the complete v${version} analysis output using the framework above. ${version === '5.1' ? 'All 11 dimensions must be present.' : 'All 10 dimensions must be present.'} Satisfy the quality enforcement checklist before delivering output. Remember: Transcript Absolutism (section 0.5) and the Insufficient Data Protocol (section 0.6) override all other instructions.`;
+**Execution**: Generate the complete v${version} analysis output using the framework above. ${version === '5.1' ? 'All 11 dimensions must be present.' : 'All 10 dimensions must be present.'} Satisfy the quality enforcement checklist before delivering output. Remember: Transcript Absolutism (section 0.5) and the Insufficient Data Protocol (section 0.6) override all other instructions.
+
+**CRITICAL**: Do NOT include any closing tags, summary lines, or metadata markers (e.g., "End of UCIS v5.1 Report") at the end of your response. The output must end immediately after the final dimension content.`;
 }
