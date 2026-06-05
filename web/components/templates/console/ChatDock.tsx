@@ -97,7 +97,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 50,
+    zIndex: 'var(--z-dock)' as any,
     borderTop: '1px solid var(--line)',
     background: 'rgb(11 14 20 / 0.97)',
     backdropFilter: 'blur(12px)',

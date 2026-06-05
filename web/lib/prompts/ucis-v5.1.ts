@@ -516,7 +516,4 @@ Analyse the provided content using the complete v5.1 framework above. You are op
 **CRITICAL REMINDER**: External data enrichment, web searching, and inference beyond the transcript boundary are FORBIDDEN. When data is absent, use the circuit breaker. This is the correct response.
 
 **For short-form content (< 180 seconds)**: You are a blind, ruthless parser. Extract exactly what the transcript provides. Mark complex dimensions with "[Insufficient data in source transcript to fulfill this dimension]" without exception or complaint. This is not a failure—it is the correct protocol.
-
----
-
-*UCIS v5.1 – End of Prompt*`;
+`;
