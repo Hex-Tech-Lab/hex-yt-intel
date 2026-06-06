@@ -36,7 +36,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
         </div>
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 hx-custom-scrollbar">
           {dimension.content ? (
-            <div className="prose prose-sm prose-invert max-w-prose mx-auto">
+            <div className="prose prose-invert max-w-none px-6 py-4">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {dimension.content}
               </ReactMarkdown>

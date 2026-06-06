@@ -77,7 +77,7 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
 
           <div style={{ flex: 1, overflowY: "auto", maxHeight: 320, paddingRight: 4 }} className="hx-custom-scrollbar">
             {status === "done" && content ? (
-              <div className="prose prose-sm prose-invert p-2">
+              <div className="prose prose-invert max-w-none px-6 py-4">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {content}
                 </ReactMarkdown>
