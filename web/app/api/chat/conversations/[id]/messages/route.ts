@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import type { ChatMessage, ChatRole } from '@/lib/types/chat';
 import { signChatToken } from '@/lib/stream-token';
+import { getUserTier } from '@/lib/services/traffic';
+import { resolveModelCascade } from '@/lib/services/settings';
 
 type Row = {
   id: string;
@@ -28,12 +30,17 @@ const toMsg = (r: Row): ChatMessage => ({
 const COLS = 'id, conversation_id, role, content, created_at, client_msg_id';
 const HISTORY_TURNS = 20;
 
-/** GET — load a thread's messages (RLS scopes to owner). */
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+/* GET — load a thread's messages (RLS scopes to owner). */
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
   const supabase = await getSupabaseClientWithAuth();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const { data, error } = await supabase
     .from('chat_messages')
@@ -48,34 +55,48 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json({ messages: (data as Row[]).map(toMsg) });
 }
 
-/**
+/*
  * POST — append a user message (idempotent on client_msg_id) and STREAM the assistant
  * reply via SSE. Events: user | title | delta | done | error.
  */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
   const supabase = await getSupabaseClientWithAuth();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const body = await request.json().catch(() => ({}));
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   const clientMsgId = typeof body.clientMsgId === 'string' ? body.clientMsgId : null;
-  if (!content) return NextResponse.json({ error: 'Empty message' }, { status: 400 });
+  if (!content) {
+    return NextResponse.json({ error: 'Empty message' }, { status: 400 });
+  }
 
   const { data: conv } = await supabase
     .from('chat_conversations')
     .select('id, title, analysis_id')
     .eq('id', id)
     .maybeSingle();
-  if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+  if (!conv) {
+    return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+  }
 
   // --- Idempotent user-message write ---------------------------------------
   let userRow: Row | null = null;
   let isRetry = false;
 
   if (clientMsgId) {
-    const { data: existing } = await supabase.from('chat_messages').select(COLS).eq('conversation_id', id).eq('client_msg_id', clientMsgId).maybeSingle();
+    const { data: existing } = await supabase
+      .from('chat_messages')
+      .select(COLS)
+      .eq('conversation_id', id)
+      .eq('client_msg_id', clientMsgId)
+      .maybeSingle();
     if (existing) {
       userRow = existing as Row;
       isRetry = true;
@@ -84,13 +105,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!userRow) {
     const { data, error } = await supabase
       .from('chat_messages')
-      .insert({ conversation_id: id, user_id: user.id, role: 'user', content, client_msg_id: clientMsgId })
+      .insert({
+        conversation_id: id,
+        user_id: user.id,
+        role: 'user',
+        content: content,
+        client_msg_id: clientMsgId,
+      })
       .select(COLS)
       .single();
     if (error) {
       // 23505 = unique violation: a concurrent retry won the race; fetch theirs.
       if (error.code === '23505' && clientMsgId) {
-        const { data: raced } = await supabase.from('chat_messages').select(COLS).eq('conversation_id', id).eq('client_msg_id', clientMsgId).single();
+        const { data: raced } = await supabase
+          .from('chat_messages')
+          .select(COLS)
+          .eq('conversation_id', id)
+          .eq('client_msg_id', clientMsgId)
+          .single();
         userRow = raced as Row;
         isRetry = true;
       } else {
@@ -115,7 +147,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .maybeSingle();
     if (laterAssistant) {
       // Already answered on a prior attempt — return both turns, no regeneration.
-      return NextResponse.json({ user: toMsg(userRow!), assistant: toMsg(laterAssistant as Row) });
+      return NextResponse.json({
+        user: toMsg(userRow!),
+        assistant: toMsg(laterAssistant as Row),
+      });
     }
   }
 
@@ -123,7 +158,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let newTitle: string | undefined;
   if (conv.title === 'New chat') {
     newTitle = content.slice(0, 60);
-    await supabase.from('chat_conversations').update({ title: newTitle }).eq('id', id);
+    await supabase
+      .from('chat_conversations')
+      .update({ title: newTitle })
+      .eq('id', id);
   }
 
   // Replay bounded history (model is stateless).
@@ -164,10 +202,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   }
 
-  // Bouncer: mint an HMAC token and hand the browser everything it needs to stream the
-  // reply directly from the worker (/chat-stream). The LLM tokens never traverse this
-  // Vercel function; the worker persists the assistant turn S2S via /api/chat/persist.
-  const { sig, exp } = signChatToken(id, user.id);
+  // Bouncer: resolve the per-tier chat cascade (app_settings; falls back to hardcoded) and bind
+  // it into the token so the worker runs exactly this list and it can't be escalated.
+  const tier = (await getUserTier(user.id)) ?? 'free';
+
+  // Strict null-safety guard for tier variable
+  if (tier === null || tier === undefined) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const chatModels = await resolveModelCascade(tier, 'chat');
+  const { sig, exp } = signChatToken(id, user.id, chatModels);
   return NextResponse.json({
     user: toMsg(userRow),
     ...(newTitle ? { title: newTitle } : {}),
@@ -181,6 +226,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       userId: user.id,
       grounding,
       history: history.map((m) => ({ role: m.role, content: m.content })),
+      models: chatModels,
     },
   });
 }
