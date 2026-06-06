@@ -202,15 +202,12 @@ export async function POST(
     }
   }
 
-  // Bouncer: resolve the per-tier chat cascade (app_settings; falls back to hardcoded) and bind
+// Bouncer: mint an HMAC token and hand the browser everything it needs to stream the
+  // reply directly from the worker (/chat-stream). The LLM tokens never traverse this
+  // Vercel function; the worker persists the assistant turn S2S via /api/chat/persist.
+  // Resolve the per-tier chat cascade (app_settings; falls back to hardcoded) and bind
   // it into the token so the worker runs exactly this list and it can't be escalated.
   const tier = (await getUserTier(user.id)) ?? 'free';
-
-  // Strict null-safety guard for tier variable
-  if (tier === null || tier === undefined) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const chatModels = await resolveModelCascade(tier, 'chat');
   const { sig, exp } = signChatToken(id, user.id, chatModels);
   return NextResponse.json({

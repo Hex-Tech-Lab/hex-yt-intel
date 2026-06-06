@@ -122,6 +122,8 @@ export interface WorkerStreamRequest {
   metadata: AnalysisJobMetadata;
   persona: string;
   timezone: string;
+  // Per-tier model cascade (app_settings); bound into the stream token's HMAC.
+  models?: string[];
   sig: string;
   exp: number;
 }
