@@ -113,17 +113,21 @@ export async function GET(): Promise<NextResponse<AdminStats | { error: string }
       const latencies = latencyData
         .map((log: { metadata: Record<string, unknown> | null }) => {
           try {
-            return parseInt(String(log.metadata?.latency_ms ?? '0'), 10);
+            const parsed = parseInt(String(log.metadata?.latency_ms ?? ''), 10);
+            return Number.isFinite(parsed) ? parsed : 0;
           } catch {
             return 0;
           }
         })
         .filter((l: number) => l > 0);
 
+      // Explicit division-by-zero protection for average API latency
       if (latencies.length > 0) {
-        stats.avg_api_latency = Math.round(
-          latencies.reduce((a: number, b: number) => a + b, 0) / latencies.length
-        );
+        const sum = latencies.reduce((a: number, b: number) => a + b, 0);
+        const avg = sum / latencies.length;
+        stats.avg_api_latency = Number.isFinite(avg) ? Math.round(avg) : 0;
+      } else {
+        stats.avg_api_latency = 0;
       }
     }
 
@@ -140,8 +144,13 @@ export async function GET(): Promise<NextResponse<AdminStats | { error: string }
       .select('*', { count: 'exact', head: true })
       .gte('created_at', oneDayAgo);
 
-    stats.error_rate_24h =
-      totalEvents && totalEvents > 0 ? ((errorCount || 0) / totalEvents) * 100 : 0;
+// Explicit division-by-zero protection for error rate
+    const eventCount = totalEvents ?? 0;
+    if (eventCount > 0) {
+      stats.error_rate_24h = ((errorCount ?? 0) / eventCount) * 100;
+    } else {
+      stats.error_rate_24h = 0;
+    }
 
     // Get revenue (from stripe_events or manual tracking)
     // For now, return 0 - implement if billing data is available
@@ -157,8 +166,13 @@ export async function GET(): Promise<NextResponse<AdminStats | { error: string }
     const uniqueActiveUsers = new Set(
       activeUsersData?.map((log: { user_id: string }) => log.user_id) || []
     ).size;
-    stats.retention_7d =
-      stats.active_users > 0 ? Math.round((uniqueActiveUsers / stats.active_users) * 100) : 0;
+// Explicit division-by-zero protection for retention
+    const userCount = stats.active_users;
+    if (userCount > 0) {
+      stats.retention_7d = Math.round((uniqueActiveUsers / userCount) * 100);
+    } else {
+      stats.retention_7d = 0;
+    }
 
     // Log access to admin stats
     await supabase.from('usage_logs').insert({
