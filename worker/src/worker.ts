@@ -12,6 +12,7 @@ import { PromptBuilder } from "./services/PromptBuilder";
 import { LLMCascade } from "./services/LLMCascade";
 import { ValidationService } from "./services/ValidationService";
 import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
+import { reconstructMarkdown, extractJsonPayload } from "./services/MarkdownReconstructor";
 import type { IReasoningEngine } from "./ports/IReasoningEngine";
 
 type Env = {
@@ -398,13 +399,25 @@ app.post("/analyze-llm-stream", async (c) => {
     const contentSig = await hmacHex(secret, finalText);
     const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
 
+    // ADR 006: Dual-write persistence
+    // Attempt to extract v2.0 JSON payload; if successful, reconstruct markdown
+    // for backward compat. Otherwise finalText is already markdown (legacy mode).
+    let markdown = finalText;
+    let jsonPayload = null;
+    const extracted = extractJsonPayload(finalText);
+    if (extracted) {
+      jsonPayload = extracted;
+      markdown = reconstructMarkdown(extracted);
+    }
+
     await fetch(`${appUrl}/api/analyses/persist`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         analysisId: req.analysisId,
         videoId: req.videoId,
-        markdown: finalText,
+        markdown,
+        payload: jsonPayload,
         model: modelUsed,
         valid,
         contentSig,

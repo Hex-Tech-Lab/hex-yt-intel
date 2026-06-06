@@ -24,6 +24,9 @@ import {
   type UCISPayload,
   type UCISDimension,
   type PersonaId,
+  type PersonaConfigV2,
+  type KnowledgeGraphV2,
+  type ClassificationData,
   computePersonaProjection,
   PERSONA_DIMENSIONS,
   isValidDimensionNumber,
@@ -37,6 +40,9 @@ import {
 export const useSynthesisNucleus = create<SynthesisNucleusState>((set, get) => ({
   // ============= INITIAL STATE =============
   analysis: null,
+  personaConfig: null,
+  knowledgeGraph: null,
+  classification: null,
   activePersona: 'analyst', // Default persona
   projection: null,
   isStreaming: false,
@@ -222,11 +228,34 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set, get) => (
   reset: () => {
     set({
       analysis: null,
+      personaConfig: null,
+      knowledgeGraph: null,
+      classification: null,
       activePersona: 'analyst',
       projection: null,
       isStreaming: false,
       streamError: null,
     });
+  },
+
+  // ============= ADR 006: v2.0 Actions =============
+
+  setPersonaConfig: (config: PersonaConfigV2) => {
+    set({ personaConfig: config });
+    console.debug('[Nucleus] Persona config received:', config.primary.id);
+  },
+
+  setKnowledgeGraph: (kg: KnowledgeGraphV2) => {
+    set({ knowledgeGraph: kg });
+    console.debug('[Nucleus] Knowledge Graph received:', {
+      nodes: kg.nodes.length,
+      edges: kg.edges.length,
+    });
+  },
+
+  setClassification: (data: ClassificationData) => {
+    set({ classification: data });
+    console.debug('[Nucleus] Classification received:', data.recommendation);
   },
 
   // ============= HELPERS =============

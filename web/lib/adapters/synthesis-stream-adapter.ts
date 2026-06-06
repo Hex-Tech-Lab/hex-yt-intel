@@ -17,7 +17,7 @@
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { validateFragment, validateDimension } from '@/lib/validators/synthesis';
-import type { UCISDimension } from '@/lib/types/synthesis-nucleus';
+import type { UCISDimension, PersonaConfigV2, KnowledgeGraphV2, ClassificationData } from '@/lib/types/synthesis-nucleus';
 
 export interface StreamAdapterOptions {
   onError?: (error: string) => void;
@@ -82,6 +82,16 @@ export class SynthesisStreamAdapter {
         break;
       case 'error':
         this.handleError(fragment);
+        break;
+      // ADR 006: New v2.0 fragment types
+      case 'persona':
+        this.handlePersona(fragment);
+        break;
+      case 'kg':
+        this.handleKG(fragment);
+        break;
+      case 'classification':
+        this.handleClassification(fragment);
         break;
     }
   }
@@ -208,6 +218,27 @@ export class SynthesisStreamAdapter {
     }
 
     console.error('[Adapter] Stream error:', fragment);
+  }
+
+  // ADR 006: v2.0 Fragment Handlers
+
+  private handlePersona(fragment: { type: 'persona'; config: PersonaConfigV2 }) {
+    const store = this.synthStore.getState();
+    store.setPersonaConfig(fragment.config);
+  }
+
+  private handleKG(fragment: { type: 'kg'; nodes: unknown[]; edges: unknown[]; rootId: string | null }) {
+    const store = this.synthStore.getState();
+    store.setKnowledgeGraph({
+      nodes: fragment.nodes as KnowledgeGraphV2['nodes'],
+      edges: fragment.edges as KnowledgeGraphV2['edges'],
+      rootId: fragment.rootId,
+    });
+  }
+
+  private handleClassification(fragment: { type: 'classification'; data: ClassificationData }) {
+    const store = this.synthStore.getState();
+    store.setClassification(fragment.data);
   }
 
   /**

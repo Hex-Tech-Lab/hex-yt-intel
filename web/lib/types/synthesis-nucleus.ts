@@ -119,6 +119,16 @@ export interface SynthesisNucleusState {
   /** Full UCISPayload from LLM (source of truth) */
   analysis: UCISPayload | null;
 
+  // ============= ADR 006: v2.0 Structured Data =============
+  /** Structured persona config from JSON stream */
+  personaConfig: PersonaConfigV2 | null;
+
+  /** Knowledge graph nodes/edges from JSON stream */
+  knowledgeGraph: KnowledgeGraphV2 | null;
+
+  /** Classification data from JSON stream */
+  classification: ClassificationData | null;
+
   // ============= PERSONA VIEW (Derived/computed state) =============
   /** Active persona for filtering */
   activePersona: PersonaId;
@@ -151,6 +161,16 @@ export interface SynthesisNucleusState {
 
   /** Clear all analysis state (for new analysis) */
   reset: () => void;
+
+  // ============= ADR 006: v2.0 Actions =============
+  /** Set structured persona config from stream */
+  setPersonaConfig: (config: PersonaConfigV2) => void;
+
+  /** Set knowledge graph from stream */
+  setKnowledgeGraph: (kg: KnowledgeGraphV2) => void;
+
+  /** Set classification data from stream */
+  setClassification: (data: ClassificationData) => void;
 
   // ============= HELPERS =============
   /** Get dimension by number */
@@ -248,4 +268,92 @@ export function computePersonaProjection(
         : 0,
     },
   };
+}
+
+// =============================================================================
+// ADR 006: Structured JSON Streaming — v2.0 Interfaces
+// =============================================================================
+
+/**
+ * Knowledge Graph Node — v2.0 interface
+ * Emitted by LLM with explicit entityType for domain-specific semantics.
+ */
+export interface KGNodeV2 {
+  id: string;
+  dimension: number;
+  label: string;
+  content: string;
+  weight: number;
+  polarity: number;
+  keyTerms: string[];
+  entityType: 'person' | 'concept' | 'framework' | 'tool' |
+              'organization' | 'study' | 'trend' | 'metric';
+}
+
+/**
+ * Knowledge Graph Edge — v2.0 interface
+ * Represents relationships between KG nodes.
+ */
+export interface KGEdgeV2 {
+  source: string;
+  target: string;
+  strength: number;
+  kind: 'similar' | 'related' | 'tangent' | 'contrarian';
+  rationale?: string;
+}
+
+/**
+ * Persona configuration — v2.0 interface
+ * Structured replacement for the text header block.
+ */
+export interface PersonaConfigV2 {
+  primary: { id: PersonaId; label: string; weight: number };
+  secondary?: { id: PersonaId; label: string; weight: number };
+  tertiary?: { id: PersonaId; label: string; weight: number };
+  cognitiveLenses: string[];
+  selectionRationale: string;
+}
+
+/**
+ * Classification data — v2.0 interface
+ */
+export interface ClassificationData {
+  authoritative: boolean;
+  practicallyActionable: boolean;
+  knowledgeGraphReady: boolean;
+  safe: boolean;
+  personaOptimised: boolean;
+  recommendation: 'highly_recommended' | 'recommended' | 'conditional' | 'skip';
+}
+
+/**
+ * Monetization verdicts — v2.0 interface
+ */
+export interface MonetizationVerdict {
+  creator: string;
+  indieMaker: string;
+  consultant: string;
+}
+
+/**
+ * Knowledge Graph structure — v2.0 interface
+ */
+export interface KnowledgeGraphV2 {
+  nodes: KGNodeV2[];
+  edges: KGEdgeV2[];
+  rootId: string | null;
+}
+
+/**
+ * Complete UCIS payload — v2.0 interface (ADR 006)
+ * Structured JSON payload for dual-write persistence.
+ * Mirrors the UCISPayloadV2 Zod schema.
+ */
+export interface UCISPayloadV2 {
+  schemaVersion: '2.0';
+  persona: PersonaConfigV2;
+  dimensions: UCISDimension[];
+  knowledgeGraph: KnowledgeGraphV2;
+  classification: ClassificationData;
+  monetizationVerdict?: MonetizationVerdict;
 }

@@ -483,38 +483,77 @@ For Dimension 11, compute:
 
 ---
 
-## OUTPUT FORMAT (CRITICAL FOR PARSING)
+## OUTPUT FORMAT (CRITICAL — STRICT JSON REQUIRED)
 
-**MANDATORY FORMATTING RULES** (These enable automated parsing of your output into structured dimensions):
+**Your output MUST be a single valid JSON object conforming to the v2.0 schema below. No markdown. No dimension headers. No text prefixes.**
 
-1. **Dimension Headers MUST match exactly**: \`### DIMENSION N – TITLE\` where:
-   - \`###\` = three hash marks
-   - \`DIMENSION N\` = the word "DIMENSION" followed by space and number 1–11
-   - \`–\` = an em-dash (or hyphen/endash acceptable)
-   - \`TITLE\` = the dimension title (Apex Intelligence, Provenance & Metadata, etc.)
+### JSON ENVELOPE STRUCTURE
 
-2. **Header placement**: Each dimension header must appear on its own line, immediately followed by dimension content.
-
-3. **Spacing**: Use blank lines between dimensions for clarity.
-
-4. **No markdown nesting inside headers**: Headers must contain text only; no bold/italic/code within the header line itself.
-
-Example (exact format):
+\`\`\`json
+{
+  "schemaVersion": "2.0",
+  "persona": {
+    "primary": { "id": "creator|critic|analyst|educator|philosopher", "label": "...", "weight": 0.5 },
+    "secondary": { "id": "...", "label": "...", "weight": 0.25 },
+    "tertiary": { "id": "...", "label": "...", "weight": 0.15 },
+    "cognitiveLenses": ["First Principles", "Systems Thinking"],
+    "selectionRationale": "..."
+  },
+  "dimensions": [
+    {
+      "number": 1,
+      "name": "Apex Intelligence",
+      "content": "...",
+      "metadata": { "wordCount": 400, "keyTerms": ["..."], "confidence": 0.9 }
+    },
+    ...
+  ],
+  "knowledgeGraph": {
+    "nodes": [
+      { "id": "...", "dimension": 8, "label": "...", "content": "...", "weight": 0.8, "polarity": 1, "keyTerms": ["..."], "entityType": "concept|framework|tool|person|..." }
+    ],
+    "edges": [
+      { "source": "nodeId1", "target": "nodeId2", "strength": 0.7, "kind": "related|similar|tangent|contrarian", "rationale": "..." }
+    ],
+    "rootId": "nodeId or null"
+  },
+  "classification": {
+    "authoritative": true,
+    "practicallyActionable": true,
+    "knowledgeGraphReady": true,
+    "safe": true,
+    "personaOptimised": true,
+    "recommendation": "highly_recommended|recommended|conditional|skip"
+  },
+  "monetizationVerdict": {
+    "creator": "Highly Viable – ...",
+    "indieMaker": "Viable – ...",
+    "consultant": "Conditional – ..."
+  }
+}
 \`\`\`
-### DIMENSION 1 – APEX INTELLIGENCE
-[content goes here]
 
-### DIMENSION 2 – PROVENANCE & METADATA
-[content goes here]
-\`\`\`
+### MANDATORY FIELD RULES
+
+1. \`schemaVersion\` MUST be the literal string "2.0".
+
+2. \`dimensions\` MUST be an array with all 11 dimension objects (use "Insufficient data in source transcript to fulfill this dimension" as the content field when the transcript lacks depth).
+
+3. Dimension \`content\` MUST be the full markdown richness previously used (tables, bold, quotes, timestamps) — now properly JSON-escaped as a string value.
+
+4. \`knowledgeGraph.nodes\` MUST contain only domain-specific semantic entities (People, Concepts, Frameworks, Tools). Do NOT extract structural document headers (e.g., "Apex Intelligence", "Semantic Foundation") as nodes.
+
+5. All required fields must be present. Omit optional fields rather than including null.
+
+6. No trailing text outside the JSON object. No markdown blocks surrounding it.
 
 ---
 
 ## EXECUTION
 
-Analyse the provided content using the complete v5.1 framework above. You are operating in a CLOSED UNIVERSE. The transcript is your only source of truth. Output must satisfy all quality enforcement checks **while strictly adhering to Transcript Absolutism (section 0.5) and the Insufficient Data Protocol (section 0.6). DIMENSION HEADERS MUST follow the output format rules in the section above.**
+Analyse the provided content using the complete v5.1 framework above. You are operating in a CLOSED UNIVERSE. The transcript is your only source of truth. Output MUST be a single JSON object conforming exactly to the schema above.
 
 **CRITICAL REMINDER**: External data enrichment, web searching, and inference beyond the transcript boundary are FORBIDDEN. When data is absent, use the circuit breaker. This is the correct response.
 
-**For short-form content (< 180 seconds)**: You are a blind, ruthless parser. Extract exactly what the transcript provides. Mark complex dimensions with "[Insufficient data in source transcript to fulfill this dimension]" without exception or complaint. This is not a failure—it is the correct protocol.
+**For short-form content (< 180 seconds)**: You are a blind, ruthless parser. Extract exactly what the transcript provides. Use "[Insufficient data in source transcript to fulfill this dimension]" for complex dimensions without exception or complaint. This is not a failure—it is the correct protocol.
 `;
