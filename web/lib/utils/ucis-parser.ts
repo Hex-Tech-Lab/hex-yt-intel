@@ -19,9 +19,11 @@ export interface UCISSections {
  * Parses raw analysis markdown into structured UCISDimension objects.
  * Useful for restoring analyses from the database.
  */
-export function parseToUCISDimensions(markdown: string): Record<number, UCISDimension> {
+export function parseToUCISDimensions(
+  markdown: string | null | undefined,
+): Record<number, UCISDimension> {
   const dimensions: Record<number, UCISDimension> = {};
-  
+
   if (!markdown) return dimensions;
 
   for (let i = 1; i <= 11; i++) {
@@ -38,10 +40,15 @@ export function parseToUCISDimensions(markdown: string): Record<number, UCISDime
   return dimensions;
 }
 
-function extractSection(markdown: string, dimensionNumber: number): string {
+function extractSection(
+  markdown: string | null | undefined,
+  dimensionNumber: number,
+): string {
+  if (!markdown) return 'Parsing...';
   // Match "### DIMENSION N <sep> Title" then skip to content on next lines.
+  // Tolerates optional **bold** markers and extra whitespace in the heading.
   const dimensionRegex = new RegExp(
-    `^### DIMENSION ${dimensionNumber}\\s*[-–—:][^\\n]*\\n([\\s\\S]*?)(?=\\n### DIMENSION|$)`,
+    `^### DIMENSION ${dimensionNumber}\\s*[-–—:]\\s*\\*{0,2}[^\\n*]*?\\*{0,2}\\s*\\n([\\s\\S]*?)(?=\\n### DIMENSION|$)`,
     'mi'
   );
 
@@ -69,7 +76,7 @@ function extractSection(markdown: string, dimensionNumber: number): string {
   return cleaned || 'Parsing...';
 }
 
-export function parseUCISSections(markdown: string): UCISSections {
+export function parseUCISSections(markdown: string | null | undefined): UCISSections {
   if (!markdown || typeof markdown !== 'string') {
     const placeholder = 'Parsing...';
     return {
