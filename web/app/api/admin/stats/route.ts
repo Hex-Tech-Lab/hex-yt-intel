@@ -121,10 +121,13 @@ export async function GET(): Promise<NextResponse<AdminStats | { error: string }
         })
         .filter((l: number) => l > 0);
 
+      // Explicit division-by-zero protection for average API latency
       if (latencies.length > 0) {
         const sum = latencies.reduce((a: number, b: number) => a + b, 0);
         const avg = sum / latencies.length;
         stats.avg_api_latency = Number.isFinite(avg) ? Math.round(avg) : 0;
+      } else {
+        stats.avg_api_latency = 0;
       }
     }
 
@@ -141,9 +144,10 @@ export async function GET(): Promise<NextResponse<AdminStats | { error: string }
       .select('*', { count: 'exact', head: true })
       .gte('created_at', oneDayAgo);
 
-    if (totalEvents && totalEvents > 0) {
-      const rate = ((errorCount ?? 0) / totalEvents) * 100;
-      stats.error_rate_24h = Number.isFinite(rate) ? rate : 0;
+// Explicit division-by-zero protection for error rate
+    const eventCount = totalEvents ?? 0;
+    if (eventCount > 0) {
+      stats.error_rate_24h = ((errorCount ?? 0) / eventCount) * 100;
     } else {
       stats.error_rate_24h = 0;
     }
@@ -162,9 +166,10 @@ export async function GET(): Promise<NextResponse<AdminStats | { error: string }
     const uniqueActiveUsers = new Set(
       activeUsersData?.map((log: { user_id: string }) => log.user_id) || []
     ).size;
-    if (stats.active_users > 0) {
-      const retention = (uniqueActiveUsers / stats.active_users) * 100;
-      stats.retention_7d = Number.isFinite(retention) ? Math.round(retention) : 0;
+// Explicit division-by-zero protection for retention
+    const userCount = stats.active_users;
+    if (userCount > 0) {
+      stats.retention_7d = Math.round((uniqueActiveUsers / userCount) * 100);
     } else {
       stats.retention_7d = 0;
     }

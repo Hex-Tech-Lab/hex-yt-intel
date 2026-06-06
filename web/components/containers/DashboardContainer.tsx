@@ -276,8 +276,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     />
                   ) : (
                     <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
-                      <Icon icon="solar:refresh-linear" size={32} className="hx-anispin text-[var(--accent)] mb-4 inline-block" />
-                      <p className="text-[var(--ink-secondary)] font-mono text-sm">Preparing synthesis dimensions…</p>
+                      {store.status === 'complete' ? (
+                        // Completed but zero dimensions (e.g. a sparse source, or history
+                        // load before the nucleus hydrates) — don't imply ongoing work.
+                        <p className="text-[var(--ink-secondary)] font-mono text-sm">No synthesis dimensions were produced for this analysis.</p>
+                      ) : store.status === 'error' ? (
+                        <p className="text-[var(--danger,#ef4444)] font-mono text-sm">Synthesis failed — see the log below.</p>
+                      ) : (
+                        <>
+                          <Icon icon="solar:refresh-linear" size={32} className="hx-anispin text-[var(--accent)] mb-4 inline-block" />
+                          <p className="text-[var(--ink-secondary)] font-mono text-sm">Preparing synthesis dimensions…</p>
+                        </>
+                      )}
                     </div>
                   )}
                   <ProcessingLog

@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './supabase';
+import { getSupabaseServiceClient } from './supabase';
 
 export interface LogUsageParams {
   userId: string;
@@ -8,7 +8,7 @@ export interface LogUsageParams {
 
 export async function logUsage(params: LogUsageParams): Promise<void> {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServiceClient();
 
     await supabase.from('usage_logs').insert({
       user_id: params.userId,
