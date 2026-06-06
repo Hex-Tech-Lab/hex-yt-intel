@@ -16,6 +16,7 @@ import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { fetchSubtitles } from '@/lib/services/decodo';
 import { signStreamToken } from '@/lib/stream-token';
+import { resolveModelCascade } from '@/lib/services/settings';
 import * as Sentry from '@sentry/nextjs';
 
 const PROCESSING_STALE_MS = 180_000;
@@ -213,9 +214,12 @@ export async function POST(request: NextRequest) {
     }
     const analysisId = prepared.id as string;
 
-    // 6. Mint the token (bound to videoId+analysisId) and return the stream payload.
+    // 6. Resolve the per-tier model cascade (app_settings, DB-backed; falls back to the
+    //    hardcoded defaults) and mint the token bound to videoId+analysisId+models.
+    //    The worker runs exactly this cascade and the browser can't escalate models.
     //    The system prompt is NOT included — the worker builds it server-side.
-    const { sig, exp } = signStreamToken(videoId, analysisId);
+    const analysisModels = await resolveModelCascade(tier, 'analysis');
+    const { sig, exp } = signStreamToken(videoId, analysisId, analysisModels);
     const responseHeaders = new Headers({ 'X-Active-Persona': persona });
     if (trafficHeaders) Object.entries(trafficHeaders).forEach(([k, v]) => responseHeaders.set(k, v));
 
@@ -232,6 +236,7 @@ export async function POST(request: NextRequest) {
         timezone,
         transcript,
         metadata: jobMetadata,
+        models: analysisModels,
         streaming: {
           started: new Date().toISOString(),
           interrupted: false,

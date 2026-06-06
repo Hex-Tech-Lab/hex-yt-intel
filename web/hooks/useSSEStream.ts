@@ -132,6 +132,7 @@ export function useSSEStream() {
                 metadata: job.metadata,
                 persona: job.persona,
                 timezone: job.timezone || safeTimezone,
+                models: job.models,
                 sig: job.stream.sig,
                 exp: job.stream.exp,
               };

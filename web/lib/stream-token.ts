@@ -24,11 +24,7 @@ function hmacHex(message: string): string {
   return createHmac('sha256', secret()).update(message).digest('hex');
 }
 
-export function signStreamToken(
-  videoId: string,
-  analysisId: string,
-  models: string[] = []
-): { sig: string; exp: number } {
+export function signStreamToken(videoId: string, analysisId: string, models: string[] = []): { sig: string; exp: number } {
   const exp = Date.now() + TOKEN_TTL_MS;
   // Bind analysisId so the browser can't swap it to overwrite another row, and the
   // model cascade so the browser can't escalate to expensive models. JSON.stringify
@@ -42,24 +38,14 @@ export function signStreamToken(
  * public worker endpoint can't be driven to burn OpenRouter quota. Bound to the
  * conversation + owner + expiry. The worker verifies with the identical message format.
  */
-export function signChatToken(
-  conversationId: string,
-  userId: string,
-  models: string[] = []
-): { sig: string; exp: number } {
+export function signChatToken(conversationId: string, userId: string, models: string[] = []): { sig: string; exp: number } {
   const exp = Date.now() + TOKEN_TTL_MS;
   // Bind the per-tier chat model cascade so the worker runs exactly this list.
   // JSON.stringify (not join) — see signStreamToken; worker verifies byte-identically.
   return { sig: hmacHex(`chat.${conversationId}.${userId}.${exp}.${JSON.stringify(models)}`), exp };
 }
 
-export function verifyChatToken(
-  conversationId: string,
-  userId: string,
-  exp: number,
-  sig: string,
-  models: string[] = []
-): boolean {
+export function verifyChatToken(conversationId: string, userId: string, exp: number, sig: string, models: string[] = []): boolean {
   if (Date.now() > exp) return false;
   return safeEqualHex(hmacHex(`chat.${conversationId}.${userId}.${exp}.${JSON.stringify(models)}`), sig);
 }
