@@ -4,13 +4,15 @@ packages:
   - "skill"
   - "worker"
 
-# Collapse the React type definitions to a single version. A transitive dep with a
+# Collapse the React type definitions to a SINGLE version. A transitive dep with a
 # loose peer ('@types/react': '>=18.0.0') was floating 19.2.15 alongside the pinned
-# 19.0.0, producing two incompatible ReactNode defs → "Link/ForceGraph2D cannot be
-# used as a JSX component". (pnpm 11 reads overrides here, not in package.json.)
+# version, producing two incompatible ReactNode defs → "Link/ForceGraph2D cannot be
+# used as a JSX component". A single unified version (here aligned to the React 19.2.6
+# runtime per CodeRabbit, so 19.2 type APIs like useEffectEvent/<Activity> are covered)
+# eliminates the dup. (pnpm 11 reads overrides here, not in package.json.)
 overrides:
-  "@types/react": "19.0.0"
-  "@types/react-dom": "19.0.0"
+  "@types/react": "^19.2.0"
+  "@types/react-dom": "^19.2.0"
 
 allowBuilds:
   "@sentry/cli": true
