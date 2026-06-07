@@ -43,18 +43,18 @@ export class WorkerIngestionAdapter implements IIngestionPort {
     channelTitle: string;
     explicitPersona?: PersonaId;
   }): PersonaId {
+    if (params.explicitPersona) {
+      return params.explicitPersona;
+    }
     return detectPersona(params.title, params.channelTitle);
   }
 
   resolveModels(_tier: UserTier, _kind: 'analysis' | 'chat'): Promise<string[]> {
-    // This adapter handles metadata/persona only; model resolution is SettingsModelAdapter.
-    // This stub is never called by the route — it exists solely to satisfy IIngestionPort.
-    return Promise.resolve([]);
+    throw new Error('WorkerIngestionAdapter: resolveModels not supported');
   }
 
   signToken(_params: { videoId: string; analysisId: string; models: string[] }) {
-    // Token signing is handled by StreamTokenAdapter. This stub is never called by the route.
-    return { sig: '', exp: 0 };
+    throw new Error('WorkerIngestionAdapter: signToken not supported');
   }
 
   buildJobMetadata(metadata: VideoMetadata): AnalysisJobMetadata {

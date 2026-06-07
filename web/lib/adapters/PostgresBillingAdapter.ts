@@ -18,6 +18,10 @@ export class PostgresBillingAdapter implements IQuotaPort {
   }
 
   async refund(params: { userId: string; email?: string }): Promise<void> {
-    await refundMonthlyQuota(params.userId, params.email);
+    try {
+      await refundMonthlyQuota(params.userId, params.email);
+    } catch (error) {
+      console.error('[PostgresBillingAdapter] refund failed:', error);
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { guardTraffic } from '@/lib/services/traffic';
 import type { IQuotaPort, QuotaGateResult } from '@/lib/ports/IQuotaPort';
 import type { UserTier } from '@/lib/types/billing';
+import type { NextRequest } from 'next/server';
 
 export class RedisTrafficAdapter implements IQuotaPort {
   async checkGate(params: {
@@ -8,9 +9,10 @@ export class RedisTrafficAdapter implements IQuotaPort {
     tier: UserTier;
     email?: string;
     endpoint: 'analyses' | 'search' | 'checkout';
+    request?: NextRequest;
   }): Promise<QuotaGateResult> {
     const { allowed, response, headers } = await guardTraffic(
-      {} as any,
+      params.request ?? ({} as NextRequest),
       params.endpoint,
       params.userId,
       params.tier,

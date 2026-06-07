@@ -1,5 +1,5 @@
 import type { UserTier } from '@/lib/types/billing';
-import type { IIngestionPort } from '@/lib/ports/IIngestionPort';
+import type { IIngestionPort, StreamToken } from '@/lib/ports/IIngestionPort';
 
 export class SettingsModelAdapter implements IIngestionPort {
   async fetch(): Promise<never> {
@@ -19,9 +19,8 @@ export class SettingsModelAdapter implements IIngestionPort {
     return Promise.resolve(['anthropic/claude-4.5-haiku', 'anthropic/claude-4.5-haiku']);
   }
 
-  signToken() {
-    // Token signing is handled by StreamTokenAdapter. This stub is never called by the route.
-    return { sig: '', exp: 0 };
+  signToken(): StreamToken {
+    throw new Error('SettingsModelAdapter: signToken not supported');
   }
 
   buildJobMetadata(): never {

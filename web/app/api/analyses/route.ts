@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
       tier,
       email: userEmail,
       endpoint: 'analyses',
+      request,
     });
     if (!trafficResult.allowed && trafficResult.denialResponse) {
       return trafficResult.denialResponse;

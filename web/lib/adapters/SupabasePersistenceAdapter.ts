@@ -9,8 +9,6 @@ import type {
 } from '@/lib/ports/IPersistencePort';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 
-const PROCESSING_STALE_MS = 180_000;
-
 export class SupabasePersistenceAdapter implements IPersistencePort {
   async findCachedAnalysis(params: {
     userId: string;
@@ -93,7 +91,7 @@ export class SupabasePersistenceAdapter implements IPersistencePort {
             status: params.validationReport.status,
             transcript_available: params.validationReport.transcriptAvailable,
             analysis_type: params.validationReport.analysisType,
-            stale_after: new Date(Date.now() + PROCESSING_STALE_MS).toISOString(),
+            stale_after: params.validationReport.staleAfter,
             metadata: params.validationReport.metadata,
             persona: params.validationReport.persona,
             timezone: params.validationReport.timezone,

@@ -34,12 +34,12 @@ export interface ValidationReportInput {
 }
 
 /**
- * Handles all Supabase persistence for the analyses table:
- *   - Cache-hit lookup (SELECT with dimension validation)
- *   - Processing stub upsert (UPSERT on user_id + video_id conflict)
- *
- * Current implementation: getSupabaseServiceClient() + direct .from('analyses') calls.
- */
+  * Handles all Supabase persistence for the analyses table:
+  *   - Cache-hit lookup (SELECT with dimension validation)
+  *   - Processing stub upsert (UPSERT on user_id + video_id conflict)
+  *
+  * Current implementation: getSupabaseServiceClient() + direct .from('analyses') calls.
+  */
 export interface IPersistencePort {
   /**
    * Look up the most recent analysis for (userId, videoId).
@@ -62,4 +62,15 @@ export interface IPersistencePort {
     title: string;
     validationReport: ValidationReportInput;
   }): Promise<AnalysisStub>;
+
+  /**
+   * Persist the final analysis result after worker completion.
+   * Updates the analysis row with the markdown, payload, and validation status.
+   */
+  persistAnalysis(params: {
+    analysisId: string;
+    analysisPayload: Record<string, unknown>;
+    analysisMarkdown: string;
+    validationPassed: boolean;
+  }): Promise<void>;
 }
