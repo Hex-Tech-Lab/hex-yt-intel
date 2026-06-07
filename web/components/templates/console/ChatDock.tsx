@@ -69,18 +69,20 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   // Reset to new conversation whenever the analysis changes — prevents stale context bleeds.
   useEffect(() => {
     if (!open || !analysisId) return;
+    let cancelled = false;
     void (async () => {
       await newConversation({ analysisId });
+      if (cancelled) return;
       requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        if (cancelled) return;
+        const el = listRef.current;
+        if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 80) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
       });
     })();
+    return () => { cancelled = true; };
   }, [analysisId, open, newConversation]);
-
-  // Auto-scroll to messages end whenever messages update.
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length]);
 
   const scrollToBottom = () => {
     const el = listRef.current;

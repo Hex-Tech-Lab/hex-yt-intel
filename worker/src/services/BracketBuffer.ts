@@ -58,7 +58,7 @@ export class BracketBuffer {
         }
         this.depth++;
       } else if (char === '}') {
-        this.depth--;
+        this.depth = Math.max(0, this.depth - 1);
         if (this.depth === 0 && this.objectStart >= 0) {
           const jsonStr = this.buffer.slice(this.objectStart, i + 1);
           const newFragments = this.tryParseDimension(jsonStr);

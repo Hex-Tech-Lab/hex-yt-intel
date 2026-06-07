@@ -149,6 +149,8 @@ export const MonetizationVerdictSchema = z.object({
   creator: z.string().min(5).max(500),
   indieMaker: z.string().min(5).max(500),
   consultant: z.string().min(5).max(500),
+  researcher: z.string().min(5).max(500),
+  productManager: z.string().min(5).max(500),
 }).strict();
 
 /**

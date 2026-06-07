@@ -510,7 +510,7 @@ For Dimension 11, compute:
   ],
   "knowledgeGraph": {
     "nodes": [
-      { "id": "...", "dimension": 8, "label": "...", "content": "...", "weight": 0.8, "polarity": 1, "keyTerms": ["..."], "entityType": "concept|framework|tool|person|..." }
+      { "id": "...", "dimension": 8, "label": "...", "content": "...", "weight": 0.8, "polarity": 1, "keyTerms": ["..."], "entityType": "person|concept|framework|tool|organization|study|trend|metric" }
     ],
     "edges": [
       { "source": "nodeId1", "target": "nodeId2", "strength": 0.7, "kind": "related|similar|tangent|contrarian", "rationale": "..." }
@@ -528,7 +528,9 @@ For Dimension 11, compute:
   "monetizationVerdict": {
     "creator": "Highly Viable – ...",
     "indieMaker": "Viable – ...",
-    "consultant": "Conditional – ..."
+    "consultant": "Conditional – ...",
+    "researcher": "Conditional – ...",
+    "productManager": "Conditional – ..."
   }
 }
 \`\`\`

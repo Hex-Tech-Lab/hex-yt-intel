@@ -26,7 +26,7 @@ export class SupabasePersistenceAdapter implements IPersistencePort {
 
     if (!existing) return null;
 
-    if (existing.analysis_payload && typeof existing.analysis_payload === 'object') {
+    if (existing.analysis_payload && typeof existing.analysis_payload === 'object' && Object.keys(existing.analysis_payload).length > 0) {
       const payload = existing.analysis_payload as Record<string, unknown>;
       return {
         id: existing.id,

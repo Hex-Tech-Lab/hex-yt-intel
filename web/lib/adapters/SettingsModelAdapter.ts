@@ -14,9 +14,9 @@ export class SettingsModelAdapter implements IIngestionPort {
     // TEMP OVERRIDE: Force Haiku 4.5 cascade until DB admin panel is built.
     // Revert by restoring: return resolveModelCascade(tier, kind);
     if (kind === 'chat') {
-      return Promise.resolve(['anthropic/claude-4.5-haiku', 'anthropic/claude-4.5-haiku']);
+      return Promise.resolve(['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5']);
     }
-    return Promise.resolve(['anthropic/claude-4.5-haiku', 'anthropic/claude-4.5-haiku']);
+    return Promise.resolve(['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5']);
   }
 
   signToken(): StreamToken {

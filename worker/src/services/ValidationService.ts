@@ -16,7 +16,9 @@ export class ValidationService {
     if (trimmed.startsWith('{')) {
       try {
         const parsed = JSON.parse(trimmed);
-        return parsed?.schemaVersion === '2.0';
+        if (parsed?.schemaVersion !== '2.0') return false;
+        const dims = parsed?.dimensions;
+        return Array.isArray(dims) && dims.length >= 8;
       } catch {
         return false;
       }

@@ -333,6 +333,8 @@ export interface MonetizationVerdict {
   creator: string;
   indieMaker: string;
   consultant: string;
+  researcher: string;
+  productManager: string;
 }
 
 /**
