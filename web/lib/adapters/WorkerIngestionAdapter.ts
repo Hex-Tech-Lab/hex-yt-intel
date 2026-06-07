@@ -53,7 +53,7 @@ export class WorkerIngestionAdapter implements IIngestionPort {
     throw new Error('WorkerIngestionAdapter: resolveModels not supported');
   }
 
-  signToken(_params: { videoId: string; analysisId: string; models: string[] }) {
+  signToken(_params: { videoId: string; analysisId: string; models: string[] }): never {
     throw new Error('WorkerIngestionAdapter: signToken not supported');
   }
 
