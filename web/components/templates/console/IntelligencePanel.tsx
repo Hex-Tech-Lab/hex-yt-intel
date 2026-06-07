@@ -34,12 +34,12 @@ function StanceSection({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="flex items-center gap-1.75 text-[var(--accent-ink)] font-mono text-[11px] tracking-[0.06em] uppercase">
+      <span className="flex items-center gap-1.75 text-[var(--accent-ink)] font-mono text-xs tracking-tight uppercase">
         <Icon icon="solar:branching-paths-up-linear" size={14} />
         Stance intelligence
       </span>
       {loading ? (
-        <div className="text-[var(--ink-muted)] font-mono text-[11px]">analyzing tensions…</div>
+        <div className="text-[var(--ink-muted)] font-mono text-[10px] tracking-tight">analyzing tensions…</div>
       ) : (
         shown.map((i) => {
           const contra = i.kind === 'contrarian';
@@ -70,7 +70,7 @@ function StanceSection({
                   {i.targetLabel}
                 </button>
               </div>
-              <p className="m-0 text-[var(--ink-secondary)] text-[11.5px] leading-relaxed">{i.rationale}</p>
+              <p className="m-0 text-[var(--ink-secondary)] text-xs leading-relaxed">{i.rationale}</p>
             </div>
           );
         })
@@ -102,7 +102,7 @@ function RefRow({ r, color, onSelect }: { r: RelatedRef; color: string; onSelect
     >
       <span className="flex items-center gap-1.75 min-w-0">
         <span className="text-[var(--ink-muted)] text-[10px]">{String(r.dimension).padStart(2, '0')}</span>
-        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{r.label}</span>
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-[var(--ink-muted)] text-[10px] font-mono text-left transition-colors">{r.label}</span>
       </span>
       <StrengthBar value={r.strength} color={color} />
     </button>
@@ -122,14 +122,14 @@ function Card({
   return (
     <div className="border border-[var(--line)] rounded-xl overflow-hidden bg-[rgb(11_14_20_/_0.5)]">
       <div className="flex items-center justify-between p-2 px-3 border-b border-[var(--line)]">
-        <span className="flex items-center gap-1.75 text-[11.5px] font-mono tracking-[0.06em] uppercase" style={{ color: meta.color }}>
+        <span className="flex items-center gap-1.75 text-[11.5px] font-mono tracking-tight uppercase" style={{ color: meta.color }}>
           <Icon icon={meta.icon} size={14} />
           {meta.label}
         </span>
-        <span className="text-[var(--ink-muted)] font-mono text-[10.5px]">{refs.length}</span>
+        <span className="text-[var(--ink-muted)] font-mono text-[10px]">{refs.length}</span>
       </div>
       {refs.length === 0 ? (
-        <div className="p-2.5 px-3 text-[var(--ink-muted)] font-mono text-[11px]">{meta.hint} — none</div>
+        <div className="p-2.5 px-3 text-[var(--ink-muted)] font-mono text-[10px]">{meta.hint} — none</div>
       ) : (
         <div className="p-1 flex flex-col gap-0.5">
           {refs.map((r) => (
@@ -152,7 +152,7 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
         <MonoLabel index="//">graph intelligence</MonoLabel>
         {rootNode && (
           <div className="border border-[var(--line)] rounded-xl p-3 bg-[rgb(6_182_212_/_0.06)]">
-            <div className="flex items-center gap-1.75 text-[var(--accent-ink)] font-mono text-[11.5px] tracking-[0.06em] uppercase">
+            <div className="flex items-center gap-1.75 text-[var(--accent-ink)] font-mono text-xs tracking-tight uppercase">
               <Icon icon="solar:crown-minimalistic-linear" size={14} />
               Foundational dimension
             </div>
@@ -162,18 +162,18 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
             >
               {String(rootNode.dimension).padStart(2, '0')} · {rootNode.label}
             </button>
-            <p className="mt-1.5 text-[var(--ink-muted)] text-[11.5px] leading-relaxed">
+            <p className="mt-1.5 text-[var(--ink-muted)] text-xs leading-relaxed">
               The most connected node — the conceptual anchor the rest of the analysis leans on.
             </p>
           </div>
         )}
-        <div className="text-[var(--ink-muted)] font-mono text-[11.5px] leading-relaxed">
+        <div className="text-[var(--ink-muted)] font-mono text-xs leading-relaxed">
           Select a node to see its <span className="text-[var(--accent-ink)]">related</span>,{' '}
           <span className="text-[var(--accent-ink)]">similar</span>, <span className="text-[var(--ink-secondary)]">tangent</span> and{' '}
           <span className="text-[var(--warn)]">contrarian</span> connections.
         </div>
         <StanceSection insights={insights} loading={insightsLoading} selectedDim={null} onSelect={onSelect} />
-        <div className="border-t border-[var(--line)] pt-2.5 flex flex-wrap gap-2.5 text-[var(--ink-muted)] font-mono text-[10.5px]">
+        <div className="border-t border-[var(--line)] pt-2.5 flex flex-wrap gap-2.5 text-[var(--ink-muted)] font-mono text-[10px] tracking-tight">
           <span>{graph.nodes.length} nodes</span>
           <span>·</span>
           <span>{graph.edges.length} relations</span>
@@ -188,11 +188,11 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
     <div className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[var(--ink-muted)] font-mono text-[10.5px]">
+          <div className="text-[var(--ink-muted)] font-mono text-xs tracking-tight">
             DIMENSION {String(selectedNode.dimension).padStart(2, '0')}
             {intel.isFoundational && <span className="text-[var(--accent-ink)] ml-2">● foundational</span>}
           </div>
-          <div className="text-[var(--ink)] text-base font-semibold mt-0.5">{selectedNode.label}</div>
+          <div className="text-[var(--ink)] text-sm font-semibold mt-0.5 tracking-tight">{selectedNode.label}</div>
         </div>
         <button
           onClick={() => onSelect(null)}
@@ -206,7 +206,7 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
       {selectedNode.keyTerms.length > 0 && (
         <div className="flex flex-wrap gap-1.25">
           {selectedNode.keyTerms.map((t) => (
-            <span key={t} className="p-0.5 px-2 rounded-full border border-[var(--line)] text-[var(--ink-secondary)] font-mono text-[10.5px]">
+            <span key={t} className="p-0.5 px-2 rounded-full border border-[var(--line)] text-[var(--ink-secondary)] font-mono text-[10px] tracking-tight">
               {t}
             </span>
           ))}

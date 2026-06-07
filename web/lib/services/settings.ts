@@ -22,14 +22,13 @@ export type ModelKind = 'chat' | 'analysis';
  *   analysis -> worker/src/services/LLMCascade.ts    (MODEL_CHAIN)
  * Kept local so a DB outage never strands the pipeline.
  */
+
+/** Commercial trial mode — hard override: all paths return Haiku-only. */
+const COMMERCIAL_TRIAL_MODE = true;
+
 const FALLBACK: Record<ModelKind, readonly string[]> = {
   chat: ['google/gemini-2.0-flash-exp:free', 'nvidia/nemotron-3-nano-30b-a3b:free'],
-  analysis: [
-    'nvidia/nemotron-3-nano-30b-a3b:free',
-    'z-ai/glm-4.5-air:free',
-    'google/gemma-4-26b-a4b-it:free',
-    'anthropic/claude-haiku-4.5',
-  ],
+  analysis: ['nvidia/nemotron-3-nano-30b-a3b:free', 'z-ai/glm-4.5-air:free', 'google/gemma-4-26b-a4b-it:free', 'anthropic/claude-haiku-4.5'],
 };
 
 interface ModelConfig {
@@ -68,12 +67,17 @@ async function readModelConfig(): Promise<ModelConfig | null> {
 
 /**
  * Resolve the ordered model cascade for a (tier, kind). Precedence:
- *   1. testOverride (when enabled) — the global "switch Haiku on for now" toggle.
- *   2. plans[tier][kind] — the per-plan cascade.
- *   3. hardcoded FALLBACK — safety net.
+ *   1. COMMERCIAL_TRIAL_MODE — if active, return Haiku-only immediately (hard override).
+ *   2. testOverride (when enabled) — the global "switch Haiku on for now" toggle.
+ *   3. plans[tier][kind] — the per-plan cascade.
+ *   4. hardcoded FALLBACK — safety net.
  * Always returns a non-empty list.
  */
 export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Promise<string[]> {
+  if (COMMERCIAL_TRIAL_MODE) {
+    return ['anthropic/claude-haiku-4.5'];
+  }
+
   const cfg = await readModelConfig();
 
   const override = cfg?.testOverride;

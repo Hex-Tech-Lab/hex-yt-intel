@@ -110,8 +110,8 @@ export async function GET(
 
     if (scope === 'full' && !isValidDimensions(analysis.analysis_payload)) {
       return NextResponse.json(
-        { error: 'No analysis data available to export', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
-        { status: 400 }
+        { error: 'Analysis data is incomplete — generation may have been interrupted. Please re-run the analysis.', code: ERROR_CODES.ANALYSIS_GENERATION_FAILED },
+        { status: 500 }
       );
     }
 
