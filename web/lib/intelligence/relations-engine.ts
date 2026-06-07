@@ -8,10 +8,12 @@ export interface StanceDimension {
   content: string;
 }
 
-const STANCE_MODELS = [
-  'google/gemini-2.0-flash-exp:free',
-  'nvidia/nemotron-3-nano-30b-a3b:free',
-] as const;
+/** Commercial trial mode — restrict stance engine to Haiku-only. */
+const COMMERCIAL_TRIAL_MODE = true;
+
+const STANCE_MODELS: readonly string[] = COMMERCIAL_TRIAL_MODE
+  ? ['anthropic/claude-haiku-4.5']
+  : ['google/gemini-2.0-flash-exp:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
 
 const LLMInsightSchema = z.object({
   kind: z.enum(['tangent', 'contrarian']),

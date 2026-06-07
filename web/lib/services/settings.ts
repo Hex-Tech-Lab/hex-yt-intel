@@ -22,14 +22,16 @@ export type ModelKind = 'chat' | 'analysis';
  *   analysis -> worker/src/services/LLMCascade.ts    (MODEL_CHAIN)
  * Kept local so a DB outage never strands the pipeline.
  */
+/** Commercial trial mode — seal all fallbacks to Haiku-only. */
+const COMMERCIAL_TRIAL_MODE = true;
+
+const FALLBACK_HAIKU_ONLY: readonly string[] = ['anthropic/claude-haiku-4.5'];
+const FALLBACK_ANALYSIS_CASCADE = ['nvidia/nemotron-3-nano-30b-a3b:free', 'z-ai/glm-4.5-air:free', 'google/gemma-4-26b-a4b-it:free', 'anthropic/claude-haiku-4.5'] as const;
+const FALLBACK_CHAT_CASCADE = ['google/gemini-2.0-flash-exp:free', 'nvidia/nemotron-3-nano-30b-a3b:free'] as const;
+
 const FALLBACK: Record<ModelKind, readonly string[]> = {
-  chat: ['google/gemini-2.0-flash-exp:free', 'nvidia/nemotron-3-nano-30b-a3b:free'],
-  analysis: [
-    'nvidia/nemotron-3-nano-30b-a3b:free',
-    'z-ai/glm-4.5-air:free',
-    'google/gemma-4-26b-a4b-it:free',
-    'anthropic/claude-haiku-4.5',
-  ],
+  chat: COMMERCIAL_TRIAL_MODE ? FALLBACK_HAIKU_ONLY : FALLBACK_CHAT_CASCADE,
+  analysis: COMMERCIAL_TRIAL_MODE ? FALLBACK_HAIKU_ONLY : FALLBACK_ANALYSIS_CASCADE,
 };
 
 interface ModelConfig {
