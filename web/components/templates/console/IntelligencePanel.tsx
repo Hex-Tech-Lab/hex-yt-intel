@@ -102,7 +102,7 @@ function RefRow({ r, color, onSelect }: { r: RelatedRef; color: string; onSelect
     >
       <span className="flex items-center gap-1.75 min-w-0">
         <span className="text-[var(--ink-muted)] text-[10px]">{String(r.dimension).padStart(2, '0')}</span>
-        <span className="text-[var(--ink-muted)] text-[10px] font-mono text-left transition-colors">{r.label}</span>
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-[var(--ink-muted)] text-[10px] font-mono text-left transition-colors">{r.label}</span>
       </span>
       <StrengthBar value={r.strength} color={color} />
     </button>

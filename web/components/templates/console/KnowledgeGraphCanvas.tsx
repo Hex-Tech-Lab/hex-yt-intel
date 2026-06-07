@@ -202,13 +202,11 @@ export function KnowledgeGraphCanvas({
             ctx.stroke();
           }
 
-          // Label (only when zoomed in enough, or active, to avoid clutter).
           const showLabel = isActive || node.id === selectedId || scale > (compact ? 1.6 : 1.2);
           if (showLabel && !dim) {
-            // Auto-scale font to stay within panel bounds when zoomed out.
             const baseFontSize = compact ? 10 : 11;
             const clampedFontSize = Math.max(7, baseFontSize / scale);
-            ctx.font = `${clampedFontSize}px var(--font-mono, monospace)`;
+            ctx.font = `${clampedFontSize}px "Courier New", Courier, monospace`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillStyle = `rgb(${COL.ink} / ${isActive ? 1 : 0.8})`;
