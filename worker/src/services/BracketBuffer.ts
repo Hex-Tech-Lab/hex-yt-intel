@@ -61,9 +61,9 @@ export class BracketBuffer {
         this.depth--;
         if (this.depth === 0 && this.objectStart >= 0) {
           const jsonStr = this.buffer.slice(this.objectStart, i + 1);
-          const fragment = this.tryParseDimension(jsonStr);
-          if (fragment) {
-            fragments.push(fragment);
+          const newFragments = this.tryParseDimension(jsonStr);
+          if (newFragments.length > 0) {
+            fragments.push(...newFragments);
           }
           this.objectStart = -1;
         }
@@ -80,35 +80,83 @@ export class BracketBuffer {
     return fragments;
   }
 
-  private tryParseDimension(jsonStr: string): DimensionFragment | null {
+  private tryParseDimension(jsonStr: string): DimensionFragment[] {
+    const fragments: DimensionFragment[] = [];
     try {
       const obj = JSON.parse(jsonStr);
+
+      // v2.0 schema: top-level payload with dimensions array
+      if (obj && obj.schemaVersion === '2.0' && Array.isArray(obj.dimensions)) {
+        // Emit persona fragment if present
+        if (obj.persona) {
+          fragments.push({ type: 'persona', config: obj.persona });
+        }
+
+        // Emit each dimension from the dimensions array
+        for (const dim of obj.dimensions) {
+          if (
+            typeof dim.number === 'number' &&
+            typeof dim.content === 'string' &&
+            dim.number >= 1 &&
+            dim.number <= 11 &&
+            !this.emittedDimensions.has(dim.number)
+          ) {
+            this.emittedDimensions.add(dim.number);
+            fragments.push({
+              type: 'dimension',
+              dimension: dim.number,
+              name: dim.name || `Dimension ${dim.number}`,
+              content: dim.content,
+            });
+          }
+        }
+
+        // Emit kg fragment if knowledgeGraph is present
+        if (obj.knowledgeGraph && Array.isArray(obj.knowledgeGraph.nodes)) {
+          fragments.push({
+            type: 'kg',
+            nodes: obj.knowledgeGraph.nodes,
+            edges: obj.knowledgeGraph.edges || [],
+            rootId: obj.knowledgeGraph.rootId ?? null,
+          });
+        }
+
+        // Emit classification fragment if present
+        if (obj.classification) {
+          fragments.push({ type: 'classification', data: obj.classification });
+        }
+
+        return fragments;
+      }
+
+      // Legacy flat object format: {number, content, name}
       if (obj && typeof obj.number === 'number' && typeof obj.content === 'string') {
         const dimNum = obj.number;
         if (dimNum >= 1 && dimNum <= 11 && !this.emittedDimensions.has(dimNum)) {
           this.emittedDimensions.add(dimNum);
-          return {
+          return [{
             type: 'dimension',
             dimension: dimNum,
             name: obj.name || `Dimension ${dimNum}`,
             content: obj.content,
-            metadata: obj.metadata,
-          };
+          }];
         }
       }
+
+      // Legacy standalone persona//kg/classification fragments
       if (obj && obj.type === 'persona') {
-        return { type: 'persona', config: obj.config };
+        return [{ type: 'persona', config: obj.config }];
       }
       if (obj && obj.type === 'kg') {
-        return { type: 'kg', nodes: obj.nodes, edges: obj.edges, rootId: obj.rootId };
+        return [{ type: 'kg', nodes: obj.nodes, edges: obj.edges, rootId: obj.rootId }];
       }
       if (obj && obj.type === 'classification') {
-        return { type: 'classification', data: obj.data };
+        return [{ type: 'classification', data: obj.data }];
       }
     } catch {
       console.warn('[BracketBuffer] Failed to parse object:', jsonStr.slice(0, 200));
     }
-    return null;
+    return fragments;
   }
 
   finalize(): DimensionFragment[] {
@@ -117,8 +165,10 @@ export class BracketBuffer {
 
     const repaired = this.repairUnclosedJson(this.buffer);
     if (repaired) {
-      const fragment = this.tryParseDimension(repaired);
-      if (fragment) fragments.push(fragment);
+      const newFragments = this.tryParseDimension(repaired);
+      if (newFragments.length > 0) {
+        fragments.push(...newFragments);
+      }
     }
 
     this.buffer = '';

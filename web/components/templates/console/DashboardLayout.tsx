@@ -21,7 +21,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
         {sidebar}
       </aside>
 
-      <main className="relative flex flex-col h-full min-w-0 overflow-hidden">
+      <main className="relative flex flex-col h-full min-w-0 overflow-hidden isolate">
         <header className="border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.8)] backdrop-blur-md z-20">
           {topbar}
         </header>

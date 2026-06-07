@@ -71,9 +71,11 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     if (!open || !analysisId) return;
     void (async () => {
       await newConversation({ analysisId });
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      });
     })();
-  }, [analysisId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [analysisId, open, newConversation]);
 
   // Auto-scroll to messages end whenever messages update.
   useEffect(() => {

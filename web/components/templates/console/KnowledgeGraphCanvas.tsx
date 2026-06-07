@@ -136,7 +136,6 @@ export function KnowledgeGraphCanvas({
         onNodeRightClick={(n: any, e: MouseEvent) => {
           e.preventDefault();
           const node = n as FGNode;
-          // Right-click = pin in place + focus (center on it).
           node.fx = node.x;
           node.fy = node.y;
           onFocus?.(node.id);
@@ -178,7 +177,7 @@ export function KnowledgeGraphCanvas({
           ctx.fillStyle = `rgb(${fillRgb} / ${alpha})`;
           ctx.fill();
 
-          // Polarity rim: green (positive) / red (negative) — usefulness, not decoration.
+          // Polarity rim: green (positive) / red (negative).
           if (!dim && Math.abs(node.polarity) > 0.15) {
             ctx.lineWidth = 1.5 / scale;
             ctx.strokeStyle = `rgb(${node.polarity > 0 ? COL.ok : COL.err} / 0.9)`;
