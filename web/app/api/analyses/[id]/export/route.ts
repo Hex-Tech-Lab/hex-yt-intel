@@ -86,6 +86,16 @@ export async function GET(
       );
     }
 
+    const hasPayload = analysis.analysis_payload && typeof analysis.analysis_payload === 'object';
+    const dimensions = hasPayload && (analysis.analysis_payload as Record<string, unknown>)?.dimensions;
+    const hasDimensions = dimensions && typeof dimensions === 'object' && Object.keys(dimensions).length > 0;
+    if (!hasDimensions) {
+      return NextResponse.json(
+        { error: 'No analysis data available to export', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
+        { status: 400 }
+      );
+    }
+
     if (format !== 'pdf') {
       return NextResponse.json(
         { error: 'Unsupported format', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },

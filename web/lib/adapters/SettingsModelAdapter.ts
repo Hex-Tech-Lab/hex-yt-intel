@@ -10,11 +10,8 @@ export class SettingsModelAdapter implements IIngestionPort {
     throw new Error('Persona detection is handled by WorkerIngestionAdapter');
   }
 
-  resolveModels(_tier: UserTier, kind: 'analysis' | 'chat'): Promise<string[]> {
-    if (kind === 'chat') {
-      return Promise.resolve(['anthropic/claude-haiku-4.5']);
-    }
-    return Promise.resolve(['nvidia/nemotron-3-nano-30b-a3b:free', 'anthropic/claude-haiku-4.5']);
+  resolveModels(_tier: UserTier, _kind: 'analysis' | 'chat'): Promise<string[]> {
+    return Promise.resolve(['anthropic/claude-haiku-4.5']);
   }
 
   signToken(): StreamToken {

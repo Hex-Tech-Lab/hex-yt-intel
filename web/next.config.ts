@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
   },
 
   // ============================================================================
+  // SERVER EXTERNAL PACKAGES (Vercel bundling fix for pdfkit)
+  // ============================================================================
+  serverExternalPackages: ['pdfkit'],
+
+  // ============================================================================
   // EXPERIMENTAL FEATURES
   // ============================================================================
   experimental: {
@@ -23,6 +28,13 @@ const nextConfig: NextConfig = {
       "@supabase/auth-helpers-nextjs",
       "@sentry/nextjs",
     ],
+  },
+
+  // ============================================================================
+  // OUTPUT FILE TRACING (Vercel bundling fix for pdfkit fonts)
+  // ============================================================================
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./node_modules/pdfkit/js/data/**'],
   },
 
   // Static env vars baked into the build bundle
