@@ -14,7 +14,7 @@ export class SettingsModelAdapter implements IIngestionPort {
     if (kind === 'chat') {
       return Promise.resolve(['anthropic/claude-haiku-4.5']);
     }
-    return Promise.resolve(['nemotron-3-nano', 'anthropic/claude-haiku-4.5']);
+    return Promise.resolve(['nvidia/nemotron-3-nano-30b-a3b:free', 'anthropic/claude-haiku-4.5']);
   }
 
   signToken(): StreamToken {
