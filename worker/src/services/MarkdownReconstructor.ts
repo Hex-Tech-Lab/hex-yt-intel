@@ -113,6 +113,9 @@ export function extractJsonPayload(finalText: string): UCISPayloadV2 | null {
   try {
     const parsed = JSON.parse(finalText);
     if (parsed && parsed.schemaVersion === '2.0' && Array.isArray(parsed.dimensions)) {
+      if (!parsed.persona?.primary || typeof parsed.persona.primary !== 'string') {
+        return null;
+      }
       return parsed as UCISPayloadV2;
     }
   } catch {

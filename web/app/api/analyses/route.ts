@@ -90,7 +90,8 @@ export async function POST(request: NextRequest) {
       tier,
       email: userEmail,
       endpoint: 'analyses',
-      request,
+      clientIp: request.headers.get('x-forwarded-for') ?? undefined,
+      userAgent: request.headers.get('user-agent') ?? undefined,
     });
     if (!trafficResult.allowed && trafficResult.denialResponse) {
       return trafficResult.denialResponse;
@@ -221,9 +222,9 @@ export async function GET() {
     }
     const { userId } = identity;
 
-    const { getSupabaseServiceClient } = await import('@/lib/supabase');
-    const service = getSupabaseServiceClient();
-    const { data: analyses, error } = await service
+    const { getSupabaseClientWithAuth } = await import('@/lib/supabase');
+    const client = await getSupabaseClientWithAuth();
+    const { data: analyses, error } = await client
       .from('analyses')
       .select('id, video_id, title, created_at, validation_passed, validation_report')
       .eq('user_id', userId)

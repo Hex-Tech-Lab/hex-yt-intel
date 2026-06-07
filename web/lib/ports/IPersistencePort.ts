@@ -1,5 +1,6 @@
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import type { PersonaId } from '@/lib/prompts';
+import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 
 /** A cached analysis row retrieved for potential cache-hit return. */
 export interface CachedAnalysis {
@@ -69,7 +70,7 @@ export interface IPersistencePort {
    */
   persistAnalysis(params: {
     analysisId: string;
-    analysisPayload: Record<string, unknown>;
+    analysisPayload: UCISPayloadV2 | null;
     analysisMarkdown: string;
     validationPassed: boolean;
   }): Promise<void>;

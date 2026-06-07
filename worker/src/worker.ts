@@ -392,11 +392,7 @@ app.post("/analyze-llm-stream", async (c) => {
 
   const persist = async (status: 'completed' | 'interrupted') => {
     if (persisted || !finalText) return;
-    persisted = true;
 
-    // ADR 006: Dual-write persistence
-    // Attempt to extract v2.0 JSON payload; if successful, reconstruct markdown
-    // for backward compat. Otherwise finalText is already markdown (legacy mode).
     let markdown = finalText;
     let jsonPayload: Record<string, unknown> | null = null;
     const extracted = extractJsonPayload(finalText);
@@ -405,15 +401,12 @@ app.post("/analyze-llm-stream", async (c) => {
       markdown = reconstructMarkdown(extracted);
     }
 
-    // Canonical signable: deterministic JSON wrapping both markdown and payload.
-    // This ensures the HMAC covers both fields so neither can be tampered with.
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
-
-    // Validate and sign the canonical message so the server can verify tamper-free.
     const valid = engine.validate12D(markdown);
     const contentSig = await hmacHex(secret, canonical);
     const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
 
+    persisted = true;
     await fetch(`${appUrl}/api/analyses/persist`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -427,7 +420,10 @@ app.post("/analyze-llm-stream", async (c) => {
         contentSig,
         status,
       }),
-    }).catch((e) => console.error(`[analyze-llm-stream] ${status} persist failed`, e));
+    }).catch((e) => {
+      persisted = false;
+      console.error(`[analyze-llm-stream] ${status} persist failed`, e);
+    });
   };
 
   // Detect browser disconnect immediately and save partial progress.

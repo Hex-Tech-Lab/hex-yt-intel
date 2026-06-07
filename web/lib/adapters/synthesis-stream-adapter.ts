@@ -227,11 +227,11 @@ export class SynthesisStreamAdapter {
     store.setPersonaConfig(fragment.config);
   }
 
-  private handleKG(fragment: { type: 'kg'; nodes: unknown[]; edges: unknown[]; rootId: string | null }) {
+  private handleKG(fragment: { type: 'kg'; nodes: KnowledgeGraphV2['nodes']; edges: KnowledgeGraphV2['edges']; rootId: string | null }) {
     const store = this.synthStore.getState();
     store.setKnowledgeGraph({
-      nodes: fragment.nodes as KnowledgeGraphV2['nodes'],
-      edges: fragment.edges as KnowledgeGraphV2['edges'],
+      nodes: fragment.nodes,
+      edges: fragment.edges,
       rootId: fragment.rootId,
     });
   }

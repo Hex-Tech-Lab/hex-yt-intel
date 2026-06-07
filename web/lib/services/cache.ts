@@ -41,7 +41,7 @@ export interface CachedAnalysisResult {
   video_id: string;
   title: string;
   analysis_markdown: string;
-  analysis_payload?: Record<string, unknown>;  // ADR 006: v2.0 structured JSON
+  analysis_payload?: Record<string, unknown> | null;  // ADR 006: v2.0 structured JSON
   validation_report: {
     transcript_available: boolean;
     analysis_type: 'full' | 'metadata-only';

@@ -26,13 +26,15 @@ export class BracketBuffer {
   private inString: boolean = false;
   private escaped: boolean = false;
   private objectStart: number = -1;
+  private scanIndex: number = 0;
   private emittedDimensions: Set<number> = new Set();
 
   feed(chunk: string): DimensionFragment[] {
     this.buffer += chunk;
     const fragments: DimensionFragment[] = [];
+    const startAt = this.scanIndex;
 
-    for (let i = this.objectStart === -1 ? 0 : this.objectStart; i < this.buffer.length; i++) {
+    for (let i = startAt; i < this.buffer.length; i++) {
       const char = this.buffer[i];
 
       if (this.escaped) {
@@ -70,11 +72,15 @@ export class BracketBuffer {
       }
     }
 
+    this.scanIndex = this.buffer.length;
+
     if (this.objectStart > 0) {
       this.buffer = this.buffer.slice(this.objectStart);
+      this.scanIndex = 0;
       this.objectStart = 0;
     } else if (this.objectStart === -1) {
       this.buffer = '';
+      this.scanIndex = 0;
     }
 
     return fragments;

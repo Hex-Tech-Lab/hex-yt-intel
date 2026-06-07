@@ -11,12 +11,10 @@ export class SettingsModelAdapter implements IIngestionPort {
   }
 
   resolveModels(_tier: UserTier, kind: 'analysis' | 'chat'): Promise<string[]> {
-    // TEMP OVERRIDE: Force Haiku 4.5 cascade until DB admin panel is built.
-    // Revert by restoring: return resolveModelCascade(tier, kind);
     if (kind === 'chat') {
-      return Promise.resolve(['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5']);
+      return Promise.resolve(['anthropic/claude-haiku-4.5']);
     }
-    return Promise.resolve(['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5']);
+    return Promise.resolve(['nemotron-3-nano', 'anthropic/claude-haiku-4.5']);
   }
 
   signToken(): StreamToken {

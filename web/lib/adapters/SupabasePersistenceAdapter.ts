@@ -8,6 +8,7 @@ import type {
   ValidationReportInput,
 } from '@/lib/ports/IPersistencePort';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
+import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 
 export class SupabasePersistenceAdapter implements IPersistencePort {
   async findCachedAnalysis(params: {
@@ -116,7 +117,7 @@ export class SupabasePersistenceAdapter implements IPersistencePort {
 
   async persistAnalysis(params: {
     analysisId: string;
-    analysisPayload: Record<string, unknown>;
+    analysisPayload: UCISPayloadV2 | null;
     analysisMarkdown: string;
     validationPassed: boolean;
   }): Promise<void> {
@@ -124,7 +125,7 @@ export class SupabasePersistenceAdapter implements IPersistencePort {
     const { error } = await service
       .from('analyses')
       .update({
-        analysis_payload: params.analysisPayload as Record<string, unknown>,
+        analysis_payload: params.analysisPayload as Record<string, unknown> | null,
         analysis_markdown: params.analysisMarkdown,
         validation_passed: params.validationPassed,
       })

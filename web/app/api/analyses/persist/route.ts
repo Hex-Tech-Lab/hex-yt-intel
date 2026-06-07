@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       .from('analyses')
       .update({
         analysis_markdown: markdown,
-        analysis_payload: payload || null,  // ADR 006: JSONB column for structured payload
+        analysis_payload: payload ?? null,  // ADR 006: JSONB column for structured payload
         model_used: model || 'edge-stream',
         validation_passed: isInterrupted ? false : !!valid,
         validation_report: {
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       video_id: videoId,
       title: row.title,
       analysis_markdown: markdown,
-      analysis_payload: payload as Record<string, unknown> | undefined,
+      analysis_payload: (payload ?? null) as Record<string, unknown> | null,
       validation_report: priorReport,
       model_used: model || 'edge-stream',
       created_at: row.created_at,

@@ -13,7 +13,7 @@
  */
 
 import { randomUUID } from 'crypto';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { getRedisValue, incrementRedisValue, setRedisExpiration, executeRedisScript } from '@/lib/redis';
 import * as Sentry from '@sentry/nextjs';
@@ -338,11 +338,12 @@ export async function getUserTier(userId: string): Promise<Tier> {
  * touch billing — compose with `chargeMonthlyQuota` from the billing service.
  */
 export async function guardTraffic(
-  _request: NextRequest,
   endpoint: Endpoint,
   userId: string,
   tier: Tier,
-  userEmail?: string
+  userEmail?: string,
+  _clientIp?: string,
+  _userAgent?: string
 ): Promise<{ allowed: boolean; response?: NextResponse; headers?: Record<string, string> }> {
   // Admin bypass: grant immediate access, skip the limiter entirely.
   if (userEmail === ADMIN_EMAIL) {

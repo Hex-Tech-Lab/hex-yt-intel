@@ -1,4 +1,4 @@
-import type { NextRequest, NextResponse } from 'next/server';
+import type { NextResponse } from 'next/server';
 import type { UserTier } from '@/lib/types/billing';
 
 /** Result of a quota gate check. */
@@ -31,7 +31,8 @@ export interface IQuotaPort {
     tier: UserTier;
     email?: string;
     endpoint: 'analyses' | 'search' | 'checkout';
-    request?: NextRequest;
+    clientIp?: string;
+    userAgent?: string;
   }): Promise<QuotaGateResult>;
 
   /**

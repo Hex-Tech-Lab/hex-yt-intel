@@ -77,11 +77,12 @@ export async function POST(request: NextRequest) {
     // 3. Rate limiting check
     const userTier = (await getUserTier(userId)) || 'free';
     const { allowed: trafficAllowed, response: trafficResponse, headers: trafficHeaders } = await guardTraffic(
-      request,
       'search',
       userId,
       userTier,
-      user?.email
+      user?.email,
+      request.headers.get('x-forwarded-for') ?? undefined,
+      request.headers.get('user-agent') ?? undefined
     );
 
     if (!trafficAllowed && trafficResponse) {
