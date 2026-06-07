@@ -5,6 +5,7 @@ export const maxDuration = 30;
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyContentSig } from '@/lib/stream-token';
+import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
 import { publishValidationTask } from '@/lib/qstash-client';
 import { env } from '@/lib/env';
@@ -33,10 +34,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Tamper check: proves this markdown came from the worker, not a forged caller.
-    if (!verifyContentSig(markdown, contentSig)) {
+    // Tamper check: proves this markdown+payload came from the worker, not a forged caller.
+    // Canonical signable matches the worker's canonical = JSON.stringify({ markdown, payload }).
+    const canonical = JSON.stringify({ markdown, payload: payload ?? null });
+    if (!verifyContentSig(canonical, contentSig)) {
       console.warn('[analyses/persist] Invalid content signature', { analysisId, videoId });
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    // ADR 006: Validate payload schema before persisting to JSONB column.
+    if (payload !== undefined && payload !== null) {
+      const parseResult = UCISPayloadV2Schema.safeParse(payload);
+      if (!parseResult.success) {
+        console.warn('[analyses/persist] Invalid payload schema', { analysisId, videoId, errors: parseResult.error.flatten() });
+        return NextResponse.json({ error: 'Invalid payload schema' }, { status: 400 });
+      }
     }
 
     // Instantiate RAW client with service role to bypass RLS and avoid cookie dependencies.

@@ -394,21 +394,25 @@ app.post("/analyze-llm-stream", async (c) => {
     if (persisted || !finalText) return;
     persisted = true;
 
-    // We sign the partial markdown so the server can verify it came from us.
-    const valid = engine.validate12D(finalText);
-    const contentSig = await hmacHex(secret, finalText);
-    const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
-
     // ADR 006: Dual-write persistence
     // Attempt to extract v2.0 JSON payload; if successful, reconstruct markdown
     // for backward compat. Otherwise finalText is already markdown (legacy mode).
     let markdown = finalText;
-    let jsonPayload = null;
+    let jsonPayload: Record<string, unknown> | null = null;
     const extracted = extractJsonPayload(finalText);
     if (extracted) {
       jsonPayload = extracted;
       markdown = reconstructMarkdown(extracted);
     }
+
+    // Canonical signable: deterministic JSON wrapping both markdown and payload.
+    // This ensures the HMAC covers both fields so neither can be tampered with.
+    const canonical = JSON.stringify({ markdown, payload: jsonPayload });
+
+    // Validate and sign the canonical message so the server can verify tamper-free.
+    const valid = engine.validate12D(markdown);
+    const contentSig = await hmacHex(secret, canonical);
+    const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
 
     await fetch(`${appUrl}/api/analyses/persist`, {
       method: 'POST',
