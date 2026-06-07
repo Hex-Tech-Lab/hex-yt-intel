@@ -47,6 +47,14 @@ function finishPdf(doc: PDFKit.PDFDocument, filename: string): Promise<Response>
   });
 }
 
+/**
+ * Handles GET requests for analysis PDF export.
+ * Validates authentication, payload presence, and dimension data before generating
+ * a PDF report in summary or full format based on user tier.
+ * @param request - Next.js request object containing URL search params (format, scope).
+ * @param context - Route context containing the analysis ID parameter.
+ * @returns NextResponse with PDF attachment or error JSON.
+ */
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -72,6 +80,13 @@ export async function GET(
     const format = searchParams.get('format') || 'pdf';
     const scope = searchParams.get('scope') || 'summary';
 
+    if (format !== 'pdf') {
+      return NextResponse.json(
+        { error: 'Unsupported format', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
+        { status: 400 }
+      );
+    }
+
     const { data: analysis, error } = await supabase
       .from('analyses')
       .select('*')
@@ -86,9 +101,16 @@ export async function GET(
       );
     }
 
-    if (format !== 'pdf') {
+    type Payload = Record<string, unknown>;
+    const isValidDimensions = (payload: unknown): payload is { dimensions: unknown[] } =>
+      typeof payload === 'object' &&
+      payload !== null &&
+      Array.isArray((payload as Payload).dimensions) &&
+      ((payload as Payload).dimensions as unknown[]).length > 0;
+
+    if (scope === 'full' && !isValidDimensions(analysis.analysis_payload)) {
       return NextResponse.json(
-        { error: 'Unsupported format', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
+        { error: 'No analysis data available to export', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
         { status: 400 }
       );
     }

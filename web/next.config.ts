@@ -1,3 +1,6 @@
+/**
+ * See /docs/next-config.md for configuration notes and historical context.
+ */
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 import path from "path";
@@ -14,15 +17,18 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: !!process.env.CI,
   },
 
-  // ============================================================================
-  // EXPERIMENTAL FEATURES
-  // ============================================================================
+  serverExternalPackages: ['pdfkit'],
+
   experimental: {
     optimizePackageImports: [
       "@supabase/supabase-js",
       "@supabase/auth-helpers-nextjs",
       "@sentry/nextjs",
     ],
+  },
+
+  outputFileTracingIncludes: {
+    '/api/analyses/[id]/export/**/*': ['./node_modules/pdfkit/js/data/**'],
   },
 
   // Static env vars baked into the build bundle
