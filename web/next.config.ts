@@ -1,7 +1,5 @@
 /**
- * Next.js application configuration.
- * Configures bundling, security headers, caching, and Vercel-specific optimizations
- * including pdfkit externalization and file tracing for server-side PDF generation.
+ * See /docs/next-config.md for configuration notes and historical context.
  */
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
@@ -19,14 +17,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: !!process.env.CI,
   },
 
-  // ============================================================================
-  // SERVER EXTERNAL PACKAGES (Vercel bundling fix for pdfkit)
-  // ============================================================================
   serverExternalPackages: ['pdfkit'],
 
-  // ============================================================================
-  // EXPERIMENTAL FEATURES
-  // ============================================================================
   experimental: {
     optimizePackageImports: [
       "@supabase/supabase-js",
@@ -35,11 +27,8 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // ============================================================================
-  // OUTPUT FILE TRACING (Vercel bundling fix for pdfkit fonts)
-  // ============================================================================
   outputFileTracingIncludes: {
-    '/api/**/*': ['./node_modules/pdfkit/js/data/**'],
+    '/api/analyses/[id]/export/**/*': ['./node_modules/pdfkit/js/data/**'],
   },
 
   // Static env vars baked into the build bundle

@@ -80,6 +80,13 @@ export async function GET(
     const format = searchParams.get('format') || 'pdf';
     const scope = searchParams.get('scope') || 'summary';
 
+    if (format !== 'pdf') {
+      return NextResponse.json(
+        { error: 'Unsupported format', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
+        { status: 400 }
+      );
+    }
+
     const { data: analysis, error } = await supabase
       .from('analyses')
       .select('*')
@@ -94,19 +101,16 @@ export async function GET(
       );
     }
 
-    const hasPayload = analysis.analysis_payload && typeof analysis.analysis_payload === 'object';
-    const dimensions = hasPayload && (analysis.analysis_payload as Record<string, unknown>)?.dimensions;
-    const hasDimensions = dimensions && typeof dimensions === 'object' && Object.keys(dimensions).length > 0;
-    if (!hasDimensions) {
+    type Payload = Record<string, unknown>;
+    const isValidDimensions = (payload: unknown): payload is { dimensions: unknown[] } =>
+      typeof payload === 'object' &&
+      payload !== null &&
+      Array.isArray((payload as Payload).dimensions) &&
+      ((payload as Payload).dimensions as unknown[]).length > 0;
+
+    if (scope === 'full' && !isValidDimensions(analysis.analysis_payload)) {
       return NextResponse.json(
         { error: 'No analysis data available to export', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
-        { status: 400 }
-      );
-    }
-
-    if (format !== 'pdf') {
-      return NextResponse.json(
-        { error: 'Unsupported format', code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
         { status: 400 }
       );
     }
