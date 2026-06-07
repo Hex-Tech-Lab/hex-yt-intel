@@ -10,6 +10,12 @@ export class SettingsModelAdapter implements IIngestionPort {
     throw new Error('Persona detection is handled by WorkerIngestionAdapter');
   }
 
+  /**
+   * Resolves the model list for ingestion requests.
+   * @param _tier - User tier (unused in this adapter; WorkerIngestionAdapter handles tier logic).
+   * @param _kind - Request kind: 'analysis' or 'chat' (unused; returns single default model).
+   * @returns Promise resolving to an array containing the default Haiku model.
+   */
   resolveModels(_tier: UserTier, _kind: 'analysis' | 'chat'): Promise<string[]> {
     return Promise.resolve(['anthropic/claude-haiku-4.5']);
   }

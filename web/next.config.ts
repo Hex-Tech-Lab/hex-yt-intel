@@ -1,3 +1,8 @@
+/**
+ * Next.js application configuration.
+ * Configures bundling, security headers, caching, and Vercel-specific optimizations
+ * including pdfkit externalization and file tracing for server-side PDF generation.
+ */
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 import path from "path";

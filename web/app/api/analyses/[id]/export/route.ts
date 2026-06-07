@@ -47,6 +47,14 @@ function finishPdf(doc: PDFKit.PDFDocument, filename: string): Promise<Response>
   });
 }
 
+/**
+ * Handles GET requests for analysis PDF export.
+ * Validates authentication, payload presence, and dimension data before generating
+ * a PDF report in summary or full format based on user tier.
+ * @param request - Next.js request object containing URL search params (format, scope).
+ * @param context - Route context containing the analysis ID parameter.
+ * @returns NextResponse with PDF attachment or error JSON.
+ */
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
