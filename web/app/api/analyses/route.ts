@@ -6,24 +6,30 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from 'next/server';
-import { detectPersona, type PersonaId } from '@/lib/prompts';
-import { guardTraffic, getUserTier } from '@/lib/services/traffic';
-import { chargeMonthlyQuota, refundMonthlyQuota } from '@/lib/services/billing';
+import { AnalysisCreateSchema } from '@/lib/types/contracts';
 import { extractVideoId } from '@/lib/youtube';
-import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
-import { AnalysisCreateSchema, type AnalysisJobMetadata } from '@/lib/types/contracts';
-import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
-import { fetchWorkerMetadata } from '@/lib/services/metadata';
-import { fetchSubtitles } from '@/lib/services/decodo';
-import { signStreamToken } from '@/lib/stream-token';
-import { resolveModelCascade } from '@/lib/services/settings';
 import * as Sentry from '@sentry/nextjs';
+import {
+  SupabaseAuthAdapter,
+  RedisTrafficAdapter,
+  PostgresBillingAdapter,
+  WorkerIngestionAdapter,
+  SettingsModelAdapter,
+  StreamTokenAdapter,
+  SupabasePersistenceAdapter,
+} from '@/lib/adapters';
+import type { PersonaId } from '@/lib/prompts';
 
-const PROCESSING_STALE_MS = 180_000;
+// Module-level singleton adapters — created once per cold-start, reused across requests.
+const authAdapter = new SupabaseAuthAdapter();
+const trafficAdapter = new RedisTrafficAdapter();
+const billingAdapter = new PostgresBillingAdapter();
+const ingestionAdapter = new WorkerIngestionAdapter();
+const modelAdapter = new SettingsModelAdapter();
+const tokenAdapter = new StreamTokenAdapter();
+const persistenceAdapter = new SupabasePersistenceAdapter();
 
 export async function POST(request: NextRequest) {
-  // Typed at the perimeter — no `any` enters the controller. Only `url` is read in the
-  // catch handler for telemetry, so a minimal shape is sufficient and explicit.
   let body: { url?: string } | undefined;
   try {
     body = await request.json();
@@ -37,191 +43,139 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
     }
 
-    // 1. Auth & tier — STRICT tenant isolation. Identity is derived ONLY from the
-    // verified Supabase session; there is no static/bearer test bypass on this route.
-    // A forged token must never resolve to a real tenant's quota or data. (Dev/CI E2E
-    // authenticates via the NODE_ENV-gated X-Hex-Test-Secret path in middleware.ts.)
-    const supabase = await getSupabaseClientWithAuth();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // 1. Auth — STRICT tenant isolation. Identity is derived ONLY from the verified
+    // Supabase session; there is no static/bearer test bypass on this route.
+    const identity = await authAdapter.authenticate();
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const userId: string = user.id;
-    const userEmail = user.email;
-    const tier: 'free' | 'pro' | 'enterprise' = (await getUserTier(userId)) ?? 'free';
+    const { userId, email: userEmail, tier } = identity;
 
-    // 2. Cache hit — must return the SAME contract shape as the fresh-job path so the
-    // client treats both interchangeably. We pull validation_report to recover the
-    // metadata persisted at job creation (see step 5), eliminating the prior gap where
-    // cache hits returned no `metadata`/`persona`/`timezone` and the UI rendered blank.
+    // 2. Cache hit — must return the SAME contract shape as the fresh-job path so
+    // the client treats both interchangeably. Persisted validation_report restores
+    // metadata/persona/timezone so the UI never renders blank.
     if (!validation.data.forceRefresh) {
-      const { data: existing } = await supabase
-        .from('analyses')
-        .select('id, title, analysis_markdown, created_at, validation_report')
-        .eq('video_id', videoId)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (existing?.analysis_markdown) {
-        const cachedReport = (existing.validation_report ?? {}) as { metadata?: AnalysisJobMetadata; persona?: string; timezone?: string };
-        const cachedPersona = cachedReport.persona || 'analyst';
-
-        // Parse the cached markdown into dimensions. A genuine analysis yields >=8 of
-        // 11 dimensions (the worker's validate12D threshold). Fewer = empty/stub/
-        // degraded cache → DON'T serve it as 'done' (that was the "hollow done state":
-        // a 101-char stub returned green with an empty grid). Fall through to a fresh
-        // run instead. We do NOT delete the row: the upsert on (user_id, video_id)
-        // below overwrites it, and deleting would risk losing a partial result or
-        // misclassifying a good row via a stale validation_passed flag.
-        const dimensions = parseUcisDimensions(existing.analysis_markdown);
-        const dimensionCount = Object.keys(dimensions).length;
-
-        if (dimensionCount >= 8) {
-          return NextResponse.json({
-            id: existing.id,
-            analysisId: existing.id,
-            videoId,
-            status: 'done',
-            title: existing.title,
-            markdown: existing.analysis_markdown,
-            analysis_markdown: existing.analysis_markdown,
-            createdAt: existing.created_at,
-            analysisAt: existing.created_at,
-            persona: cachedPersona,
-            detectedPersona: cachedPersona,
-            timezone: cachedReport.timezone || validation.data.timezone || 'UTC',
-            // Restored from the persisted job context; absent only for legacy pre-contract rows.
-            metadata: cachedReport.metadata,
-            // Rehydrate the grid: initSynthesis(job) consumes payload.dimensions, so a
-            // cache hit renders identically to a fresh stream (fixes the hollow cards).
-            dimensions,
-            streaming: {
-              started: existing.created_at,
-              interrupted: false,
-              dimensionsReceived: Object.keys(dimensions).map(Number),
-            },
-            cacheHit: true,
-            message: 'Retrieved from persistent cache.',
-          });
-        }
-        console.warn(`[Bouncer] Cache for ${existing.id} has ${dimensionCount} dimensions (<8) — treating as a miss and re-running fresh.`);
+      const cached = await persistenceAdapter.findCachedAnalysis({ userId, videoId });
+      if (cached) {
+        const cachedPersona = cached.cachedReport.persona || 'analyst';
+        return NextResponse.json({
+          id: cached.id,
+          analysisId: cached.id,
+          videoId,
+          status: 'done',
+          title: cached.title,
+          markdown: cached.analysisMarkdown,
+          analysis_markdown: cached.analysisMarkdown,
+          createdAt: cached.createdAt,
+          analysisAt: cached.createdAt,
+          persona: cachedPersona,
+          detectedPersona: cachedPersona,
+          timezone: cached.cachedReport.timezone || validation.data.timezone || 'UTC',
+          metadata: cached.cachedReport.metadata,
+          dimensions: cached.dimensions,
+          streaming: {
+            started: cached.createdAt,
+            interrupted: false,
+            dimensionsReceived: Object.keys(cached.dimensions).map(Number),
+          },
+          cacheHit: true,
+          message: 'Retrieved from persistent cache.',
+        });
       }
     }
 
     // 3a. Traffic guard: per-minute rate limit (DDoS protection)
-    const { allowed: trafficAllowed, response: trafficResponse, headers: trafficHeaders } = await guardTraffic(request, 'analyses', userId, tier, userEmail);
-    if (!trafficAllowed && trafficResponse) {
-      return trafficResponse;
+    const trafficResult = await trafficAdapter.checkGate({
+      userId,
+      tier,
+      email: userEmail,
+      endpoint: 'analyses',
+      clientIp: request.headers.get('x-forwarded-for') ?? undefined,
+      userAgent: request.headers.get('user-agent') ?? undefined,
+    });
+    if (!trafficResult.allowed && trafficResult.denialResponse) {
+      return trafficResult.denialResponse;
     }
 
     // 3b. Billing charge: monthly quota enforcement
-    const { allowed: quotaAllowed, response: quotaResponse } = await chargeMonthlyQuota(userId, tier, userEmail);
-    if (!quotaAllowed && quotaResponse) {
-      return quotaResponse;
+    const billingResult = await billingAdapter.checkGate({
+      userId,
+      tier,
+      email: userEmail,
+      endpoint: 'analyses',
+    });
+    if (!billingResult.allowed && billingResult.denialResponse) {
+      return billingResult.denialResponse;
     }
 
-    // 4. Ingestion (parallel metadata + transcript)
-    const [metadataResult, transcriptResult] = await Promise.allSettled([
-      fetchWorkerMetadata(videoId),
-      fetchSubtitles(videoId),
-    ]);
-
-    if (metadataResult.status === 'rejected') {
-      // Quota was charged at step 3; ingestion failed before any generation ran. Refund it.
-      await refundMonthlyQuota(userId, userEmail);
+    // 4. Ingestion: parallel metadata + transcript fetch
+    let ingestionResult;
+    try {
+      ingestionResult = await ingestionAdapter.fetch(videoId);
+    } catch {
+      // Quota was charged at step 3; ingestion failed before any generation ran — refund.
+      await billingAdapter.refund({ userId, email: userEmail });
       return NextResponse.json({ error: 'Failed to fetch video metadata', code: 'ERR_METADATA_FETCH' }, { status: 502 });
     }
-    const metadata = metadataResult.value;
 
-    let transcript = '';
-    if (transcriptResult.status === 'fulfilled' && transcriptResult.value.success) {
-      transcript = transcriptResult.value.transcript ?? '';
-    }
-
-    if (!transcript || transcript.trim().length === 0) {
+    // Transcript Absolutism: no usable source means no analysis can run. Refund the
+    // quota unit so a subtitle-less video costs nothing.
+    if (!ingestionResult.transcriptAvailable || !ingestionResult.transcript.trim()) {
       console.warn('[analyses] Empty transcript, halting analysis', { videoId });
-      // Transcript Absolutism: no usable source means no analysis can run. The quota
-      // unit charged at step 3 must be refunded so a subtitle-less video costs nothing.
-      await refundMonthlyQuota(userId, userEmail);
+      await billingAdapter.refund({ userId, email: userEmail });
       return NextResponse.json(
         {
           error: 'Transcript unavailable: video has no subtitles or extraction failed. Full synthesis requires a textual source.',
-          code: 'ERR_TRANSCRIPT_REQUIRED'
+          code: 'ERR_TRANSCRIPT_REQUIRED',
         },
         { status: 400 }
       );
     }
 
-    const persona = (validation.data.persona as PersonaId) || detectPersona(metadata.title, metadata.channelTitle);
+    const persona = (validation.data.persona as PersonaId) || ingestionAdapter.detectPersona({
+      title: ingestionResult.metadata.title,
+      channelTitle: ingestionResult.metadata.channelTitle,
+    });
     const timezone = validation.data.timezone || 'UTC';
+    const jobMetadata = ingestionAdapter.buildJobMetadata(ingestionResult.metadata);
 
-    // Single typed metadata object — the contract source of truth reused by the upsert
-    // (persisted into validation_report for cache-hit parity) AND the response/worker
-    // payload. Counts are stringified here to satisfy WorkerStreamRequest.
-    const jobMetadata: AnalysisJobMetadata = {
-      title: metadata.title,
-      channelTitle: metadata.channelTitle,
-      publishedAt: metadata.publishedAt,
-      duration: metadata.duration ?? 0,
-      viewCount: String(metadata.viewCount),
-      likeCount: String(metadata.likeCount),
-      commentCount: String(metadata.commentCount),
-    };
-
-    // 5. Processing job row (filled by the worker via /api/analyses/persist).
-    const service = getSupabaseServiceClient();
-    // UPSERT on (user_id, video_id): the analyses table has a UNIQUE(user_id, video_id)
-    // index, so a user has at most one row per video. A plain INSERT 23505'd whenever a
-    // video was re-analyzed after an incomplete prior attempt (empty markdown → cache
-    // miss above), which silently orphaned the stream (persist then 404'd). Re-analysis
-    // now reuses + resets the existing row; the RETURNED id is the canonical analysisId
-    // the worker persists back to.
-    const { data: prepared, error: insertError } = await service
-      .from('analyses')
-      .upsert(
-        {
-          video_id: videoId,
-          user_id: userId,
-          title: metadata.title,
-          analysis_markdown: '',
-          model_used: 'edge-stream',
-          validation_report: {
-            status: 'processing',
-            transcript_available: true,
-            analysis_type: 'full',
-            stale_after: new Date(Date.now() + PROCESSING_STALE_MS).toISOString(),
-            // Persisted for cache-hit contract parity (see step 2). The persist route
-            // preserves this via `...priorReport`, so it survives stream completion.
-            metadata: jobMetadata,
-            persona,
-            timezone,
-          },
-          validation_passed: false,
+    // 5. Processing job row — UPSERT on (user_id, video_id) so re-analysis reuses
+    // the existing row instead of 23505-ing. The returned id is the canonical
+    // analysisId the worker persists back to via /api/analyses/persist.
+    let analysisId: string;
+    try {
+      const stub = await persistenceAdapter.upsertProcessingStub({
+        videoId,
+        userId,
+        title: ingestionResult.metadata.title,
+        validationReport: {
+          status: 'processing',
+          transcriptAvailable: ingestionResult.transcriptAvailable,
+          analysisType: 'full',
+          staleAfter: new Date(Date.now() + 180_000).toISOString(),
+          metadata: jobMetadata,
+          persona,
+          timezone,
         },
-        { onConflict: 'user_id,video_id' }
-      )
-      .select('id')
-      .single();
-
-    if (insertError || !prepared?.id) {
-      Sentry.captureException(insertError ?? new Error('upsert returned no row'), { tags: { operation: 'analysis-prepare-upsert' }, extra: { videoId, userId } });
-      console.error('[analyses] processing-row upsert failed:', insertError?.message);
-      // Quota was already charged (line ~94); refund it so a failed init doesn't leak a credit.
-      try { await refundMonthlyQuota(userId, userEmail); } catch (e) { Sentry.captureException(e); }
+      });
+      analysisId = stub.id;
+    } catch (insertError) {
+      // Quota was already charged; refund so a failed init doesn't leak a credit.
+      try { await billingAdapter.refund({ userId, email: userEmail }); } catch (e) { Sentry.captureException(e); }
+      Sentry.captureException(insertError as any, { tags: { operation: 'analysis-prepare-upsert' }, extra: { videoId, userId } });
+      console.error('[analyses] processing-row upsert failed:', (insertError as any)?.message);
       return NextResponse.json({ error: 'Failed to initialize analysis', code: 'ERR_ANALYSIS_ROW_INSERT' }, { status: 500 });
     }
-    const analysisId = prepared.id as string;
 
-    // 6. Resolve the per-tier model cascade (app_settings, DB-backed; falls back to the
-    //    hardcoded defaults) and mint the token bound to videoId+analysisId+models.
-    //    The worker runs exactly this cascade and the browser can't escalate models.
-    //    The system prompt is NOT included — the worker builds it server-side.
-    const analysisModels = await resolveModelCascade(tier, 'analysis');
-    const { sig, exp } = signStreamToken(videoId, analysisId, analysisModels);
+    // 6. Resolve per-tier model cascade (app_settings DB-backed; falls back to hardcoded)
+    // and mint the HMAC token bound to videoId+analysisId+models. The worker runs
+    // exactly this cascade and the browser cannot escalate to expensive models.
+    const analysisModels = await modelAdapter.resolveModels(tier, 'analysis');
+    const { sig, exp } = tokenAdapter.signAnalysisToken({ videoId, analysisId, models: analysisModels });
     const responseHeaders = new Headers({ 'X-Active-Persona': persona });
-    if (trafficHeaders) Object.entries(trafficHeaders).forEach(([k, v]) => responseHeaders.set(k, v));
+    if (trafficResult.headers) {
+      Object.entries(trafficResult.headers).forEach(([k, v]) => responseHeaders.set(k, v));
+    }
 
     return NextResponse.json(
       {
@@ -229,12 +183,12 @@ export async function POST(request: NextRequest) {
         analysisId,
         videoId,
         status: 'processing',
-        title: metadata.title,
+        title: ingestionResult.metadata.title,
         persona,
         detectedPersona: persona,
         analysisAt: new Date().toISOString(),
         timezone,
-        transcript,
+        transcript: ingestionResult.transcript,
         metadata: jobMetadata,
         models: analysisModels,
         streaming: {
@@ -262,19 +216,18 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    // 1. Auth: Get user from session
-    const supabase = await getSupabaseClientWithAuth();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const identity = await authAdapter.authenticate();
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const { userId } = identity;
 
-    // 2. Fetch user's analyses from Supabase (most recent first)
-    const { data: analyses, error } = await supabase
+    const { getSupabaseClientWithAuth } = await import('@/lib/supabase');
+    const client = await getSupabaseClientWithAuth();
+    const { data: analyses, error } = await client
       .from('analyses')
       .select('id, video_id, title, created_at, validation_passed, validation_report')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -283,8 +236,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch analyses', code: 'ERR_DB_QUERY' }, { status: 500 });
     }
 
-    // 3. Transform response to match frontend schema
-    const historyItems = (analyses || []).map(analysis => ({
+    const historyItems = (analyses || []).map((analysis: any) => ({
       id: analysis.id,
       videoId: analysis.video_id,
       title: analysis.title || 'Untitled Analysis',

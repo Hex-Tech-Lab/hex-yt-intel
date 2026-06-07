@@ -32,6 +32,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const messages = useMemo(() => (activeId ? messagesByConv[activeId] || [] : []), [activeId, messagesByConv]);
   const activeConv = useMemo(() => conversations.find((c) => c.id === activeId) || null, [conversations, activeId]);
@@ -64,6 +65,24 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, sending, open]);
+
+  // Reset to new conversation whenever the analysis changes — prevents stale context bleeds.
+  useEffect(() => {
+    if (!open || !analysisId) return;
+    let cancelled = false;
+    void (async () => {
+      await newConversation({ analysisId });
+      if (cancelled) return;
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        const el = listRef.current;
+        if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 80) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [analysisId, open, newConversation]);
 
   const scrollToBottom = () => {
     const el = listRef.current;
@@ -230,6 +249,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
               ))}
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 

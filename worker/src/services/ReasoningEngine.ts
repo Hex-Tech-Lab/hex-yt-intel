@@ -9,17 +9,17 @@
  *     ValidationService      — 11D structure validation
  *     IPersistenceRepository — Upstash KV cache (optional; insulated behind port)
  *
- * The engine owns ONLY orchestration + the per-stream dimension parser. It holds no
+ * The engine owns ONLY orchestration + the per-stream BracketBuffer parser. It holds no
  * request-scoped mutable state on shared sub-services — each is stateless/config-only,
- * and a fresh StreamingDimensionParser is created per stream — so DI is race-free
- * even though worker.ts constructs the engine per-request.
+ * and a fresh BracketBuffer is created per stream — so DI is race-free even though
+ * worker.ts constructs the engine per-request.
  *
  * BOUNDARY: Accepts domain objects (transcript, metadata), emits domain events
  * (delta text, dimension fragments). Never touches raw HTTP Request/Response or SSE.
  * The orchestrator (worker.ts) owns transport; this engine owns reasoning.
  */
 
-import { StreamingDimensionParser } from '../dimension-parser';
+import { BracketBuffer } from './BracketBuffer';
 import type { IReasoningEngine, EngineContext, StreamHandlers, StreamResult, ExecuteResult } from '../ports/IReasoningEngine';
 import type { IPromptBuilder } from '../ports/IPromptBuilder';
 import type { ILLMCascade } from '../ports/ILLMCascade';
@@ -59,29 +59,33 @@ export class ReasoningEngine implements IReasoningEngine {
    * Execute the cascade with streaming. Emits delta + dimension fragments through
    * the supplied handlers. Falls through to the next model only if the current one
    * never produced a token (cold 429/error) — once tokens stream we commit.
+   *
+   * ADR 006: Uses BracketBuffer for programmatic JSON parsing (zero regex).
+   * The BracketBuffer detects complete top-level JSON objects via bracket balancing
+   * while respecting string literals and escape sequences.
    */
   async executeAndStream(
     context: EngineContext,
     handlers: StreamHandlers
   ): Promise<StreamResult> {
     const systemPrompt = context.systemPrompt || this.promptBuilder.build(context);
-    const parser = new StreamingDimensionParser();
+    const bracketBuffer = new BracketBuffer();
 
     const { started, finalText, modelUsed } = await this.cascade.streamCascade(
       systemPrompt,
       (delta) => {
         // Raw delta for terminal/processing log
         handlers.onDelta(delta);
-        // Parse markdown into dimension JSON fragments for the grid
-        const fragments = parser.feed(delta);
+        // Parse JSON fragments via BracketBuffer (programmatic, zero regex)
+        const fragments = bracketBuffer.feed(delta);
         fragments.forEach((frag) => handlers.onFragment(frag));
       },
       handlers.onStatus
     );
 
-    // Flush any trailing partial dimension
+    // Flush any remaining buffered JSON on stream end
     if (started || finalText) {
-      const finalFragments = parser.finalize();
+      const finalFragments = bracketBuffer.finalize();
       finalFragments.forEach((frag) => handlers.onFragment(frag));
     }
 

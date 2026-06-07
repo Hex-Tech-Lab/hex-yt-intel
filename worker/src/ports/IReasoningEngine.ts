@@ -9,7 +9,18 @@
  * transport; the engine owns reasoning.
  */
 
-import type { DimensionFragment } from '../dimension-parser';
+/** Domain fragment emitted during streaming (ADR 006: extended with persona/kg/classification). */
+export interface DimensionFragment {
+  type: 'dimension' | 'complete' | 'error' | 'persona' | 'kg' | 'classification';
+  dimension?: number;
+  name?: string;
+  content?: string;
+  config?: unknown;
+  nodes?: unknown[];
+  edges?: unknown[];
+  rootId?: string | null;
+  data?: unknown;
+}
 
 /** Domain metadata describing the source video. */
 export interface EngineMetadata {

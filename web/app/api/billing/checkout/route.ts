@@ -36,11 +36,12 @@ export async function POST(request: NextRequest) {
     // 1b. Check rate limits (no quota charge for checkout flow)
     const userTier = (await getUserTier(userId)) || 'free';
     const { allowed: trafficAllowed, response: trafficResponse } = await guardTraffic(
-      request,
       'checkout',
       userId,
       userTier,
-      userEmail
+      userEmail,
+      request.headers.get('x-forwarded-for') ?? undefined,
+      request.headers.get('user-agent') ?? undefined
     );
 
     if (!trafficAllowed && trafficResponse) {
