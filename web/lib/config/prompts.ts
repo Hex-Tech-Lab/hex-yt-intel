@@ -25,10 +25,12 @@ export const CHAT_PROTOCOL = [
  *
  * Used by: /api/chat/conversations/[id]/messages
  */
-export const CHAT_MODELS = [
-  'google/gemini-2.0-flash-exp:free',
-  'nvidia/nemotron-3-nano-30b-a3b:free',
-] as const;
+/** Commercial trial mode — restrict chat to Haiku-only. */
+const COMMERCIAL_TRIAL_MODE = true;
+
+export const CHAT_MODELS: readonly string[] = COMMERCIAL_TRIAL_MODE
+  ? ['anthropic/claude-haiku-4.5']
+  : ['google/gemini-2.0-flash-exp:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
 
 /**
  * UCIS v3.2 system prompt (legacy, kept for backward compatibility)
