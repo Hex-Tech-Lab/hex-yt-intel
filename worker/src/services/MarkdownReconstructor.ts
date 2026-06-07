@@ -49,6 +49,8 @@ interface UCISPayloadV2 {
     creator: string;
     indieMaker: string;
     consultant: string;
+    researcher: string;
+    productManager: string;
   };
 }
 
@@ -113,7 +115,7 @@ export function extractJsonPayload(finalText: string): UCISPayloadV2 | null {
   try {
     const parsed = JSON.parse(finalText);
     if (parsed && parsed.schemaVersion === '2.0' && Array.isArray(parsed.dimensions)) {
-      if (!parsed.persona?.primary || typeof parsed.persona.primary !== 'string') {
+      if (!parsed.persona?.primary || typeof parsed.persona.primary !== 'object' || !('id' in parsed.persona.primary)) {
         return null;
       }
       return parsed as UCISPayloadV2;
