@@ -12,6 +12,7 @@ import { PromptBuilder } from "./services/PromptBuilder";
 import { LLMCascade } from "./services/LLMCascade";
 import { ValidationService } from "./services/ValidationService";
 import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
+import { reconstructMarkdown, extractJsonPayload } from "./services/MarkdownReconstructor";
 import type { IReasoningEngine } from "./ports/IReasoningEngine";
 
 type Env = {
@@ -391,26 +392,38 @@ app.post("/analyze-llm-stream", async (c) => {
 
   const persist = async (status: 'completed' | 'interrupted') => {
     if (persisted || !finalText) return;
-    persisted = true;
 
-    // We sign the partial markdown so the server can verify it came from us.
-    const valid = engine.validate12D(finalText);
-    const contentSig = await hmacHex(secret, finalText);
+    let markdown = finalText;
+    let jsonPayload: Record<string, unknown> | null = null;
+    const extracted = extractJsonPayload(finalText);
+    if (extracted) {
+      jsonPayload = extracted;
+      markdown = reconstructMarkdown(extracted);
+    }
+
+    const canonical = JSON.stringify({ markdown, payload: jsonPayload });
+    const valid = engine.validate12D(markdown);
+    const contentSig = await hmacHex(secret, canonical);
     const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
 
+    persisted = true;
     await fetch(`${appUrl}/api/analyses/persist`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         analysisId: req.analysisId,
         videoId: req.videoId,
-        markdown: finalText,
+        markdown,
+        payload: jsonPayload,
         model: modelUsed,
         valid,
         contentSig,
         status,
       }),
-    }).catch((e) => console.error(`[analyze-llm-stream] ${status} persist failed`, e));
+    }).catch((e) => {
+      persisted = false;
+      console.error(`[analyze-llm-stream] ${status} persist failed`, e);
+    });
   };
 
   // Detect browser disconnect immediately and save partial progress.

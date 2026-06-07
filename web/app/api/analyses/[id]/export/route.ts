@@ -6,6 +6,7 @@ import { ERROR_CODES } from '@/lib/error-codes';
 import PDFDocument from 'pdfkit';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+import { filterHallucinationContent } from '@/lib/utils/hallucination-filter';
 
 /** Tiers permitted to export the FULL report (TOC + all 11 dimensions). */
 const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
@@ -110,13 +111,17 @@ export async function GET(
     return exportSummaryPDF(analysis);
   } catch (error) {
     const errorCode = ERROR_CODES.UNHANDLED_EXCEPTION;
+    const isPdfError = error instanceof Error && /PDF generation failed/i.test(error.message);
     Sentry.captureException(error, {
       tags: { operation: 'export', code: errorCode },
       contexts: { api: { endpoint: '/api/analyses/[id]/export' } }
     });
     return NextResponse.json(
-      { error: 'Failed to export analysis', code: errorCode },
-      { status: 500 }
+      {
+        error: isPdfError ? 'PDF generation failed: malformed payload' : 'Failed to export analysis',
+        code: errorCode,
+      },
+      { status: isPdfError ? 400 : 500 }
     );
   }
 }
@@ -139,10 +144,11 @@ function drawHeader(doc: PDFKit.PDFDocument, analysis: ExportableAnalysis, subti
 }
 
 async function exportSummaryPDF(analysis: ExportableAnalysis) {
-  const doc = new PDFDocument({ margin: 50, bufferPages: true });
-  drawHeader(doc, analysis, 'Executive Summary');
+  try {
+    const doc = new PDFDocument({ margin: 50, bufferPages: true });
+    drawHeader(doc, analysis, 'Executive Summary');
 
-  const content: string = analysis.analysis_markdown || '';
+    const content: string = filterHallucinationContent(analysis.analysis_markdown || '');
   const sections = content.split(/\n(?=#{1,3}\s)/).filter((s) => s.trim().length > 0);
   const MAX_CHARS = 2400;
   let used = 0;
@@ -168,17 +174,23 @@ async function exportSummaryPDF(analysis: ExportableAnalysis) {
     }
   }
 
-  doc.moveDown(1).fontSize(8).fillColor('#999999').font('Helvetica-Oblique')
-    .text('This is an executive summary. Upgrade to Pro for the full multi-dimension report.', { align: 'center' });
+    doc.moveDown(1).fontSize(8).fillColor('#999999').font('Helvetica-Oblique')
+      .text('This is an executive summary. Upgrade to Pro for the full multi-dimension report.', { align: 'center' });
 
-  return finishPdf(doc, `${analysis.title || 'synthesis'}-summary.pdf`);
+    return finishPdf(doc, `${analysis.title || 'synthesis'}-summary.pdf`);
+  } catch (error) {
+    console.error('[export/summary] Generation failed:', error);
+    Sentry.captureException(error, { tags: { operation: 'export-summary-pdf' } });
+    throw new Error('Summary PDF generation failed');
+  }
 }
 
 async function exportFullPDF(analysis: ExportableAnalysis) {
-  const doc = new PDFDocument({ margin: 50, bufferPages: true });
-  drawHeader(doc, analysis, 'Full Synthesis Report');
+  try {
+    const doc = new PDFDocument({ margin: 50, bufferPages: true });
+    drawHeader(doc, analysis, 'Full Synthesis Report');
 
-  const content: string = analysis.analysis_markdown || '';
+    const content: string = filterHallucinationContent(analysis.analysis_markdown || '');
   const sections = content.split(/\n(?=#{1,3}\s)/).filter((s) => s.trim().length > 0);
 
   doc.fontSize(13).font('Helvetica-Bold').text('Table of Contents');
@@ -207,5 +219,10 @@ async function exportFullPDF(analysis: ExportableAnalysis) {
     }
   }
 
-  return finishPdf(doc, `${analysis.title || 'synthesis'}-full-report.pdf`);
+    return finishPdf(doc, `${analysis.title || 'synthesis'}-full-report.pdf`);
+  } catch (error) {
+    console.error('[export/full] Generation failed:', error);
+    Sentry.captureException(error, { tags: { operation: 'export-full-pdf' } });
+    throw new Error('Full PDF generation failed');
+  }
 }

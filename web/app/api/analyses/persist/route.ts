@@ -5,6 +5,7 @@ export const maxDuration = 30;
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyContentSig } from '@/lib/stream-token';
+import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
 import { publishValidationTask } from '@/lib/qstash-client';
 import { env } from '@/lib/env';
@@ -12,27 +13,42 @@ import * as Sentry from '@sentry/nextjs';
 
 /**
  * Server-to-server persistence endpoint. The Cloudflare Worker calls this (from
- * ctx.waitUntil, after the stream completes or is interrupted) with the generated 
- * markdown and an HMAC content signature. 
- * 
+ * ctx.waitUntil, after the stream completes or is interrupted) with the generated
+ * markdown and an HMAC content signature.
+ *
+ * ADR 006: Dual-write persistence
+ * - analysis_markdown: Reconstructed markdown for backward compat + PDF export
+ * - analysis_payload: Structured JSON (v2.0 schema) for KG visualization + cache hits
+ *
  * FIX: We use the raw @supabase/supabase-js client here because the SSR wrapper
  * (@supabase/ssr) expects cookies to establish a session, which causes 401 errors
  * in Server-to-Server calls.
  */
 export async function POST(request: NextRequest) {
-  let body: { analysisId?: string; videoId?: string; markdown?: string; model?: string; valid?: boolean; contentSig?: string; status?: string } | undefined;
+  let body: { analysisId?: string; videoId?: string; markdown?: string; payload?: unknown; model?: string; valid?: boolean; contentSig?: string; status?: string } | undefined;
   try {
     body = await request.json();
-    const { analysisId, videoId, markdown, model, valid, contentSig, status = 'completed' } = body || {};
+    const { analysisId, videoId, markdown, payload, model, valid, contentSig, status = 'completed' } = body || {};
 
     if (!analysisId || !videoId || typeof markdown !== 'string' || !contentSig) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Tamper check: proves this markdown came from the worker, not a forged caller.
-    if (!verifyContentSig(markdown, contentSig)) {
+    // Tamper check: proves this markdown+payload came from the worker, not a forged caller.
+    // Canonical signable matches the worker's canonical = JSON.stringify({ markdown, payload }).
+    const canonical = JSON.stringify({ markdown, payload: payload ?? null });
+    if (!verifyContentSig(canonical, contentSig)) {
       console.warn('[analyses/persist] Invalid content signature', { analysisId, videoId });
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    // ADR 006: Validate payload schema before persisting to JSONB column.
+    if (payload !== undefined && payload !== null) {
+      const parseResult = UCISPayloadV2Schema.safeParse(payload);
+      if (!parseResult.success) {
+        console.warn('[analyses/persist] Invalid payload schema', { analysisId, videoId, errors: parseResult.error.flatten() });
+        return NextResponse.json({ error: 'Invalid payload schema' }, { status: 400 });
+      }
     }
 
     // Instantiate RAW client with service role to bypass RLS and avoid cookie dependencies.
@@ -71,17 +87,19 @@ export async function POST(request: NextRequest) {
     const priorReport = (row.validation_report as any) || {};
     const isInterrupted = status === 'interrupted';
 
+    // ADR 006: Dual-write - update both markdown and JSON payload columns
     const { error: updateError } = await service
       .from('analyses')
       .update({
         analysis_markdown: markdown,
+        analysis_payload: payload ?? null,  // ADR 006: JSONB column for structured payload
         model_used: model || 'edge-stream',
         validation_passed: isInterrupted ? false : !!valid,
-        validation_report: { 
-          ...priorReport, 
-          status: isInterrupted ? 'interrupted' : 'done', 
-          model_used: model, 
-          valid: isInterrupted ? false : !!valid 
+        validation_report: {
+          ...priorReport,
+          status: isInterrupted ? 'interrupted' : 'done',
+          model_used: model,
+          valid: isInterrupted ? false : !!valid,
         },
         updated_at: new Date().toISOString(),
       })
@@ -97,13 +115,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, analysisId, status: 'interrupted' });
     }
 
-    // Best-effort cache + validation task (never block the persist response on these).
+    // ADR 006: Best-effort cache + validation task (never block the persist response).
+    // Cache includes both markdown and structured JSON payload for v2.0 cache hits.
     const transcriptAvailable = !!priorReport.transcript_available;
     const cachedPayload: CachedAnalysisResult = {
       id: analysisId,
       video_id: videoId,
       title: row.title,
       analysis_markdown: markdown,
+      analysis_payload: (payload ?? null) as Record<string, unknown> | null,
       validation_report: priorReport,
       model_used: model || 'edge-stream',
       created_at: row.created_at,
