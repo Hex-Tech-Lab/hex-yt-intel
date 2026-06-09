@@ -103,7 +103,7 @@ export default async function BillingPage() {
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--accent)" }}>Billing</span>
             </div>
             
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: "0 0 12px 0" }}>// Account Administration</p>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: "0 0 12px 0" }}>{"// Account Administration"}</p>
             <h1 className="hx-display" style={{ margin: 0, fontSize: 32 }}>
               Billing & Account
             </h1>
