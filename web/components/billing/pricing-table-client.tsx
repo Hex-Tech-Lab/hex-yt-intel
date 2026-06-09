@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CheckoutButton } from './checkout-button';
+import { Icon } from '@/components/templates/_shared/primitives';
 
 interface PricingTableClientProps {
   userInfo: {
@@ -13,154 +14,58 @@ interface PricingTableClientProps {
 export function PricingTableClient({ userInfo }: PricingTableClientProps) {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
 
+  const plans = [
+    { 
+      name: "Free", 
+      price: "$0", 
+      desc: "Get started", 
+      features: ["3 syntheses/month", "Personal library only", "Standard support"],
+      isPro: false
+    },
+    { 
+      name: "Pro", 
+      price: "$9", 
+      desc: "/month, billed monthly", 
+      features: ["Unlimited syntheses", "Durable persistence", "Semantic Search", "Export & Download", "API access"],
+      isPro: true
+    }
+  ];
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {/* Free Plan */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden hover:shadow-lg transition">
-        <div className="p-8">
-          <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
-          <p className="text-slate-400 mb-6">Perfect for getting started</p>
-
-          <div className="mb-8">
-            <span className="text-5xl font-bold text-white">$0</span>
-            <span className="text-slate-400 ml-2">/month</span>
-          </div>
-
-          <button
-            disabled
-            className="w-full py-3 bg-slate-700 text-slate-300 rounded-lg font-semibold cursor-not-allowed mb-8"
-          >
-            Current Plan
-          </button>
-
-          <div className="space-y-4">
-            <div className="flex items-start">
-              <span className="text-green-400 mr-3">✓</span>
-              <div>
-                <p className="text-white font-medium">3 Analyses/month</p>
-                <p className="text-slate-400 text-sm">Analyze YouTube videos</p>
-              </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
+      {plans.map((p) => (
+        <div key={p.name} style={{ padding: 32, border: p.isPro ? "1px solid var(--accent)" : "1px solid var(--line)", borderRadius: 16, background: "rgb(26 31 43 / 0.6)" }}>
+          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{p.name}</h3>
+          <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 500, color: "var(--accent)" }}>{p.price}</p>
+          <p style={{ margin: "2px 0 20px", fontSize: 13, color: "var(--ink-secondary)" }}>{p.desc}</p>
+          
+          {p.name === "Free" ? (
+            <button className="btn-secondary" disabled style={{ width: "100%", opacity: 0.5, cursor: "not-allowed", border: "1px solid var(--line-strong)", background: "transparent", color: "var(--ink-secondary)", padding: "10px 17px", borderRadius: 8, fontSize: 14, fontFamily: "var(--font-sans)", fontWeight: 500 }}>
+              Current Plan
+            </button>
+          ) : userInfo ? (
+            <div style={{ width: "100%" }}>
+              <CheckoutButton
+                isLoading={isCheckoutLoading}
+                setIsLoading={setIsCheckoutLoading}
+              />
             </div>
-
-            <div className="flex items-start">
-              <span className="text-gray-500 mr-3">✗</span>
-              <div>
-                <p className="text-slate-300 font-medium">Semantic Search</p>
-                <p className="text-slate-400 text-sm">Coming with Pro</p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <span className="text-gray-500 mr-3">✗</span>
-              <div>
-                <p className="text-slate-300 font-medium">Export & Download</p>
-                <p className="text-slate-400 text-sm">Pro feature</p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <span className="text-gray-500 mr-3">✗</span>
-              <div>
-                <p className="text-slate-300 font-medium">API Access</p>
-                <p className="text-slate-400 text-sm">Pro feature</p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <span className="text-green-400 mr-3">✓</span>
-              <div>
-                <p className="text-white font-medium">30-day History</p>
-                <p className="text-slate-400 text-sm">Auto-cleanup after 30 days</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Pro Plan */}
-      <div className="bg-gradient-to-b from-blue-600 to-blue-700 rounded-lg overflow-hidden hover:shadow-xl transition border-2 border-blue-500">
-        <div className="bg-blue-500 px-8 py-3">
-          <p className="text-white font-semibold text-sm">MOST POPULAR</p>
-        </div>
-
-        <div className="p-8">
-          <h3 className="text-2xl font-bold text-white mb-2">Pro</h3>
-          <p className="text-blue-100 mb-6">For serious content analysts</p>
-
-          <div className="mb-8">
-            <span className="text-5xl font-bold text-white">$9</span>
-            <span className="text-blue-100 ml-2">/month</span>
-          </div>
-
-          {userInfo ? (
-            <CheckoutButton
-              isLoading={isCheckoutLoading}
-              setIsLoading={setIsCheckoutLoading}
-            />
           ) : (
-            <a
-              href="/auth/signin"
-              className="w-full inline-block text-center py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition"
-            >
-              Sign Up
-            </a>
+            <button onClick={() => window.location.href = '/auth/signin'} className="btn-primary" style={{ width: "100%", background: "var(--accent-strong)", color: "var(--void)", border: "none", padding: "11px 18px", borderRadius: 8, fontSize: 14, fontFamily: "var(--font-sans)", fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              Get started
+            </button>
           )}
 
-          <p className="text-center text-blue-100 text-sm mt-4">
-            7-day free trial. Cancel anytime.
-          </p>
-
-          <div className="space-y-4 mt-8">
-            <div className="flex items-start">
-              <span className="text-green-300 mr-3">✓</span>
-              <div>
-                <p className="text-white font-medium">Unlimited Analyses</p>
-                <p className="text-blue-100 text-sm">Analyze as many videos as you want</p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <span className="text-green-300 mr-3">✓</span>
-              <div>
-                <p className="text-white font-medium">Semantic Search</p>
-                <p className="text-blue-100 text-sm">Find similar content with AI</p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <span className="text-green-300 mr-3">✓</span>
-              <div>
-                <p className="text-white font-medium">Export & Download</p>
-                <p className="text-blue-100 text-sm">Get reports in MD, JSON, CSV</p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <span className="text-green-300 mr-3">✓</span>
-              <div>
-                <p className="text-white font-medium">API Access</p>
-                <p className="text-blue-100 text-sm">100 requests/day for apps</p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <span className="text-green-300 mr-3">✓</span>
-              <div>
-                <p className="text-white font-medium">1-year History</p>
-                <p className="text-blue-100 text-sm">Keep your analyses forever</p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <span className="text-green-300 mr-3">✓</span>
-              <div>
-                <p className="text-white font-medium">Priority Support</p>
-                <p className="text-blue-100 text-sm">Email support within 24 hours</p>
-              </div>
-            </div>
-          </div>
+          <ul style={{ marginTop: 20, listStyle: "none", padding: 0 }}>
+            {p.features.map((f) => (
+              <li key={f} style={{ fontSize: 13, color: "var(--ink-secondary)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                <Icon icon="solar:check-circle-linear" size={16} style={{ color: "var(--ok)" }} />
+                {f}
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
+      ))}
     </div>
   );
 }

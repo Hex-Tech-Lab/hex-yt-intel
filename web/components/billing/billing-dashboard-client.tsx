@@ -18,6 +18,11 @@ interface BillingDashboardProps {
 export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const tierConfig = STRIPE_PRICING[initialData.tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
+  
+  const isPro = initialData.tier === 'pro' || initialData.tier === 'enterprise';
+  const statusColor = isPro ? "var(--ok)" : "var(--accent)";
+  const status = isPro ? "active" : "free";
+  
   const usagePercent =
     initialData.analysesLimit && initialData.analysesLimit > 0
       ? (initialData.analysesUsed / initialData.analysesLimit) * 100
@@ -26,194 +31,196 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
   const isNearLimit = usagePercent >= 80 && usagePercent < 100;
   const isAtLimit = usagePercent >= 100;
 
+  const handleManageBilling = async () => {
+    try {
+      const response = await fetch('/api/billing/portal', { method: 'POST' });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Billing & Account</h1>
-        <p className="text-slate-600">Manage your subscription and usage</p>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Current Plan Card (from Design System SubscriptionOverview) */}
+      <div
+        style={{
+          padding: 20,
+          borderRadius: 12,
+          border: "1px solid var(--line)",
+          background: "var(--surface)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>
+            Subscription
+          </h2>
+          <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              borderRadius: 9999,
+              border: "1px solid var(--line)",
+              background: "rgb(26 31 43 / 0.6)",
+              padding: "4px 11px",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              color: statusColor,
+              textTransform: "uppercase",
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor }} />
+            {status}
+          </span>
+        </div>
 
-      {/* Current Plan Card */}
-      <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Plan Info */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
           <div>
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">
+            <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase" }}>
               Current Plan
-            </h2>
-            <p className="text-4xl font-bold text-slate-900 mb-2">
-              {initialData.tier === 'free' ? 'Free' : 'Pro'}
             </p>
-            <p className="text-slate-600 mb-4">
-              {tierConfig.price === 0 ? 'Always free' : `$${(tierConfig.price / 100).toFixed(2)}/month`}
+            <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
+              {initialData.tier === 'free' ? 'Free Plan' : 'Pro Plan'}
             </p>
-            {initialData.tier === 'free' && (
-              <CheckoutButton
-                isLoading={isLoading}
-                setIsLoading={setIsLoading}
-              />
-            )}
-            {initialData.tier === 'pro' && (
-              <button
-                disabled
-                className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold cursor-default"
-              >
-                ✓ Active
-              </button>
-            )}
           </div>
-
-          {/* Analyses Usage */}
           <div>
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">
-              Analyses This Month
-            </h2>
-            <p className="text-4xl font-bold text-slate-900 mb-2">
-              {initialData.analysesUsed}
-              {initialData.analysesLimit && ` / ${initialData.analysesLimit}`}
+            <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase" }}>
+              Monthly Cost
             </p>
-            {initialData.analysesLimit && (
-              <>
-                <div className="w-full bg-slate-200 rounded-full h-2 mb-2">
-                  <div
-                    className={`h-2 rounded-full transition-all ${
-                      isAtLimit
-                        ? 'bg-red-500'
-                        : isNearLimit
-                          ? 'bg-yellow-500'
-                          : 'bg-green-500'
-                    }`}
-                    style={{ width: `${Math.min(usagePercent, 100)}%` }}
-                  />
-                </div>
-                <p className={`text-sm ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-yellow-600' : 'text-slate-600'}`}>
-                  {isAtLimit && '⚠️ Quota exceeded'}
-                  {isNearLimit && !isAtLimit && '⚠️ Nearing limit'}
-                  {!isAtLimit && !isNearLimit && `${100 - Math.round(usagePercent)}% remaining`}
-                </p>
-              </>
-            )}
-            {!initialData.analysesLimit && (
-              <p className="text-sm text-green-600">Unlimited analyses</p>
-            )}
-          </div>
-
-          {/* Features */}
-          <div>
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">
-              Available Features
-            </h2>
-            <ul className="space-y-2">
-              {tierConfig.features.analyses && (
-                <li className="flex items-center text-slate-700">
-                  <span className="mr-2 text-green-500">✓</span>
-                  Content Analysis
-                </li>
-              )}
-              {tierConfig.features.search && (
-                <li className="flex items-center text-slate-700">
-                  <span className="mr-2 text-green-500">✓</span>
-                  Semantic Search
-                </li>
-              )}
-              {tierConfig.features.export && (
-                <li className="flex items-center text-slate-700">
-                  <span className="mr-2 text-green-500">✓</span>
-                  Export & Download
-                </li>
-              )}
-              {tierConfig.features.apiAccess && (
-                <li className="flex items-center text-slate-700">
-                  <span className="mr-2 text-green-500">✓</span>
-                  API Access
-                </li>
-              )}
-              <li className="text-sm text-slate-500 mt-2 pt-2 border-t border-slate-200">
-                {tierConfig.features.historyRetention}-day history
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Usage Statistics */}
-      <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-6">Usage Statistics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-slate-50 rounded-lg p-4">
-            <p className="text-sm text-slate-600 mb-1">Analyses Created</p>
-            <p className="text-2xl font-bold text-slate-900">
-              {initialData.usageStats['analysis_created'] || 0}
-            </p>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-4">
-            <p className="text-sm text-slate-600 mb-1">Searches Performed</p>
-            <p className="text-2xl font-bold text-slate-900">
-              {initialData.usageStats['search'] || 0}
-            </p>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-4">
-            <p className="text-sm text-slate-600 mb-1">Exports Downloaded</p>
-            <p className="text-2xl font-bold text-slate-900">
-              {initialData.usageStats['export'] || 0}
-            </p>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-4">
-            <p className="text-sm text-slate-600 mb-1">API Calls Made</p>
-            <p className="text-2xl font-bold text-slate-900">
-              {initialData.usageStats['api_call'] || 0}
+            <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
+              {tierConfig.price === 0 ? '$0' : `$${(tierConfig.price / 100).toFixed(2)}`}
             </p>
           </div>
         </div>
+
+        {!isPro ? (
+           <CheckoutButton isLoading={isLoading} setIsLoading={setIsLoading} />
+        ) : (
+          <button
+            type="button"
+            onClick={handleManageBilling}
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: 8,
+              border: "1px solid var(--line)",
+              background: "transparent",
+              color: "var(--accent)",
+              fontFamily: "var(--font-sans)",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "all var(--dur-fast)",
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = "rgb(6 182 212 / 0.10)"}
+            onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
+          >
+            Manage in Billing Portal
+          </button>
+        )}
       </div>
 
-      {/* Invoice History */}
-      {initialData.tier === 'pro' && initialData.invoices.length > 0 && (
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Invoice History</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+      {/* Usage Stats */}
+      <div
+        style={{
+          padding: 20,
+          borderRadius: 12,
+          border: "1px solid var(--line)",
+          background: "var(--surface)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>
+            Usage & Quota
+          </h2>
+        </div>
+        
+        <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase" }}>
+          Analyses This Month
+        </p>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4, marginBottom: 12 }}>
+          <span style={{ fontSize: 24, fontWeight: 700, color: "var(--accent)" }}>{initialData.analysesUsed}</span>
+          <span style={{ fontSize: 14, color: "var(--ink-secondary)" }}>
+            / {initialData.analysesLimit ? initialData.analysesLimit : 'Unlimited'}
+          </span>
+        </div>
+
+        {initialData.analysesLimit && (
+          <div>
+             <div style={{ width: "100%", background: "var(--line)", height: 6, borderRadius: 9999, overflow: "hidden" }}>
+                <div 
+                  style={{ 
+                    height: "100%", 
+                    background: isAtLimit ? "var(--err)" : isNearLimit ? "var(--warn)" : "var(--accent)",
+                    width: `${Math.min(usagePercent, 100)}%`,
+                    transition: "width 500ms ease"
+                  }} 
+                />
+             </div>
+             <p style={{ marginTop: 8, fontSize: 12, color: isAtLimit ? "var(--err)" : isNearLimit ? "var(--warn)" : "var(--ink-secondary)" }}>
+               {isAtLimit && '⚠️ Quota exceeded'}
+               {isNearLimit && !isAtLimit && '⚠️ Nearing limit'}
+               {!isAtLimit && !isNearLimit && `${100 - Math.round(usagePercent)}% remaining`}
+             </p>
+          </div>
+        )}
+      </div>
+
+      {/* Invoice History (PromosTable design clone) */}
+      {initialData.invoices && initialData.invoices.length > 0 && (
+        <div
+          style={{
+            padding: 20,
+            borderRadius: 12,
+            border: "1px solid var(--line)",
+            background: "var(--surface)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>
+              Invoice History
+            </h2>
+          </div>
+
+          <div style={{ borderRadius: 8, border: "1px solid var(--line)", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Date</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Amount</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-slate-700">Action</th>
+                <tr style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
+                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Date</th>
+                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Amount</th>
+                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Status</th>
+                  <th style={{ padding: 12, textAlign: "right", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Receipt</th>
                 </tr>
               </thead>
               <tbody>
-                {initialData.invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-b border-slate-200 hover:bg-slate-50">
-                    <td className="py-3 px-4 text-slate-700">
-                      {invoice.paidAt ? new Date(invoice.paidAt).toLocaleDateString() : 'N/A'}
+                {initialData.invoices.map((inv) => (
+                  <tr key={inv.id} style={{ borderBottom: "1px solid var(--line)" }}>
+                    <td style={{ padding: 12, color: "var(--ink)" }}>
+                      {inv.paidAt ? inv.paidAt.toLocaleDateString() : 'Pending'}
                     </td>
-                    <td className="py-3 px-4 font-semibold text-slate-900">
-                      ${(invoice.amount / 100).toFixed(2)}
+                    <td style={{ padding: 12, color: "var(--ink)" }}>
+                      ${(inv.amount / 100).toFixed(2)} {inv.currency.toUpperCase()}
                     </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                          invoice.status === 'paid'
-                            ? 'bg-green-100 text-green-800'
-                            : invoice.status === 'draft'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {invoice.status === 'paid' ? '✓ Paid' : invoice.status}
+                    <td style={{ padding: 12 }}>
+                      <span style={{ 
+                        color: inv.status === 'paid' ? "var(--ok)" : "var(--warn)",
+                        fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase"
+                      }}>
+                        {inv.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      {invoice.invoiceUrl && (
-                        <a
-                          href={invoice.invoiceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 font-medium"
-                        >
+                    <td style={{ padding: 12, textAlign: "right" }}>
+                      {inv.invoiceUrl ? (
+                        <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "none", fontSize: 12, fontWeight: 500 }}>
                           View
                         </a>
+                      ) : (
+                        <span style={{ color: "var(--ink-muted)", fontSize: 12 }}>N/A</span>
                       )}
                     </td>
                   </tr>
@@ -224,26 +231,6 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
         </div>
       )}
 
-      {/* Account Info */}
-      <div className="bg-white rounded-lg shadow-md p-8 mt-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-6">Account Information</h2>
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm text-slate-600">Email Address</p>
-            <p className="text-slate-900 font-medium">{initialData.user.email}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-600">Name</p>
-            <p className="text-slate-900 font-medium">{initialData.user.name || 'Not set'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-600">Member Since</p>
-            <p className="text-slate-900 font-medium">
-              {new Date(initialData.user.created_at).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
