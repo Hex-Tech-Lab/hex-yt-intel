@@ -13,6 +13,7 @@ In compliance with the "Right to Actual Identity" requirements of the General Da
 | **Vercel** | Vercel Inc. | Cloud Hosting & Edge Compute Infrastructure | United States / Global Edge |
 | **Cloudflare** | Cloudflare, Inc. | Content Delivery Network (CDN) & Edge Security | United States / Global Edge |
 | **Supabase** | Supabase, Inc. | Managed Database & Authentication Services | United States (AWS) |
+| **Upstash** | Upstash, Inc. | Serverless Vector Database (RAG & Indexing) | United States (AWS) |
 | **OpenRouter** | OpenRouter LLC | Third-Party LLM API Routing Interface | United States |
 
 ## Standard Contractual Clauses (SCCs)
