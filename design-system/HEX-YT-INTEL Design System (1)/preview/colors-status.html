@@ -1,0 +1,23 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/><link rel="stylesheet" href="_card.css"/>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+.acc { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:14px; }
+.cell { border-radius:10px; border:1px solid var(--line); overflow:hidden; }
+.chip { height:44px; display:flex; align-items:center; justify-content:center; }
+.chip iconify-icon { color:var(--void); font-size:20px; }
+.meta { padding:8px 10px; }
+.name { font-size:12px; color:var(--ink); font-weight:500; }
+.hex { font-family:var(--font-mono); font-size:10.5px; color:var(--ink-muted); margin-top:2px; }
+.note { margin-top:13px; font-size:11.5px; color:var(--ink-secondary); }
+</style></head>
+<body>
+<div class="cap"><span class="i">// </span>status · data states (icon + label, never hue alone)</div>
+<div class="acc">
+  <div class="cell"><div class="chip" style="background:var(--ok)"><iconify-icon icon="solar:check-circle-linear"></iconify-icon></div><div class="meta"><div class="name">success</div><div class="hex">#22C55E</div></div></div>
+  <div class="cell"><div class="chip" style="background:var(--warn)"><iconify-icon icon="solar:danger-triangle-linear"></iconify-icon></div><div class="meta"><div class="name">warning</div><div class="hex">#F59E0B</div></div></div>
+  <div class="cell"><div class="chip" style="background:var(--err)"><iconify-icon icon="solar:close-circle-linear"></iconify-icon></div><div class="meta"><div class="name">error</div><div class="hex">#EF4444</div></div></div>
+  <div class="cell"><div class="chip" style="background:var(--info)"><iconify-icon icon="solar:info-circle-linear"></iconify-icon></div><div class="meta"><div class="name">info</div><div class="hex">#06B6D4</div></div></div>
+</div>
+<div class="note">Status hue is always paired with a Solar icon + label. Colorblind-safe, never hue-only.</div>
+</body></html>

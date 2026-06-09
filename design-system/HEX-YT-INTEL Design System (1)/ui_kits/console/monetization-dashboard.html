@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HEX-YT-INTEL — Billing & Promos</title>
+  <link rel="stylesheet" href="../../colors_and_type.css" />
+  <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+  <script src="https://unpkg.com/framer-motion@11.0.0/dist/framer-motion.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--void); color: var(--ink); font-family: var(--font-sans); }
+    #root { display: flex; flex-direction: column; min-height: 100vh; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; border-bottom: 1px solid var(--line); background: rgb(17 20 29 / 0.7); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 20; }
+    main { flex: 1; padding: 40px 32px; max-width: 1280px; margin: 0 auto; width: 100%; }
+    section { margin-bottom: 40px; }
+    section > h2 { margin-top: 0; }
+    .grid-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .card { padding: 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+    button { font-family: var(--font-sans); border: none; cursor: pointer; transition: all 200ms ease-out; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent-strong); color: var(--void); padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+    .btn-secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+    .theme-toggle { display: flex; gap: 4px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: transparent; }
+    .theme-toggle button { padding: 6px 10px; border-radius: 4px; border: none; background: transparent; color: var(--ink-secondary); font-size: 12px; font-weight: 500; }
+    .theme-toggle button.active { background: var(--accent-strong); color: var(--void); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    function Icon({ icon, size = 16, style = {} }) {
+      return <iconify-icon icon={icon} style={{ fontSize: size, ...style }} />;
+    }
+
+    function PromoBanner({ promos, onDismiss, theme }) {
+      const expiring = promos.filter((p) => {
+        const daysLeft = Math.floor((p.expiresAt * 1000 - Date.now()) / (1000 * 60 * 60 * 24));
+        return !p.used && daysLeft > 0 && daysLeft <= 7;
+      });
+
+      if (expiring.length === 0) return null;
+
+      const daysLeft = Math.floor((expiring[0].expiresAt * 1000 - Date.now()) / (1000 * 60 * 60 * 24));
+
+      return (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            padding: 12,
+            borderRadius: 8,
+            borderLeft: "4px solid var(--err)",
+            background: "rgb(239 68 68 / 0.10)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--err)" }}>
+              ⚠️ Promo expiring soon
+            </p>
+            <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "var(--ink-secondary)" }}>
+              {expiring[0].code} expires in {daysLeft} days
+            </p>
+          </div>
+          {onDismiss && (
+            <button
+              type="button"
+              onClick={onDismiss}
+              aria-label="Dismiss banner"
+              style={{
+                padding: "4px 8px",
+                borderRadius: 4,
+                border: "none",
+                background: "transparent",
+                color: "var(--err)",
+                cursor: "pointer",
+                fontSize: 16,
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    function SubscriptionOverview({ plan, renewal, addons }) {
+      return (
+        <div className="card">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>Subscription</h2>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 9999, border: "1px solid var(--line)", background: "rgb(6 182 212 / 0.10)", padding: "4px 11px", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--ok)", textTransform: "uppercase" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--ok)" }} />
+              Active
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase" }}>Current Plan</p>
+              <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{plan}</p>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase" }}>Renewal</p>
+              <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{renewal}</p>
+            </div>
+          </div>
+          {addons.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase", marginBottom: 8 }}>Active Add-Ons</p>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {addons.map((addon) => (
+                  <span key={addon} style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 6, border: "1px solid var(--line)", background: "rgb(6 182 212 / 0.10)", padding: "4px 10px", fontSize: 12, color: "var(--accent-ink)" }}>
+                    ✓ {addon}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <button className="btn-secondary" style={{ width: "100%" }}>Manage in Billing Portal</button>
+        </div>
+      );
+    }
+
+    function PromosTable({ promos, onRedeem, onShare }) {
+      if (promos.length === 0) {
+        return (
+          <div className="card" style={{ textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)" }}>No active promos yet.</p>
+          </div>
+        );
+      }
+
+      return (
+        <div style={{ borderRadius: 8, border: "1px solid var(--line)", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Code</th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Type</th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Value</th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Expires</th>
+                <th style={{ padding: 12, textAlign: "right", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {promos.map((promo) => {
+                const daysLeft = Math.floor((promo.expiresAt * 1000 - Date.now()) / (1000 * 60 * 60 * 24));
+                const statusColor = promo.used || daysLeft <= 0 ? "var(--ink-muted)" : daysLeft <= 3 ? "var(--err)" : "var(--ok)";
+                return (
+                  <tr key={promo.code} style={{ borderBottom: "1px solid var(--line)", background: "var(--surface)" }}>
+                    <td style={{ padding: 12, fontFamily: "var(--font-mono)", fontWeight: 500, color: "var(--accent)" }}>{promo.code}</td>
+                    <td style={{ padding: 12, color: "var(--ink-secondary)" }}>{promo.type === "gift_card" ? "Gift Card" : "Referral"}</td>
+                    <td style={{ padding: 12, fontWeight: 600, color: "var(--ink)" }}>${promo.amount / 100}</td>
+                    <td style={{ padding: 12, color: statusColor }}>{promo.used || daysLeft <= 0 ? (promo.used ? "Used" : "Expired") : `${daysLeft} days`}</td>
+                    <td style={{ padding: 12, textAlign: "right" }}>
+                      {!promo.used && daysLeft > 0 ? (
+                        promo.type === "gift_card" ? (
+                          <button type="button" onClick={() => onRedeem?.(promo.code)} className="btn-primary" style={{ fontSize: 11, padding: "6px 10px" }}>Redeem</button>
+                        ) : (
+                          <button type="button" onClick={() => onShare?.(promo.code)} className="btn-secondary" style={{ fontSize: 11, padding: "6px 10px" }}>Share</button>
+                        )
+                      ) : (
+                        <span style={{ fontSize: 11, color: "var(--ink-muted)" }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    function ReferralSection({ onInvite }) {
+      const [code, setCode] = useState(null);
+      return (
+        <div className="card">
+          <h3 style={{ margin: "0 0 12px 0", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Invite a Friend</h3>
+          {code ? (
+            <>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--ink-secondary)", marginBottom: 12 }}>Share this code with friends to earn $10 off:</p>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <code style={{ flex: 1, padding: "8px 12px", borderRadius: 6, background: "var(--bg)", border: "1px solid var(--line)", fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--accent)" }}>{code}</code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(code);
+                    alert("Copied to clipboard!");
+                  }}
+                  className="btn-primary"
+                >
+                  Copy
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                const newCode = "REF" + Math.random().toString(36).substring(2, 8).toUpperCase();
+                setCode(newCode);
+                onInvite?.();
+              }}
+              className="btn-secondary"
+              style={{ width: "100%" }}
+            >
+              Generate Referral Code
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    function App() {
+      const [theme, setTheme] = useState("dark");
+      const [promos, setPromos] = useState([
+        { code: "ABC123", type: "gift_card", amount: 2500, expiresAt: Math.floor((Date.now() + 3 * 24 * 60 * 60 * 1000) / 1000), used: false },
+        { code: "XYZ789", type: "referral", amount: 1000, expiresAt: Math.floor((Date.now() + 12 * 24 * 60 * 60 * 1000) / 1000), used: false },
+        { code: "OLD456", type: "gift_card", amount: 5000, expiresAt: Math.floor((Date.now() - 1 * 24 * 60 * 60 * 1000) / 1000), used: false },
+      ]);
+      const [bannerVisible, setBannerVisible] = useState(true);
+
+      return (
+        <>
+          <header>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: 8, background: "var(--accent-strong)", color: "var(--void)" }}>
+                <Icon icon="solar:graph-up-linear" size={17} />
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
+            </div>
+            <div className="theme-toggle">
+              <button
+                type="button"
+                onClick={() => setTheme("dark")}
+                className={theme === "dark" ? "active" : ""}
+              >
+                🌙 Dark
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme("light")}
+                className={theme === "light" ? "active" : ""}
+              >
+                ☀️ Light
+              </button>
+            </div>
+          </header>
+          <main>
+            {bannerVisible && (
+              <PromoBanner
+                promos={promos}
+                onDismiss={() => setBannerVisible(false)}
+                theme={theme}
+              />
+            )}
+
+            <section>
+              <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Account Overview</h2>
+              <SubscriptionOverview
+                plan="Pro (Annual)"
+                renewal="June 30, 2026"
+                addons={["Bulk Processing", "Rush Service"]}
+              />
+            </section>
+
+            <section>
+              <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Active Promos</h2>
+              <PromosTable
+                promos={promos}
+                onRedeem={(code) => {
+                  setPromos(promos.map((p) => (p.code === code ? { ...p, used: true, usedAt: Math.floor(Date.now() / 1000) } : p)));
+                  alert(`Redeemed ${code}!`);
+                }}
+                onShare={(code) => {
+                  navigator.clipboard.writeText(code);
+                  alert(`Shared ${code}!`);
+                }}
+              />
+            </section>
+
+            <section>
+              <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Referrals</h2>
+              <div className="grid-2col">
+                <ReferralSection
+                  onInvite={() => {
+                    // Generate new referral
+                  }}
+                />
+                <div className="card">
+                  <h3 style={{ margin: "0 0 12px 0", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Recent Referrals</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ padding: 8, borderRadius: 6, border: "1px solid var(--line)", background: "var(--bg)" }}>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>John</p>
+                      <p style={{ margin: "2px 0 0 0", fontSize: 11, color: "var(--ink-secondary)" }}>Subscribed • Reward earned ✓</p>
+                    </div>
+                    <div style={{ padding: 8, borderRadius: 6, border: "1px solid var(--line)", background: "var(--bg)" }}>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: "var(--ink)" }}>Sarah</p>
+                      <p style={{ margin: "2px 0 0 0", fontSize: 11, color: "var(--ink-secondary)" }}>Pending • Awaiting signup</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </main>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

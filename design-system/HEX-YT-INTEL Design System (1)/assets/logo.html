@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HEX-YT-INTEL — Brand mark</title>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-10);
+    align-items: flex-start;
+    padding: var(--space-12);
+  }
+  .lockup { display: inline-flex; align-items: center; gap: var(--space-3); }
+  .mark {
+    display: grid; place-items: center;
+    background: var(--accent-strong);
+    color: var(--void);
+    border-radius: var(--radius-control);
+  }
+  .mark.lg { width: 44px; height: 44px; font-size: 26px; }
+  .mark.md { width: 28px; height: 28px; font-size: 18px; }
+  .wordmark {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+  }
+  .wordmark.lg { font-size: 24px; }
+  .wordmark.md { font-size: 14px; }
+  .caption { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: var(--space-2); }
+  .row { display: flex; align-items: center; gap: var(--space-12); flex-wrap: wrap; }
+  .onaccent { background: var(--accent-strong); padding: var(--space-4) var(--space-5); border-radius: var(--radius-card); }
+  .onaccent .wordmark { color: var(--void); }
+  .onaccent .mark { background: var(--void); color: var(--accent-ink); }
+</style>
+</head>
+<body>
+  <div>
+    <div class="caption">Primary lockup</div>
+    <div class="lockup">
+      <span class="mark lg"><iconify-icon icon="solar:graph-up-linear"></iconify-icon></span>
+      <span class="wordmark lg">HEX·YT·INTEL</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="caption">Compact (sidebar)</div>
+      <div class="lockup">
+        <span class="mark md"><iconify-icon icon="solar:graph-up-linear"></iconify-icon></span>
+        <span class="wordmark md">HEX·YT</span>
+      </div>
+    </div>
+    <div>
+      <div class="caption">Mark only</div>
+      <span class="mark lg"><iconify-icon icon="solar:graph-up-linear"></iconify-icon></span>
+    </div>
+    <div>
+      <div class="caption">On accent</div>
+      <div class="lockup onaccent">
+        <span class="mark md"><iconify-icon icon="solar:graph-up-linear"></iconify-icon></span>
+        <span class="wordmark md">HEX·YT·INTEL</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

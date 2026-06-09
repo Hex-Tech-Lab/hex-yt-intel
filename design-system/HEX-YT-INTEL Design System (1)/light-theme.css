@@ -1,0 +1,92 @@
+/* ============================================================================
+   LIGHT THEME VARIABLES
+   Inverted palette for light mode. Cyan accent remains the only color accent.
+   ========================================================================= */
+
+:root[data-theme="light"] {
+  /* Surfaces */
+  --void: #ffffff;
+  --bg: #f8fafc;
+  --surface: #f1f5f9;
+  
+  /* Typography */
+  --ink: #0f172a;
+  --ink-secondary: #475569;
+  --ink-muted: #94a3b8;
+  
+  /* Borders */
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  
+  /* Accents */
+  --accent: #0891b2;
+  --accent-strong: #06b6d4;
+  --accent-ink: #164e63;
+  
+  /* Status */
+  --ok: #16a34a;
+  --err: #dc2626;
+  --warn: #f59e0b;
+  
+  /* Motion */
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+}
+
+/* Dark (default) – already defined in colors_and_type.css */
+:root,
+:root[data-theme="dark"] {
+  /* Surfaces */
+  --void: #0f0f13;
+  --bg: #1a1f2b;
+  --surface: #1e2738;
+  
+  /* Typography */
+  --ink: #f1f5f9;
+  --ink-secondary: #cbd5e1;
+  --ink-muted: #94a3b8;
+  
+  /* Borders */
+  --line: #334155;
+  --line-strong: #475569;
+  
+  /* Accents */
+  --accent: #06b6d4;
+  --accent-strong: #0891b2;
+  --accent-ink: #cffafe;
+  
+  /* Status */
+  --ok: #22c55e;
+  --err: #ef4444;
+  --warn: #eab308;
+  
+  /* Motion */
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+}
+
+/* Light theme body */
+:root[data-theme="light"] {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-theme="dark"] {
+  background: #0f0f13;
+  color: #f1f5f9;
+}
+
+/* Ensure readability in light mode */
+:root[data-theme="light"] code,
+:root[data-theme="light"] pre {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:root[data-theme="dark"] code,
+:root[data-theme="dark"] pre {
+  background: #1a1f2b;
+  color: #cffafe;
+}

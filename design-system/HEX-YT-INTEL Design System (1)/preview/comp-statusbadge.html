@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/><link rel="stylesheet" href="_card.css"/>
+<style>
+@keyframes p { 0%,100%{opacity:1} 50%{opacity:.4} }
+.row { display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; }
+.badge { display:inline-flex; align-items:center; gap:7px; border-radius:9999px; border:1px solid var(--line); background:rgb(26 31 43 / 0.6); padding:5px 12px; font-family:var(--font-mono); font-size:11px; font-weight:600; letter-spacing:0.08em; }
+.dot { width:6px; height:6px; border-radius:50%; }
+.idle .dot{ background:var(--ink-muted) } .idle{ color:var(--ink-muted) }
+.streaming .dot{ background:var(--accent); animation:p 1.4s ease-in-out infinite } .streaming{ color:var(--accent-ink) }
+.done .dot{ background:var(--ok) } .done{ color:var(--ink-secondary) }
+.error .dot{ background:var(--err) } .error{ color:var(--err) }
+</style></head>
+<body>
+<div class="cap"><span class="i">// </span>status badge · SynthesisStatus union</div>
+<div class="row">
+  <span class="badge idle"><span class="dot"></span>IDLE</span>
+  <span class="badge streaming"><span class="dot"></span>STREAMING</span>
+  <span class="badge done"><span class="dot"></span>DONE</span>
+  <span class="badge error"><span class="dot"></span>ERROR</span>
+</div>
+<div class="tiny" style="margin-top:14px; color:var(--ink-secondary)">idle · streaming (pulsing dot) · done · error. The single state contract across every async surface.</div>
+</body></html>
