@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LLM Council Report: YouTube Synthesis SaaS</title>
+    <style>
+        body { font-family: system-ui, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; color: #333; }
+        h1, h2, h3 { color: #111; }
+        .executive-summary { background: #f8f9fa; padding: 1.5rem; border-left: 4px solid #0066cc; margin-bottom: 2rem; }
+        .fatal-flaws { background: #fff0f0; padding: 1.5rem; border-left: 4px solid #cc0000; margin-bottom: 2rem; }
+        .winning-strategy { background: #f0fff0; padding: 1.5rem; border-left: 4px solid #00cc00; margin-bottom: 2rem; }
+        .implementation { margin-bottom: 2rem; }
+        .step { margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>LLM Council Report: Optimal 8-Week Launch Strategy</h1>
+    <p><em>Date: 2026-06-08</em> | <em>Focus: $0-Runway Survival</em></p>
+
+    <div class="executive-summary">
+        <h2>Executive Summary (The Hard Truth)</h2>
+        <p>The council fundamentally rejects the premise of an "8-week launch strategy." With $0 runway, 8 weeks is a luxury you do not have. This is an existence problem, not a marketing optimization problem. The core constraints—no cash, no legal entity, reliance on vulnerable 3rd party APIs—mean that <strong>velocity to first revenue</strong> is the only metric that matters. Furthermore, the council universally identified critical technical oversights: the application is currently non-functional (missing API keys and DB schemas), and the underlying transcript scraping pipeline will likely trigger immediate IP blocks or violate YouTube API ToS if scaled.</p>
+    </div>
+
+    <div class="fatal-flaws">
+        <h2>The Fatal Flaws (Highest-Rated Risks)</h2>
+        <ul>
+            <li><strong>The Legal/Platform Guillotine (Response E):</strong> Commercializing scraped YouTube transcripts without a corporate shield invites unlimited personal liability. A DMCA takedown or API revocation kills the business overnight.</li>
+            <li><strong>Technical Fragility (Identified by all Peer Reviewers):</strong> YouTube actively IP-blocks unauthenticated server-side scraping. Building a business model that assumes infinite free scraping will break the application on day one. Additionally, generating 11-dimension outputs will likely exceed Vercel execution timeouts.</li>
+            <li><strong>The Non-Functional Codebase:</strong> As identified in the peer reviews, the production DB tables (<code>embeddings</code>, <code>videos</code>, <code>playlists</code>) are empty, and <code>OPENROUTER_API_KEY</code> is missing. The engine cannot currently generate a summary.</li>
+            <li><strong>MoR Underwriting Risk:</strong> Dodo/Paddle heavily scrutinize AI wrappers in copyright gray areas. An unincorporated Egyptian founder selling derivative works faces a high risk of application rejection or account freezes.</li>
+        </ul>
+    </div>
+
+    <div class="winning-strategy">
+        <h2>The Winning Strategy (The Specific Plan)</h2>
+        <p><strong>The "Survival Arithmetic" Protocol (Response G + D Synthesis)</strong></p>
+        <p>Cancel all unnecessary dev subscriptions immediately to stop the bleeding. Do not attempt US infrastructure migrations or complex feature additions. Your objective is to validate willingness-to-pay manually before writing another line of code. Secure a Merchant of Record (Paddle/Dodo), publish basic legal templates, and attempt to pre-sell $39 packages to 5-10 users via direct outreach. If you cannot secure 5 manual sales, the product hypothesis is dead, and the 8-week plan is moot.</p>
+    </div>
+
+    <div class="implementation">
+        <h2>Implementation Sequence (Chronological Next Steps)</h2>
+        <div class="step">
+            <h3>Week 1: Fix the Engine & Secure Legal/Payments</h3>
+            <ul>
+                <li><strong>Fix the Codebase:</strong> Resolve the empty DB tables (embeddings, videos, playlists) and input a valid <code>OPENROUTER_API_KEY</code>. The product must be able to function.</li>
+                <li><strong>Halt the Bleed:</strong> Cancel the $500/mo AI coding tool subscriptions immediately.</li>
+                <li><strong>Legal Minimums:</strong> Generate a ToS and Privacy Policy. Create a DMCA takedown endpoint. State clearly that the tool provides <em>summarization</em> and does not store raw transcripts.</li>
+                <li><strong>Payment Rails:</strong> Apply for Dodo Payments/Paddle. Have a backup plan if they reject the application due to copyright/AML risks.</li>
+            </ul>
+        </div>
+        <div class="step">
+            <h3>Week 2: Manual Validation</h3>
+            <ul>
+                <li><strong>Cold Outreach:</strong> Do not rely on the 900K influencer yet. Manually run 5-10 YouTube channels through the fixed engine. DM the creators the structured output.</li>
+                <li><strong>The Ask:</strong> Ask for $39 for a 150-video pre-sale credit bucket. If zero out of five pay, pivot.</li>
+            </ul>
+        </div>
+        <div class="step">
+            <h3>Weeks 3-4: The Influencer Lever</h3>
+            <ul>
+                <li><strong>Sabrina Romanov Activation:</strong> Generate a lifetime premium token for Sabrina. Send her a zero-pressure DM highlighting the time saved.</li>
+                <li><strong>Monitor Limits:</strong> Closely monitor Vercel execution times and LLM context window limits as usage scales. Maintain the 48K transcript truncation hard-limit.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

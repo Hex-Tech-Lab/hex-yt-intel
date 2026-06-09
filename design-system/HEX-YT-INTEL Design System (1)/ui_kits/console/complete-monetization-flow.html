@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HEX-YT-INTEL — Complete Monetization Flow</title>
+  <link rel="stylesheet" href="../../colors_and_type.css" />
+  <link rel="stylesheet" href="../../light-theme.css" />
+  <link rel="stylesheet" href="../../motion.css" />
+  <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--void); color: var(--ink); font-family: var(--font-sans); }
+    #root { display: flex; flex-direction: column; min-height: 100vh; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; border-bottom: 1px solid var(--line); background: rgb(17 20 29 / 0.7); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 20; }
+    main { flex: 1; padding: 40px 32px; max-width: 1280px; margin: 0 auto; width: 100%; }
+    section { margin-bottom: 48px; }
+    section > h2 { margin-top: 0; margin-bottom: 24px; font-size: 20px; font-weight: 600; }
+    .grid-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .card { padding: 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+    button { font-family: var(--font-sans); border: none; cursor: pointer; transition: all 200ms ease-out; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent-strong); color: var(--void); padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+    .btn-secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+    .theme-toggle { display: flex; gap: 4px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: transparent; }
+    .theme-toggle button { padding: 6px 10px; border-radius: 4px; border: none; background: transparent; color: var(--ink-secondary); font-size: 12px; font-weight: 500; cursor: pointer; }
+    .theme-toggle button.active { background: var(--accent-strong); color: var(--void); }
+    .checkout-step { display: none; }
+    .checkout-step.active { display: block; animation: hx-fade-in 300ms ease-out; }
+    .step-indicator { display: flex; gap: 8px; margin-bottom: 32px; font-size: 12px; }
+    .step-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; color: var(--ink-muted); font-weight: 600; font-size: 11px; }
+    .step-dot.active { border: 2px solid var(--accent); color: var(--accent); }
+    .step-dot.done { background: var(--accent-strong); color: var(--void); border-color: var(--accent-strong); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function Icon({ icon, size = 16, style = {} }) {
+      return <iconify-icon icon={icon} style={{ fontSize: size, ...style }} />;
+    }
+
+    function ThemeToggle({ theme, onToggle }) {
+      return (
+        <div className="theme-toggle">
+          <button
+            type="button"
+            onClick={() => onToggle("dark")}
+            className={theme === "dark" ? "active" : ""}
+          >
+            🌙 Dark
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggle("light")}
+            className={theme === "light" ? "active" : ""}
+          >
+            ☀️ Light
+          </button>
+        </div>
+      );
+    }
+
+    function PlanSelector({ plans, selectedId, onSelect }) {
+      return (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+          {plans.map((plan) => {
+            const selected = plan.id === selectedId;
+            return (
+              <button
+                key={plan.id}
+                type="button"
+                onClick={() => onSelect(plan.id)}
+                className={selected ? "hx-rise-1" : "hx-rise-2"}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  padding: 16,
+                  borderRadius: 8,
+                  border: selected ? "2px solid var(--accent)" : "1px solid var(--line)",
+                  background: selected ? "rgb(6 182 212 / 0.10)" : "var(--bg)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>{plan.name}</h3>
+                  {plan.badge && <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 600, letterSpacing: "0.08em", background: "var(--accent-strong)", color: "var(--void)", padding: "2px 6px", borderRadius: 3 }}>{plan.badge}</span>}
+                </div>
+                <p style={{ margin: "0 0 8px 0", fontSize: 12, color: "var(--ink-secondary)" }}>{plan.description}</p>
+                <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "var(--accent)" }}>${plan.price}<span style={{ fontSize: 11, fontWeight: 400, color: "var(--ink-secondary)", marginLeft: 4 }}>/{plan.interval === "monthly" ? "mo" : "yr"}</span></p>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function AddonSelector({ addons, selectedIds, onToggle }) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+          {addons.map((addon, i) => (
+            <label
+              key={addon.id}
+              className={`hx-rise-${(i % 4) + 1}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: 12,
+                borderRadius: 8,
+                border: "1px solid var(--line)",
+                background: "var(--bg)",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.has(addon.id)}
+                onChange={() => onToggle(addon.id)}
+                style={{ width: 18, height: 18, accentColor: "var(--accent)", cursor: "pointer" }}
+              />
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{addon.name}</p>
+                <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "var(--ink-secondary)" }}>{addon.description}</p>
+              </div>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>+${addon.price}</p>
+            </label>
+          ))}
+        </div>
+      );
+    }
+
+    function PromoSection({ promoCode, setPromoCode, promoError, promoSuccess, onApply }) {
+      return (
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              placeholder="Enter promo code (optional)"
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--line)",
+                background: "var(--bg)",
+                color: "var(--ink)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 13,
+                outline: "none",
+              }}
+            />
+            <button
+              type="button"
+              onClick={onApply}
+              disabled={!promoCode.trim()}
+              className="btn-primary"
+            >
+              Apply
+            </button>
+          </label>
+          {promoError && <p style={{ margin: "8px 0 0 0", fontSize: 12, color: "var(--err)", fontFamily: "var(--font-mono)" }}>{promoError}</p>}
+          {promoSuccess && <p style={{ margin: "8px 0 0 0", fontSize: 12, color: "var(--ok)", fontFamily: "var(--font-mono)" }}>✓ {promoSuccess}</p>}
+        </div>
+      );
+    }
+
+    function OrderSummary({ plan, addons, promoDiscount, theme }) {
+      const subtotal = (plan?.price || 0) + addons.reduce((sum, a) => sum + a.price, 0);
+      const total = Math.max(0, subtotal - (promoDiscount || 0));
+
+      return (
+        <div className="card">
+          <h3 style={{ margin: "0 0 12px 0", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Order Summary</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+            {plan && (
+              <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, borderBottom: "1px solid var(--line)" }}>
+                <span>{plan.name} ({plan.interval})</span>
+                <span style={{ fontWeight: 600, color: "var(--ink)" }}>${plan.price}</span>
+              </div>
+            )}
+            {addons.map((addon) => (
+              <div key={addon.id} style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, borderBottom: "1px solid var(--line)" }}>
+                <span>{addon.name}</span>
+                <span style={{ fontWeight: 600, color: "var(--ink)" }}>+${addon.price}</span>
+              </div>
+            ))}
+            {promoDiscount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, borderBottom: "1px solid var(--line)", color: "var(--ok)" }}>
+                <span>Promo discount</span>
+                <span>-${promoDiscount}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 16, fontWeight: 700, color: "var(--accent)" }}>
+              <span>Total</span>
+              <span>${total}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function BillingSection({ subscription, customerId, onOpenPortal, theme }) {
+      return (
+        <div className="card">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>Current Subscription</h2>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 9999, border: "1px solid var(--line)", background: "rgb(6 182 212 / 0.10)", padding: "4px 11px", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--ok)" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--ok)" }} />
+              Active
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase" }}>Current Plan</p>
+              <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{subscription.plan}</p>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase" }}>Next Billing</p>
+              <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{subscription.nextBilling}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenPortal(customerId)}
+            className="btn-secondary"
+            style={{ width: "100%" }}
+          >
+            Manage in Billing Portal
+          </button>
+        </div>
+      );
+    }
+
+    function App() {
+      const [theme, setTheme] = useState("dark");
+      const [checkoutStep, setCheckoutStep] = useState("plan");
+      const [selectedPlan, setSelectedPlan] = useState("pro");
+      const [selectedAddons, setSelectedAddons] = useState(new Set());
+      const [promoCode, setPromoCode] = useState("");
+      const [promoError, setPromoError] = useState("");
+      const [promoSuccess, setPromoSuccess] = useState("");
+      const [promoDiscount, setPromoDiscount] = useState(0);
+      const [email, setEmail] = useState("");
+      const [showBilling, setShowBilling] = useState(false);
+
+      useEffect(() => {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("hex-yt-theme", theme);
+      }, [theme]);
+
+      const plans = [
+        { id: "starter", name: "Starter", price: 29, interval: "monthly", description: "For individuals", badge: null },
+        { id: "pro", name: "Pro", price: 99, interval: "monthly", description: "For teams", badge: "POPULAR" },
+      ];
+
+      const addons = [
+        { id: "bulk", name: "Bulk Processing", description: "Up to 100 analyses/day", price: 49 },
+        { id: "rush", name: "Rush Service", description: "Priority queue (15min)", price: 29 },
+        { id: "api", name: "API Access", description: "Direct REST + GraphQL", price: 99 },
+      ];
+
+      const selectedPlanData = plans.find((p) => p.id === selectedPlan);
+      const selectedAddonData = addons.filter((a) => selectedAddons.has(a.id));
+
+      const handlePromoApply = () => {
+        setPromoError("");
+        setPromoSuccess("");
+
+        if (!promoCode.trim()) {
+          setPromoError("Enter a promo code");
+          return;
+        }
+
+        if (promoCode.toUpperCase().startsWith("INVALID")) {
+          setPromoError("Promo code not found or expired");
+          setPromoDiscount(0);
+        } else {
+          setPromoSuccess(`${promoCode} applied! You save $5.`);
+          setPromoDiscount(5);
+        }
+      };
+
+      const handleCheckout = () => {
+        if (!email || !email.includes("@")) {
+          alert("Valid email required");
+          return;
+        }
+        alert(`Checkout for ${selectedPlanData?.name} (${email})\nAddons: ${selectedAddonData.map((a) => a.name).join(", ") || "none"}\nPromo: ${promoCode || "none"}`);
+      };
+
+      const handleOpenPortal = (customerId) => {
+        alert(`Opening Stripe Billing Portal for customer ${customerId}...`);
+      };
+
+      return (
+        <>
+          <header>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: 8, background: "var(--accent-strong)", color: "var(--void)" }}>
+                <Icon icon="solar:graph-up-linear" size={17} />
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
+            </div>
+            <ThemeToggle theme={theme} onToggle={setTheme} />
+          </header>
+
+          <main>
+            {!showBilling ? (
+              <>
+                <section>
+                  <h2>Choose Your Plan</h2>
+                  <PlanSelector plans={plans} selectedId={selectedPlan} onSelect={setSelectedPlan} />
+                </section>
+
+                <section>
+                  <h2>Add Optional Features</h2>
+                  <AddonSelector addons={addons} selectedIds={selectedAddons} onToggle={(id) => {
+                    const newAddons = new Set(selectedAddons);
+                    newAddons.has(id) ? newAddons.delete(id) : newAddons.add(id);
+                    setSelectedAddons(newAddons);
+                  }} />
+                </section>
+
+                <section>
+                  <h2>Have a Promo Code?</h2>
+                  <PromoSection promoCode={promoCode} setPromoCode={setPromoCode} promoError={promoError} promoSuccess={promoSuccess} onApply={handlePromoApply} />
+                </section>
+
+                <section style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24, alignItems: "start" }}>
+                  <div>
+                    <h2>Complete Your Purchase</h2>
+                    <label style={{ display: "flex", flexDirection: "column", marginBottom: 24 }}>
+                      <span style={{ marginBottom: 6, fontSize: 12, fontWeight: 500, color: "var(--ink-muted)" }}>Email for receipt</span>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: 8,
+                          border: "1px solid var(--line)",
+                          background: "var(--bg)",
+                          color: "var(--ink)",
+                          fontFamily: "var(--font-sans)",
+                          fontSize: 13,
+                          outline: "none",
+                        }}
+                      />
+                    </label>
+                    <button type="button" onClick={handleCheckout} className="btn-primary" style={{ width: "100%" }}>
+                      Complete Purchase
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowBilling(true)}
+                      style={{
+                        width: "100%",
+                        marginTop: 12,
+                        padding: "10px 16px",
+                        borderRadius: 8,
+                        border: "1px solid var(--line)",
+                        background: "transparent",
+                        color: "var(--ink-secondary)",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      View Billing (Demo)
+                    </button>
+                  </div>
+                  <OrderSummary plan={selectedPlanData} addons={selectedAddonData} promoDiscount={promoDiscount} theme={theme} />
+                </section>
+              </>
+            ) : (
+              <section>
+                <button
+                  type="button"
+                  onClick={() => setShowBilling(false)}
+                  className="btn-secondary"
+                  style={{ marginBottom: 24 }}
+                >
+                  ← Back to Checkout
+                </button>
+                <BillingSection
+                  subscription={{ plan: selectedPlanData?.name || "Pro", nextBilling: "July 30, 2026" }}
+                  customerId="cus_demo123"
+                  onOpenPortal={handleOpenPortal}
+                  theme={theme}
+                />
+              </section>
+            )}
+          </main>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

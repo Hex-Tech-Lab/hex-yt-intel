@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/><link rel="stylesheet" href="_card.css"/>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+@property --hx-angle { syntax:"<angle>"; initial-value:0deg; inherits:false; }
+@keyframes hx-rotate-ring { to { --hx-angle:360deg; } }
+.row { display:flex; align-items:center; gap:22px; margin-top:14px; }
+.ring { position:relative; width:96px; height:96px; border-radius:14px; padding:1.5px; overflow:hidden; }
+.ring .spin { position:absolute; inset:-40%; background:conic-gradient(from var(--hx-angle), transparent 55%, var(--accent) 78%, transparent 92%); animation:hx-rotate-ring 3s linear infinite; }
+.ring .inner { position:relative; width:100%; height:100%; border-radius:13px; background:var(--surface); display:grid; place-items:center; color:var(--accent); font-size:24px; }
+.txt { font-size:12.5px; color:var(--ink-secondary); line-height:1.6; }
+.txt b { color:var(--ink); }
+.ease { font-family:var(--font-mono); font-size:10.5px; color:var(--ink-muted); margin-top:8px; }
+</style></head>
+<body>
+<div class="cap"><span class="i">// </span>motion · the one signal = streaming</div>
+<div class="row">
+  <div class="ring"><div class="spin"></div><div class="inner"><iconify-icon icon="solar:bolt-linear"></iconify-icon></div></div>
+  <div class="txt">
+    <b>Rotating cyan scope-ring</b> · 3s linear · the only product-wide animation.<br>Renders only while <span class="mono" style="color:var(--accent-ink)">status === "streaming"</span>. Nothing else spins.
+    <div class="ease">ease-out-quint cubic-bezier(0.22,1,0.36,1) · 160 / 280 / 520ms · no bounce</div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/><link rel="stylesheet" href="_card.css"/>
+<style>
+.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:14px; }
+.box { height:74px; border-radius:12px; background:var(--surface); display:flex; align-items:flex-end; padding:10px; }
+.box .l { font-family:var(--font-mono); font-size:10.5px; color:var(--ink-muted); }
+.b1 { border:1px solid var(--line); }
+.b2 { border:1px solid var(--line-strong); }
+.b3 { padding:1px; background:linear-gradient(135deg, rgb(148 163 184 / 0.18) 0%, rgb(148 163 184 / 0) 60%); }
+.b3 .inner { background:var(--surface); border-radius:11px; height:100%; display:flex; align-items:flex-end; padding:10px; }
+</style></head>
+<body>
+<div class="cap"><span class="i">// </span>borders · dark hairlines</div>
+<div class="grid">
+  <div class="box b1"><span class="l">line · #1E293B<br>slate-800 default</span></div>
+  <div class="box b2"><span class="l">line-strong · #334155<br>slate-700 emphasis</span></div>
+  <div class="box b3"><div class="inner"><span class="l">glow-border<br>gradient hairline</span></div></div>
+</div>
+</body></html>

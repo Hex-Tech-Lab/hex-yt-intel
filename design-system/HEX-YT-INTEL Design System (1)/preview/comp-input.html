@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/><link rel="stylesheet" href="_card.css"/>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+.field { margin-top:14px; display:flex; align-items:center; gap:10px; background:rgb(26 31 43 / 0.6); border:1px solid var(--line); border-radius:8px; padding:9px 11px; }
+.field.focus { border-color:var(--line-strong); }
+.icon { display:grid; place-items:center; width:34px; height:34px; border-radius:8px; background:var(--bg); color:var(--accent); flex:none; font-size:18px; }
+.field input { flex:1; min-width:0; background:transparent; border:none; outline:none; color:var(--ink); font-family:var(--font-mono); font-size:13px; }
+.field input::placeholder { color:var(--ink-muted); }
+.kbd { font-family:var(--font-mono); font-size:10px; color:var(--ink-muted); border:1px solid var(--line); border-radius:4px; padding:2px 6px; }
+.search { display:flex; align-items:center; gap:8px; background:rgb(26 31 43 / 0.6); border:1px solid var(--line); border-radius:8px; padding:8px 11px; margin-top:12px; }
+.search input { flex:1; background:transparent; border:none; outline:none; color:var(--ink); font-family:var(--font-sans); font-size:13px; }
+.search input::placeholder { color:var(--ink-muted); }
+.lab { font-family:var(--font-mono); font-size:10px; color:var(--ink-muted); margin-top:7px; }
+</style></head>
+<body>
+<div class="cap"><span class="i">// </span>inputs · URL field + search</div>
+<div class="field focus">
+  <span class="icon"><iconify-icon icon="solar:link-round-angle-linear"></iconify-icon></span>
+  <input value="https://youtube.com/watch?v=dQw4..." readonly/>
+  <span class="kbd">URL</span>
+</div>
+<div class="lab">focus: border line → line-strong, no glow</div>
+<div class="search">
+  <iconify-icon icon="solar:magnifer-linear" style="color:var(--ink-muted); font-size:16px"></iconify-icon>
+  <input placeholder="Search your knowledge graph" readonly/>
+  <span class="kbd">⌘K</span>
+</div>
+</body></html>

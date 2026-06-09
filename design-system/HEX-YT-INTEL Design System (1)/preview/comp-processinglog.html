@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/><link rel="stylesheet" href="_card.css"/>
+<style>
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+.log { margin-top:12px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:rgb(11 14 20 / 0.8); }
+.bar { display:flex; align-items:center; justify-content:space-between; padding:8px 13px; border-bottom:1px solid var(--line); background:rgb(26 31 43 / 0.6); }
+.dots { display:flex; gap:6px; align-items:center; }
+.d { width:9px; height:9px; border-radius:50%; }
+.fn { font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-muted); margin-left:8px; }
+.live { font-family:var(--font-mono); font-size:10.5px; color:var(--accent-ink); }
+.lines { padding:11px 13px; font-family:var(--font-mono); font-size:12px; line-height:1.7; }
+.ln { display:flex; gap:12px; }
+.ts { color:var(--ink-muted); }
+.info { color:var(--ink-secondary); } .ok { color:var(--ok); } .warn { color:var(--warn); }
+.caret { display:inline-block; width:7px; height:13px; background:var(--accent); vertical-align:-2px; animation:blink 1s step-end infinite; margin-left:96px; }
+</style></head>
+<body>
+<div class="cap"><span class="i">// </span>processing log · terminal output</div>
+<div class="log">
+  <div class="bar"><div class="dots"><span class="d" style="background:rgb(239 68 68 / 0.7)"></span><span class="d" style="background:rgb(245 158 11 / 0.7)"></span><span class="d" style="background:rgb(34 197 94 / 0.7)"></span><span class="fn">synthesis.log</span></div><span class="live">● live</span></div>
+  <div class="lines">
+    <div class="ln"><span class="ts">14:02:01</span><span class="info">transcript fetched · 18,402 tokens</span></div>
+    <div class="ln"><span class="ts">14:02:04</span><span class="ok">dimensions 1–6 resolved</span></div>
+    <div class="ln"><span class="ts">14:02:07</span><span class="warn">low-signal segment skipped</span></div>
+    <div><span class="caret"></span></div>
+  </div>
+</div>
+</body></html>

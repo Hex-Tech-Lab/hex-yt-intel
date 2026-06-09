@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Council Synthesis: v1 vs v2 Comparison</title>
+    <style>
+        :root {
+            --v1-color: #f8f9fa;
+            --v1-border: #6c757d;
+            --v2-color: #e6f2ff;
+            --v2-border: #0066cc;
+            --delta-color: #f0fff0;
+            --delta-border: #28a745;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            line-height: 1.6; 
+            margin: 0; 
+            padding: 2rem; 
+            color: #333;
+            background-color: #fcfcfc;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #ddd;
+        }
+        h1, h2, h3 { color: #111; margin-top: 0; }
+        
+        .container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .column {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .col-v1 { border-top: 5px solid var(--v1-border); background-color: var(--v1-color); }
+        .col-v2 { border-top: 5px solid var(--v2-border); background-color: var(--v2-color); }
+        .col-delta { border-top: 5px solid var(--delta-border); background-color: var(--delta-color); }
+
+        .section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .section:last-child { border-bottom: none; }
+        
+        ul { padding-left: 1.5rem; margin-top: 0.5rem; }
+        li { margin-bottom: 0.5rem; }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+        .badge-v1 { background: var(--v1-border); color: white; }
+        .badge-v2 { background: var(--v2-border); color: white; }
+        .badge-delta { background: var(--delta-border); color: white; }
+
+        .critical {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Council Synthesis: Strategy Evolution (v1 vs v2)</h1>
+        <p>A side-by-side comparison of the initial council output and the 10x-verified updated strategy.</p>
+    </header>
+
+    <div class="container">
+        <!-- COLUMN 1: V1 (OLD) -->
+        <div class="column col-v1">
+            <span class="badge badge-v1">Old Strategy (v1)</span>
+            <h2>Initial Council Report</h2>
+            
+            <div class="section">
+                <h3>Core Assumptions</h3>
+                <ul>
+                    <li>Founder burn rate is $500-600/mo.</li>
+                    <li>Relying on raw scraping (high IP ban risk).</li>
+                    <li>Product is totally non-functional (missing API keys).</li>
+                    <li>Pricing is undefined but targeted at $49/mo.</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h3>Executive Summary</h3>
+                <p>The council fundamentally rejects the "8-week launch" premise. With assumed $500/mo burn and $0 runway, velocity to first revenue is the only metric. Recommended halting all development to focus on manual sales.</p>
+            </div>
+
+            <div class="section">
+                <h3>Execution Plan</h3>
+                <ul>
+                    <li><strong>Week 1:</strong> Cancel all $500/mo AI coding subscriptions to stop the bleed. Fix the missing OPENROUTER_API_KEY. Apply for MoR.</li>
+                    <li><strong>Week 2:</strong> Manual outreach to 5-10 YouTube channels. Try to pre-sell $39 packages.</li>
+                    <li><strong>Weeks 3-4:</strong> Sabrina Romanov (influencer) activation via lifetime premium token.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- COLUMN 2: V2 (UPDATED) -->
+        <div class="column col-v2">
+            <span class="badge badge-v2">Updated Strategy (v2)</span>
+            <h2>10x-Verified Report</h2>
+            
+            <div class="section">
+                <h3>Core Assumptions (Corrected)</h3>
+                <ul>
+                    <li>Founder burn rate is $60-120/mo (highly sustainable).</li>
+                    <li>Using Enterprise API (Decodo), but costing $0.0015 per video, NOT $3.70. Total COGS ~$0.0615/video.</li>
+                    <li>App IS functional (keys are valid), but has deep logical bugs (Trial lock).</li>
+                    <li>Codebase pricing is hardcoded to $9/mo, which is actually highly profitable due to corrected COGS.</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h3>Executive Summary</h3>
+                <p>The immediate bottleneck is <strong>Payment and Legal Structure</strong>. Negative unit economics are a myth; P(Profitability) > 99.9%. However, the codebase has fatal misconfigurations: a trial-mode lock limiting it to Haiku, an empty RAG database, and a single-point-of-failure in the Decodo transcript integration.</p>
+            </div>
+
+            <div class="section">
+                <h3>Execution Plan (Survival Sequence)</h3>
+                <ul>
+                    <li><strong>Week 1 (Physics Constraints):</strong> 
+                        <ul>
+                            <li>Test PayPal USD inbound from Cairo immediately.</li>
+                            <li>Form Ohio LLC if MoR (Paddle) requires it.</li>
+                            <li><span class="critical">Fix Trial Lock:</span> Disable `COMMERCIAL_TRIAL_MODE = true`.</li>
+                            <li><span class="critical">Seed DB:</span> Initialize empty `embeddings/videos/playlists` tables.</li>
+                            <li><span class="critical">Fix SPOF:</span> Build transcript fallback.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Week 2 (Distribution):</strong> Rip out Stripe completely and rewrite webhooks/checkout for Paddle/Dodo. Do manual sales.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- COLUMN 3: COMPARISON / DELTA -->
+        <div class="column col-delta">
+            <span class="badge badge-delta">Comparison & Delta</span>
+            <h2>Strategic Shifts</h2>
+            
+            <div class="section">
+                <h3>The Burn Rate Mirage</h3>
+                <p><strong>Shift:</strong> v1 panicked over a $500/mo burn rate. v2 recognizes the actual burn is $60-120/mo. The founder actually has a structural advantage (low burn), shifting the focus from "stop the bleeding" to "fix the product infrastructure."</p>
+            </div>
+
+            <div class="section">
+                <h3>The Unit Economics Miracle</h3>
+                <p><strong>Shift:</strong> v1 panicked over a misunderstood Decodo pricing of $2.50 per request. v2 confirms it is $1.00 per 1,000 requests. <em>Delta: Total COGS is $0.0615/video. The $9/mo tier is actually wildly profitable. The statistical risk of negative unit economics is effectively zero. Strategy must pivot immediately from cost-containment to aggressive user acquisition.</em></p>
+            </div>
+
+            <div class="section">
+                <h3>The Pricing Reality Check</h3>
+                <p><strong>Shift:</strong> v1 debated pricing in the abstract. v2 discovered through codebase verification that the checkout system is hardcoded to $9/mo. Because of the COGS miracle, this is actually a viable feature, not a fatal bug. <em>Delta: Decide whether to keep $9/mo for acquisition or enforce $49/mo for margin leverage.</em></p>
+            </div>
+
+            <div class="section">
+                <h3>Technical Fragility Redefined</h3>
+                <p><strong>Shift:</strong> v1 feared IP blocks from raw scraping. v2 knows Decodo handles the scraping, but identified a <strong>Single Point of Failure</strong> (no fallback transcript provider built). Also, v2 discovered the app is locked to Haiku (`COMMERCIAL_TRIAL_MODE`) and the RAG tables are completely empty.</p>
+            </div>
+
+            <div class="section">
+                <h3>The Stripe Rip-and-Replace</h3>
+                <p><strong>Shift:</strong> v1 treated switching to an MoR (Paddle) as an administrative application. v2 correctly identifies this as a massive engineering rewrite (replacing Stripe SDK, checkout routes, and tier enforcement logic).</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

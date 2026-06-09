@@ -171,6 +171,58 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
         )}
       </div>
 
+      {/* Promos & Rewards (10X Design Port) */}
+      <div
+        style={{
+          padding: 20,
+          borderRadius: 12,
+          border: "1px solid var(--line)",
+          background: "var(--surface)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>
+            Promos & Rewards
+          </h2>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+          <div style={{ padding: 16, borderRadius: 8, background: "rgb(26 31 43 / 0.4)", border: "1px dashed var(--line)" }}>
+             <p style={{ margin: 0, fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-muted)", textTransform: "uppercase" }}>Your Referral Link</p>
+             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                <code style={{ fontSize: 12, color: "var(--accent)" }}>v-intel.app/r/user_{initialData.user.id.slice(0,5)}</code>
+                <button onClick={() => navigator.clipboard.writeText(`https://v-intel.app/r/user_${initialData.user.id.slice(0,5)}`)} style={{ background: "transparent", border: "none", color: "var(--ink-secondary)", cursor: "pointer" }}>
+                  <Icon icon="solar:copy-linear" size={14} />
+                </button>
+             </div>
+          </div>
+          <div style={{ padding: 16, borderRadius: 8, background: "rgb(26 31 43 / 0.4)", border: "1px dashed var(--line)" }}>
+             <p style={{ margin: 0, fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-muted)", textTransform: "uppercase" }}>Active Credits</p>
+             <p style={{ margin: "4px 0 0 0", fontSize: 18, fontWeight: 600, color: "var(--ok)" }}>$0.00</p>
+          </div>
+        </div>
+
+        <div style={{ borderRadius: 8, border: "1px solid var(--line)", overflow: "hidden" }}>
+           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+             <thead style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
+               <tr>
+                 <th style={{ padding: 10, textAlign: "left", color: "var(--ink-muted)" }}>CODE</th>
+                 <th style={{ padding: 10, textAlign: "left", color: "var(--ink-muted)" }}>TYPE</th>
+                 <th style={{ padding: 10, textAlign: "left", color: "var(--ink-muted)" }}>STATUS</th>
+                 <th style={{ padding: 10, textAlign: "right", color: "var(--ink-muted)" }}>ACTION</th>
+               </tr>
+             </thead>
+             <tbody>
+               <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                 <td colSpan={4} style={{ padding: 20, textAlign: "center", color: "var(--ink-muted)", fontStyle: "italic" }}>
+                   No active promo codes or gift cards found.
+                 </td>
+               </tr>
+             </tbody>
+           </table>
+        </div>
+      </div>
+
       {/* Invoice History (PromosTable design clone) */}
       {initialData.invoices && initialData.invoices.length > 0 && (
         <div

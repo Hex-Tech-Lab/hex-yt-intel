@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/><link rel="stylesheet" href="_card.css"/>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+@property --hx-angle { syntax:"<angle>"; initial-value:0deg; inherits:false; }
+@keyframes hx-rotate-ring { to { --hx-angle:360deg; } }
+.row { display:flex; align-items:center; gap:12px; margin-top:16px; flex-wrap:wrap; }
+.btn { display:inline-flex; align-items:center; gap:8px; font-family:var(--font-sans); font-size:14px; font-weight:500; border:none; cursor:pointer; padding:11px 18px; border-radius:8px; }
+.primary { background:var(--accent-strong); color:var(--void); }
+.secondary { background:transparent; color:var(--ink-secondary); border:1px solid var(--line-strong); padding:10px 17px; }
+.disabled { background:var(--accent-strong); color:var(--void); opacity:0.4; cursor:not-allowed; }
+.ring { position:relative; padding:1.5px; border-radius:9px; overflow:hidden; display:inline-flex; }
+.ring .spin { position:absolute; inset:-60%; background:conic-gradient(from var(--hx-angle), transparent 55%, var(--accent) 78%, transparent 92%); animation:hx-rotate-ring 3s linear infinite; }
+.ring .btn { position:relative; }
+.lab { font-family:var(--font-mono); font-size:10px; color:var(--ink-muted); margin-top:7px; }
+.grp { display:flex; flex-direction:column; align-items:flex-start; }
+iconify-icon { font-size:16px; }
+</style></head>
+<body>
+<div class="cap"><span class="i">// </span>buttons</div>
+<div class="row">
+  <div class="grp"><button class="btn primary"><iconify-icon icon="solar:bolt-linear"></iconify-icon>Analyze</button><div class="lab">primary · cyan-600</div></div>
+  <div class="grp"><button class="btn secondary">See a sample<iconify-icon icon="solar:arrow-right-linear"></iconify-icon></button><div class="lab">secondary · hairline</div></div>
+  <div class="grp"><div class="ring"><span class="spin"></span><button class="btn primary"><iconify-icon icon="solar:refresh-linear"></iconify-icon>Analyzing</button></div><div class="lab">loading · scope-ring</div></div>
+  <div class="grp"><button class="btn disabled" disabled><iconify-icon icon="solar:bolt-linear"></iconify-icon>Analyze</button><div class="lab">disabled · 40%</div></div>
+</div>
+</body></html>

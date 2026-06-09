@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/><link rel="stylesheet" href="_card.css"/>
+<style>
+.acc { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:14px; }
+.cell { border-radius:10px; border:1px solid var(--line); overflow:hidden; }
+.chip { height:58px; }
+.meta { padding:8px 10px; }
+.name { font-size:12px; color:var(--ink); font-weight:500; }
+.hex { font-family:var(--font-mono); font-size:10.5px; color:var(--ink-muted); margin-top:2px; }
+.glow { margin-top:14px; height:46px; border-radius:10px; border:1px solid var(--line); background:var(--surface); position:relative; overflow:hidden; display:flex; align-items:center; padding-left:14px; }
+.glow .blob { position:absolute; right:-40px; top:-30px; width:160px; height:160px; border-radius:50%; background:var(--accent-glow); filter:blur(48px); }
+.glow span { font-family:var(--font-mono); font-size:11px; color:var(--ink-secondary); position:relative; }
+</style></head>
+<body>
+<div class="cap"><span class="i">// </span>accent · cyan (the only accent)</div>
+<div class="acc">
+  <div class="cell"><div class="chip" style="background:var(--accent)"></div><div class="meta"><div class="name">accent · 500</div><div class="hex">#06B6D4</div></div></div>
+  <div class="cell"><div class="chip" style="background:var(--accent-strong)"></div><div class="meta"><div class="name">strong · 600</div><div class="hex">#0891B2</div></div></div>
+  <div class="cell"><div class="chip" style="background:var(--accent-ink)"></div><div class="meta"><div class="name">accent-ink · 300</div><div class="hex">#67E8F9</div></div></div>
+</div>
+<div class="glow"><div class="blob"></div><span>accent-glow · rgba(6,182,212,0.40) · blur 60–120px</span></div>
+</body></html>

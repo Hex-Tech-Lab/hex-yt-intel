@@ -1,39 +1,27 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession, getOrCreateStripeCustomer } from '@/lib/stripe';
+import { getBillingProvider } from '@/lib/billing-factory';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { CheckoutSchema } from '@/lib/types/contracts';
 import { guardTraffic, getUserTier } from '@/lib/services/traffic';
 import * as Sentry from '@sentry/nextjs';
 
-interface CheckoutResponse {
-  sessionUrl: string;
-}
-
 export async function POST(request: NextRequest) {
   try {
-    // 1. Auth check
     const supabase = await getSupabaseClientWithAuth();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const userId = user.id;
-    const userEmail = user.email;
+    const userEmail = user.email!;
 
-    if (!userEmail) {
-      return NextResponse.json(
-        { error: 'User email is required' },
-        { status: 400 }
-      );
-    }
+    // 1. Validate request
+    const body = await request.json();
+    const validation = CheckoutSchema.safeParse(body);
+    if (!validation.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
 
-    // 1b. Check rate limits (no quota charge for checkout flow)
+    // 2. Traffic guard (quota)
     const userTier = (await getUserTier(userId)) || 'free';
     const { allowed: trafficAllowed, response: trafficResponse } = await guardTraffic(
       'checkout',
@@ -43,117 +31,38 @@ export async function POST(request: NextRequest) {
       request.headers.get('x-forwarded-for') ?? undefined,
       request.headers.get('user-agent') ?? undefined
     );
+    if (!trafficAllowed && trafficResponse) return trafficResponse;
 
-    if (!trafficAllowed && trafficResponse) {
-      return trafficResponse;
-    }
+    // 3. Determine active provider via switch
+    const provider = getBillingProvider();
+    
+    // 4. Create checkout using active provider
+    const { url, id } = await provider.createCheckout({
+      userId,
+      userEmail,
+      successUrl: validation.data.successUrl,
+      cancelUrl: validation.data.cancelUrl,
+      priceId: provider.type === 'paddle' ? process.env.PADDLE_PRO_PRICE_ID! : process.env.STRIPE_PRO_PRICE_ID!,
+    });
 
-    // 2. Parse and validate request
-    const body = await request.json();
-    const validation = CheckoutSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: 'Invalid request', details: validation.error.flatten() },
-        { status: 400 }
-      );
-    }
+    if (!url && !id) return NextResponse.json({ error: 'Failed to create checkout' }, { status: 500 });
 
-    // 3. Fetch user data from Supabase
-
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, email, name, tier, stripe_customer_id')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (userError || !userData) {
-      return NextResponse.json(
-        { error: 'Failed to fetch user data' },
-        { status: 500 }
-      );
-    }
-
-    // 4. Check if already pro
-    if (userData.tier === 'pro') {
-      return NextResponse.json(
-        { error: 'User already has Pro subscription' },
-        { status: 400 }
-      );
-    }
-
-    // 5. Get or create Stripe customer
-    let customerId = userData.stripe_customer_id;
-    if (!customerId) {
-      customerId = await getOrCreateStripeCustomer(
-        userId,
-        userEmail,
-        userData.name
-      );
-
-      // Update user with Stripe customer ID
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', userId);
-
-      if (updateError) {
-        console.error('[/api/billing/checkout] Failed to update stripe_customer_id:', updateError);
-        return NextResponse.json(
-          { error: 'Failed to create checkout session' },
-          { status: 500 }
-        );
-      }
-    }
-
-    // 6. Create checkout session with userId in metadata
-    const checkoutUrl = await createCheckoutSession(
-      customerId,
-      validation.data.successUrl,
-      validation.data.cancelUrl,
-      userId
-    );
-
-    if (!checkoutUrl) {
-      return NextResponse.json(
-        { error: 'Failed to create checkout session' },
-        { status: 500 }
-      );
-    }
-
-    // 7. Log checkout session creation
+    // 5. Log activity
     await supabase.from('usage_logs').insert({
       user_id: userId,
       action: 'checkout_initiated',
-      metadata: {
-        tier: 'pro',
-        amount: 900,
-        currency: 'usd',
-      },
+      metadata: { provider: provider.type },
       created_at: new Date().toISOString(),
     });
 
-    const response: CheckoutResponse = {
-      sessionUrl: checkoutUrl,
-    };
-
-    return NextResponse.json(response, { status: 200 });
+    return NextResponse.json({ 
+      sessionUrl: url, 
+      checkoutId: id,
+      provider: provider.type 
+    });
   } catch (error) {
     console.error('[/api/billing/checkout] Error:', error);
-    Sentry.captureException(error, {
-      contexts: {
-        api: {
-          endpoint: '/api/billing/checkout',
-          method: 'POST',
-        },
-      },
-      tags: {
-        endpoint: 'billing_checkout',
-        severity: 'high',
-      },
-    });
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    Sentry.captureException(error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

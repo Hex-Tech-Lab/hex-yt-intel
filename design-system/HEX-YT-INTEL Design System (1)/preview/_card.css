@@ -1,0 +1,26 @@
+/* Shared styling for Design System preview specimen cards.
+   Each card links colors_and_type.css then this. Body is the card surface. */
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  padding: 22px 24px;
+  box-sizing: border-box;
+}
+* { box-sizing: border-box; }
+.cap {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.cap .i { color: rgb(6 182 212 / 0.7); }
+.row { display: flex; gap: 14px; align-items: stretch; }
+.col { display: flex; flex-direction: column; }
+.wrap { display: flex; flex-wrap: wrap; gap: 14px; }
+.swatch { border-radius: 10px; border: 1px solid var(--line); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tiny { font-size: 11px; color: var(--ink-muted); }

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HEX-YT-INTEL — Complete Monetization Flow</title>
+  <meta name="ext-resource-dependency" content="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js" data-resource-id="iconifyScript" />
+  <meta name="ext-resource-dependency" content="https://unpkg.com/react@18.3.1/umd/react.development.js" data-resource-id="reactScript" />
+  <meta name="ext-resource-dependency" content="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" data-resource-id="reactDomScript" />
+  <meta name="ext-resource-dependency" content="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" data-resource-id="babelScript" />
+  
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+    :root {
+      --void: #0B0E14;
+      --bg: #11141D;
+      --surface: #1A1F2B;
+      --surface-raised: #1F2533;
+      --card: rgb(15 23 42 / 0.5);
+      --card-quiet: rgb(15 23 42 / 0.4);
+      --line: #1E293B;
+      --line-strong: #334155;
+      --line-faint: rgb(148 163 184 / 0.10);
+      --ink: #E2E8F0;
+      --ink-secondary: #94A3B8;
+      --ink-muted: #64748B;
+      --accent: #06B6D4;
+      --accent-strong: #0891B2;
+      --accent-ink: #67E8F9;
+      --accent-glow: rgb(6 182 212 / 0.40);
+      --ok: #22C55E;
+      --warn: #F59E0B;
+      --err: #EF4444;
+      --info: #06B6D4;
+      --radius-control: 8px;
+      --radius-card: 16px;
+      --radius-pill: 9999px;
+      --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+      --text-11: 11px;
+      --text-12: 12px;
+      --text-14: 14px;
+      --text-16: 16px;
+      --text-18: 18px;
+      --text-24: 24px;
+      --text-30: 30px;
+      --text-36: 36px;
+      --text-48: 48px;
+      --text-60: 60px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --space-16: 64px;
+      --space-20: 80px;
+      --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur-fast: 160ms;
+      --dur-base: 280ms;
+      --dur-slow: 520ms;
+      --z-canvas: 1;
+      --z-content: 10;
+      --z-sticky: 20;
+      --z-dropdown: 30;
+      --z-modal: 40;
+      --z-toast: 50;
+    }
+
+    :root[data-theme="light"] {
+      --void: #ffffff;
+      --bg: #f8fafc;
+      --surface: #f1f5f9;
+      --ink: #0f172a;
+      --ink-secondary: #475569;
+      --ink-muted: #94a3b8;
+      --line: #e2e8f0;
+      --line-strong: #cbd5e1;
+      --accent: #0891b2;
+      --accent-strong: #06b6d4;
+      --accent-ink: #164e63;
+      --ok: #16a34a;
+      --err: #dc2626;
+      --warn: #f59e0b;
+    }
+
+    @property --hx-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+    @keyframes hx-rotate-ring { to { --hx-angle: 360deg; } }
+    @keyframes hx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes hx-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes hx-fade-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes hx-shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); } 20%, 40%, 60%, 80% { transform: translateX(2px); } }
+    @keyframes hx-copy-bounce { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+    .hx-rise { animation: hx-rise 500ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+    .hx-rise-1 { animation-delay: 60ms; }
+    .hx-rise-2 { animation-delay: 120ms; }
+    .hx-rise-3 { animation-delay: 180ms; }
+    .hx-rise-4 { animation-delay: 240ms; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--void); color: var(--ink); font-family: var(--font-sans); }
+    #root { display: flex; flex-direction: column; min-height: 100vh; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; border-bottom: 1px solid var(--line); background: rgb(17 20 29 / 0.7); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 20; }
+    main { flex: 1; padding: 40px 32px; max-width: 1280px; margin: 0 auto; width: 100%; }
+    section { margin-bottom: 48px; }
+    section > h2 { margin-top: 0; margin-bottom: 24px; font-size: 20px; font-weight: 600; }
+    .grid-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .card { padding: 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+    button { font-family: var(--font-sans); border: none; cursor: pointer; transition: all 200ms ease-out; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent-strong); color: var(--void); padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+    .btn-secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+    .theme-toggle { display: flex; gap: 4px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: transparent; }
+    .theme-toggle button { padding: 6px 10px; border-radius: 4px; border: none; background: transparent; color: var(--ink-secondary); font-size: 12px; font-weight: 500; cursor: pointer; }
+    .theme-toggle button.active { background: var(--accent-strong); color: var(--void); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <template id="__bundler_thumbnail" data-bg-color="#0B0E14">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#0B0E14"/>
+      <circle cx="600" cy="300" r="100" fill="#06B6D4" opacity="0.9"/>
+      <circle cx="600" cy="300" r="70" fill="none" stroke="#06B6D4" stroke-width="6" opacity="0.5"/>
+      <rect x="300" y="450" width="600" height="200" fill="#1A1F2B" rx="12"/>
+      <rect x="320" y="470" width="560" height="40" fill="#06B6D4" rx="8" opacity="0.2"/>
+      <rect x="320" y="520" width="560" height="100" fill="#0891B2" rx="8" opacity="0.3"/>
+      <text x="600" y="680" font-family="monospace" font-size="36" font-weight="600" fill="#E2E8F0" text-anchor="middle">HEX·YT·INTEL</text>
+    </svg>
+  </template>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function Icon({ icon, size = 16, style = {} }) {
+      return <iconify-icon icon={icon} style={{ fontSize: size, ...style }} />;
+    }
+
+    function ThemeToggle({ theme, onToggle }) {
+      return (
+        <div className="theme-toggle">
+          <button
+            type="button"
+            onClick={() => onToggle("dark")}
+            className={theme === "dark" ? "active" : ""}
+          >
+            🌙 Dark
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggle("light")}
+            className={theme === "light" ? "active" : ""}
+          >
+            ☀️ Light
+          </button>
+        </div>
+      );
+    }
+
+    function PlanSelector({ plans, selectedId, onSelect }) {
+      return (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+          {plans.map((plan) => {
+            const selected = plan.id === selectedId;
+            return (
+              <button
+                key={plan.id}
+                type="button"
+                onClick={() => onSelect(plan.id)}
+                className={selected ? "hx-rise-1" : "hx-rise-2"}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  padding: 16,
+                  borderRadius: 8,
+                  border: selected ? "2px solid var(--accent)" : "1px solid var(--line)",
+                  background: selected ? "rgb(6 182 212 / 0.10)" : "var(--bg)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>{plan.name}</h3>
+                  {plan.badge && <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 600, letterSpacing: "0.08em", background: "var(--accent-strong)", color: "var(--void)", padding: "2px 6px", borderRadius: 3 }}>{plan.badge}</span>}
+                </div>
+                <p style={{ margin: "0 0 8px 0", fontSize: 12, color: "var(--ink-secondary)" }}>{plan.description}</p>
+                <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "var(--accent)" }}>${plan.price}<span style={{ fontSize: 11, fontWeight: 400, color: "var(--ink-secondary)", marginLeft: 4 }}>/{plan.interval === "monthly" ? "mo" : "yr"}</span></p>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function AddonSelector({ addons, selectedIds, onToggle }) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+          {addons.map((addon, i) => (
+            <label
+              key={addon.id}
+              className={`hx-rise-${(i % 4) + 1}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: 12,
+                borderRadius: 8,
+                border: "1px solid var(--line)",
+                background: "var(--bg)",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.has(addon.id)}
+                onChange={() => onToggle(addon.id)}
+                style={{ width: 18, height: 18, accentColor: "var(--accent)", cursor: "pointer" }}
+              />
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{addon.name}</p>
+                <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "var(--ink-secondary)" }}>{addon.description}</p>
+              </div>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>+${addon.price}</p>
+            </label>
+          ))}
+        </div>
+      );
+    }
+
+    function PromoSection({ promoCode, setPromoCode, promoError, promoSuccess, onApply }) {
+      return (
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              placeholder="Enter promo code (optional)"
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--line)",
+                background: "var(--bg)",
+                color: "var(--ink)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 13,
+                outline: "none",
+              }}
+            />
+            <button
+              type="button"
+              onClick={onApply}
+              disabled={!promoCode.trim()}
+              className="btn-primary"
+            >
+              Apply
+            </button>
+          </label>
+          {promoError && <p style={{ margin: "8px 0 0 0", fontSize: 12, color: "var(--err)", fontFamily: "var(--font-mono)" }}>{promoError}</p>}
+          {promoSuccess && <p style={{ margin: "8px 0 0 0", fontSize: 12, color: "var(--ok)", fontFamily: "var(--font-mono)" }}>✓ {promoSuccess}</p>}
+        </div>
+      );
+    }
+
+    function OrderSummary({ plan, addons, promoDiscount, theme }) {
+      const subtotal = (plan?.price || 0) + addons.reduce((sum, a) => sum + a.price, 0);
+      const total = Math.max(0, subtotal - (promoDiscount || 0));
+
+      return (
+        <div className="card">
+          <h3 style={{ margin: "0 0 12px 0", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Order Summary</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+            {plan && (
+              <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, borderBottom: "1px solid var(--line)" }}>
+                <span>{plan.name} ({plan.interval})</span>
+                <span style={{ fontWeight: 600, color: "var(--ink)" }}>${plan.price}</span>
+              </div>
+            )}
+            {addons.map((addon) => (
+              <div key={addon.id} style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, borderBottom: "1px solid var(--line)" }}>
+                <span>{addon.name}</span>
+                <span style={{ fontWeight: 600, color: "var(--ink)" }}>+${addon.price}</span>
+              </div>
+            ))}
+            {promoDiscount > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, borderBottom: "1px solid var(--line)", color: "var(--ok)" }}>
+                <span>Promo discount</span>
+                <span>-${promoDiscount}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 16, fontWeight: 700, color: "var(--accent)" }}>
+              <span>Total</span>
+              <span>${total}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function BillingSection({ subscription, customerId, onOpenPortal, theme }) {
+      return (
+        <div className="card">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>Current Subscription</h2>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 9999, border: "1px solid var(--line)", background: "rgb(6 182 212 / 0.10)", padding: "4px 11px", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--ok)" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--ok)" }} />
+              Active
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase" }}>Current Plan</p>
+              <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{subscription.plan}</p>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.08em", color: "var(--ink-muted)", textTransform: "uppercase" }}>Next Billing</p>
+              <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{subscription.nextBilling}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenPortal(customerId)}
+            className="btn-secondary"
+            style={{ width: "100%" }}
+          >
+            Manage in Billing Portal
+          </button>
+        </div>
+      );
+    }
+
+    function App() {
+      const [theme, setTheme] = useState("dark");
+      const [selectedPlan, setSelectedPlan] = useState("pro");
+      const [selectedAddons, setSelectedAddons] = useState(new Set());
+      const [promoCode, setPromoCode] = useState("");
+      const [promoError, setPromoError] = useState("");
+      const [promoSuccess, setPromoSuccess] = useState("");
+      const [promoDiscount, setPromoDiscount] = useState(0);
+      const [email, setEmail] = useState("");
+      const [showBilling, setShowBilling] = useState(false);
+
+      useEffect(() => {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("hex-yt-theme", theme);
+      }, [theme]);
+
+      const plans = [
+        { id: "starter", name: "Starter", price: 29, interval: "monthly", description: "For individuals", badge: null },
+        { id: "pro", name: "Pro", price: 99, interval: "monthly", description: "For teams", badge: "POPULAR" },
+      ];
+
+      const addons = [
+        { id: "bulk", name: "Bulk Processing", description: "Up to 100 analyses/day", price: 49 },
+        { id: "rush", name: "Rush Service", description: "Priority queue (15min)", price: 29 },
+        { id: "api", name: "API Access", description: "Direct REST + GraphQL", price: 99 },
+      ];
+
+      const selectedPlanData = plans.find((p) => p.id === selectedPlan);
+      const selectedAddonData = addons.filter((a) => selectedAddons.has(a.id));
+
+      const handlePromoApply = () => {
+        setPromoError("");
+        setPromoSuccess("");
+
+        if (!promoCode.trim()) {
+          setPromoError("Enter a promo code");
+          return;
+        }
+
+        if (promoCode.toUpperCase().startsWith("INVALID")) {
+          setPromoError("Promo code not found or expired");
+          setPromoDiscount(0);
+        } else {
+          setPromoSuccess(`${promoCode} applied! You save $5.`);
+          setPromoDiscount(5);
+        }
+      };
+
+      const handleCheckout = () => {
+        if (!email || !email.includes("@")) {
+          alert("Valid email required");
+          return;
+        }
+        alert(`Checkout for ${selectedPlanData?.name} (${email})\nAddons: ${selectedAddonData.map((a) => a.name).join(", ") || "none"}\nPromo: ${promoCode || "none"}`);
+      };
+
+      const handleOpenPortal = (customerId) => {
+        alert(`Opening Stripe Billing Portal for customer ${customerId}...`);
+      };
+
+      return (
+        <>
+          <header>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: 8, background: "var(--accent-strong)", color: "var(--void)" }}>
+                <Icon icon="solar:graph-up-linear" size={17} />
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
+            </div>
+            <ThemeToggle theme={theme} onToggle={setTheme} />
+          </header>
+
+          <main>
+            {!showBilling ? (
+              <>
+                <section>
+                  <h2>Choose Your Plan</h2>
+                  <PlanSelector plans={plans} selectedId={selectedPlan} onSelect={setSelectedPlan} />
+                </section>
+
+                <section>
+                  <h2>Add Optional Features</h2>
+                  <AddonSelector addons={addons} selectedIds={selectedAddons} onToggle={(id) => {
+                    const newAddons = new Set(selectedAddons);
+                    newAddons.has(id) ? newAddons.delete(id) : newAddons.add(id);
+                    setSelectedAddons(newAddons);
+                  }} />
+                </section>
+
+                <section>
+                  <h2>Have a Promo Code?</h2>
+                  <PromoSection promoCode={promoCode} setPromoCode={setPromoCode} promoError={promoError} promoSuccess={promoSuccess} onApply={handlePromoApply} />
+                </section>
+
+                <section style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24, alignItems: "start" }}>
+                  <div>
+                    <h2>Complete Your Purchase</h2>
+                    <label style={{ display: "flex", flexDirection: "column", marginBottom: 24 }}>
+                      <span style={{ marginBottom: 6, fontSize: 12, fontWeight: 500, color: "var(--ink-muted)" }}>Email for receipt</span>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: 8,
+                          border: "1px solid var(--line)",
+                          background: "var(--bg)",
+                          color: "var(--ink)",
+                          fontFamily: "var(--font-sans)",
+                          fontSize: 13,
+                          outline: "none",
+                        }}
+                      />
+                    </label>
+                    <button type="button" onClick={handleCheckout} className="btn-primary" style={{ width: "100%" }}>
+                      Complete Purchase
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowBilling(true)}
+                      style={{
+                        width: "100%",
+                        marginTop: 12,
+                        padding: "10px 16px",
+                        borderRadius: 8,
+                        border: "1px solid var(--line)",
+                        background: "transparent",
+                        color: "var(--ink-secondary)",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      View Billing (Demo)
+                    </button>
+                  </div>
+                  <OrderSummary plan={selectedPlanData} addons={selectedAddonData} promoDiscount={promoDiscount} theme={theme} />
+                </section>
+              </>
+            ) : (
+              <section>
+                <button
+                  type="button"
+                  onClick={() => setShowBilling(false)}
+                  className="btn-secondary"
+                  style={{ marginBottom: 24 }}
+                >
+                  ← Back to Checkout
+                </button>
+                <BillingSection
+                  subscription={{ plan: selectedPlanData?.name || "Pro", nextBilling: "July 30, 2026" }}
+                  customerId="cus_demo123"
+                  onOpenPortal={handleOpenPortal}
+                  theme={theme}
+                />
+              </section>
+            )}
+          </main>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
