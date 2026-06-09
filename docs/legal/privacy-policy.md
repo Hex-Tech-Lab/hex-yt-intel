@@ -5,7 +5,7 @@
 Hex-YT Intel values your privacy and is committed to protecting your personal data in compliance with global standards, including the General Data Protection Regulation (GDPR) and the California Privacy Rights Act (CPRA). This policy explains our data processing practices, specifically regarding artificial intelligence.
 
 ## 1. Information We Collect
-- **Account Data:** Name, email address, and authentication credentials (securely managed via Supabase).
+- **Account Data:** Name, email address, and authentication credentials (securely managed via encrypted database infrastructure).
 - **Processing Data:** YouTube URLs, text prompts, and metadata submitted for summarization.
 - **Output Data:** The AI-generated transcripts and summaries.
 - **Technical Data:** IP address, browser type, device information, and essential cookies.
@@ -24,12 +24,13 @@ Hex-YT Intel operates as a real-time processing engine, not a permanent archive 
 
 ## 4. AI Model Training & Data Usage
 **We do not use your personal data or submitted video URLs to train our foundational AI models.** 
-When your data is passed to our third-party LLM partners (such as via OpenRouter), it is strictly for the purpose of generating the requested summary. We specifically select and configure API partners whose standard enterprise terms dictate that API inputs and outputs are explicitly excluded from being used to train their models. *(Note for Future Reference: As the company scales, formal Enterprise Data Processing Agreements (DPAs) will be executed to guarantee this compliance).*
+When your data is passed to our third-party LLM partners, it is strictly for the purpose of generating the requested summary. We specifically select and configure API partners whose standard enterprise terms dictate that API inputs and outputs are explicitly excluded from being used to train their models. *(Note for Future Reference: As the company scales, formal Enterprise Data Processing Agreements (DPAs) will be executed to guarantee this compliance).*
 
 ## 5. Third-Party Sharing & International Transfers
-We do not sell your personal data. We share data only with essential service providers:
-- **Infrastructure:** Vercel (Hosting), Cloudflare (Edge routing), Supabase (Database).
-- **AI Processing:** OpenRouter (LLM routing).
+We do not sell your personal data. We share data only with essential service providers categorized as follows:
+- **Cloud Infrastructure & Hosting:** Secure cloud providers and content delivery networks.
+- **Database Management:** Encrypted database and authentication providers.
+- **AI Processing:** Enterprise-grade Large Language Model (LLM) routing partners.
 For EU users, any data transferred outside the European Economic Area (EEA) is protected by Standard Contractual Clauses (SCCs) and appropriate technical safeguards.
 
 ## 6. Automated Decision-Making
