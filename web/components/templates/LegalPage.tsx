@@ -29,9 +29,9 @@ export function LegalPage({ content }: LegalPageProps) {
         <div className="animate-slideInDown">
           <article className="prose prose-invert prose-cyan max-w-none 
             prose-headings:tracking-tight prose-headings:font-semibold
-            prose-h1:text-[36px] prose-h1:mb-8 prose-h1:text-white
-            prose-h2:text-[24px] prose-h2:mt-12 prose-h2:mb-4 prose-h2:text-white/90
-            prose-p:text-[16px] prose-p:leading-relaxed prose-p:text-ink-secondary
+            prose-h1:text-display-md prose-h1:mb-8 prose-h1:text-white
+            prose-h2:text-headline-md prose-h2:mt-12 prose-h2:mb-4 prose-h2:text-white/90
+            prose-p:text-body-base prose-p:leading-relaxed prose-p:text-ink-secondary
             prose-strong:text-white prose-strong:font-semibold
             prose-ul:list-disc prose-ul:pl-6
             prose-li:text-ink-secondary prose-li:my-2

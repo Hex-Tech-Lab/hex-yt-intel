@@ -143,7 +143,7 @@ export default function SavedSearchesPage() {
             {/* Saved Searches List */}
             {filteredSearches.length > 0 && (
               <div className="space-y-4 hx-rise">
-                <div className="text-[11px] font-mono text-ink-muted uppercase tracking-widest mb-4">
+                <div className="text-caption font-mono text-ink-muted uppercase tracking-widest mb-4">
                   {filteredSearches.length} saved item{filteredSearches.length !== 1 ? 's' : ''}
                 </div>
 
@@ -171,7 +171,7 @@ export default function SavedSearchesPage() {
                     </p>
 
                     {/* Metadata */}
-                    <div className="flex flex-wrap gap-2 mb-4 text-[11px] font-mono text-ink-muted">
+                    <div className="flex flex-wrap gap-2 mb-4 text-caption font-mono text-ink-muted">
                       {search.channelTitle && (
                         <span className="inline-block px-2 py-1 bg-void border border-line rounded">
                           {search.channelTitle}
