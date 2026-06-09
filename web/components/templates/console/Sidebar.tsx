@@ -1,6 +1,7 @@
 'use client';
 
 import { Icon } from '@/components/templates/_shared/primitives';
+import Link from 'next/link';
 
 export interface SidebarItem {
   key: string;
@@ -25,30 +26,32 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope }: SidebarProp
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "24px 14px" }}>
       {/* brand */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 10px 32px" }}>
-        <span style={{ 
-          display: "grid", 
-          placeItems: "center", 
-          width: 30, 
-          height: 30, 
-          borderRadius: 8, 
-          background: "var(--accent-strong)", 
-          color: "var(--void)",
-          boxShadow: "0 4px 12px var(--accent-glow)"
-        }}>
-          <Icon icon="solar:graph-up-linear" size={18} />
-        </span>
-        <span style={{ 
-          fontFamily: "var(--font-mono)", 
-          fontSize: 15, 
-          fontWeight: 700, 
-          letterSpacing: "0.02em", 
-          color: "var(--ink)",
-          textShadow: "0 0 20px var(--accent-glow)"
-        }}>
-          HEX{"\u00b7"}YT
-        </span>
-      </div>
+      <Link href="/?v=landing" style={{ textDecoration: 'none', display: 'block' }} className="group">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 10px 32px" }}>
+          <span style={{ 
+            display: "grid", 
+            placeItems: "center", 
+            width: 30, 
+            height: 30, 
+            borderRadius: 8, 
+            background: "var(--accent-strong)", 
+            color: "var(--void)",
+            boxShadow: "0 4px 12px var(--accent-glow)"
+          }}>
+            <Icon icon="solar:graph-up-linear" size={18} />
+          </span>
+          <span style={{ 
+            fontFamily: "var(--font-mono)", 
+            fontSize: 15, 
+            fontWeight: 700, 
+            letterSpacing: "0.02em", 
+            color: "var(--ink)",
+            textShadow: "0 0 20px var(--accent-glow)"
+          }}>
+            HEX{"\u00b7"}YT
+          </span>
+        </div>
+      </Link>
 
       {/* nav */}
       <nav style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
