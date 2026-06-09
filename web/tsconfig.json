@@ -23,7 +23,8 @@
       "@components/*": ["./web/components/*"],
       "@hooks/*": ["./web/hooks/*"],
       "@store/*": ["./web/store/*"],
-      "@api/*": ["./web/app/api/*"]
+      "@api/*": ["./web/app/api/*"],
+      "@design-system/*": ["./design-system/*"]
     },
     "noEmit": true,
     "incremental": true,

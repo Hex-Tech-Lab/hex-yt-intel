@@ -1,59 +1,96 @@
 import plugin from 'tailwindcss/plugin';
 
 /**
- * HEX-YT-INTEL Tailwind Configuration Extensions
- * Drop this into the main tailwind.config.ts or merge with the existing theme.
+ * HEX-YT-INTEL Centralized Design System
+ * This is the SINGLE SOURCE OF TRUTH for design standards.
+ * Consumed by /web and other design-aware packages.
  */
 export const hexYtIntelConfig = {
   theme: {
     extend: {
       colors: {
+        // Semantic Tokens (Obsidian-Escher)
+        primary: '#06B6D4',   // Electric Cyan
+        surface: '#1A1F2B',   // Primary Slate Surface
+        accent: '#06B6D4',    // Brand Hue
+        void: '#0B0E14',      // Deep Backdrop
+        bg: '#11141D',        // App Canvas
+
+        // Extended Palette
         cyan: {
-          DEFAULT: '#06B6D4', // Primary intelligence/extraction action
+          DEFAULT: '#06B6D4',
+          300: '#67E8F9',
+          500: '#06B6D4',
+          600: '#0891B2',
         },
         indigo: {
-          DEFAULT: '#6366F1', // Secondary accents
+          DEFAULT: '#6366F1',
         },
         coral: {
-          DEFAULT: '#FF6B6B', // Alerts and critical flags ONLY
+          DEFAULT: '#FF6B6B',
         },
         slate: {
           950: '#0F172A', // Dark mode background
           900: '#1E293B', // Dark mode surface
           800: '#334155', // Dark mode elevated surface
-          100: '#F1F5F9', // Light mode elevated surface
-          50: '#FAFAFA',  // Light mode background
+          700: '#334155',
+          400: '#94A3B8',
+          200: '#E2E8F0',
+          100: '#F1F5F9',
+          50: '#FAFAFA',
+        },
+        border: {
+          DEFAULT: '#252A38',
+          line: '#1E293B',
+          strong: '#334155',
         },
       },
       fontFamily: {
         display: ['Geist', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       fontSize: {
+        // Semantic Scale
         'display-lg': ['64px', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
         'display-md': ['48px', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '600' }],
-        'headline-lg': ['32px', { lineHeight: '1.2', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'headline-lg': ['36px', { lineHeight: '1.2', letterSpacing: '-0.01em', fontWeight: '600' }],
         'headline-md': ['24px', { lineHeight: '1.2', letterSpacing: '-0.01em', fontWeight: '500' }],
         'body-base': ['16px', { lineHeight: '1.6', letterSpacing: '0px', fontWeight: '400' }],
         'body-sm': ['14px', { lineHeight: '1.6', letterSpacing: '0px', fontWeight: '400' }],
-        'caption': ['13px', { lineHeight: '1.5', letterSpacing: '0px', fontWeight: '400' }],
+        'caption': ['11px', { lineHeight: '1.5', letterSpacing: '0px', fontWeight: '400' }],
+      },
+      borderRadius: {
+        card: '16px',
+        control: '8px',
+        pill: '9999px',
       },
       transitionTimingFunction: {
-        'hex-ease': 'cubic-bezier(0.16, 1, 0.3, 1)', // Snappy, precise ease-out without bounce
+        'hex-ease': 'cubic-bezier(0.16, 1, 0.3, 1)',
       },
-      transitionDuration: {
-        'hex-fast': '150ms',
-        'hex-medium': '300ms',
+      keyframes: {
+        flare: {
+          '0%': { boxShadow: '0 0 0 1px rgba(6, 182, 212, 0.2)' },
+          '50%': { boxShadow: '0 0 0 3px rgba(6, 182, 212, 0.4)' },
+          '100%': { boxShadow: '0 0 0 1px rgba(6, 182, 212, 0.2)' },
+        },
+        slideInDown: {
+          from: { opacity: '0', transform: 'translateY(-12px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        flare: 'flare 2s ease-in-out infinite',
+        slideInDown: 'slideInDown 0.3s ease-out forwards',
       },
       backdropBlur: {
-        'hex-subtle': '6px', // Maps perfectly to the restrained 5-8% visual requirement
+        'hex-subtle': '6px',
       },
     },
   },
   plugins: [
     plugin(function ({ addComponents, addUtilities }) {
-      // Beautiful Shadows Mapping
       addUtilities({
         '.beautiful-shadow-sm': {
           boxShadow: '0 2px 4px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.1)',
@@ -63,13 +100,11 @@ export const hexYtIntelConfig = {
         },
       });
 
-      // Outline Styling Guardrails
       addComponents({
         '.outline-card': {
           border: '1px solid rgba(255, 255, 255, 0.1)',
-        },
-        '.outline-card-light': {
-          border: '1px solid rgba(0, 0, 0, 0.1)',
+          borderRadius: '16px',
+          backgroundColor: 'rgba(15, 23, 42, 0.5)',
         },
       });
     }),
