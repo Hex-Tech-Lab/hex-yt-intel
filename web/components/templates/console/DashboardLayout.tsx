@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { Footer } from '@/components/Footer';
 
 // See /docs/ui/dashboard-layout.md
 
@@ -27,8 +28,11 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
         </header>
 
         <div className="flex-1 overflow-y-auto p-8 px-10 pb-[72px] scroll-smooth">
-          <div className="max-w-[1200px] mx-auto">
-            {children}
+          <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
+            <div className="flex-1">
+              {children}
+            </div>
+            <Footer />
           </div>
         </div>
 

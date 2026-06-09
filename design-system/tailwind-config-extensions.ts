@@ -62,9 +62,10 @@ export const hexYtIntelConfig = {
         'caption': ['11px', { lineHeight: '1.5', letterSpacing: '0px', fontWeight: '400' }],
       },
       borderRadius: {
-        card: '16px',
-        control: '8px',
-        pill: '9999px',
+        none: '0px',
+        card: '0px',     // Banned per AGY/User
+        control: '0px',  // Banned per AGY/User
+        pill: '0px',     // Banned per AGY/User
       },
       transitionTimingFunction: {
         'hex-ease': 'cubic-bezier(0.16, 1, 0.3, 1)',
@@ -87,10 +88,10 @@ export const hexYtIntelConfig = {
       backdropBlur: {
         'hex-subtle': '6px',
       },
-    },
-  },
-  plugins: [
-    plugin(function ({ addComponents, addUtilities }) {
+      },
+      },
+      plugins: [
+      plugin(function ({ addComponents, addUtilities }) {
       addUtilities({
         '.beautiful-shadow-sm': {
           boxShadow: '0 2px 4px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.1)',
@@ -98,15 +99,24 @@ export const hexYtIntelConfig = {
         '.beautiful-shadow-lg': {
           boxShadow: '0 4px 8px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.12), 0 16px 32px rgba(0,0,0,0.15)',
         },
+        '.cyan-glow': {
+          boxShadow: '0 0 20px rgba(6, 182, 212, 0.2), 0 0 40px rgba(6, 182, 212, 0.1)',
+        },
+        '.clip-tessellate': {
+          clipPath: 'polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%)',
+        },
+        '.clip-tessellate-reverse': {
+          clipPath: 'polygon(0% 0%, 95% 0%, 100% 100%, 5% 100%)',
+        },
       });
 
       addComponents({
         '.outline-card': {
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
+          borderRadius: '0px',
           backgroundColor: 'rgba(15, 23, 42, 0.5)',
         },
       });
-    }),
-  ],
-};
+      }),
+      ],
+      };
