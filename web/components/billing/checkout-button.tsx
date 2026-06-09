@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Icon } from '@/components/templates/_shared/primitives';
 
 interface CheckoutButtonProps {
   isLoading: boolean;
@@ -15,8 +16,7 @@ export function CheckoutButton({ isLoading, setIsLoading }: CheckoutButtonProps)
     setIsLoading(true);
 
     try {
-      // Get safe URL for redirect
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://hex-yt-intel.vercel.app';
+      const baseUrl = window.location.origin;
       const successUrl = `${baseUrl}/billing?success=true`;
       const cancelUrl = `${baseUrl}/pricing?canceled=true`;
 
@@ -47,20 +47,32 @@ export function CheckoutButton({ isLoading, setIsLoading }: CheckoutButtonProps)
     }
   };
 
+  if (isLoading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+        <div style={{ position: "relative", padding: 1.5, borderRadius: 9, overflow: "hidden", display: "inline-flex", width: "100%" }}>
+          <span style={{ position: "absolute", inset: "-60%", background: "conic-gradient(from var(--hx-angle), transparent 55%, var(--accent) 78%, transparent 92%)", animation: "hx-rotate-ring 3s linear infinite" }} />
+          <button
+            disabled
+            style={{ position: "relative", width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 500, border: "none", cursor: "not-allowed", padding: "11px 18px", borderRadius: 8, background: "var(--accent-strong)", color: "var(--void)" }}
+          >
+            <Icon icon="solar:refresh-linear" size={16} />
+            Analyzing
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", width: "100%" }}>
       <button
         onClick={handleCheckout}
-        disabled={isLoading}
-        className={`px-4 py-2 rounded-lg font-semibold transition ${
-          isLoading
-            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-            : 'bg-blue-600 text-white hover:bg-blue-700'
-        }`}
+        style={{ width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 500, border: "none", cursor: "pointer", padding: "11px 18px", borderRadius: 8, background: "var(--accent-strong)", color: "var(--void)" }}
       >
-        {isLoading ? 'Processing...' : 'Upgrade to Pro'}
+        Get started
       </button>
-      {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+      {error && <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--err)", marginTop: 7 }}>{error}</div>}
     </div>
   );
 }

@@ -3,86 +3,160 @@
 import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
+import { Icon, MonoLabel } from '@/components/templates/_shared/primitives';
 
 interface LegalPageProps {
   content: string;
 }
 
 export function LegalPage({ content }: LegalPageProps) {
+  // Clean content for rendering (strip the title and date if we are rendering them custom)
+  // But standard ReactMarkdown is fine if we style it perfectly.
+  
   return (
-    <div className="min-h-screen bg-black text-ink selection:bg-accent/30 font-sans overflow-x-hidden">
-      {/* Subtle background element to match LandingThree feel */}
+    <div className="min-h-screen bg-[#0B0E14] text-[#E2E8F0] selection:bg-[#06B6D430] font-sans">
+      {/* Brand Aesthetic Background */}
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_-20%,#06B6D415,transparent_50%)] pointer-events-none" />
       
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black/70 backdrop-blur-md border-b border-line-faint h-16">
-        <div className="max-w-[1200px] mx-auto h-full px-6 flex items-center justify-between">
-          <Link href="/?v=landing" className="flex items-center gap-3 text-lg font-semibold tracking-tight text-accent hover:opacity-80 transition-opacity">
-            <div className="w-6 h-6 bg-accent clip-tessellate" />
-            <span>hex-yt-intel</span>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#11141DCC] backdrop-blur-xl border-b border-[#1E293B]">
+        <div className="max-w-[1200px] mx-auto h-16 px-8 flex items-center justify-between">
+          <Link href="/?v=landing" className="flex items-center gap-3 group">
+            <span className="flex items-center justify-center w-7 h-7 bg-[#0891B2] text-[#0B0E14] rounded-lg shadow-[0_4px_12px_rgba(6,182,212,0.4)] transition-transform group-hover:scale-105">
+              <Icon icon="solar:graph-up-linear" size={18} />
+            </span>
+            <span className="font-mono text-[15px] font-bold tracking-[0.04em] text-[#E2E8F0]">
+              HEX{"\u00b7"}YT{"\u00b7"}INTEL
+            </span>
           </Link>
-          <nav className="flex gap-6 text-sm text-ink-secondary">
-            <Link href="/terms-and-conditions" className="hover:text-accent transition-colors">Terms</Link>
-            <Link href="/privacy-policy" className="hover:text-accent transition-colors">Privacy</Link>
-            <Link href="/refund-policy" className="hover:text-accent transition-colors">Refunds</Link>
+          <nav className="flex gap-8 text-[11px] font-mono uppercase tracking-[0.12em] text-[#94A3B8]">
+            <Link href="/pricing" className="hover:text-[#06B6D4] transition-colors">Pricing</Link>
+            <Link href="/terms-and-conditions" className="hover:text-[#06B6D4] transition-colors">Terms</Link>
+            <Link href="/privacy-policy" className="hover:text-[#06B6D4] transition-colors">Privacy</Link>
           </nav>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-4xl mx-auto px-6 pt-40 pb-32">
-        <div className="animate-slideInDown">
-          <article className="prose prose-invert prose-cyan max-w-none 
-            prose-headings:tracking-tight prose-headings:font-semibold
-            prose-h1:text-headline-lg prose-h1:mb-16 prose-h1:text-white
-            prose-h2:text-headline-md prose-h2:mt-24 prose-h2:mb-8 prose-h2:text-white/90
-            prose-p:text-body-base prose-p:leading-relaxed prose-p:text-ink-secondary prose-p:my-10
-            prose-strong:text-white prose-strong:font-semibold
-            prose-ul:list-disc prose-ul:pl-8 prose-ul:my-10
-            prose-li:text-ink-secondary prose-li:my-5
-            prose-a:text-accent hover:prose-a:text-accent-ink transition-colors
-            prose-table:border-collapse prose-table:my-12 prose-th:border prose-th:border-line-strong prose-th:bg-surface-raised prose-th:p-4 prose-td:border prose-td:border-line prose-td:p-4">
-            <ReactMarkdown>{content}</ReactMarkdown>
-          </article>
+      <main className="relative z-10 max-w-[1280px] mx-auto px-8 pt-40 pb-32">
+        <div className="max-w-[800px]">
+          {/* Breadcrumbs & Title Section */}
+          <div className="mb-16 animate-hx-rise">
+             <div className="flex items-center gap-2 mb-6">
+                <Link href="/?v=landing" className="text-[11px] font-mono uppercase tracking-widest text-[#64748B] hover:text-[#06B6D4] transition-colors">Home</Link>
+                <span className="text-[#334155] font-mono text-[10px]">/</span>
+                <span className="text-[11px] font-mono uppercase tracking-widest text-[#06B6D4]">Legal</span>
+             </div>
+
+             <MonoLabel index="//" className="mb-4">Internal Register</MonoLabel>
+             
+             {/* Note: The Markdown usually starts with an H1, we let it render but we control the spacing */}
+             <div className="prose-container">
+                <article className="prose prose-invert prose-cyan max-w-none">
+                  <ReactMarkdown>{content}</ReactMarkdown>
+                </article>
+             </div>
+          </div>
         </div>
       </main>
 
       <Footer />
 
-      {/* Aggressive spacing overrides using global CSS block */}
+      {/* 
+        PIXEL-PERFECT DESIGN SYSTEM INJECTION
+        Directly mapping from colors_and_type.css and motion.css specs
+      */}
       <style dangerouslySetInnerHTML={{ __html: `
-        .prose p {
-          margin-top: 2.5rem !important;
-          margin-bottom: 2.5rem !important;
-          line-height: 1.8 !important;
-          display: block !important;
+        @keyframes hx-rise { 
+          from { opacity: 0; transform: translateY(12px); } 
+          to { opacity: 1; transform: translateY(0); } 
         }
+        .animate-hx-rise { animation: hx-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+        /* Typography Hardening */
         .prose h1 {
-          margin-bottom: 3.5rem !important;
-          font-size: 2.5rem !important;
-          display: block !important;
+          font-family: var(--font-sans);
+          font-weight: 500;
+          font-size: 48px !important;
+          line-height: 1.05 !important;
+          letter-spacing: -0.02em !important;
+          margin-bottom: 12px !important;
+          color: #E2E8F0 !important;
         }
+
+        /* Last Updated Styling (immediately follows H1 usually) */
+        .prose p:first-of-type strong {
+          color: #94A3B8 !important;
+          font-family: var(--font-mono);
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
         .prose h2 {
-          margin-top: 4.5rem !important;
-          margin-bottom: 2rem !important;
-          font-size: 1.75rem !important;
-          display: block !important;
+          font-family: var(--font-sans);
+          font-weight: 500;
+          font-size: 24px !important;
+          margin-top: 64px !important;
+          margin-bottom: 24px !important;
+          color: #E2E8F0 !important;
+          border-bottom: 1px solid #1E293B;
+          padding-bottom: 12px;
         }
+
+        .prose p {
+          font-family: var(--font-sans);
+          font-size: 16px !important;
+          line-height: 1.6 !important;
+          color: #E2E8F0 !important;
+          margin-top: 1.5rem !important;
+          margin-bottom: 1.5rem !important;
+          max-width: 72ch;
+        }
+
+        .prose strong { color: #ffffff !important; font-weight: 600; }
+        
         .prose ul, .prose ol {
-          margin-top: 2rem !important;
-          margin-bottom: 2rem !important;
-          display: block !important;
-          list-style-type: disc !important;
-          padding-left: 2.5rem !important;
+          margin-top: 1.5rem !important;
+          margin-bottom: 1.5rem !important;
+          padding-left: 1.5rem !important;
         }
+
         .prose li {
-          margin-top: 1rem !important;
-          margin-bottom: 1rem !important;
-          display: list-item !important;
+          margin-top: 0.75rem !important;
+          margin-bottom: 0.75rem !important;
+          color: #94A3B8 !important;
         }
+
+        .prose a {
+          color: #06B6D4 !important;
+          text-decoration: none !important;
+          border-bottom: 1px solid transparent;
+          transition: border-color 0.2s;
+        }
+        .prose a:hover { border-color: #06B6D4; }
+
+        /* Tables - Obsidian Style */
         .prose table {
-          margin-top: 3rem !important;
-          margin-bottom: 3rem !important;
           width: 100% !important;
           border-collapse: collapse !important;
+          margin: 32px 0 !important;
+          font-size: 13px !important;
+          background: rgba(26, 31, 43, 0.4);
+          border: 1px solid #1E293B;
+        }
+        .prose th {
+          background: #1A1F2B !important;
+          color: #94A3B8 !important;
+          font-family: var(--font-mono);
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          padding: 12px 16px !important;
+          text-align: left !important;
+          border: 1px solid #1E293B !important;
+        }
+        .prose td {
+          padding: 12px 16px !important;
+          border: 1px solid #1E293B !important;
+          color: #E2E8F0 !important;
         }
       `}} />
     </div>

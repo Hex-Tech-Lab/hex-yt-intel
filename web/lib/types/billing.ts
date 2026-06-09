@@ -1,49 +1,26 @@
+/**
+ * BILLING ARCHITECTURE LAW (2026-06-08)
+ * -------------------------------------
+ * Standard interface for all payment providers (Paddle, Stripe, LemonSqueezy).
+ * Allows switching providers with a single environment variable change.
+ */
+
 export type UserTier = 'free' | 'pro' | 'enterprise';
 
-export interface UserBillingData {
-  id: string;
-  email: string;
-  name: string | null;
-  tier: UserTier;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
-  analyses_used: number;
-  last_reset_date: string;
-  created_at: string;
-  updated_at: string;
+export type BillingProviderType = 'paddle' | 'stripe' | 'lemonsqueezy';
+
+export interface CheckoutOptions {
+  userId: string;
+  userEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+  priceId: string;
 }
 
-export interface SubscriptionStatus {
-  status: 'active' | 'inactive' | 'canceled' | 'past_due';
-  currentPeriodEnd?: Date;
-  subscriptionId?: string;
-}
-
-export interface CheckoutSessionResponse {
-  sessionUrl: string;
-}
-
-export interface BillingDashboardData {
-  tier: UserTier;
-  analysesUsed: number;
-  analysesLimit: number | null;
-  stripeCustomerId: string | null;
-  subscriptionStatus: SubscriptionStatus | null;
-  invoices: InvoiceData[];
-}
-
-export interface InvoiceData {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  paidAt: Date | null;
-  dueDate: Date | null;
-  invoiceUrl: string;
-}
-
-export interface UsageData {
-  action: string;
-  count: number;
-  lastAction: Date;
+export interface BillingProvider {
+  type: BillingProviderType;
+  createCheckout(options: CheckoutOptions): Promise<{ url: string | null; id: string | null }>;
+  // Future-proofing for unified dashboard
+  getInvoices?(customerId: string): Promise<any[]>;
+  cancelSubscription?(subscriptionId: string): Promise<boolean>;
 }
