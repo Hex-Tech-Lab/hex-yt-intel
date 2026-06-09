@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Icon } from '@/components/templates/_shared/primitives';
 import { STRIPE_PRICING } from '@/lib/stripe';
 import { CheckoutButton } from './checkout-button';
 

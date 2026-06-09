@@ -42,7 +42,7 @@ export default async function PricingPage() {
       <main style={{ flex: 1 }}>
         <section style={{ padding: "60px 32px", maxWidth: 1280, margin: "0 auto", width: "100%" }}>
           <div style={{ maxWidth: "52ch", marginBottom: 48 }}>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>// Plans</p>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// Plans"}</p>
             <h2 className="hx-h2" style={{ marginTop: 12 }}>Simple, transparent pricing.</h2>
             <p className="hx-body-lg">Pay for what you use. Cancel anytime.</p>
           </div>
@@ -52,7 +52,7 @@ export default async function PricingPage() {
 
         <section style={{ padding: "60px 32px", maxWidth: 1280, margin: "0 auto", width: "100%", borderTop: "1px solid var(--line)" }}>
           <div style={{ maxWidth: "52ch", marginBottom: 48 }}>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>// FAQ</p>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// FAQ"}</p>
             <h2 className="hx-h2" style={{ marginTop: 12 }}>Frequently Asked Questions</h2>
           </div>
 
