@@ -27,11 +27,11 @@ Hex-YT Intel operates as a real-time processing engine, not a permanent archive 
 When your data is passed to our third-party LLM partners, it is strictly for the purpose of generating the requested summary. We specifically select and configure API partners whose standard enterprise terms dictate that API inputs and outputs are explicitly excluded from being used to train their models. *(Note for Future Reference: As the company scales, formal Enterprise Data Processing Agreements (DPAs) will be executed to guarantee this compliance).*
 
 ## 5. Third-Party Sharing & International Transfers
-We do not sell your personal data. We share data only with essential service providers categorized as follows:
-- **Cloud Infrastructure & Hosting:** Secure cloud providers and content delivery networks.
-- **Database Management:** Encrypted database and authentication providers.
-- **AI Processing:** Enterprise-grade Large Language Model (LLM) routing partners.
-For EU users, any data transferred outside the European Economic Area (EEA) is protected by Standard Contractual Clauses (SCCs) and appropriate technical safeguards.
+We do not sell your personal data. We share data only with essential service providers necessary for our core operations:
+- **Core Infrastructure:** Cloud hosting, content delivery, and managed database services.
+- **AI Synthesis:** Third-party Large Language Model (LLM) interface providers.
+
+For a full list of our current sub-processors, their functions, and locations, please visit our [Sub-processor Disclosure Page](/legal/sub-processors). For EEA users, all transfers are protected by Standard Contractual Clauses (SCCs).
 
 ## 6. Automated Decision-Making
 Hex-YT Intel utilizes AI to generate summaries, but we do not engage in automated decision-making or profiling that produces legal or similarly significant effects concerning you.
