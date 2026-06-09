@@ -14,7 +14,7 @@ export function LegalPage({ content }: LegalPageProps) {
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/70 backdrop-blur-md border-b border-line-faint">
         <div className="max-w-[1200px] mx-auto h-16 px-6 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 text-lg font-semibold tracking-tight text-accent hover:opacity-80 transition-opacity">
-            <div className="w-6 h-6 bg-gradient-to-br from-accent to-sky-400" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 80%, 80% 100%, 0 100%)' }} />
+            <div className="w-6 h-6 bg-cyan-electric clip-tessellate" />
             <span>hex-yt-intel</span>
           </Link>
           <nav className="flex gap-6 text-sm text-ink-secondary">
