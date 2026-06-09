@@ -94,7 +94,7 @@ export function LandingPage() {
         {/* Footer */}
         <footer className="relative z-10 border-t border-cyan-500/10 px-6 py-12 bg-black/50 backdrop-blur-md">
           <div className="max-w-[1200px] mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
               <div className="flex flex-col gap-4">
                 <div className="text-sm font-semibold text-cyan-500 uppercase tracking-wider">Product</div>
                 {['Analyzer', 'Dashboard', 'API'].map((item) => (
@@ -111,6 +111,13 @@ export function LandingPage() {
                     {item}
                   </a>
                 ))}
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="text-sm font-semibold text-cyan-500 uppercase tracking-wider">Legal</div>
+                <a href="/terms-and-conditions" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">Terms of Service</a>
+                <a href="/privacy-policy" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">Privacy Policy</a>
+                <a href="/refund-policy" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">Refund Policy</a>
               </div>
             </div>
 

@@ -27,3 +27,7 @@ docs/specs/.env_*
 .wrangler/
 # Binary design-system exports (source-of-truth lives as extracted .tsx/.css)
 design-system/*.zip
+
+# Private agent skills
+.gemini/skills/
+docs/skills/
