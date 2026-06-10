@@ -17,10 +17,10 @@ packages:
 # - "esbuild": Pinned to "^0.25.0" to resolve a dev server vulnerability. This is safe as it's only 
 #   used in the worker/package.json build script for basic ESM bundling without dev server/watch mode features.
 overrides:
-  "@types/react": "^19.2.0"
-  "@types/react-dom": "^19.2.0"
+  "@types/react": "^19.2.17"
+  "@types/react-dom": "^19.2.3"
   "postcss": "^8.4.49"
-  "esbuild": "^0.25.0"
+  "esbuild": "^0.28.0"
 
 allowBuilds:
   "@sentry/cli": true
