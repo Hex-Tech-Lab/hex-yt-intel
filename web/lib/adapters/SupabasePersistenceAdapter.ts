@@ -185,6 +185,24 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       });
       throw error;
     }
+
+    // NEW: Persist Knowledge Graph data if payload exists
+    if (params.analysisPayload && params.analysisPayload.knowledgeGraph) {
+      await this.persistKnowledgeGraph({
+        analysisId: params.analysisId,
+        entities: params.analysisPayload.knowledgeGraph.nodes.map(n => ({
+          label: n.label,
+          type: n.entityType || 'concept',
+          weight: n.weight || 1
+        })),
+        relations: params.analysisPayload.knowledgeGraph.edges.map(e => ({
+          source: e.source,
+          target: e.target,
+          relation: e.kind || 'related',
+          strength: e.strength || 1
+        }))
+      });
+    }
   }  async getUserHistory(params: { userId: string }): Promise<Array<{
     id: string;
     videoId: string;

@@ -7,11 +7,12 @@ export interface AnalysisHeroProps {
   status: SynthesisStatus;
   onUrlChange: (url: string) => void;
   onAnalyze: () => void;
+  onReanalyze: () => void;
   error?: string;
   quota?: string;
 }
 
-export function AnalysisHero({ url, status, onUrlChange, onAnalyze, error, quota }: AnalysisHeroProps) {
+export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze, error, quota }: AnalysisHeroProps) {
   const streaming = status === "streaming";
   const disabled = streaming || !url || url.trim().length === 0;
 
@@ -76,35 +77,60 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, error, quota
                   color: "var(--ink)" 
                 }}
               />
-              <button
-                type="button"
-                onClick={onAnalyze}
-                disabled={disabled}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 10,
-                  borderRadius: 10,
-                  border: "none",
-                  background: streaming ? "var(--bg)" : "var(--accent-strong)",
-                  color: streaming ? "var(--accent)" : "var(--void)",
-                  padding: "12px 20px",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: disabled ? "not-allowed" : "pointer",
-                  opacity: disabled && !streaming ? 0.4 : 1,
-                  transition: "all var(--dur-fast)",
-                  boxShadow: streaming ? "none" : "0 4px 14px var(--accent-glow)"
-                }}
-              >
-                <Icon 
-                  icon={streaming ? "solar:refresh-linear" : "solar:bolt-linear"} 
-                  size={16} 
-                  className={streaming ? "hx-anispin" : ""} 
-                />
-                {streaming ? "Analyzing" : "Analyze"}
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                {status === "done" && (
+                  <button
+                    type="button"
+                    onClick={onReanalyze}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      borderRadius: 10,
+                      border: "1px solid var(--line)",
+                      background: "transparent",
+                      color: "var(--ink-secondary)",
+                      padding: "12px 16px",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 14,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      transition: "all var(--dur-fast)",
+                    }}
+                  >
+                    <Icon icon="solar:refresh-linear" size={16} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onAnalyze}
+                  disabled={disabled}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 10,
+                    borderRadius: 10,
+                    border: "none",
+                    background: streaming ? "var(--bg)" : "var(--accent-strong)",
+                    color: streaming ? "var(--accent)" : "var(--void)",
+                    padding: "12px 20px",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    opacity: disabled && !streaming ? 0.4 : 1,
+                    transition: "all var(--dur-fast)",
+                    boxShadow: streaming ? "none" : "0 4px 14px var(--accent-glow)"
+                  }}
+                >
+                  <Icon 
+                    icon={streaming ? "solar:refresh-linear" : "solar:bolt-linear"} 
+                    size={16} 
+                    className={streaming ? "hx-anispin" : ""} 
+                  />
+                  {streaming ? "Analyzing" : "Analyze"}
+                </button>
+              </div>
             </div>
           </GlowBorder>
         </CornerFrame>

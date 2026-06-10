@@ -108,9 +108,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     }
   };
 
-  const handleAnalyze = useCallback(async () => {
+  const handleAnalyze = useCallback(async (force = false) => {
     if (!url) return;
-    await startAnalysis(url, getUserTimezone());
+    await startAnalysis(url, getUserTimezone(), force);
   }, [url, startAnalysis]);
 
   const handleExport = useCallback((format: 'pdf' | 'markdown') => {
@@ -227,7 +227,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             url={url}
             status={store.status === 'analyzing' || store.status === 'downloading' ? 'streaming' : store.status === 'complete' ? 'done' : store.status === 'error' ? 'error' : 'idle'}
             onUrlChange={setUrl}
-            onAnalyze={handleAnalyze}
+            onAnalyze={() => handleAnalyze()}
+            onReanalyze={() => handleAnalyze(true)}
             error={store.error?.message}
             quota={quotaLabel}
           />
