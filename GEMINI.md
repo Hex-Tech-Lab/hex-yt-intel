@@ -108,7 +108,11 @@ Before writing any file mutations, running automated pipeline pushes, or executi
 
 ### Preflight Verification Checklist
 
-Before EVERY code mutation or pipeline operation:
+Before EVERY code mutation or pipeline operation, execute the following:
+
+0. **Check the Agent Ledger**:
+   - `cat .memory/AGENT_LEDGER.md` — Read the ledger to ensure no other agent is actively modifying your target files.
+   - Update the ledger line-by-line: Add your `[IN_PROGRESS]` intent and close it to `[DONE]` when finished.
 
 1. **For Source Code Changes**:
    - `git status` — Confirm working tree state (nothing uncommitted from other agents)

@@ -23,7 +23,16 @@ The platform utilizes a multi-cloud hybrid flow:
 
 ---
 
-## 2. THE ADR LEDGER (Architectural Decision Records)
+## 2. SHARED COMMUNICATION PROTOCOL (.memory/AGENT_LEDGER.md)
+
+To enable high concurrency without toe-stepping, all agents MUST use the shared ledger:
+1. **Read**: View `.memory/AGENT_LEDGER.md` before starting any task or file mutation to avoid active files.
+2. **Write**: Append an `[IN_PROGRESS]` line specifying your intent, target files, and timestamp.
+3. **Update**: Change your line to `[DONE]` when the task is complete.
+
+---
+
+## 3. THE ADR LEDGER (Architectural Decision Records)
 
 | ADR | Date | Title | Status |
 |---|---|---|---|
