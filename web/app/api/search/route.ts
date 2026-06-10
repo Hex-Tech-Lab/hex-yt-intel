@@ -2,8 +2,8 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Index } from '@upstash/vector';
-import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { guardTraffic, getUserTier } from '@/lib/services/traffic';
+import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
+import { guardTraffic } from '@/lib/services/traffic';
 import { ERROR_CODES } from '@/lib/error-codes';
 import { generateEmbedding } from '@/lib/embeddings';
 import * as Sentry from '@sentry/nextjs';
@@ -58,11 +58,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Authentication check
-    const supabase = await getSupabaseClientWithAuth();
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
+    const authAdapter = new SupabaseAuthAdapter();
+    const identity = await authAdapter.authenticate();
 
-    if (!userId) {
+    if (!identity) {
       const errorCode = ERROR_CODES.AUTH_UNAUTHORIZED;
       Sentry.captureMessage('Search: Authentication check failed', {
         level: 'warning',
@@ -73,14 +72,14 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    const { userId, email: userEmail, tier: userTier } = identity;
 
     // 3. Rate limiting check
-    const userTier = (await getUserTier(userId)) || 'free';
     const { allowed: trafficAllowed, response: trafficResponse, headers: trafficHeaders } = await guardTraffic(
       'search',
       userId,
       userTier,
-      user?.email,
+      userEmail,
       request.headers.get('x-forwarded-for') ?? undefined,
       request.headers.get('user-agent') ?? undefined
     );
@@ -123,28 +122,27 @@ export async function POST(request: NextRequest) {
     console.log('[search] 4. Vector search completed', { resultCount: searchResults.length });
 
     // 6. Fetch full analysis data from Supabase for each result
+    const persistenceAdapter = new SupabasePersistenceAdapter();
     const enrichedResults = await Promise.all(
       searchResults.map(async (result) => {
         try {
           const analysisId = result.metadata?.analysisId as string | undefined;
           if (!analysisId) return null;
 
-          const { data, error } = await supabase
-            .from('analyses')
-            .select('id, title, analysis_markdown, video_id, created_at')
-            .eq('id', analysisId)
-            .eq('user_id', userId)
-            .maybeSingle();
+          const data = await persistenceAdapter.findAnalysisById({
+            userId,
+            analysisId,
+          });
 
-          if (error || !data) return null;
+          if (!data) return null;
 
           return {
             analysisId: data.id,
             title: data.title,
-            videoId: data.video_id,
-            excerpt: data.analysis_markdown?.substring(0, 200),
+            videoId: data.videoId,
+            excerpt: data.analysisMarkdown?.substring(0, 200),
             score: result.score,
-            createdAt: data.created_at,
+            createdAt: data.createdAt,
           };
         } catch (err) {
           console.warn('[search] Failed to enrich result:', err);

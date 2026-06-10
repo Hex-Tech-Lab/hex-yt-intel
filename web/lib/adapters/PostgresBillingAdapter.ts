@@ -1,8 +1,8 @@
 import { chargeMonthlyQuota, refundMonthlyQuota } from '@/lib/services/billing';
-import type { IQuotaPort, QuotaGateResult } from '@/lib/ports/IQuotaPort';
+import type { QuotaGateResult, BillingQuotaPort } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
 
-export class PostgresBillingAdapter implements IQuotaPort {
+export class PostgresBillingAdapter implements BillingQuotaPort {
   async checkGate(params: {
     userId: string;
     tier: UserTier;

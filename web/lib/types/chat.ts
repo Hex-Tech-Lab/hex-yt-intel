@@ -8,6 +8,7 @@ export type ChatRole = 'user' | 'assistant' | 'system';
 
 export interface ChatConversation {
   id: string;
+  userId: string;
   title: string;
   /** Optional analysis this thread is grounded in (nullable = general chat). */
   analysisId: string | null;

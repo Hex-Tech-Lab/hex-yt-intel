@@ -6,11 +6,11 @@
  * Config-only (url + token): no request-scoped mutable state, safe to share.
  */
 
-import type { IPersistenceRepository } from '../ports/IPersistenceRepository';
+import type { PersistenceRepositoryPort } from '../ports/PersistenceRepositoryPort';
 
 const DEFAULT_TTL_SECONDS = 604800; // 7 days
 
-export class UpstashCacheAdapter implements IPersistenceRepository {
+export class UpstashCacheAdapter implements PersistenceRepositoryPort {
   private url: string;
   private token: string;
 

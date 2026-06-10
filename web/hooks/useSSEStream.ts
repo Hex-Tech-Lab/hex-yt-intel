@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
@@ -15,6 +16,15 @@ export function useSSEStream() {
   } = useAnalysisStore();
 
   const { initializeAnalysis: initSynthesis } = useSynthesisNucleus();
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const extractTelemetryId = (urlStr: string) => {
     try {
@@ -33,6 +43,12 @@ export function useSSEStream() {
   const startAnalysis = async (url: string, timezone: string, forceRefresh: boolean = false) => {
     const videoId = extractTelemetryId(url);
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const currentSignal = abortControllerRef.current.signal;
 
     return Sentry.startSpan(
       {
@@ -54,6 +70,7 @@ export function useSSEStream() {
               credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ url, timezone, forceRefresh }),
+              signal: currentSignal,
             })
           );
 
@@ -62,13 +79,13 @@ export function useSSEStream() {
             let errorMsg = errorData.message || errorData.error || `HTTP ${prepRes.status}`;
             let errorCode = errorData.code || 'ERR_REQUEST_FAILED';
             if (prepRes.status === 400 && errorData.details?.fieldErrors) {
-              const fieldErrors = errorData.details.fieldErrors;
-              errorCode = 'ERR_INVALID_REQUEST_SCHEMA';
-              errorMsg = fieldErrors.url
-                ? 'Invalid YouTube URL'
-                : Object.entries(fieldErrors)
-                    .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors[0] : errors}`)
-                    .join('; ') || 'Invalid request';
+               const fieldErrors = errorData.details.fieldErrors;
+               errorCode = 'ERR_INVALID_REQUEST_SCHEMA';
+               errorMsg = fieldErrors.url
+                 ? 'Invalid YouTube URL'
+                 : Object.entries(fieldErrors)
+                     .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors[0] : errors}`)
+                     .join('; ') || 'Invalid request';
             }
             setError({ code: errorCode, status: prepRes.status, message: errorMsg });
             setStatus('error');
@@ -108,11 +125,13 @@ export function useSSEStream() {
           let streamCompleted = false;
           const adapter = new SynthesisStreamAdapter({
             onError: (error) => {
+              if (currentSignal.aborted) return;
               setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: error });
               setStatus('error');
               setIsLoading(false);
             },
             onComplete: () => {
+              if (currentSignal.aborted) return;
               streamCompleted = true;
               setStatus('complete');
               setIsLoading(false);
@@ -140,6 +159,7 @@ export function useSSEStream() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(streamPayload),
+                signal: currentSignal,
               });
 
               if (!res.ok || !res.body) {
@@ -192,6 +212,10 @@ export function useSSEStream() {
             }
           );
         } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            // Quiet abort, do not report or show error
+            return;
+          }
           const errorMsg = error instanceof Error ? error.message : String(error);
           setError({ code: 'ERR_CLIENT_EXCEPTION', status: 0, message: errorMsg });
           setStatus('error');
@@ -200,7 +224,9 @@ export function useSSEStream() {
           // Terminal cleanup: all async work has settled by here. Guarantees the main
           // action button is never left disabled after a partial/interrupted stream,
           // regardless of which exit path ran.
-          setIsLoading(false);
+          if (!currentSignal.aborted) {
+            setIsLoading(false);
+          }
         }
       }
     );

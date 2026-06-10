@@ -20,10 +20,10 @@
  */
 
 import { BracketBuffer } from './BracketBuffer';
-import type { IReasoningEngine, EngineContext, StreamHandlers, StreamResult, ExecuteResult } from '../ports/IReasoningEngine';
-import type { IPromptBuilder } from '../ports/IPromptBuilder';
-import type { ILLMCascade } from '../ports/ILLMCascade';
-import type { IPersistenceRepository } from '../ports/IPersistenceRepository';
+import type { ReasoningEnginePort, EngineContext, StreamHandlers, StreamResult, ExecuteResult } from '../ports/ReasoningEnginePort';
+import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
+import type { LLMCascadePort } from '../ports/LLMCascadePort';
+import type { PersistenceRepositoryPort } from '../ports/PersistenceRepositoryPort';
 import type { ValidationService } from './ValidationService';
 
 // Re-export the shared domain contracts so existing importers (worker.ts) keep
@@ -36,15 +36,15 @@ export type {
   StreamResult,
   ExecuteResult,
   CacheConfig,
-  IReasoningEngine,
-} from '../ports/IReasoningEngine';
+  ReasoningEnginePort,
+} from '../ports/ReasoningEnginePort';
 
-export class ReasoningEngine implements IReasoningEngine {
+export class ReasoningEngine implements ReasoningEnginePort {
   constructor(
-    private promptBuilder: IPromptBuilder,
-    private cascade: ILLMCascade,
+    private promptBuilder: PromptBuilderPort,
+    private cascade: LLMCascadePort,
     private validator: ValidationService,
-    private cache?: IPersistenceRepository
+    private cache?: PersistenceRepositoryPort
   ) {}
 
   /**

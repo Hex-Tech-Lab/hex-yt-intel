@@ -1,15 +1,7 @@
 import type { UserTier } from '@/lib/types/billing';
-import type { IIngestionPort, StreamToken } from '@/lib/ports/IIngestionPort';
+import type { ModelResolutionPort } from '@/lib/ports';
 
-export class SettingsModelAdapter implements IIngestionPort {
-  async fetch(): Promise<never> {
-    throw new Error('Metadata fetch is handled by WorkerIngestionAdapter');
-  }
-
-  detectPersona(): never {
-    throw new Error('Persona detection is handled by WorkerIngestionAdapter');
-  }
-
+export class SettingsModelAdapter implements ModelResolutionPort {
   /** When true, restricts SettingsModelAdapter to Haiku only (commercial trial mode). */
   private static readonly COMMERCIAL_TRIAL_MODE = true;
 
@@ -27,13 +19,5 @@ export class SettingsModelAdapter implements IIngestionPort {
       return Promise.resolve(['anthropic/claude-haiku-4.5']);
     }
     return Promise.resolve(['nvidia/nemotron-3-nano-30b-a3b:free', 'anthropic/claude-haiku-4.5']);
-  }
-
-  signToken(): StreamToken {
-    throw new Error('SettingsModelAdapter: signToken not supported');
-  }
-
-  buildJobMetadata(): never {
-    throw new Error('Metadata building is handled by WorkerIngestionAdapter');
   }
 }
