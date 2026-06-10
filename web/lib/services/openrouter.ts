@@ -24,7 +24,7 @@ export class AnalysisEngineError extends Error {
 const MODEL_TIERS = [
   { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 },  // Tier 0: Paid primary Claude Haiku 4.5
   { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 },  // Tier 1: Paid alternate Claude Haiku 4.5
-  { model: 'anthropic/claude-sonnet-4.6', tier: 'paid', cost: 0.003 },   // Tier 2: Paid emergency fallback Claude Sonnet 4.6
+  { model: 'anthropic/claude-sonnet-4.6:nitro', tier: 'paid', cost: 0.003 },   // Tier 2: Paid emergency fallback Claude Sonnet 4.6 (Nitro)
 ] as const;
 
 /**

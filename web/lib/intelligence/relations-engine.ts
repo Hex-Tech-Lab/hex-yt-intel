@@ -12,8 +12,8 @@ export interface StanceDimension {
 const COMMERCIAL_TRIAL_MODE = true;
 
 const STANCE_MODELS: readonly string[] = COMMERCIAL_TRIAL_MODE
-  ? ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6']
-  : ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6'];
+  ? ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro']
+  : ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro'];
 
 const LLMInsightSchema = z.object({
   kind: z.enum(['tangent', 'contrarian']),

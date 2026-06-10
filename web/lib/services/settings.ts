@@ -28,7 +28,7 @@ const COMMERCIAL_TRIAL_MODE = true;
 
 const FALLBACK: Record<ModelKind, readonly string[]> = {
   chat: ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash'],
-  analysis: ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6'],
+  analysis: ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro'],
 };
 
 interface ModelConfig {
@@ -78,7 +78,7 @@ export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Prom
     if (kind === 'chat') {
       return ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash'];
     }
-    return ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6'];
+    return ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro'];
   }
 
   const cfg = await readModelConfig();
