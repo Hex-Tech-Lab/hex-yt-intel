@@ -1,5 +1,5 @@
 import { chargeMonthlyQuota, refundMonthlyQuota } from '@/lib/services/billing';
-import type { QuotaGateResult, BillingQuotaPort } from '@/lib/ports';
+import type { QuotaGateResult, BillingQuotaPort, QuotaEndpoint } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
 
 export class PostgresBillingAdapter implements BillingQuotaPort {
@@ -7,14 +7,14 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
     userId: string;
     tier: UserTier;
     email?: string;
-    endpoint: 'analyses' | 'search' | 'checkout';
+    endpoint: QuotaEndpoint;
   }): Promise<QuotaGateResult> {
-    const { allowed, response } = await chargeMonthlyQuota(
+    const { allowed } = await chargeMonthlyQuota(
       params.userId,
       params.tier,
       params.email
     );
-    return { allowed, denialResponse: response };
+    return { allowed };
   }
 
   async refund(params: { userId: string; email?: string }): Promise<void> {

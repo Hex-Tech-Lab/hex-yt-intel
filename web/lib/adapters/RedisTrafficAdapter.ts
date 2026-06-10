@@ -1,5 +1,5 @@
 import { guardTraffic } from '@/lib/services/traffic';
-import type { QuotaGateResult, TrafficGuardPort } from '@/lib/ports';
+import type { QuotaGateResult, TrafficGuardPort, QuotaEndpoint } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
 
 export class RedisTrafficAdapter implements TrafficGuardPort {
@@ -7,11 +7,11 @@ export class RedisTrafficAdapter implements TrafficGuardPort {
     userId: string;
     tier: UserTier;
     email?: string;
-    endpoint: 'analyses' | 'search' | 'checkout';
+    endpoint: QuotaEndpoint;
     clientIp?: string;
     userAgent?: string;
   }): Promise<QuotaGateResult> {
-    const { allowed, response, headers } = await guardTraffic(
+    const { allowed, headers } = await guardTraffic(
       params.endpoint,
       params.userId,
       params.tier,
@@ -19,6 +19,6 @@ export class RedisTrafficAdapter implements TrafficGuardPort {
       params.clientIp,
       params.userAgent
     );
-    return { allowed, denialResponse: response, headers };
+    return { allowed, headers };
   }
 }

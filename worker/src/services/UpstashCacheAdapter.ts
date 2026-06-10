@@ -1,7 +1,7 @@
 /**
  * UpstashCacheAdapter - Persistence Adapter (config-only)
  *
- * Implements IPersistenceRepository. The SOLE place Upstash REST `fetch` calls
+ * Implements PersistenceRepositoryPort. The SOLE place Upstash REST `fetch` calls
  * live — core reasoning never touches the Upstash client directly, only this port.
  * Config-only (url + token): no request-scoped mutable state, safe to share.
  */

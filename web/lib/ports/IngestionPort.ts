@@ -1,3 +1,6 @@
+import type { StreamToken } from '@/lib/types/stream-token';
+
+export type { StreamToken };
 
 /** Video metadata fetched from the YouTube/Worker pipeline. */
 export interface VideoMetadata {
@@ -18,10 +21,4 @@ export interface IngestionResult {
   transcript: string;
   /** Whether the transcript was successfully extracted. */
   transcriptAvailable: boolean;
-}
-
-/** The signed streaming token handed to the client for direct browser→worker flow. */
-export interface StreamToken {
-  sig: string;
-  exp: number;
 }

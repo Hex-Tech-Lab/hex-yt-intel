@@ -1,5 +1,5 @@
 /**
- * ILLMCascade — Domain Port (Hexagonal-Lite)
+ * LLMCascadePort — Domain Port (Hexagonal-Lite)
  *
  * The OpenRouter multi-model fallback cascade. Owns model selection and the
  * streaming/non-streaming transport adapters. Stateless / config-only: all

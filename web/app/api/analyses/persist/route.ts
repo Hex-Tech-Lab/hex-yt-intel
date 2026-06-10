@@ -10,6 +10,18 @@ import { publishValidationTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
 
+export interface ValidationReport {
+  status: 'processing' | 'done' | 'interrupted';
+  transcript_available?: boolean;
+  analysis_type?: string;
+  stale_after?: string;
+  metadata?: any;
+  persona?: string;
+  timezone?: string;
+  model_used?: string | null;
+  valid?: boolean;
+}
+
 /**
  * Server-to-server persistence endpoint. The Cloudflare Worker calls this (from
  * ctx.waitUntil, after the stream completes or is interrupted) with the generated
@@ -64,13 +76,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
     }
 
-    const priorReport = (row.validationReport as any) || {};
+    const priorReport = (row.validationReport as ValidationReport) || {};
     const isInterrupted = status === 'interrupted';
 
-    const newReport = {
+    const newReport: ValidationReport = {
       ...priorReport,
       status: isInterrupted ? 'interrupted' : 'done',
-      model_used: model,
+      model_used: model || null,
       valid: isInterrupted ? false : !!valid,
     };
 
@@ -78,10 +90,9 @@ export async function POST(request: NextRequest) {
     await persistenceAdapter.updateAnalysisResult({
       analysisId,
       markdown,
-      payload,
+      payload: payload as any, // Payload is cast to UCISPayloadV2 | null via interface
       model: model || null,
       validationPassed: isInterrupted ? false : !!valid,
-      status: isInterrupted ? 'interrupted' : 'done',
       validationReport: newReport,
     });
 
@@ -99,7 +110,10 @@ export async function POST(request: NextRequest) {
       title: row.title,
       analysis_markdown: markdown,
       analysis_payload: (payload ?? null) as Record<string, unknown> | null,
-      validation_report: priorReport,
+      validation_report: {
+        transcript_available: !!priorReport.transcript_available,
+        analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
+      },
       model_used: model || 'edge-stream',
       created_at: row.createdAt,
       cached_at: new Date().toISOString(),

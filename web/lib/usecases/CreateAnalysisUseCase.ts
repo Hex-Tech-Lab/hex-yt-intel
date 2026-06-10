@@ -22,9 +22,58 @@ export interface CreateAnalysisUseCaseParams {
   userAgent?: string;
 }
 
+export interface CacheHitData {
+  id: string;
+  analysisId: string;
+  videoId: string;
+  status: 'done';
+  title: string;
+  markdown: string;
+  analysis_markdown: string;
+  createdAt: string;
+  analysisAt: string;
+  persona: string;
+  detectedPersona: string;
+  timezone: string;
+  metadata: any;
+  dimensions: Record<string, unknown>;
+  streaming: {
+    started: string;
+    interrupted: boolean;
+    dimensionsReceived: number[];
+  };
+  cacheHit: true;
+  message: string;
+}
+
+export interface ProcessingData {
+  id: string;
+  analysisId: string;
+  videoId: string;
+  status: 'processing';
+  title: string;
+  persona: string;
+  detectedPersona: string;
+  analysisAt: string;
+  timezone: string;
+  transcript: string;
+  metadata: any;
+  models: string[];
+  streaming: {
+    started: string;
+    interrupted: boolean;
+    dimensionsReceived: number[];
+  };
+  stream: {
+    url: string;
+    sig: string;
+    exp: number;
+  };
+}
+
 export type UseCaseResult =
-  | { type: 'cache_hit'; data: any; headers?: Record<string, string> }
-  | { type: 'processing'; data: any; headers?: Record<string, string> }
+  | { type: 'cache_hit'; data: CacheHitData; headers?: Record<string, string> }
+  | { type: 'processing'; data: ProcessingData; headers?: Record<string, string> }
   | { type: 'error'; code: string; status: number; message: string; headers?: Record<string, string> };
 
 export class CreateAnalysisUseCase {

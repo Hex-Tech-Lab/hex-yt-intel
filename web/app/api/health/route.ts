@@ -9,7 +9,7 @@ export async function GET(_request: NextRequest) {
     status: 'ok',
     timestamp: new Date().toISOString(),
     message: 'System operational',
-    version: '1.5.1',
+    version: '1.5.2',
     subsystems: {
       engine: 'healthy',
       vector: 'healthy',
