@@ -20,7 +20,7 @@ export class SettingsModelAdapter implements ModelResolutionPort {
   async resolveModels(tier: UserTier, kind: 'analysis' | 'chat'): Promise<string[]> {
     if (this.commercialTrialMode) {
       if (kind === 'chat') {
-        return ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash'];
+        return ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'openai/gpt-oss-120b', 'google/gemini-2.0-flash'];
       }
       return ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro'];
     }
