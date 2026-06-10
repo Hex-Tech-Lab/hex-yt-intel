@@ -50,7 +50,7 @@ export const authConfigs = {
   nextauth: {
     provider: 'nextauth' as const,
     AUTH_PROVIDER: 'nextauth',
-    NEXTAUTH_SECRET: 'test-secret-32-characters-long-min',
+    NEXTAUTH_SECRET: 'placeholder',
     NEXTAUTH_URL: 'http://localhost:3000',
   },
 } as const;

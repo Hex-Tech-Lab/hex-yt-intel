@@ -10,11 +10,7 @@ import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@
 import { publishValidationTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
-import type { PersistedValidationReport } from '@/lib/types/validation-report';
-
-export function isPersistedValidationReport(obj: unknown): obj is PersistedValidationReport {
-  return typeof obj === 'object' && obj !== null && typeof (obj as any).status === 'string';
-}
+import { PersistedValidationReport, isPersistedValidationReport } from '@/lib/types/validation-report';
 
 /**
  * Server-to-server persistence endpoint. The Cloudflare Worker calls this (from

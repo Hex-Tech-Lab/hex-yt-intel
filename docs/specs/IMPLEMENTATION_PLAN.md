@@ -86,26 +86,26 @@ graph TD
 
 #### Step 2.1: Split IIngestionPort
 * **Target Files**:
-  * [web/lib/ports/IIngestionPort.ts](web/lib/ports/IIngestionPort.ts)
+  * [web/lib/ports/IngestionPort.ts](web/lib/ports/IngestionPort.ts)
   * [web/lib/adapters/WorkerIngestionAdapter.ts](web/lib/adapters/WorkerIngestionAdapter.ts)
 * **Action**:
-  * Create `IMetadataIngestionPort` containing only `fetch()` and `buildJobMetadata()`.
-  * Create `IModelResolutionPort` containing `resolveModels()`.
-  * Create `ICryptographicTokenPort` containing `signToken()`.
-  * Refactor `WorkerIngestionAdapter` to only implement `IMetadataIngestionPort`, removing the throwing methods.
+  * Create `MetadataIngestionPort` containing only `fetch()` and `buildJobMetadata()`.
+  * Create `ModelResolutionPort` containing `resolveModels()`.
+  * Create `CryptographicTokenPort` containing `signToken()`.
+  * Refactor `WorkerIngestionAdapter` to only implement `MetadataIngestionPort`, removing the throwing methods.
   * Move resolution and signing implementations into separate adapter classes cleanly.
 * **Estimated LLM Effort**: 45 minutes.
 
 #### Step 2.2: Split IQuotaPort
 * **Target Files**:
-  * [web/lib/ports/IQuotaPort.ts](web/lib/ports/IQuotaPort.ts)
+  * [web/lib/ports/QuotaPort.ts](web/lib/ports/QuotaPort.ts)
   * [web/lib/adapters/RedisTrafficAdapter.ts](web/lib/adapters/RedisTrafficAdapter.ts)
   * [web/lib/adapters/PostgresBillingAdapter.ts](web/lib/adapters/PostgresBillingAdapter.ts)
 * **Action**:
-  * Create `ITrafficGuardPort` with `checkGate()` for DDoS/rate-limiting.
-  * Create `IBillingQuotaPort` with `checkGate()` and `refund()` for credit transactions.
-  * Refactor `RedisTrafficAdapter` to implement `ITrafficGuardPort` (removing the unused `refund` method).
-  * Refactor `PostgresBillingAdapter` to implement `IBillingQuotaPort`.
+  * Create `TrafficGuardPort` with `checkGate()` for DDoS/rate-limiting.
+  * Create `BillingQuotaPort` with `checkGate()` and `refund()` for credit transactions.
+  * Refactor `RedisTrafficAdapter` to implement `TrafficGuardPort` (removing the unused `refund` method).
+  * Refactor `PostgresBillingAdapter` to implement `BillingQuotaPort`.
 * **Estimated LLM Effort**: 30 minutes.
 
 ---
@@ -126,7 +126,7 @@ graph TD
 
 #### Step 3.3: Refactor route.ts GET Handler
 * **Target File**: [web/app/api/analyses/route.ts](web/app/api/analyses/route.ts)
-* **Action**: Add a `findAnalysesByUserId(userId: string): Promise<CachedAnalysis[]>` method to [IPersistencePort](web/lib/ports/IPersistencePort.ts). Query history through [SupabasePersistenceAdapter](web/lib/adapters/SupabasePersistenceAdapter.ts) instead of writing inline database calls in the GET route.
+* **Action**: Add a `findAnalysesByUserId(userId: string): Promise<CachedAnalysis[]>` method to [PersistencePort](web/lib/ports/PersistencePort.ts). Query history through [SupabasePersistenceAdapter](web/lib/adapters/SupabasePersistenceAdapter.ts) instead of writing inline database calls in the GET route.
 * **Estimated LLM Effort**: 25 minutes.
 
 #### Step 3.4: Reconcile Monorepo Versions

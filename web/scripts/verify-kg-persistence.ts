@@ -3,7 +3,10 @@ import { SupabasePersistenceAdapter } from '../lib/adapters/SupabasePersistenceA
 async function verifyKG() {
   const adapter = new SupabasePersistenceAdapter();
   
-  const mockAnalysisId = '00000000-0000-0000-0000-000000000000'; // Placeholder
+  // NOTE: This script is for development verification only. 
+  // It directly mutates the DB, which violates Law #4 (HMAC S2S mandate).
+  // Use for local schema testing ONLY.
+  const mockAnalysisId = 'test-kg-stub-001'; 
   
   console.log('Testing persistKnowledgeGraph...');
   

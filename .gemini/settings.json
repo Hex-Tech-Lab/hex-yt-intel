@@ -1,0 +1,36 @@
+{
+  "general": {
+    "defaultApprovalMode": "auto_edit",
+    "enableNotifications": true,
+    "notificationMethod": "auto"
+  },
+  "ui": {
+    "inlineThinkingMode": "full",
+    "footer": {
+      "hideContextPercentage": false
+    },
+    "showMemoryUsage": true,
+    "showModelInfoInChat": true,
+    "loadingPhrases": "tips",
+    "errorVerbosity": "full"
+  },
+  "model": {
+    "name": ""
+  },
+  "context": {
+    "loadMemoryFromIncludeDirectories": true
+  },
+  "security": {
+    "enablePermanentToolApproval": true
+  },
+  "experimental": {
+    "voiceMode": true,
+    "voice": {
+      "activationMode": "push-to-talk"
+    },
+    "directWebFetch": false,
+    "autoMemory": true,
+    "generalistProfile": false,
+    "contextManagement": true
+  }
+}

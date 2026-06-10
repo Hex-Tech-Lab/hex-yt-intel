@@ -15,3 +15,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 [IN_PROGRESS] Refactoring billing lifecycle: check quota in UseCase, consume only upon successful persist in route.ts. Target: BillingQuotaPort, PostgresBillingAdapter, CreateAnalysisUseCase, persist/route.ts. (2026-06-10)
 [IN_PROGRESS] Investigating XSS vulnerabilities (alert #42, #43) in design-system/HEX-YT-INTEL Design System (1)/api/monetization.js. (2026-06-10)
 [DONE] Upgraded workspace dependencies and fixed PostgresBillingAdapter type error. Verified via production build. (2026-06-10)
+[DONE] Hardened worker streaming pipeline and relations engine against LLM loops/timeouts using AbortSignals. Verified via build. (2026-06-10)
+[IN_PROGRESS] Addressing PR #62 unaddressed items: localizing adapters, resolving circular imports of validation type-guard, and remediating Snyk hardcoded secrets. Target: web/lib/types/validation-report.ts, web/lib/adapters/SupabasePersistenceAdapter.ts, web/app/api/analyses/persist/route.ts, web/lib/chat/outbox.ts, web/playwright.config.ts, web/.tests-parked-backup/config.ts. (2026-06-10)
+[IN_PROGRESS] Investigating root-level 500 error on preview URL, analyzing Vercel logs, and fixing root page components. (2026-06-10)
+

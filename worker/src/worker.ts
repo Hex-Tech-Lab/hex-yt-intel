@@ -449,8 +449,6 @@ app.post("/analyze-llm-stream", async (c) => {
       try {
         send({ type: 'status', stage: 'starting', videoId: req.videoId });
 
-        // Delegate reasoning to the engine. It emits domain events; we map them to
-        // SSE fragments and mirror finalText/modelUsed for abort-time persistence.
         const result = await engine.executeAndStream(
           {
             metadata: req.metadata,
@@ -470,7 +468,8 @@ app.post("/analyze-llm-stream", async (c) => {
               }
               send({ type: 'status', ...statusEvent });
             },
-          }
+          },
+          c.req.raw.signal
         );
 
         if (!result.produced && !result.finalText) {

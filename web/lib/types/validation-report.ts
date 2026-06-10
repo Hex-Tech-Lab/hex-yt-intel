@@ -9,3 +9,7 @@ export interface PersistedValidationReport {
   model_used?: string | null;
   valid?: boolean;
 }
+
+export function isPersistedValidationReport(obj: unknown): obj is PersistedValidationReport {
+  return typeof obj === 'object' && obj !== null && typeof (obj as any).status === 'string';
+}

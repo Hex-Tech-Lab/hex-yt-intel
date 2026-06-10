@@ -1,18 +1,12 @@
-const { execSync } = require('child_process');
-
 const requiredVars = ['DECODO_API_KEY', 'YOUTUBE_API_KEY', 'CLOUDFLARE_SECRET_TOKEN'];
 
-try {
-  const envOutput = execSync('vercel env list').toString();
+const missing = requiredVars.filter(varName => !process.env[varName]);
 
-  requiredVars.forEach(varName => {
-    if (!envOutput.includes(varName)) {
-      console.error(`❌ FATAL: Production environment missing: ${varName}`);
-      process.exit(1);
-    }
-  });
-  console.log('✅ Infrastructure Validation: All production secrets confirmed.');
-} catch (e) {
-  console.error('❌ Failed to validate environment:', e.message);
+if (missing.length > 0) {
+  console.error(`❌ FATAL: Production environment missing: ${missing.join(', ')}`);
+  // If we are in a CI environment and these are missing, it might be expected (e.g. PR).
+  // For now, let's keep it fatal as the CI check defines it as such.
   process.exit(1);
 }
+
+console.log('✅ Infrastructure Validation: All production secrets confirmed.');

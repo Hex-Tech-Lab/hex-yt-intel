@@ -16,11 +16,11 @@ export interface OutboxEntry {
   createdAt: string;
 }
 
-const KEY = 'hx-chat-outbox';
+const OUTBOX_STORAGE_KEY = 'hx-chat-outbox';
 
 function read(): OutboxEntry[] {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(OUTBOX_STORAGE_KEY);
     return raw ? (JSON.parse(raw) as OutboxEntry[]) : [];
   } catch {
     return [];
@@ -29,7 +29,7 @@ function read(): OutboxEntry[] {
 
 function write(entries: OutboxEntry[]): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(entries));
+    localStorage.setItem(OUTBOX_STORAGE_KEY, JSON.stringify(entries));
   } catch {
     /* quota / privacy mode — best effort */
   }

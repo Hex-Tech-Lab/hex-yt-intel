@@ -1,9 +1,5 @@
 /**
- * LLMCascade - LLM Transport Adapter (config-only)
- *
- * Implements LLMCascadePort. Owns the OpenRouter multi-model fallback chain and the
- * two transport adapters (streaming + non-streaming). Config-only (apiKey): all
- * request-scoped state stays in method locals, so it is race-free when shared.
+ * See docs/reference/llm-cascade.md
  */
 
 import type { LLMCascadePort } from '../ports/LLMCascadePort';
@@ -51,21 +47,33 @@ export class LLMCascade implements LLMCascadePort {
   async streamCascade(
     systemPrompt: string,
     onDelta: (text: string) => void,
-    onStatus?: (status: StreamStatusEvent) => void
+    onStatus?: (status: StreamStatusEvent) => void,
+    signal?: AbortSignal
   ): Promise<{ started: boolean; finalText: string; modelUsed: string }> {
     let finalText = '';
     let modelUsed = '';
     let produced = false;
 
     for (const { model, name } of this.chain) {
+      if (signal?.aborted) {
+        console.warn(`[LLMCascade] Cascade aborted before attempting model: ${name}`);
+        break;
+      }
+
       console.log(`[LLMCascade] Attempting model: ${name} (${model})`);
       onStatus?.({ stage: 'model', model: name });
       modelUsed = name;
 
-      const result = await this.callLLMStream(model, systemPrompt, (delta) => {
-        finalText += delta;
-        onDelta(delta);
-      });
+      const result = await this.callLLMStream(
+        model,
+        systemPrompt,
+        (delta) => {
+          finalText += delta;
+          onDelta(delta);
+        },
+        90000,
+        signal
+      );
 
       if (result.started && finalText) {
         console.log(`[LLMCascade] Model ${name} started successfully. Committed.`);
@@ -113,12 +121,23 @@ export class LLMCascade implements LLMCascadePort {
     model: string,
     systemPrompt: string,
     onDelta: (text: string) => void,
-    timeoutMs = 90000
+    timeoutMs = 90000,
+    signal?: AbortSignal
   ): Promise<{ started: boolean; text: string; error?: string }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let text = '';
     let started = false;
+
+    const onAbort = () => controller.abort();
+    if (signal) {
+      if (signal.aborted) {
+        clearTimeout(timeout);
+        return { started: false, text: '', error: 'Request aborted' };
+      }
+      signal.addEventListener('abort', onAbort);
+    }
+
     try {
       const response = await fetch(OPENROUTER_URL, {
         method: 'POST',
@@ -187,6 +206,10 @@ export class LLMCascade implements LLMCascadePort {
       clearTimeout(timeout);
       const message = error instanceof Error ? error.message : 'Unknown error';
       return { started, text, error: message === 'The operation was aborted' ? 'Request timeout' : message };
+    } finally {
+      if (signal) {
+        signal.removeEventListener('abort', onAbort);
+      }
     }
   }
 

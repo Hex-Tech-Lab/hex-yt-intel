@@ -41,7 +41,7 @@ interface MessageRow {
   client_msg_id: string | null;
 }
 
-import { isPersistedValidationReport } from '@/app/api/analyses/persist/route';
+import { isPersistedValidationReport } from '@/lib/types/validation-report';
 
 export class SupabasePersistenceAdapter implements PersistencePort, ChatPersistencePort {
   async findCachedAnalysis(params: {
@@ -707,7 +707,12 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     const service = getSupabaseServiceClient();
 
     // Delete existing for clean slate
-    await service.from('kg_entities').delete().eq('analysis_id', params.analysisId);
+    const { error: deleteError } = await service
+      .from('kg_entities')
+      .delete()
+      .eq('analysis_id', params.analysisId);
+
+    if (deleteError) throw deleteError;
 
     // Insert entities
     const { data: entityRows, error: entityError } = await service

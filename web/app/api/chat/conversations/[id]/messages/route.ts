@@ -6,29 +6,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   SupabaseAuthAdapter,
   SupabasePersistenceAdapter,
-  SettingsModelAdapter,
   StreamTokenAdapter,
+  SettingsModelAdapter,
 } from '@/lib/adapters';
 
-const authAdapter = new SupabaseAuthAdapter();
-const persistenceAdapter = new SupabasePersistenceAdapter();
-const modelAdapter = new SettingsModelAdapter();
-const tokenAdapter = new StreamTokenAdapter();
-
-const HISTORY_TURNS = 20;
-
-/* GET — load a thread's messages (RLS scopes to owner). */
+  /* GET — load a thread's messages (RLS scopes to owner). */
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const authAdapter = new SupabaseAuthAdapter();
   const identity = await authAdapter.authenticate();
   if (!identity) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
+    const persistenceAdapter = new SupabasePersistenceAdapter();
     const conv = await persistenceAdapter.getConversation({ conversationId: id });
     if (!conv) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
@@ -54,6 +49,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const authAdapter = new SupabaseAuthAdapter();
   const identity = await authAdapter.authenticate();
   if (!identity) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -67,6 +63,10 @@ export async function POST(
     if (!content) {
       return NextResponse.json({ error: 'Empty message' }, { status: 400 });
     }
+
+    const persistenceAdapter = new SupabasePersistenceAdapter();
+    const modelAdapter = new SettingsModelAdapter();
+    const tokenAdapter = new StreamTokenAdapter();
 
     const conv = await persistenceAdapter.getConversation({ conversationId: id });
     if (!conv) {
@@ -146,6 +146,7 @@ export async function POST(
 
     // Replay bounded history (model is stateless).
     const allMessages = await persistenceAdapter.getMessages({ conversationId: id });
+    const HISTORY_TURNS = 20;
     // Bounded history: get the last HISTORY_TURNS messages
     const history = allMessages.slice(-HISTORY_TURNS);
 

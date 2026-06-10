@@ -90,7 +90,11 @@ export interface CacheConfig {
 /** The reasoning engine port: streaming + non-streaming execution. */
 export interface ReasoningEnginePort {
   execute(context: EngineContext): Promise<ExecuteResult>;
-  executeAndStream(context: EngineContext, handlers: StreamHandlers): Promise<StreamResult>;
+  executeAndStream(
+    context: EngineContext,
+    handlers: StreamHandlers,
+    signal?: AbortSignal
+  ): Promise<StreamResult>;
   /** Passthrough so the orchestrator can validate partial markdown on abort. */
   validate12D(analysis: unknown): boolean;
 }
