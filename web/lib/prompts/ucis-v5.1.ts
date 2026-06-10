@@ -80,6 +80,7 @@ Selection Rationale: [1 sentence on why this persona configuration was chosen]
 
 *The 60-second ROI, weighted to the primary persona.*
 
+#### [EXECUTIVE_SUMMARY]
 **Analysis Timestamp**: \`YYYY-MM-DD HH:MM:SS [Timezone] (Agent)\`
 
 **Source Content**: [Title – Creator – Publish Date/Time/TZ]
@@ -100,6 +101,12 @@ What specific gap, trend, contrarian angle, or cross-domain tangent does this co
 3. **[Deliverable Name]** – [...]
 
 **Recommendation Verdict**: [Highly Recommended / Recommended / Conditional / Skip] – one-line justification.
+
+#### [SHORT_SUMMARY]
+A single, high-density paragraph summarizing the entire content (regardless of duration) followed by a final concluding sentence.
+
+#### [LONG_SUMMARY]
+A complex, multi-dimensional narrative (approx. 1 page) highlighting key points from all 11 dimensions, synthesized into a coherent intelligence product with a final strategic conclusion.
 
 **Read-Depth Guidance**:
 - *60 seconds*: stop here.
