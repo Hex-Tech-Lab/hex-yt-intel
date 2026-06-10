@@ -90,6 +90,7 @@ async function streamChatCascade(
           provider: {
             sort: "latency",
             allow_fallbacks: true,
+            ...(model === "openai/gpt-oss-120b" ? { order: ["groq"] } : {}),
           },
         }),
         signal: controller.signal,
