@@ -683,4 +683,57 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       throw error;
     }
   }
+
+  async persistKnowledgeGraph(params: {
+    analysisId: string;
+    entities: Array<{
+      label: string;
+      type: string;
+      weight: number;
+    }>;
+    relations: Array<{
+      source: string;
+      target: string;
+      relation: string;
+      strength: number;
+    }>;
+  }): Promise<void> {
+    const service = getSupabaseServiceClient();
+
+    // Delete existing for clean slate
+    await service.from('kg_entities').delete().eq('analysis_id', params.analysisId);
+
+    // Insert entities
+    const { data: entityRows, error: entityError } = await service
+      .from('kg_entities')
+      .insert(params.entities.map(e => ({
+        analysis_id: params.analysisId,
+        label: e.label,
+        type: e.type,
+        weight: e.weight
+      })))
+      .select('id, label');
+
+    if (entityError) throw entityError;
+
+    // Map label to ID
+    const labelToId = new Map(entityRows.map(r => [r.label, r.id]));
+
+    // Insert relations
+    const relationRows = params.relations.map(r => ({
+      analysis_id: params.analysisId,
+      source_entity_id: labelToId.get(r.source),
+      target_entity_id: labelToId.get(r.target),
+      relation_label: r.relation,
+      strength: r.strength
+    })).filter(r => r.source_entity_id && r.target_entity_id);
+
+    if (relationRows.length > 0) {
+      const { error: relationError } = await service
+        .from('kg_relations')
+        .insert(relationRows);
+      
+      if (relationError) throw relationError;
+    }
+  }
 }

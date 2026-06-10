@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { Footer } from '@/components/Footer';
 
 // See /docs/ui/dashboard-layout.md
 
