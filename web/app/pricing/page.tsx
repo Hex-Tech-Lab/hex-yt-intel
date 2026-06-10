@@ -4,6 +4,7 @@ import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { PricingTableClient } from '@/components/billing/pricing-table-client';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { FaqAccordion } from '@/components/marketing/FaqAccordion';
+import { PricingComparisonTable } from '@/components/marketing/PricingComparisonTable';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 
@@ -28,9 +29,10 @@ export default async function PricingPage() {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
         </Link>
         <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
-          <Link href="/pricing" style={{ color: "var(--accent)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Pricing</Link>
-          <Link href="/terms-and-conditions" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Terms</Link>
           <Link href="/privacy-policy" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Privacy</Link>
+          <Link href="/terms-and-conditions" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Terms</Link>
+          <Link href="/refund-policy" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Refunds</Link>
+          <Link href="/pricing" style={{ color: "var(--accent)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Pricing</Link>
           {!userInfo && (
             <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none" }}>Sign in</Link>
           )}
@@ -49,6 +51,16 @@ export default async function PricingPage() {
           </div>
           
           <PricingTableClient userInfo={userInfo} />
+        </section>
+
+        <section id="compare" style={{ padding: "80px 32px", maxWidth: 1280, margin: "0 auto", width: "100%", borderTop: "1px solid var(--line)" }}>
+          <div style={{ maxWidth: "52ch", marginBottom: 48 }}>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// Deep Dive"}</p>
+            <h2 className="hx-h2" style={{ marginTop: 12 }}>Compare all features</h2>
+            <p className="hx-body-lg">A technical breakdown of our intelligence tiers.</p>
+          </div>
+          
+          <PricingComparisonTable />
         </section>
 
         <section style={{ padding: "80px 32px", maxWidth: 1280, margin: "0 auto", width: "100%", borderTop: "1px solid var(--line)" }}>
