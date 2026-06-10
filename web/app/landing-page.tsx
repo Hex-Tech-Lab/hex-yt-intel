@@ -1,150 +1,147 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { LandingThree } from '@/components/LandingThree';
+import Link from 'next/link';
+import { Icon } from '@/components/templates/_shared/primitives';
+import { Footer } from '@/components/Footer';
+
+/**
+ * LANDING PAGE - 10X DESIGN SYSTEM REPLICATION
+ * -------------------------------------------
+ * This page strictly mirrors ui_kits/marketing/index.html
+ * and consumes tokens from colors_and_type.css.
+ */
+
+function Nav() {
+  return (
+    <header style={{ 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "space-between", 
+      padding: "12px 32px", 
+      borderBottom: "1px solid var(--line)", 
+      background: "rgb(17 20 29 / 0.7)", 
+      backdropFilter: "blur(12px)", 
+      position: "sticky", 
+      top: 0, 
+      zIndex: 50 
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ 
+          display: "grid", 
+          placeItems: "center", 
+          width: 28, 
+          height: 28, 
+          borderRadius: 8, 
+          background: "var(--accent-strong)", 
+          color: "var(--void)" 
+        }}>
+          <Icon icon="solar:graph-up-linear" size={17} />
+        </span>
+        <span style={{ 
+          fontFamily: "var(--font-mono)", 
+          fontSize: 14, 
+          fontWeight: 600, 
+          letterSpacing: "0.04em", 
+          color: "var(--ink)" 
+        }}>HEX·YT·INTEL</span>
+      </div>
+      <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
+        <Link href="#features" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Features</Link>
+        <Link href="/pricing" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Pricing</Link>
+        <Link href="/dashboard" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Console</Link>
+        <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none" }}>Sign in</Link>
+      </nav>
+    </header>
+  );
+}
+
+function Hero() {
+  return (
+    <section style={{ textAlign: "center", paddingTop: 80, paddingBottom: 80, maxWidth: 1280, margin: "0 auto", padding: "80px 32px", width: "100%" }}>
+      <div style={{ maxWidth: "52ch", margin: "0 auto" }}>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// YouTube → knowledge graph"}</p>
+        <h1 className="hx-display" style={{ marginTop: 16, marginBottom: 12 }}>
+          Drop a video. Get a synthesis.
+        </h1>
+        <p className="hx-body-lg" style={{ maxWidth: "54ch", margin: "0 auto" }}>
+          Transcript, claims, frameworks, and contrarian takes — structured across 11 dimensions, mapped into your knowledge graph, searchable in seconds.
+        </p>
+        <div style={{ marginTop: 32, display: "flex", justifyContent: "center", gap: 12 }}>
+          <Link href="/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>
+            <Icon icon="solar:bolt-linear" size={16} />
+            Try it free
+          </Link>
+          <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none" }}>
+            See a sample
+            <Icon icon="solar:arrow-right-linear" size={16} />
+          </Link>
+        </div>
+      </div>
+      {/* Product Still Placeholder */}
+      <div style={{ 
+        marginTop: 48, 
+        padding: 32, 
+        borderRadius: 16, 
+        border: "1px solid rgb(148 163 184 / 0.18)", 
+        background: "rgb(26 31 43 / 0.6)",
+        boxShadow: "0 24px 48px -12px rgba(0,0,0,0.5)"
+      }}>
+        <div style={{ 
+          height: 320, 
+          background: "linear-gradient(135deg, rgb(51 65 85 / 0.3) 0%, transparent 60%)", 
+          borderRadius: 12,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "var(--font-mono)",
+          color: "var(--ink-muted)",
+          fontSize: 12
+        }}>
+          [ PROPRIETARY SYNTHESIS ENGINE INTERFACE ]
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Features() {
+  const features = [
+    { icon: "solar:target-linear", title: "Core thesis", desc: "The central claim distilled to one clear sentence." },
+    { icon: "solar:chat-square-like-linear", title: "Key arguments", desc: "Supporting points ranked by relevance and evidence strength." },
+    { icon: "solar:database-linear", title: "Evidence", desc: "Citations, timestamps, and source material linked." },
+    { icon: "solar:widget-5-linear", title: "Frameworks", desc: "Mental models and applicable systems thinking." },
+    { icon: "solar:users-group-rounded-linear", title: "Entities", desc: "People, companies, products mentioned and mapped." },
+    { icon: "solar:bolt-linear", title: "Tactics", desc: "Actionable techniques and implementation methods." },
+  ];
+  return (
+    <section id="features" style={{ borderTop: "1px solid var(--line)", padding: "80px 32px", maxWidth: 1280, margin: "0 auto", width: "100%" }}>
+      <div style={{ maxWidth: "52ch", marginBottom: 48 }}>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// 11-dimension synthesis"}</p>
+        <h2 className="hx-h2" style={{ marginTop: 12 }}>The UCIS model.</h2>
+        <p className="hx-body-lg">Every video is parsed across 11 semantic dimensions. You get the full picture — not a summary, a structured synthesis.</p>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+        {features.map((f) => (
+          <div key={f.title} className="hx-glow" style={{ padding: 20, background: "rgb(26 31 43 / 0.6)", border: "1px solid var(--line)", borderRadius: 16 }}>
+            <Icon icon={f.icon} size={24} style={{ color: "var(--accent)" }} />
+            <h3 style={{ marginTop: 12, marginBottom: 0, fontSize: 18, fontWeight: 500, color: "var(--ink)" }}>{f.title}</h3>
+            <p style={{ fontSize: 14, color: "var(--ink-secondary)", marginTop: 8, lineHeight: 1.5 }}>{f.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export function LandingPage() {
-  const [scrollY, setScrollY] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-cyan-500/30 overflow-x-hidden">
-      {/* WebGL Particle Background */}
-      <LandingThree />
-
-      {/* Content Wrapper */}
-      <div className="relative z-10">
-        {/* Header */}
-        <header
-          className={`fixed top-0 left-0 right-0 z-50 px-6 transition-all duration-300 ${
-            scrollY > 50 ? 'bg-black/70 backdrop-blur-md border-b border-cyan-500/10' : 'bg-transparent'
-          }`}
-        >
-          <div className="max-w-[1200px] mx-auto h-16 flex items-center justify-between gap-8">
-            <div className="flex items-center gap-3 text-lg font-semibold tracking-tight text-cyan-500">
-              <div className="w-6 h-6 bg-gradient-to-br from-cyan-500 to-sky-400 rounded-md" />
-              <span>hex-yt-intel</span>
-            </div>
-            
-            <nav className="hidden md:flex items-center gap-1 flex-1">
-              {['Analyze', 'Learn', 'Docs'].map((item) => (
-                <a
-                  key={item}
-                  href="#"
-                  className="px-3 py-1.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-all"
-                >
-                  {item}
-                </a>
-              ))}
-            </nav>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => (window.location.href = '/dashboard')}
-                className="px-6 py-3 rounded-full text-sm font-semibold bg-gradient-to-br from-cyan-500 to-sky-400 text-black shadow-[0_4px_8px_rgba(6,182,212,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(6,182,212,0.4)] transition-all active:translate-y-0"
-              >
-                Get Started
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Hero Section */}
-        <section className="min-h-screen flex items-center justify-center p-5 pt-32">
-          <div className="max-w-[900px] text-center animate-[fadeInUp_1.2s_ease-out]">
-            <div className="text-sm font-medium text-cyan-500 tracking-[1px] uppercase mb-6 opacity-80">
-              YouTube Intelligence Platform
-            </div>
-
-            <h1 className="text-[clamp(36px,8vw,72px)] font-semibold leading-[1.1] mb-8 tracking-tight">
-              Knowledge is more than<br />
-              <span className="bg-gradient-to-br from-cyan-500 to-sky-400 bg-clip-text text-transparent">
-                data points.
-              </span><br />
-              Let there be light.
-            </h1>
-
-            <p className="text-lg md:text-xl text-white/70 mb-12 max-w-[600px] mx-auto leading-relaxed">
-              Transform YouTube content into actionable insights. Semantic analysis, real-time transcription, and intelligence synthesis — all in one platform.
-            </p>
-
-            <div className="flex flex-wrap gap-4 justify-center">
-              <button
-                onClick={() => (window.location.href = '/dashboard')}
-                className="px-8 py-4 rounded-full text-sm font-semibold bg-gradient-to-br from-cyan-500 to-sky-400 text-black shadow-[0_4px_8px_rgba(6,182,212,0.3)] hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(6,182,212,0.4)] transition-all"
-              >
-                Start Analyzing Free
-              </button>
-              <button
-                className="px-8 py-4 rounded-full text-sm font-semibold bg-cyan-500/10 border border-cyan-500/30 text-cyan-500 hover:bg-cyan-500/20 transition-all"
-              >
-                View Documentation
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="relative z-10 border-t border-cyan-500/10 px-6 py-12 bg-black/50 backdrop-blur-md">
-          <div className="max-w-[1200px] mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-              <div className="flex flex-col gap-4">
-                <div className="text-sm font-semibold text-cyan-500 uppercase tracking-wider">Product</div>
-                {['Analyzer', 'Dashboard', 'API'].map((item) => (
-                  <a key={item} href="#" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">
-                    {item}
-                  </a>
-                ))}
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="text-sm font-semibold text-cyan-500 uppercase tracking-wider">Resources</div>
-                {['Documentation', 'Blog', 'GitHub'].map((item) => (
-                  <a key={item} href="#" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">
-                    {item}
-                  </a>
-                ))}
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="text-sm font-semibold text-cyan-500 uppercase tracking-wider">Legal</div>
-                <a href="/terms-and-conditions" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">Terms of Service</a>
-                <a href="/privacy-policy" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">Privacy Policy</a>
-                <a href="/refund-policy" className="text-sm text-white/60 hover:text-cyan-500 transition-colors">Refund Policy</a>
-              </div>
-            </div>
-
-            <div className="pt-6 border-t border-cyan-500/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/50">
-              <div>© 2026 hex-yt-intel. All rights reserved.</div>
-              <div className="flex gap-4">
-                {['Twitter', 'GitHub', 'Discord'].map((item) => (
-                  <a key={item} href="#" className="hover:text-cyan-500 transition-colors">{item}</a>
-                ))}
-              </div>
-            </div>
-          </div>
-        </footer>
-      </div>
-
-      <style jsx global>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+    <div style={{ background: "var(--void)", color: "var(--ink)", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <Nav />
+      <main style={{ flex: 1 }}>
+        <Hero />
+        <Features />
+      </main>
+      <Footer />
     </div>
   );
 }
