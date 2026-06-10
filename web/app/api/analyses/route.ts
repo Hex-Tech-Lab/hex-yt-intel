@@ -7,7 +7,6 @@ export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisCreateSchema } from '@/lib/types/contracts';
-import type { PersonaId } from '@/lib/prompts';
 import { extractVideoId } from '@/lib/youtube';
 import * as Sentry from '@sentry/nextjs';
 import {
