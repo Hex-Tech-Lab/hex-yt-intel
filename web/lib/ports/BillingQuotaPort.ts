@@ -1,4 +1,4 @@
-import type { QuotaGateResult } from './QuotaPort';
+import type { QuotaGateResult, QuotaEndpoint } from './QuotaPort';
 import type { UserTier } from '@/lib/types/billing';
 
 /**
@@ -12,7 +12,7 @@ export interface BillingQuotaPort {
     userId: string;
     tier: UserTier;
     email?: string;
-    endpoint: 'analyses' | 'search' | 'checkout';
+    endpoint: QuotaEndpoint;
   }): Promise<QuotaGateResult>;
 
   /**

@@ -1,5 +1,5 @@
 /**
- * IPersistenceRepository — Domain Port (Hexagonal-Lite)
+ * PersistenceRepositoryPort — Domain Port (Hexagonal-Lite)
  *
  * The cache port that INSULATES Upstash. Core reasoning must never reference the
  * Upstash REST client directly — only this port. The adapter

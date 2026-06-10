@@ -21,7 +21,7 @@ const router = express.Router();
    VALIDATION HELPERS
    ========================================================================= */
 
-const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validateEmail = (email) => typeof email === 'string' && email.length < 256 && email.includes('@') && email.split('@')[1].includes('.');
 const validatePromoCode = (code) => /^[A-Z0-9]{6,12}$/.test(code);
 
 /* ============================================================================
@@ -300,7 +300,7 @@ router.post("/api/webhook", express.raw({ type: "application/json" }), async (re
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (error) {
-    return res.status(400).send(`Webhook Error: ${error.message}`);
+    return res.status(400).json({ error: `Webhook Error: ${error.message}` });
   }
 
   try {

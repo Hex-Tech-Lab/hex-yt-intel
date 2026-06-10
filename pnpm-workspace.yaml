@@ -13,6 +13,8 @@ packages:
 overrides:
   "@types/react": "^19.2.0"
   "@types/react-dom": "^19.2.0"
+  "postcss": "^8.4.49"
+  "esbuild": "^0.25.0"
 
 allowBuilds:
   "@sentry/cli": true

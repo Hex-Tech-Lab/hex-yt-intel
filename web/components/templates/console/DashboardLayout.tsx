@@ -32,7 +32,6 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
             <div className="flex-1">
               {children}
             </div>
-            <Footer />
           </div>
         </div>
 

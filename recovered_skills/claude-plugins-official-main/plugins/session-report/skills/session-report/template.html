@@ -415,8 +415,16 @@
     function gantt() {
       const d = days[sel], DAY = 1440;
       $('g-day').textContent = `${d.dow} ${md(d.date)}`;
-      $('g-stats').innerHTML = `${d.sessions.length} sessions · ${fmt(d.tokens)} tokens`+
-        ` · peak <b>${d.peak}</b> concurrent at <b>${hhmm(d.peak_at_min)}</b>`;
+      const gStats = $('g-stats');
+      gStats.textContent = '';
+      gStats.appendChild(document.createTextNode(`${d.sessions.length} sessions · ${fmt(d.tokens)} tokens · peak `));
+      const bPeak = document.createElement('b');
+      bPeak.textContent = String(d.peak);
+      gStats.appendChild(bPeak);
+      gStats.appendChild(document.createTextNode(' concurrent at '));
+      const bPeakAt = document.createElement('b');
+      bPeakAt.textContent = hhmm(d.peak_at_min);
+      gStats.appendChild(bPeakAt);
       const lanes = [];
       for (const s of d.sessions) {
         let placed = false;

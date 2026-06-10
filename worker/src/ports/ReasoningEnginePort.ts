@@ -1,5 +1,5 @@
 /**
- * IReasoningEngine — Domain Port (Hexagonal-Lite)
+ * ReasoningEnginePort — Domain Port (Hexagonal-Lite)
  *
  * The reasoning engine contract plus the shared domain types it exchanges with the
  * orchestrator (worker.ts). Concrete services import these contracts rather than
