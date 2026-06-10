@@ -1,4 +1,4 @@
-import { chargeMonthlyQuota, refundMonthlyQuota } from '@/lib/services/billing';
+import { chargeMonthlyQuota, refundMonthlyQuota, checkMonthlyQuota } from '@/lib/services/billing';
 import type { QuotaGateResult, BillingQuotaPort, QuotaEndpoint } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
 

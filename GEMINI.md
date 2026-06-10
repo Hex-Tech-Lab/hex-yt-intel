@@ -113,6 +113,7 @@ Before EVERY code mutation or pipeline operation, execute the following:
 0. **Check the Agent Ledger**:
    - `cat .memory/AGENT_LEDGER.md` — Read the ledger to ensure no other agent is actively modifying your target files.
    - Update the ledger line-by-line: Add your `[IN_PROGRESS]` intent and close it to `[DONE]` when finished.
+   - **Orchestrator Sink Pattern**: If taking on a sweeping workflow (like a PR review), claim `[SINK: Workflow Name]`. Only the Sink Orchestrator can finalize, test, and merge the overall workflow. Assisting agents report back to the Sink.
 
 1. **For Source Code Changes**:
    - `git status` — Confirm working tree state (nothing uncommitted from other agents)

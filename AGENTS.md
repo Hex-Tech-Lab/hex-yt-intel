@@ -47,6 +47,12 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 2. **Write**: Append an `[IN_PROGRESS]` line specifying your intent, target files, and timestamp.
 3. **Update**: Change your line to `[DONE]` when the task is complete.
 
+### The Orchestrator "Sink" Pattern
+For complex, multi-stage workflows (e.g., PR Review Workflows, Epic Refactors), the initiating agent must claim responsibility as the "Sink" or Orchestrator. 
+- **Claiming the Sink**: The agent logs `[SINK: <Workflow Name>]` in the ledger.
+- **Responsibility**: The Orchestrator is solely responsible for the end-to-end lifecycle. They create the branch, delegate sub-tasks to sibling agents, verify the final green state, merge the PR, and update the ledger.
+- **Sub-agents**: Sibling agents assisting with sub-tasks log `[IN_PROGRESS: Sub-task]` linked to the Sink, but they *do not* merge or finalize the overarching workflow. They only complete their assigned fix and report back to the Orchestrator.
+
 ---
 
 ## 4. HOUSEKEEPING PROTOCOL

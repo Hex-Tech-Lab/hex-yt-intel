@@ -29,6 +29,7 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 1. **Read**: View `.memory/AGENT_LEDGER.md` before starting any task or file mutation to avoid active files.
 2. **Write**: Append an `[IN_PROGRESS]` line specifying your intent, target files, and timestamp.
 3. **Update**: Change your line to `[DONE]` when the task is complete.
+4. **Orchestrator "Sink" Pattern**: For complex workflows (e.g., PR Reviews), the lead agent logs `[SINK: Workflow Name]`. Sibling agents log sub-tasks but **cannot** finalize or merge the overall workflow. Only the Sink Orchestrator is responsible for testing, verifying, merging, and closing out the overarching task.
 
 ---
 
