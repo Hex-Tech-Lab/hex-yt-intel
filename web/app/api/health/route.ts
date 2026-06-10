@@ -3,16 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 export async function GET(_request: NextRequest) {
-  // Check for explicit HTML request (likely a browser)
-  const accept = _request.headers.get('accept') || '';
-  const format = _request.nextUrl.searchParams.get('format');
-  
-  // If browser (HTML) and not explicitly asking for JSON, redirect to visual dashboard
-  if (accept.includes('text/html') && format !== 'json') {
-    return NextResponse.redirect(new URL('/status', _request.url));
-  }
-
-  // Default: Return 200 JSON for all automated probes (curl, CI, Vercel)
+  // Return 200 JSON for all automated probes and browsers to satisfy CI/CD.
+  // Visual dashboard is available at /status
   return NextResponse.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -23,6 +15,14 @@ export async function GET(_request: NextRequest) {
       vector: 'healthy',
       billing: 'healthy',
       persistence: 'healthy'
+    },
+    dashboard: '/status'
+  }, { 
+    status: 200,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
     }
-  }, { status: 200 });
+  });
 }
