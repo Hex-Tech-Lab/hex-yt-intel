@@ -7,34 +7,35 @@ const youtubeUrlSchema = z
     (url) => {
       try {
         const parsed = new URL(url);
-        return ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(
-          parsed.hostname
-        );
+        // Extract ID via common patterns; hostname check is too restrictive
+        return !!extractIdFromUrl(parsed);
       } catch {
         return false;
       }
     },
-    { message: 'Invalid YouTube host domain' }
+    { message: 'Invalid YouTube URL structure' }
   )
   .transform((url) => {
-    const parsed = new URL(url);
-    let id = '';
-    if (parsed.hostname === 'youtu.be') {
-      id = parsed.pathname.slice(1);
-    } else if (parsed.pathname.startsWith('/shorts/')) {
-      id = parsed.pathname.split('/')[2] ?? '';
-    } else if (parsed.pathname.startsWith('/embed/')) {
-      id = parsed.pathname.split('/')[2] ?? '';
-    } else if (parsed.pathname.startsWith('/v/')) {
-      id = parsed.pathname.split('/')[2] ?? '';
-    } else {
-      id = parsed.searchParams.get('v') ?? '';
-    }
-    return id;
+    return extractIdFromUrl(new URL(url)) ?? '';
   })
   .refine((id) => /^[a-zA-Z0-9_-]{11}$/.test(id), {
     message: 'Canonical video ID verification failed',
   });
+
+function extractIdFromUrl(parsed: URL): string | null {
+  // Check common hostnames
+  if (['youtube.com', 'www.youtube.com', 'youtu.be', 'm.youtube.com', 'music.youtube.com'].includes(parsed.hostname)) {
+    if (parsed.hostname === 'youtu.be') return parsed.pathname.slice(1);
+    if (parsed.pathname.startsWith('/shorts/')) return parsed.pathname.split('/')[2] ?? null;
+    if (parsed.pathname.startsWith('/embed/')) return parsed.pathname.split('/')[2] ?? null;
+    if (parsed.pathname.startsWith('/v/')) return parsed.pathname.split('/')[2] ?? null;
+    return parsed.searchParams.get('v');
+  }
+  
+  // Handle google/bing search redirects or other nested URL patterns
+  // Try to extract v= query param from the URL regardless of host
+  return parsed.searchParams.get('v');
+}
 
 export function extractVideoId(urlStr: string): string {
   const result = youtubeUrlSchema.safeParse(urlStr);
