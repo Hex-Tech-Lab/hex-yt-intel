@@ -1,25 +1,34 @@
-# Sub-processor Disclosure Page
+# Sub-processor Ledger
+**Status**: ACTIVE
+**Last Updated**: 2026-06-10
 
-**Last Updated:** June 9, 2026
+To provide high-fidelity intelligence and global billing, HEX-YT-INTEL engages the following sub-processors. These entities have been vetted for security and data protection compliance (GDPR/SOC2).
 
-To support the delivery of our services, Hex-YT Intel ("we," "our," or "us") engages third-party service providers who may process personal data on our behalf. These third parties are known as sub-processors.
+## Core Infrastructure
 
-In compliance with the "Right to Actual Identity" requirements of the General Data Protection Regulation (GDPR) and the European Data Protection Board (EDPB) transparency guidelines, we provide the following complete list of our current sub-processors, their specific functions, and their processing locations.
+| Entity | Purpose | Location |
+| :--- | :--- | :--- |
+| **Vercel** | Frontend hosting & Edge compute | Global |
+| **Supabase** | Database & Authentication | US (AWS) |
+| **Upstash** | Vector Index & Caching | Global |
+| **Cloudflare** | DNS & WAF Protection | Global |
 
-## Current Sub-processors
+## Artificial Intelligence
 
-| Sub-processor Name | Corporate Entity | Function / Role | Processing Location |
-| :--- | :--- | :--- | :--- |
-| **Vercel** | Vercel Inc. | Cloud Hosting & Edge Compute Infrastructure | United States / Global Edge |
-| **Cloudflare** | Cloudflare, Inc. | Content Delivery Network (CDN) & Edge Security | United States / Global Edge |
-| **Supabase** | Supabase, Inc. | Managed Database & Authentication Services | United States (AWS) |
-| **Upstash** | Upstash, Inc. | Distributed Cache (Redis), Key-Value Storage (KV), Vector Indexing (RAG), and Task Orchestration (QStash) | United States (AWS) / Global Edge |
-| **OpenRouter** | OpenRouter LLC | Third-Party LLM API Routing Interface | United States |
+| Entity | Purpose | Location |
+| :--- | :--- | :--- |
+| **Anthropic** | Claude 3.5 Sonnet (Synthesis) | US |
+| **OpenRouter** | LLM Gateway & Fallback | US |
 
-## Standard Contractual Clauses (SCCs)
-For users located in the European Economic Area (EEA), the United Kingdom, or Switzerland, the transfer of personal data to the sub-processors listed above is safeguarded by executed Standard Contractual Clauses (SCCs), in accordance with GDPR Annex III requirements.
+## Payment & Billing
 
-## Updates to this List
-As our architecture scales, we may occasionally onboard new sub-processors or replace existing ones. We will update this page prior to authorizing any new sub-processor to process personal data. We encourage users to review this page periodically.
+| Entity | Purpose | Data Touched |
+| :--- | :--- | :--- |
+| **Stripe** | Payment Processing (US/EU) | Customer Email, Credit Card Info, Billing Address |
+| **Paddle** | Merchant of Record (Global/ME) | Customer Email, Billing Address, VAT/Tax IDs |
 
-If you have any specific inquiries or require a copy of our Data Processing Agreements (DPAs), please contact our Data Protection Officer at privacy@hex-yt-intel.com.
+## Monitoring & Analytics
+
+| Entity | Purpose | Location |
+| :--- | :--- | :--- |
+| **Sentry** | Error Tracking & Observability | US |

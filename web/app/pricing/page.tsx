@@ -50,23 +50,52 @@ export default async function PricingPage() {
           <PricingTableClient userInfo={userInfo} />
         </section>
 
-        <section style={{ padding: "60px 32px", maxWidth: 1280, margin: "0 auto", width: "100%", borderTop: "1px solid var(--line)" }}>
+        <section style={{ padding: "80px 32px", maxWidth: 1280, margin: "0 auto", width: "100%", borderTop: "1px solid var(--line)" }}>
           <div style={{ maxWidth: "52ch", marginBottom: 48 }}>
             <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// FAQ"}</p>
             <h2 className="hx-h2" style={{ marginTop: 12 }}>Frequently Asked Questions</h2>
+            <p className="hx-body-lg">Everything you need to know about our intelligence engine.</p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 800 }}>
             {[
-              { q: "Can I change my plan anytime?", a: "Yes. Upgrade to Pro or downgrade to Free immediately. Pro-rated adjustments are handled via Stripe." },
-              { q: "Do you offer refunds?", a: "Due to immediate LLM infrastructure costs, we operate on a strict no-refund basis. Evaluation is available via the Free tier." },
-              { q: "What payment methods do you accept?", a: "All major credit cards (Visa, Mastercard, Amex) processed securely via Stripe." },
-              { q: "Is there a discount for annual billing?", a: "Annual plans with a 20% discount are scheduled for release in Q3 2026." }
+              { q: "How does the synthesis engine work?", a: "We process video transcripts through our UCIS (Unified Content Intelligence System) model, which extracts claims, frameworks, and tactics across 11 semantic dimensions." },
+              { q: "Can I change my plan anytime?", a: "Yes. Upgrade or downgrade immediately. Pro-rated adjustments are handled automatically by our global payment processors." },
+              { q: "Do you handle long-form videos?", a: "Yes. Our Pro and Enterprise tiers can synthesize videos up to 12 hours in length with full accuracy and timestamp mapping." },
+              { q: "Which languages are supported?", a: "We currently support 40+ languages. The synthesis engine automatically detects and translates content into your primary workspace language." },
+              { q: "Do you offer refunds?", a: "To maintain our compute-heavy infrastructure, we operate on a strict no-refund basis. We encourage starting with the Free tier to evaluate performance." },
+              { q: "Is my data secure?", a: "Absolutely. All synthesis data is encrypted and stored in your private knowledge graph. We never use user data to train third-party models." }
             ].map((faq, i) => (
-              <div key={i}>
-                <h3 style={{ margin: "0 0 8px 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{faq.q}</h3>
-                <p style={{ margin: 0, fontSize: 14, color: "var(--ink-secondary)", lineHeight: 1.6 }}>{faq.a}</p>
-              </div>
+              <details key={i} style={{ 
+                background: "var(--surface)", 
+                border: "1px solid var(--line)", 
+                borderRadius: 12, 
+                padding: "16px 20px",
+                cursor: "pointer"
+              }}>
+                <summary style={{ 
+                  listStyle: "none", 
+                  fontSize: 15, 
+                  fontWeight: 600, 
+                  color: "var(--ink)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}>
+                  {faq.q}
+                  <Icon icon="solar:alt-arrow-down-linear" size={16} style={{ color: "var(--ink-muted)" }} />
+                </summary>
+                <p style={{ 
+                  marginTop: 12, 
+                  fontSize: 14, 
+                  color: "var(--ink-secondary)", 
+                  lineHeight: 1.6,
+                  borderTop: "1px solid var(--line)",
+                  paddingTop: 12
+                }}>
+                  {faq.a}
+                </p>
+              </details>
             ))}
           </div>
         </section>
