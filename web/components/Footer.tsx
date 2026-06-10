@@ -45,19 +45,17 @@ export function Footer() {
             <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)" }}>Resources</p>
             <nav style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <Link href="/docs" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>Documentation</Link>
-              <Link href="/api/health" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>System Status</Link>
-              <Link href="https://github.com/Hex-Tech-Lab/hex-yt-intel" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>GitHub</Link>
+              <Link href="/status" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>System Status</Link>
             </nav>
           </div>
 
-          {/* Legal Col */}
+          {/* Trust & Safety Col */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)" }}>Legal</p>
+            <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)" }}>Trust & Safety</p>
             <nav style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <Link href="/privacy-policy" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>Privacy Policy</Link>
               <Link href="/terms-and-conditions" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>Terms of Service</Link>
               <Link href="/refund-policy" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>Refund Policy</Link>
-              <Link href="/legal/sub-processors" style={{ fontSize: 13, color: "var(--ink-secondary)", textDecoration: "none" }}>Sub-processors</Link>
             </nav>
           </div>
         </div>
@@ -69,7 +67,6 @@ export function Footer() {
           </p>
           <div style={{ display: "flex", gap: 16 }}>
             <Link href="#" style={{ color: "var(--ink-muted)" }}><Icon icon="solar:letter-linear" size={16} /></Link>
-            <Link href="#" style={{ color: "var(--ink-muted)" }}><Icon icon="solar:share-circle-linear" size={16} /></Link>
           </div>
         </div>
       </div>
