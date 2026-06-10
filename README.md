@@ -1,9 +1,17 @@
 # hex-yt-intel (v1.4.1)
 ### YouTube Content Intelligence: The Hybrid Edge Symphony
 
-[![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![Phase](https://img.shields.io/badge/Phase-2%20Stabilization-orange.svg)](ROADMAP.md)
 [![Architecture](https://img.shields.io/badge/Arch-Hybrid%20Edge-success.svg)](docs/specs/ADR_005_HYBRID_EDGE_ARCHITECTURE.md)
+
+---
+
+## ⚖️ LEGAL & COMPLIANCE
+
+**This repository is licensed under [GNU AGPL-3.0](LICENSE).**
+
+**Important**: This repository includes a mandatory [Custom Addendum](/docs/legal/LICENSE-ADDENDUM.md) that applies additional restrictions regarding commercial use, AI training, scraping, and SaaS derivatives. By using, cloning, or interacting with this repository, you agree to the full terms of both the AGPL-3.0 and the Addendum.
 
 ---
 
