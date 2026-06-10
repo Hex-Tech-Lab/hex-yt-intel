@@ -26,6 +26,16 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
 
     if (!content) return summaries;
 
+    // Helper to get Core Thesis or first paragraph to avoid duplicate logic
+    const getThesisOrFirstParagraph = (text: string, limit: number): string => {
+      const match = text.match(/(?:The Core Thesis:|Core Thesis:)\s*([^\n]+)/i);
+      if (match && match[1]) {
+        return `**Core Thesis:** ${match[1].trim()}`;
+      }
+      const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
+      return paragraphs[0] || text.slice(0, limit);
+    };
+
     // Helper to extract sections between markers
     const extract = (tag: string) => {
       const startTag = `#### [${tag}]`;
@@ -55,16 +65,7 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
     // Fallback if tags not found (legacy or early stream)
     if (!summaries.executive && !summaries.short && !summaries.long) {
        summaries.executive = content;
-       
-       // Try to extract "Core Thesis" or first paragraph for short summary
-       const thesisMatch = content.match(/(?:The Core Thesis:|Core Thesis:)\s*([^\n]+)/i);
-       if (thesisMatch && thesisMatch[1]) {
-         summaries.short = `**Core Thesis:** ${thesisMatch[1].trim()}`;
-       } else {
-         const paragraphs = content.split('\n\n').filter(p => p.trim().length > 0);
-         summaries.short = paragraphs[0] || content.slice(0, 300);
-       }
-       
+       summaries.short = getThesisOrFirstParagraph(content, 300);
        summaries.long = content;
     }
 
@@ -72,8 +73,7 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
     if (status === "done") {
       if (!summaries.executive) summaries.executive = content;
       if (!summaries.short) {
-        const thesisMatch = content.match(/(?:The Core Thesis:|Core Thesis:)\s*([^\n]+)/i);
-        summaries.short = thesisMatch && thesisMatch[1] ? `**Core Thesis:** ${thesisMatch[1].trim()}` : content.slice(0, 400);
+        summaries.short = getThesisOrFirstParagraph(content, 400);
       }
       if (!summaries.long) summaries.long = content;
     }

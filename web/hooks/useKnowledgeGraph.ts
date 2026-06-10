@@ -48,6 +48,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
   // 1. API Fetching (if analysisId exists)
   useEffect(() => {
     if (!analysisId) {
+      setGraph(EMPTY);
       setApiFetchDone(false);
       setLoadedFromApi(false);
       return;
