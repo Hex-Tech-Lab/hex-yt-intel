@@ -1,8 +1,0 @@
-2026-05-22T18:05:50.7730000Z Evaluating test.if
-2026-05-22T18:05:50.7730000Z Evaluating: success()
-2026-05-22T18:05:50.7730000Z Result: true
-2026-05-22T18:05:50.7750000Z Requested labels: ubuntu-latest
-2026-05-22T18:05:50.7750000Z Job defined at: Hex-Tech-Lab/hex-yt-intel/.github/workflows/ci-cd.yml@refs/pull/27/merge
-2026-05-22T18:05:50.7750000Z Waiting for a runner to pick up this job...
-2026-05-22T18:05:50.9980000Z Job is about to start running on the hosted runner: GitHub Actions 1000004281
-2026-05-22T18:05:51.0010000Z Job is waiting for a hosted runner to come online.
