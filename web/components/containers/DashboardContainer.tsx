@@ -108,9 +108,14 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     }
   };
 
-  const handleAnalyze = useCallback(async (force = false) => {
+  const handleAnalyze = useCallback(async () => {
     if (!url) return;
-    await startAnalysis(url, getUserTimezone(), force);
+    await startAnalysis(url, getUserTimezone());
+  }, [url, startAnalysis]);
+
+  const handleReanalyze = useCallback(async () => {
+    if (!url) return;
+    await startAnalysis(url, getUserTimezone(), true);
   }, [url, startAnalysis]);
 
   const handleExport = useCallback((format: 'pdf' | 'markdown') => {
@@ -227,8 +232,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             url={url}
             status={store.status === 'analyzing' || store.status === 'downloading' ? 'streaming' : store.status === 'complete' ? 'done' : store.status === 'error' ? 'error' : 'idle'}
             onUrlChange={setUrl}
-            onAnalyze={() => handleAnalyze()}
-            onReanalyze={() => handleAnalyze(true)}
+            onAnalyze={handleAnalyze}
+            onReanalyze={handleReanalyze}
             error={store.error?.message}
             quota={quotaLabel}
           />
