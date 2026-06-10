@@ -27,8 +27,8 @@ export type ModelKind = 'chat' | 'analysis';
 const COMMERCIAL_TRIAL_MODE = true;
 
 const FALLBACK: Record<ModelKind, readonly string[]> = {
-  chat: ['anthropic/claude-3.5-haiku', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'],
-  analysis: ['anthropic/claude-3.5-haiku', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'],
+  chat: ['anthropic/claude-haiku-4.5', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'],
+  analysis: ['anthropic/claude-haiku-4.5', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'],
 };
 
 interface ModelConfig {
@@ -75,7 +75,7 @@ async function readModelConfig(): Promise<ModelConfig | null> {
  */
 export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Promise<string[]> {
   if (COMMERCIAL_TRIAL_MODE) {
-    return ['anthropic/claude-3.5-haiku', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
+    return ['anthropic/claude-haiku-4.5', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
   }
 
   const cfg = await readModelConfig();
@@ -95,7 +95,7 @@ export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Prom
 
   // Defensive engineering: map invalid/stale model IDs to working ones
   return resolved.map((m) =>
-    m === 'anthropic/claude-4.5-haiku' ? 'anthropic/claude-3.5-haiku' : m
+    m === 'anthropic/claude-4.5-haiku' ? 'anthropic/claude-haiku-4.5' : m
   );
 }
 
