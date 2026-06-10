@@ -41,17 +41,17 @@ values (
           'nvidia/nemotron-3-nano-30b-a3b:free',
           'z-ai/glm-4.5-air:free',
           'google/gemma-4-26b-a4b-it:free',
-          'anthropic/claude-haiku-4.5'
+          'anthropic/claude-3.5-haiku'
         )
       ),
       'pro', jsonb_build_object(
         'chat', jsonb_build_array(
-          'anthropic/claude-haiku-4.5',
+          'anthropic/claude-3.5-haiku',
           'google/gemini-2.0-flash-exp:free',
           'nvidia/nemotron-3-nano-30b-a3b:free'
         ),
         'analysis', jsonb_build_array(
-          'anthropic/claude-haiku-4.5',
+          'anthropic/claude-3.5-haiku',
           'nvidia/nemotron-3-nano-30b-a3b:free',
           'z-ai/glm-4.5-air:free',
           'google/gemma-4-26b-a4b-it:free'
@@ -59,12 +59,12 @@ values (
       ),
       'enterprise', jsonb_build_object(
         'chat', jsonb_build_array(
-          'anthropic/claude-haiku-4.5',
+          'anthropic/claude-3.5-haiku',
           'google/gemini-2.0-flash-exp:free',
           'nvidia/nemotron-3-nano-30b-a3b:free'
         ),
         'analysis', jsonb_build_array(
-          'anthropic/claude-haiku-4.5',
+          'anthropic/claude-3.5-haiku',
           'nvidia/nemotron-3-nano-30b-a3b:free',
           'z-ai/glm-4.5-air:free',
           'google/gemma-4-26b-a4b-it:free'
@@ -74,11 +74,11 @@ values (
     'testOverride', jsonb_build_object(
       'enabled', true,
       'chat', jsonb_build_array(
-        'anthropic/claude-haiku-4.5',
+        'anthropic/claude-3.5-haiku',
         'google/gemini-2.0-flash-exp:free'
       ),
       'analysis', jsonb_build_array(
-        'anthropic/claude-haiku-4.5',
+        'anthropic/claude-3.5-haiku',
         'nvidia/nemotron-3-nano-30b-a3b:free'
       )
     )

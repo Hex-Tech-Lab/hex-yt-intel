@@ -88,8 +88,8 @@ DO $$ BEGIN
 
     -- Set default values for required fields
     ALTER TABLE public.analyses
-    ALTER COLUMN model_attempted SET DEFAULT 'anthropic/claude-haiku-4.5',
-    ALTER COLUMN model_used SET DEFAULT 'anthropic/claude-haiku-4.5';
+    ALTER COLUMN model_attempted SET DEFAULT 'anthropic/claude-3.5-haiku',
+    ALTER COLUMN model_used SET DEFAULT 'anthropic/claude-3.5-haiku';
 
     RAISE NOTICE 'Analyses table: Missing columns + cascading delete + constraints + timestamptz applied';
   END IF;

@@ -87,6 +87,10 @@ async function streamChatCascade(
           stream: true,
           reasoning: { effort: "low" },
           messages,
+          provider: {
+            sort: "latency",
+            allow_fallbacks: true,
+          },
         }),
         signal: controller.signal,
       });

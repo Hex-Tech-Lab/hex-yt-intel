@@ -12,8 +12,8 @@ export interface StanceDimension {
 const COMMERCIAL_TRIAL_MODE = true;
 
 const STANCE_MODELS: readonly string[] = COMMERCIAL_TRIAL_MODE
-  ? ['anthropic/claude-3.5-haiku']
-  : ['google/gemini-2.0-flash', 'anthropic/claude-3.5-haiku'];
+  ? ['anthropic/claude-3.5-haiku', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash']
+  : ['anthropic/claude-3.5-haiku', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
 
 const LLMInsightSchema = z.object({
   kind: z.enum(['tangent', 'contrarian']),
@@ -77,6 +77,10 @@ async function* callStanceModelStream(
         max_tokens: 700,
         stream: true,
         messages: [{ role: 'user', content: prompt }],
+        provider: {
+          sort: 'latency',
+          allow_fallbacks: true,
+        },
       }),
       signal: controller.signal,
     });
@@ -128,6 +132,10 @@ export async function* computeStanceRelationsStream(
   const prompt = buildPrompt(usable);
 
   for (const model of STANCE_MODELS) {
+    if (handshakeSignal?.aborted) {
+      console.warn(`[relations/engine] Cascade aborted before attempting model: ${model}`);
+      break;
+    }
     yield { type: 'model', model };
     let fullText = '';
 
