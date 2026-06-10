@@ -10,6 +10,12 @@ packages:
 # used as a JSX component". A single unified version (here aligned to the React 19.2.6
 # runtime per CodeRabbit, so 19.2 type APIs like useEffectEvent/<Activity> are covered)
 # eliminates the dup. (pnpm 11 reads overrides here, not in package.json.)
+#
+# Security overrides:
+# - "postcss": Pinned to "^8.4.49" to resolve a transitive XSS vulnerability. This override forces
+#   the secure version across all workspaces (e.g., Next.js in web/package.json which relies on postcss).
+# - "esbuild": Pinned to "^0.25.0" to resolve a dev server vulnerability. This is safe as it's only 
+#   used in the worker/package.json build script for basic ESM bundling without dev server/watch mode features.
 overrides:
   "@types/react": "^19.2.0"
   "@types/react-dom": "^19.2.0"

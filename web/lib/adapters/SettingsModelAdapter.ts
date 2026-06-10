@@ -6,7 +6,7 @@ export class SettingsModelAdapter implements ModelResolutionPort {
   private readonly commercialTrialMode: boolean;
 
   constructor(config?: { commercialTrialMode?: boolean }) {
-    // Default to true (commercial trial mode), configurable via injection or env flag.
+    // See docs: SettingsModelAdapter architecture for trial mode configuration.
     const envFlag = process.env.COMMERCIAL_TRIAL_MODE;
     this.commercialTrialMode = config?.commercialTrialMode ?? (envFlag !== undefined ? envFlag === 'true' : true);
   }

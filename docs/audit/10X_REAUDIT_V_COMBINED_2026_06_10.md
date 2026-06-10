@@ -12,6 +12,7 @@
 ## PHASE 0 — PREFLIGHT SNAPSHOT
 
 ### Monorepo Metrics
+
 | Metric | Value | Reference / Notes |
 | :--- | :--- | :--- |
 | **Branch** | `main` | Clean working tree; type-check and production build pass 100% |
@@ -39,7 +40,7 @@
 | **H1** | Missing composite index on `analyses(user_id, created_at)` | Database | ✅ **RESOLVED** | Index `idx_analyses_user_created` added in migrations. |
 | **H2** | Missing `users(id)` foreign key constraint | Database | ✅ **RESOLVED** | Foreign key added (defined as `NOT VALID` but active). |
 | **H4** | `NextRequest` leaked into `IQuotaPort` interface | `IQuotaPort.ts` | ✅ **RESOLVED** | Naming standardizations complete; request object decoupling verified. |
-| **H5** | `usage_logs` table grows unboundedly without TTL | Database | ❌ **UNCHANGED** | No pg_cron job or background worker has been scheduled to clean logs. |
+| **H5** | `usage_logs` table grows unboundedly without TTL | Database | ✅ **RESOLVED** | Scheduled `purge-usage-logs-daily` pg_cron job deletes rows older than 30 days. |
 | **H6** | Version drift across root/web/worker packages | `package.json` files | ✅ **RESOLVED** | Monorepo versions aligned at 1.5.2. |
 | **H7** | Undocumented `embedding vector(1536)` column in schema | `analyses` table | ✅ **RESOLVED** | Wired to semantic search pipelines via Upstash Vector. Retracted as issue. |
 | **N14** | `COMMERCIAL_TRIAL_MODE = true` hardcoded SPOF | `SettingsModelAdapter.ts` | ❌ **UNCHANGED** | If Haiku cascade is exhausted, all analyses fail. |
@@ -65,20 +66,24 @@
 ## PHASE 2 — MULTI-SKILL DEEP ANALYSIS
 
 ### 1. Structural Analysis (code-reviewer + code-modernization)
+
 - **Ports & Adapters (Hexagonal Architecture)**: We have a clear separation of interface ports (`web/lib/ports`) and concrete adapters (`web/lib/adapters`). 
 - **Use Case Decoupling**: Business flows are isolated within `CreateAnalysisUseCase.ts`, taking adapters through constructor injection. This makes code mockable and unit-testable.
-- **Bypasses**: The Next.js API endpoint now delegates directly to the usecase, ending controller-orchestrated database access.
+- **Bypasses**: The Next.js API endpoint now delegates directly to the use case, ending controller-orchestrated database access.
 
 ### 2. Dependency Ingestion & TS Aliases
-- **Dependency Isolation**: Separate workspaces prevent leaking server-side dependencies into edge configurations. However, raw imports from `@/lib/*` across `web/` must not leak into the Cloudflare Worker which is bundled separately by `wrangler`.
+
+- **Dependency Isolation**: Separate workspaces prevent leaking server-side dependencies into edge configurations. However, raw imports from `@/lib/*` across `web/` must not leak into the Cloudflare Worker, which is bundled separately by `wrangler`.
 - **TS Aliases config**: `@/*` maps to `./web/*` relative to the root folder via `baseUrl: "../"` in `web/tsconfig.json`. While this works, it creates soft boundaries between workspaces and could resolve relative paths to parent folders during local IDE refactoring.
 
 ### 3. Frontend & Design (vercel-react-best-practices + web-design-guidelines)
+
 - **View Transitions**: Navigation transitions between dashboard and `/status` pages are smooth.
 - **Telemetry Visual Jitter**: The status dashboard barcode uses mocked historical days (`i === 42 || i === 78 ? 'warn' : 'ok'`) to build the Stripe-like uptime timeline. Only the last bar uses real telemetry from Sentry.
 - **Resource Cleanup**: Stream handles in `useSSEStream.ts` still lack `AbortController` injection, leaving the possibility of orphaned active stream HTTP calls.
 
 ### 4. Database Optimization (database-architect-10x + supabase-postgres-best-practices)
+
 - **RLS Policy Checks**: All policies enforce `auth.uid() IS NOT NULL` instead of the deprecated `auth.role()`.
 - **Index Utilizations**: Large table queries leverage `idx_analyses_user_created` composite index, eliminating costly sequential table scans.
 
@@ -106,7 +111,8 @@ The following changes were introduced in the latest iteration:
 ## PHASE 4 — RISKS / BLIND SPOTS / TANGENTS
 
 ### Risk Ledger
-1. **[Medium Risk] Absent Log Purges (`usage_logs`)**: Missing database cron job (`pg_cron`) or scheduled cloud worker to clean old usage log rows. Over time, table growth will increase query latency.
+
+1. **[Medium Risk] Absent Log Purges (`usage_logs`)**: Missing database cron job (`pg_cron`) or scheduled cloud worker to clean old usage log rows. Over time, table growth will increase query latency. (Mitigated in migrations/20260610095804_add_health_ledger_and_log_purging.sql).
 2. **[Medium Risk] Commercial Trial Hardcode**: If Haiku cascade limits are reached, there is no automatic model failover path in `SettingsModelAdapter.ts`, creating a Single Point of Failure (SPOF) for the analysis generation stream.
 3. **[Low Risk] Monolithic env.ts**: Environment validations remain in a single file, rather than separating client-safe variables from secret backend tokens.
 
@@ -115,6 +121,7 @@ The following changes were introduced in the latest iteration:
 ## PHASE 5 — SYNTHESIS
 
 ### master Checklist
+
 - [x] Port naming prefix standardization (v1.5.2)
 - [x] UseCase abstraction decoupling (CreateAnalysisUseCase)
 - [x] Quota bypass vulnerability migration
@@ -122,15 +129,14 @@ The following changes were introduced in the latest iteration:
 - [x] Upstash Vector configuration verification
 - [x] 12 CodeQL Security and ReDoS alerts resolved
 - [x] 11 Dependabot package manager/lockfile vulnerabilities resolved
-- [ ] Database log auto-purging (pg_cron)
+- [x] Database log auto-purging (pg_cron)
 - [ ] Model cascade failover path configuration
 
 ### Action Clusters
-1. **Database Operations**:
-   - Write a migration to schedule a nightly `DELETE FROM usage_logs WHERE created_at < NOW() - INTERVAL '30 days'` via `pg_cron`.
-2. **Settings Hardening**:
+
+1. **Settings Hardening**:
    - Refactor `SettingsModelAdapter.ts` to allow a fallback cascade (e.g., trying Claude 3.5 Sonnet if Haiku quota limits are hit).
-3. **TypeScript Alignment**:
+2. **TypeScript Alignment**:
    - Separate client environment configurations from server secrets.
 
 ---

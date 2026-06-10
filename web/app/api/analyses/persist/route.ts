@@ -5,21 +5,15 @@ export const maxDuration = 30;
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyContentSig } from '@/lib/stream-token';
 import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
+import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
 import { publishValidationTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
+import type { PersistedValidationReport } from '@/lib/types/validation-report';
 
-export interface ValidationReport {
-  status: 'processing' | 'done' | 'interrupted';
-  transcript_available?: boolean;
-  analysis_type?: string;
-  stale_after?: string;
-  metadata?: any;
-  persona?: string;
-  timezone?: string;
-  model_used?: string | null;
-  valid?: boolean;
+export function isPersistedValidationReport(obj: unknown): obj is PersistedValidationReport {
+  return typeof obj === 'object' && obj !== null && typeof (obj as any).status === 'string';
 }
 
 /**
@@ -50,12 +44,14 @@ export async function POST(request: NextRequest) {
     }
 
     // ADR 006: Validate payload schema before persisting to JSONB column.
+    let validPayload: UCISPayloadV2 | undefined;
     if (payload !== undefined && payload !== null) {
       const parseResult = UCISPayloadV2Schema.safeParse(payload);
       if (!parseResult.success) {
         console.warn('[analyses/persist] Invalid payload schema', { analysisId, videoId, errors: parseResult.error.flatten() });
         return NextResponse.json({ error: 'Invalid payload schema' }, { status: 400 });
       }
+      validPayload = parseResult.data;
     }
 
     const persistenceAdapter = new SupabasePersistenceAdapter();
@@ -76,10 +72,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
     }
 
-    const priorReport = (row.validationReport as ValidationReport) || {};
+    const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport) ? row.validationReport : { status: 'processing' };
     const isInterrupted = status === 'interrupted';
 
-    const newReport: ValidationReport = {
+    const newReport: PersistedValidationReport = {
       ...priorReport,
       status: isInterrupted ? 'interrupted' : 'done',
       model_used: model || null,
@@ -90,7 +86,7 @@ export async function POST(request: NextRequest) {
     await persistenceAdapter.updateAnalysisResult({
       analysisId,
       markdown,
-      payload: payload as any, // Payload is cast to UCISPayloadV2 | null via interface
+      payload: validPayload ?? null, // Payload is cast to UCISPayloadV2 | null via interface
       model: model || null,
       validationPassed: isInterrupted ? false : !!valid,
       validationReport: newReport,

@@ -56,6 +56,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // Define Right Panel Accordion Items
   const rightPanelItems = useMemo(() => [
     {
+      id: 'insights',
       title: 'Insights',
       defaultOpen: true,
       content: (
@@ -63,6 +64,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       )
     },
     {
+      id: 'word-cloud',
       title: 'Word Cloud',
       content: (
         graph.nodes.length > 0 ? 
@@ -71,6 +73,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       )
     },
     {
+      id: 'mind-map',
       title: 'Mind Map',
       content: (
         graph.nodes.length > 0 ? 

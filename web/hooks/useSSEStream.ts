@@ -44,11 +44,9 @@ export function useSSEStream() {
     const videoId = extractTelemetryId(url);
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-    const currentSignal = abortControllerRef.current.signal;
+    const myController = new AbortController();
+    abortControllerRef.current = myController;
+    const currentSignal = myController.signal;
 
     return Sentry.startSpan(
       {
@@ -224,7 +222,9 @@ export function useSSEStream() {
           // Terminal cleanup: all async work has settled by here. Guarantees the main
           // action button is never left disabled after a partial/interrupted stream,
           // regardless of which exit path ran.
-          setIsLoading(false);
+          if (abortControllerRef.current === myController) {
+            setIsLoading(false);
+          }
         }
       }
     );
