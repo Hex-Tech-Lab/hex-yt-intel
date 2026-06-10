@@ -27,7 +27,7 @@ export type ModelKind = 'chat' | 'analysis';
 const COMMERCIAL_TRIAL_MODE = true;
 
 const FALLBACK: Record<ModelKind, readonly string[]> = {
-  chat: ['anthropic/claude-haiku-4.5', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'],
+  chat: ['google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'],
   analysis: ['anthropic/claude-haiku-4.5', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'],
 };
 
@@ -75,6 +75,9 @@ async function readModelConfig(): Promise<ModelConfig | null> {
  */
 export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Promise<string[]> {
   if (COMMERCIAL_TRIAL_MODE) {
+    if (kind === 'chat') {
+      return ['google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
+    }
     return ['anthropic/claude-haiku-4.5', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
   }
 

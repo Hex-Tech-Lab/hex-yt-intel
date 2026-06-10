@@ -19,6 +19,9 @@ export class SettingsModelAdapter implements ModelResolutionPort {
    */
   async resolveModels(tier: UserTier, kind: 'analysis' | 'chat'): Promise<string[]> {
     if (this.commercialTrialMode) {
+      if (kind === 'chat') {
+        return ['google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
+      }
       return ['anthropic/claude-haiku-4.5', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
     }
     return resolveModelCascade(tier, kind);
