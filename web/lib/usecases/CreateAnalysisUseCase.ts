@@ -148,10 +148,6 @@ export class CreateAnalysisUseCase {
     ]);
 
     if (!trafficResult.allowed) {
-      if (billingResult.allowed) {
-        // Refund since traffic blocked request
-        await this.billingQuota.refund({ userId, email: userEmail });
-      }
       return {
         type: 'error',
         code: 'ERR_RATE_LIMITED',
@@ -170,6 +166,13 @@ export class CreateAnalysisUseCase {
         headers: trafficResult.headers,
       };
     }
+
+    // 2.5 Consume quota now that gates are passed
+    await this.billingQuota.consumeQuota({
+      userId,
+      tier,
+      email: userEmail,
+    });
 
     // 3. Metadata + Transcript Ingestion
     let ingestionResult;
@@ -220,7 +223,7 @@ export class CreateAnalysisUseCase {
         },
       });
       analysisId = stub.id;
-    } catch (insertError) {
+    } catch {
       await this.billingQuota.refund({ userId, email: userEmail });
       return {
         type: 'error',

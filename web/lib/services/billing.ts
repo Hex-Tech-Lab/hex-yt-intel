@@ -152,8 +152,10 @@ export async function chargeMonthlyQuota(
  */
 export async function checkMonthlyQuota(
   userId: string,
-  tier: Tier
+  tier: Tier,
+  userEmail?: string
 ): Promise<{ allowed: boolean }> {
+  if (userEmail === ADMIN_EMAIL) return { allowed: true };
   if (tier === 'pro' || tier === 'enterprise') return { allowed: true };
   
   // Basic check: current usage < limit
