@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { sentry } from "@sentry/hono/cloudflare";
 // Ingestion + reasoning services. The ReasoningEngine bundles the UCIS prompt IP
 // (getUCISPrompt) and dimension parser internally via esbuild, so neither ever
 // reaches the browser. worker.ts is the orchestrator: it wires these services to
@@ -28,6 +29,7 @@ type Env = {
   STREAM_HMAC_SECRET: string;
   // Vercel app origin the worker calls server-to-server (in waitUntil) to persist.
   APP_URL?: string;
+  SENTRY_DSN?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -70,6 +72,11 @@ const corsMiddleware = (origin: string | undefined): string | null => {
   if (!origin) return null;
   return allowedOrigins.some(allowed => origin.startsWith(allowed)) ? origin : null;
 };
+
+app.use("*", sentry(app, (env) => ({
+  dsn: env.SENTRY_DSN,
+  tracesSampleRate: 1.0,
+})));
 
 app.use("*", cors({
   origin: corsMiddleware,
