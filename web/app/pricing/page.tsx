@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { PricingTableClient } from '@/components/billing/pricing-table-client';
 import { Icon } from '@/components/templates/_shared/primitives';
+import { FaqAccordion } from '@/components/marketing/FaqAccordion';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 
@@ -57,47 +58,14 @@ export default async function PricingPage() {
             <p className="hx-body-lg">Everything you need to know about our intelligence engine.</p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 800 }}>
-            {[
-              { q: "How does the synthesis engine work?", a: "We process video transcripts through our UCIS (Unified Content Intelligence System) model, which extracts claims, frameworks, and tactics across 11 semantic dimensions." },
-              { q: "Can I change my plan anytime?", a: "Yes. Upgrade or downgrade immediately. Pro-rated adjustments are handled automatically by our global payment processors." },
-              { q: "Do you handle long-form videos?", a: "Yes. Our Pro and Enterprise tiers can synthesize videos up to 12 hours in length with full accuracy and timestamp mapping." },
-              { q: "Which languages are supported?", a: "We currently support 40+ languages. The synthesis engine automatically detects and translates content into your primary workspace language." },
-              { q: "Do you offer refunds?", a: "To maintain our compute-heavy infrastructure, we operate on a strict no-refund basis. We encourage starting with the Free tier to evaluate performance." },
-              { q: "Is my data secure?", a: "Absolutely. All synthesis data is encrypted and stored in your private knowledge graph. We never use user data to train third-party models." }
-            ].map((faq, i) => (
-              <details key={i} style={{ 
-                background: "var(--surface)", 
-                border: "1px solid var(--line)", 
-                borderRadius: 12, 
-                padding: "16px 20px",
-                cursor: "pointer"
-              }}>
-                <summary style={{ 
-                  listStyle: "none", 
-                  fontSize: 15, 
-                  fontWeight: 600, 
-                  color: "var(--ink)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}>
-                  {faq.q}
-                  <Icon icon="solar:alt-arrow-down-linear" size={16} style={{ color: "var(--ink-muted)" }} />
-                </summary>
-                <p style={{ 
-                  marginTop: 12, 
-                  fontSize: 14, 
-                  color: "var(--ink-secondary)", 
-                  lineHeight: 1.6,
-                  borderTop: "1px solid var(--line)",
-                  paddingTop: 12
-                }}>
-                  {faq.a}
-                </p>
-              </details>
-            ))}
-          </div>
+          <FaqAccordion items={[
+            { q: "How does the synthesis engine work?", a: "We process video transcripts through our UCIS (Unified Content Intelligence System) model, which extracts claims, frameworks, and tactics across the most important dimensions." },
+            { q: "Can I change my plan anytime?", a: "Yes. Upgrade or downgrade immediately. Pro-rated adjustments are handled automatically by our global payment processors." },
+            { q: "Do you handle long-form videos?", a: "Yes. Our Pro and Enterprise tiers can synthesize videos up to 12 hours in length with full accuracy and timestamp mapping." },
+            { q: "Which languages are supported?", a: "We currently support 40+ languages. The synthesis engine automatically detects and translates content into your primary workspace language." },
+            { q: "Do you offer refunds?", a: "To maintain our compute-heavy infrastructure, we operate on a strict no-refund basis. We encourage starting with the Free tier to evaluate performance." },
+            { q: "Is my data secure?", a: "Absolutely. All synthesis data is encrypted and stored in your private knowledge graph. Transcripts are held in transient cache for up to 72hrs and automatically removed. We never use user data to train third-party models." }
+          ]} />
         </section>
       </main>
 
