@@ -141,6 +141,38 @@ export function LandingPage() {
       <main style={{ flex: 1 }}>
         <Hero />
         <Features />
+        
+        {/* Pricing Summary */}
+        <section style={{ borderTop: "1px solid var(--line)", padding: "80px 32px", maxWidth: 1280, margin: "0 auto", width: "100%" }}>
+          <div style={{ maxWidth: "52ch", marginBottom: 48 }}>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// Investment"}</p>
+            <h2 className="hx-h2" style={{ marginTop: 12 }}>Simple, transparent pricing.</h2>
+            <p className="hx-body-lg">Pay for what you use. Scale when you&apos;re ready.</p>
+          </div>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginBottom: 40 }}>
+            {[
+              { name: "Free", price: "$0", desc: "Individual experimenters", isPro: false },
+              { name: "Pro", price: "$9", desc: "Serious content analysts", isPro: true },
+              { name: "Enterprise", price: "$99", desc: "For high-volume operations", isPro: false, isEnterprise: true },
+            ].map((p) => (
+              <div key={p.name} style={{ padding: 32, border: p.isPro || (p as any).isEnterprise ? "1px solid var(--accent)" : "1px solid var(--line)", borderRadius: 16, background: "rgb(26 31 43 / 0.6)" }}>
+                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{p.name}</h3>
+                <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 500, color: "var(--accent)" }}>{p.price}</p>
+                <p style={{ margin: "2px 0 20px", fontSize: 13, color: "var(--ink-secondary)" }}>{p.desc}</p>
+                <Link href="/pricing" className={p.isPro ? "btn-primary" : "btn-secondary"} style={{ width: "100%", textDecoration: "none", display: "flex", justifyContent: "center" }}>
+                  {(p as any).isEnterprise ? "Contact Sales" : "Get started"}
+                </Link>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+             <Link href="/pricing#compare" style={{ color: "var(--accent)", textDecoration: "none", fontSize: 13, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 8 }}>
+                Compare all features <Icon icon="solar:arrow-right-linear" size={14} />
+             </Link>
+          </div>
+        </section>
       </main>
       <Footer />
     </div>
