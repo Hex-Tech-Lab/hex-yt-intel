@@ -29,15 +29,16 @@ export function LegalPage({ content }: LegalPageProps) {
             </span>
           </Link>
           <nav className="flex gap-8 text-[11px] font-mono uppercase tracking-[0.12em] text-[#94A3B8]">
-            <Link href="/pricing" className="hover:text-[#06B6D4] transition-colors">Pricing</Link>
-            <Link href="/terms-and-conditions" className="hover:text-[#06B6D4] transition-colors">Terms</Link>
             <Link href="/privacy-policy" className="hover:text-[#06B6D4] transition-colors">Privacy</Link>
+            <Link href="/terms-and-conditions" className="hover:text-[#06B6D4] transition-colors">Terms</Link>
+            <Link href="/refund-policy" className="hover:text-[#06B6D4] transition-colors">Refunds</Link>
+            <Link href="/pricing" className="hover:text-[#06B6D4] transition-colors">Pricing</Link>
           </nav>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-[1280px] mx-auto px-8 pt-40 pb-32">
-        <div className="max-w-[800px]">
+      <main className="relative z-10 max-w-[1280px] mx-auto px-12 pt-48 pb-32">
+        <div className="max-w-[800px] w-full">
           {/* Breadcrumbs & Title Section */}
           <div className="mb-16 animate-hx-rise">
              <div className="flex items-center gap-2 mb-6">

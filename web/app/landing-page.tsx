@@ -46,9 +46,10 @@ function Nav() {
         }}>HEX·YT·INTEL</span>
       </div>
       <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
-        <Link href="#features" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Features</Link>
+        <Link href="/privacy-policy" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Privacy</Link>
+        <Link href="/terms-and-conditions" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Terms</Link>
+        <Link href="/refund-policy" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Refunds</Link>
         <Link href="/pricing" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Pricing</Link>
-        <Link href="/dashboard" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Console</Link>
         <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none" }}>Sign in</Link>
       </nav>
     </header>
@@ -64,7 +65,7 @@ function Hero() {
           Drop a video. Get a synthesis.
         </h1>
         <p className="hx-body-lg" style={{ maxWidth: "54ch", margin: "0 auto" }}>
-          Transcript, claims, frameworks, and contrarian takes — structured across 11 dimensions, mapped into your knowledge graph, searchable in seconds.
+          Transcript, claims, frameworks, and contrarian takes — structured across the most important dimensions, mapped into your knowledge graph, searchable in seconds.
         </p>
         <div style={{ marginTop: 32, display: "flex", justifyContent: "center", gap: 12 }}>
           <Link href="/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>
@@ -116,9 +117,9 @@ function Features() {
   return (
     <section id="features" style={{ borderTop: "1px solid var(--line)", padding: "80px 32px", maxWidth: 1280, margin: "0 auto", width: "100%" }}>
       <div style={{ maxWidth: "52ch", marginBottom: 48 }}>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// 11-dimension synthesis"}</p>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// Multi-dimension synthesis"}</p>
         <h2 className="hx-h2" style={{ marginTop: 12 }}>The UCIS model.</h2>
-        <p className="hx-body-lg">Every video is parsed across 11 semantic dimensions. You get the full picture — not a summary, a structured synthesis.</p>
+        <p className="hx-body-lg">Every video is parsed across the most important semantic dimensions. You get the full picture — not a summary, a structured synthesis.</p>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
         {features.map((f) => (
