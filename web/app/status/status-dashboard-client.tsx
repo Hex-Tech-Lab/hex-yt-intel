@@ -26,6 +26,16 @@ function UptimeBar({ day, status }: { day: number, status: 'ok' | 'warn' | 'err'
     err: "var(--err)"
   };
 
+  const getBarDateString = (barIndex: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (89 - barIndex));
+    return d.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
   return (
     <div 
       style={{ 
@@ -56,7 +66,7 @@ function UptimeBar({ day, status }: { day: number, status: 'ok' | 'warn' | 'err'
           boxShadow: "0 10px 15px -3px rgba(0,0,0,0.5)"
         }}>
           <p style={{ margin: 0, fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-muted)" }}>
-            June {Math.max(1, 10 - (90 - day))}, 2026
+            {getBarDateString(day)}
           </p>
           <p style={{ margin: "2px 0 0", fontSize: 11, fontWeight: 600, color: status === 'ok' ? "var(--ok)" : "var(--warn)" }}>
             {status === 'ok' ? 'System Operational' : status === 'warn' ? 'Minor Degradation' : 'Partial Outage'}
