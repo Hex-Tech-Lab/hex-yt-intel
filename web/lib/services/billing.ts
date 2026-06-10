@@ -148,6 +148,28 @@ export async function chargeMonthlyQuota(
 }
 
 /**
+ * Check if the user is under the monthly analysis quota.
+ */
+export async function checkMonthlyQuota(
+  userId: string,
+  tier: Tier
+): Promise<{ allowed: boolean }> {
+  if (tier === 'pro' || tier === 'enterprise') return { allowed: true };
+  
+  // Basic check: current usage < limit
+  const supabase = getSupabaseServiceClient();
+  const { count, error } = await supabase
+    .from('analyses')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
+
+  if (error || count === null) return { allowed: true }; // Fail open
+  
+  return { allowed: count < (MONTHLY_QUOTAS[tier] || 3) };
+}
+
+/**
  * Refund a single monthly quota unit previously consumed by chargeMonthlyQuota.
  *
  * The atomic increment happens at ingestion (before we know a generation can
