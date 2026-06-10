@@ -16,8 +16,8 @@ import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEngine
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
 const MODEL_CHAIN = [
   { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5' },
-  { model: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-  { model: 'google/gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Alternate Route)' },
+  { model: 'anthropic/claude-sonnet-4.6', name: 'Claude Sonnet 4.6' },
 ] as const;
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -53,6 +53,7 @@ export class LLMCascade implements LLMCascadePort {
     let modelUsed = '';
     let produced = false;
 
+    let index = 0;
     for (const { model, name } of this.chain) {
       if (signal?.aborted) {
         console.warn(`[LLMCascade] Cascade aborted before attempting model: ${name}`);
@@ -71,7 +72,8 @@ export class LLMCascade implements LLMCascadePort {
           onDelta(delta);
         },
         90000,
-        signal
+        signal,
+        index
       );
 
       if (result.started && finalText) {
@@ -83,6 +85,7 @@ export class LLMCascade implements LLMCascadePort {
       const errorMsg = result.error || 'No tokens produced';
       console.warn(`[LLMCascade] Model ${name} failed/skipped. Error: ${errorMsg}`);
       onStatus?.({ stage: 'fallback', from: name, error: errorMsg });
+      index++;
     }
 
     return { started: produced, finalText, modelUsed };
@@ -99,13 +102,15 @@ export class LLMCascade implements LLMCascadePort {
     metadata: EngineMetadata,
     accept?: (text: string) => boolean
   ): Promise<{ text: string; modelUsed: string } | null> {
+    let index = 0;
     for (const { model, name } of this.chain) {
-      const result = await this.callLLM(model, systemPrompt, transcript, metadata);
+      const result = await this.callLLM(model, systemPrompt, transcript, metadata, 45000, index);
       if (result.success && result.text) {
         if (!accept || accept(result.text)) {
           return { text: result.text, modelUsed: name };
         }
       }
+      index++;
     }
     return null;
   }
@@ -121,7 +126,8 @@ export class LLMCascade implements LLMCascadePort {
     systemPrompt: string,
     onDelta: (text: string) => void,
     timeoutMs = 90000,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    index?: number
   ): Promise<{ started: boolean; text: string; error?: string }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -165,6 +171,7 @@ export class LLMCascade implements LLMCascadePort {
           provider: {
             sort: 'latency',
             allow_fallbacks: true,
+            ...(index === 1 ? { order: ['amazon-bedrock/global', 'google-vertex/global'] } : {}),
           },
         }),
         signal: controller.signal,
@@ -224,7 +231,8 @@ export class LLMCascade implements LLMCascadePort {
     systemPrompt: string,
     transcript: string,
     metadata: EngineMetadata,
-    timeoutMs = 45000
+    timeoutMs = 45000,
+    index?: number
   ): Promise<{ success: boolean; text?: string; error?: string }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -262,6 +270,7 @@ export class LLMCascade implements LLMCascadePort {
           provider: {
             sort: 'latency',
             allow_fallbacks: true,
+            ...(index === 1 ? { order: ['amazon-bedrock/global', 'google-vertex/global'] } : {}),
           },
         }),
         signal: controller.signal,
