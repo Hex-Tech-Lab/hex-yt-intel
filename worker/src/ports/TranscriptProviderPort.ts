@@ -9,6 +9,6 @@ import type { TranscriptResult } from '../services/TranscriptExtractor';
 
 export type { TranscriptResult };
 
-export interface ITranscriptProvider {
+export interface TranscriptProviderPort {
   fetch(videoId: string): Promise<TranscriptResult>;
 }

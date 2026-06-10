@@ -7,10 +7,10 @@
  */
 
 import { getUCISPrompt } from '../../../web/lib/prompts/factory';
-import type { IPromptBuilder } from '../ports/IPromptBuilder';
-import type { EngineContext } from '../ports/IReasoningEngine';
+import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
+import type { EngineContext } from '../ports/ReasoningEnginePort';
 
-export class PromptBuilder implements IPromptBuilder {
+export class PromptBuilder implements PromptBuilderPort {
   /**
    * Build the UCIS v5.1 system prompt from domain objects.
    */

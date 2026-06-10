@@ -5,8 +5,8 @@
  * getUCISPrompt so the prompt IP stays server-side (bundled into the worker).
  */
 
-import type { EngineContext } from './IReasoningEngine';
+import type { EngineContext } from './ReasoningEnginePort';
 
-export interface IPromptBuilder {
+export interface PromptBuilderPort {
   build(context: EngineContext): string;
 }

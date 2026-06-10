@@ -1,8 +1,8 @@
 import { guardTraffic } from '@/lib/services/traffic';
-import type { IQuotaPort, QuotaGateResult } from '@/lib/ports/IQuotaPort';
+import type { QuotaGateResult, TrafficGuardPort } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
 
-export class RedisTrafficAdapter implements IQuotaPort {
+export class RedisTrafficAdapter implements TrafficGuardPort {
   async checkGate(params: {
     userId: string;
     tier: UserTier;
@@ -20,9 +20,5 @@ export class RedisTrafficAdapter implements IQuotaPort {
       params.userAgent
     );
     return { allowed, denialResponse: response, headers };
-  }
-
-  async refund(): Promise<void> {
-    // Traffic guard is stateless per-request; no refund needed.
   }
 }

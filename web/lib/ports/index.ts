@@ -1,4 +1,10 @@
-export type { IAuthPort, AuthIdentity } from './IAuthPort';
-export type { IQuotaPort, QuotaGateResult } from './IQuotaPort';
-export type { IIngestionPort, VideoMetadata, IngestionResult, StreamToken } from './IIngestionPort';
-export type { IPersistencePort, CachedAnalysis, AnalysisStub, ValidationReportInput } from './IPersistencePort';
+export type { AuthPort, AuthIdentity } from './AuthPort';
+export type { QuotaGateResult } from './QuotaPort';
+export type { TrafficGuardPort } from './TrafficGuardPort';
+export type { BillingQuotaPort } from './BillingQuotaPort';
+export type { VideoMetadata, IngestionResult, StreamToken } from './IngestionPort';
+export type { MetadataIngestionPort } from './MetadataIngestionPort';
+export type { ModelResolutionPort } from './ModelResolutionPort';
+export type { CryptographicTokenPort } from './CryptographicTokenPort';
+export type { PersistencePort, CachedAnalysis, AnalysisStub, ValidationReportInput } from './PersistencePort';
+export type { ChatPersistencePort } from './ChatPersistencePort';

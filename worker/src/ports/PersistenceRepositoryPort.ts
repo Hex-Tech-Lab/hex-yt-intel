@@ -5,7 +5,7 @@
  * Upstash REST client directly — only this port. The adapter
  * (UpstashCacheAdapter) is the sole place the Upstash `fetch` calls live.
  */
-export interface IPersistenceRepository {
+export interface PersistenceRepositoryPort {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, ttlSeconds?: number): Promise<void>;
   /** Deterministic SHA-256 fingerprint of a system prompt (cache-key component). */

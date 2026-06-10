@@ -14,7 +14,7 @@ export interface AuthIdentity {
  *
  * Current implementation: getSupabaseClientWithAuth() + getUser() + getUserTier()
  */
-export interface IAuthPort {
+export interface AuthPort {
   /**
    * Authenticate the incoming request.
    * @returns AuthIdentity on success, null if session is missing/invalid.

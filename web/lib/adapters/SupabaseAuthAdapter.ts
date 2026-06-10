@@ -1,8 +1,8 @@
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { getUserTier } from '@/lib/services/traffic';
-import type { IAuthPort, AuthIdentity } from '@/lib/ports/IAuthPort';
+import type { AuthPort, AuthIdentity } from '@/lib/ports';
 
-export class SupabaseAuthAdapter implements IAuthPort {
+export class SupabaseAuthAdapter implements AuthPort {
   async authenticate(): Promise<AuthIdentity | null> {
     const supabase = await getSupabaseClientWithAuth();
     const { data: { user } } = await supabase.auth.getUser();

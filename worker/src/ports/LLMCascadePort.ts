@@ -6,9 +6,9 @@
  * request-scoped state stays in method locals.
  */
 
-import type { EngineMetadata, StreamStatusEvent } from './IReasoningEngine';
+import type { EngineMetadata, StreamStatusEvent } from './ReasoningEnginePort';
 
-export interface ILLMCascade {
+export interface LLMCascadePort {
   /**
    * Stream the cascade. Iterates the model chain and commits to the first model
    * that produces tokens. Emits 'model'/'fallback' lifecycle events via onStatus.

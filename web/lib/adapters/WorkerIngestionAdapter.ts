@@ -1,12 +1,11 @@
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
 import { fetchSubtitles } from '@/lib/services/decodo';
 import { detectPersona } from '@/lib/prompts';
-import type { IIngestionPort, VideoMetadata, IngestionResult } from '@/lib/ports/IIngestionPort';
+import type { VideoMetadata, IngestionResult, MetadataIngestionPort } from '@/lib/ports';
 import type { PersonaId } from '@/lib/prompts';
-import type { UserTier } from '@/lib/types/billing';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 
-export class WorkerIngestionAdapter implements IIngestionPort {
+export class WorkerIngestionAdapter implements MetadataIngestionPort {
   async fetch(videoId: string): Promise<IngestionResult> {
     const [metadataResult, transcriptResult] = await Promise.allSettled([
       fetchWorkerMetadata(videoId),
@@ -47,14 +46,6 @@ export class WorkerIngestionAdapter implements IIngestionPort {
       return params.explicitPersona;
     }
     return detectPersona(params.title, params.channelTitle);
-  }
-
-  resolveModels(_tier: UserTier, _kind: 'analysis' | 'chat'): Promise<string[]> {
-    throw new Error('WorkerIngestionAdapter: resolveModels not supported');
-  }
-
-  signToken(_params: { videoId: string; analysisId: string; models: string[] }): never {
-    throw new Error('WorkerIngestionAdapter: signToken not supported');
   }
 
   buildJobMetadata(metadata: VideoMetadata): AnalysisJobMetadata {

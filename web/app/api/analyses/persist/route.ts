@@ -3,12 +3,11 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { verifyContentSig } from '@/lib/stream-token';
 import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
 import { publishValidationTask } from '@/lib/qstash-client';
-import { env } from '@/lib/env';
+import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
 
 /**
@@ -19,10 +18,6 @@ import * as Sentry from '@sentry/nextjs';
  * ADR 006: Dual-write persistence
  * - analysis_markdown: Reconstructed markdown for backward compat + PDF export
  * - analysis_payload: Structured JSON (v2.0 schema) for KG visualization + cache hits
- *
- * FIX: We use the raw @supabase/supabase-js client here because the SSR wrapper
- * (@supabase/ssr) expects cookies to establish a session, which causes 401 errors
- * in Server-to-Server calls.
  */
 export async function POST(request: NextRequest) {
   let body: { analysisId?: string; videoId?: string; markdown?: string; payload?: unknown; model?: string; valid?: boolean; contentSig?: string; status?: string } | undefined;
@@ -51,26 +46,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Instantiate RAW client with service role to bypass RLS and avoid cookie dependencies.
-    const service = createClient(
-      env.supabaseUrl,
-      env.supabaseServiceRoleKey!
-    );
+    const persistenceAdapter = new SupabasePersistenceAdapter();
 
     // Fetch the processing row to recover its context (user, transcript availability).
-    const { data: row, error: fetchError } = await service
-      .from('analyses')
-      .select('id, user_id, title, validation_report, created_at')
-      .eq('id', analysisId)
-      .eq('video_id', videoId)
-      .maybeSingle();
+    const row = await persistenceAdapter.findAnalysisForPersist({ analysisId, videoId });
 
-    // Don't mask a DB failure as a 404 — they need different handling/alerting.
-    if (fetchError) {
-      Sentry.captureException(fetchError, { tags: { operation: 'analysis-persist', reason: 'fetch-error' }, extra: { analysisId, videoId } });
-      console.error('[analyses/persist] Row fetch failed:', fetchError.message);
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
     if (!row) {
       // Authenticated (valid content sig) but no matching row. Usual cause: the bouncer
       // wrote the processing row to a DIFFERENT environment's DB (e.g. a preview branch)
@@ -84,31 +64,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
     }
 
-    const priorReport = (row.validation_report as any) || {};
+    const priorReport = (row.validationReport as any) || {};
     const isInterrupted = status === 'interrupted';
 
-    // ADR 006: Dual-write - update both markdown and JSON payload columns
-    const { error: updateError } = await service
-      .from('analyses')
-      .update({
-        analysis_markdown: markdown,
-        analysis_payload: payload ?? null,  // ADR 006: JSONB column for structured payload
-        model_used: model || 'edge-stream',
-        validation_passed: isInterrupted ? false : !!valid,
-        validation_report: {
-          ...priorReport,
-          status: isInterrupted ? 'interrupted' : 'done',
-          model_used: model,
-          valid: isInterrupted ? false : !!valid,
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', analysisId);
+    const newReport = {
+      ...priorReport,
+      status: isInterrupted ? 'interrupted' : 'done',
+      model_used: model,
+      valid: isInterrupted ? false : !!valid,
+    };
 
-    if (updateError) {
-      Sentry.captureException(updateError, { tags: { operation: 'analysis-persist' } });
-      return NextResponse.json({ error: 'Failed to persist analysis' }, { status: 500 });
-    }
+    // ADR 006: Dual-write - update both markdown and JSON payload columns via adapter
+    await persistenceAdapter.updateAnalysisResult({
+      analysisId,
+      markdown,
+      payload,
+      model: model || null,
+      validationPassed: isInterrupted ? false : !!valid,
+      status: isInterrupted ? 'interrupted' : 'done',
+      validationReport: newReport,
+    });
 
     // Skip cache and validation for interrupted/partial streams.
     if (isInterrupted) {
@@ -126,7 +101,7 @@ export async function POST(request: NextRequest) {
       analysis_payload: (payload ?? null) as Record<string, unknown> | null,
       validation_report: priorReport,
       model_used: model || 'edge-stream',
-      created_at: row.created_at,
+      created_at: row.createdAt,
       cached_at: new Date().toISOString(),
     };
     const cacheKey = generateCacheKey('edge-stream', markdown, '5.1');
@@ -137,7 +112,7 @@ export async function POST(request: NextRequest) {
         videoId,
         markdown,
         filename: `${videoId}.md`,
-        userId: row.user_id,
+        userId: row.userId,
         analysisId,
         metadata: { title: row.title, channelTitle: '' },
       }).catch(() => {});

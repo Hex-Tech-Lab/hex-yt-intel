@@ -6,8 +6,8 @@
  * request-scoped state stays in method locals, so it is race-free when shared.
  */
 
-import type { ILLMCascade } from '../ports/ILLMCascade';
-import type { EngineMetadata, StreamStatusEvent } from '../ports/IReasoningEngine';
+import type { LLMCascadePort } from '../ports/LLMCascadePort';
+import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEnginePort';
 
 // 3-free + 1-paid model cascade – ordered best-first by a real latency+quality
 // benchmark (2026-06-02) against the full v5.1 prompt. Under the ~55s request budget
@@ -28,7 +28,7 @@ const MODEL_CHAIN = [
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const HTTP_REFERER = 'https://yt-intel.hex-tech-lab.workers.dev';
 
-export class LLMCascade implements ILLMCascade {
+export class LLMCascade implements LLMCascadePort {
   private apiKey: string;
   // The ordered cascade actually used. Defaults to the hardcoded MODEL_CHAIN, but the
   // bouncer may inject a per-tier list (resolved from app_settings) — the DB config is

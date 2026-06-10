@@ -41,7 +41,7 @@ export interface ValidationReportInput {
   *
   * Current implementation: getSupabaseServiceClient() + direct .from('analyses') calls.
   */
-export interface IPersistencePort {
+export interface PersistencePort {
   /**
    * Look up the most recent analysis for (userId, videoId).
    * Returns null if no row exists or the markdown is empty/stub (< 8 dimensions).
@@ -73,5 +73,65 @@ export interface IPersistencePort {
     analysisPayload: UCISPayloadV2 | null;
     analysisMarkdown: string;
     validationPassed: boolean;
+  }): Promise<void>;
+
+  /**
+   * Fetch analysis history for the user. Limits to 50 items.
+   */
+  getUserHistory(params: { userId: string }): Promise<Array<{
+    id: string;
+    videoId: string;
+    title: string;
+    createdAt: string;
+    status: 'completed' | 'processing' | 'incomplete';
+  }>>;
+
+  /**
+   * Look up a single analysis by its ID and userId.
+   */
+  findAnalysisById(params: {
+    userId: string;
+    analysisId: string;
+  }): Promise<{
+    id: string;
+    title: string;
+    videoId: string;
+    analysisMarkdown: string;
+    createdAt: string;
+  } | null>;
+
+  /**
+   * Update the user subscription tier.
+   */
+  updateUserTier(params: {
+    userId: string;
+    tier: 'pro' | 'free';
+  }): Promise<void>;
+
+  /**
+   * Find analysis row for server-to-server persistence lookup.
+   */
+  findAnalysisForPersist(params: {
+    analysisId: string;
+    videoId: string;
+  }): Promise<{
+    id: string;
+    userId: string;
+    title: string;
+    validationReport: any;
+    createdAt: string;
+  } | null>;
+
+  /**
+   * Update the analysis row with the final reasoning results.
+   */
+  updateAnalysisResult(params: {
+    analysisId: string;
+    markdown: string;
+    payload: any;
+    model: string | null;
+    validationPassed: boolean;
+    status: 'done' | 'interrupted';
+    validationReport: any;
   }): Promise<void>;
 }

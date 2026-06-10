@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClientWithAuth } from '@/lib/supabase';
+import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { paddle } from '@/lib/paddle';
 
 /**
  * PADDLE WEBHOOK HANDLER
@@ -9,35 +10,40 @@ import { getSupabaseClientWithAuth } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
+  const signature = request.headers.get('paddle-signature') || '';
 
   try {
-    // 1. Verify Webhook (Boilerplate - requires PADDLE_WEBHOOK_SECRET)
-    // const event = paddle.webhooks.unmarshal(body, process.env.PADDLE_WEBHOOK_SECRET!, signature);
-    const event = JSON.parse(body); // Temporary bypass for dev until secret is set
+    let event;
+    const secret = process.env.PADDLE_WEBHOOK_SECRET;
 
-    const supabase = await getSupabaseClientWithAuth();
+    if (!secret && process.env.NODE_ENV === 'development') {
+      event = JSON.parse(body);
+    } else {
+      if (!secret) {
+        throw new Error('PADDLE_WEBHOOK_SECRET is required');
+      }
+      event = paddle.webhooks.unmarshal(body, secret, signature);
+    }
+
+    const persistenceAdapter = new SupabasePersistenceAdapter();
 
     switch (event.event_type) {
       case 'subscription.created':
-      case 'subscription.updated':
+      case 'subscription.updated': {
         const userId = event.data.custom_data?.userId;
         if (userId) {
-          await supabase
-            .from('users')
-            .update({ tier: 'pro', updated_at: new Date().toISOString() })
-            .eq('id', userId);
+          await persistenceAdapter.updateUserTier({ userId, tier: 'pro' });
         }
         break;
+      }
       
-      case 'subscription.canceled':
+      case 'subscription.canceled': {
         const cancelUserId = event.data.custom_data?.userId;
         if (cancelUserId) {
-          await supabase
-            .from('users')
-            .update({ tier: 'free', updated_at: new Date().toISOString() })
-            .eq('id', cancelUserId);
+          await persistenceAdapter.updateUserTier({ userId: cancelUserId, tier: 'free' });
         }
         break;
+      }
     }
 
     return NextResponse.json({ processed: true });

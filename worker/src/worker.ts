@@ -13,7 +13,7 @@ import { LLMCascade } from "./services/LLMCascade";
 import { ValidationService } from "./services/ValidationService";
 import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
 import { reconstructMarkdown, extractJsonPayload } from "./services/MarkdownReconstructor";
-import type { IReasoningEngine } from "./ports/IReasoningEngine";
+import type { ReasoningEnginePort } from "./ports/ReasoningEnginePort";
 
 type Env = {
   YOUTUBE_API_KEY: string;
@@ -266,7 +266,7 @@ app.post("/analyze-llm", async (c) => {
       upstashUrl && upstashToken
         ? new UpstashCacheAdapter({ url: upstashUrl, token: upstashToken })
         : undefined;
-    const engine: IReasoningEngine = new ReasoningEngine(
+    const engine: ReasoningEnginePort = new ReasoningEngine(
       new PromptBuilder(),
       new LLMCascade(apiKey),
       new ValidationService(),
@@ -374,7 +374,7 @@ app.post("/analyze-llm-stream", async (c) => {
   // Instantiate the reasoning engine via DI. It builds the UCIS prompt server-side
   // and runs the model cascade — the orchestrator only wires domain events to SSE.
   // No cache on the streaming path (partial-progress persistence handled by worker).
-  const engine: IReasoningEngine = new ReasoningEngine(
+  const engine: ReasoningEnginePort = new ReasoningEngine(
     new PromptBuilder(),
     new LLMCascade(apiKey, req.models),
     new ValidationService(),
