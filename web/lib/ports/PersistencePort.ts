@@ -112,4 +112,19 @@ export interface PersistencePort {
     validationPassed: boolean;
     validationReport: ValidationReportInput | unknown;
   }): Promise<void>;
+
+  persistKnowledgeGraph(params: {
+    analysisId: string;
+    entities: Array<{
+      label: string;
+      type: string;
+      weight: number;
+    }>;
+    relations: Array<{
+      source: string;
+      target: string;
+      relation: string;
+      strength: number;
+    }>;
+  }): Promise<void>;
 }

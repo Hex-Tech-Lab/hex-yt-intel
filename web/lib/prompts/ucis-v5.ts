@@ -98,7 +98,7 @@ What specific gap, trend, or contrarian angle does this content reveal that comp
 1. **[Deliverable Name]** – [Value statement]
    - **Action**: [Implementation step]
    - **Persona Fit**: [Primary / Secondary]
-   - **Source Anchor**: `[HH:MM:SS]`
+   - **Source Anchor**: \`[HH:MM:SS]\`
 
 2. **[Deliverable Name]** – [...]
 3. **[Deliverable Name]** – [...]
