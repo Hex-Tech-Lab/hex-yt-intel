@@ -40,7 +40,16 @@ When assigned a vertical architecture task, agents must follow this sequence:
 
 ---
 
-## 3. HOUSEKEEPING PROTOCOL
+## 3. SHARED COMMUNICATION PROTOCOL (.memory/AGENT_LEDGER.md)
+
+To enable high concurrency without toe-stepping, all agents MUST use the shared ledger:
+1. **Read**: View `.memory/AGENT_LEDGER.md` before starting to avoid active files.
+2. **Write**: Append an `[IN_PROGRESS]` line specifying your intent, target files, and timestamp.
+3. **Update**: Change your line to `[DONE]` when the task is complete.
+
+---
+
+## 4. HOUSEKEEPING PROTOCOL
 
 Every 10 turns or 5 commits, a "Housekeeping Cycle" must be initiated by GC:
 - [ ] Verify version parity across root/web/worker.

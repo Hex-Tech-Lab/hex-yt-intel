@@ -16,6 +16,15 @@ export interface BillingQuotaPort {
   }): Promise<QuotaGateResult>;
 
   /**
+   * Consume one monthly quota unit (called after successful synthesis).
+   */
+  consumeQuota(params: {
+    userId: string;
+    tier: UserTier;
+    email?: string;
+  }): Promise<void>;
+
+  /**
    * Refund one monthly quota unit. Called on post-charge ingestion failure.
    */
   refund(params: { userId: string; email?: string }): Promise<void>;

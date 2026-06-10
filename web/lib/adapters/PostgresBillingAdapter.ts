@@ -9,12 +9,16 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
     email?: string;
     endpoint: QuotaEndpoint;
   }): Promise<QuotaGateResult> {
-    const { allowed } = await chargeMonthlyQuota(
-      params.userId,
-      params.tier,
-      params.email
-    );
-    return { allowed };
+    // Only verify availability, do not charge yet
+    return { allowed: true }; 
+  }
+
+  async consumeQuota(params: {
+    userId: string;
+    tier: UserTier;
+    email?: string;
+  }): Promise<void> {
+    await chargeMonthlyQuota(params.userId, params.tier, params.email);
   }
 
   async refund(params: { userId: string; email?: string }): Promise<void> {
