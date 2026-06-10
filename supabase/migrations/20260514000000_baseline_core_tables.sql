@@ -56,10 +56,10 @@ create table if not exists public.analyses (
   updated_at        timestamp default current_timestamp,
   shared_token      varchar,
   shared_expires_at timestamptz,
-  model_attempted   text default 'anthropic/claude-haiku-4.5',
+  model_attempted   text default 'anthropic/claude-3.5-haiku',
   validation_report jsonb,
   validation_passed boolean default false,
-  model_used        text default 'anthropic/claude-haiku-4.5'
+  model_used        text default 'anthropic/claude-3.5-haiku'
 );
 
 -- usage_logs ----------------------------------------------------------------

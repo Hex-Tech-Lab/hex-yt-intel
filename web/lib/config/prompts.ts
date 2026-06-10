@@ -29,8 +29,8 @@ export const CHAT_PROTOCOL = [
 const COMMERCIAL_TRIAL_MODE = true;
 
 export const CHAT_MODELS: readonly string[] = COMMERCIAL_TRIAL_MODE
-  ? ['google/gemini-2.0-flash', 'anthropic/claude-3.5-haiku']
-  : ['google/gemini-2.0-flash', 'anthropic/claude-3.5-haiku'];
+  ? ['anthropic/claude-3.5-haiku', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash']
+  : ['anthropic/claude-3.5-haiku', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
 
 /**
  * UCIS v3.2 system prompt (legacy, kept for backward compatibility)

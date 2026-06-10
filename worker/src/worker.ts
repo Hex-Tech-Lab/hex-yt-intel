@@ -70,7 +70,14 @@ function timingSafeEqualHex(a: string, b: string): boolean {
 // to-server calls (no Origin) skip CORS entirely and are unaffected.
 const corsMiddleware = (origin: string | undefined): string | null => {
   if (!origin) return null;
-  return allowedOrigins.some(allowed => origin.startsWith(allowed)) ? origin : null;
+  if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+    return origin;
+  }
+  // Allow dynamic Vercel preview deployment origins (e.g. hex-yt-intel-git-*.vercel.app)
+  if (origin.startsWith('https://hex-yt-intel-') && origin.endsWith('.vercel.app')) {
+    return origin;
+  }
+  return null;
 };
 
 app.use("*", sentry(app, (env) => ({

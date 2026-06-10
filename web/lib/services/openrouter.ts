@@ -22,9 +22,9 @@ export class AnalysisEngineError extends Error {
 }
 
 const MODEL_TIERS = [
-  { model: 'google/gemini-2.0-flash-lite-preview-02-05:free', tier: 'free', cost: 0 }, // Tier 0: Google Gemini 2.0 Flash (massive rate limits, high reliability)
-  { model: 'google/gemini-2.0-pro-exp-02-05:free', tier: 'free', cost: 0 }, // Tier 1: Google Gemini 2.0 Pro (fallback free tier)
-  { model: 'anthropic/claude-3.5-haiku', tier: 'paid', cost: 0.0015 }, // Tier 2: Paid fallback only if free exhausted
+  { model: 'anthropic/claude-3.5-haiku', tier: 'paid', cost: 0.0015 }, // Tier 0: Paid primary Claude Haiku 4.5
+  { model: 'google/gemini-2.0-flash-lite-preview-02-05:free', tier: 'free', cost: 0 }, // Tier 1: Google Gemini 2.0 Flash (fallback free tier)
+  { model: 'google/gemini-2.0-pro-exp-02-05:free', tier: 'free', cost: 0 }, // Tier 2: Google Gemini 2.0 Pro (fallback free tier)
 ] as const;
 
 /**
@@ -95,6 +95,10 @@ export async function callOpenRouter(
         messages: [{ role: 'user', content: prompt }],
         stream: true,
         max_tokens: maxTokens,
+        provider: {
+          sort: 'latency',
+          allow_fallbacks: true,
+        },
       }),
       signal: controller.signal,
     });
