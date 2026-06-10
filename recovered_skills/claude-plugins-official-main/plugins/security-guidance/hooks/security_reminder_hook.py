@@ -678,7 +678,7 @@ _GIT_COMMIT_RE = re.compile(
     # _GIT_PUSH_RE). Without this, `git -C /repo commit` is silently dropped
     # by the handler — see #2089's secondary finding. The gt branch has no
     # global-option layer to worry about.
-    r'\bgit(?:\s+-[Cc]\s+\S+|\s+--\S+=\S+)*\s+commit\b'
+    r'\bgit(?:\s+-[Cc]\s+\S+|\s+--\S+=\S+){0,5}\s+commit\b'
     r'|\bgt\s+(?:create|modify)\b'
 )
 # Match either the `--amend` flag (with the leading whitespace boundary
@@ -721,7 +721,7 @@ COMMIT_REVIEW_RATE_WINDOW_S = int(
 # but the bash hook fires on Claude's top-level command so we need to
 # recognize gt submit at the matcher level. See #2048.
 _GIT_PUSH_RE = re.compile(
-    r'(?:\bgit(?:\s+-[cC]\s+\S+|\s+--\S+=\S+)*\s+push\b|\bgt\s+submit\b)'
+    r'(?:\bgit(?:\s+-[cC]\s+\S+|\s+--\S+=\S+){0,5}\s+push\b|\bgt\s+submit\b)'
 )
 
 # `git push` stdout: "abc1234..def5678  branch -> branch" (or `+abc..def` on

@@ -77,22 +77,29 @@ Selection Rationale: [1 sentence on why this persona configuration was chosen]
 
 *The 60-second ROI, weighted to the primary persona.*
 
-**Analysis Timestamp**: \`YYYY-MM-DD HH:MM:SS [Timezone] (Agent)\`
+#### [EXECUTIVE_SUMMARY]
+An actionable distillation including:
+- **Core Thesis**: The fundamental argument/teaching.
+- **Insights & Financials**: Key economic/strategic takeaways.
+- **Recommendations**: Persona-weighted advice.
+- **Next Steps & Actions**: Concrete implementation path.
+- **Conclusion**: The ultimate takeaway.
 
-**Source Content**: [Title – Creator – Publish Date/Time/TZ]
+#### [SHORT_SUMMARY]
+A single, high-density paragraph summarizing the entire content (regardless of duration) followed by a final concluding sentence.
 
-**The Core Thesis** (1–2 sentences):
-The single most compressed statement of what this content is fundamentally arguing or teaching.
+#### [LONG_SUMMARY]
+A complex, multi-dimensional narrative (approx. 1 page) highlighting key points from all 10 dimensions, synthesized into a coherent intelligence product with a final strategic conclusion.
 
-**The Unfair Advantage** (1–2 sentences, persona-weighted):
-What specific gap, trend, contrarian angle, or cross-domain tangent does this content reveal that competitors / peers in the **primary persona's domain** are missing?
+#### [UNFAIR_ADVANTAGE]
+What specific gap, trend, or contrarian angle does this content reveal that competitors/peers are missing?
 
 **Top 3–5 Ranked Deliverables for [Primary Persona]**:
+1. **[Deliverable Name]** – [Value statement]
+   - **Action**: [Implementation step]
+   - **Persona Fit**: [Primary / Secondary]
+   - **Source Anchor**: `[HH:MM:SS]`
 
-1. **[Deliverable Name]** – [1-sentence value statement keyed to the primary persona's utility function]
-   - **Action**: [Exact prompt, step, framework, or decision to execute]
-   - **Persona Fit**: [Primary / also valuable to: ...]
-   - **Source Anchor**: \`[HH:MM:SS]\` or Act reference
 2. **[Deliverable Name]** – [...]
 3. **[Deliverable Name]** – [...]
 

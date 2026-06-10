@@ -1,23 +1,26 @@
 import type { UserTier } from '@/lib/types/billing';
 import type { ModelResolutionPort } from '@/lib/ports';
+import { resolveModelCascade } from '@/lib/services/settings';
 
 export class SettingsModelAdapter implements ModelResolutionPort {
-  /** When true, restricts SettingsModelAdapter to Haiku only (commercial trial mode). */
-  private static readonly COMMERCIAL_TRIAL_MODE = true;
+  private readonly commercialTrialMode: boolean;
+
+  constructor(config?: { commercialTrialMode?: boolean }) {
+    // Default to true (commercial trial mode), configurable via injection or env flag.
+    const envFlag = process.env.COMMERCIAL_TRIAL_MODE;
+    this.commercialTrialMode = config?.commercialTrialMode ?? (envFlag !== undefined ? envFlag === 'true' : true);
+  }
 
   /**
    * Resolves the model list for ingestion requests.
-   * @param _tier - User tier (unused in this adapter; WorkerIngestionAdapter handles tier logic).
+   * @param tier - User tier.
    * @param kind - Request kind: 'analysis' or 'chat'.
-   * @returns Promise resolving to model array (Haiku-only in trial mode, cascade otherwise).
+   * @returns Promise resolving to model array (resolves via resolveModelCascade unless in trial mode).
    */
-  resolveModels(_tier: UserTier, kind: 'analysis' | 'chat'): Promise<string[]> {
-    if (SettingsModelAdapter.COMMERCIAL_TRIAL_MODE) {
-      return Promise.resolve(['anthropic/claude-haiku-4.5']);
+  async resolveModels(tier: UserTier, kind: 'analysis' | 'chat'): Promise<string[]> {
+    if (this.commercialTrialMode) {
+      return ['anthropic/claude-haiku-4.5'];
     }
-    if (kind === 'chat') {
-      return Promise.resolve(['anthropic/claude-haiku-4.5']);
-    }
-    return Promise.resolve(['nvidia/nemotron-3-nano-30b-a3b:free', 'anthropic/claude-haiku-4.5']);
+    return resolveModelCascade(tier, kind);
   }
 }

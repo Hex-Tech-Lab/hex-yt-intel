@@ -16,10 +16,10 @@
 | :--- | :--- | :--- |
 | **Branch** | `main` | Clean working tree, aligned with `origin/main` |
 | **HEAD Commit** | `f83c582` | Author: Kelly Bakri (11 minutes ago) |
-| **Root Version** | `1.4.1` | `package.json` |
-| **Web Version** | `1.4.6` | `web/package.json` |
-| **Worker Version**| `1.5.1` | `worker/package.json` |
-| **Version Drift** | ⚠️ **CONFIRMED** | Monorepo versions (1.4.1 vs 1.4.6 vs 1.5.1) are out of sync |
+| **Root Version** | `1.5.2` | `package.json` |
+| **Web Version** | `1.5.2` | `web/package.json` |
+| **Worker Version**| `1.5.2` | `worker/package.json` |
+| **Version Drift** | **NONE** | Monorepo versions are aligned at 1.5.2 |
 | **Web LOC** | ~17,400 TS/TSX | Includes billing services and legal templates |
 | **Worker LOC** | ~5,400 TS | Cloudflare Worker Hono code + chat streams |
 | **DB Migrations** | 24 | From baseline to `20260607231000_c1_quota_auth_bypass.sql` |
@@ -61,7 +61,7 @@ Below is the status of every item tracked since the prior audit, including the 4
 | **H3** | Duplicate of C2 (`persistAnalysis` completion) | `SupabasePersistenceAdapter.ts` | ✅ **RESOLVED** | Synced and resolved. |
 | **H4** | `NextRequest` leaked into `IQuotaPort` interface, breaking service decoupling | `IQuotaPort.ts` | ✅ **RESOLVED** | Changed request argument to `clientIp?: string` and `userAgent?: string`. |
 | **H5** | `usage_logs` table grows unboundedly without TTL or purge system | Supabase Database | ❌ **UNCHANGED** | No pg_cron or worker-level job is scheduled to purge logs older than 30 days. |
-| **H6** | Version drift across root/web/worker packages | `package.json` configurations | ❌ **UNCHANGED** | root=1.4.1, web=1.4.6, worker=1.5.1. Blocks clean housekeeping check cycles. |
+| **H6** | Version drift across root/web/worker packages | `package.json` configurations | ✅ **RESOLVED** | Monorepo versions are aligned at 1.5.2 (clean housekeeping check cycles). |
 | **H7** | Undocumented `embedding vector(1536)` column in schema | `analyses` table | ✅ **RESOLVED** | Wired to semantic search pipelines via Upstash Vector. Retracted as issue. |
 | **N14** | `COMMERCIAL_TRIAL_MODE = true` hardcoded SPOF | `SettingsModelAdapter.ts` | ❌ **UNCHANGED** | Hardcoded to true. If Haiku cascade is exhausted, all analyses fail. |
 | **N15** | Single-model cascade (no fallback) | `SettingsModelAdapter.ts` | ❌ **UNCHANGED** | Still lacks second model failover path inside the configuration. |

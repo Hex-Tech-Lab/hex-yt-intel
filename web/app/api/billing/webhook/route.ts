@@ -17,12 +17,16 @@ export async function POST(request: NextRequest) {
     const secret = process.env.PADDLE_WEBHOOK_SECRET;
 
     if (!secret && process.env.NODE_ENV === 'development') {
+      if (process.env.DEV_ALLOW_UNVERIFIED_WEBHOOKS !== 'true') {
+        throw new Error('PADDLE_WEBHOOK_SECRET is missing. Set DEV_ALLOW_UNVERIFIED_WEBHOOKS=true to bypass verification in development.');
+      }
+      console.warn('[Paddle Webhook] WARNING: Using unverified webhook payload fallback in development mode.');
       event = JSON.parse(body);
     } else {
       if (!secret) {
         throw new Error('PADDLE_WEBHOOK_SECRET is required');
       }
-      event = paddle.webhooks.unmarshal(body, secret, signature);
+      event = await paddle.webhooks.unmarshal(body, secret, signature);
     }
 
     const persistenceAdapter = new SupabasePersistenceAdapter();

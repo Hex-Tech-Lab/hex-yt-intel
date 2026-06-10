@@ -1,7 +1,7 @@
 /**
  * PromptBuilder - Pure Service (stateless)
  *
- * Implements IPromptBuilder. Wraps getUCISPrompt — the prompt IP is constructed
+ * Implements PromptBuilderPort. Wraps getUCISPrompt — the prompt IP is constructed
  * here and bundled into the worker by esbuild, so it never leaves the server.
  * Config-only / stateless: safe to share across requests.
  */

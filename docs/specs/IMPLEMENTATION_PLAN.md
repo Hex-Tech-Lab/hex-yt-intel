@@ -64,17 +64,17 @@ graph TD
 * **Dependencies**: None.
 
 #### Step 1.1: Secure Paddle Webhook Signature Verification
-* **Target File**: [web/app/api/billing/webhook/route.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/app/api/billing/webhook/route.ts)
+* **Target File**: [web/app/api/billing/webhook/route.ts](web/app/api/billing/webhook/route.ts)
 * **Action**: Restore the signature verification mechanism using `@paddle/paddle-node-sdk`. Gate the JSON parsing fallback strictly behind `process.env.NODE_ENV === 'development'`.
 * **Estimated LLM Effort**: 15 minutes.
 
 #### Step 1.2: Add AbortController to useSSEStream
-* **Target File**: [web/hooks/useSSEStream.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/hooks/useSSEStream.ts)
+* **Target File**: [web/hooks/useSSEStream.ts](web/hooks/useSSEStream.ts)
 * **Action**: Instantiate and maintain an `AbortController` in the SSE stream initiator. Call `.abort()` on the controller before starting a new stream or when the component unmounts to close old connections.
 * **Estimated LLM Effort**: 20 minutes.
 
 #### Step 1.3: Parallelize Traffic & Billing Checks in route.ts
-* **Target File**: [web/app/api/analyses/route.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/app/api/analyses/route.ts)
+* **Target File**: [web/app/api/analyses/route.ts](web/app/api/analyses/route.ts)
 * **Action**: Group `trafficAdapter.checkGate()` and `billingAdapter.checkGate()` calls into a single `Promise.all()` block. Saves ~100ms of latency per POST request.
 * **Estimated LLM Effort**: 15 minutes.
 
@@ -86,8 +86,8 @@ graph TD
 
 #### Step 2.1: Split IIngestionPort
 * **Target Files**:
-  * [web/lib/ports/IIngestionPort.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/lib/ports/IIngestionPort.ts)
-  * [web/lib/adapters/WorkerIngestionAdapter.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/lib/adapters/WorkerIngestionAdapter.ts)
+  * [web/lib/ports/IIngestionPort.ts](web/lib/ports/IIngestionPort.ts)
+  * [web/lib/adapters/WorkerIngestionAdapter.ts](web/lib/adapters/WorkerIngestionAdapter.ts)
 * **Action**:
   * Create `IMetadataIngestionPort` containing only `fetch()` and `buildJobMetadata()`.
   * Create `IModelResolutionPort` containing `resolveModels()`.
@@ -98,9 +98,9 @@ graph TD
 
 #### Step 2.2: Split IQuotaPort
 * **Target Files**:
-  * [web/lib/ports/IQuotaPort.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/lib/ports/IQuotaPort.ts)
-  * [web/lib/adapters/RedisTrafficAdapter.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/lib/adapters/RedisTrafficAdapter.ts)
-  * [web/lib/adapters/PostgresBillingAdapter.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/lib/adapters/PostgresBillingAdapter.ts)
+  * [web/lib/ports/IQuotaPort.ts](web/lib/ports/IQuotaPort.ts)
+  * [web/lib/adapters/RedisTrafficAdapter.ts](web/lib/adapters/RedisTrafficAdapter.ts)
+  * [web/lib/adapters/PostgresBillingAdapter.ts](web/lib/adapters/PostgresBillingAdapter.ts)
 * **Action**:
   * Create `ITrafficGuardPort` with `checkGate()` for DDoS/rate-limiting.
   * Create `IBillingQuotaPort` with `checkGate()` and `refund()` for credit transactions.
@@ -120,20 +120,20 @@ graph TD
 * **Estimated LLM Effort**: 30 minutes.
 
 #### Step 3.2: Refactor route.ts POST Handler
-* **Target File**: [web/app/api/analyses/route.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/app/api/analyses/route.ts)
+* **Target File**: [web/app/api/analyses/route.ts](web/app/api/analyses/route.ts)
 * **Action**: Instantiate the adapters, pass them to `CreateAnalysisUseCase`, and execute the UseCase. Map resulting data to `NextResponse.json` payload shapes.
 * **Estimated LLM Effort**: 20 minutes.
 
 #### Step 3.3: Refactor route.ts GET Handler
-* **Target File**: [web/app/api/analyses/route.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/app/api/analyses/route.ts)
-* **Action**: Add a `findAnalysesByUserId(userId: string): Promise<CachedAnalysis[]>` method to [IPersistencePort](file:///home/kellyb_dev/projects/hex-yt-intel/web/lib/ports/IPersistencePort.ts). Query history through [SupabasePersistenceAdapter](file:///home/kellyb_dev/projects/hex-yt-intel/web/lib/adapters/SupabasePersistenceAdapter.ts) instead of writing inline database calls in the GET route.
+* **Target File**: [web/app/api/analyses/route.ts](web/app/api/analyses/route.ts)
+* **Action**: Add a `findAnalysesByUserId(userId: string): Promise<CachedAnalysis[]>` method to [IPersistencePort](web/lib/ports/IPersistencePort.ts). Query history through [SupabasePersistenceAdapter](web/lib/adapters/SupabasePersistenceAdapter.ts) instead of writing inline database calls in the GET route.
 * **Estimated LLM Effort**: 25 minutes.
 
 #### Step 3.4: Reconcile Monorepo Versions
 * **Target Files**:
-  * [package.json](file:///home/kellyb_dev/projects/hex-yt-intel/package.json)
-  * [web/package.json](file:///home/kellyb_dev/projects/hex-yt-intel/web/package.json)
-  * [worker/package.json](file:///home/kellyb_dev/projects/hex-yt-intel/worker/package.json)
+  * [package.json](package.json)
+  * [web/package.json](web/package.json)
+  * [worker/package.json](worker/package.json)
 * **Action**: Unify monorepo package versions to `1.5.2` (or current clean state) to complete the Housekeeping checks.
 * **Estimated LLM Effort**: 10 minutes.
 

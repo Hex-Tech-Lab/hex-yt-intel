@@ -14,6 +14,7 @@ import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer'
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
+import { ApexSummaryCard } from '@/components/templates/console/ApexSummaryCard';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
@@ -268,13 +269,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               {consoleTab === 'synthesis' ? (
                 <div className="flex flex-col gap-8">
                   {store.status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
-                  {dimensions.length > 0 ? (
+                  
+                  {dimensions.length > 0 && (
+                    <ApexSummaryCard dimension={dimensions[0]!} />
+                  )}
+
+                  {dimensions.length > 1 ? (
                     <StreamingGrid
-                      dimensions={dimensions}
+                      dimensions={dimensions.slice(1)}
                       progress={store.status === 'analyzing' ? 'Processing...' : store.status === 'complete' ? '100% complete' : undefined}
                       onOpenDimension={(key) => setSelectedDimensionKey(key)}
                     />
-                  ) : (
+                  ) : dimensions.length === 0 && (
                     <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
                       {store.status === 'complete' ? (
                         // Completed but zero dimensions (e.g. a sparse source, or history

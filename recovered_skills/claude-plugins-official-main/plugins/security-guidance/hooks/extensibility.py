@@ -266,7 +266,7 @@ _REDOS_SHAPES = [
     re.compile(r"\([^()]*[+*][^()]*\)[+*?]"),  # nested quantifier: (a+)*  (a*b)*
     re.compile(r"\(\.\*[^()]*\)[+*]"),         # wildcard group: (.*)*
 ]
-_ALT_UNDER_REP = re.compile(r"\(([^()]*)\|([^()|]*)(?:\|[^()]*)*\)[+*]")
+_ALT_UNDER_REP = re.compile(r"\([^()|]*\|[^()]*\)[+*]")
 
 
 def _has_redos_structure(regex: str) -> bool:

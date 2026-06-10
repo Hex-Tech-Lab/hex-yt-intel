@@ -29,6 +29,14 @@ export async function GET(
   }
 
   try {
+    const conv = await persistenceAdapter.getConversation({ conversationId: id });
+    if (!conv) {
+      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+    }
+    if (conv.userId !== identity.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const messages = await persistenceAdapter.getMessages({ conversationId: id });
     return NextResponse.json({ messages });
   } catch (error) {
@@ -63,6 +71,9 @@ export async function POST(
     const conv = await persistenceAdapter.getConversation({ conversationId: id });
     if (!conv) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+    }
+    if (conv.userId !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // --- Idempotent user-message write ---------------------------------------

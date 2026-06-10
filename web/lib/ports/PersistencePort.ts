@@ -34,29 +34,12 @@ export interface ValidationReportInput {
   timezone: string;
 }
 
-/**
-  * Handles all Supabase persistence for the analyses table:
-  *   - Cache-hit lookup (SELECT with dimension validation)
-  *   - Processing stub upsert (UPSERT on user_id + video_id conflict)
-  *
-  * Current implementation: getSupabaseServiceClient() + direct .from('analyses') calls.
-  */
 export interface PersistencePort {
-  /**
-   * Look up the most recent analysis for (userId, videoId).
-   * Returns null if no row exists or the markdown is empty/stub (< 8 dimensions).
-   * The dimension count threshold (8) matches the worker's validate12D gate.
-   */
   findCachedAnalysis(params: {
     userId: string;
     videoId: string;
   }): Promise<CachedAnalysis | null>;
 
-  /**
-   * Upsert a processing stub row. Uses ON CONFLICT (user_id, video_id) so
-   * re-analysis of the same video reuses the existing row instead of 23505-ing.
-   * @throws When the upsert fails (caller must refund quota).
-   */
   upsertProcessingStub(params: {
     videoId: string;
     userId: string;
@@ -64,10 +47,6 @@ export interface PersistencePort {
     validationReport: ValidationReportInput;
   }): Promise<AnalysisStub>;
 
-  /**
-   * Persist the final analysis result after worker completion.
-   * Updates the analysis row with the markdown, payload, and validation status.
-   */
   persistAnalysis(params: {
     analysisId: string;
     analysisPayload: UCISPayloadV2 | null;
@@ -118,7 +97,7 @@ export interface PersistencePort {
     id: string;
     userId: string;
     title: string;
-    validationReport: any;
+    validationReport: ValidationReportInput | unknown;
     createdAt: string;
   } | null>;
 
@@ -128,10 +107,9 @@ export interface PersistencePort {
   updateAnalysisResult(params: {
     analysisId: string;
     markdown: string;
-    payload: any;
+    payload: UCISPayloadV2 | null;
     model: string | null;
     validationPassed: boolean;
-    status: 'done' | 'interrupted';
-    validationReport: any;
+    validationReport: ValidationReportInput | unknown;
   }): Promise<void>;
 }

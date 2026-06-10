@@ -78,12 +78,13 @@ test.describe('Production Verification Suite', () => {
       }
 
       // Check that script tags don't contain unpolyfilled environment references
-      const scriptSections = html.match(/<script[^>]*>[\s\S]*?<\/script>/g) || [];
-      for (const script of scriptSections) {
-        // Inline scripts shouldn't have raw process.env references
-        if (!script.includes('src=')) {
-          expect(script).not.toContain('process.env.NEXT_PUBLIC_SUPABASE_URL');
-          expect(script).not.toContain('process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY');
+      const scripts = await page.locator('script').all();
+      for (const script of scripts) {
+        const src = await script.getAttribute('src');
+        if (!src) {
+          const text = await script.textContent() || '';
+          expect(text).not.toContain('process.env.NEXT_PUBLIC_SUPABASE_URL');
+          expect(text).not.toContain('process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY');
         }
       }
     });
