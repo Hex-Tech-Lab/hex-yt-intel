@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Icon } from '@/components/templates/_shared/primitives';
+import Link from 'next/link';
+import { Footer } from '@/components/Footer';
+import { Icon, MonoLabel } from '@/components/templates/_shared/primitives';
 
 interface SavedSearch {
   id: string;
@@ -14,27 +16,13 @@ interface SavedSearch {
   viewCount?: number;
 }
 
-/**
- * /app/analyses/saved/page.tsx
- *
- * Saved searches listing page
- *
- * Features:
- * - List all saved search results
- * - Delete saved searches
- * - Quick view analysis
- * - Sort by date saved
- * - Filter/search within saved items
- */
 export default function SavedSearchesPage() {
   const router = useRouter();
-
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load saved searches on mount
   useEffect(() => {
     loadSavedSearches();
   }, []);
@@ -43,7 +31,7 @@ export default function SavedSearchesPage() {
     try {
       setIsLoading(true);
       setError(null);
-      // Mock data for now
+      // Mock data for now - keeping functionality as is but refining UI
       setSavedSearches([]);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load saved searches';
@@ -69,166 +57,177 @@ export default function SavedSearchesPage() {
     search.channelTitle?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-
   return (
-    <div className="min-h-screen bg-void text-ink font-sans">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="hx-h1 mb-2">
-            Saved Searches
-          </h1>
-          <p className="hx-body-secondary">
-            Quick access to your saved analysis results
-          </p>
+    <div className="min-h-screen bg-[#0B0E14] text-[#E2E8F0] selection:bg-[#06B6D430] font-sans flex flex-col">
+      {/* Brand Aesthetic Background */}
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_-20%,#06B6D415,transparent_50%)] pointer-events-none" />
+      
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#11141DCC] backdrop-blur-xl border-b border-[#1E293B]">
+        <div className="max-w-[1200px] mx-auto h-16 px-8 flex items-center justify-between">
+          <Link href="/?v=landing" className="flex items-center gap-3 group">
+            <span className="flex items-center justify-center w-7 h-7 bg-[#0891B2] text-[#0B0E14] rounded-lg shadow-[0_4px_12px_rgba(6,182,212,0.4)] transition-transform group-hover:scale-105">
+              <Icon icon="solar:graph-up-linear" size={18} />
+            </span>
+            <span className="font-mono text-[15px] font-bold tracking-[0.04em] text-[#E2E8F0]">
+              HEX{"\u00b7"}YT{"\u00b7"}INTEL
+            </span>
+          </Link>
+          <nav className="flex gap-8 text-[11px] font-mono uppercase tracking-[0.12em] text-[#94A3B8]">
+            <Link href="/privacy-policy" className="hover:text-[#06B6D4] transition-colors">Privacy</Link>
+            <Link href="/terms-and-conditions" className="hover:text-[#06B6D4] transition-colors">Terms</Link>
+            <Link href="/refund-policy" className="hover:text-[#06B6D4] transition-colors">Refunds</Link>
+            <Link href="/pricing" className="hover:text-[#06B6D4] transition-colors">Pricing</Link>
+          </nav>
         </div>
+      </header>
 
-        {/* Search Filter */}
-        <div className="mb-6 hx-rise">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter saved searches..."
-            className="w-full px-4 py-3 bg-surface border border-line rounded-lg focus:outline-none focus:border-accent text-ink transition-all"
-          />
-        </div>
+      <main className="relative z-10 flex-1 max-w-[1280px] mx-auto px-12 pt-48 pb-32 w-full">
+        <div className="max-w-[800px]">
+          {/* Header Section */}
+          <div className="mb-12 animate-hx-rise">
+             <div className="flex items-center gap-2 mb-6">
+                <Link href="/dashboard" className="text-[11px] font-mono uppercase tracking-widest text-[#64748B] hover:text-[#06B6D4] transition-colors">Dashboard</Link>
+                <span className="text-[#334155] font-mono text-[10px]">/</span>
+                <span className="text-[11px] font-mono uppercase tracking-widest text-[#06B6D4]">Library</span>
+             </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-err/10 border border-err/20 rounded-lg flex items-start gap-3">
-            <Icon icon="solar:danger-circle-linear" size={20} className="text-err flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-err">Error</p>
-              <p className="text-sm text-err/80">{error}</p>
+             <MonoLabel index="//" className="mb-4">Internal Repository</MonoLabel>
+             <h1 className="text-[48px] font-medium tracking-tight text-[#E2E8F0] leading-[1.05] mb-4">
+                Saved Searches
+             </h1>
+             <p className="text-[#94A3B8] text-lg max-w-[54ch]">
+                Quick access to your curated video intelligence and synthesis results.
+             </p>
+          </div>
+
+          {/* Search Filter */}
+          <div className="mb-10 animate-hx-rise" style={{ animationDelay: "100ms" }}>
+            <div className="relative group">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#475569] group-focus-within:text-[#06B6D4] transition-colors">
+                <Icon icon="solar:magnifer-linear" size={18} />
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search your library..."
+                className="w-full pl-12 pr-4 py-4 bg-[#1A1F2B66] border border-[#1E293B] rounded-xl focus:outline-none focus:border-[#06B6D440] focus:ring-1 focus:ring-[#06B6D440] text-[#E2E8F0] transition-all placeholder:text-[#475569] font-sans"
+              />
             </div>
           </div>
-        )}
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-24 bg-surface rounded-lg border border-line" />
+          {/* Content Area */}
+          <div className="animate-hx-rise" style={{ animationDelay: "200ms" }}>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-32 bg-[#1A1F2B44] border border-[#1E293B] rounded-xl animate-pulse" />
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Content */}
-        {!isLoading && (
-          <>
-            {/* Empty State */}
-            {savedSearches.length === 0 && (
-              <div className="text-center py-16 hx-rise">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-surface border border-line rounded-full mb-4">
-                  <Icon icon="solar:heart-linear" size={32} className="text-ink-muted" />
+            ) : error ? (
+              <div className="p-6 bg-[#EF444408] border border-[#EF444420] rounded-xl flex items-start gap-4">
+                <Icon icon="solar:danger-circle-linear" size={20} className="text-[#EF4444] mt-0.5" />
+                <div>
+                  <p className="font-semibold text-[#EF4444]">Data Retrieval Error</p>
+                  <p className="text-[#EF4444CC] text-sm">{error}</p>
                 </div>
-                <h3 className="text-xl font-semibold text-ink mb-2">
-                  No Saved Searches Yet
-                </h3>
-                <p className="text-ink-muted mb-6">
-                  Save search results from your analysis page to access them quickly
+              </div>
+            ) : filteredSearches.length === 0 ? (
+              <div className="text-center py-24 border border-dashed border-[#1E293B] rounded-2xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#1A1F2B] border border-[#1E293B] rounded-full mb-6 text-[#475569]">
+                  <Icon icon="solar:folder-error-linear" size={32} />
+                </div>
+                <h3 className="text-xl font-medium text-[#E2E8F0] mb-2">No syntheses found</h3>
+                <p className="text-[#64748B] mb-8 max-w-[32ch] mx-auto">
+                  Save results from the synthesis console to populate your technical library.
                 </p>
-                <button
-                  onClick={() => router.push('/search')}
-                  className="px-6 py-2 bg-accent text-void rounded-lg hover:bg-accent-strong transition-colors font-bold uppercase tracking-wider text-sm"
-                >
-                  Go to Search
-                </button>
+                <Link href="/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>
+                  Go to Console
+                </Link>
               </div>
-            )}
-
-            {/* Saved Searches List */}
-            {filteredSearches.length > 0 && (
-              <div className="space-y-4 hx-rise">
-                <div className="text-caption font-mono text-ink-muted uppercase tracking-widest mb-4">
-                  {filteredSearches.length} saved item{filteredSearches.length !== 1 ? 's' : ''}
-                </div>
-
+            ) : (
+              <div className="grid gap-4">
                 {filteredSearches.map((search) => (
                   <div
                     key={search.id}
-                    className="p-5 bg-surface border border-line rounded-xl hover:border-accent/20 transition-all group"
+                    className="p-6 bg-[#1A1F2B66] border border-[#1E293B] rounded-2xl hover:border-[#06B6D440] transition-all group relative overflow-hidden"
                   >
-                    {/* Header: Title + Badge */}
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-ink text-lg line-clamp-2 hover:text-accent cursor-pointer transition-colors">
-                          {search.title}
-                        </h3>
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 
+                            onClick={() => handleViewAnalysis(search.analysisId)}
+                            className="text-lg font-medium text-[#E2E8F0] hover:text-[#06B6D4] cursor-pointer transition-colors line-clamp-1"
+                          >
+                            {search.title}
+                          </h3>
+                          <p className="text-[11px] font-mono text-[#64748B] uppercase tracking-wider mt-1">
+                            {search.channelTitle || "Unknown Origin"}
+                          </p>
+                        </div>
+                        <button 
+                          onClick={() => handleDeleteSearch(search.id)}
+                          className="text-[#334155] hover:text-[#EF4444] transition-colors p-1"
+                        >
+                          <Icon icon="solar:trash-bin-trash-linear" size={18} />
+                        </button>
                       </div>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-err/10 text-err border border-err/20 rounded text-[10px] font-bold uppercase tracking-wider flex-shrink-0">
-                        <Icon icon="solar:heart-linear" size={12} style={{ fill: 'currentColor' }} />
-                        Saved
-                      </span>
-                    </div>
+                      
+                      <p className="text-[#94A3B8] text-sm line-clamp-2 mb-6 leading-relaxed">
+                        {search.snippet}
+                      </p>
 
-                    {/* Snippet */}
-                    <p className="text-sm text-ink-secondary line-clamp-2 mb-4 leading-relaxed">
-                      {search.snippet}
-                    </p>
-
-                    {/* Metadata */}
-                    <div className="flex flex-wrap gap-2 mb-4 text-caption font-mono text-ink-muted">
-                      {search.channelTitle && (
-                        <span className="inline-block px-2 py-1 bg-void border border-line rounded">
-                          {search.channelTitle}
-                        </span>
-                      )}
-                      {search.viewCount !== undefined && (
-                        <span className="inline-block px-2 py-1 bg-void border border-line rounded">
-                          {formatNumber(search.viewCount)} views
-                        </span>
-                      )}
-                      <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-void border border-line rounded">
-                        <Icon icon="solar:clock-circle-linear" size={12} />
-                        {new Date(search.savedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 pt-4 border-t border-line/50">
-                      <button
-                        onClick={() => handleViewAnalysis(search.analysisId)}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-accent text-void rounded-lg hover:bg-accent-strong transition-all text-xs font-bold uppercase tracking-widest"
-                      >
-                        <Icon icon="solar:external-link-linear" size={14} />
-                        View Analysis
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSearch(search.id)}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-void text-ink-muted border border-line rounded-lg hover:bg-err/10 hover:text-err hover:border-err/20 transition-all"
-                        title="Remove from saved"
-                      >
-                        <Icon icon="solar:trash-bin-trash-linear" size={16} />
-                      </button>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex gap-4">
+                          <span className="flex items-center gap-1.5 text-[10px] font-mono text-[#475569] uppercase tracking-widest">
+                            <Icon icon="solar:calendar-linear" size={12} />
+                            {new Date(search.savedAt).toLocaleDateString()}
+                          </span>
+                          {search.viewCount !== undefined && (
+                             <span className="flex items-center gap-1.5 text-[10px] font-mono text-[#475569] uppercase tracking-widest">
+                              <Icon icon="solar:eye-linear" size={12} />
+                              {search.viewCount} views
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleViewAnalysis(search.analysisId)}
+                          className="text-[11px] font-mono text-[#06B6D4] uppercase tracking-[0.12em] flex items-center gap-2 hover:translate-x-1 transition-transform"
+                        >
+                          Access Synthesis <Icon icon="solar:arrow-right-linear" size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      </main>
 
-            {/* No Results After Filter */}
-            {savedSearches.length > 0 && filteredSearches.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-ink-muted">No saved searches match your filter</p>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      <Footer />
+
+      <style jsx global>{`
+        @keyframes hx-rise { 
+          from { opacity: 0; transform: translateY(12px); } 
+          to { opacity: 1; transform: translateY(0); } 
+        }
+        .animate-hx-rise { animation: hx-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+        
+        .btn-primary { 
+          background: #0891B2; 
+          color: #0B0E14; 
+          padding: 10px 24px; 
+          border-radius: 8px; 
+          font-family: var(--font-sans); 
+          font-weight: 600; 
+          font-size: 14px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+      `}</style>
     </div>
   );
-}
-
-function formatNumber(num: number): string {
-  if (num >= 1_000_000) {
-    return (num / 1_000_000).toFixed(1) + 'M';
-  }
-  if (num >= 1_000) {
-    return (num / 1_000).toFixed(1) + 'K';
-  }
-  return num.toString();
 }
