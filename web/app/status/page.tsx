@@ -19,14 +19,14 @@ interface Subsystem {
 }
 
 const SUBSYSTEMS: Subsystem[] = [
-  { id: "S1", name: "Synthesis Engine Core", status: 'operational', uptime: 99.98 },
-  { id: "S2", name: "Vector Index Gateway", status: 'operational', uptime: 100 },
-  { id: "S3", name: "Streaming Buffer (Global)", status: 'operational', uptime: 99.95 },
-  { id: "S4", name: "Persistence Layer (Relational)", status: 'operational', uptime: 99.99 },
-  { id: "S5", name: "Edge Execution (Vercel)", status: 'operational', uptime: 100 },
-  { id: "S6", name: "Authentication Service", status: 'operational', uptime: 100 },
-  { id: "S7", name: "Billing Webhook Orchestrator", status: 'operational', uptime: 99.90 },
-  { id: "S8", name: "API Rate Limiting", status: 'operational', uptime: 100 },
+  { id: "S1", name: "Intelligence Processing", status: 'operational', uptime: 99.98 },
+  { id: "S2", name: "Semantic Discovery", status: 'operational', uptime: 100 },
+  { id: "S3", name: "Stream Orchestration", status: 'operational', uptime: 99.95 },
+  { id: "S4", name: "Data Persistence", status: 'operational', uptime: 99.99 },
+  { id: "S5", name: "Global Edge Compute", status: 'operational', uptime: 100 },
+  { id: "S6", name: "Identity Management", status: 'operational', uptime: 100 },
+  { id: "S7", name: "Transactional Systems", status: 'operational', uptime: 99.90 },
+  { id: "S8", name: "Network Security", status: 'operational', uptime: 100 },
 ];
 
 function UptimeBar({ day, status }: { day: number, status: 'ok' | 'warn' | 'err' }) {
