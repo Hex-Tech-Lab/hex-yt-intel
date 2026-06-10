@@ -17,7 +17,7 @@ import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEngine
 const MODEL_CHAIN = [
   { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5' },
   { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Alternate Route)' },
-  { model: 'anthropic/claude-sonnet-4.6', name: 'Claude Sonnet 4.6' },
+  { model: 'anthropic/claude-sonnet-4.6:nitro', name: 'Claude Sonnet 4.6 (Nitro)' },
 ] as const;
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
