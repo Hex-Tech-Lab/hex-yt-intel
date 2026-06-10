@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 interface AccordionItem {
+  id: string;
   title: string;
   content: React.ReactNode;
   defaultOpen?: boolean;
@@ -14,52 +15,33 @@ interface RightPanelAccordionProps {
 }
 
 export function RightPanelAccordion({ items }: RightPanelAccordionProps) {
-  const [openStates, setOpenStates] = useState<boolean[]>(
-    items.map((item) => item.defaultOpen || false)
+  const [openStates, setOpenStates] = useState<Record<string, boolean>>(
+    Object.fromEntries(items.map((item) => [item.id, item.defaultOpen || false]))
   );
 
-  const toggleItem = (index: number) => {
-    const newStates = [...openStates];
-    newStates[index] = !newStates[index];
-    setOpenStates(newStates);
+  const toggleItem = (id: string) => {
+    setOpenStates((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {items.map((item, index) => (
+    <div className="flex flex-col gap-2">
+      {items.map((item) => (
         <div
-          key={index}
-          style={{
-            border: "1px solid var(--line)",
-            borderRadius: 0, // Enforcing strict 0px border-radius
-            background: "var(--surface)",
-            overflow: "hidden",
-          }}
+          key={item.id}
+          className="border border-[var(--line)] rounded-none bg-[var(--surface)] overflow-hidden"
         >
           <button
-            onClick={() => toggleItem(index)}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "var(--bg)",
-              border: "none",
-              color: "var(--ink)",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            onClick={() => toggleItem(item.id)}
+            className="w-full px-4 py-3 flex items-center justify-between bg-[var(--bg)] border-0 text-[14px] font-semibold text-[var(--ink)] cursor-pointer"
           >
             {item.title}
             <Icon 
-              icon={openStates[index] ? "solar:alt-arrow-up-linear" : "solar:alt-arrow-down-linear"} 
+              icon={openStates[item.id] ? "solar:alt-arrow-up-linear" : "solar:alt-arrow-down-linear"} 
               size={16} 
             />
           </button>
-          {openStates[index] && (
-            <div style={{ padding: 16, color: "var(--ink-secondary)", fontSize: 13 }}>
+          {openStates[item.id] && (
+            <div className="p-4 text-[13px] text-[var(--ink-secondary)]">
               {item.content}
             </div>
           )}

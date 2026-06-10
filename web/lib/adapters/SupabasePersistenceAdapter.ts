@@ -41,21 +41,7 @@ interface MessageRow {
   client_msg_id: string | null;
 }
 
-interface ValidationReport {
-  status?: string;
-  transcript_available?: boolean;
-  analysis_type?: string;
-  stale_after?: string;
-  metadata?: any;
-  persona?: string;
-  timezone?: string;
-  model_used?: string | null;
-  valid?: boolean;
-}
-
-function isValidationReport(obj: unknown): obj is ValidationReport {
-  return typeof obj === 'object' && obj !== null;
-}
+import { isPersistedValidationReport } from '@/app/api/analyses/persist/route';
 
 export class SupabasePersistenceAdapter implements PersistencePort, ChatPersistencePort {
   async findCachedAnalysis(params: {
@@ -203,7 +189,9 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         }))
       });
     }
-  }  async getUserHistory(params: { userId: string }): Promise<Array<{
+  }
+  
+  async getUserHistory(params: { userId: string }): Promise<Array<{
     id: string;
     videoId: string;
     title: string;
@@ -615,7 +603,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         title: data.title || '',
         channelTitle: data.channel_title || null,
         analysisMarkdown: data.analysis_markdown || null,
-        status: isValidationReport(data.validation_report) ? data.validation_report.status || 'incomplete' : 'incomplete',
+        status: isPersistedValidationReport(data.validation_report) ? data.validation_report.status || 'incomplete' : 'incomplete',
       };
     } catch (error: any) {
       Sentry.captureException(error, {

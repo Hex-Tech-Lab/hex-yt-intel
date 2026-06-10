@@ -97,7 +97,7 @@ export interface PersistencePort {
     id: string;
     userId: string;
     title: string;
-    validationReport: ValidationReportInput | unknown;
+    validationReport: unknown;
     createdAt: string;
   } | null>;
 
@@ -110,7 +110,7 @@ export interface PersistencePort {
     payload: UCISPayloadV2 | null;
     model: string | null;
     validationPassed: boolean;
-    validationReport: ValidationReportInput | unknown;
+    validationReport: unknown;
   }): Promise<void>;
 
   persistKnowledgeGraph(params: {

@@ -21,7 +21,12 @@ const router = express.Router();
    VALIDATION HELPERS
    ========================================================================= */
 
-const validateEmail = (email) => typeof email === 'string' && email.length < 256 && email.includes('@') && email.split('@')[1].includes('.');
+const validateEmail = (email) => {
+  if (typeof email !== 'string') return false;
+  const trimmed = email.trim();
+  if (trimmed !== email || /\s/.test(trimmed) || trimmed.length > 255) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+};
 const validatePromoCode = (code) => /^[A-Z0-9]{6,12}$/.test(code);
 
 /* ============================================================================
