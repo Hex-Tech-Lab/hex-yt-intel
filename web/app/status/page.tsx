@@ -143,7 +143,7 @@ export default function HealthDashboard() {
             Real-time data provided by our observability cluster.
           </p>
           <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 24 }}>
-            <Link href="/dashboard" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none" }}>Back to Console</Link>
+            <Link href="/" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none" }}>Back to Home</Link>
             <a href="/api/health?format=json" style={{ fontSize: 12, color: "var(--ink-muted)", textDecoration: "none" }}>View Programmatic JSON</a>
           </div>
         </div>
