@@ -85,6 +85,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
           });
           setLoadedFromApi(true);
         } else {
+          setGraph(EMPTY);
           setLoadedFromApi(false);
         }
         setLoading(false);

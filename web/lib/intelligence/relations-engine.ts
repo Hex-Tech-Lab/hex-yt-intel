@@ -12,7 +12,7 @@ export interface StanceDimension {
 const COMMERCIAL_TRIAL_MODE = true;
 
 const STANCE_MODELS: readonly string[] = COMMERCIAL_TRIAL_MODE
-  ? ['google/gemini-2.0-flash', 'anthropic/claude-3.5-haiku']
+  ? ['anthropic/claude-3.5-haiku']
   : ['google/gemini-2.0-flash', 'anthropic/claude-3.5-haiku'];
 
 const LLMInsightSchema = z.object({
