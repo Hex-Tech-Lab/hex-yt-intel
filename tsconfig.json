@@ -9,6 +9,7 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitAny": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": ["./web/*"],
       "@types/*": ["./packages/types/src/*"],

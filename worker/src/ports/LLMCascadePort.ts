@@ -16,7 +16,8 @@ export interface LLMCascadePort {
   streamCascade(
     systemPrompt: string,
     onDelta: (text: string) => void,
-    onStatus?: (status: StreamStatusEvent) => void
+    onStatus?: (status: StreamStatusEvent) => void,
+    signal?: AbortSignal
   ): Promise<{ started: boolean; finalText: string; modelUsed: string }>;
 
   /**

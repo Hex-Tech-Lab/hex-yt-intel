@@ -66,7 +66,8 @@ export class ReasoningEngine implements ReasoningEnginePort {
    */
   async executeAndStream(
     context: EngineContext,
-    handlers: StreamHandlers
+    handlers: StreamHandlers,
+    signal?: AbortSignal
   ): Promise<StreamResult> {
     const systemPrompt = context.systemPrompt || this.promptBuilder.build(context);
     const bracketBuffer = new BracketBuffer();
@@ -80,7 +81,8 @@ export class ReasoningEngine implements ReasoningEnginePort {
         const fragments = bracketBuffer.feed(delta);
         fragments.forEach((frag) => handlers.onFragment(frag));
       },
-      handlers.onStatus
+      handlers.onStatus,
+      signal
     );
 
     // Flush any remaining buffered JSON on stream end

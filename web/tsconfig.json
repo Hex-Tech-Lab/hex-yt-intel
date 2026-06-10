@@ -16,6 +16,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": ["./*"],
       "@types/*": ["../packages/types/src/*"],
@@ -46,6 +47,9 @@
   "exclude": [
     "node_modules",
     "tests",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

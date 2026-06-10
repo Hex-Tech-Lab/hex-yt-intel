@@ -8,6 +8,7 @@ import type {
 } from '@/lib/ports';
 import type { PersonaId } from '@/lib/prompts';
 import type { UserTier } from '@/lib/types/billing';
+import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import { extractVideoId } from '@/lib/youtube';
 
 export interface CreateAnalysisUseCaseParams {
@@ -35,7 +36,7 @@ export interface CacheHitData {
   persona: string;
   detectedPersona: string;
   timezone: string;
-  metadata: any;
+  metadata: AnalysisJobMetadata | undefined;
   dimensions: Record<string, unknown>;
   streaming: {
     started: string;
@@ -57,7 +58,7 @@ export interface ProcessingData {
   analysisAt: string;
   timezone: string;
   transcript: string;
-  metadata: any;
+  metadata: AnalysisJobMetadata;
   models: string[];
   streaming: {
     started: string;
