@@ -48,7 +48,7 @@ Handles all database operations for chat threads and messages, isolating the cha
 - **Returns**: `Promise<ChatMessage[]>`
 
 #### `findMessageByClientMsgId`
-- **Purpose**: Check if a message already exists (idempotency support).
+- **Purpose**: Look up a message by its client-side unique identifier (for idempotency).
 - **Parameters**:
   - `params`:
     - `conversationId`: string
@@ -56,7 +56,7 @@ Handles all database operations for chat threads and messages, isolating the cha
 - **Returns**: `Promise<ChatMessage | null>`
 
 #### `createMessage`
-- **Purpose**: Save a chat message.
+- **Purpose**: Persist a new message in a conversation.
 - **Parameters**:
   - `params`:
     - `conversationId`: string
@@ -67,7 +67,7 @@ Handles all database operations for chat threads and messages, isolating the cha
 - **Returns**: `Promise<ChatMessage>`
 
 #### `findAssistantMessageAfter`
-- **Purpose**: Find the first assistant message created after a user message.
+- **Purpose**: Find the first assistant message following a specific timestamp (used for idempotent retry logic).
 - **Parameters**:
   - `params`:
     - `conversationId`: string
@@ -75,8 +75,8 @@ Handles all database operations for chat threads and messages, isolating the cha
 - **Returns**: `Promise<ChatMessage | null>`
 
 #### `getAnalysisGrounding`
-- **Purpose**: Retrieve analysis details for grounding the chat session.
+- **Purpose**: Retrieve the analysis markdown and status for grounding a chat conversation.
 - **Parameters**:
   - `params`:
     - `analysisId`: string
-- **Returns**: `Promise<{ title: string; channelTitle: string | null; analysisMarkdown: string | null; status: string; } | null>`
+- **Returns**: `Promise<{ title: string; channelTitle: string | null; analysisMarkdown: string | null; status: string } | null>`

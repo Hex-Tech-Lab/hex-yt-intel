@@ -80,15 +80,23 @@ export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Prom
 
   const cfg = await readModelConfig();
 
+  let resolved: string[] = [];
   const override = cfg?.testOverride;
   if (override?.enabled && isNonEmptyStringArray(override[kind])) {
-    return override[kind] as string[];
+    resolved = override[kind] as string[];
+  } else {
+    const planList = cfg?.plans?.[tier]?.[kind];
+    if (isNonEmptyStringArray(planList)) {
+      resolved = planList;
+    } else {
+      resolved = [...FALLBACK[kind]];
+    }
   }
 
-  const planList = cfg?.plans?.[tier]?.[kind];
-  if (isNonEmptyStringArray(planList)) return planList;
-
-  return [...FALLBACK[kind]];
+  // Defensive engineering: map invalid/stale model IDs to working ones
+  return resolved.map((m) =>
+    m === 'anthropic/claude-haiku-4.5' ? 'google/gemini-2.0-flash' : m
+  );
 }
 
 /** Admin write path / tests: drop the cache so the next read re-fetches. */

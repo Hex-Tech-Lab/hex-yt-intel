@@ -4,22 +4,20 @@ This document defines the responsibilities and contracts of the `MetadataIngesti
 
 ## Interface: `MetadataIngestionPort`
 
-Handles only the retrieval of video metadata and transcripts, and persona detection.
+Handles the retrieval of video metadata and transcripts, and automated persona detection.
 
 ---
 
 ### Methods
 
 #### `fetch`
-- **Purpose**: Fetch video metadata and transcript in parallel.
-- **Behavior**: Returns an `IngestionResult` where the transcript may be empty.
-- **Throws**: When the metadata fetch fails (caller must refund user quota).
+- **Purpose**: Fetch video metadata and transcript.
 - **Parameters**:
   - `videoId`: string
 - **Returns**: `Promise<IngestionResult>`
 
 #### `detectPersona`
-- **Purpose**: Detect the target persona from video title + channel, or use the explicit override.
+- **Purpose**: Detect the target persona from video details.
 - **Parameters**:
   - `params`:
     - `title`: string
@@ -32,3 +30,9 @@ Handles only the retrieval of video metadata and transcripts, and persona detect
 - **Parameters**:
   - `metadata`: `VideoMetadata`
 - **Returns**: `AnalysisJobMetadata`
+
+---
+
+## Implementation Details
+
+Implementation specific details such as parallel fetching, transcript availability logic, and quota-refund behavior are managed by the `WorkerIngestionAdapter` and the corresponding Use Cases.

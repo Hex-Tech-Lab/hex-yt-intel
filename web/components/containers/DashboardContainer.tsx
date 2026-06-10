@@ -8,7 +8,6 @@ import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import { StreamingGrid, Dimension } from '@/components/templates/console/StreamingGrid';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
-import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
 import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
@@ -22,7 +21,6 @@ import { useSSEStream } from '@/hooks/useSSEStream';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
-import { useChatStore } from '@/store/useChatStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 
@@ -44,6 +42,10 @@ function cleanDimensionContent(raw: string): string {
 export function DashboardContainer({ profile }: DashboardContainerProps) {
   const store = useAnalysisStore();
   const { url, setUrl } = useInputStore();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const { startAnalysis } = useSSEStream();
   const nucleus = useSynthesisNucleus();
   const { graph } = useKnowledgeGraph(nucleus.analysis?.id);
@@ -168,12 +170,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     }
   ], [graph, selectedNodeId, insights, insightsLoading]);
 
-  // Clear the sticky localStorage chat session when starting a new analysis or navigating away
-  useEffect(() => {
-    if (nucleus.analysis?.id || url) {
-      useChatStore.getState().reset();
-    }
-  }, [nucleus.analysis?.id, url]);
+
 
   useEffect(() => {
     if (activeNav !== 'console') {
@@ -317,7 +314,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       {activeNav === 'console' ? (
         <div className="flex flex-col gap-8 pb-4">
           <AnalysisHero
-            url={url}
+            url={mounted ? url : ''}
             status={store.status === 'analyzing' || store.status === 'downloading' ? 'streaming' : store.status === 'complete' ? 'done' : store.status === 'error' ? 'error' : 'idle'}
             onUrlChange={setUrl}
             onAnalyze={handleAnalyze}
@@ -404,9 +401,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 </div>
               )}
 
-              <ProcessingLog
-                status={store.status === 'analyzing' || store.status === 'downloading' ? 'streaming' : store.status === 'complete' ? 'done' : store.status === 'error' ? 'error' : 'idle'}
-              />
             </div>
           )}
         </div>

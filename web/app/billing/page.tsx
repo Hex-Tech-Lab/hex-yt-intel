@@ -89,9 +89,12 @@ export default async function BillingPage() {
             </span>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
           </Link>
-          <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
-            <Link href="/dashboard" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Dashboard</Link>
-            <Link href="/pricing" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Pricing</Link>
+          <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none" }}>Pricing</Link>
+            <Link href="/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>
+              <Icon icon="solar:bolt-linear" size={16} />
+              Dashboard
+            </Link>
           </nav>
         </header>
 

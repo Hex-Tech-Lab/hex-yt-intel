@@ -24,8 +24,11 @@ const router = express.Router();
 const validateEmail = (email) => {
   if (typeof email !== 'string') return false;
   const trimmed = email.trim();
-  if (trimmed !== email || /\s/.test(trimmed) || trimmed.length > 255) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  if (trimmed.length > 255) return false;
+  // Conservative regex for valid email format: non-empty local part, exactly one '@', 
+  // domain with at least one dot and valid characters.
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return emailRegex.test(trimmed);
 };
 const validatePromoCode = (code) => /^[A-Z0-9]{6,12}$/.test(code);
 
