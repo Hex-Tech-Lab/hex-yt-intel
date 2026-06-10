@@ -22,9 +22,9 @@ export class AnalysisEngineError extends Error {
 }
 
 const MODEL_TIERS = [
-  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 }, // Tier 0: Paid primary Claude Haiku 4.5
-  { model: 'google/gemini-2.0-flash', tier: 'paid', cost: 0.00015 },   // Tier 1: Google Gemini 2.0 Flash (fallback 1)
-  { model: 'google/gemini-1.5-flash', tier: 'paid', cost: 0.000075 },  // Tier 2: Google Gemini 1.5 Flash (fallback 2)
+  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 },  // Tier 0: Paid primary Claude Haiku 4.5
+  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 },  // Tier 1: Paid alternate Claude Haiku 4.5
+  { model: 'anthropic/claude-sonnet-4.6', tier: 'paid', cost: 0.003 },   // Tier 2: Paid emergency fallback Claude Sonnet 4.6
 ] as const;
 
 /**
@@ -98,6 +98,7 @@ export async function callOpenRouter(
         provider: {
           sort: 'latency',
           allow_fallbacks: true,
+          ...(tierIndex === 1 ? { order: ['amazon-bedrock/global', 'google-vertex/global'] } : {}),
         },
       }),
       signal: controller.signal,

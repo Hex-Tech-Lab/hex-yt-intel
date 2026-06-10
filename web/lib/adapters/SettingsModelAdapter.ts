@@ -22,7 +22,7 @@ export class SettingsModelAdapter implements ModelResolutionPort {
       if (kind === 'chat') {
         return ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash'];
       }
-      return ['anthropic/claude-haiku-4.5', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
+      return ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6'];
     }
     return resolveModelCascade(tier, kind);
   }
