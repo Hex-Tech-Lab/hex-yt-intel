@@ -52,6 +52,6 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, { tags: { operation: 'chat-persist' }, contexts: { api: { endpoint: '/api/chat/persist' } } });
     console.error('[chat/persist] Failed:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to persist message' }, { status: 500 });
   }
 }

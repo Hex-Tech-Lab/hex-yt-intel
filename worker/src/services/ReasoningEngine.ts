@@ -2,12 +2,12 @@
  * ReasoningEngine - Thin Orchestrator (Hexagonal-Lite)
  *
  * HEXAGONAL ARCHITECTURE:
- * - PORT: IReasoningEngine (executeAndStream(context, handlers) / execute(context))
+ * - PORT: ReasoningEnginePort (executeAndStream(context, handlers) / execute(context))
  * - DEPENDENCIES (constructor DI):
- *     IPromptBuilder         — UCIS v5.1 prompt synthesis (IP stays server-side)
- *     ILLMCascade            — OpenRouter multi-model fallback (streaming + batch)
+ *     PromptBuilderPort      — UCIS v5.1 prompt synthesis (IP stays server-side)
+ *     LLMCascadePort         — OpenRouter multi-model fallback (streaming + batch)
  *     ValidationService      — 11D structure validation
- *     IPersistenceRepository — Upstash KV cache (optional; insulated behind port)
+ *     PersistenceRepositoryPort — Upstash KV cache (optional; insulated behind port)
  *
  * The engine owns ONLY orchestration + the per-stream BracketBuffer parser. It holds no
  * request-scoped mutable state on shared sub-services — each is stateless/config-only,

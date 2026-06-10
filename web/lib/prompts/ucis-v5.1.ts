@@ -250,12 +250,21 @@ Key assumptions – Base case – Optimistic – Pessimistic – Tail risk.
 
 #### 8.1 Primary Knowledge Graph Nodes
 
-3–5 core concepts to become dedicated KG nodes. 
-CRITICAL: Do NOT extract structural document headers (e.g., 'Apex Intelligence', 'Semantic Foundation') as entities. You must extract ONLY domain-specific semantic nodes (People, Concepts, Frameworks, Tools).
+Extract domain-specific semantic entities (People, Concepts, Frameworks, Tools, Organizations, Metrics) as nodes. 
+DO NOT extract structural document headers as nodes.
 
-#### 8.2 Semantic Keyword Layer
+For every node, provide:
+- \`label\`: The entity name.
+- \`type\`: Category (person|concept|framework|tool|organization|study|trend|metric).
+- \`weight\`: Importance (1-10).
 
-Primary keywords, long-tail keywords, LSI keywords, emerging terminology.
+#### 8.2 Semantic Relations
+
+Extract relations between the entities extracted in 8.1 as edges in a Knowledge Graph:
+- \`source\`: Entity Label (must exist in 8.1).
+- \`target\`: Entity Label (must exist in 8.1).
+- \`relation\`: The nature of the connection (e.g., "uses", "developed_by", "impacts", "is_part_of").
+- \`strength\`: Connection strength (1-10).
 
 #### 8.3 Cross-Domain Bridges
 

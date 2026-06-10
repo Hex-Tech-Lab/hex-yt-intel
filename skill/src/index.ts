@@ -25,8 +25,13 @@ const youtubeUrlSchema = z
   .refine((url) => {
     try {
       const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
       return (
-        parsed.hostname.includes("youtube.com") || parsed.hostname.includes("youtu.be")
+        host === "youtube.com" ||
+        host === "www.youtube.com" ||
+        host === "m.youtube.com" ||
+        host.endsWith(".youtube.com") ||
+        host === "youtu.be"
       );
     } catch {
       return false;
@@ -34,8 +39,9 @@ const youtubeUrlSchema = z
   }, "Invalid YouTube URL")
   .transform((url) => {
     const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
     let videoId = "";
-    if (parsed.hostname.includes("youtu.be")) {
+    if (host === "youtu.be" || host.endsWith(".youtu.be")) {
       videoId = parsed.pathname.slice(1);
     } else if (parsed.pathname.startsWith("/embed/")) {
       videoId = parsed.pathname.split("/")[2] ?? "";

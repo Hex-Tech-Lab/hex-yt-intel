@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { Footer } from '@/components/Footer';
 
 // See /docs/ui/dashboard-layout.md
 
@@ -32,7 +31,6 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
             <div className="flex-1">
               {children}
             </div>
-            <Footer />
           </div>
         </div>
 

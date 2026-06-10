@@ -1,7 +1,7 @@
 /**
  * LLMCascade - LLM Transport Adapter (config-only)
  *
- * Implements ILLMCascade. Owns the OpenRouter multi-model fallback chain and the
+ * Implements LLMCascadePort. Owns the OpenRouter multi-model fallback chain and the
  * two transport adapters (streaming + non-streaming). Config-only (apiKey): all
  * request-scoped state stays in method locals, so it is race-free when shared.
  */

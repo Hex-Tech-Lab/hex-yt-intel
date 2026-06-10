@@ -2,7 +2,7 @@
  * TranscriptExtractor - Pure Service
  *
  * HEXAGONAL ARCHITECTURE:
- * - PORT: ITranscriptProvider (fetch(videoId: string): Promise<string>)
+ * - PORT: TranscriptProviderPort (fetch(videoId: string): Promise<TranscriptResult>)
  * - ADAPTER: YouTube Caption API + Decodo fallback
  * - DOMAIN: Caption parsing, language fallback, timeout protection
  *

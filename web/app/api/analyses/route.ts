@@ -7,6 +7,7 @@ export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisCreateSchema } from '@/lib/types/contracts';
+import type { PersonaId } from '@/lib/prompts';
 import { extractVideoId } from '@/lib/youtube';
 import * as Sentry from '@sentry/nextjs';
 import {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       url: validation.data.url,
       timezone: validation.data.timezone || 'UTC',
       forceRefresh: validation.data.forceRefresh || false,
-      explicitPersona: validation.data.persona as any,
+      explicitPersona: validation.data.persona as PersonaId | undefined,
       clientIp: request.headers.get('x-forwarded-for') ?? undefined,
       userAgent: request.headers.get('user-agent') ?? undefined,
     });

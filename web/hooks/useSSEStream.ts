@@ -224,9 +224,7 @@ export function useSSEStream() {
           // Terminal cleanup: all async work has settled by here. Guarantees the main
           // action button is never left disabled after a partial/interrupted stream,
           // regardless of which exit path ran.
-          if (!currentSignal.aborted) {
-            setIsLoading(false);
-          }
+          setIsLoading(false);
         }
       }
     );

@@ -1,5 +1,5 @@
 export type { AuthPort, AuthIdentity } from './AuthPort';
-export type { QuotaGateResult } from './QuotaPort';
+export type { QuotaGateResult, QuotaEndpoint } from './QuotaPort';
 export type { TrafficGuardPort } from './TrafficGuardPort';
 export type { BillingQuotaPort } from './BillingQuotaPort';
 export type { VideoMetadata, IngestionResult, StreamToken } from './IngestionPort';
