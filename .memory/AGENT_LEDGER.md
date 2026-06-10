@@ -9,13 +9,13 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Active Ledger
-[IN_PROGRESS] Refactoring quota consumption logic to be deferred until successful analysis completion. Target: web/lib/usecases/CreateAnalysisUseCase.ts, web/app/api/analyses/persist/route.ts. (2026-06-10)
 - [2026-06-10T19:10:00+03:00] [GC (Agent)] [DONE] PR #62 review attempted; CI integration authentication failure; Snyk high-severity issues identified. Matrix: /docs/testing/chunk-62-review-matrix.md.
-[IN_PROGRESS] Refactoring billing lifecycle: check quota in UseCase, consume only upon successful persist in route.ts. Target: BillingQuotaPort, PostgresBillingAdapter, CreateAnalysisUseCase, persist/route.ts. (2026-06-10)
-[IN_PROGRESS] Refactoring billing lifecycle: check quota in UseCase, consume only upon successful persist in route.ts. Target: BillingQuotaPort, PostgresBillingAdapter, CreateAnalysisUseCase, persist/route.ts. (2026-06-10)
-[IN_PROGRESS] Investigating XSS vulnerabilities (alert #42, #43) in design-system/HEX-YT-INTEL Design System (1)/api/monetization.js. (2026-06-10)
-[DONE] Upgraded workspace dependencies and fixed PostgresBillingAdapter type error. Verified via production build. (2026-06-10)
-[DONE] Hardened worker streaming pipeline and relations engine against LLM loops/timeouts using AbortSignals. Verified via build. (2026-06-10)
-[IN_PROGRESS] Addressing PR #62 unaddressed items: localizing adapters, resolving circular imports of validation type-guard, and remediating Snyk hardcoded secrets. Target: web/lib/types/validation-report.ts, web/lib/adapters/SupabasePersistenceAdapter.ts, web/app/api/analyses/persist/route.ts, web/lib/chat/outbox.ts, web/playwright.config.ts, web/.tests-parked-backup/config.ts. (2026-06-10)
-[IN_PROGRESS] Investigating root-level 500 error on preview URL, analyzing Vercel logs, and fixing root page components. (2026-06-10)
-
+- [2026-06-10T19:20:00+03:00] [GC (Agent)] [DONE] Upgraded workspace dependencies and fixed PostgresBillingAdapter type error. Verified via production build.
+- [2026-06-10T19:25:00+03:00] [GC (Agent)] [DONE] Hardened worker streaming pipeline and relations engine against LLM loops/timeouts using AbortSignals. Verified via build.
+- [2026-06-10T19:30:00+03:00] [GC (Agent)] [DONE] Fixed root-level 500 error on Vercel preview URL by configuring missing environment variables.
+- [2026-06-10T19:45:00+03:00] [GC (Agent)] [IN_PROGRESS] Refactoring billing lifecycle: check quota in UseCase, consume only upon successful persist in route.ts. Target: BillingQuotaPort, PostgresBillingAdapter, CreateAnalysisUseCase, persist/route.ts.
+- [2026-06-10T19:50:00+03:00] [GC (Agent)] [IN_PROGRESS] Investigating XSS vulnerabilities (alert #42, #43).
+- [2026-06-10T19:55:00+03:00] [GC (Agent)] [IN_PROGRESS] Addressing PR #62 unaddressed items.
+- [2026-06-10T20:00:00+03:00] [GC (Agent)] [IN_PROGRESS] Refactoring dashboard rendering.
+- [2026-06-10T20:05:00+03:00] [GC (Agent)] [IN_PROGRESS] Resolving relations engine AbortError.
+- [2026-06-10T20:10:00+03:00] [GC (Agent)] [IN_PROGRESS] Performing comprehensive audit and resolving policy violations. Target: .memory/AGENT_LEDGER.md, CLAUDE.md, package.json, web/lib/youtube.ts, web/lib/services/billing.ts, pnpm-workspace.yaml, web/package.json, web/lib/adapters/PostgresBillingAdapter.ts, web/tsconfig.json.

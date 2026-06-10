@@ -28,7 +28,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-surface text-primary antialiased">
+      <body className="bg-bg text-primary antialiased font-sans">
         <Providers>{children}</Providers>
         <Script
           src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"

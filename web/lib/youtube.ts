@@ -22,18 +22,18 @@ const youtubeUrlSchema = z
     message: 'Canonical video ID verification failed',
   });
 
+// Recursive YouTube URL parsing logic (see /docs/youtube-url-parsing.md)
 function extractIdFromUrl(parsed: URL): string | null {
-  // 1. Check for nested YouTube URL in common search engine query parameters
   const nestedUrl = parsed.searchParams.get('q') || parsed.searchParams.get('url') || parsed.searchParams.get('u');
   if (nestedUrl) {
     try {
-      return extractIdFromUrl(new URL(nestedUrl));
+      const nestedResult = extractIdFromUrl(new URL(nestedUrl));
+      if (nestedResult) return nestedResult;
     } catch {
-      // Not a valid nested URL, proceed to check 'v' parameter
+      // Ignore invalid nested URLs
     }
   }
 
-  // 2. Check common YouTube hostnames
   if (['youtube.com', 'www.youtube.com', 'youtu.be', 'm.youtube.com', 'music.youtube.com'].includes(parsed.hostname)) {
     if (parsed.hostname === 'youtu.be') return parsed.pathname.slice(1);
     if (parsed.pathname.startsWith('/shorts/')) return parsed.pathname.split('/')[2] ?? null;
@@ -42,7 +42,6 @@ function extractIdFromUrl(parsed: URL): string | null {
     return parsed.searchParams.get('v');
   }
   
-  // 3. Fallback: Try to extract 'v' param from ANY host
   return parsed.searchParams.get('v');
 }
 

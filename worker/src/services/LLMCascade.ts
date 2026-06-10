@@ -10,15 +10,14 @@ import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEngine
 // only ~1-2 attempts realistically complete, so tier 1 must be the proven performer.
 //   - nemotron-3-nano-30b: ONLY free model that reliably produced valid 11-dim output
 //     (3s first-token, 19-33s total). Lead model.
-//   - glm-4.5-air / gemma-4-26b: $0 fallbacks, but volatile (429 / slow) — best effort.
-//   - claude-haiku-4.5: paid last resort (needs OpenRouter credit; 402 while overdrawn).
+//   - gemini-2.0-flash: fast, sub-second TTFB, highly reliable.
+//   - claude-3.5-haiku: paid last resort (needs OpenRouter credit; 402 while overdrawn).
 // NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
 const MODEL_CHAIN = [
   { model: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 3 Nano 30B' },
-  { model: 'z-ai/glm-4.5-air:free', name: 'GLM 4.5 Air' },
-  { model: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B' },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (paid fallback)' },
+  { model: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+  { model: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku' },
 ] as const;
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';

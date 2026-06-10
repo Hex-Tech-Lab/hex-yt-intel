@@ -25,6 +25,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
   const analysis = useSynthesisNucleus((s) => s.analysis);
   const activePersona = useSynthesisNucleus((s) => s.activePersona);
   const [loading, setLoading] = useState(false);
+  const [apiFetchDone, setApiFetchDone] = useState(false);
 
   // Stable list of dimensions with non-trivial content.
   const dimensions = useMemo(() => {
@@ -45,35 +46,43 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
 
   // 1. API Fetching (if analysisId exists)
   useEffect(() => {
-    if (!analysisId) return;
+    if (!analysisId) {
+      setApiFetchDone(false);
+      return;
+    }
 
     let cancelled = false;
     setLoading(true);
+    setApiFetchDone(false);
     fetch(`/api/analyses/${analysisId}/graph`)
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
-        // Transform API response to KnowledgeGraph format
+        const nodes = (data.entities || []).map((e: any) => ({
+          id: e.id,
+          label: e.label,
+          type: e.type,
+          weight: e.weight
+        }));
+        const edges = (data.relations || []).map((r: any) => ({
+          source: r.source_entity_id,
+          target: r.target_entity_id,
+          strength: r.strength
+        }));
+        
         setGraph({
-          nodes: data.entities.map((e: any) => ({
-            id: e.id,
-            label: e.label,
-            type: e.type,
-            weight: e.weight
-          })),
-          edges: data.relations.map((r: any) => ({
-            source: r.source_entity_id,
-            target: r.target_entity_id,
-            strength: r.strength
-          })),
+          nodes,
+          edges,
           rootId: null
         });
         setLoading(false);
+        setApiFetchDone(true);
       })
       .catch(() => {
         if (!cancelled) {
           setGraph(EMPTY);
           setLoading(false);
+          setApiFetchDone(true);
         }
       });
 
@@ -82,7 +91,11 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
 
   // 2. Client-side Synthesis (fallback/live)
   useEffect(() => {
-    if (analysisId) return; // Prioritize API if provided
+    // If analysisId exists, only fall back to client-side synthesis if API fetch finished and returned no nodes
+    if (analysisId) {
+      if (!apiFetchDone) return;
+      if (graph.nodes.length > 0) return;
+    }
 
     if (dimensions.length < 1) {
       setGraph(EMPTY);
@@ -106,7 +119,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
     return () => {
       cancelled = true;
     };
-  }, [fingerprint, dimensions, activePersona, analysisId]);
+  }, [fingerprint, dimensions, activePersona, analysisId, apiFetchDone, graph.nodes.length]);
 
   return { graph, ready: graph.nodes.length >= 1, loading };
 }

@@ -45,7 +45,7 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 
 ---
 
-## 3. INFRASTRUCTURE COORDINATES
+## 4. INFRASTRUCTURE COORDINATES
 
 - **Vercel App**: `https://hex-yt-intel.vercel.app` (prod domain: `https://yt-intel.getmytestdrive.com`)
 - **CF Worker**: `https://yt-intel.hex-tech-lab.workers.dev`
@@ -54,7 +54,7 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 
 ---
 
-## 4. THE FROZEN STACK PROTOCOL (GCT Aligned — 2026-05-23)
+## 5. THE FROZEN STACK PROTOCOL (GCT Aligned — 2026-05-23)
 
 **Package Management**: `pnpm` only  
 **CSS Framework**: Tailwind CSS + shadcn/ui exclusively
