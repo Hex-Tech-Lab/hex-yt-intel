@@ -29,8 +29,8 @@ export const CHAT_PROTOCOL = [
 const COMMERCIAL_TRIAL_MODE = true;
 
 export const CHAT_MODELS: readonly string[] = COMMERCIAL_TRIAL_MODE
-  ? ['google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash']
-  : ['google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash', 'google/gemini-1.5-flash'];
+  ? ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash']
+  : ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'google/gemini-2.0-flash'];
 
 /**
  * UCIS v3.2 system prompt (legacy, kept for backward compatibility)
