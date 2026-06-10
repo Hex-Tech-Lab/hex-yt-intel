@@ -127,4 +127,9 @@ export interface PersistencePort {
       strength: number;
     }>;
   }): Promise<void>;
+
+  getKnowledgeGraph(analysisId: string): Promise<{
+    entities: Array<{ id: string; label: string; type: string; weight: number }>;
+    relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number }>;
+  } | null>;
 }
