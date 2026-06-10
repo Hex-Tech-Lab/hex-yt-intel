@@ -31,7 +31,7 @@ export default defineConfig({
       CI: process.env.CI || 'false',
       GITHUB_ACTIONS: process.env.GITHUB_ACTIONS || 'false',
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key',
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key',
       OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || 'placeholder',
       STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || 'placeholder',
