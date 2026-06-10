@@ -171,7 +171,7 @@ export class LLMCascade implements LLMCascadePort {
           provider: {
             sort: 'latency',
             allow_fallbacks: true,
-            ...(index === 1 ? { order: ['amazon-bedrock/global', 'google-vertex/global'] } : {}),
+            ...(index === 1 ? { order: ['google-vertex/global', 'google-vertex/europe', 'amazon-bedrock/global'] } : {}),
           },
         }),
         signal: controller.signal,
@@ -270,7 +270,7 @@ export class LLMCascade implements LLMCascadePort {
           provider: {
             sort: 'latency',
             allow_fallbacks: true,
-            ...(index === 1 ? { order: ['amazon-bedrock/global', 'google-vertex/global'] } : {}),
+            ...(index === 1 ? { order: ['google-vertex/global', 'google-vertex/europe', 'amazon-bedrock/global'] } : {}),
           },
         }),
         signal: controller.signal,

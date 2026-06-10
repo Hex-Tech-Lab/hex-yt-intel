@@ -98,7 +98,7 @@ export async function callOpenRouter(
         provider: {
           sort: 'latency',
           allow_fallbacks: true,
-          ...(tierIndex === 1 ? { order: ['amazon-bedrock/global', 'google-vertex/global'] } : {}),
+          ...(tierIndex === 1 ? { order: ['google-vertex/global', 'google-vertex/europe', 'amazon-bedrock/global'] } : {}),
         },
       }),
       signal: controller.signal,
