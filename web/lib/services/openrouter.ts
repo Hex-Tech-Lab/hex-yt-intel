@@ -24,7 +24,7 @@ export class AnalysisEngineError extends Error {
 const MODEL_TIERS = [
   { model: 'google/gemini-2.0-flash-lite-preview-02-05:free', tier: 'free', cost: 0 }, // Tier 0: Google Gemini 2.0 Flash (massive rate limits, high reliability)
   { model: 'google/gemini-2.0-pro-exp-02-05:free', tier: 'free', cost: 0 }, // Tier 1: Google Gemini 2.0 Pro (fallback free tier)
-  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 }, // Tier 2: Paid fallback only if free exhausted
+  { model: 'anthropic/claude-3.5-haiku', tier: 'paid', cost: 0.0015 }, // Tier 2: Paid fallback only if free exhausted
 ] as const;
 
 /**

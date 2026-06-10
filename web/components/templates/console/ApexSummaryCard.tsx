@@ -55,10 +55,31 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
     // Fallback if tags not found (legacy or early stream)
     if (!summaries.executive && !summaries.short && !summaries.long) {
        summaries.executive = content;
+       
+       // Try to extract "Core Thesis" or first paragraph for short summary
+       const thesisMatch = content.match(/(?:The Core Thesis:|Core Thesis:)\s*([^\n]+)/i);
+       if (thesisMatch && thesisMatch[1]) {
+         summaries.short = `**Core Thesis:** ${thesisMatch[1].trim()}`;
+       } else {
+         const paragraphs = content.split('\n\n').filter(p => p.trim().length > 0);
+         summaries.short = paragraphs[0] || content.slice(0, 300);
+       }
+       
+       summaries.long = content;
+    }
+
+    // Individual fallbacks for done state if still empty
+    if (status === "done") {
+      if (!summaries.executive) summaries.executive = content;
+      if (!summaries.short) {
+        const thesisMatch = content.match(/(?:The Core Thesis:|Core Thesis:)\s*([^\n]+)/i);
+        summaries.short = thesisMatch && thesisMatch[1] ? `**Core Thesis:** ${thesisMatch[1].trim()}` : content.slice(0, 400);
+      }
+      if (!summaries.long) summaries.long = content;
     }
 
     return summaries;
-  }, [content]);
+  }, [content, status]);
 
   const tabs: { key: SummaryTab; label: string; icon: string }[] = [
     { key: 'executive', label: 'Executive', icon: 'solar:case-linear' },

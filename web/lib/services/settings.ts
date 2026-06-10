@@ -23,12 +23,12 @@ export type ModelKind = 'chat' | 'analysis';
  * Kept local so a DB outage never strands the pipeline.
  */
 
-/** Commercial trial mode — hard override: all paths return Haiku-only. */
+/** Commercial trial mode — hard override. */
 const COMMERCIAL_TRIAL_MODE = true;
 
 const FALLBACK: Record<ModelKind, readonly string[]> = {
-  chat: ['google/gemini-2.0-flash-exp:free', 'nvidia/nemotron-3-nano-30b-a3b:free'],
-  analysis: ['nvidia/nemotron-3-nano-30b-a3b:free', 'z-ai/glm-4.5-air:free', 'google/gemma-4-26b-a4b-it:free', 'anthropic/claude-haiku-4.5'],
+  chat: ['google/gemini-2.0-flash', 'anthropic/claude-3.5-haiku'],
+  analysis: ['google/gemini-2.0-flash', 'anthropic/claude-3.5-haiku'],
 };
 
 interface ModelConfig {
@@ -75,7 +75,7 @@ async function readModelConfig(): Promise<ModelConfig | null> {
  */
 export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Promise<string[]> {
   if (COMMERCIAL_TRIAL_MODE) {
-    return ['anthropic/claude-haiku-4.5'];
+    return ['google/gemini-2.0-flash', 'anthropic/claude-3.5-haiku'];
   }
 
   const cfg = await readModelConfig();

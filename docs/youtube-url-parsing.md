@@ -1,0 +1,1 @@
+The YouTube URL parser follows a recursive strategy: it first checks for common search engine query parameters ('q', 'url', 'u') to find a nested YouTube URL, recursively parsing it if found. If no nested URL is found, it proceeds to check common YouTube hostnames for the video ID, supporting various patterns like '/shorts/', '/embed/', and the 'v' parameter.

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useChatStore } from '@/store/useChatStore';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export interface ChatDockProps {
   /** Active analysis for grounding new threads (optional). */
@@ -208,15 +210,24 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
             const isUser = m.role === 'user';
             return (
               <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', gap: 6 }}>
-                <div style={{
-                  maxWidth: '80%', padding: '9px 13px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.55,
-                  background: isUser ? 'var(--accent)' : 'rgb(26 31 43 / 0.85)',
-                  color: isUser ? 'var(--void)' : 'var(--ink-secondary)',
-                  border: isUser ? 'none' : '1px solid var(--line)',
-                  borderBottomRightRadius: isUser ? 4 : 12, borderBottomLeftRadius: isUser ? 12 : 4,
-                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                }}>
-                  {body}
+                <div 
+                  className={isUser ? "" : "prose prose-invert max-w-none prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1"}
+                  style={{
+                    maxWidth: '80%', padding: '9px 13px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.55,
+                    background: isUser ? 'var(--accent)' : 'rgb(26 31 43 / 0.85)',
+                    color: isUser ? 'var(--void)' : 'var(--ink-secondary)',
+                    border: isUser ? 'none' : '1px solid var(--line)',
+                    borderBottomRightRadius: isUser ? 4 : 12, borderBottomLeftRadius: isUser ? 12 : 4,
+                    whiteSpace: isUser ? 'pre-wrap' : 'normal', wordBreak: 'break-word',
+                  }}
+                >
+                  {isUser ? (
+                    body
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {body}
+                    </ReactMarkdown>
+                  )}
                 </div>
                 {!isUser && body && (
                   <div style={{ display: 'flex', gap: 6, marginLeft: 2 }}>
