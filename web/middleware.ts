@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import * as Sentry from '@sentry/nextjs';
 
 // Timing-safe string comparison without crypto module (Edge Runtime compatible)
 function timingSafeStringEqual(a: string, b: string): boolean {
@@ -187,6 +188,11 @@ export async function middleware(request: NextRequest) {
   const isAuthenticated = await hasSupabaseAuth(request, supabaseResponse);
 
   if (!isAuthenticated) {
+    Sentry.captureMessage('Auth Failure', {
+      level: 'warning',
+      tags: { pathname },
+    });
+
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
