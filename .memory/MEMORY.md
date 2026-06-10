@@ -72,3 +72,4 @@
 - **production_fix_complete.md** — FINAL: Supabase production integration verified & fixed
 - **decisions.md** — Strategic choices & reasoning
 - **lessons.md** — 7 critical lessons (Cloudflare, docs, verification)
+- [Session Handover v1.5.2](session_handover_v1.5.2.md) - PR #62 submission status & handover for GCT1.

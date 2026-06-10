@@ -736,4 +736,32 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       if (relationError) throw relationError;
     }
   }
+
+  async getKnowledgeGraph(analysisId: string): Promise<{
+    entities: Array<{ id: string; label: string; type: string; weight: number }>;
+    relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number }>;
+  } | null> {
+    try {
+      const service = getSupabaseServiceClient();
+
+      const [entities, relations] = await Promise.all([
+        service.from('kg_entities').select('id, label, type, weight').eq('analysis_id', analysisId),
+        service.from('kg_relations').select('source_entity_id, target_entity_id, relation_label, strength').eq('analysis_id', analysisId)
+      ]);
+
+      if (entities.error) throw entities.error;
+      if (relations.error) throw relations.error;
+
+      return {
+        entities: entities.data || [],
+        relations: relations.data || []
+      };
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'getKnowledgeGraph' },
+        extra: { analysisId },
+      });
+      throw error;
+    }
+  }
 }

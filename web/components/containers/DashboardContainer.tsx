@@ -15,6 +15,7 @@ import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGr
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
 import { ApexSummaryCard } from '@/components/templates/console/ApexSummaryCard';
+import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
@@ -45,13 +46,39 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { url, setUrl } = useInputStore();
   const { startAnalysis } = useSSEStream();
   const nucleus = useSynthesisNucleus();
-  const { graph } = useKnowledgeGraph();
+  const { graph } = useKnowledgeGraph(nucleus.analysis?.id);
   const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, store.status === 'complete');
   const [search, setSearch] = useState('');
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
-  const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
+
+  // Define Right Panel Accordion Items
+  const rightPanelItems = useMemo(() => [
+    {
+      title: 'Insights',
+      defaultOpen: true,
+      content: (
+        <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
+      )
+    },
+    {
+      title: 'Word Cloud',
+      content: (
+        graph.nodes.length > 0 ? 
+        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} compact height={200} />
+        : <div className="p-4 text-center text-[var(--ink-muted)]">No graph structure yet.</div>
+      )
+    },
+    {
+      title: 'Mind Map',
+      content: (
+        graph.nodes.length > 0 ? 
+        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} compact height={200} />
+        : <div className="p-4 text-center text-[var(--ink-muted)]">No graph structure yet.</div>
+      )
+    }
+  ], [graph, selectedNodeId, insights, insightsLoading]);
 
   // Clear the sticky localStorage chat session when starting a new analysis or navigating away
   useEffect(() => {
@@ -189,34 +216,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       }
       rightPanel={
         store.status !== 'idle' ? (
-          <div className="flex flex-col gap-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--ink-secondary)] font-mono text-[11px] tracking-[0.08em] uppercase">Intelligence</span>
-              {graph.nodes.length > 0 && consoleTab === 'synthesis' && (
-                <button
-                  onClick={() => setConsoleTab('graph')}
-                  title="Open full graph"
-                  className="flex items-center gap-1.25 px-2.5 py-1 rounded-lg border border-[var(--line)] bg-transparent text-[var(--accent-ink)] cursor-pointer font-mono text-[10.5px]"
-                >
-                  <Icon icon="solar:maximize-square-linear" size={13} /> expand
-                </button>
-              )}
-            </div>
-            {consoleTab === 'synthesis' ? (
-              <>
-                {graph.nodes.length > 0 ? (
-                  <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} compact height={200} />
-                ) : (
-                  <div className="h-[200px] rounded-2xl border border-dashed border-[var(--line)] grid place-items-center text-center text-[var(--ink-muted)] font-mono text-[10.5px] p-3 leading-relaxed">
-                    {store.status === 'complete' ? 'No relational structure for this analysis.' : 'Synthesizing… the graph populates as dimensions arrive.'}
-                  </div>
-                )}
-                <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
-              </>
-            ) : (
-              <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
-            )}
-          </div>
+          <RightPanelAccordion items={rightPanelItems} />
         ) : undefined
       }
       dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={store.videoMetadata?.title} />}
@@ -244,77 +244,37 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           )}
 
           {store.status !== 'idle' && (
-            <>
-              <div className="flex gap-1 p-1 rounded-xl border border-[var(--line)] bg-[rgb(11_14_20_/_0.5)] self-start">
-                {([
-                  { key: 'synthesis', label: 'Synthesis', icon: 'solar:widget-5-linear' },
-                  { key: 'graph', label: 'Knowledge Graph', icon: 'solar:share-circle-linear' },
-                ] as const).map((t) => {
-                  const active = consoleTab === t.key;
-                  return (
-                    <button
-                      key={t.key}
-                      onClick={() => setConsoleTab(t.key as 'synthesis' | 'graph')}
-                      className={`flex items-center gap-1.75 px-3.5 py-1.75 rounded-lg border-none cursor-pointer font-mono text-xs font-semibold transition-colors ${
-                        active ? 'bg-[var(--accent)] text-[var(--void)]' : 'bg-transparent text-[var(--ink-secondary)]'
-                      }`}
-                    >
-                      <Icon icon={t.icon} size={15} />
-                      {t.label}
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex flex-col gap-8">
+              {store.status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
+              
+              {dimensions.length > 0 && (
+                <ApexSummaryCard dimension={dimensions[0]!} />
+              )}
 
-              {consoleTab === 'synthesis' ? (
-                <div className="flex flex-col gap-8">
-                  {store.status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
-                  
-                  {dimensions.length > 0 && (
-                    <ApexSummaryCard dimension={dimensions[0]!} />
-                  )}
-
-                  {dimensions.length > 1 ? (
-                    <StreamingGrid
-                      dimensions={dimensions.slice(1)}
-                      progress={store.status === 'analyzing' ? 'Processing...' : store.status === 'complete' ? '100% complete' : undefined}
-                      onOpenDimension={(key) => setSelectedDimensionKey(key)}
-                    />
-                  ) : dimensions.length === 0 && (
-                    <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
-                      {store.status === 'complete' ? (
-                        // Completed but zero dimensions (e.g. a sparse source, or history
-                        // load before the nucleus hydrates) — don't imply ongoing work.
-                        <p className="text-[var(--ink-secondary)] font-mono text-sm">No synthesis dimensions were produced for this analysis.</p>
-                      ) : store.status === 'error' ? (
-                        <p className="text-[var(--danger,#ef4444)] font-mono text-sm">Synthesis failed — see the log below.</p>
-                      ) : (
-                        <>
-                          <Icon icon="solar:refresh-linear" size={32} className="hx-anispin text-[var(--accent)] mb-4 inline-block" />
-                          <p className="text-[var(--ink-secondary)] font-mono text-sm">Preparing synthesis dimensions…</p>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <ProcessingLog
-                    status={store.status === 'analyzing' || store.status === 'downloading' ? 'streaming' : store.status === 'complete' ? 'done' : store.status === 'error' ? 'error' : 'idle'}
-                  />
-                </div>
-              ) : (
-                <div>
-                  {graph.nodes.length > 0 ? (
-                    <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={580} />
+              {dimensions.length > 1 ? (
+                <StreamingGrid
+                  dimensions={dimensions.slice(1)}
+                  progress={store.status === 'analyzing' ? 'Processing...' : store.status === 'complete' ? '100% complete' : undefined}
+                  onOpenDimension={(key) => setSelectedDimensionKey(key)}
+                />
+              ) : dimensions.length === 0 && (
+                <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
+                  {store.status === 'complete' ? (
+                    <p className="text-[var(--ink-secondary)] font-mono text-sm">No synthesis dimensions were produced for this analysis.</p>
+                  ) : store.status === 'error' ? (
+                    <p className="text-[var(--danger,#ef4444)] font-mono text-sm">Synthesis failed — see the log below.</p>
                   ) : (
-                    <div className="h-[580px] rounded-2xl border border-dashed border-[var(--line)] grid place-items-center text-center text-[var(--ink-muted)] font-mono text-[12.5px] p-6 leading-relaxed">
-                      {store.status === 'complete' ? 'No graph relations were synthesized for this analysis.' : 'The knowledge graph builds live as dimensions arrive…'}
-                    </div>
+                    <>
+                      <Icon icon="solar:refresh-linear" size={32} className="hx-anispin text-[var(--accent)] mb-4 inline-block" />
+                      <p className="text-[var(--ink-secondary)] font-mono text-sm">Preparing synthesis dimensions…</p>
+                    </>
                   )}
-                  <p className="mt-2.5 text-[var(--ink-muted)] font-mono text-[11px] leading-relaxed">
-                    Left-click to inspect · right-click to pin &amp; focus · drag to reposition · scroll to zoom
-                  </p>
                 </div>
               )}
-            </>
+              <ProcessingLog
+                status={store.status === 'analyzing' || store.status === 'downloading' ? 'streaming' : store.status === 'complete' ? 'done' : store.status === 'error' ? 'error' : 'idle'}
+              />
+            </div>
           )}
         </div>
       ) : (activeNav as string) === 'history' ? (

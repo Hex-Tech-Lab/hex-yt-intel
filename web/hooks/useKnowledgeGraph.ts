@@ -21,15 +21,14 @@ const EMPTY: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
 // Single engine + synthesizer instance (stateless, safe to reuse).
 const synthesizer = new KnowledgeGraphSynthesizer(new TfIdfSimilarityEngine());
 
-export function useKnowledgeGraph(): { graph: KnowledgeGraph; ready: boolean } {
+export function useKnowledgeGraph(analysisId?: string | null): { graph: KnowledgeGraph; ready: boolean; loading: boolean } {
   const analysis = useSynthesisNucleus((s) => s.analysis);
   const activePersona = useSynthesisNucleus((s) => s.activePersona);
+  const [loading, setLoading] = useState(false);
 
   // Stable list of dimensions with non-trivial content.
   const dimensions = useMemo(() => {
     if (!analysis) return [];
-    // Low threshold: any dimension with real content becomes a node. (40 was too
-    // aggressive — parsed dimension bodies can be short, leaving the graph empty.)
     return Object.values(analysis.dimensions)
       .filter((d) => d && d.content && d.content.trim().length >= 12)
       .map((d) => ({ number: d.number, name: d.name, content: d.content }));
@@ -44,10 +43,47 @@ export function useKnowledgeGraph(): { graph: KnowledgeGraph; ready: boolean } {
   const [graph, setGraph] = useState<KnowledgeGraph>(EMPTY);
   const lastFingerprint = useRef<string>('');
 
+  // 1. API Fetching (if analysisId exists)
   useEffect(() => {
-    // Build incrementally from whatever the CURRENT analysis has — a single dimension
-    // yields a 1-node graph; edges appear once ≥2 dimensions exist. No streaming gate,
-    // so the rail/graph populate live as each dimension arrives.
+    if (!analysisId) return;
+
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/analyses/${analysisId}/graph`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        // Transform API response to KnowledgeGraph format
+        setGraph({
+          nodes: data.entities.map((e: any) => ({
+            id: e.id,
+            label: e.label,
+            type: e.type,
+            weight: e.weight
+          })),
+          edges: data.relations.map((r: any) => ({
+            source: r.source_entity_id,
+            target: r.target_entity_id,
+            strength: r.strength
+          })),
+          rootId: null
+        });
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGraph(EMPTY);
+          setLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [analysisId]);
+
+  // 2. Client-side Synthesis (fallback/live)
+  useEffect(() => {
+    if (analysisId) return; // Prioritize API if provided
+
     if (dimensions.length < 1) {
       setGraph(EMPTY);
       lastFingerprint.current = '';
@@ -70,7 +106,7 @@ export function useKnowledgeGraph(): { graph: KnowledgeGraph; ready: boolean } {
     return () => {
       cancelled = true;
     };
-  }, [fingerprint, dimensions, activePersona]);
+  }, [fingerprint, dimensions, activePersona, analysisId]);
 
-  return { graph, ready: graph.nodes.length >= 1 };
+  return { graph, ready: graph.nodes.length >= 1, loading };
 }
