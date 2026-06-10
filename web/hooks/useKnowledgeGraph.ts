@@ -26,6 +26,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
   const activePersona = useSynthesisNucleus((s) => s.activePersona);
   const [loading, setLoading] = useState(false);
   const [apiFetchDone, setApiFetchDone] = useState(false);
+  const [loadedFromApi, setLoadedFromApi] = useState(false);
 
   // Stable list of dimensions with non-trivial content.
   const dimensions = useMemo(() => {
@@ -48,14 +49,19 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
   useEffect(() => {
     if (!analysisId) {
       setApiFetchDone(false);
+      setLoadedFromApi(false);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
     setApiFetchDone(false);
+    setLoadedFromApi(false);
     fetch(`/api/analyses/${analysisId}/graph`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (cancelled) return;
         const nodes = (data.entities || []).map((e: any) => ({
@@ -70,17 +76,23 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
           strength: r.strength
         }));
         
-        setGraph({
-          nodes,
-          edges,
-          rootId: null
-        });
+        if (nodes.length > 0) {
+          setGraph({
+            nodes,
+            edges,
+            rootId: null
+          });
+          setLoadedFromApi(true);
+        } else {
+          setLoadedFromApi(false);
+        }
         setLoading(false);
         setApiFetchDone(true);
       })
       .catch(() => {
         if (!cancelled) {
           setGraph(EMPTY);
+          setLoadedFromApi(false);
           setLoading(false);
           setApiFetchDone(true);
         }
@@ -94,7 +106,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
     // If analysisId exists, only fall back to client-side synthesis if API fetch finished and returned no nodes
     if (analysisId) {
       if (!apiFetchDone) return;
-      if (graph.nodes.length > 0) return;
+      if (loadedFromApi) return;
     }
 
     if (dimensions.length < 1) {
@@ -119,7 +131,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
     return () => {
       cancelled = true;
     };
-  }, [fingerprint, dimensions, activePersona, analysisId, apiFetchDone, graph.nodes.length]);
+  }, [fingerprint, dimensions, activePersona, analysisId, apiFetchDone, loadedFromApi]);
 
   return { graph, ready: graph.nodes.length >= 1, loading };
 }

@@ -324,3 +324,47 @@ button:focus-visible,
   .hx-dim-grid { grid-template-columns: 1fr; }
   .hx-dim-grid > * { grid-column: 1 / -1 !important; }
 }
+
+/* Global button components conforming to the design system */
+.btn-primary { 
+  background: var(--accent-strong) !important; 
+  color: var(--void) !important; 
+  padding: 10px 24px; 
+  border-radius: 8px; 
+  font-family: var(--font-sans); 
+  font-weight: 600; 
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out-quint);
+}
+.btn-primary:hover {
+  background: var(--accent) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.btn-secondary {
+  background: transparent !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line) !important;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out-quint);
+}
+.btn-secondary:hover {
+  background: var(--surface) !important;
+  border-color: var(--line-strong) !important;
+  transform: translateY(-1px);
+}
+

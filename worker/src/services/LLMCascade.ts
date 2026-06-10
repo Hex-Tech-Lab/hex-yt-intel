@@ -15,9 +15,9 @@ import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEngine
 // NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
 const MODEL_CHAIN = [
-  { model: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 3 Nano 30B' },
   { model: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
   { model: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku' },
+  { model: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 3 Nano 30B' },
 ] as const;
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';

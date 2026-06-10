@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useChatStore } from '@/store/useChatStore';
+import { useAnalysisStore } from '@/store/useAnalysisStore';
+import { ProcessingLog } from './ProcessingLog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -27,6 +29,10 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     conversations, activeId, messagesByConv, sending,
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
   } = useChatStore();
+  const analysisStore = useAnalysisStore();
+
+  const logStatus = analysisStore.status;
+  const showLog = logStatus !== 'idle' && analysisStore.terminalLines.length > 0;
 
   const [open, setOpen] = useState(false);
   const [showThreads, setShowThreads] = useState(false);
@@ -47,33 +53,29 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
   useEffect(() => {
     try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* noop */ }
-    if (open) {
-      void loadConversations();
-      requestAnimationFrame(() => inputRef.current?.focus());
-    } else {
+    if (!open) {
       setShowThreads(false);
+      return;
     }
-  }, [open, loadConversations]);
 
-  useEffect(() => {
-    if (open && activeId) void selectConversation(activeId);
-  }, [open, activeId, selectConversation]);
-
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    // Only autoscroll if the user is already near the bottom — don't yank them down
-    // when they've scrolled up to read earlier messages.
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [messages, sending, open]);
-
-  // Reset to new conversation whenever the analysis changes — prevents stale context bleeds.
-  useEffect(() => {
-    if (!open || !analysisId) return;
     let cancelled = false;
     void (async () => {
-      await newConversation({ analysisId });
+      await loadConversations();
+      if (cancelled) return;
+      requestAnimationFrame(() => inputRef.current?.focus());
+
+      if (analysisId) {
+        const state = useChatStore.getState();
+        const existing = state.conversations.find((c) => c.analysisId === analysisId);
+        if (existing) {
+          if (state.activeId !== existing.id) {
+            await selectConversation(existing.id);
+          }
+        } else {
+          await newConversation({ analysisId });
+        }
+      }
+      
       if (cancelled) return;
       requestAnimationFrame(() => {
         if (cancelled) return;
@@ -83,8 +85,22 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
         }
       });
     })();
-    return () => { cancelled = true; };
-  }, [analysisId, open, newConversation]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, analysisId, loadConversations, selectConversation, newConversation]);
+
+  useEffect(() => {
+    if (open && activeId) void selectConversation(activeId);
+  }, [open, activeId, selectConversation]);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [messages, sending, open]);
 
   const scrollToBottom = () => {
     const el = listRef.current;
@@ -128,6 +144,11 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   if (!open) {
     return (
       <div style={{ ...shell, height: BAR_H, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10 }}>
+        {showLog && (
+          <div style={{ position: 'absolute', bottom: 'calc(100% + 1px)', left: 0, right: 0, zIndex: 100 }}>
+            <ProcessingLog status={logStatus === 'analyzing' || logStatus === 'downloading' ? 'streaming' : logStatus === 'complete' ? 'done' : logStatus === 'error' ? 'error' : 'idle'} />
+          </div>
+        )}
         <button
           onClick={() => setOpen(true)}
           aria-label="Open chat"
@@ -153,6 +174,11 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       aria-label="Synthesis chat"
       style={{ ...shell, height: 'min(60vh, 560px)', display: 'flex', flexDirection: 'column' }}
     >
+      {showLog && (
+        <div style={{ position: 'absolute', bottom: 'calc(100% + 1px)', left: 0, right: 0, zIndex: 100 }}>
+          <ProcessingLog status={logStatus === 'analyzing' || logStatus === 'downloading' ? 'streaming' : logStatus === 'complete' ? 'done' : logStatus === 'error' ? 'error' : 'idle'} />
+        </div>
+      )}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', borderBottom: '1px solid var(--line)', background: 'rgb(26 31 43 / 0.6)' }}>
         <button

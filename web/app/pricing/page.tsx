@@ -28,16 +28,21 @@ export default async function PricingPage() {
           </span>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
         </Link>
-        <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
-          <Link href="/privacy-policy" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Privacy</Link>
-          <Link href="/terms-and-conditions" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Terms</Link>
-          <Link href="/refund-policy" style={{ color: "var(--ink-secondary)", textDecoration: "none", fontSize: 14 }}>Refunds</Link>
-          <Link href="/pricing" style={{ color: "var(--accent)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Pricing</Link>
+        <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none" }}>
+            Pricing
+          </Link>
           {!userInfo && (
-            <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none" }}>Sign in</Link>
+            <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none" }}>
+              <Icon icon="solar:sun-bold-duotone" size={16} />
+              Sign in
+            </Link>
           )}
           {userInfo && (
-            <Link href="/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>Dashboard</Link>
+            <Link href="/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>
+              <Icon icon="solar:bolt-linear" size={16} />
+              Dashboard
+            </Link>
           )}
         </nav>
       </header>

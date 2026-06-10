@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       url: validation.data.url,
       timezone: validation.data.timezone || 'UTC',
       forceRefresh: validation.data.forceRefresh || false,
-      explicitPersona: validation.data.persona as PersonaId | undefined,
+      explicitPersona: validation.data.persona,
       clientIp: request.headers.get('x-forwarded-for') ?? undefined,
       userAgent: request.headers.get('user-agent') ?? undefined,
     });

@@ -28,11 +28,12 @@ export function LegalPage({ content }: LegalPageProps) {
               HEX{"\u00b7"}YT{"\u00b7"}INTEL
             </span>
           </Link>
-          <nav className="flex gap-8 text-[11px] font-mono uppercase tracking-[0.12em] text-[#94A3B8]">
-            <Link href="/privacy-policy" className="hover:text-[#06B6D4] transition-colors">Privacy</Link>
-            <Link href="/terms-and-conditions" className="hover:text-[#06B6D4] transition-colors">Terms</Link>
-            <Link href="/refund-policy" className="hover:text-[#06B6D4] transition-colors">Refunds</Link>
-            <Link href="/pricing" className="hover:text-[#06B6D4] transition-colors">Pricing</Link>
+          <nav className="flex gap-4 items-center">
+            <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none" }}>Pricing</Link>
+            <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none" }}>
+              <Icon icon="solar:sun-bold-duotone" size={16} />
+              Sign in
+            </Link>
           </nav>
         </div>
       </header>
