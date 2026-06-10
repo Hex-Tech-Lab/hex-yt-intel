@@ -22,9 +22,9 @@ export class AnalysisEngineError extends Error {
 }
 
 const MODEL_TIERS = [
-  { model: 'anthropic/claude-3.5-haiku', tier: 'paid', cost: 0.0015 }, // Tier 0: Paid primary Claude Haiku 4.5
-  { model: 'google/gemini-2.0-flash-lite-preview-02-05:free', tier: 'free', cost: 0 }, // Tier 1: Google Gemini 2.0 Flash (fallback free tier)
-  { model: 'google/gemini-2.0-pro-exp-02-05:free', tier: 'free', cost: 0 }, // Tier 2: Google Gemini 2.0 Pro (fallback free tier)
+  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 }, // Tier 0: Paid primary Claude Haiku 4.5
+  { model: 'google/gemini-2.0-flash', tier: 'paid', cost: 0.00015 },   // Tier 1: Google Gemini 2.0 Flash (fallback 1)
+  { model: 'google/gemini-1.5-flash', tier: 'paid', cost: 0.000075 },  // Tier 2: Google Gemini 1.5 Flash (fallback 2)
 ] as const;
 
 /**

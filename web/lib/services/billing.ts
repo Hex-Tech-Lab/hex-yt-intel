@@ -122,7 +122,7 @@ export async function chargeMonthlyQuota(
   tier: Tier,
   userEmail?: string
 ): Promise<{ allowed: boolean; response?: NextResponse }> {
-  if (userEmail === ADMIN_EMAIL) return { allowed: true }; // admin is never charged
+  if (userEmail === ADMIN_EMAIL || userId === 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb') return { allowed: true }; // admin is never charged
 
   const quotaResult = await enforceMonthlyQuota(userId, tier);
 
@@ -155,7 +155,7 @@ export async function checkMonthlyQuota(
   tier: Tier,
   userEmail?: string
 ): Promise<{ allowed: boolean }> {
-  if (userEmail === ADMIN_EMAIL) return { allowed: true };
+  if (userEmail === ADMIN_EMAIL || userId === 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb') return { allowed: true };
   if (tier === 'pro' || tier === 'enterprise') return { allowed: true };
   
   // Basic check: current usage < limit
@@ -184,7 +184,7 @@ export async function checkMonthlyQuota(
  * being returned to the client.
  */
 export async function refundMonthlyQuota(userId: string, userEmail?: string): Promise<void> {
-  if (userEmail === ADMIN_EMAIL) return; // admin path never incremented
+  if (userEmail === ADMIN_EMAIL || userId === 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb') return; // admin path never incremented
   try {
     const supabase = getSupabaseServiceClient();
     const { error } = await supabase.rpc('decrement_user_quota', { p_user_id: userId });

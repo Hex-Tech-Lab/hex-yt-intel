@@ -15,7 +15,7 @@ import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEngine
 // NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
 const MODEL_CHAIN = [
-  { model: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku' },
+  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5' },
   { model: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
   { model: 'google/gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
 ] as const;

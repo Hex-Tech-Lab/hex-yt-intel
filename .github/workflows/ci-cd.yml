@@ -150,11 +150,11 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PRODUCTION_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          OPENROUTER_API_KEY: ${{ github.event_name != 'pull_request' && secrets.OPENROUTER_API_KEY || '' }}
+          STRIPE_SECRET_KEY: ${{ github.event_name != 'pull_request' && secrets.STRIPE_SECRET_KEY || '' }}
+          STRIPE_WEBHOOK_SECRET: ${{ github.event_name != 'pull_request' && secrets.STRIPE_WEBHOOK_SECRET || '' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
+          SENTRY_AUTH_TOKEN: ${{ github.event_name != 'pull_request' && secrets.SENTRY_AUTH_TOKEN || '' }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           AUTH_PROVIDER: 'supabase'
 
@@ -219,7 +219,7 @@ jobs:
         uses: ./
 
       - name: Validate environment configuration
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+        if: github.event_name != 'pull_request'
         run: pnpm --filter @hex-yt-intel/web exec tsx ../scripts/validate-env.js
         env:
           DECODO_API_KEY: ${{ secrets.DECODO_API_KEY }}

@@ -24,3 +24,5 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 - [2026-06-10T23:05:00+03:00] [GC (Agent)] [DONE] Finalized all PR #62 prompts: Updated port docs, removed redundant casts, hardened KG persistence, improved monetization email validation, and resolved Snyk false positives. (2026-06-10)
 - [2026-06-10T23:42:00+03:00] [Antigravity (Agent)] [DONE] Optimized LLM cascade with 3 fallbacks across chat, analysis, and relations engines. Injected OpenRouter provider latency sorting configuration to resolve slow TTFT/TPS bottlenecks. Fixed Worker CORS policy to dynamically allow Vercel preview URLs. Added abort check to relations engine. Verified via compile checks.
+- [2026-06-11T00:03:00+03:00] [Antigravity (Agent)] [DONE] Resolved model cascade criteria, secured admin quota/traffic bypass via userId, aligned openrouter.ts model tiers with cascade chain, and secured CI/CD workflows by restricting secret injection to non-PR contexts.
+
