@@ -106,7 +106,7 @@ function isPlaceholder(value: string | undefined): boolean {
 function validateEnvVar(
   name: EnvVar,
   required: boolean = false,
-  allowPlaceholder: boolean = false
+  allowPlaceholder?: boolean
 ): string | undefined {
   let value = process.env[name];
 
@@ -115,6 +115,11 @@ function validateEnvVar(
   if (process.env.GITHUB_ACTIONS === 'true' && required && !value) {
     console.warn(`[ci-validation] Auto-injecting mock for missing required variable: ${name}`);
     return `ci-mock-${name.toLowerCase().replace(/_/g, '-')}`;
+  }
+
+  // During Vercel build, provide default values instead of throwing
+  if (required && !value && process.env.VERCEL) {
+    return `[build-time-placeholder-${name}]`;
   }
 
   if (required && !value) {
@@ -128,9 +133,20 @@ function validateEnvVar(
     throw new Error(`Environment variable ${name} must be a string, got ${typeof value}`);
   }
 
-  // In production, reject placeholder values (but allow in CI environments)
+  // In production, reject placeholder values (but allow in CI and Vercel preview environments)
   const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
-  if (required && value && isPlaceholder(value) && !allowPlaceholder && !isCI) {
+  const isProduction =
+    !isCI &&
+    (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
+      process.env.VERCEL_ENV === 'production' ||
+      (process.env.NODE_ENV === 'production' && !process.env.VERCEL));
+  const isCIorPreview = isCI || process.env.VERCEL_ENV === 'preview';
+
+  const resolvedAllowPlaceholder = allowPlaceholder !== undefined
+    ? allowPlaceholder
+    : (isCIorPreview && !isProduction);
+
+  if (required && value && isPlaceholder(value) && !resolvedAllowPlaceholder && !isCI) {
     throw new Error(
       `Environment variable ${name} has a placeholder value in production.\n` +
       `Please set a real value in your deployment environment.`
@@ -156,11 +172,12 @@ function validateEnvironment(): void {
   const errors: string[] = [];
 
   // Detect environment context
-  const isCI = process.env.GITHUB_ACTIONS === 'true';
+  const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
   const isProduction =
     !isCI &&
     (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
-      process.env.NODE_ENV === 'production');
+      process.env.VERCEL_ENV === 'production' ||
+      (process.env.NODE_ENV === 'production' && !process.env.VERCEL));
   const isCIorPreview = isCI || process.env.VERCEL_ENV === 'preview';
 
   // Allow placeholders in CI/Preview, but enforce strict validation in production
