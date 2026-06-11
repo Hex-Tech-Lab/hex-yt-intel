@@ -66,7 +66,7 @@ export async function callOpenRouter(
     });
   }
 
-  const prompt = getUCISPrompt({
+  const prompt = await getUCISPrompt({
     version: '5.1',
     metadata,
     transcript,

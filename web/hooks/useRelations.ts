@@ -9,8 +9,18 @@ interface RelationsState {
   error: string | null;
 }
 
+// Module-level cache mapping analysisId -> insights
+const relationsCache = new Map<string, RelationInsight[]>();
+// Module-level in-flight requests mapping analysisId -> Promise of insights
+const inFlightRequests = new Map<string, Promise<RelationInsight[]>>();
+
 export function useRelations(analysisId: string | null, enabled: boolean): RelationsState {
-  const [state, setState] = useState<RelationsState>({ insights: [], loading: false, error: null });
+  const [state, setState] = useState<RelationsState>(() => {
+    if (analysisId && relationsCache.has(analysisId)) {
+      return { insights: relationsCache.get(analysisId)!, loading: false, error: null };
+    }
+    return { insights: [], loading: false, error: null };
+  });
 
   useEffect(() => {
     if (!analysisId || !enabled) {
@@ -18,30 +28,52 @@ export function useRelations(analysisId: string | null, enabled: boolean): Relat
       return;
     }
 
-    const controller = new AbortController();
-    
-    const timeoutId = setTimeout(() => {
-      setState((s) => ({ ...s, loading: true, error: null }));
+    // Resolve from cache immediately if present
+    if (relationsCache.has(analysisId)) {
+      setState({ insights: relationsCache.get(analysisId)!, loading: false, error: null });
+      return;
+    }
 
-      fetch(`/api/analyses/${analysisId}/relations`, { signal: controller.signal })
+    let isMounted = true;
+    setState((s) => ({ ...s, loading: true, error: null }));
+
+    let promise = inFlightRequests.get(analysisId);
+    if (!promise) {
+      promise = fetch(`/api/analyses/${analysisId}/relations`)
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json();
         })
         .then((data) => {
-          setState({ insights: data.insights ?? [], loading: false, error: null });
+          const insights = data.insights ?? [];
+          relationsCache.set(analysisId, insights);
+          inFlightRequests.delete(analysisId);
+          return insights;
         })
         .catch((err) => {
-          if (err.name === 'AbortError') return;
-          setState({ insights: [], loading: false, error: String(err?.message ?? err) });
+          inFlightRequests.delete(analysisId);
+          throw err;
         });
-    }, 100);
+      inFlightRequests.set(analysisId, promise);
+    }
+
+    promise
+      .then((insights) => {
+        if (isMounted) {
+          setState({ insights, loading: false, error: null });
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setState({ insights: [], loading: false, error: String(err?.message ?? err) });
+        }
+      });
 
     return () => {
-      clearTimeout(timeoutId);
-      controller.abort();
+      isMounted = false;
     };
   }, [analysisId, enabled]);
 
   return state;
 }
+

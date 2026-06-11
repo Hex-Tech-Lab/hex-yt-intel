@@ -14,6 +14,8 @@
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import type { UserTier } from '@/lib/types/billing';
 import { CHAT_CASCADE, ANALYSIS_CASCADE } from '../config/cascade';
+import { UCIS_V5_SYSTEM } from '../prompts/ucis-v5';
+import { UCIS_V5_1_SYSTEM } from '../prompts/ucis-v5.1';
 
 export type ModelKind = 'chat' | 'analysis';
 
@@ -38,8 +40,14 @@ interface ModelConfig {
   testOverride?: { enabled?: boolean } & Partial<Record<ModelKind, string[]>>;
 }
 
+export interface PromptConfig {
+  '5.0'?: string;
+  '5.1'?: string;
+}
+
 const TTL_MS = 60_000;
 let cache: { value: ModelConfig | null; at: number } | null = null;
+let promptCache: { value: PromptConfig | null; at: number } | null = null;
 
 function isNonEmptyStringArray(v: unknown): v is string[] {
   // Reject empty/whitespace entries: a malformed DB config (e.g. ["", "x"]) must fall
@@ -64,6 +72,40 @@ async function readModelConfig(): Promise<ModelConfig | null> {
     cache = { value: null, at: Date.now() };
     return null;
   }
+}
+
+async function readPromptConfig(): Promise<PromptConfig | null> {
+  if (promptCache && Date.now() - promptCache.at < TTL_MS) return promptCache.value;
+  try {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'prompt_config')
+      .single();
+    const value = error || !data ? null : (data.value as PromptConfig);
+    promptCache = { value, at: Date.now() };
+    return value;
+  } catch {
+    // DB unreachable / not migrated yet — fall back, don't throw on the live path.
+    promptCache = { value: null, at: Date.now() };
+    return null;
+  }
+}
+
+/**
+ * Resolve the system prompt template for a version. Precedence:
+ *   1. prompt_config row in DB (if key exists and has non-empty prompt for the version).
+ *   2. Static fallback from code.
+ */
+export async function resolveUCISPromptTemplate(version: '5.0' | '5.1'): Promise<string> {
+  const cfg = await readPromptConfig();
+  const dbPrompt = cfg?.[version];
+  if (dbPrompt && dbPrompt.trim().length > 0) {
+    return dbPrompt;
+  }
+  // Fallback to static code
+  return version === '5.1' ? UCIS_V5_1_SYSTEM : UCIS_V5_SYSTEM;
 }
 
 /**
@@ -106,4 +148,6 @@ export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Prom
 /** Admin write path / tests: drop the cache so the next read re-fetches. */
 export function invalidateSettingsCache(): void {
   cache = null;
+  promptCache = null;
 }
+

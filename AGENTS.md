@@ -1,4 +1,4 @@
-# Agent Responsibilities & Workflows (v1.4.1)
+# Agent Responsibilities & Workflows (v1.6.0)
 
 ---
 
@@ -36,7 +36,7 @@ When assigned a vertical architecture task, agents must follow this sequence:
     -   `pnpm type-check` (Strict mode clean).
     -   `pnpm build` (Next.js + Worker).
     -   E2E Stream test (Verify markdown saves in DB after stream close).
-4.  **Bumping**: Update monorepo versions to `1.4.1`.
+4.  **Bumping**: Update monorepo versions to `1.6.0`.
 
 ---
 
