@@ -12,18 +12,10 @@ export default function SignInForm() {
     setError(null);
     try {
       const supabase = createClient();
-      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-      const productionOrigin = 'https://yt-intel.getmytestdrive.com';
-      
-      let redirectTo = `${currentOrigin}/auth/callback`;
-      if (currentOrigin && currentOrigin !== productionOrigin) {
-        redirectTo = `${productionOrigin}/auth/callback?origin_referrer=${encodeURIComponent(currentOrigin)}`;
-      }
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: oauthProvider,
         options: {
-          redirectTo,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (error) {
