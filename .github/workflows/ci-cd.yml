@@ -219,7 +219,7 @@ jobs:
         uses: ./
 
       - name: Validate environment configuration
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: pnpm --filter @hex-yt-intel/web exec tsx ../scripts/validate-env.js
         env:
           DECODO_API_KEY: ${{ secrets.DECODO_API_KEY }}
