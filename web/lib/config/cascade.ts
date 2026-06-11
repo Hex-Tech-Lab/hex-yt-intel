@@ -57,3 +57,45 @@ export const ANALYSIS_CASCADE: readonly CascadeItem[] = [
 ] as const;
 
 export const STANCE_CASCADE: readonly CascadeItem[] = ANALYSIS_CASCADE;
+
+export const REASONING_CASCADE: Record<string, readonly CascadeItem[]> = {
+  free: [
+    {
+      model: 'google/gemini-2.0-flash-thinking-exp:free',
+      name: 'Gemini 2.0 Flash Thinking (Free)',
+    },
+    {
+      model: 'deepseek/deepseek-r1:free',
+      name: 'DeepSeek R1 (Free)',
+    },
+  ],
+  pro: [
+    {
+      model: 'deepseek/deepseek-r1',
+      name: 'DeepSeek R1 (Paid)',
+    },
+    {
+      model: 'google/gemini-2.0-flash-thinking-exp:free',
+      name: 'Gemini 2.0 Flash Thinking (Free)',
+    },
+    {
+      model: 'anthropic/claude-3.5-sonnet',
+      name: 'Claude 3.5 Sonnet',
+    },
+  ],
+  enterprise: [
+    {
+      model: 'deepseek/deepseek-r1',
+      name: 'DeepSeek R1 (Paid)',
+    },
+    {
+      model: 'google/gemini-2.0-flash-thinking-exp:free',
+      name: 'Gemini 2.0 Flash Thinking (Free)',
+    },
+    {
+      model: 'anthropic/claude-3.5-sonnet',
+      name: 'Claude 3.5 Sonnet',
+    },
+  ],
+};
+

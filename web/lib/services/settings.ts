@@ -13,9 +13,9 @@
  */
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import type { UserTier } from '@/lib/types/billing';
-import { CHAT_CASCADE, ANALYSIS_CASCADE } from '../config/cascade';
-import { UCIS_V5_SYSTEM } from '../prompts/ucis-v5';
+import { CHAT_CASCADE, ANALYSIS_CASCADE, REASONING_CASCADE } from '../config/cascade';
 import { UCIS_V5_1_SYSTEM } from '../prompts/ucis-v5.1';
+import { getRedisValue, setRedisValue, deleteRedisKey } from '../redis';
 
 export type ModelKind = 'chat' | 'analysis';
 
@@ -41,7 +41,6 @@ interface ModelConfig {
 }
 
 export interface PromptConfig {
-  '5.0'?: string;
   '5.1'?: string;
 }
 
@@ -56,8 +55,19 @@ function isNonEmptyStringArray(v: unknown): v is string[] {
 }
 
 async function readModelConfig(): Promise<ModelConfig | null> {
+  // Tier 1: Local In-Memory Cache (TTL: 60s)
   if (cache && Date.now() - cache.at < TTL_MS) return cache.value;
   try {
+    // Tier 2: Upstash Redis
+    const redisKey = 'config:model_config';
+    const redisVal = await getRedisValue(redisKey);
+    if (redisVal) {
+      const parsed = typeof redisVal === 'string' ? JSON.parse(redisVal) : redisVal;
+      cache = { value: parsed, at: Date.now() };
+      return parsed;
+    }
+
+    // Tier 3: Supabase DB
     const service = getSupabaseServiceClient();
     const { data, error } = await service
       .from('app_settings')
@@ -65,18 +75,35 @@ async function readModelConfig(): Promise<ModelConfig | null> {
       .eq('key', 'model_config')
       .single();
     const value = error || !data ? null : (data.value as ModelConfig);
+
+    if (value) {
+      // Warm up Redis with a 24-hour TTL (86400s)
+      await setRedisValue(redisKey, value, 86400);
+    }
+
     cache = { value, at: Date.now() };
     return value;
   } catch {
-    // DB unreachable / not migrated yet — fall back, don't throw on the live path.
+    // DB/Redis unreachable — fall back to local cache, don't throw on the live path.
     cache = { value: null, at: Date.now() };
     return null;
   }
 }
 
 async function readPromptConfig(): Promise<PromptConfig | null> {
+  // Tier 1: Local In-Memory Cache (TTL: 60s)
   if (promptCache && Date.now() - promptCache.at < TTL_MS) return promptCache.value;
   try {
+    // Tier 2: Upstash Redis
+    const redisKey = 'config:prompt_config';
+    const redisVal = await getRedisValue(redisKey);
+    if (redisVal) {
+      const parsed = typeof redisVal === 'string' ? JSON.parse(redisVal) : redisVal;
+      promptCache = { value: parsed, at: Date.now() };
+      return parsed;
+    }
+
+    // Tier 3: Supabase DB
     const service = getSupabaseServiceClient();
     const { data, error } = await service
       .from('app_settings')
@@ -84,10 +111,16 @@ async function readPromptConfig(): Promise<PromptConfig | null> {
       .eq('key', 'prompt_config')
       .single();
     const value = error || !data ? null : (data.value as PromptConfig);
+
+    if (value) {
+      // Warm up Redis with a 24-hour TTL (86400s)
+      await setRedisValue(redisKey, value, 86400);
+    }
+
     promptCache = { value, at: Date.now() };
     return value;
   } catch {
-    // DB unreachable / not migrated yet — fall back, don't throw on the live path.
+    // DB/Redis unreachable — fall back to local cache, don't throw on the live path.
     promptCache = { value: null, at: Date.now() };
     return null;
   }
@@ -95,17 +128,17 @@ async function readPromptConfig(): Promise<PromptConfig | null> {
 
 /**
  * Resolve the system prompt template for a version. Precedence:
- *   1. prompt_config row in DB (if key exists and has non-empty prompt for the version).
+ *   1. prompt_config row in DB or Redis cache.
  *   2. Static fallback from code.
  */
-export async function resolveUCISPromptTemplate(version: '5.0' | '5.1'): Promise<string> {
+export async function resolveUCISPromptTemplate(version: '5.1' = '5.1'): Promise<string> {
   const cfg = await readPromptConfig();
   const dbPrompt = cfg?.[version];
   if (dbPrompt && dbPrompt.trim().length > 0) {
     return dbPrompt;
   }
   // Fallback to static code
-  return version === '5.1' ? UCIS_V5_1_SYSTEM : UCIS_V5_SYSTEM;
+  return UCIS_V5_1_SYSTEM;
 }
 
 /**
@@ -145,9 +178,17 @@ export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Prom
   );
 }
 
+export async function resolveReasoningCascade(tier: UserTier): Promise<string[]> {
+  const cascade = REASONING_CASCADE[tier] || REASONING_CASCADE.free || [];
+  return cascade.map((item) => item.model);
+}
+
 /** Admin write path / tests: drop the cache so the next read re-fetches. */
 export function invalidateSettingsCache(): void {
   cache = null;
   promptCache = null;
+  // Clear from Redis so all edge regions reload fresh configs
+  deleteRedisKey('config:model_config').catch(() => null);
+  deleteRedisKey('config:prompt_config').catch(() => null);
 }
 

@@ -9,6 +9,7 @@ import {
   StreamTokenAdapter,
   SettingsModelAdapter,
 } from '@/lib/adapters';
+import { resolveReasoningCascade } from '@/lib/services/settings';
 
   /* GET — load a thread's messages (RLS scopes to owner). */
 export async function GET(
@@ -58,9 +59,24 @@ export async function POST(
 
   try {
     const body = await request.json().catch(() => ({}));
-    const content = typeof body.content === 'string' ? body.content.trim() : '';
+    const rawContent = typeof body.content === 'string' ? body.content.trim() : '';
     const clientMsgId = typeof body.clientMsgId === 'string' ? body.clientMsgId : null;
-    if (!content) {
+    if (!rawContent) {
+      return NextResponse.json({ error: 'Empty message' }, { status: 400 });
+    }
+
+    let finalContent = rawContent;
+    const isReasoning = rawContent.startsWith('/reason') || 
+                        rawContent.startsWith('/think') || 
+                        /\b(reason|explain|verify|calculate|logic|why|analyze deeply|deep dive)\b/i.test(rawContent);
+
+    if (rawContent.startsWith('/reason')) {
+      finalContent = rawContent.slice(7).trim();
+    } else if (rawContent.startsWith('/think')) {
+      finalContent = rawContent.slice(6).trim();
+    }
+
+    if (!finalContent) {
       return NextResponse.json({ error: 'Empty message' }, { status: 400 });
     }
 
@@ -91,13 +107,31 @@ export async function POST(
       }
     }
 
+    // --- Enforce turn limits based on user tier ------------------------------
+    const allMessages = await persistenceAdapter.getMessages({ conversationId: id });
+    const userMessageCount = allMessages.filter((m) => m.role === 'user').length;
+
+    const limits: Record<string, number> = {
+      free: 5,
+      pro: 30,
+      enterprise: 100,
+    };
+    const userLimit = limits[tier] || 5;
+
+    if (userMessageCount >= userLimit && !isRetry) {
+      return NextResponse.json({
+        error: `Turn limit reached. Your plan (${tier}) is limited to ${userLimit} user messages per conversation. Please upgrade or start a new chat.`,
+        code: 'ERR_CHAT_LIMIT_EXCEEDED'
+      }, { status: 403 });
+    }
+
     if (!userRow) {
       try {
         userRow = await persistenceAdapter.createMessage({
           conversationId: id,
           userId,
           role: 'user',
-          content,
+          content: finalContent,
           clientMsgId,
         });
       } catch (error: any) {
@@ -136,7 +170,7 @@ export async function POST(
     // Auto-title from the first user message.
     let newTitle: string | undefined;
     if (conv.title === 'New chat') {
-      const title = content.slice(0, 60);
+      const title = finalContent.slice(0, 60);
       newTitle = title;
       await persistenceAdapter.updateConversationTitle({
         conversationId: id,
@@ -145,10 +179,10 @@ export async function POST(
     }
 
     // Replay bounded history (model is stateless).
-    const allMessages = await persistenceAdapter.getMessages({ conversationId: id });
+    const historyMessages = await persistenceAdapter.getMessages({ conversationId: id });
     const HISTORY_TURNS = 20;
     // Bounded history: get the last HISTORY_TURNS messages
-    const history = allMessages.slice(-HISTORY_TURNS);
+    const history = historyMessages.slice(-HISTORY_TURNS);
 
     // Grounding from the linked analysis.
     let grounding = '';
@@ -172,8 +206,10 @@ export async function POST(
       }
     }
 
-    // Resolve the per-tier chat cascade and bind it into the token
-    const chatModels = await modelAdapter.resolveModels(tier, 'chat');
+    // Resolve the per-tier chat cascade (or reasoning cascade if triggered) and bind it into the token
+    const chatModels = isReasoning
+      ? await resolveReasoningCascade(tier)
+      : await modelAdapter.resolveModels(tier, 'chat');
     const { sig, exp } = tokenAdapter.signChatToken({
       conversationId: id,
       userId,
