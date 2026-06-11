@@ -42,5 +42,6 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 - [2026-06-11T14:20:00+03:00] [Antigravity (Agent)] [DONE] Migrated UCIS v5.0/v5.1 prompts to Supabase app_settings. Hardened relations engine fetching with an ironclad promise-sharing deduplication hook in useRelations.ts. Documented cascade routing behavior. Upgraded monorepo package versions to 1.6.0.
 
-- [2026-06-11T15:33:00+03:00] [Antigravity (Agent)] [IN_PROGRESS] Restructuring prompt history to docs/history/prompts/, implementing Upstash Redis-backed prompt caching, adding chat turn limits/reasoning model cascades, and documenting prompt references.
+- [2026-06-11T15:33:00+03:00] [Antigravity (Agent)] [DONE] Cleared legacy UCIS v3.2/v5.0 prompts from code and archived to docs/history/prompts/. Implemented Upstash Redis-backed caching for prompts/cascades. Enforced turn limits (5/30/100) and thinking cascades (DeepSeek R1/Gemini Thinking) on chat route. Isolated changes to a feature branch.
+
 
