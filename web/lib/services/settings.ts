@@ -13,6 +13,7 @@
  */
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import type { UserTier } from '@/lib/types/billing';
+import { CHAT_CASCADE, ANALYSIS_CASCADE } from '../config/cascade';
 
 export type ModelKind = 'chat' | 'analysis';
 
@@ -27,8 +28,8 @@ export type ModelKind = 'chat' | 'analysis';
 const COMMERCIAL_TRIAL_MODE = true;
 
 const FALLBACK: Record<ModelKind, readonly string[]> = {
-  chat: ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'openai/gpt-oss-120b', 'google/gemini-2.0-flash'],
-  analysis: ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro'],
+  chat: CHAT_CASCADE.map((c) => c.model),
+  analysis: ANALYSIS_CASCADE.map((c) => c.model),
 };
 
 interface ModelConfig {
@@ -76,9 +77,9 @@ async function readModelConfig(): Promise<ModelConfig | null> {
 export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Promise<string[]> {
   if (COMMERCIAL_TRIAL_MODE) {
     if (kind === 'chat') {
-      return ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'openai/gpt-oss-120b', 'google/gemini-2.0-flash'];
+      return CHAT_CASCADE.map((c) => c.model);
     }
-    return ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro'];
+    return ANALYSIS_CASCADE.map((c) => c.model);
   }
 
   const cfg = await readModelConfig();

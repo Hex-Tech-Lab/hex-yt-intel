@@ -17,63 +17,69 @@ export interface UCISSections {
 
 /**
  * Parses raw analysis markdown into structured UCISDimension objects.
- * Useful for restoring analyses from the database.
+ * Uses a robust index-slicing approach that handles all formatting variations
+ * (carriage returns, missing/varying separators, bold formatting).
  */
 export function parseToUCISDimensions(
   markdown: string | null | undefined,
 ): Record<number, UCISDimension> {
-  const dimensions: Record<number, UCISDimension> = {};
+  const out: Record<number, UCISDimension> = {};
+  if (!markdown || !markdown.trim()) return out;
 
-  if (!markdown) return dimensions;
-
-  for (let i = 1; i <= 11; i++) {
-    const content = extractSection(markdown, i);
-    if (content && content !== 'Parsing...') {
-      dimensions[i] = {
-        number: i,
-        name: DIMENSION_NAMES[i] || `Dimension ${i}`,
-        content,
-      };
+  // Match lines starting with "### DIMENSION N" (case-insensitive)
+  const headerRegex = /^###\s+DIMENSION\s+(\d+)\b[^\n]*/gim;
+  const matches: Array<{ number: number; index: number; length: number; name: string }> = [];
+  
+  let match;
+  while ((match = headerRegex.exec(markdown)) !== null) {
+    const number = parseInt(match[1] || '', 10);
+    if (number >= 1 && number <= 11) {
+      // Clean up the dimension name by removing the prefix and separators
+      const name = match[0]
+        .replace(/^###\s+DIMENSION\s+\d+\b/i, '')
+        .replace(/^\s*[-–—:.]\s*/, '')
+        .replace(/\*{2,}/g, '')
+        .trim();
+      
+      matches.push({
+        number,
+        index: match.index,
+        length: match[0].length,
+        name: name || DIMENSION_NAMES[number] || `Dimension ${number}`
+      });
     }
   }
 
-  return dimensions;
+  // Sort matches by their index in the document
+  matches.sort((a, b) => a.index - b.index);
+
+  // Slice content between headers
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i]!;
+    const contentStart = m.index + m.length;
+    const contentEnd = matches[i + 1]?.index ?? markdown.length;
+    const content = markdown.slice(contentStart, contentEnd).trim();
+    
+    out[m.number] = {
+      number: m.number,
+      name: m.name,
+      content,
+    };
+  }
+
+  return out;
 }
+
+// Alias for SupabasePersistenceAdapter compatibility
+export const parseUcisDimensions = parseToUCISDimensions;
 
 function extractSection(
   markdown: string | null | undefined,
   dimensionNumber: number,
 ): string {
   if (!markdown) return 'Parsing...';
-  // Match "### DIMENSION N <sep> Title" then skip to content on next lines.
-  // Tolerates optional **bold** markers and extra whitespace in the heading.
-  const dimensionRegex = new RegExp(
-    `^### DIMENSION ${dimensionNumber}\\s*[-–—:]\\s*\\*{0,2}[^\\n*]*?\\*{0,2}\\s*\\n([\\s\\S]*?)(?=\\n### DIMENSION|$)`,
-    'mi'
-  );
-
-  const match = markdown.match(dimensionRegex);
-  if (!match) {
-    return 'Parsing...';
-  }
-
-  const content = match[1] || '';
-
-  // Strip markdown syntax and clean up dimension numbering artifacts (e.g., 8.1, 10.1)
-  let cleaned = content
-    .replace(/\*\*([^*]+)\*\*/g, '$1')           // Remove **bold**
-    .replace(/__([^_]+)__/g, '$1')                // Remove __bold__
-    .replace(/`([^`]+)`/g, '$1')                  // Remove `code`
-    .replace(/^#+\s+/gm, '')                      // Remove heading markers
-    .replace(/\b\d+\.\d+\s/g, '')                 // Strip artifacts like "8.1 ", "10.2 "
-    .replace(/\|\s*[^|]+\s*\|/g, '')              // Remove table pipes
-    .replace(/^---+$/gm, '')                      // Remove horizontal rules
-    .replace(/^\s*[-*]\s+/gm, '')                 // Remove bullet points
-    .replace(/End of UCIS.*Report/gim, '')       // Strip completion tags
-    .replace(/\n\n+/g, '\n')                      // Collapse multiple blank lines
-    .trim();
-
-  return cleaned || 'Parsing...';
+  const dims = parseToUCISDimensions(markdown);
+  return dims[dimensionNumber]?.content || 'Parsing...';
 }
 
 export function parseUCISSections(markdown: string | null | undefined): UCISSections {

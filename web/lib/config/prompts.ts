@@ -3,6 +3,8 @@
  * Extracts multi-line prompt strings from routes and services
  */
 
+import { CHAT_CASCADE } from './cascade';
+
 /**
  * Chat protocol — interaction rules for OpenRouter streaming
  * Keeps replies short and PING-PONG, never a wall-of-text dump.
@@ -25,12 +27,7 @@ export const CHAT_PROTOCOL = [
  *
  * Used by: /api/chat/conversations/[id]/messages
  */
-/** Commercial trial mode. */
-const COMMERCIAL_TRIAL_MODE = true;
-
-export const CHAT_MODELS: readonly string[] = COMMERCIAL_TRIAL_MODE
-  ? ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'openai/gpt-oss-120b', 'google/gemini-2.0-flash']
-  : ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'openai/gpt-oss-120b', 'google/gemini-2.0-flash'];
+export const CHAT_MODELS: readonly string[] = CHAT_CASCADE.map((c) => c.model);
 
 /**
  * UCIS v3.2 system prompt (legacy, kept for backward compatibility)

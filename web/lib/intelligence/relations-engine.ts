@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
+import { STANCE_CASCADE } from '@/lib/config/cascade';
 
 // See /docs/intelligence/relations-engine.md
 export interface StanceDimension {
@@ -8,12 +9,7 @@ export interface StanceDimension {
   content: string;
 }
 
-/** Commercial trial mode — restrict stance engine to Haiku-only. */
-const COMMERCIAL_TRIAL_MODE = true;
-
-const STANCE_MODELS: readonly string[] = COMMERCIAL_TRIAL_MODE
-  ? ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro']
-  : ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro'];
+const STANCE_MODELS = STANCE_CASCADE;
 
 const LLMInsightSchema = z.object({
   kind: z.enum(['tangent', 'contrarian']),
@@ -51,7 +47,8 @@ async function* callStanceModelStream(
   prompt: string,
   apiKey: string,
   handshakeTimeoutMs: number = 3000,
-  externalSignal?: AbortSignal
+  externalSignal?: AbortSignal,
+  providerOrder?: string[]
 ): AsyncGenerator<string> {
   const controller = new AbortController();
   const handshakeTimer = setTimeout(() => controller.abort(), handshakeTimeoutMs);
@@ -80,6 +77,7 @@ async function* callStanceModelStream(
         provider: {
           sort: 'latency',
           allow_fallbacks: true,
+          ...(providerOrder ? { order: providerOrder } : {}),
         },
       }),
       signal: controller.signal,
@@ -131,15 +129,22 @@ export async function* computeStanceRelationsStream(
   const labelOf = new Map(usable.map((d) => [d.number, d.name]));
   const prompt = buildPrompt(usable);
 
-  for (const model of STANCE_MODELS) {
+  for (const item of STANCE_MODELS) {
     if (handshakeSignal?.aborted) {
-      console.warn(`[relations/engine] Cascade aborted before attempting model: ${model}`);
+      console.warn(`[relations/engine] Cascade aborted before attempting model: ${item.model}`);
       break;
     }
-    yield { type: 'model', model };
+    yield { type: 'model', model: item.model };
     let fullText = '';
 
-    for await (const delta of callStanceModelStream(model, prompt, apiKey, 3000, handshakeSignal)) {
+    for await (const delta of callStanceModelStream(
+      item.model,
+      prompt,
+      apiKey,
+      3000,
+      handshakeSignal,
+      item.providerOrder as string[] | undefined
+    )) {
       fullText += delta;
     }
 
