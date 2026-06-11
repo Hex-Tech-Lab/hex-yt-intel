@@ -29,4 +29,11 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-11T00:41:00+03:00] [Antigravity (Agent)] [DONE] Configured Analysis cascade to support Claude Haiku 4.5 -> Alternate Haiku 4.5 (routing explicitly via Bedrock/Vertex CSPs to bypass default route transient failures) -> Claude Sonnet 4.6 (Nitro) as emergency fallback.
 - [2026-06-11T00:58:00+03:00] [Antigravity (Agent)] [DONE] Restructured all LLM model configurations to be centralized inside web/lib/config/cascade.ts. Restructured openrouter.ts, SettingsModelAdapter.ts, prompts.ts, settings.ts, relations-engine.ts, chat-stream.ts, and LLMCascade.ts to dynamically resolve model IDs and provider routing constraints from this central location, eliminating hardcoded model-specific indices and arrays. Verified via type-check and full workspace builds.
 - [2026-06-11T01:18:00+03:00] [Antigravity (Agent)] [DONE] Consolidated and refactored the markdown dimension parser logic inside web/lib/utils/ucis-parser.ts to use an index-slicing method, resolving parser failures on carriage returns and varying separators. Bypassed duplicate parser in parse-ucis-dimensions.ts by re-exporting. Fixed type-safety warnings in worker.ts and dimension-parser.ts. Verified via direct workspace tsc checks and worker esbuild.
+- [2026-06-11T12:55:00+03:00] [Antigravity (Agent)] [DONE] Deep reviewed session history and transcripts, extracted outstanding system TODOs, analyzed prioritization logic, and produced a comprehensive session roadmap.
+- [2026-06-11T13:22:00+03:00] [Antigravity (Agent)] [DONE] Resolved UI white background flash during hydration by explicitly setting the bg-[var(--bg)] background on the main layout component. Resolved client-side dimension validation failure by making the metadata property optional in UCISDimensionSchema.
 
+
+
+- [2026-06-10T23:55:00+03:00] [GC (Agent)] [DONE] Resolved Dependabot High-severity alert #30 by overriding 'glob' to safe version 10.5.0 in pnpm-workspace.yaml. Verified via pnpm audit. (2026-06-10)
+
+- [2026-06-11T13:20:00+00:00] [GC (Agent)] [DONE] Resolved CodeQL Python detection failure by adding explicit configuration in .github/workflows/codeql.yml, excluding Python from the scan.
