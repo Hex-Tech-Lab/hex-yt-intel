@@ -52,6 +52,8 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-11T18:27:00+03:00] [Antigravity (Agent)] [DONE] Optimized chat route query latency by parallelizing 7 sequential DB fetches into 2 parallel blocks. Implemented database transaction outbox pattern for quota charging by moving stub insertion before metadata fetch, allowing self-correcting refunds. Added billing_status column to public.analyses. Buffered streaming terminal logs in useAnalysisStore to split only on paragraph breaks (\n\n) or list bullets, keeping paragraphs fully contiguous.
 - [2026-06-11T19:26:00+03:00] [Antigravity (Agent)] [DONE] Patched remote Supabase auth configuration via Management API to add wildcard domains (*.vercel.app) to the redirect URL whitelist. Rolled back temporary code redirects, keeping the codebase fully clean and standard. Verified and force-deployed to Vercel preview.
 - [2026-06-11T19:48:00+03:00] [Antigravity (Agent)] [DONE] Retrieved decrypted remote Supabase service_role API key. Configured missing preview environment variables (SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_APP_URL, SENTRY_DSN) on Vercel CLI for current branch. Triggered fresh forced preview redeployment.
+- [2026-06-11T21:08:00+03:00] [Antigravity (Agent)] [DONE] Implemented double-secret verification (production + fallback) in Cloudflare Worker (worker.ts and chat-stream.ts) to resolve Worker stream 401 token authentication errors on preview domains. Staged, committed, and pushed to GitHub; verified successful deployment of the updated worker via GitHub Actions.
+
 
 
 
