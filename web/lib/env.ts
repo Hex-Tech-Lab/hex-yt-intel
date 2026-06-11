@@ -119,6 +119,9 @@ function validateEnvVar(
 
   // During Vercel build, provide default values instead of throwing
   if (required && !value && process.env.VERCEL) {
+    if (name.toLowerCase().includes('url')) {
+      return `https://${name.toLowerCase().replace(/_/g, '-')}-placeholder.co`;
+    }
     return `[build-time-placeholder-${name}]`;
   }
 
@@ -151,6 +154,13 @@ function validateEnvVar(
       `Environment variable ${name} has a placeholder value in production.\n` +
       `Please set a real value in your deployment environment.`
     );
+  }
+
+  // If it's a placeholder, and we allow it, return a valid URL if it's a URL field
+  if (value && isPlaceholder(value) && resolvedAllowPlaceholder) {
+    if (name.toLowerCase().includes('url')) {
+      return `https://${name.toLowerCase().replace(/_/g, '-')}-placeholder.co`;
+    }
   }
 
   return value;
