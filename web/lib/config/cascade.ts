@@ -8,6 +8,12 @@ export interface CascadeItem {
 export const CHAT_CASCADE: readonly CascadeItem[] = [
   {
     model: 'openai/gpt-oss-120b',
+    name: 'gpt-oss-120b (Cerebras)',
+    cost: 0.00035,
+    providerOrder: ['cerebras'],
+  },
+  {
+    model: 'openai/gpt-oss-120b',
     name: 'gpt-oss-120b (Groq)',
     cost: 0.00015,
     providerOrder: ['groq'],
@@ -16,19 +22,13 @@ export const CHAT_CASCADE: readonly CascadeItem[] = [
     model: 'openai/gpt-oss-120b',
     name: 'gpt-oss-120b (Vertex Global)',
     cost: 0.00015,
-    providerOrder: ['google-vertex/global'],
-  },
-  {
-    model: 'openai/gpt-oss-120b',
-    name: 'gpt-oss-120b (Cerebras)',
-    cost: 0.00035,
-    providerOrder: ['cerebras/fp16'],
+    providerOrder: ['google-vertex'],
   },
   {
     model: 'google/gemini-3.1-flash-lite',
     name: 'Gemini 3.1 Flash Lite',
     cost: 0.00025,
-    providerOrder: ['google-vertex/global'],
+    providerOrder: ['google-vertex'],
   },
   {
     model: 'google/gemini-2.0-flash',
@@ -39,19 +39,19 @@ export const CHAT_CASCADE: readonly CascadeItem[] = [
 
 export const ANALYSIS_CASCADE: readonly CascadeItem[] = [
   {
-    model: 'anthropic/claude-haiku-4.5',
-    name: 'Claude Haiku 4.5',
+    model: 'anthropic/claude-3.5-haiku',
+    name: 'Claude 3.5 Haiku',
     cost: 0.0015,
   },
   {
-    model: 'anthropic/claude-haiku-4.5',
-    name: 'Claude Haiku 4.5 (Alternate Route)',
+    model: 'anthropic/claude-3.5-haiku',
+    name: 'Claude 3.5 Haiku (Alternate Route)',
     cost: 0.0015,
-    providerOrder: ['google-vertex/global', 'google-vertex/europe', 'amazon-bedrock/global'],
+    providerOrder: ['google-vertex', 'amazon-bedrock'],
   },
   {
-    model: 'anthropic/claude-sonnet-4.6:nitro',
-    name: 'Claude Sonnet 4.6 (Nitro)',
+    model: 'anthropic/claude-3.5-sonnet',
+    name: 'Claude 3.5 Sonnet',
     cost: 0.003,
   },
 ] as const;

@@ -85,12 +85,45 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
 
   appendTerminalLine: (content) =>
     set((state) => {
-      const newLine: LogLine = {
-        timestamp: new Date().toLocaleTimeString(),
-        type: 'info',
-        message: content,
-      };
-      return { terminalLines: [...state.terminalLines, newLine] };
+      const lines = [...state.terminalLines];
+      if (lines.length > 0) {
+        const lastLine = { ...lines[lines.length - 1]! };
+        if (content.includes('\n')) {
+          const parts = content.split('\n');
+          lastLine.message += parts[0] || '';
+          lines[lines.length - 1] = lastLine;
+          
+          const newLines: LogLine[] = [];
+          for (let i = 1; i < parts.length; i++) {
+            newLines.push({
+              timestamp: new Date().toLocaleTimeString(),
+              type: 'info',
+              message: parts[i] || '',
+            });
+          }
+          return { terminalLines: [...lines, ...newLines] };
+        } else {
+          lastLine.message += content;
+          lines[lines.length - 1] = lastLine;
+          return { terminalLines: lines };
+        }
+      } else {
+        const parts = content.split('\n');
+        const firstLine: LogLine = {
+          timestamp: new Date().toLocaleTimeString(),
+          type: 'info',
+          message: parts[0] || '',
+        };
+        const newLines: LogLine[] = [firstLine];
+        for (let i = 1; i < parts.length; i++) {
+          newLines.push({
+            timestamp: new Date().toLocaleTimeString(),
+            type: 'info',
+            message: parts[i] || '',
+          });
+        }
+        return { terminalLines: newLines };
+      }
     }),
 
   clearTerminal: () => set({ terminalLines: [] }),

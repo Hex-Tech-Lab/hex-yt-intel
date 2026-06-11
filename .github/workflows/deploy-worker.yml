@@ -7,7 +7,7 @@ name: Deploy Worker
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/1.6.0-prompts-and-limits]
     paths:
       - 'worker/**'
       - 'web/lib/prompts/**'        # bundled into the worker (UCIS prompt IP)
