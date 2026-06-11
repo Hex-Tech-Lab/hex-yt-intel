@@ -29,6 +29,7 @@ interface ChatStreamRequest {
   models?: string[];
   sig: string;
   exp: number;
+  appUrl?: string;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -215,7 +216,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       // Persist the assistant turn S2S so Postgres stays the source of truth. The
       // content signature proves to Vercel that this text came from the worker.
       const contentSig = await hmacHex(activeSecret, full);
-      const appUrl = c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
+      const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
       c.executionCtx.waitUntil(
         fetch(`${appUrl}/api/chat/persist`, {
           method: "POST",

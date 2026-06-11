@@ -5,6 +5,7 @@ import type {
 } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
 import type { ChatMessage } from '@/lib/types/chat';
+import { env } from '@/lib/env';
 
 export interface ProcessChatMessageUseCaseParams {
   conversationId: string;
@@ -224,7 +225,7 @@ export class ProcessChatMessageUseCase {
         user: userRow!,
         ...(newTitle ? { title: newTitle } : {}),
         stream: {
-          url: `${process.env.NEXT_PUBLIC_WORKER_URL || ''}/chat-stream`,
+          url: `${env.cloudflareWorkerUrl}/chat-stream`,
           sig,
           exp,
         },

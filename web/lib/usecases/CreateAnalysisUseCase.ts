@@ -10,6 +10,7 @@ import type { PersonaId } from '@/lib/prompts';
 import type { UserTier } from '@/lib/types/billing';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import { extractVideoId } from '@/lib/youtube';
+import { env } from '@/lib/env';
 
 export interface CreateAnalysisUseCaseParams {
   userId: string;
@@ -295,7 +296,7 @@ export class CreateAnalysisUseCase {
           dimensionsReceived: [],
         },
         stream: {
-          url: `${process.env.NEXT_PUBLIC_WORKER_URL || ''}/analyze-llm-stream`,
+          url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig,
           exp,
         },

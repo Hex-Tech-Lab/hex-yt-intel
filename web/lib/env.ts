@@ -23,6 +23,7 @@ const OPTIONAL_ENV_VARS = [
   'NEXT_PUBLIC_APP_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
   'CLOUDFLARE_WORKER_URL',
+  'NEXT_PUBLIC_WORKER_URL',
   'SENTRY_AUTH_TOKEN',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
@@ -249,7 +250,8 @@ export function getEnv(): EnvironmentConfig {
       authToken: validateEnvVar('SENTRY_AUTH_TOKEN', false),
     },
     cloudflare: {
-      workerUrl: validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
+      workerUrl: validateEnvVar('NEXT_PUBLIC_WORKER_URL', false) ||
+        validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
         'https://yt-intel.hex-tech-lab.workers.dev',
     },
     openrouter: {
@@ -302,7 +304,8 @@ export const env = {
     return validateEnvVar('OPENROUTER_API_KEY', true)!;
   },
   get cloudflareWorkerUrl(): string {
-    return validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
+    return validateEnvVar('NEXT_PUBLIC_WORKER_URL', false) ||
+      validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
       'https://yt-intel.hex-tech-lab.workers.dev';
   },
   get upstashRedisUrl(): string | undefined {
