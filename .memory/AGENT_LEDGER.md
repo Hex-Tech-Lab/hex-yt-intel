@@ -40,4 +40,5 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 - [2026-06-11T13:20:00+00:00] [GC (Agent)] [DONE] Resolved CodeQL Python detection failure by adding explicit configuration in .github/workflows/codeql.yml, excluding Python from the scan.
 
-- [2026-06-11T14:20:00+03:00] [Antigravity (Agent)] [IN_PROGRESS] Auditing UCIS v5.1 prompt database relocation, refining useRelations caching, detailing model cascade behavior, and upgrading monorepo version identifiers.
+- [2026-06-11T14:20:00+03:00] [Antigravity (Agent)] [DONE] Migrated UCIS v5.0/v5.1 prompts to Supabase app_settings. Hardened relations engine fetching with an ironclad promise-sharing deduplication hook in useRelations.ts. Documented cascade routing behavior. Upgraded monorepo package versions to 1.6.0.
+
