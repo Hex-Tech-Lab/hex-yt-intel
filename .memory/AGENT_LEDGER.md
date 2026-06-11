@@ -46,4 +46,4 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 - [2026-06-11T15:37:00+03:00] [Antigravity (Agent)] [DONE] Refactored chat message processing flow to ProcessChatMessageUseCase, encapsulating turn limits, commands, and cascade routing. Implemented structured prompt versioning and chronological change history logs. Fixed worker PromptBuilder compilation type errors. Verified via full monorepo build.
 
-- [2026-06-11T16:20:00+03:00] [Antigravity (Agent)] [DONE] Implemented training-exempt production reasoning cascade (o3-mini -> gemini-1.5-pro -> claude-3.5-sonnet) and published comprehensive benchmark evaluation. Fixed Vercel preview crash (500) caused by strict placeholder env validation in preview mode.
+- [2026-06-11T16:20:00+03:00] [Antigravity (Agent)] [DONE] Implemented training-exempt production reasoning cascade (o3-mini -> gemini-1.5-pro -> claude-3.5-sonnet) and published comprehensive benchmark evaluation. Fixed Vercel preview crash (500) by wrapping cookies() lookup in try/catch, relaxing placeholder validation in preview, and converting placeholder URL strings to valid HTTP/HTTPS mock configurations.
