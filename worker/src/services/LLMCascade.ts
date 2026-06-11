@@ -14,11 +14,9 @@ import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEngine
 //   - claude-3.5-haiku: paid last resort (needs OpenRouter credit; 402 while overdrawn).
 // NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
-const MODEL_CHAIN = [
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5' },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Alternate Route)' },
-  { model: 'anthropic/claude-sonnet-4.6:nitro', name: 'Claude Sonnet 4.6 (Nitro)' },
-] as const;
+import { ANALYSIS_CASCADE } from '../../../web/lib/config/cascade';
+
+const MODEL_CHAIN = ANALYSIS_CASCADE;
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const HTTP_REFERER = 'https://yt-intel.hex-tech-lab.workers.dev';
@@ -28,14 +26,22 @@ export class LLMCascade implements LLMCascadePort {
   // The ordered cascade actually used. Defaults to the hardcoded MODEL_CHAIN, but the
   // bouncer may inject a per-tier list (resolved from app_settings) — the DB config is
   // the override source of truth; MODEL_CHAIN is the safety-net fallback.
-  private chain: ReadonlyArray<{ model: string; name: string }>;
+  private chain: ReadonlyArray<{ model: string; name: string; providerOrder?: readonly string[] }>;
 
   constructor(apiKey: string, models?: string[]) {
     this.apiKey = apiKey;
-    this.chain =
-      models && models.length > 0
-        ? models.map((model) => ({ model, name: model }))
-        : MODEL_CHAIN;
+    if (models && models.length > 0) {
+      this.chain = models.map((model) => {
+        const matched = MODEL_CHAIN.find((item) => item.model === model);
+        return {
+          model,
+          name: matched?.name ?? model,
+          providerOrder: matched?.providerOrder,
+        };
+      });
+    } else {
+      this.chain = MODEL_CHAIN;
+    }
   }
 
   /**
@@ -53,8 +59,7 @@ export class LLMCascade implements LLMCascadePort {
     let modelUsed = '';
     let produced = false;
 
-    let index = 0;
-    for (const { model, name } of this.chain) {
+    for (const { model, name, providerOrder } of this.chain) {
       if (signal?.aborted) {
         console.warn(`[LLMCascade] Cascade aborted before attempting model: ${name}`);
         break;
@@ -73,7 +78,7 @@ export class LLMCascade implements LLMCascadePort {
         },
         90000,
         signal,
-        index
+        providerOrder as string[] | undefined
       );
 
       if (result.started && finalText) {
@@ -85,7 +90,6 @@ export class LLMCascade implements LLMCascadePort {
       const errorMsg = result.error || 'No tokens produced';
       console.warn(`[LLMCascade] Model ${name} failed/skipped. Error: ${errorMsg}`);
       onStatus?.({ stage: 'fallback', from: name, error: errorMsg });
-      index++;
     }
 
     return { started: produced, finalText, modelUsed };
@@ -102,15 +106,20 @@ export class LLMCascade implements LLMCascadePort {
     metadata: EngineMetadata,
     accept?: (text: string) => boolean
   ): Promise<{ text: string; modelUsed: string } | null> {
-    let index = 0;
-    for (const { model, name } of this.chain) {
-      const result = await this.callLLM(model, systemPrompt, transcript, metadata, 45000, index);
+    for (const { model, name, providerOrder } of this.chain) {
+      const result = await this.callLLM(
+        model,
+        systemPrompt,
+        transcript,
+        metadata,
+        45000,
+        providerOrder as string[] | undefined
+      );
       if (result.success && result.text) {
         if (!accept || accept(result.text)) {
           return { text: result.text, modelUsed: name };
         }
       }
-      index++;
     }
     return null;
   }
@@ -127,7 +136,7 @@ export class LLMCascade implements LLMCascadePort {
     onDelta: (text: string) => void,
     timeoutMs = 90000,
     signal?: AbortSignal,
-    index?: number
+    providerOrder?: string[]
   ): Promise<{ started: boolean; text: string; error?: string }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -171,7 +180,7 @@ export class LLMCascade implements LLMCascadePort {
           provider: {
             sort: 'latency',
             allow_fallbacks: true,
-            ...(index === 1 ? { order: ['google-vertex/global', 'google-vertex/europe', 'amazon-bedrock/global'] } : {}),
+            ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
         signal: controller.signal,
@@ -232,7 +241,7 @@ export class LLMCascade implements LLMCascadePort {
     transcript: string,
     metadata: EngineMetadata,
     timeoutMs = 45000,
-    index?: number
+    providerOrder?: string[]
   ): Promise<{ success: boolean; text?: string; error?: string }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -270,7 +279,7 @@ export class LLMCascade implements LLMCascadePort {
           provider: {
             sort: 'latency',
             allow_fallbacks: true,
-            ...(index === 1 ? { order: ['google-vertex/global', 'google-vertex/europe', 'amazon-bedrock/global'] } : {}),
+            ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
         signal: controller.signal,

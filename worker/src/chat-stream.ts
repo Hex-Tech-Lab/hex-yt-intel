@@ -2,6 +2,7 @@ import type { Context } from "hono";
 // Chat config is bundled from web/lib by esbuild (same pattern as ReasoningEngine's
 // getUCISPrompt import) — the protocol/model list stays a single source of truth.
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
+import { CHAT_CASCADE } from "../../web/lib/config/cascade";
 
 /**
  * Direct browser->worker chat streaming. Mirrors /analyze-llm-stream: the Vercel
@@ -67,9 +68,20 @@ async function streamChatCascade(
   if (grounding) messages.push({ role: "system", content: grounding });
   for (const m of history) messages.push({ role: m.role, content: m.content });
 
-  const chain = models && models.length > 0 ? models : CHAT_MODELS;
-  let index = 0;
-  for (const model of chain) {
+  const chain = models && models.length > 0
+    ? models.map((m, idx) => {
+        if (CHAT_CASCADE[idx] && CHAT_CASCADE[idx].model === m) {
+          return CHAT_CASCADE[idx];
+        }
+        const matched = CHAT_CASCADE.find((c) => c.model === m);
+        return {
+          model: m,
+          providerOrder: matched?.providerOrder,
+        };
+      })
+    : CHAT_CASCADE;
+
+  for (const { model, providerOrder } of chain) {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 50000);
     let full = "";
@@ -91,14 +103,12 @@ async function streamChatCascade(
           provider: {
             sort: "latency",
             allow_fallbacks: true,
-            ...(model === "openai/gpt-oss-120b" && index === 0 ? { order: ["groq"] } : {}),
-            ...(model === "openai/gpt-oss-120b" && index === 2 ? { order: ["cerebras/fp16"] } : {}),
+            ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
-        index++;
         continue; // try next model
       }
       const reader = res.body.getReader();
@@ -132,7 +142,6 @@ async function streamChatCascade(
       /* timeout / network — fall through to next model */
     } finally {
       clearTimeout(t);
-      index++;
     }
   }
   return "";

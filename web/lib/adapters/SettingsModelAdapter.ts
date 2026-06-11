@@ -1,6 +1,7 @@
 import type { UserTier } from '@/lib/types/billing';
 import type { ModelResolutionPort } from '@/lib/ports';
 import { resolveModelCascade } from '@/lib/services/settings';
+import { CHAT_CASCADE, ANALYSIS_CASCADE } from '../config/cascade';
 
 export class SettingsModelAdapter implements ModelResolutionPort {
   private readonly commercialTrialMode: boolean;
@@ -20,9 +21,9 @@ export class SettingsModelAdapter implements ModelResolutionPort {
   async resolveModels(tier: UserTier, kind: 'analysis' | 'chat'): Promise<string[]> {
     if (this.commercialTrialMode) {
       if (kind === 'chat') {
-        return ['openai/gpt-oss-120b', 'google/gemini-3.1-flash-lite', 'openai/gpt-oss-120b', 'google/gemini-2.0-flash'];
+        return CHAT_CASCADE.map((c) => c.model);
       }
-      return ['anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6:nitro'];
+      return ANALYSIS_CASCADE.map((c) => c.model);
     }
     return resolveModelCascade(tier, kind);
   }

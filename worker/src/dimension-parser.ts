@@ -31,8 +31,8 @@ export class StreamingDimensionParser {
     // Extract all complete dimensions from buffer
     let match;
     while ((match = this.dimensionPattern.exec(this.buffer))) {
-      const dimensionNum = parseInt(match[1], 10);
-      const dimensionName = match[2].trim();
+      const dimensionNum = parseInt(match[1] || '', 10);
+      const dimensionName = (match[2] || '').trim();
 
       // Find where this dimension ends (start of next dimension or end of buffer)
       const dimensionStart = match.index;
@@ -77,8 +77,8 @@ export class StreamingDimensionParser {
     const match = this.dimensionPattern.exec(this.buffer);
 
     if (match) {
-      const dimensionNum = parseInt(match[1], 10);
-      const dimensionName = match[2].trim();
+      const dimensionNum = parseInt(match[1] || '', 10);
+      const dimensionName = (match[2] || '').trim();
       const contentStart = this.buffer.indexOf('\n', match.index) + 1;
       const content = this.buffer.slice(contentStart).trim();
 

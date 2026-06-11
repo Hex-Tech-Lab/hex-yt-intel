@@ -6,6 +6,7 @@
 import { getUCISPrompt } from '@/lib/prompts/factory';
 import type { PersonaId } from '@/lib/prompts';
 import type { VideoMetadata } from '@/lib/types';
+import { ANALYSIS_CASCADE } from '@/lib/config/cascade';
 
 export class AnalysisEngineError extends Error {
   code: string;
@@ -21,11 +22,12 @@ export class AnalysisEngineError extends Error {
   }
 }
 
-const MODEL_TIERS = [
-  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 },  // Tier 0: Paid primary Claude Haiku 4.5
-  { model: 'anthropic/claude-haiku-4.5', tier: 'paid', cost: 0.0015 },  // Tier 1: Paid alternate Claude Haiku 4.5
-  { model: 'anthropic/claude-sonnet-4.6:nitro', tier: 'paid', cost: 0.003 },   // Tier 2: Paid emergency fallback Claude Sonnet 4.6 (Nitro)
-] as const;
+const MODEL_TIERS = ANALYSIS_CASCADE.map((item) => ({
+  model: item.model,
+  tier: 'paid',
+  cost: item.cost ?? 0,
+  providerOrder: item.providerOrder,
+}));
 
 /**
  * Read a failed response body for diagnostics without ever throwing.
@@ -98,7 +100,7 @@ export async function callOpenRouter(
         provider: {
           sort: 'latency',
           allow_fallbacks: true,
-          ...(tierIndex === 1 ? { order: ['google-vertex/global', 'google-vertex/europe', 'amazon-bedrock/global'] } : {}),
+          ...(currentTier.providerOrder ? { order: currentTier.providerOrder } : {}),
         },
       }),
       signal: controller.signal,
