@@ -132,4 +132,12 @@ export interface PersistencePort {
     entities: Array<{ id: string; label: string; type: string; weight: number }>;
     relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number }>;
   } | null>;
+
+  /**
+   * Update the billing/quota status of an analysis.
+   */
+  updateBillingStatus(params: {
+    analysisId: string;
+    status: 'processing' | 'completed' | 'failed';
+  }): Promise<void>;
 }

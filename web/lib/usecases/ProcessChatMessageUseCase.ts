@@ -66,8 +66,12 @@ export class ProcessChatMessageUseCase {
       return { type: 'error', code: 'ERR_EMPTY_MESSAGE', status: 400, message: 'Empty message' };
     }
 
-    // 1. Load conversation and validate ownership
-    const conv = await this.chatPersistence.getConversation({ conversationId });
+    // 1. Load conversation and messages in parallel to avoid sequential network roundtrips
+    const [conv, allMessages] = await Promise.all([
+      this.chatPersistence.getConversation({ conversationId }),
+      this.chatPersistence.getMessages({ conversationId }),
+    ]);
+
     if (!conv) {
       return { type: 'error', code: 'ERR_CONVERSATION_NOT_FOUND', status: 404, message: 'Conversation not found' };
     }
@@ -75,15 +79,12 @@ export class ProcessChatMessageUseCase {
       return { type: 'error', code: 'ERR_FORBIDDEN', status: 403, message: 'Forbidden' };
     }
 
-    // 2. Idempotent user-message lookup
+    // 2. Idempotent user-message lookup (in-memory lookup from pre-loaded history)
     let userRow: ChatMessage | null = null;
     let isRetry = false;
 
     if (clientMsgId) {
-      const existing = await this.chatPersistence.findMessageByClientMsgId({
-        conversationId,
-        clientMsgId,
-      });
+      const existing = allMessages.find((m) => m.clientMsgId === clientMsgId);
       if (existing) {
         userRow = existing;
         isRetry = true;
@@ -91,7 +92,6 @@ export class ProcessChatMessageUseCase {
     }
 
     // 3. Enforce turn limits based on user tier
-    const allMessages = await this.chatPersistence.getMessages({ conversationId });
     const userMessageCount = allMessages.filter((m) => m.role === 'user').length;
 
     const limits: Record<UserTier, number> = {
@@ -110,32 +110,45 @@ export class ProcessChatMessageUseCase {
       };
     }
 
-    // 4. Create user message if not exists
+    // 4. Create user message (if needed) and fetch grounding in parallel to minimize latency
+    let groundingResult: any = null;
     if (!userRow) {
       try {
-        userRow = await this.chatPersistence.createMessage({
-          conversationId,
-          userId,
-          role: 'user',
-          content: finalContent,
-          clientMsgId,
-        });
-      } catch (error: any) {
-        // Handle race conditions/duplicate client message writes gracefully
-        if (clientMsgId) {
-          const raced = await this.chatPersistence.findMessageByClientMsgId({
+        const [createdMsg, ground] = await Promise.all([
+          this.chatPersistence.createMessage({
             conversationId,
+            userId,
+            role: 'user',
+            content: finalContent,
             clientMsgId,
-          });
-          if (raced) {
-            userRow = raced;
-            isRetry = true;
-          } else {
+          }).catch(async (error: any) => {
+            // Handle race conditions/duplicate client message writes gracefully
+            if (clientMsgId) {
+              const raced = await this.chatPersistence.findMessageByClientMsgId({
+                conversationId,
+                clientMsgId,
+              });
+              if (raced) {
+                isRetry = true;
+                return raced;
+              }
+            }
             throw error;
-          }
-        } else {
-          throw error;
-        }
+          }),
+          conv.analysisId
+            ? this.chatPersistence.getAnalysisGrounding({ analysisId: conv.analysisId })
+            : Promise.resolve(null),
+        ]);
+        userRow = createdMsg;
+        groundingResult = ground;
+      } catch (error) {
+        console.error('[chat-usecase] Failed during parallel user-message write / grounding fetch:', error);
+        throw error;
+      }
+    } else {
+      // Message already exists, just fetch grounding if conversation has analysisId
+      if (conv.analysisId) {
+        groundingResult = await this.chatPersistence.getAnalysisGrounding({ analysisId: conv.analysisId });
       }
     }
 
@@ -167,30 +180,29 @@ export class ProcessChatMessageUseCase {
       });
     }
 
-    // 7. Get last 20 messages for context replay (bounded history)
-    const historyMessages = await this.chatPersistence.getMessages({ conversationId });
+    // 7. Get last 20 messages for context replay (constructed in-memory to save a query)
+    const historyMessages = userRow && !allMessages.some((m) => m.id === userRow!.id)
+      ? [...allMessages, userRow]
+      : allMessages;
     const HISTORY_TURNS = 20;
     const history = historyMessages.slice(-HISTORY_TURNS);
 
     // 8. Grounding retrieval
     let grounding = '';
-    if (conv.analysisId) {
-      const a = await this.chatPersistence.getAnalysisGrounding({ analysisId: conv.analysisId });
-      if (a) {
-        const md = typeof a.analysisMarkdown === 'string' ? a.analysisMarkdown : '';
-        const status = a.status;
-        if (md.trim().length > 0) {
-          grounding =
-            `You are the analyst for the YouTube video "${a.title}"${a.channelTitle ? ` by ${a.channelTitle}` : ''}. ` +
-            `Answer the user's questions using the structured analysis below; be concise and cite dimension names where relevant. ` +
-            `Do not ask which video — you have it.\n\n--- ANALYSIS ---\n` +
-            md.slice(0, 12000);
-        } else {
-          grounding =
-            `You are the analyst for the YouTube video "${a.title}"${a.channelTitle ? ` by ${a.channelTitle}` : ''}. ` +
-            `The full ${status === 'processing' ? 'analysis is still being generated' : 'analysis is not available yet'} — answer from the title/topic ` +
-            `and let the user know richer answers will be available once the synthesis finishes. Never claim you don't know which video this is.`;
-        }
+    if (groundingResult) {
+      const md = typeof groundingResult.analysisMarkdown === 'string' ? groundingResult.analysisMarkdown : '';
+      const status = groundingResult.status;
+      if (md.trim().length > 0) {
+        grounding =
+          `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
+          `Answer the user's questions using the structured analysis below; be concise and cite dimension names where relevant. ` +
+          `Do not ask which video — you have it.\n\n--- ANALYSIS ---\n` +
+          md.slice(0, 12000);
+      } else {
+        grounding =
+          `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
+          `The full ${status === 'processing' ? 'analysis is still being generated' : 'analysis is not available yet'} — answer from the title/topic ` +
+          `and let the user know richer answers will be available once the synthesis finishes. Never claim you don't know which video this is.`;
       }
     }
 
@@ -209,7 +221,7 @@ export class ProcessChatMessageUseCase {
     return {
       type: 'success',
       data: {
-        user: userRow,
+        user: userRow!,
         ...(newTitle ? { title: newTitle } : {}),
         stream: {
           url: `${process.env.NEXT_PUBLIC_WORKER_URL || ''}/chat-stream`,

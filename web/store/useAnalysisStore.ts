@@ -86,29 +86,8 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   appendTerminalLine: (content) =>
     set((state) => {
       const lines = [...state.terminalLines];
-      if (lines.length > 0) {
-        const lastLine = { ...lines[lines.length - 1]! };
-        if (content.includes('\n')) {
-          const parts = content.split('\n');
-          lastLine.message += parts[0] || '';
-          lines[lines.length - 1] = lastLine;
-          
-          const newLines: LogLine[] = [];
-          for (let i = 1; i < parts.length; i++) {
-            newLines.push({
-              timestamp: new Date().toLocaleTimeString(),
-              type: 'info',
-              message: parts[i] || '',
-            });
-          }
-          return { terminalLines: [...lines, ...newLines] };
-        } else {
-          lastLine.message += content;
-          lines[lines.length - 1] = lastLine;
-          return { terminalLines: lines };
-        }
-      } else {
-        const parts = content.split('\n');
+      if (lines.length === 0) {
+        const parts = content.split('\n\n');
         const firstLine: LogLine = {
           timestamp: new Date().toLocaleTimeString(),
           type: 'info',
@@ -123,6 +102,50 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
           });
         }
         return { terminalLines: newLines };
+      }
+
+      const lastLine = { ...lines[lines.length - 1]! };
+
+      // Split on paragraph boundaries (\n\n)
+      if (content.includes('\n\n')) {
+        const parts = content.split('\n\n');
+        lastLine.message += parts[0] || '';
+        lines[lines.length - 1] = lastLine;
+
+        const newLines: LogLine[] = [];
+        for (let i = 1; i < parts.length; i++) {
+          newLines.push({
+            timestamp: new Date().toLocaleTimeString(),
+            type: 'info',
+            message: parts[i] || '',
+          });
+        }
+        return { terminalLines: [...lines, ...newLines] };
+      } else {
+        // If content contains a single newline followed by a bullet marker (e.g. \n- or \n1. )
+        // start a new line. Otherwise, treat single newlines as soft breaks and append to current line.
+        const bulletMatch = content.match(/\n\s*([-*]|\d+\.)\s+/);
+        if (bulletMatch) {
+          const parts = content.split(/\n(?=\s*[-*]|\d+\.)/);
+          lastLine.message += parts[0] || '';
+          lines[lines.length - 1] = lastLine;
+
+          const newLines: LogLine[] = [];
+          for (let i = 1; i < parts.length; i++) {
+            newLines.push({
+              timestamp: new Date().toLocaleTimeString(),
+              type: 'info',
+              message: parts[i] || '',
+            });
+          }
+          return { terminalLines: [...lines, ...newLines] };
+        } else {
+          // Replace single newlines with spaces to form a continuous paragraph
+          const cleaned = content.replace(/\r?\n/g, ' ');
+          lastLine.message += cleaned;
+          lines[lines.length - 1] = lastLine;
+          return { terminalLines: lines };
+        }
       }
     }),
 

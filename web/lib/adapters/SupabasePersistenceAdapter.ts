@@ -131,6 +131,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
             timezone: params.validationReport.timezone,
           },
           validation_passed: false,
+          billing_status: 'processing',
         },
         { onConflict: 'user_id,video_id' }
       )
@@ -161,6 +162,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         analysis_payload: params.analysisPayload as Record<string, unknown> | null,
         analysis_markdown: params.analysisMarkdown,
         validation_passed: params.validationPassed,
+        billing_status: 'completed',
       })
       .eq('id', params.analysisId);
 
@@ -673,6 +675,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
           model_used: params.model || 'edge-stream',
           validation_passed: params.validationPassed,
           validation_report: params.validationReport,
+          billing_status: 'completed',
           updated_at: new Date().toISOString(),
         })
         .eq('id', params.analysisId);
@@ -771,6 +774,33 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       Sentry.captureException(error, {
         tags: { method: 'getKnowledgeGraph' },
         extra: { analysisId },
+      });
+      throw error;
+    }
+  }
+
+  async updateBillingStatus(params: {
+    analysisId: string;
+    status: 'processing' | 'completed' | 'failed';
+  }): Promise<void> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { error } = await service
+        .from('analyses')
+        .update({
+          billing_status: params.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.analysisId);
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] updateBillingStatus failed:', error.message);
+        throw error;
+      }
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'updateBillingStatus' },
+        extra: { analysisId: params.analysisId, status: params.status },
       });
       throw error;
     }

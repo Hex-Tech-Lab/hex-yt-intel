@@ -42,41 +42,24 @@ async function enforceMonthlyQuota(userId: string, tier: Tier): Promise<{
   error?: string;
 }> {
   try {
-    const supabase = getSupabaseServiceClient();
+    const quotaResult = await checkMonthlyQuota(userId, tier);
+    const limit = MONTHLY_QUOTAS[tier] || 3;
 
-    const { data, error } = await supabase.rpc('increment_user_quota_atomic', {
-      p_user_id: userId,
-    });
-
-    if (error) {
-      console.error('[billing] RPC failed:', error);
-      return { allowed: false, error: 'Quota check failed' };
-    }
-
-    if (!Array.isArray(data) || data.length === 0) {
-      console.warn('[billing] Unexpected RPC response format:', data);
-      return { allowed: false, error: 'Invalid quota response' };
-    }
-
-    const result = data[0];
-    const success = result.success === true;
-
-    if (!success) {
+    if (!quotaResult.allowed) {
       console.warn(`[billing] Monthly quota exceeded for user ${userId}`, {
-        newQuota: result.new_quota,
-        quotaLimit: result.quota_limit,
-        tier: result.tier,
+        quotaLimit: limit,
+        tier,
       });
 
       // Log quota hit for abuse detection (non-blocking)
       try {
+        const supabase = getSupabaseServiceClient();
         await supabase.from('usage_logs').insert({
           user_id: userId,
           action: 'monthly_quota_exceeded',
           metadata: {
-            tier: result.tier,
-            usageCount: result.new_quota,
-            quotaLimit: result.quota_limit,
+            tier,
+            quotaLimit: limit,
             timestamp: new Date().toISOString(),
           },
           created_at: new Date().toISOString(),
@@ -87,16 +70,16 @@ async function enforceMonthlyQuota(userId: string, tier: Tier): Promise<{
 
       return {
         allowed: false,
-        newQuota: result.new_quota,
-        quotaLimit: result.quota_limit,
+        newQuota: limit,
+        quotaLimit: limit,
         error: 'Monthly quota exceeded',
       };
     }
 
     return {
       allowed: true,
-      newQuota: result.new_quota,
-      quotaLimit: result.quota_limit,
+      newQuota: 0,
+      quotaLimit: limit,
     };
   } catch (err) {
     console.error('[billing] Quota enforcement exception:', err);
@@ -149,6 +132,7 @@ export async function chargeMonthlyQuota(
 
 /**
  * Check if the user is under the monthly analysis quota.
+ * Consolidates check on the public.analyses table using billing_status.
  */
 export async function checkMonthlyQuota(
   userId: string,
@@ -158,45 +142,38 @@ export async function checkMonthlyQuota(
   if (userEmail === ADMIN_EMAIL || userId === 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb') return { allowed: true };
   if (tier === 'pro' || tier === 'enterprise') return { allowed: true };
   
-  // Basic check: current usage < limit
   const supabase = getSupabaseServiceClient();
-  const { count, error } = await supabase
-    .from('analyses')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
-  if (error || count === null) return { allowed: true }; // Fail open
+  // Query all analyses in the current month that did not explicitly fail
+  const { data, error } = await supabase
+    .from('analyses')
+    .select('id, billing_status, created_at')
+    .eq('user_id', userId)
+    .neq('billing_status', 'failed')
+    .gte('created_at', startOfMonth);
+
+  if (error || !data) return { allowed: true }; // Fail open
   
-  return { allowed: count < (MONTHLY_QUOTAS[tier] || 3) };
+  // Filter out stalled processing stubs that are older than 15 minutes
+  const activeCount = data.filter((a) => {
+    if (a.billing_status === 'completed') return true;
+    if (a.billing_status === 'processing') {
+      const createdTime = new Date(a.created_at).getTime();
+      const fifteenMinutes = 15 * 60 * 1000;
+      return Date.now() - createdTime < fifteenMinutes;
+    }
+    return false;
+  }).length;
+
+  return { allowed: activeCount < (MONTHLY_QUOTAS[tier] || 3) };
 }
 
 /**
- * Refund a single monthly quota unit previously consumed by chargeMonthlyQuota.
- *
- * The atomic increment happens at ingestion (before we know a generation can
- * actually run). When ingestion fails — no transcript, metadata fetch error —
- * the user must not be charged for an analysis that never produced output.
- * Call this on every post-charge failure exit.
- *
- * No-op for the admin bypass (admin requests are never charged). Best-effort: a
- * refund failure is logged, never thrown, so it cannot mask the original error
- * being returned to the client.
+ * Refund a single monthly quota unit.
+ * Deprecated for Postgres RPCs; refunds are handled dynamically by marking 
+ * the analyses.billing_status as 'failed' in the CreateAnalysisUseCase.
  */
-export async function refundMonthlyQuota(userId: string, userEmail?: string): Promise<void> {
-  if (userEmail === ADMIN_EMAIL || userId === 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb') return; // admin path never incremented
-  try {
-    const supabase = getSupabaseServiceClient();
-    const { error } = await supabase.rpc('decrement_user_quota', { p_user_id: userId });
-    if (error) {
-      console.warn('[billing] Refund failed:', error);
-      Sentry.captureException(error, {
-        tags: { component: 'quota-refund' },
-        contexts: { quota: { userId } },
-      });
-    }
-  } catch (err) {
-    console.warn('[billing] Refund exception:', err);
-    Sentry.captureException(err, { tags: { component: 'quota-refund' } });
-  }
+export async function refundMonthlyQuota(_userId: string, _userEmail?: string): Promise<void> {
+  // NO-OP: Handled S2S or inside the bouncer UseCase flow using updateBillingStatus.
 }

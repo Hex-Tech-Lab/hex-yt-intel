@@ -3,6 +3,42 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
+ * Validates whether a cross-domain redirect origin is a safe local development
+ * or Vercel preview domain.
+ */
+function isValidRedirectOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    
+    // Only allow http (for localhost) or https protocols
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return false;
+    }
+    
+    const hostname = url.hostname;
+    
+    // Allow localhost and 127.0.0.1
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return true;
+    }
+    
+    // Allow Vercel preview and deployment domains
+    if (hostname.endsWith('.vercel.app')) {
+      return true;
+    }
+    
+    // Allow custom testing subdomains
+    if (hostname.endsWith('.getmytestdrive.com')) {
+      return true;
+    }
+    
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * OAuth callback route handler for Supabase authentication.
  *
  * Processes the authorization code returned by Supabase OAuth providers,
@@ -13,15 +49,37 @@ import { NextRequest, NextResponse } from 'next/server';
  *          or error redirect if code exchange fails
  *
  * Flow:
- * 1. Extract authorization code from query params
- * 2. Create Supabase client with cookie manager
- * 3. Exchange code for session via Supabase Auth
- * 4. Capture session tokens (workaround for Route Handler cookie transience)
- * 5. Set tokens on response as HTTP-only, Secure, SameSite=Lax cookies
- * 6. Redirect to safe `next` path (or `/` if unsafe)
+ * 1. Check for origin_referrer to bounce the authentication back to preview/local domains
+ * 2. Extract authorization code from query params
+ * 3. Create Supabase client with cookie manager
+ * 4. Exchange code for session via Supabase Auth
+ * 5. Capture session tokens (workaround for Route Handler cookie transience)
+ * 6. Set tokens on response as HTTP-only, Secure, SameSite=Lax cookies
+ * 7. Redirect to safe `next` path (or `/` if unsafe)
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+
+  // If we are on production, bounce the request back to the preview/local origin callback.
+  // This allows preview domains to receive the OAuth tokens and set cookies on their own origin.
+  const originReferrer = searchParams.get('origin_referrer');
+  if (originReferrer) {
+    if (isValidRedirectOrigin(originReferrer)) {
+      console.log('[callback] Bouncing OAuth callback to origin_referrer', {
+        originReferrer,
+        url: request.url,
+      });
+      const redirectUrl = new URL('/auth/callback', originReferrer);
+      searchParams.forEach((value, key) => {
+        if (key !== 'origin_referrer') {
+          redirectUrl.searchParams.set(key, value);
+        }
+      });
+      return NextResponse.redirect(redirectUrl);
+    } else {
+      console.warn('[callback] Invalid cross-domain origin_referrer rejected', { originReferrer });
+    }
+  }
 
   // Catch any Supabase auth error before attempting code exchange.
   // Common codes: bad_oauth_callback, redirect_uri_mismatch, access_denied, server_error
