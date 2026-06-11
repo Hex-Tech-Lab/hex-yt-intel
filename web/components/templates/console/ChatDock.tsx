@@ -7,6 +7,9 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { ProcessingLog } from './ProcessingLog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useInputStore } from '@/store/useInputStore';
+import { extractVideoId } from '@/lib/youtube';
+import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 
 export interface ChatDockProps {
   /** Active analysis for grounding new threads (optional). */
@@ -30,6 +33,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
   } = useChatStore();
   const analysisStore = useAnalysisStore();
+  const { url } = useInputStore();
+  const nucleusAnalysis = useSynthesisNucleus((state) => state.analysis);
 
   const logStatus = analysisStore.status;
   const showLog = logStatus !== 'idle' && analysisStore.terminalLines.length > 0;
@@ -50,6 +55,38 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   useEffect(() => {
     try { if (localStorage.getItem(OPEN_KEY) === '1') setOpen(true); } catch { /* noop */ }
   }, []);
+
+  useEffect(() => {
+    if (!url) {
+      const state = useChatStore.getState();
+      const activeConv = state.conversations.find((c) => c.id === state.activeId);
+      if (activeConv && activeConv.analysisId) {
+        const generalConv = state.conversations.find((c) => !c.analysisId);
+        if (generalConv) {
+          void selectConversation(generalConv.id);
+        } else {
+          useChatStore.setState({ activeId: null });
+        }
+      }
+      return;
+    }
+
+    const inputVideoId = extractVideoId(url);
+    const loadedVideoId = nucleusAnalysis?.videoId || null;
+
+    if (inputVideoId !== loadedVideoId) {
+      const state = useChatStore.getState();
+      const activeConv = state.conversations.find((c) => c.id === state.activeId);
+      if (activeConv && activeConv.analysisId) {
+        const generalConv = state.conversations.find((c) => !c.analysisId);
+        if (generalConv) {
+          void selectConversation(generalConv.id);
+        } else {
+          useChatStore.setState({ activeId: null });
+        }
+      }
+    }
+  }, [url, nucleusAnalysis?.videoId, selectConversation]);
 
   useEffect(() => {
     try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* noop */ }
@@ -268,8 +305,27 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                       components={{
                         ul: ({ children }) => <ul className="list-disc list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ul>,
                         ol: ({ children }) => <ol className="list-decimal list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ol>,
-                        li: ({ children }) => <li className="text-[12px] leading-relaxed text-[var(--ink-secondary)] pl-0.5">{children}</li>,
-                        p: ({ children }) => <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{children}</p>,
+                        li: ({ children }) => <li className="text-[12px] leading-relaxed text-[var(--ink-secondary)] pl-0.5">{renderChildren(children)}</li>,
+                        p: ({ children }) => <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{renderChildren(children)}</p>,
+                        code: ({ className, children }) => {
+                          const codeText = String(children).replace(/\n$/, '');
+                          const hasNewline = codeText.includes('\n');
+                          const isInline = !hasNewline && !className?.includes('language-');
+
+                          if (isInline) {
+                            return (
+                              <code className="bg-slate-800/80 px-1.5 py-0.5 rounded font-mono text-[11px] text-[var(--ink-secondary)]">
+                                {parseAnsiToReact(codeText)}
+                              </code>
+                            );
+                          }
+
+                          return (
+                            <pre className="bg-slate-900/60 p-3 rounded-lg border border-[var(--line-faint)] overflow-x-auto my-3 font-mono text-[11px] leading-relaxed text-[var(--ink-secondary)]">
+                              <code>{parseAnsiToReact(codeText)}</code>
+                            </pre>
+                          );
+                        },
                         table: ({ children }) => (
                           <div className="overflow-x-auto mt-4 mb-6 rounded-xl border border-[var(--line-faint)] bg-[var(--bg)]/30">
                             <table className="min-w-full divide-y divide-[var(--line-faint)] text-[11px] text-[var(--ink-secondary)]">{children}</table>
@@ -278,11 +334,11 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                         thead: ({ children }) => <thead className="bg-[var(--bg)]/50">{children}</thead>,
                         tbody: ({ children }) => <tbody className="divide-y divide-[var(--line-faint)]/50">{children}</tbody>,
                         tr: ({ children }) => <tr>{children}</tr>,
-                        th: ({ children }) => <th className="px-4 py-2.5 text-left font-mono font-bold uppercase tracking-wider text-[var(--ink-muted)] border-r border-[var(--line-faint)] last:border-r-0">{children}</th>,
-                        td: ({ children }) => <td className="px-4 py-2.5 border-r border-[var(--line-faint)] last:border-r-0 whitespace-pre-wrap">{children}</td>,
+                        th: ({ children }) => <th className="px-4 py-2.5 text-left font-mono font-bold uppercase tracking-wider text-[var(--ink-muted)] border-r border-[var(--line-faint)] last:border-r-0">{renderChildren(children)}</th>,
+                        td: ({ children }) => <td className="px-4 py-2.5 border-r border-[var(--line-faint)] last:border-r-0 whitespace-pre-wrap">{renderChildren(children)}</td>,
                       }}
                     >
-                      {body}
+                      {preprocessMarkdown(body)}
                     </ReactMarkdown>
                   )}
                 </div>
@@ -378,4 +434,144 @@ function parseAssistant(content: string): { body: string; options: string[] } {
   }
   const body = content.slice(0, m.index).trim();
   return { body: body || content.trim(), options };
+}
+
+const renderChildren = (children: React.ReactNode) => {
+  if (typeof children === 'string') {
+    return parseAnsiToReact(children);
+  }
+  return children;
+};
+
+/**
+ * Preprocesses markdown content from the assistant to convert non-standard elements:
+ * 1. Convert unicode bullets (•/●) into standard markdown list items (-).
+ * 2. Translate tab-separated values into markdown pipe tables.
+ */
+function preprocessMarkdown(content: string): string {
+  if (!content) return '';
+
+  let processed = content;
+
+  // 1. Convert unicode bullet points at the start of a line or after tab/pipe
+  processed = processed.replace(/^[ \t]*[•●]\s*/gm, '- ');
+  processed = processed.replace(/\t[ \t]*[•●]\s*/g, '\t- ');
+  processed = processed.replace(/\|[ \t]*[•●]\s*/g, '| - ');
+
+  // 2. Detect and transform tab-separated lines into pipe-separated tables
+  const lines = processed.split('\n');
+  let inTable = false;
+  let tableHeaderIndex = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (line.includes('\t')) {
+      const parts = line.split('\t').map((p) => p.trim());
+      lines[i] = '| ' + parts.join(' | ') + ' |';
+
+      if (!inTable) {
+        inTable = true;
+        tableHeaderIndex = i;
+      }
+    } else {
+      if (inTable && tableHeaderIndex !== -1) {
+        // Exited tab table: insert the separator line right after the header
+        const headerLine = lines[tableHeaderIndex]!;
+        const colCount = headerLine.split('|').length - 2;
+        if (colCount > 0) {
+          const sep = '| ' + Array(colCount).fill('---').join(' | ') + ' |';
+          lines.splice(tableHeaderIndex + 1, 0, sep);
+          i++; // adjust index for added separator
+        }
+        inTable = false;
+        tableHeaderIndex = -1;
+      }
+    }
+  }
+
+  // Handle table ending at the end of the content
+  if (inTable && tableHeaderIndex !== -1) {
+    const headerLine = lines[tableHeaderIndex]!;
+    const colCount = headerLine.split('|').length - 2;
+    if (colCount > 0) {
+      const sep = '| ' + Array(colCount).fill('---').join(' | ') + ' |';
+      lines.splice(tableHeaderIndex + 1, 0, sep);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Parses ANSI escape codes (colors/formatting) in text and outputs React elements.
+ */
+function parseAnsiToReact(text: string): React.ReactNode[] | string {
+  if (typeof text !== 'string') return text;
+  
+  // Matches actual ESC sequence or literal escapes like \x1b, \u001b, \033
+  const ansiRegex = /(?:\\x1b|\\u001b|\\033|[\u001b])\[([0-9;]*)m/g;
+
+  if (!ansiRegex.test(text)) {
+    return text;
+  }
+
+  ansiRegex.lastIndex = 0;
+
+  const result: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let currentStyle: React.CSSProperties = {};
+  let match;
+
+  while ((match = ansiRegex.exec(text)) !== null) {
+    const textSegment = text.slice(lastIndex, match.index);
+    if (textSegment) {
+      if (Object.keys(currentStyle).length > 0) {
+        result.push(
+          <span key={lastIndex} style={{ ...currentStyle }}>
+            {textSegment}
+          </span>
+        );
+      } else {
+        result.push(textSegment);
+      }
+    }
+
+    const code = match[1] || '0';
+    if (code === '0') {
+      currentStyle = {};
+    } else {
+      const styles = code.split(';');
+      for (const s of styles) {
+        switch (s) {
+          case '30': currentStyle.color = '#000000'; break;
+          case '31': currentStyle.color = '#ef4444'; break; // red-500
+          case '32': currentStyle.color = '#22c55e'; break; // green-500
+          case '33': currentStyle.color = '#eab308'; break; // yellow-500
+          case '34': currentStyle.color = '#3b82f6'; break; // blue-500
+          case '35': currentStyle.color = '#a855f7'; break; // purple-500
+          case '36': currentStyle.color = '#06b6d4'; break; // cyan-500
+          case '37': currentStyle.color = '#ffffff'; break;
+          case '90': currentStyle.color = '#6b7280'; break; // gray-500
+          case '1': currentStyle.fontWeight = 'bold'; break;
+          case '4': currentStyle.textDecoration = 'underline'; break;
+        }
+      }
+    }
+    lastIndex = ansiRegex.lastIndex;
+  }
+
+  const remainingText = text.slice(lastIndex);
+  if (remainingText) {
+    if (Object.keys(currentStyle).length > 0) {
+      result.push(
+        <span key={lastIndex} style={{ ...currentStyle }}>
+          {remainingText}
+        </span>
+      );
+    } else {
+      result.push(remainingText);
+    }
+  }
+
+  return result;
 }

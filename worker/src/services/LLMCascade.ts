@@ -145,14 +145,22 @@ export class LLMCascade implements LLMCascadePort {
     providerOrder?: string[]
   ): Promise<{ started: boolean; text: string; error?: string }> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const handshakeTimer = setTimeout(() => {
+      console.warn(`[LLMCascade] Handshake timeout (15s exceeded) for model ${model}`);
+      controller.abort();
+    }, 15000);
+    const totalTimer = setTimeout(() => {
+      console.warn(`[LLMCascade] Total execution timeout (${timeoutMs}ms exceeded) for model ${model}`);
+      controller.abort();
+    }, timeoutMs);
     let text = '';
     let started = false;
 
     const onAbort = () => controller.abort();
     if (signal) {
       if (signal.aborted) {
-        clearTimeout(timeout);
+        clearTimeout(handshakeTimer);
+        clearTimeout(totalTimer);
         return { started: false, text: '', error: 'Request aborted' };
       }
       signal.addEventListener('abort', onAbort);
@@ -192,8 +200,10 @@ export class LLMCascade implements LLMCascadePort {
         signal: controller.signal,
       });
 
+      clearTimeout(handshakeTimer);
+
       if (!response.ok || !response.body) {
-        clearTimeout(timeout);
+        clearTimeout(totalTimer);
         const errBody = await response.text().catch(() => '');
         return { started: false, text: '', error: `${response.status}: ${errBody.slice(0, 160)}` };
       }
@@ -236,13 +246,16 @@ export class LLMCascade implements LLMCascadePort {
           }
         }
       }
-      clearTimeout(timeout);
+      clearTimeout(totalTimer);
       return { started, text };
     } catch (error) {
-      clearTimeout(timeout);
+      clearTimeout(handshakeTimer);
+      clearTimeout(totalTimer);
       const message = error instanceof Error ? error.message : 'Unknown error';
       return { started, text, error: message === 'The operation was aborted' ? 'Request timeout' : message };
     } finally {
+      clearTimeout(handshakeTimer);
+      clearTimeout(totalTimer);
       if (signal) {
         signal.removeEventListener('abort', onAbort);
       }
