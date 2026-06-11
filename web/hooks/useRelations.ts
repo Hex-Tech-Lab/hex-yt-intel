@@ -19,22 +19,26 @@ export function useRelations(analysisId: string | null, enabled: boolean): Relat
     }
 
     const controller = new AbortController();
-    setState((s) => ({ ...s, loading: true, error: null }));
+    
+    const timeoutId = setTimeout(() => {
+      setState((s) => ({ ...s, loading: true, error: null }));
 
-    fetch(`/api/analyses/${analysisId}/relations`, { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        setState({ insights: data.insights ?? [], loading: false, error: null });
-      })
-      .catch((err) => {
-        if (err.name === 'AbortError') return;
-        setState({ insights: [], loading: false, error: String(err?.message ?? err) });
-      });
+      fetch(`/api/analyses/${analysisId}/relations`, { signal: controller.signal })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then((data) => {
+          setState({ insights: data.insights ?? [], loading: false, error: null });
+        })
+        .catch((err) => {
+          if (err.name === 'AbortError') return;
+          setState({ insights: [], loading: false, error: String(err?.message ?? err) });
+        });
+    }, 100);
 
     return () => {
+      clearTimeout(timeoutId);
       controller.abort();
     };
   }, [analysisId, enabled]);

@@ -31,6 +31,8 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-11T01:18:00+03:00] [Antigravity (Agent)] [DONE] Consolidated and refactored the markdown dimension parser logic inside web/lib/utils/ucis-parser.ts to use an index-slicing method, resolving parser failures on carriage returns and varying separators. Bypassed duplicate parser in parse-ucis-dimensions.ts by re-exporting. Fixed type-safety warnings in worker.ts and dimension-parser.ts. Verified via direct workspace tsc checks and worker esbuild.
 - [2026-06-11T12:55:00+03:00] [Antigravity (Agent)] [DONE] Deep reviewed session history and transcripts, extracted outstanding system TODOs, analyzed prioritization logic, and produced a comprehensive session roadmap.
 - [2026-06-11T13:22:00+03:00] [Antigravity (Agent)] [DONE] Resolved UI white background flash during hydration by explicitly setting the bg-[var(--bg)] background on the main layout component. Resolved client-side dimension validation failure by making the metadata property optional in UCISDimensionSchema.
+- [2026-06-11T13:42:00+03:00] [Antigravity (Agent)] [DONE] Implemented 100ms debouncing logic in useRelations hook to prevent duplicate HTTP/API fetches and double OpenRouter requests caused by rapid, unbatched store state re-renders.
+
 
 
 
