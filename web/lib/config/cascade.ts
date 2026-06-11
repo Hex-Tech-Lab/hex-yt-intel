@@ -61,22 +61,18 @@ export const STANCE_CASCADE: readonly CascadeItem[] = ANALYSIS_CASCADE;
 export const REASONING_CASCADE: Record<string, readonly CascadeItem[]> = {
   free: [
     {
-      model: 'google/gemini-2.0-flash-thinking-exp:free',
-      name: 'Gemini 2.0 Flash Thinking (Free)',
-    },
-    {
-      model: 'deepseek/deepseek-r1:free',
-      name: 'DeepSeek R1 (Free)',
+      model: 'google/gemini-2.0-flash',
+      name: 'Gemini 2.0 Flash',
     },
   ],
   pro: [
     {
-      model: 'deepseek/deepseek-r1',
-      name: 'DeepSeek R1 (Paid)',
+      model: 'openai/o3-mini',
+      name: 'o3-mini (OpenAI)',
     },
     {
-      model: 'google/gemini-2.0-flash-thinking-exp:free',
-      name: 'Gemini 2.0 Flash Thinking (Free)',
+      model: 'google/gemini-1.5-pro',
+      name: 'Gemini 1.5 Pro',
     },
     {
       model: 'anthropic/claude-3.5-sonnet',
@@ -85,12 +81,12 @@ export const REASONING_CASCADE: Record<string, readonly CascadeItem[]> = {
   ],
   enterprise: [
     {
-      model: 'deepseek/deepseek-r1',
-      name: 'DeepSeek R1 (Paid)',
+      model: 'openai/o3-mini',
+      name: 'o3-mini (OpenAI)',
     },
     {
-      model: 'google/gemini-2.0-flash-thinking-exp:free',
-      name: 'Gemini 2.0 Flash Thinking (Free)',
+      model: 'google/gemini-1.5-pro',
+      name: 'Gemini 1.5 Pro',
     },
     {
       model: 'anthropic/claude-3.5-sonnet',
