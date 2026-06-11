@@ -44,4 +44,4 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 - [2026-06-11T15:33:00+03:00] [Antigravity (Agent)] [DONE] Cleared legacy UCIS v3.2/v5.0 prompts from code and archived to docs/history/prompts/. Implemented Upstash Redis-backed caching for prompts/cascades. Enforced turn limits (5/30/100) and thinking cascades (DeepSeek R1/Gemini Thinking) on chat route. Isolated changes to a feature branch.
 
-- [2026-06-11T15:37:00+03:00] [Antigravity (Agent)] [IN_PROGRESS] Refactoring chat message processing flow to hexagonal use-case and fixing worker PromptBuilder type mismatches.
+- [2026-06-11T15:37:00+03:00] [Antigravity (Agent)] [DONE] Refactored chat message processing flow to ProcessChatMessageUseCase, encapsulating turn limits, commands, and cascade routing. Implemented structured prompt versioning and chronological change history logs. Fixed worker PromptBuilder compilation type errors. Verified via full monorepo build.
