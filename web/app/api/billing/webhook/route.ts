@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     let event;
     const secret = process.env.PADDLE_WEBHOOK_SECRET;
 
-    if (!secret && process.env.NODE_ENV === 'development') {
+    if (!secret && process.env.NODE_ENV === 'development' && !process.env.VERCEL) {
       if (process.env.DEV_ALLOW_UNVERIFIED_WEBHOOKS !== 'true') {
         throw new Error('PADDLE_WEBHOOK_SECRET is missing. Set DEV_ALLOW_UNVERIFIED_WEBHOOKS=true to bypass verification in development.');
       }
