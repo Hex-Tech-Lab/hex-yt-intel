@@ -2,10 +2,8 @@ import type { PersonaId } from '@/lib/prompts';
 import { rankPersonas } from '@/lib/prompts';
 import { resolveUCISPromptTemplate } from '../services/settings';
 
-type UCISVersion = '5.1';
-
 export interface GetUCISPromptParams {
-  version?: UCISVersion;
+  version?: string;
   metadata: {
     title: string;
     channelTitle: string;
@@ -25,7 +23,7 @@ export interface GetUCISPromptParams {
  * Injects metadata/persona context into the resolved system prompt template
  */
 export async function getUCISPrompt({
-  version = '5.1',
+  version,
   metadata,
   transcript,
   persona,

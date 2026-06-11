@@ -17,7 +17,18 @@ if (!v51Text) {
 }
 
 const jsonObject = {
-  "5.1": v51Text
+  "latest": "5.1",
+  "history": [
+    {
+      "version": "5.1",
+      "timestamp": "2026-06-11T14:25:00Z",
+      "author": "Kelly Bakri with Antigravity",
+      "description": "Initial active UCIS v5.1 prompt configuration"
+    }
+  ],
+  "versions": {
+    "5.1": v51Text
+  }
 };
 
 const jsonStr = JSON.stringify(jsonObject);

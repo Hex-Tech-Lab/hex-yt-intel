@@ -40,8 +40,18 @@ interface ModelConfig {
   testOverride?: { enabled?: boolean } & Partial<Record<ModelKind, string[]>>;
 }
 
+export interface PromptHistoryEntry {
+  version: string;
+  timestamp: string;
+  author: string;
+  description?: string;
+}
+
 export interface PromptConfig {
-  '5.1'?: string;
+  latest?: string;
+  history?: PromptHistoryEntry[];
+  versions?: Record<string, string>;
+  [key: string]: any;
 }
 
 const TTL_MS = 60_000;
@@ -126,17 +136,51 @@ async function readPromptConfig(): Promise<PromptConfig | null> {
   }
 }
 
+function getHighestVersion(versions: string[]): string | undefined {
+  if (versions.length === 0) return undefined;
+  return [...versions].sort((a, b) => {
+    const aParts = a.split('.').map(Number);
+    const bParts = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+      const aVal = aParts[i] ?? 0;
+      const bVal = bParts[i] ?? 0;
+      if (aVal !== bVal) return bVal - aVal; // Descending sort
+    }
+    return 0;
+  })[0];
+}
+
 /**
  * Resolve the system prompt template for a version. Precedence:
  *   1. prompt_config row in DB or Redis cache.
  *   2. Static fallback from code.
  */
-export async function resolveUCISPromptTemplate(version: '5.1' = '5.1'): Promise<string> {
+export async function resolveUCISPromptTemplate(version?: string): Promise<string> {
   const cfg = await readPromptConfig();
-  const dbPrompt = cfg?.[version];
-  if (dbPrompt && dbPrompt.trim().length > 0) {
-    return dbPrompt;
+  if (!cfg) {
+    return UCIS_V5_1_SYSTEM;
   }
+
+  let targetVersion = version;
+  if (!targetVersion) {
+    // Determine the latest version: use designated latest pointer or sort version keys
+    const keys = Object.keys(cfg.versions || {});
+    if (keys.length > 0) {
+      targetVersion = cfg.latest || getHighestVersion(keys);
+    } else {
+      // Fallback: get highest key in the legacy flat object (excluding latest/history/versions properties)
+      const legacyKeys = Object.keys(cfg).filter((k) => k !== 'latest' && k !== 'history' && k !== 'versions');
+      targetVersion = cfg.latest || getHighestVersion(legacyKeys);
+    }
+  }
+
+  if (targetVersion) {
+    const dbPrompt = cfg.versions?.[targetVersion] || cfg[targetVersion];
+    if (typeof dbPrompt === 'string' && dbPrompt.trim().length > 0) {
+      return dbPrompt;
+    }
+  }
+
   // Fallback to static code
   return UCIS_V5_1_SYSTEM;
 }

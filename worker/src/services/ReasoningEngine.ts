@@ -69,7 +69,7 @@ export class ReasoningEngine implements ReasoningEnginePort {
     handlers: StreamHandlers,
     signal?: AbortSignal
   ): Promise<StreamResult> {
-    const systemPrompt = context.systemPrompt || this.promptBuilder.build(context);
+    const systemPrompt = context.systemPrompt || await this.promptBuilder.build(context);
     const bracketBuffer = new BracketBuffer();
 
     const { started, finalText, modelUsed } = await this.cascade.streamCascade(
