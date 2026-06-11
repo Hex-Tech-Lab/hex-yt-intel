@@ -31,7 +31,10 @@ export class LLMCascade implements LLMCascadePort {
   constructor(apiKey: string, models?: string[]) {
     this.apiKey = apiKey;
     if (models && models.length > 0) {
-      this.chain = models.map((model) => {
+      this.chain = models.map((model, idx) => {
+        if (MODEL_CHAIN[idx] && MODEL_CHAIN[idx].model === model) {
+          return MODEL_CHAIN[idx];
+        }
         const matched = MODEL_CHAIN.find((item) => item.model === model);
         return {
           model,
@@ -179,7 +182,7 @@ export class LLMCascade implements LLMCascadePort {
           ],
           provider: {
             sort: 'latency',
-            allow_fallbacks: true,
+            allow_fallbacks: false,
             ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
@@ -278,7 +281,7 @@ export class LLMCascade implements LLMCascadePort {
           ],
           provider: {
             sort: 'latency',
-            allow_fallbacks: true,
+            allow_fallbacks: false,
             ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),

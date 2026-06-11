@@ -102,7 +102,7 @@ async function streamChatCascade(
           messages,
           provider: {
             sort: "latency",
-            allow_fallbacks: true,
+            allow_fallbacks: false,
             ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),

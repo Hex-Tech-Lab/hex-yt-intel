@@ -8,12 +8,6 @@ export interface CascadeItem {
 export const CHAT_CASCADE: readonly CascadeItem[] = [
   {
     model: 'openai/gpt-oss-120b',
-    name: 'gpt-oss-120b (Cerebras)',
-    cost: 0.00035,
-    providerOrder: ['cerebras'],
-  },
-  {
-    model: 'openai/gpt-oss-120b',
     name: 'gpt-oss-120b (Groq)',
     cost: 0.00015,
     providerOrder: ['groq'],
@@ -23,6 +17,12 @@ export const CHAT_CASCADE: readonly CascadeItem[] = [
     name: 'gpt-oss-120b (Vertex Global)',
     cost: 0.00015,
     providerOrder: ['google-vertex'],
+  },
+  {
+    model: 'openai/gpt-oss-120b',
+    name: 'gpt-oss-120b (Cerebras)',
+    cost: 0.00035,
+    providerOrder: ['cerebras'],
   },
   {
     model: 'google/gemini-3.1-flash-lite',

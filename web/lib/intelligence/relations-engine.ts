@@ -46,7 +46,7 @@ async function* callStanceModelStream(
   model: string,
   prompt: string,
   apiKey: string,
-  handshakeTimeoutMs: number = 3000,
+  handshakeTimeoutMs: number = 15000,
   externalSignal?: AbortSignal,
   providerOrder?: string[]
 ): AsyncGenerator<string> {
@@ -76,7 +76,7 @@ async function* callStanceModelStream(
         messages: [{ role: 'user', content: prompt }],
         provider: {
           sort: 'latency',
-          allow_fallbacks: true,
+          allow_fallbacks: false,
           ...(providerOrder ? { order: providerOrder } : {}),
         },
       }),
@@ -141,7 +141,7 @@ export async function* computeStanceRelationsStream(
       item.model,
       prompt,
       apiKey,
-      3000,
+      15000,
       handshakeSignal,
       item.providerOrder as string[] | undefined
     )) {

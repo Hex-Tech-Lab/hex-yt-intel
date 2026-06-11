@@ -39,21 +39,59 @@ export function useRelations(analysisId: string | null, enabled: boolean): Relat
 
     let promise = inFlightRequests.get(analysisId);
     if (!promise) {
-      promise = fetch(`/api/analyses/${analysisId}/relations`)
-        .then((res) => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json();
-        })
-        .then((data) => {
+      promise = (async () => {
+        const res = await fetch(`/api/analyses/${analysisId}/relations`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
           const insights = data.insights ?? [];
           relationsCache.set(analysisId, insights);
           inFlightRequests.delete(analysisId);
           return insights;
-        })
-        .catch((err) => {
-          inFlightRequests.delete(analysisId);
-          throw err;
-        });
+        }
+
+        if (!res.body) throw new Error('No response body');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let insights: RelationInsight[] = [];
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split('\n\n');
+          buffer = frames.pop() || '';
+
+          for (const frame of frames) {
+            const line = frame.split('\n').find((l) => l.startsWith('data:'));
+            if (!line) continue;
+            try {
+              const parsed = JSON.parse(line.slice(5).trim());
+              if (parsed.type === 'insight' && parsed.insight) {
+                insights.push(parsed.insight);
+                if (isMounted) {
+                  setState({ insights: [...insights], loading: true, error: null });
+                }
+              } else if (parsed.type === 'complete' && parsed.insights) {
+                insights = parsed.insights;
+              }
+            } catch {
+              /* partial */
+            }
+          }
+        }
+
+        relationsCache.set(analysisId, insights);
+        inFlightRequests.delete(analysisId);
+        return insights;
+      })().catch((err) => {
+        inFlightRequests.delete(analysisId);
+        throw err;
+      });
+
       inFlightRequests.set(analysisId, promise);
     }
 

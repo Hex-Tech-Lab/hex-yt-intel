@@ -99,7 +99,7 @@ export async function callOpenRouter(
         max_tokens: maxTokens,
         provider: {
           sort: 'latency',
-          allow_fallbacks: true,
+          allow_fallbacks: false,
           ...(currentTier.providerOrder ? { order: currentTier.providerOrder } : {}),
         },
       }),
