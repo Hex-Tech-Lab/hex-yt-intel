@@ -28,6 +28,9 @@ export interface AnalysisState extends UseAnalysisStreamState {
   clearHistory: () => void;
   appendMarkdown: (token: string) => void;
   appendTerminalLine: (content: string) => void;
+  logInfo: (message: string) => void;
+  logOk: (message: string) => void;
+  logError: (message: string) => void;
   clearTerminal: () => void;
   initializeAnalysis: (id: string, title: string, initialMarkdown?: string) => void;
 }
@@ -56,6 +59,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
       analysis: null,
       status: 'idle',
       error: null,
+      videoMetadata: null,
       terminalLines: [],
     }),
 
@@ -150,6 +154,30 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
     }),
 
   clearTerminal: () => set({ terminalLines: [] }),
+
+  logInfo: (message) =>
+    set((state) => ({
+      terminalLines: [
+        ...state.terminalLines,
+        { timestamp: new Date().toLocaleTimeString(), type: 'info', message },
+      ],
+    })),
+
+  logOk: (message) =>
+    set((state) => ({
+      terminalLines: [
+        ...state.terminalLines,
+        { timestamp: new Date().toLocaleTimeString(), type: 'ok', message },
+      ],
+    })),
+
+  logError: (message) =>
+    set((state) => ({
+      terminalLines: [
+        ...state.terminalLines,
+        { timestamp: new Date().toLocaleTimeString(), type: 'error', message },
+      ],
+    })),
 
   initializeAnalysis: (id, title, initialMarkdown = '') =>
     set((state) => ({

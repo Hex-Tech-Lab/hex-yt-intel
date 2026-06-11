@@ -345,6 +345,7 @@ app.post("/analyze-llm-stream", async (c) => {
     models?: string[];
     sig: string;
     exp: number;
+    appUrl?: string;
   }
 
   const req = (await c.req.json()) as StreamRequest;
@@ -430,7 +431,7 @@ app.post("/analyze-llm-stream", async (c) => {
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
     const valid = engine.validate12D(markdown);
     const contentSig = await hmacHex(activeSecret, canonical);
-    const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
+    const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
 
     persisted = true;
     await fetch(`${appUrl}/api/analyses/persist`, {

@@ -107,6 +107,17 @@ export class SynthesisStreamAdapter {
     from?: string;
     error?: string;
   }) {
+    const store = this.analysisStore.getState();
+    if (fragment.stage === 'starting') {
+      store.logInfo(`Edge pipeline start for video ID: ${fragment.videoId}`);
+    } else if (fragment.stage === 'model') {
+      store.logInfo(`Contacting OpenRouter endpoint...`);
+      store.logInfo(`Running model cascade node: ${fragment.model}`);
+    } else if (fragment.stage === 'fallback') {
+      store.logError(`Model node failed: ${fragment.from}. Error: ${fragment.error}`);
+      store.logInfo(`Attempting automated fallback routing...`);
+    }
+
     // Status messages are lifecycle events; log them for debugging
     console.debug('[Adapter] Status update:', {
       stage: fragment.stage,
@@ -123,7 +134,7 @@ export class SynthesisStreamAdapter {
     content: string;
   }) {
     const store = this.analysisStore.getState();
-    store.appendTerminalLine(fragment.content);
+    store.appendMarkdown(fragment.content);
     console.debug('[Adapter] Delta received:', fragment.content.slice(0, 100));
   }
 
@@ -152,6 +163,8 @@ export class SynthesisStreamAdapter {
     // Feed into store
     const store = this.synthStore.getState();
     store.addDimension(entityValidation.data);
+
+    this.analysisStore.getState().logOk(`Synthesized Dimension ${fragment.dimension}: ${fragment.name}`);
 
     // Notify progress
     if (this.options.onProgress) {
@@ -189,6 +202,13 @@ export class SynthesisStreamAdapter {
     const store = this.synthStore.getState();
     store.completeAnalysis();
 
+    const analysisStore = this.analysisStore.getState();
+    if (fragment.valid) {
+      analysisStore.logOk(`Synthesis verification complete. Structure check passed.`);
+    } else {
+      analysisStore.logError(`Content verification warning: output did not pass all 11-dimension checks.`);
+    }
+
     // Notify completion
     if (this.options.onComplete) {
       this.options.onComplete();
@@ -212,6 +232,8 @@ export class SynthesisStreamAdapter {
     const store = this.synthStore.getState();
     store.setStreamError(fragment.error);
 
+    this.analysisStore.getState().logError(`Edge stream error: ${fragment.error}`);
+
     // Notify error
     if (this.options.onError) {
       this.options.onError(fragment.error);
@@ -225,6 +247,7 @@ export class SynthesisStreamAdapter {
   private handlePersona(fragment: { type: 'persona'; config: PersonaConfigV2 }) {
     const store = this.synthStore.getState();
     store.setPersonaConfig(fragment.config);
+    this.analysisStore.getState().logOk(`Resolved persona schema: ${fragment.config.primary.label}`);
   }
 
   private handleKG(fragment: { type: 'kg'; nodes: KnowledgeGraphV2['nodes']; edges: KnowledgeGraphV2['edges']; rootId: string | null }) {
@@ -234,11 +257,13 @@ export class SynthesisStreamAdapter {
       edges: fragment.edges,
       rootId: fragment.rootId,
     });
+    this.analysisStore.getState().logOk(`Structured Knowledge Graph constructed (${fragment.nodes.length} nodes, ${fragment.edges.length} edges)`);
   }
 
   private handleClassification(fragment: { type: 'classification'; data: ClassificationData }) {
     const store = this.synthStore.getState();
     store.setClassification(fragment.data);
+    this.analysisStore.getState().logOk(`Actionable classification: ${fragment.data.recommendation}`);
   }
 
   /**
