@@ -16,12 +16,14 @@ export interface AnalysisState extends UseAnalysisStreamState {
   analysisHistory: AnalysisResult[];
   videoMetadata: VideoMetadata | null;
   terminalLines: LogLine[];
+  userRole: string | null;
   setAnalysis: (analysis: AnalysisResult | null) => void;
   setIsLoading: (loading: boolean) => void;
   setStatus: (status: AnalysisStatus) => void;
   setError: (error: AnalysisErrorState | null) => void;
   setVideoMetadata: (metadata: VideoMetadata | null) => void;
   setLockoutTimeRemaining: (time: number) => void;
+  setUserRole: (role: string | null) => void;
   clearAnalysis: () => void;
   addToHistory: (analysis: AnalysisResult) => void;
   archiveCurrentAnalysis: () => void;
@@ -35,6 +37,39 @@ export interface AnalysisState extends UseAnalysisStreamState {
   initializeAnalysis: (id: string, title: string, initialMarkdown?: string) => void;
 }
 
+function sanitizeLogMessage(message: string, role: string | null): string {
+  if (role === 'admin') return message;
+
+  let clean = message;
+
+  // 1. Remove references to OpenRouter
+  clean = clean.replace(/OpenRouter/gi, 'secure server');
+
+  // 2. Remove references to Vercel or Worker or Cloudflare edge worker
+  clean = clean.replace(/Cloudflare edge worker/gi, 'edge server');
+  clean = clean.replace(/Cloudflare/gi, 'edge server');
+  clean = clean.replace(/Worker/gi, 'edge server');
+  clean = clean.replace(/Vercel/gi, 'server');
+
+  // 3. Remove specific model names/cascade nodes
+  clean = clean.replace(/Running model cascade node:\s*([^\n]+)/gi, 'Analyzing video dimensions...');
+
+  // 4. Remove fallback routing details
+  clean = clean.replace(/Attempting automated fallback routing\.\.\./gi, 'Retrying analysis...');
+  clean = clean.replace(/Adjusting backup cascade path\.\.\./gi, 'retrying...');
+  clean = clean.replace(/Cascade path fault detected\. Switching node\.\.\./gi, 'Optimizing request routing...');
+  clean = clean.replace(/Connection response delayed\. Adjusting backup cascade path\.\.\./gi, 'Optimizing request routing...');
+  clean = clean.replace(/Provider capacity limit reached\. Re-routing to alternate provider\.\.\./gi, 'Optimizing request routing...');
+  clean = clean.replace(/Model tier capacity overdrawn\. Transitioning route\.\.\./gi, 'Optimizing request routing...');
+  clean = clean.replace(/Model response validation failed\. Re-routing analysis\.\.\./gi, 'Optimizing request routing...');
+
+  // 5. Clean up edge pipeline/worker start details
+  clean = clean.replace(/Edge pipeline start for video ID:\s*([a-zA-Z0-9_-]+)/gi, 'Initializing analysis pipeline...');
+  clean = clean.replace(/Worker handshaked successfully\./gi, 'Secure connection established.');
+
+  return clean;
+}
+
 export const useAnalysisStore = create<AnalysisState>((set) => ({
   // Initial state
   analysis: null,
@@ -45,6 +80,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   lockoutTimeRemaining: 0,
   analysisHistory: [],
   terminalLines: [],
+  userRole: null,
 
   // Synchronous actions
   setAnalysis: (analysis) => set({ analysis }),
@@ -53,6 +89,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
   setError: (error) => set({ error }),
   setVideoMetadata: (metadata) => set({ videoMetadata: metadata }),
   setLockoutTimeRemaining: (time) => set({ lockoutTimeRemaining: time }),
+  setUserRole: (userRole) => set({ userRole }),
 
   clearAnalysis: () =>
     set({
@@ -159,7 +196,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
     set((state) => ({
       terminalLines: [
         ...state.terminalLines,
-        { timestamp: new Date().toLocaleTimeString(), type: 'info', message },
+        { timestamp: new Date().toLocaleTimeString(), type: 'info', message: sanitizeLogMessage(message, state.userRole) },
       ],
     })),
 
@@ -167,7 +204,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
     set((state) => ({
       terminalLines: [
         ...state.terminalLines,
-        { timestamp: new Date().toLocaleTimeString(), type: 'ok', message },
+        { timestamp: new Date().toLocaleTimeString(), type: 'ok', message: sanitizeLogMessage(message, state.userRole) },
       ],
     })),
 
@@ -175,7 +212,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
     set((state) => ({
       terminalLines: [
         ...state.terminalLines,
-        { timestamp: new Date().toLocaleTimeString(), type: 'error', message },
+        { timestamp: new Date().toLocaleTimeString(), type: 'error', message: sanitizeLogMessage(message, state.userRole) },
       ],
     })),
 

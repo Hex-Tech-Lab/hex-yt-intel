@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 
 const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+const serverInFlight = new Map<string, Promise<RelationsResult>>();
 
 function parseDimensions(markdown: string): StanceDimension[] {
   const out: StanceDimension[] = [];
@@ -90,32 +91,62 @@ export async function GET(
           }
         }
 
+        // Check for in-flight server computation first
+        const existingPromise = serverInFlight.get(cacheKey);
+        if (existingPromise) {
+          try {
+            const result = await existingPromise;
+            send({ ...result, type: 'complete' });
+          } catch (err) {
+            send({ type: 'error', error: 'Failed to compute relations' });
+          }
+          controller.close();
+          return;
+        }
+
         const apiKey = process.env.OPENROUTER_API_KEY || '';
         const insights: RelationInsight[] = [];
         let modelUsed = 'unknown';
 
-        for await (const chunk of computeStanceRelationsStream(dimensions, apiKey, _request.signal)) {
-          if (chunk.type === 'model') {
-            modelUsed = chunk.model;
-            send({ type: 'status', stage: 'computing', model: chunk.model });
-          } else if (chunk.type === 'insight') {
-            insights.push(chunk.insight);
-            send({ type: 'insight', insight: chunk.insight });
+        let resolvePromise: (val: RelationsResult) => void = () => {};
+        let rejectPromise: (err: any) => void = () => {};
+        const computePromise = new Promise<RelationsResult>((res, rej) => {
+          resolvePromise = res;
+          rejectPromise = rej;
+        });
+        serverInFlight.set(cacheKey, computePromise);
+
+        try {
+          for await (const chunk of computeStanceRelationsStream(dimensions, apiKey)) {
+            if (chunk.type === 'model') {
+              modelUsed = chunk.model;
+              send({ type: 'status', stage: 'computing', model: chunk.model });
+            } else if (chunk.type === 'insight') {
+              insights.push(chunk.insight);
+              send({ type: 'insight', insight: chunk.insight });
+            }
           }
+
+          const result: RelationsResult = {
+            analysisId: id,
+            generatedAt: new Date().toISOString(),
+            model: modelUsed,
+            insights,
+          };
+
+          if (insights.length > 0) {
+            await setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).catch(() => {});
+          }
+
+          resolvePromise(result);
+          serverInFlight.delete(cacheKey);
+
+          send({ ...result, type: 'complete' });
+        } catch (err) {
+          rejectPromise(err);
+          serverInFlight.delete(cacheKey);
+          throw err;
         }
-
-        const result: RelationsResult = {
-          analysisId: id,
-          generatedAt: new Date().toISOString(),
-          model: modelUsed,
-          insights,
-        };
-
-        if (insights.length > 0) {
-          await setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).catch(() => {});
-        }
-
-        send({ ...result, type: 'complete' });
       } catch (err) {
         Sentry.captureException(err, { tags: { operation: 'relations', reason: 'unhandled' } });
         send({ type: 'error', error: 'Failed to compute relations' });

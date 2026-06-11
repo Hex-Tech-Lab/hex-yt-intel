@@ -43,6 +43,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const store = useAnalysisStore();
   const { url, setUrl } = useInputStore();
   const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    store.setUserRole(profile.role);
+  }, [profile.role, store.setUserRole]);
+
   useEffect(() => {
     setMounted(true);
   }, []);
