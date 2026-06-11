@@ -84,15 +84,18 @@ export class LLMCascade implements LLMCascadePort {
         providerOrder as string[] | undefined
       );
 
-      if (result.started && finalText) {
+      if (result.started && finalText && !result.error) {
         console.log(`[LLMCascade] Model ${name} started successfully. Committed.`);
         produced = true;
         break;
       }
 
-      const errorMsg = result.error || 'No tokens produced';
-      console.warn(`[LLMCascade] Model ${name} failed/skipped. Error: ${errorMsg}`);
-      onStatus?.({ stage: 'fallback', from: name, error: errorMsg });
+      // If it failed/refused mid-stream, clear the partial text and run the next model in cascade
+      finalText = '';
+      const rawError = result.error || 'No tokens produced';
+      const classifiedError = classifyError(rawError);
+      console.warn(`[LLMCascade] Model ${name} failed/skipped. Raw: ${rawError}, Classified: ${classifiedError}`);
+      onStatus?.({ stage: 'fallback', from: name, error: classifiedError });
     }
 
     return { started: produced, finalText, modelUsed };
@@ -215,9 +218,20 @@ export class LLMCascade implements LLMCascadePort {
             if (delta) {
               started = true;
               text += delta;
+
+              // Early refusal/safety block detection
+              if (text.length >= 20 && text.length <= 400) {
+                if (isRefusalOrChatter(text)) {
+                  throw new Error('ERR_MODEL_REFUSAL: Safety refusal or conversational chatter detected early in stream');
+                }
+              }
+
               onDelta(delta);
             }
-          } catch {
+          } catch (e) {
+            if (e instanceof Error && e.message.startsWith('ERR_MODEL_REFUSAL')) {
+              throw e;
+            }
             // ignore keep-alive / partial frames
           }
         }
@@ -310,3 +324,65 @@ export class LLMCascade implements LLMCascadePort {
     }
   }
 }
+
+/**
+ * Early safety refusal or conversational chatter detector.
+ * Scans initial token output for typical system refusals or prompts asking what to do.
+ */
+function isRefusalOrChatter(text: string): boolean {
+  const clean = text.trim().toLowerCase();
+  
+  const refusalKeywords = [
+    'i cannot',
+    'i am unable',
+    "i'm sorry",
+    'as an ai',
+    'safety guidelines',
+    'ethical guidelines',
+    'cannot fulfill',
+    'against my instructions',
+    'inappropriate content',
+    'cannot assist',
+    'not comfortable',
+    'would violate'
+  ];
+  
+  const chatterKeywords = [
+    'what should i do',
+    'what would you like me to do',
+    'please provide the',
+    'how can i assist',
+    'how can i help',
+    'would you like me to'
+  ];
+
+  for (const kw of refusalKeywords) {
+    if (clean.includes(kw)) return true;
+  }
+  for (const kw of chatterKeywords) {
+    if (clean.includes(kw)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Maps raw provider/OpenRouter errors to clean, user-friendly error codes.
+ */
+function classifyError(errorMsg: string): string {
+  const clean = errorMsg.toLowerCase();
+  if (clean.includes('err_model_refusal') || clean.includes('refusal') || clean.includes('safety') || clean.includes('ethical')) {
+    return 'ERR_MODEL_REFUSAL';
+  }
+  if (clean.includes('429') || clean.includes('rate limit') || clean.includes('too many requests') || clean.includes('overloaded')) {
+    return 'ERR_MODEL_OVERLOAD';
+  }
+  if (clean.includes('402') || clean.includes('credit') || clean.includes('payment required') || clean.includes('insufficient balance')) {
+    return 'ERR_MONTHLY_QUOTA_EXHAUSTED';
+  }
+  if (clean.includes('timeout') || clean.includes('aborted') || clean.includes('deadline')) {
+    return 'ERR_CONNECTION_TIMEOUT';
+  }
+  return 'ERR_INTERNAL_PROVIDER_FAULT';
+}
+

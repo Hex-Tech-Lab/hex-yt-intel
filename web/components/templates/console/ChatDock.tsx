@@ -74,6 +74,19 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
         } else {
           await newConversation({ analysisId });
         }
+      } else {
+        const state = useChatStore.getState();
+        const activeConv = state.conversations.find((c) => c.id === state.activeId);
+        if (activeConv && activeConv.analysisId) {
+          // If current conversation is bound to a video but analysis is now null,
+          // switch to a general conversation (where analysisId is null/falsy) or deselect.
+          const generalConv = state.conversations.find((c) => !c.analysisId);
+          if (generalConv) {
+            await selectConversation(generalConv.id);
+          } else {
+            useChatStore.setState({ activeId: null });
+          }
+        }
       }
       
       if (cancelled) return;

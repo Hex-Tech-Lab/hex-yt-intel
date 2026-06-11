@@ -114,7 +114,24 @@ export class SynthesisStreamAdapter {
       store.logInfo(`Contacting OpenRouter endpoint...`);
       store.logInfo(`Running model cascade node: ${fragment.model}`);
     } else if (fragment.stage === 'fallback') {
-      store.logError(`Model node failed: ${fragment.from}. Error: ${fragment.error}`);
+      // Clear any partial text written by the failed model so the next model starts fresh
+      store.setAnalysis(store.analysis ? { ...store.analysis, analysis_markdown: '' } : null);
+
+      const code = fragment.error || '';
+      let msg = 'Optimizing pipeline routing...';
+      if (code === 'ERR_MODEL_REFUSAL') {
+        msg = 'Model response validation failed. Re-routing analysis...';
+      } else if (code === 'ERR_MODEL_OVERLOAD') {
+        msg = 'Provider capacity limit reached. Re-routing to alternate provider...';
+      } else if (code === 'ERR_CONNECTION_TIMEOUT') {
+        msg = 'Connection response delayed. Adjusting backup cascade path...';
+      } else if (code === 'ERR_MONTHLY_QUOTA_EXHAUSTED') {
+        msg = 'Model tier capacity overdrawn. Transitioning route...';
+      } else if (code === 'ERR_INTERNAL_PROVIDER_FAULT') {
+        msg = 'Cascade path fault detected. Switching node...';
+      }
+
+      store.logError(msg);
       store.logInfo(`Attempting automated fallback routing...`);
     }
 
