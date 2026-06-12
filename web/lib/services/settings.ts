@@ -217,9 +217,15 @@ export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Prom
   }
 
   // Defensive engineering: map invalid/stale model IDs to working ones
-  return resolved.map((m) =>
-    m === 'anthropic/claude-4.5-haiku' ? 'anthropic/claude-haiku-4.5' : m
-  );
+  return resolved.map((m) => {
+    if (m === 'anthropic/claude-4.5-haiku' || m === 'anthropic/claude-haiku-4.5') {
+      return 'anthropic/claude-3.5-haiku';
+    }
+    if (m === 'anthropic/claude-sonnet-4.6:nitro' || m === 'anthropic/claude-sonnet-4.6') {
+      return 'anthropic/claude-3.5-sonnet';
+    }
+    return m;
+  });
 }
 
 export async function resolveReasoningCascade(tier: UserTier): Promise<string[]> {
