@@ -30,6 +30,7 @@
     "react-force-graph-2d": "^1.29.1",
     "react-hot-toast": "2.6.0",
     "react-markdown": "^10.1.0",
+    "react-player": "^3.4.0",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.1",
     "stripe": "15.7.0",
