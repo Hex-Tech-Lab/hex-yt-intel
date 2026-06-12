@@ -77,3 +77,4 @@
 - **decisions.md** — Strategic choices & reasoning
 - **lessons.md** — 7 critical lessons (Cloudflare, docs, verification)
 - [Session Handover v1.5.2](session_handover_v1.5.2.md) - PR #62 submission status & handover for GCT1.
+- Never change OpenRouter model names unless explicitly requested. `anthropic/claude-haiku-4.5` and `anthropic/claude-sonnet-4.6:nitro` are correct.
