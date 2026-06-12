@@ -259,8 +259,15 @@ export class SynthesisStreamAdapter {
 
     const healed = this.healJson(this.rawSink);
     if (healed) {
+      let obj: any;
       try {
-        const obj = JSON.parse(healed);
+        obj = JSON.parse(healed);
+      } catch {
+        // Expected parsing failures on incomplete JSON stream
+        return;
+      }
+
+      try {
         if (obj && obj.schemaVersion === '2.0') {
           // If this is a JSON stream, dynamically reconstruct clean markdown and update the store
           if (isJsonStream && store.analysis) {
@@ -358,8 +365,8 @@ export class SynthesisStreamAdapter {
             this.rawSink = '';
           }
         }
-      } catch {
-        // Silent catch for incomplete JSON
+      } catch (err) {
+        console.error('[Adapter] Failed to process progressive JSON updates:', err);
       }
     }
   }
