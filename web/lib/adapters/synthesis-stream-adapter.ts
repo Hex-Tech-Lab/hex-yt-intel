@@ -35,9 +35,54 @@ export class SynthesisStreamAdapter {
   private synthStore = useSynthesisNucleus;
   private analysisStore = useAnalysisStore;
   private options: StreamAdapterOptions;
+  private rawSink: string = '';
 
   constructor(options: StreamAdapterOptions = {}) {
     this.options = options;
+  }
+
+  private healJson(text: string): string | null {
+    const stack: string[] = [];
+    let inStr = false;
+    let esc = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (esc) {
+        esc = false;
+        continue;
+      }
+      if (char === '\\' && inStr) {
+        esc = true;
+        continue;
+      }
+      if (char === '"') {
+        inStr = !inStr;
+        continue;
+      }
+      if (inStr) continue;
+
+      if (char === '{' || char === '[') {
+        stack.push(char === '{' ? '}' : ']');
+      } else if (char === '}' || char === ']') {
+        stack.pop();
+      }
+    }
+
+    let healed = text;
+    if (inStr) healed += '"';
+    healed = healed.replace(/,\s*$/, '').trim();
+    while (stack.length > 0) {
+      const closer = stack.pop();
+      if (closer) healed += closer;
+    }
+
+    try {
+      JSON.parse(healed);
+      return healed;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -123,6 +168,8 @@ export class SynthesisStreamAdapter {
     } else if (fragment.stage === 'fallback') {
       // Clear any partial text written by the failed model so the next model starts fresh
       store.setAnalysis(store.analysis ? { ...store.analysis, analysis_markdown: '' } : null);
+      // Reset rawSink buffer to prevent stale partial JSON from corrupting the fallback model run
+      this.rawSink = '';
 
       // Fully reset the synthesis projection state (dimensions, persona, etc.) upon a fallback transition,
       // keeping the metadata of the current analysis intact.
@@ -190,8 +237,138 @@ export class SynthesisStreamAdapter {
     content: string;
   }) {
     const store = this.analysisStore.getState();
-    store.appendMarkdown(fragment.content);
+
+    // Progressive JSON Parsing (Dual-Accumulator Pattern)
+    this.rawSink += fragment.content;
+
+    // Check if the raw sink starts with '{', indicating it is a structured JSON stream
+    const isJsonStream = this.rawSink.trim().startsWith('{');
+
+    // Only append to raw display markdown if this is NOT a JSON stream (legacy/fallback plaintext)
+    if (!isJsonStream) {
+      store.appendMarkdown(fragment.content);
+    }
     console.debug('[Adapter] Delta received:', fragment.content.slice(0, 100));
+
+    // Check if the raw sink itself is already a fully valid complete JSON object
+    let isRawComplete = false;
+    try {
+      JSON.parse(this.rawSink);
+      isRawComplete = true;
+    } catch {}
+
+    const healed = this.healJson(this.rawSink);
+    if (healed) {
+      let obj: any;
+      try {
+        obj = JSON.parse(healed);
+      } catch {
+        // Expected parsing failures on incomplete JSON stream
+        return;
+      }
+
+      try {
+        if (obj && obj.schemaVersion === '2.0') {
+          // If this is a JSON stream, dynamically reconstruct clean markdown and update the store
+          if (isJsonStream && store.analysis) {
+            const reconstructed = this.reconstructMarkdown(obj);
+            store.setAnalysis({
+              ...store.analysis,
+              analysis_markdown: reconstructed,
+            });
+          }
+          // 1. Validate and set Persona
+          if (obj.persona && typeof obj.persona === 'object') {
+            const p = obj.persona;
+            if (
+              p.primary &&
+              typeof p.primary === 'object' &&
+              typeof p.primary.id === 'string' &&
+              typeof p.primary.label === 'string' &&
+              typeof p.primary.weight === 'number' &&
+              Array.isArray(p.cognitiveLenses) &&
+              typeof p.selectionRationale === 'string'
+            ) {
+              this.synthStore.getState().setPersonaConfig(p);
+            } else {
+              console.warn('[Adapter] Invalid persona payload format, skipping setPersonaConfig');
+            }
+          }
+
+          // 2. Validate and add Dimensions
+          if (Array.isArray(obj.dimensions)) {
+            for (const dim of obj.dimensions) {
+              if (
+                dim &&
+                typeof dim.number === 'number' &&
+                dim.number >= 1 &&
+                dim.number <= 11 &&
+                typeof dim.content === 'string' &&
+                (typeof dim.name === 'string' || dim.name === undefined)
+              ) {
+                this.synthStore.getState().addDimension({
+                  number: dim.number,
+                  name: dim.name || `Dimension ${dim.number}`,
+                  content: dim.content,
+                });
+              } else {
+                console.warn('[Adapter] Invalid dimension entry format, skipping addDimension:', dim);
+              }
+            }
+          }
+
+          // 3. Validate and set Knowledge Graph
+          if (obj.knowledgeGraph && typeof obj.knowledgeGraph === 'object') {
+            const kg = obj.knowledgeGraph;
+            if (Array.isArray(kg.nodes)) {
+              // Ensure nodes are actually objects
+              const validNodes = kg.nodes.every(
+                (node: any) =>
+                  node &&
+                  typeof node === 'object' &&
+                  typeof node.id === 'string' &&
+                  typeof node.label === 'string'
+              );
+              if (validNodes) {
+                this.synthStore.getState().setKnowledgeGraph({
+                  nodes: kg.nodes,
+                  edges: Array.isArray(kg.edges) ? kg.edges : [],
+                  rootId: typeof kg.rootId === 'string' || kg.rootId === null ? kg.rootId : null,
+                });
+              } else {
+                console.warn('[Adapter] Invalid knowledge graph nodes format, skipping setKnowledgeGraph');
+              }
+            } else {
+              console.warn('[Adapter] Knowledge graph nodes is not an array, skipping setKnowledgeGraph');
+            }
+          }
+
+          // 4. Validate and set Classification
+          if (obj.classification && typeof obj.classification === 'object') {
+            const c = obj.classification;
+            if (
+              typeof c.authoritative === 'boolean' &&
+              typeof c.practicallyActionable === 'boolean' &&
+              typeof c.knowledgeGraphReady === 'boolean' &&
+              typeof c.safe === 'boolean' &&
+              typeof c.personaOptimised === 'boolean' &&
+              typeof c.recommendation === 'string'
+            ) {
+              this.synthStore.getState().setClassification(c);
+            } else {
+              console.warn('[Adapter] Invalid classification payload format, skipping setClassification');
+            }
+          }
+
+          // Reset the sink if we have processed the final complete unhealed object
+          if (isRawComplete) {
+            this.rawSink = '';
+          }
+        }
+      } catch (err) {
+        console.error('[Adapter] Failed to process progressive JSON updates:', err);
+      }
+    }
   }
 
   /**
@@ -322,10 +499,87 @@ export class SynthesisStreamAdapter {
     this.analysisStore.getState().logOk(`Actionable classification: ${fragment.data.recommendation}`);
   }
 
+  private reconstructMarkdown(payload: any): string {
+    const lines: string[] = [];
+
+    // Persona header (text format for backward compat)
+    if (payload.persona) {
+      lines.push('=== PERSONA CONFIGURATION ===');
+      if (payload.persona.primary?.label) {
+        lines.push(`Primary Persona:    ${payload.persona.primary.label} (Weight: ${Math.round((payload.persona.primary.weight || 0) * 100)}%)`);
+      }
+      if (payload.persona.secondary?.label) {
+        lines.push(`Secondary Persona:  ${payload.persona.secondary.label} (Weight: ${Math.round((payload.persona.secondary.weight || 0) * 100)}%)`);
+      }
+      if (payload.persona.tertiary?.label) {
+        lines.push(`Tertiary Persona:   ${payload.persona.tertiary.label} (Weight: ${Math.round((payload.persona.tertiary.weight || 0) * 100)}%)`);
+      }
+      if (Array.isArray(payload.persona.cognitiveLenses)) {
+        lines.push(`Active Cognitive Lenses: [${payload.persona.cognitiveLenses.join(', ')}]`);
+      }
+      if (payload.persona.selectionRationale) {
+        lines.push(`Selection Rationale: ${payload.persona.selectionRationale}`);
+      }
+      lines.push('==============================');
+      lines.push('');
+    }
+
+    // Dimensions
+    if (Array.isArray(payload.dimensions)) {
+      for (const dim of payload.dimensions) {
+        if (dim && typeof dim.number === 'number' && typeof dim.content === 'string') {
+          const name = dim.name || `Dimension ${dim.number}`;
+          lines.push(`### DIMENSION ${dim.number} – ${name.toUpperCase()}`);
+          lines.push('');
+          lines.push(dim.content);
+          lines.push('');
+        }
+      }
+    }
+
+    // Classification (if present)
+    if (payload.classification) {
+      lines.push('=== CLASSIFICATION ===');
+      if (payload.classification.authoritative !== undefined) {
+        lines.push(`Authoritative:           ${payload.classification.authoritative}`);
+      }
+      if (payload.classification.practicallyActionable !== undefined) {
+        lines.push(`Practically Actionable:  ${payload.classification.practicallyActionable}`);
+      }
+      if (payload.classification.knowledgeGraphReady !== undefined) {
+        lines.push(`Knowledge Graph Ready:   ${payload.classification.knowledgeGraphReady}`);
+      }
+      if (payload.classification.safe !== undefined) {
+        lines.push(`Safe:                    ${payload.classification.safe}`);
+      }
+      if (payload.classification.personaOptimised !== undefined) {
+        lines.push(`Persona Optimised:       ${payload.classification.personaOptimised}`);
+      }
+      if (payload.classification.recommendation !== undefined) {
+        lines.push(`Recommendation:          ${payload.classification.recommendation}`);
+      }
+      lines.push('');
+    }
+
+    // Monetization verdicts (if present)
+    if (payload.monetizationVerdict) {
+      lines.push('=== MONETIZATION VERDICTS ===');
+      lines.push(`Creator:         ${payload.monetizationVerdict.creator || 'N/A'}`);
+      lines.push(`Indie Maker:     ${payload.monetizationVerdict.indieMaker || 'N/A'}`);
+      lines.push(`Consultant:      ${payload.monetizationVerdict.consultant || 'N/A'}`);
+      lines.push(`Researcher:      ${payload.monetizationVerdict.researcher || 'N/A'}`);
+      lines.push(`Product Manager: ${payload.monetizationVerdict.productManager || 'N/A'}`);
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  }
+
   /**
    * Reset adapter state for new stream
    */
   reset() {
+    this.rawSink = '';
     this.synthStore.getState().reset();
     this.analysisStore.getState().clearTerminal();
   }

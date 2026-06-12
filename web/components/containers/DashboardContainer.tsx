@@ -274,13 +274,30 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       1: 3, 5: 2, 11: 2
     };
 
+    const rawReceived = nucleus.analysis?.streaming.dimensionsReceived;
+    const receivedList = Array.isArray(rawReceived)
+      ? rawReceived.filter((v): v is number => typeof v === 'number')
+      : [];
+
+    const visibleDimensionNumbers = nucleus.projection.visibleDimensions.map(d => d.number);
+    const visibleReceivedList = receivedList.filter(num => visibleDimensionNumbers.includes(num));
+    const lastVisibleReceived = visibleReceivedList.length > 0 ? visibleReceivedList[visibleReceivedList.length - 1] : null;
+
     return nucleus.projection.visibleDimensions.map((dim) => {
-      const isPending = nucleus.projection?.pendingDimensions.has(dim.number);
       let dimStatus: 'idle' | 'streaming' | 'done' | 'error' = 'idle';
+      
+      const isReceived = receivedList.includes(dim.number);
+
       if (status === 'complete') {
-        dimStatus = isPending ? 'idle' : 'done';
+        dimStatus = isReceived ? 'done' : 'idle';
       } else if (status === 'analyzing' || status === 'downloading') {
-        dimStatus = isPending ? 'idle' : 'streaming';
+        if (!isReceived) {
+          dimStatus = 'idle';
+        } else if (dim.number === lastVisibleReceived) {
+          dimStatus = 'streaming';
+        } else {
+          dimStatus = 'done';
+        }
       } else if (status === 'error') {
         dimStatus = 'error';
       }
@@ -294,7 +311,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         span: (DIMENSION_SPANS[dim.number] || 1) as 1 | 2 | 3,
       };
     });
-  }, [nucleus.projection, status]);
+  }, [nucleus.projection, status, nucleus.analysis?.streaming.dimensionsReceived]);
 
   return (
     <>

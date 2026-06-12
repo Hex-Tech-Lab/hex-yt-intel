@@ -3,6 +3,7 @@ import type { Context } from "hono";
 // getUCISPrompt import) — the protocol/model list stays a single source of truth.
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CHAT_CASCADE } from "../../web/lib/config/cascade";
+import { translateModelId } from "./services/model-id-translator";
 
 /**
  * Direct browser->worker chat streaming. Mirrors /analyze-llm-stream: the Vercel
@@ -144,7 +145,7 @@ async function streamChatCascade(
           "HTTP-Referer": HTTP_REFERER,
         },
         body: JSON.stringify({
-          model,
+          model: translateModelId(model),
           temperature: 0.6,
           max_tokens: 1200,
           stream: true,
@@ -299,3 +300,5 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     },
   });
 }
+
+

@@ -143,7 +143,8 @@ export async function checkMonthlyQuota(
   if (tier === 'pro' || tier === 'enterprise') return { allowed: true };
   
   const supabase = getSupabaseServiceClient();
-  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const now = new Date();
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 
   // Query all analyses in the current month that did not explicitly fail
   const { data, error } = await supabase

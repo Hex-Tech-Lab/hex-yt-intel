@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
 import { STANCE_CASCADE } from '@/lib/config/cascade';
+import { translateModelId } from '@/lib/utils/model-id-translator';
 
 // See /docs/intelligence/relations-engine.md
 export interface StanceDimension {
@@ -69,7 +70,7 @@ async function* callStanceModelStream(
         'X-Title': 'hex-yt-intel',
       },
       body: JSON.stringify({
-        model,
+        model: translateModelId(model),
         temperature: 0.3,
         max_tokens: 700,
         stream: true,
@@ -177,3 +178,5 @@ export async function* computeStanceRelationsStream(
     } catch { continue; }
   }
 }
+
+
