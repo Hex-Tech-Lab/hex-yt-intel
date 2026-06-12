@@ -106,10 +106,7 @@ export class ReasoningEngine implements ReasoningEnginePort {
    */
   async execute(context: EngineContext): Promise<ExecuteResult> {
     const systemPrompt =
-      context.systemPrompt ||
-      `# UCIS v5.1 Analysis Framework
-Your task is to analyze YouTube video transcripts across 11 dimensions using the UCIS v5.1 framework.
-Provide comprehensive analysis with all 11 dimensions in markdown format.`;
+      context.systemPrompt || (await this.promptBuilder.build(context));
 
     // Cache-aside read
     let cacheKey: string | null = null;

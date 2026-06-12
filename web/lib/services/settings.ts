@@ -26,8 +26,9 @@ export type ModelKind = 'chat' | 'analysis';
  * Kept local so a DB outage never strands the pipeline.
  */
 
-/** Commercial trial mode — hard override. */
-const COMMERCIAL_TRIAL_MODE = true;
+/** Commercial trial mode — read from env at runtime. Defaults to true unless explicitly disabled. */
+const getCommercialTrialMode = () => process.env.COMMERCIAL_TRIAL_MODE !== 'false';
+
 
 const FALLBACK: Record<ModelKind, readonly string[]> = {
   chat: CHAT_CASCADE.map((c) => c.model),
@@ -187,14 +188,14 @@ export async function resolveUCISPromptTemplate(version?: string): Promise<strin
 
 /**
  * Resolve the ordered model cascade for a (tier, kind). Precedence:
- *   1. COMMERCIAL_TRIAL_MODE — if active, return Haiku-only immediately (hard override).
+ *   1. getCommercialTrialMode() — if active, return cascade defaults immediately (hard override).
  *   2. testOverride (when enabled) — the global "switch Haiku on for now" toggle.
  *   3. plans[tier][kind] — the per-plan cascade.
  *   4. hardcoded FALLBACK — safety net.
  * Always returns a non-empty list.
  */
 export async function resolveModelCascade(tier: UserTier, kind: ModelKind): Promise<string[]> {
-  if (COMMERCIAL_TRIAL_MODE) {
+  if (getCommercialTrialMode()) {
     if (kind === 'chat') {
       return CHAT_CASCADE.map((c) => c.model);
     }

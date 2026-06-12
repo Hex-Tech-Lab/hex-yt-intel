@@ -16,7 +16,6 @@ export class PromptBuilder implements PromptBuilderPort {
    */
   async build(context: EngineContext): Promise<string> {
     return getUCISPrompt({
-      version: '5.1',
       metadata: {
         title: context.metadata.title,
         channelTitle: context.metadata.channelTitle,

@@ -75,7 +75,6 @@ export async function callWorkerLLMAnalysis(
 
     // Build system prompt using UCIS v5.1 factory
     const systemPrompt = await getUCISPrompt({
-      version: '5.1',
       metadata: {
         title: metadata.title,
         channelTitle: metadata.channelTitle,

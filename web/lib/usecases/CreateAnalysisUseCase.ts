@@ -205,13 +205,21 @@ export class CreateAnalysisUseCase {
       };
     }
 
+    const markReservationFailed = async () => {
+      try {
+        await this.persistence.updateBillingStatus({ analysisId, status: 'failed' });
+      } catch (refundError) {
+        console.error('[CreateAnalysisUseCase] Failed to mark reservation failed:', refundError);
+      }
+    };
+
     // 3. Metadata + Transcript Ingestion
     let ingestionResult;
     try {
       ingestionResult = await this.metadataIngestion.fetch(videoId);
     } catch {
       // Refund: mark reservation as failed
-      await this.persistence.updateBillingStatus({ analysisId, status: 'failed' });
+      await markReservationFailed();
       return {
         type: 'error',
         code: 'ERR_METADATA_FETCH',
@@ -222,7 +230,7 @@ export class CreateAnalysisUseCase {
 
     if (!ingestionResult.transcriptAvailable || !ingestionResult.transcript.trim()) {
       // Refund: mark reservation as failed
-      await this.persistence.updateBillingStatus({ analysisId, status: 'failed' });
+      await markReservationFailed();
       return {
         type: 'error',
         code: 'ERR_TRANSCRIPT_REQUIRED',
@@ -256,7 +264,7 @@ export class CreateAnalysisUseCase {
       });
     } catch {
       // Refund: mark reservation as failed
-      await this.persistence.updateBillingStatus({ analysisId, status: 'failed' });
+      await markReservationFailed();
       return {
         type: 'error',
         code: 'ERR_ANALYSIS_ROW_INSERT',

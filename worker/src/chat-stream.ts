@@ -167,7 +167,10 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   let isTokenValid = false;
 
   // Support both production secret and local/preview fallback secret
-  const secretsToTry = [secret, 'dev-hmac-secret-123'];
+  const secretsToTry = [secret];
+  if (c.env.DEV_HMAC_SECRET && c.env.NODE_ENV !== 'production') {
+    secretsToTry.push(c.env.DEV_HMAC_SECRET);
+  }
   for (const s of secretsToTry) {
     if (!s) continue;
     const expected = await hmacHex(

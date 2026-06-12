@@ -405,7 +405,7 @@
 **Low Risk** (3-4 more cases needed):
 - Redis partial outage (some keys available, TTL variations)
 - Concurrent quota updates (race conditions at 1M+ requests/day)
-- OpenRouter model fallback chain (Haiku 4.5 → Haiku 3.5)
+- OpenRouter model fallback chain (Haiku 4.5)
 
 **Medium Risk** (5-6 more cases needed):
 - Supabase connection pooling exhaustion (high concurrency)

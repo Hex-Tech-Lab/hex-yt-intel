@@ -8,5 +8,5 @@
 import type { EngineContext } from './ReasoningEnginePort';
 
 export interface PromptBuilderPort {
-  build(context: EngineContext): Promise<string> | string;
+  build(context: EngineContext): Promise<string>;
 }
