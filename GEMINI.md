@@ -214,3 +214,6 @@ Instead of full-blown clean architecture, we use a streamlined version:
 - **Use Cases (`/usecases`)**: **Application Services** representing the entry points to business logic (e.g., `CreateAnalysisUseCase`). They orchestrate ports without knowing the underlying implementation (Supabase, Stripe, etc.).
 - **Domain Services (`/services`)**: Core domain logic that doesn't fit a single entity. 
   - **CRITICAL ARCHITECTURAL RULE**: Components in `worker/src/services/` (e.g., `ReasoningEngine`, `PromptBuilder`, `LLMCascade`, `ValidationService`) are **Domain Services**. They are NOT adapters and MUST NOT be moved to `/adapters/` or renamed with an `Adapter` suffix. While they may interact with external APIs (like OpenRouter), the *logic* of the reasoning cascade or prompt building is core to our domain. Thus, `LLMCascade` implements `LLMCascadePort` but its orchestrator rightly lives in `/services/`. Only pure database/infrastructure connectors (like `UpstashCacheAdapter`) belong in `/adapters/`.
+
+## 10. AUTONOMOUS WORKFLOW
+- **Standing Instruction**: No man in the middle. I am the sole agent, the user is the orchestrator. I act autonomously, manage all tasks, and execute all work without needing intermediate approval unless critically underspecified.
