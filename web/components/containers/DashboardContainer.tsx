@@ -306,7 +306,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         span: (DIMENSION_SPANS[dim.number] || 1) as 1 | 2 | 3,
       };
     });
-  }, [nucleus.projection, status]);
+  }, [nucleus.projection, status, nucleus.analysis?.streaming.dimensionsReceived]);
 
   return (
     <>

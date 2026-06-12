@@ -168,6 +168,8 @@ export class SynthesisStreamAdapter {
     } else if (fragment.stage === 'fallback') {
       // Clear any partial text written by the failed model so the next model starts fresh
       store.setAnalysis(store.analysis ? { ...store.analysis, analysis_markdown: '' } : null);
+      // Reset rawSink buffer to prevent stale partial JSON from corrupting the fallback model run
+      this.rawSink = '';
 
       // Fully reset the synthesis projection state (dimensions, persona, etc.) upon a fallback transition,
       // keeping the metadata of the current analysis intact.
@@ -253,9 +255,25 @@ export class SynthesisStreamAdapter {
       try {
         const obj = JSON.parse(healed);
         if (obj && obj.schemaVersion === '2.0') {
-          if (obj.persona) {
-            this.synthStore.getState().setPersonaConfig(obj.persona);
+          // 1. Validate and set Persona
+          if (obj.persona && typeof obj.persona === 'object') {
+            const p = obj.persona;
+            if (
+              p.primary &&
+              typeof p.primary === 'object' &&
+              typeof p.primary.id === 'string' &&
+              typeof p.primary.label === 'string' &&
+              typeof p.primary.weight === 'number' &&
+              Array.isArray(p.cognitiveLenses) &&
+              typeof p.selectionRationale === 'string'
+            ) {
+              this.synthStore.getState().setPersonaConfig(p);
+            } else {
+              console.warn('[Adapter] Invalid persona payload format, skipping setPersonaConfig');
+            }
           }
+
+          // 2. Validate and add Dimensions
           if (Array.isArray(obj.dimensions)) {
             for (const dim of obj.dimensions) {
               if (
@@ -263,25 +281,61 @@ export class SynthesisStreamAdapter {
                 typeof dim.number === 'number' &&
                 dim.number >= 1 &&
                 dim.number <= 11 &&
-                typeof dim.content === 'string'
+                typeof dim.content === 'string' &&
+                (typeof dim.name === 'string' || dim.name === undefined)
               ) {
                 this.synthStore.getState().addDimension({
                   number: dim.number,
                   name: dim.name || `Dimension ${dim.number}`,
                   content: dim.content,
                 });
+              } else {
+                console.warn('[Adapter] Invalid dimension entry format, skipping addDimension:', dim);
               }
             }
           }
-          if (obj.knowledgeGraph && Array.isArray(obj.knowledgeGraph.nodes)) {
-            this.synthStore.getState().setKnowledgeGraph({
-              nodes: obj.knowledgeGraph.nodes,
-              edges: obj.knowledgeGraph.edges || [],
-              rootId: obj.knowledgeGraph.rootId ?? null,
-            });
+
+          // 3. Validate and set Knowledge Graph
+          if (obj.knowledgeGraph && typeof obj.knowledgeGraph === 'object') {
+            const kg = obj.knowledgeGraph;
+            if (Array.isArray(kg.nodes)) {
+              // Ensure nodes are actually objects
+              const validNodes = kg.nodes.every(
+                (node: any) =>
+                  node &&
+                  typeof node === 'object' &&
+                  typeof node.id === 'string' &&
+                  typeof node.label === 'string'
+              );
+              if (validNodes) {
+                this.synthStore.getState().setKnowledgeGraph({
+                  nodes: kg.nodes,
+                  edges: Array.isArray(kg.edges) ? kg.edges : [],
+                  rootId: typeof kg.rootId === 'string' || kg.rootId === null ? kg.rootId : null,
+                });
+              } else {
+                console.warn('[Adapter] Invalid knowledge graph nodes format, skipping setKnowledgeGraph');
+              }
+            } else {
+              console.warn('[Adapter] Knowledge graph nodes is not an array, skipping setKnowledgeGraph');
+            }
           }
-          if (obj.classification) {
-            this.synthStore.getState().setClassification(obj.classification);
+
+          // 4. Validate and set Classification
+          if (obj.classification && typeof obj.classification === 'object') {
+            const c = obj.classification;
+            if (
+              typeof c.authoritative === 'boolean' &&
+              typeof c.practicallyActionable === 'boolean' &&
+              typeof c.knowledgeGraphReady === 'boolean' &&
+              typeof c.safe === 'boolean' &&
+              typeof c.personaOptimised === 'boolean' &&
+              typeof c.recommendation === 'string'
+            ) {
+              this.synthStore.getState().setClassification(c);
+            } else {
+              console.warn('[Adapter] Invalid classification payload format, skipping setClassification');
+            }
           }
 
           // Reset the sink if we have processed the final complete unhealed object
