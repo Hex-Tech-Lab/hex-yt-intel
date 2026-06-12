@@ -11,7 +11,7 @@ import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEngine
 //   - nemotron-3-nano-30b: ONLY free model that reliably produced valid 11-dim output
 //     (3s first-token, 19-33s total). Lead model.
 //   - gemini-2.0-flash: fast, sub-second TTFB, highly reliable.
-//   - claude-3.5-haiku: paid last resort (needs OpenRouter credit; 402 while overdrawn).
+//   - claude-haiku-4.5: paid last resort (needs OpenRouter credit; 402 while overdrawn).
 // NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
 import { ANALYSIS_CASCADE } from '../../../web/lib/config/cascade';
@@ -31,7 +31,10 @@ export class LLMCascade implements LLMCascadePort {
   constructor(apiKey: string, models?: string[]) {
     this.apiKey = apiKey;
     if (models && models.length > 0) {
-      this.chain = models.map((model) => {
+      this.chain = models.map((model, idx) => {
+        if (MODEL_CHAIN[idx] && MODEL_CHAIN[idx].model === model) {
+          return MODEL_CHAIN[idx];
+        }
         const matched = MODEL_CHAIN.find((item) => item.model === model);
         return {
           model,
@@ -81,15 +84,18 @@ export class LLMCascade implements LLMCascadePort {
         providerOrder as string[] | undefined
       );
 
-      if (result.started && finalText) {
+      if (result.started && finalText && !result.error) {
         console.log(`[LLMCascade] Model ${name} started successfully. Committed.`);
         produced = true;
         break;
       }
 
-      const errorMsg = result.error || 'No tokens produced';
-      console.warn(`[LLMCascade] Model ${name} failed/skipped. Error: ${errorMsg}`);
-      onStatus?.({ stage: 'fallback', from: name, error: errorMsg });
+      // If it failed/refused mid-stream, clear the partial text and run the next model in cascade
+      finalText = '';
+      const rawError = result.error || 'No tokens produced';
+      const classifiedError = classifyError(rawError);
+      console.warn(`[LLMCascade] Model ${name} failed/skipped. Raw: ${rawError}, Classified: ${classifiedError}`);
+      onStatus?.({ stage: 'fallback', from: name, error: classifiedError });
     }
 
     return { started: produced, finalText, modelUsed };
@@ -139,14 +145,22 @@ export class LLMCascade implements LLMCascadePort {
     providerOrder?: string[]
   ): Promise<{ started: boolean; text: string; error?: string }> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const handshakeTimer = setTimeout(() => {
+      console.warn(`[LLMCascade] Handshake timeout (15s exceeded) for model ${model}`);
+      controller.abort();
+    }, 15000);
+    const totalTimer = setTimeout(() => {
+      console.warn(`[LLMCascade] Total execution timeout (${timeoutMs}ms exceeded) for model ${model}`);
+      controller.abort();
+    }, timeoutMs);
     let text = '';
     let started = false;
 
     const onAbort = () => controller.abort();
     if (signal) {
       if (signal.aborted) {
-        clearTimeout(timeout);
+        clearTimeout(handshakeTimer);
+        clearTimeout(totalTimer);
         return { started: false, text: '', error: 'Request aborted' };
       }
       signal.addEventListener('abort', onAbort);
@@ -179,15 +193,17 @@ export class LLMCascade implements LLMCascadePort {
           ],
           provider: {
             sort: 'latency',
-            allow_fallbacks: true,
+            allow_fallbacks: false,
             ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
         signal: controller.signal,
       });
 
+      clearTimeout(handshakeTimer);
+
       if (!response.ok || !response.body) {
-        clearTimeout(timeout);
+        clearTimeout(totalTimer);
         const errBody = await response.text().catch(() => '');
         return { started: false, text: '', error: `${response.status}: ${errBody.slice(0, 160)}` };
       }
@@ -212,20 +228,34 @@ export class LLMCascade implements LLMCascadePort {
             if (delta) {
               started = true;
               text += delta;
+
+              // Early refusal/safety block detection
+              if (text.length >= 20 && text.length <= 400) {
+                if (isRefusalOrChatter(text)) {
+                  throw new Error('ERR_MODEL_REFUSAL: Safety refusal or conversational chatter detected early in stream');
+                }
+              }
+
               onDelta(delta);
             }
-          } catch {
+          } catch (e) {
+            if (e instanceof Error && e.message.startsWith('ERR_MODEL_REFUSAL')) {
+              throw e;
+            }
             // ignore keep-alive / partial frames
           }
         }
       }
-      clearTimeout(timeout);
+      clearTimeout(totalTimer);
       return { started, text };
     } catch (error) {
-      clearTimeout(timeout);
+      clearTimeout(handshakeTimer);
+      clearTimeout(totalTimer);
       const message = error instanceof Error ? error.message : 'Unknown error';
       return { started, text, error: message === 'The operation was aborted' ? 'Request timeout' : message };
     } finally {
+      clearTimeout(handshakeTimer);
+      clearTimeout(totalTimer);
       if (signal) {
         signal.removeEventListener('abort', onAbort);
       }
@@ -278,7 +308,7 @@ export class LLMCascade implements LLMCascadePort {
           ],
           provider: {
             sort: 'latency',
-            allow_fallbacks: true,
+            allow_fallbacks: false,
             ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
@@ -307,3 +337,65 @@ export class LLMCascade implements LLMCascadePort {
     }
   }
 }
+
+/**
+ * Early safety refusal or conversational chatter detector.
+ * Scans initial token output for typical system refusals or prompts asking what to do.
+ */
+function isRefusalOrChatter(text: string): boolean {
+  const clean = text.trim().toLowerCase();
+  
+  const refusalKeywords = [
+    'i cannot',
+    'i am unable',
+    "i'm sorry",
+    'as an ai',
+    'safety guidelines',
+    'ethical guidelines',
+    'cannot fulfill',
+    'against my instructions',
+    'inappropriate content',
+    'cannot assist',
+    'not comfortable',
+    'would violate'
+  ];
+  
+  const chatterKeywords = [
+    'what should i do',
+    'what would you like me to do',
+    'please provide the',
+    'how can i assist',
+    'how can i help',
+    'would you like me to'
+  ];
+
+  for (const kw of refusalKeywords) {
+    if (clean.includes(kw)) return true;
+  }
+  for (const kw of chatterKeywords) {
+    if (clean.includes(kw)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Maps raw provider/OpenRouter errors to clean, user-friendly error codes.
+ */
+function classifyError(errorMsg: string): string {
+  const clean = errorMsg.toLowerCase();
+  if (clean.includes('err_model_refusal') || clean.includes('refusal') || clean.includes('safety') || clean.includes('ethical')) {
+    return 'ERR_MODEL_REFUSAL';
+  }
+  if (clean.includes('429') || clean.includes('rate limit') || clean.includes('too many requests') || clean.includes('overloaded')) {
+    return 'ERR_MODEL_OVERLOAD';
+  }
+  if (clean.includes('402') || clean.includes('credit') || clean.includes('payment required') || clean.includes('insufficient balance')) {
+    return 'ERR_MONTHLY_QUOTA_EXHAUSTED';
+  }
+  if (clean.includes('timeout') || clean.includes('aborted') || clean.includes('deadline')) {
+    return 'ERR_CONNECTION_TIMEOUT';
+  }
+  return 'ERR_INTERNAL_PROVIDER_FAULT';
+}
+

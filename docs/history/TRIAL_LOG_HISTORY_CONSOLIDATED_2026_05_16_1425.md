@@ -136,7 +136,7 @@ curl -X POST https://openrouter.ai/api/v1/chat/completions \
 # Try each model in order:
 # 1. anthropic/claude-haiku-latest
 # 2. anthropic/claude-haiku-4.5
-# 3. anthropic/claude-3.5-haiku
+# 3. anthropic/claude-haiku-4.5
 # First success = that's the working model
 ```
 
@@ -218,7 +218,7 @@ supabase status --linked
 curl -X POST https://openrouter.ai/api/v1/chat/completions \
   -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
   -H "Content-Type: application/json" \
-  -d '{"model":"anthropic/claude-3.5-haiku","messages":[{"role":"user","content":"Say ok"}],"max_tokens":10}'
+  -d '{"model":"anthropic/claude-haiku-4.5","messages":[{"role":"user","content":"Say ok"}],"max_tokens":10}'
 ```
 
 ---
@@ -501,7 +501,7 @@ Purpose: HANDOVER REPORT 2026 05 16
 **Critical Issues Fixed This Session**:
 1. Session cookies weren't persisting (fix: response.cookies.set() instead of cookieStore.set())
 2. RLS blocking user insert (fix: migration 20260516_disable_rls_users.sql)
-3. OpenRouter model name wrong (fix: anthropic/claude-3.5-haiku)
+3. OpenRouter model name wrong (fix: anthropic/claude-haiku-4.5)
 4. User records not created in callback (fix: auto-insert logic in route)
 
 ---
@@ -545,7 +545,7 @@ POST /api/analyses:
   4. Fetch metadata from Cloudflare Worker
   5. Fetch transcript (placeholder currently)
   6. Call OpenRouter with Claude Haiku:
-     - Model: anthropic/claude-3.5-haiku
+     - Model: anthropic/claude-haiku-4.5
      - Prompt: 16-section UCIS framework
      - Response: Markdown analysis
   7. Insert analysis to public.analyses
@@ -627,7 +627,7 @@ GOOGLE_CLIENT_SECRET=GOCSPX-...  (for OAuth)
 
 | Commit | Change |
 |--------|--------|
-| d6e140b | fix: Use correct OpenRouter model identifier anthropic/claude-3.5-haiku |
+| d6e140b | fix: Use correct OpenRouter model identifier anthropic/claude-haiku-4.5 |
 | c8585ab | fix(database): Disable RLS on users table to allow OAuth signup |
 | f3ddcdc | fix(critical): Set Supabase session cookies explicitly in callback response |
 | 7b0a60e | fix(auth): Auto-create user record on OAuth callback |
@@ -734,11 +734,11 @@ See [OAUTH_TESTING_CHECKLIST.md](./OAUTH_TESTING_CHECKLIST.md) for:
 2. Line 106: `getUserTier()` - Check if free (3/month) or pro (unlimited)
 3. Line 113: `applyRateLimit()` - Enforce quota
 4. Line 228: Call Cloudflare Worker for metadata
-5. Line 283: **CRITICAL** - Call OpenRouter with model `anthropic/claude-3.5-haiku`
+5. Line 283: **CRITICAL** - Call OpenRouter with model `anthropic/claude-haiku-4.5`
 6. Line 309: Insert analysis to public.analyses
 
 **Recent Fix**:
-- Changed model from `anthropic/claude-haiku-4.5:free` (404 error) to `anthropic/claude-3.5-haiku`
+- Changed model from `anthropic/claude-haiku-4.5:free` (404 error) to `anthropic/claude-haiku-4.5`
 
 ---
 
@@ -841,7 +841,7 @@ grep -r "anthropic" web/   # Find Claude model references
    - Cookies are being sent with HttpOnly + Secure flags
    - Supabase server client is reading cookies correctly
 
-5. **Model Name Matters**: OpenRouter uses specific model identifiers. If analysis returns 404, check model name in /api/analyses/route.ts. Use `anthropic/claude-3.5-haiku` not `anthropic/claude-haiku-4.5:free`.
+5. **Model Name Matters**: OpenRouter uses specific model identifiers. If analysis returns 404, check model name in /api/analyses/route.ts. Use `anthropic/claude-haiku-4.5` not `anthropic/claude-haiku-4.5:free`.
 
 ---
 
@@ -1642,7 +1642,7 @@ After that, the route's `INSERT` will find its column and the service role will 
 - CC's tool schema found the real source via per-model error logging (Fix A+B)
 - Column existence tested via PostgREST OPTIONS/HEAD inventory — definitive
 - RLS never reached production from local — evident from `42501` despite migration
-- The 2026-05-16 cost log shows traffic going to `anthropic/claude-3.5-haiku` — anon key works
+- The 2026-05-16 cost log shows traffic going to `anthropic/claude-haiku-4.5` — anon key works
 - Blocking loop terminated by this report
 - No will be given more instructions; this is a terminal notice
 

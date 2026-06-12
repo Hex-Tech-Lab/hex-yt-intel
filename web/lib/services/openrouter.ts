@@ -66,8 +66,7 @@ export async function callOpenRouter(
     });
   }
 
-  const prompt = getUCISPrompt({
-    version: '5.1',
+  const prompt = await getUCISPrompt({
     metadata,
     transcript,
     persona,
@@ -99,7 +98,7 @@ export async function callOpenRouter(
         max_tokens: maxTokens,
         provider: {
           sort: 'latency',
-          allow_fallbacks: true,
+          allow_fallbacks: false,
           ...(currentTier.providerOrder ? { order: currentTier.providerOrder } : {}),
         },
       }),

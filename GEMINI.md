@@ -197,3 +197,20 @@ The system is transitioning to a triple-redundant hybrid model (ADR 005) to solv
 - **2026-06-04**: Fix (hardening): Implement API resilience (Edge runtime, streaming, dual-timeout), refactor UI to Tailwind, and migrate docs to markdown.
 - **2026-06-04**: Fix (review): Processed structural UX epic recommendations; resolved PDFKit type issues and secured analysis route via getSupabaseClientWithAuth().
 - **2026-06-04**: Feat (ux): Complete 5-part structural epic (layout trapping, history restoration, dimension drawers, tier-gated PDFs, stance relations engine) and merge to main.
+
+---
+
+## 9. ARCHITECTURAL PATTERN: HEX-LITE + DDD
+
+The workspace enforces a **Hexagonal Lite (Ports & Adapters) + Domain-Driven Design (DDD)** pattern.
+
+### 9.1 Hex-Lite (The Shape)
+Instead of full-blown clean architecture, we use a streamlined version:
+- **Ports (`/ports`)**: Abstract interfaces defining *what* the application needs (e.g., `PersistencePort`).
+- **Adapters (`/adapters`)**: Concrete implementations defining *how* we talk to external systems (e.g., `SupabasePersistenceAdapter`, `JwtStreamTokenAdapter`).
+- **The "Lite" Exception**: We allow direct usage of domain objects in ports to reduce mapping boilerplate, and we bypass ports for simple, read-only GET requests where no business logic resides.
+
+### 9.2 DDD (The Heart)
+- **Use Cases (`/usecases`)**: **Application Services** representing the entry points to business logic (e.g., `CreateAnalysisUseCase`). They orchestrate ports without knowing the underlying implementation (Supabase, Stripe, etc.).
+- **Domain Services (`/services`)**: Core domain logic that doesn't fit a single entity. 
+  - **CRITICAL ARCHITECTURAL RULE**: Components in `worker/src/services/` (e.g., `ReasoningEngine`, `PromptBuilder`, `LLMCascade`, `ValidationService`) are **Domain Services**. They are NOT adapters and MUST NOT be moved to `/adapters/` or renamed with an `Adapter` suffix. While they may interact with external APIs (like OpenRouter), the *logic* of the reasoning cascade or prompt building is core to our domain. Thus, `LLMCascade` implements `LLMCascadePort` but its orchestrator rightly lives in `/services/`. Only pure database/infrastructure connectors (like `UpstashCacheAdapter`) belong in `/adapters/`.

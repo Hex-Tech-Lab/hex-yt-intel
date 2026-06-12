@@ -345,6 +345,7 @@ app.post("/analyze-llm-stream", async (c) => {
     models?: string[];
     sig: string;
     exp: number;
+    appUrl?: string;
   }
 
   const req = (await c.req.json()) as StreamRequest;
@@ -374,14 +375,29 @@ app.post("/analyze-llm-stream", async (c) => {
   if (Date.now() > req.exp) {
     return c.json({ error: 'Token expired' }, 401);
   }
-  // The models list is bound into the signature (byte-identical JSON.stringify the
-  // bouncer used): the token authorizes THIS exact cascade, so model selection is
-  // tamper-proof. JSON (not join) avoids comma-in-id aliasing.
-  const expected = await hmacHex(
-    secret,
-    `${req.videoId}.${req.analysisId}.${req.exp}.${JSON.stringify(req.models ?? [])}`
-  );
-  if (!timingSafeEqualHex(expected, req.sig)) {
+  
+  let activeSecret = secret;
+  let isTokenValid = false;
+
+  // Support both production secret and local/preview fallback secret
+  const secretsToTry = [secret];
+  if (c.env.DEV_HMAC_SECRET && c.env.NODE_ENV !== 'production') {
+    secretsToTry.push(c.env.DEV_HMAC_SECRET);
+  }
+  for (const s of secretsToTry) {
+    if (!s) continue;
+    const expected = await hmacHex(
+      s,
+      `${req.videoId}.${req.analysisId}.${req.exp}.${JSON.stringify(req.models ?? [])}`
+    );
+    if (timingSafeEqualHex(expected, req.sig)) {
+      activeSecret = s;
+      isTokenValid = true;
+      break;
+    }
+  }
+
+  if (!isTokenValid) {
     return c.json({ error: 'Invalid token' }, 401);
   }
 
@@ -417,8 +433,8 @@ app.post("/analyze-llm-stream", async (c) => {
 
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
     const valid = engine.validate12D(markdown);
-    const contentSig = await hmacHex(secret, canonical);
-    const appUrl = c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
+    const contentSig = await hmacHex(activeSecret, canonical);
+    const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
 
     persisted = true;
     await fetch(`${appUrl}/api/analyses/persist`, {

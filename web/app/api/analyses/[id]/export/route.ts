@@ -101,14 +101,8 @@ export async function GET(
       );
     }
 
-    type Payload = Record<string, unknown>;
-    const isValidDimensions = (payload: unknown): payload is { dimensions: unknown[] } =>
-      typeof payload === 'object' &&
-      payload !== null &&
-      Array.isArray((payload as Payload).dimensions) &&
-      ((payload as Payload).dimensions as unknown[]).length > 0;
-
-    if (scope === 'full' && !isValidDimensions(analysis.analysis_payload)) {
+    const hasMarkdown = typeof analysis.analysis_markdown === 'string' && analysis.analysis_markdown.trim().length > 0;
+    if (!hasMarkdown) {
       return NextResponse.json(
         { error: 'Analysis data is incomplete — generation may have been interrupted. Please re-run the analysis.', code: ERROR_CODES.ANALYSIS_GENERATION_FAILED },
         { status: 500 }

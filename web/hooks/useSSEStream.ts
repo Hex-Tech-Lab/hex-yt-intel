@@ -4,7 +4,6 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
-
 export function useSSEStream() {
   const {
     setIsLoading,
@@ -13,9 +12,10 @@ export function useSSEStream() {
     initializeAnalysis,
     archiveCurrentAnalysis,
     setVideoMetadata,
+    clearAnalysis,
   } = useAnalysisStore();
 
-  const { initializeAnalysis: initSynthesis } = useSynthesisNucleus();
+  const { initializeAnalysis: initSynthesis, reset: resetSynthesis } = useSynthesisNucleus();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -56,9 +56,15 @@ export function useSSEStream() {
       },
       async () => {
         try {
+          clearAnalysis();
+          resetSynthesis();
+
           setIsLoading(true);
           setStatus('downloading');
           setError(null);
+
+          const store = useAnalysisStore.getState();
+          store.logInfo(`Initializing analysis pipeline for URL: ${url}`);
 
           // 1. Bouncer: auth + quota + ingestion. Returns 200 (cache) or 202 (job + token).
           const prepRes = await Sentry.startSpan(
@@ -85,6 +91,7 @@ export function useSSEStream() {
                      .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors[0] : errors}`)
                      .join('; ') || 'Invalid request';
             }
+            store.logError(`Bouncer checklist failed (${prepRes.status}): ${errorMsg}`);
             setError({ code: errorCode, status: prepRes.status, message: errorMsg });
             setStatus('error');
             setIsLoading(false);
@@ -92,6 +99,7 @@ export function useSSEStream() {
           }
 
           const job = await prepRes.json();
+          store.logOk(`Bouncer checklist complete. Auth & quota checks passed.`);
 
           // 2. Metadata extraction
           if (job.metadata) {
@@ -100,6 +108,7 @@ export function useSSEStream() {
 
           // 3. Cache hit — render immediately.
           if (job.status === 'done' && job.markdown) {
+            store.logOk(`Cache hit detected. Restoring historical synthesis instantly.`);
             initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result', job.markdown);
             initSynthesis(job);
             setStatus('complete');
@@ -110,12 +119,15 @@ export function useSSEStream() {
 
           // 3. Stream directly from the Cloudflare Worker (no Vercel in the LLM path).
           if (!job.stream?.url) {
-            setError({ code: 'ERR_STREAM_UNCONFIGURED', status: 0, message: 'Streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).' });
+            const msg = 'Streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).';
+            store.logError(`Configuration error: ${msg}`);
+            setError({ code: 'ERR_STREAM_UNCONFIGURED', status: 0, message: msg });
             setStatus('error');
             setIsLoading(false);
             return;
           }
 
+          store.logInfo(`Connecting to Cloudflare edge worker...`);
           initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result');
           initSynthesis(job);
           setStatus('analyzing');
@@ -124,6 +136,7 @@ export function useSSEStream() {
           const adapter = new SynthesisStreamAdapter({
             onError: (error) => {
               if (currentSignal.aborted) return;
+              store.logError(`Worker stream error: ${error}`);
               setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: error });
               setStatus('error');
               setIsLoading(false);
@@ -131,6 +144,7 @@ export function useSSEStream() {
             onComplete: () => {
               if (currentSignal.aborted) return;
               streamCompleted = true;
+              store.logOk(`Analysis streaming completed successfully.`);
               setStatus('complete');
               setIsLoading(false);
               archiveCurrentAnalysis();
@@ -152,6 +166,7 @@ export function useSSEStream() {
                 models: job.models,
                 sig: job.stream.sig,
                 exp: job.stream.exp,
+                appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
               };
               const res = await fetch(job.stream.url, {
                 method: 'POST',
@@ -164,6 +179,8 @@ export function useSSEStream() {
                 const errText = await res.text().catch(() => '');
                 throw new Error(`Worker stream failed (${res.status}): ${errText.slice(0, 160)}`);
               }
+
+              store.logInfo(`Worker handshaked successfully. Streaming UCIS dimensions...`);
 
               const reader = res.body.getReader();
               const decoder = new TextDecoder();
@@ -203,7 +220,9 @@ export function useSSEStream() {
               // interruption is classified correctly and never leaves the action button
               // wedged in a loading state.
               if (!streamCompleted && useAnalysisStore.getState().status !== 'error') {
-                setError({ code: 'ERR_STREAM_INCOMPLETE', status: 0, message: 'The analysis stream ended unexpectedly. Please try again.' });
+                const msg = 'The analysis stream ended unexpectedly. Please try again.';
+                store.logError(msg);
+                setError({ code: 'ERR_STREAM_INCOMPLETE', status: 0, message: msg });
                 setStatus('error');
                 setIsLoading(false);
               }
@@ -215,6 +234,7 @@ export function useSSEStream() {
             return;
           }
           const errorMsg = error instanceof Error ? error.message : String(error);
+          useAnalysisStore.getState().logError(`Client exception: ${errorMsg}`);
           setError({ code: 'ERR_CLIENT_EXCEPTION', status: 0, message: errorMsg });
           setStatus('error');
           Sentry.captureException(error);

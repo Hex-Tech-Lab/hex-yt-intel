@@ -1,6 +1,6 @@
 {
   "name": "youtube-intelligence-worker",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "Cloudflare Worker for YouTube metadata fetching",
   "type": "module",
   "main": "dist/worker.js",

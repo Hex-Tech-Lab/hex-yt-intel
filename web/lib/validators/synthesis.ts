@@ -27,7 +27,7 @@ export const UCISDimensionSchema = z.object({
   number: z.number().int().min(1).max(11),
   name: z.string().min(1).max(100),
   content: z.string().min(10),
-  metadata: DimensionMetadataSchema,
+  metadata: DimensionMetadataSchema.optional(),
 }).strict();
 
 /**

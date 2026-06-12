@@ -143,7 +143,7 @@ Transcripts up to 25 k chars get the 5 s floor; each additional 5 k block adds 1
 | Priority | Model |
 |---|---|
 | 1 (primary) | `anthropic/claude-haiku-4.5` |
-| 2 (fallback) | `anthropic/claude-3.5-haiku` |
+| 2 (fallback) | `anthropic/claude-haiku-4.5` |
 
 A `404 Not Found` response from the primary model triggers an automatic retry on the fallback. `401` / `403` / `429` / other non-2xx do **not** fall back — they surface immediately with their typed error.
 

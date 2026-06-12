@@ -52,7 +52,7 @@ DO $$ BEGIN
 
     -- Ensure model_used column exists (should already be from 20260516 migration)
     ALTER TABLE public.analyses
-    ADD COLUMN IF NOT EXISTS model_used VARCHAR(255) DEFAULT 'anthropic/claude-3.5-haiku';
+    ADD COLUMN IF NOT EXISTS model_used VARCHAR(255) DEFAULT 'anthropic/claude-haiku-4.5';
 
     -- Add vector column for semantic search (future embedding support)
     CREATE EXTENSION IF NOT EXISTS vector;
@@ -88,8 +88,8 @@ DO $$ BEGIN
 
     -- Set default values for required fields
     ALTER TABLE public.analyses
-    ALTER COLUMN model_attempted SET DEFAULT 'anthropic/claude-3.5-haiku',
-    ALTER COLUMN model_used SET DEFAULT 'anthropic/claude-3.5-haiku';
+    ALTER COLUMN model_attempted SET DEFAULT 'anthropic/claude-haiku-4.5',
+    ALTER COLUMN model_used SET DEFAULT 'anthropic/claude-haiku-4.5';
 
     RAISE NOTICE 'Analyses table: Missing columns + cascading delete + constraints + timestamptz applied';
   END IF;
