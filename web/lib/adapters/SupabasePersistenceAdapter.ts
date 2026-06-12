@@ -537,6 +537,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     role: 'user' | 'assistant';
     content: string;
     clientMsgId?: string | null;
+    parentMessageId?: string | null;
   }): Promise<ChatMessage> {
     try {
       const service = getSupabaseServiceClient();
@@ -548,8 +549,9 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
           role: params.role,
           content: params.content,
           client_msg_id: params.clientMsgId,
+          parent_message_id: params.parentMessageId,
         })
-        .select('id, conversation_id, role, content, created_at, client_msg_id')
+        .select('id, conversation_id, role, content, created_at, client_msg_id, parent_message_id')
         .single();
 
       if (error || !data) {
@@ -564,6 +566,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         content: data.content,
         createdAt: data.created_at,
         clientMsgId: data.client_msg_id ?? null,
+        parentMessageId: data.parent_message_id ?? null,
       };
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -582,7 +585,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('chat_messages')
-        .select('id, conversation_id, role, content, created_at, client_msg_id')
+        .select('id, conversation_id, role, content, created_at, client_msg_id, parent_message_id')
         .eq('conversation_id', params.conversationId)
         .eq('role', 'assistant')
         .gt('created_at', params.timestamp)
@@ -603,11 +606,51 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         content: data.content,
         createdAt: data.created_at,
         clientMsgId: data.client_msg_id ?? null,
+        parentMessageId: data.parent_message_id ?? null,
       };
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'findAssistantMessageAfter' },
         extra: { conversationId: params.conversationId, timestamp: params.timestamp },
+      });
+      throw error;
+    }
+  }
+
+  async findAssistantByParentId(params: {
+    conversationId: string;
+    parentId: string;
+  }): Promise<ChatMessage | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('chat_messages')
+        .select('id, conversation_id, role, content, created_at, client_msg_id, parent_message_id')
+        .eq('conversation_id', params.conversationId)
+        .eq('role', 'assistant')
+        .eq('parent_message_id', params.parentId)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] findAssistantByParentId failed:', error.message);
+        throw error;
+      }
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        conversationId: data.conversation_id,
+        role: data.role,
+        content: data.content,
+        createdAt: data.created_at,
+        clientMsgId: data.client_msg_id ?? null,
+        parentMessageId: data.parent_message_id ?? null,
+      };
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'findAssistantByParentId' },
+        extra: { conversationId: params.conversationId, parentId: params.parentId },
       });
       throw error;
     }

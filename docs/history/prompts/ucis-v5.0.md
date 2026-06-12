@@ -66,7 +66,7 @@ This is a valid, complete output. It is not a failure. It is the correct respons
 
 ### PERSONA HEADER (appears first)
 
-```
+```text
 === PERSONA CONFIGURATION ===
 Primary Persona:    [P1 Content Creator / P2 Indie Maker / P3 Consultant / P4 Researcher / P5 Product Manager] (Weight: 50%)
 Secondary Persona:  [...]  (Weight: 25%)
@@ -346,7 +346,7 @@ Extract from provided metadata JSON blob:
 
 ### Step 2 – Internal Insight Ranking (CRITICAL)
 Before writing output, rank every insight by:
-```
+```text
 Score = (Insight Density × Practical Utility × Speaker Emphasis × Novelty)
         ÷ (Effort to Apply × Risk of Misapplication)
 ```

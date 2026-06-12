@@ -2,7 +2,7 @@
 update public.app_settings
 set value = (
   replace(
-    replace(value::text, 'anthropic/claude-haiku-4.5', 'anthropic/claude-haiku-4.5'),
+    replace(value::text, 'anthropic/claude-3.5-haiku', 'anthropic/claude-haiku-4.5'),
     'anthropic/claude-3.5-sonnet',
     'anthropic/claude-sonnet-4.6:nitro'
   )

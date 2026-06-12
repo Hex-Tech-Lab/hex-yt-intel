@@ -31,12 +31,15 @@ BEGIN
 
   v_limit := CASE WHEN v_tier = 'free' THEN 3 ELSE 999999 END;
 
-  -- Count active analyses for this user this month
+  -- Count active analyses for this user this month (completed or processing younger than 15m)
   SELECT count(*) INTO v_count
   FROM public.analyses
   WHERE user_id = p_user_id
-    AND billing_status != 'failed'
-    AND created_at >= v_start_of_month;
+    AND created_at >= v_start_of_month
+    AND (
+      billing_status = 'completed'
+      OR (billing_status = 'processing' AND created_at >= now() - interval '15 minutes')
+    );
 
   IF v_count >= v_limit THEN
     RAISE EXCEPTION 'Monthly quota exhausted';

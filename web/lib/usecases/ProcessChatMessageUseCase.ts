@@ -155,9 +155,9 @@ export class ProcessChatMessageUseCase {
 
     // 5. If it's a retry and we already generated a reply, return it immediately without regening
     if (isRetry && userRow) {
-      const laterAssistant = await this.chatPersistence.findAssistantMessageAfter({
+      const laterAssistant = await this.chatPersistence.findAssistantByParentId({
         conversationId,
-        timestamp: userRow.createdAt,
+        parentId: userRow.id,
       });
       if (laterAssistant) {
         return {

@@ -58,6 +58,21 @@ export const ANALYSIS_CASCADE: readonly CascadeItem[] = [
 
 export const STANCE_CASCADE: readonly CascadeItem[] = ANALYSIS_CASCADE;
 
+const PRO_REASONING_CASCADE: readonly CascadeItem[] = [
+  {
+    model: 'openai/o3-mini',
+    name: 'o3-mini (OpenAI)',
+  },
+  {
+    model: 'google/gemini-1.5-pro',
+    name: 'Gemini 1.5 Pro',
+  },
+  {
+    model: 'anthropic/claude-3.5-sonnet',
+    name: 'Claude 3.5 Sonnet',
+  },
+];
+
 export const REASONING_CASCADE: Record<string, readonly CascadeItem[]> = {
   free: [
     {
@@ -65,33 +80,7 @@ export const REASONING_CASCADE: Record<string, readonly CascadeItem[]> = {
       name: 'Gemini 2.0 Flash',
     },
   ],
-  pro: [
-    {
-      model: 'openai/o3-mini',
-      name: 'o3-mini (OpenAI)',
-    },
-    {
-      model: 'google/gemini-1.5-pro',
-      name: 'Gemini 1.5 Pro',
-    },
-    {
-      model: 'anthropic/claude-3.5-sonnet',
-      name: 'Claude 3.5 Sonnet',
-    },
-  ],
-  enterprise: [
-    {
-      model: 'openai/o3-mini',
-      name: 'o3-mini (OpenAI)',
-    },
-    {
-      model: 'google/gemini-1.5-pro',
-      name: 'Gemini 1.5 Pro',
-    },
-    {
-      model: 'anthropic/claude-3.5-sonnet',
-      name: 'Claude 3.5 Sonnet',
-    },
-  ],
+  pro: PRO_REASONING_CASCADE,
+  enterprise: PRO_REASONING_CASCADE,
 };
 

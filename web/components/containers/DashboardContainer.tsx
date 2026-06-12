@@ -40,13 +40,19 @@ function cleanDimensionContent(raw: string): string {
 }
 
 export function DashboardContainer({ profile }: DashboardContainerProps) {
-  const store = useAnalysisStore();
+  const setUserRole = useAnalysisStore((s) => s.setUserRole);
+  const status = useAnalysisStore((s) => s.status);
+  const analysisHistory = useAnalysisStore((s) => s.analysisHistory);
+  const analysis = useAnalysisStore((s) => s.analysis);
+  const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
+  const error = useAnalysisStore((s) => s.error);
+
   const { url, setUrl } = useInputStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    store.setUserRole(profile.role);
-  }, [profile.role, store.setUserRole]);
+    setUserRole(profile.role);
+  }, [profile.role, setUserRole]);
 
   useEffect(() => {
     setMounted(true);
@@ -54,7 +60,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { startAnalysis } = useSSEStream();
   const nucleus = useSynthesisNucleus();
   const { graph } = useKnowledgeGraph(nucleus.analysis?.id);
-  const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, store.status === 'complete');
+  const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, status === 'complete');
   const [search, setSearch] = useState('');
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -188,7 +194,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     profile.monthlyLimit === null
       ? `${profile.analysesUsed} analyses · Unlimited`
       : `${profile.analysesUsed} / ${profile.monthlyLimit} monthly analyses`;
-  const historyBadge = store.analysisHistory.length > 0 ? String(store.analysisHistory.length) : undefined;
+  const historyBadge = analysisHistory.length > 0 ? String(analysisHistory.length) : undefined;
 
   const getUserTimezone = (): string => {
     try {
@@ -213,7 +219,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     if (format === 'pdf') {
       window.open(`/api/analyses/${nucleus.analysis.id}/export?format=pdf&scope=full`, '_blank');
     } else {
-      const content = store.analysis?.analysis_markdown || '';
+      const content = analysis?.analysis_markdown || '';
       const blob = new Blob([content], { type: 'text/markdown' });
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -224,7 +230,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
     }
-  }, [nucleus.analysis?.id, nucleus.analysis?.title, store.analysis?.analysis_markdown]);
+  }, [nucleus.analysis?.id, nucleus.analysis?.title, analysis?.analysis_markdown]);
 
   const sidebarItems: SidebarItem[] = useMemo(() => [
     { key: 'console', label: 'Synthesis Console', icon: 'solar:graph-up-linear' },
@@ -270,11 +276,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     return nucleus.projection.visibleDimensions.map((dim) => {
       const isPending = nucleus.projection?.pendingDimensions.has(dim.number);
       let dimStatus: 'idle' | 'streaming' | 'done' | 'error' = 'idle';
-      if (store.status === 'complete') {
+      if (status === 'complete') {
         dimStatus = isPending ? 'idle' : 'done';
-      } else if (store.status === 'analyzing' || store.status === 'downloading') {
+      } else if (status === 'analyzing' || status === 'downloading') {
         dimStatus = isPending ? 'idle' : 'streaming';
-      } else if (store.status === 'error') {
+      } else if (status === 'error') {
         dimStatus = 'error';
       }
 
@@ -287,7 +293,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         span: (DIMENSION_SPANS[dim.number] || 1) as 1 | 2 | 3,
       };
     });
-  }, [nucleus.projection, store.status]);
+  }, [nucleus.projection, status]);
 
   return (
     <>
@@ -310,36 +316,36 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         />
       }
       rightPanel={
-        store.status !== 'idle' ? (
+        status !== 'idle' ? (
           <RightPanelAccordion items={rightPanelItems} />
         ) : undefined
       }
-      dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={store.videoMetadata?.title} />}
+      dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
         <div className="flex flex-col gap-8 pb-4">
           <AnalysisHero
             url={mounted ? url : ''}
-            status={store.status === 'analyzing' || store.status === 'downloading' ? 'streaming' : store.status === 'complete' ? 'done' : store.status === 'error' ? 'error' : 'idle'}
+            status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
             onUrlChange={setUrl}
             onAnalyze={handleAnalyze}
             onReanalyze={handleReanalyze}
-            error={store.error?.message}
+            error={error?.message}
             quota={quotaLabel}
           />
 
-          {store.videoMetadata && (
+          {videoMetadata && (
             <BentoMetadata
-              title={store.videoMetadata.title}
-              channelTitle={store.videoMetadata.channelTitle}
-              viewCount={store.videoMetadata.viewCount}
-              likeCount={store.videoMetadata.likeCount}
-              duration={store.videoMetadata.duration || 0}
-              publishedAt={store.videoMetadata.publishedAt}
+              title={videoMetadata.title}
+              channelTitle={videoMetadata.channelTitle}
+              viewCount={videoMetadata.viewCount}
+              likeCount={videoMetadata.likeCount}
+              duration={videoMetadata.duration || 0}
+              publishedAt={videoMetadata.publishedAt}
             />
           )}
 
-          {store.status !== 'idle' && (
+          {status !== 'idle' && (
             <div className="flex flex-col gap-8">
               {/* Tab bar: Synthesis grid vs. Knowledge Graph */}
               <div className="flex gap-1 p-1 rounded-xl border border-[var(--line)] bg-[rgb(11_14_20_/_0.5)] self-start">
@@ -368,7 +374,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
               {consoleTab === 'synthesis' ? (
                 <>
-                  {store.status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
+                  {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
                   
                   {dimensions.length > 0 && (
                     <ApexSummaryCard dimension={dimensions[0]!} />
@@ -377,14 +383,14 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   {dimensions.length > 1 ? (
                     <StreamingGrid
                       dimensions={dimensions.slice(1)}
-                      progress={store.status === 'analyzing' ? 'Processing...' : store.status === 'complete' ? '100% complete' : undefined}
+                      progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
                       onOpenDimension={(key) => setSelectedDimensionKey(key)}
                     />
                   ) : dimensions.length === 0 && (
                     <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
-                      {store.status === 'complete' ? (
+                      {status === 'complete' ? (
                         <p className="text-[var(--ink-secondary)] font-mono text-sm">No synthesis dimensions were produced for this analysis.</p>
-                      ) : store.status === 'error' ? (
+                      ) : status === 'error' ? (
                         <p className="text-[var(--danger,#ef4444)] font-mono text-sm">Synthesis failed — see the log below.</p>
                       ) : (
                         <>

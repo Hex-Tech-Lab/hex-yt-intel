@@ -25,4 +25,6 @@ export interface ChatMessage {
   createdAt: string;
   /** Client idempotency key (user messages only); lets the outbox reconcile retries. */
   clientMsgId?: string | null;
+  /** Stable parent identifier mapping assistant replies to user messages. */
+  parentMessageId?: string | null;
 }

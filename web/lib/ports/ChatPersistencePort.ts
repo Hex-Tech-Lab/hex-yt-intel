@@ -33,11 +33,17 @@ export interface ChatPersistencePort {
     role: 'user' | 'assistant';
     content: string;
     clientMsgId?: string | null;
+    parentMessageId?: string | null;
   }): Promise<ChatMessage>;
 
   findAssistantMessageAfter(params: {
     conversationId: string;
     timestamp: string;
+  }): Promise<ChatMessage | null>;
+
+  findAssistantByParentId(params: {
+    conversationId: string;
+    parentId: string;
   }): Promise<ChatMessage | null>;
 
   getAnalysisGrounding(params: {

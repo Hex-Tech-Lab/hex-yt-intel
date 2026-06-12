@@ -18,6 +18,9 @@ type ChatEnv = {
   STREAM_HMAC_SECRET: string;
   OPENROUTER_API_KEY: string;
   APP_URL?: string;
+  ALLOWED_APP_ORIGINS?: string;
+  NODE_ENV?: string;
+  DEV_HMAC_SECRET?: string;
 };
 
 interface ChatStreamRequest {
@@ -54,6 +57,52 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
+}
+
+function isValidAppUrl(
+  urlStr: string | undefined,
+  envAppUrl: string | undefined,
+  allowedOrigins?: string,
+  isProd?: boolean
+): boolean {
+  if (!urlStr) return true;
+
+  try {
+    const parsedUrl = new URL(urlStr);
+    const origin = parsedUrl.origin.toLowerCase();
+
+    // 1. If it matches envAppUrl's origin, it's safe
+    if (envAppUrl) {
+      const parsedEnv = new URL(envAppUrl);
+      if (origin === parsedEnv.origin.toLowerCase()) {
+        return true;
+      }
+    }
+
+    // 2. Check explicitly allowed origins from env
+    if (allowedOrigins) {
+      const list = allowedOrigins.split(",").map((o) => o.trim().toLowerCase());
+      if (list.includes(origin)) {
+        return true;
+      }
+    }
+
+    // 3. For non-production/preview environments, allow localhost and vercel preview domains
+    if (!isProd) {
+      const hostname = parsedUrl.hostname.toLowerCase();
+      if (
+        hostname === "localhost" ||
+        hostname === "127.0.0.1" ||
+        hostname.endsWith(".vercel.app")
+      ) {
+        return true;
+      }
+    }
+  } catch (e) {
+    return false;
+  }
+
+  return false;
 }
 
 /** Run the chat cascade, committing to the first model that produces tokens. The model
@@ -155,6 +204,10 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
 
   if (!req.conversationId || !req.userId || !req.sig || !req.exp) {
     return c.json({ error: "Missing required fields" }, 400);
+  }
+  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, c.env.NODE_ENV === "production")) {
+    console.warn("[chat-stream] Blocked untrusted appUrl callback redirect:", req.appUrl);
+    return c.json({ error: "Invalid appUrl callback destination" }, 400);
   }
   if (!secret || !apiKey) {
     console.error("[chat-stream] Server misconfigured: missing STREAM_HMAC_SECRET or OPENROUTER_API_KEY");
