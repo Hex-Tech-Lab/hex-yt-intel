@@ -23,6 +23,7 @@ import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
+import { VideoPlayerCard } from '@/components/templates/console/VideoPlayerCard';
 
 // See /docs/ui/dashboard-container.md
 
@@ -66,6 +67,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
+  const [showVideoRunner, setShowVideoRunner] = useState(false);
 
   // Define Right Panel Accordion Items
   const rightPanelItems = useMemo(() => [
@@ -206,6 +208,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const handleAnalyze = useCallback(async () => {
     if (!url) return;
+    setShowVideoRunner(true);
     await startAnalysis(url, getUserTimezone());
   }, [url, startAnalysis]);
 
@@ -297,9 +300,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   return (
     <>
-    <DashboardLayout
-      sidebar={
-        <Sidebar
+      {showVideoRunner && (
+        <VideoPlayerCard onClose={() => setShowVideoRunner(false)} />
+      )}
+      <DashboardLayout
+        sidebar={
+          <Sidebar
           items={sidebarItems}
           activeKey={activeNav}
           onNavigate={(key) => setActiveNav(key as 'console' | 'history' | 'settings')}

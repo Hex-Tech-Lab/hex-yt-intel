@@ -16,6 +16,7 @@ export interface AnalysisMetadata {
 }
 
 export interface VideoMetadata {
+  videoId: string;
   title: string;
   channelTitle: string;
   channelId: string;
