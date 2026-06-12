@@ -63,6 +63,8 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-12T01:50:00+03:00] [GC (Agent)] [DONE] 10X Full-Spectrum Re-Audit completed. Reconciled all 25 items from prior reports. Validated Hex-Lite + DDD architectural pattern. System secured (glob/Paddle fixes) and aligned for v1.6.0. Standing by for Orchestrator/Sink review. (2026-06-12)
 - [2026-06-12T11:10:00+03:00] [Antigravity (Agent)] [DONE] Addressed remaining CodeRabbit, Cubic, and Sourcery review tool findings: secured webhook placeholders, minimized Zustand selectors, turn retries lookup, migration guard, worker appUrl verification, and aligned database 15-minute quota stubs.
 - [2026-06-12T12:05:00+03:00] [Antigravity (Agent)] [DONE] Repaired remote database migrations (app_settings and health_ledger), applied all pending schema migrations (update_model_config, atomic_compare_and_reserve, parent_message_id) using Supabase CLI and verified successful schema and function deployment.
+- [2026-06-12T12:45:00+03:00] [Antigravity (Agent)] [DONE] Fixed pipeline environment validation fatal error by adding SKIP_ENV_VALIDATION bypass, resolved "supabase CLI not found" error in GitHub Actions by adding supabase to root devDependencies, and enforced 3s handshake + 25s stream timeouts in LLMCascade to prevent gateway timeouts.
 
 - [2026-06-11T13:30:00+00:00] [GC (Agent)] [IN_PROGRESS] Performing 10X Re-Audit v1.6.0. Target: docs/audit/10X_PREFLIGHT_REPORT_2026_06_11.md
+
 

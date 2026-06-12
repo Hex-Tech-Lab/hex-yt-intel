@@ -79,7 +79,7 @@ export class LLMCascade implements LLMCascadePort {
           finalText += delta;
           onDelta(delta);
         },
-        90000,
+        25000,
         signal,
         providerOrder as string[] | undefined
       );
@@ -140,15 +140,15 @@ export class LLMCascade implements LLMCascadePort {
     model: string,
     systemPrompt: string,
     onDelta: (text: string) => void,
-    timeoutMs = 90000,
+    timeoutMs = 25000,
     signal?: AbortSignal,
     providerOrder?: string[]
   ): Promise<{ started: boolean; text: string; error?: string }> {
     const controller = new AbortController();
     const handshakeTimer = setTimeout(() => {
-      console.warn(`[LLMCascade] Handshake timeout (15s exceeded) for model ${model}`);
+      console.warn(`[LLMCascade] Handshake timeout (3s exceeded) for model ${model}`);
       controller.abort();
-    }, 15000);
+    }, 3000);
     const totalTimer = setTimeout(() => {
       console.warn(`[LLMCascade] Total execution timeout (${timeoutMs}ms exceeded) for model ${model}`);
       controller.abort();

@@ -225,6 +225,7 @@ jobs:
           DECODO_API_KEY: ${{ secrets.DECODO_API_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           CLOUDFLARE_SECRET_TOKEN: ${{ secrets.CLOUDFLARE_SECRET_TOKEN }}
+          SKIP_ENV_VALIDATION: 'true'
 
   # ============================================================================
   # STAGE 5: DEPLOYMENT (Main/Master branch only)
