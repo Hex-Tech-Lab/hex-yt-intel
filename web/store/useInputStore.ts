@@ -28,7 +28,7 @@ export const useInputStore = create<InputState>()(
     }),
     {
       name: 'hex_intel_saved_input',
-      storage: createJSONStorage(() => localStorage), // Persist across sessions
+      storage: createJSONStorage(() => (typeof window !== 'undefined' ? localStorage : ({} as any))), // Persist across sessions
     }
   )
 );
