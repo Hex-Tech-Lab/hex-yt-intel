@@ -7,9 +7,6 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { ProcessingLog } from './ProcessingLog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useInputStore } from '@/store/useInputStore';
-import { extractVideoId } from '@/lib/youtube';
-import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
 
 export interface ChatDockProps {
@@ -34,8 +31,6 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
   } = useChatStore();
   const analysisStore = useAnalysisStore();
-  const { url, isValid } = useInputStore();
-  const nucleusAnalysis = useSynthesisNucleus((state) => state.analysis);
 
   const logStatus = analysisStore.status;
   const showLog = logStatus !== 'idle' && analysisStore.terminalLines.length > 0;
@@ -58,40 +53,6 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   }, []);
 
   useEffect(() => {
-    if (!isValid) {
-      if (!url) {
-        const state = useChatStore.getState();
-        const activeConv = state.conversations.find((c) => c.id === state.activeId);
-        if (activeConv && activeConv.analysisId) {
-          const generalConv = state.conversations.find((c) => !c.analysisId);
-          if (generalConv) {
-            void selectConversation(generalConv.id);
-          } else {
-            useChatStore.setState({ activeId: null });
-          }
-        }
-      }
-      return;
-    }
-
-    const inputVideoId = extractVideoId(url);
-    const loadedVideoId = nucleusAnalysis?.videoId || null;
-
-    if (isValid && inputVideoId && inputVideoId !== 'unknown' && inputVideoId !== loadedVideoId) {
-      const state = useChatStore.getState();
-      const activeConv = state.conversations.find((c) => c.id === state.activeId);
-      if (activeConv && activeConv.analysisId) {
-        const generalConv = state.conversations.find((c) => !c.analysisId);
-        if (generalConv) {
-          void selectConversation(generalConv.id);
-        } else {
-          useChatStore.setState({ activeId: null });
-        }
-      }
-    }
-  }, [url, isValid, nucleusAnalysis?.videoId, selectConversation]);
-
-  useEffect(() => {
     try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* noop */ }
     if (!open) {
       setShowThreads(false);
@@ -104,16 +65,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       if (cancelled) return;
       requestAnimationFrame(() => inputRef.current?.focus());
 
-      const currentVideoId = extractVideoId(url);
-      const isMatchingAnalysis =
-        isValid &&
-        nucleusAnalysis &&
-        nucleusAnalysis.id === analysisId &&
-        currentVideoId &&
-        currentVideoId !== 'unknown' &&
-        currentVideoId === nucleusAnalysis.videoId;
-
-      if (analysisId && isMatchingAnalysis) {
+      if (analysisId) {
         const state = useChatStore.getState();
         const existing = state.conversations.find((c) => c.analysisId === analysisId);
         if (existing) {
@@ -151,7 +103,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     return () => {
       cancelled = true;
     };
-  }, [open, analysisId, url, isValid, nucleusAnalysis, loadConversations, selectConversation, newConversation]);
+  }, [open, analysisId, loadConversations, selectConversation, newConversation]);
 
   useEffect(() => {
     if (open && activeId) void selectConversation(activeId);

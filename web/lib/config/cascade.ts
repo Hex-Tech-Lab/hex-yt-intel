@@ -39,19 +39,19 @@ export const CHAT_CASCADE: readonly CascadeItem[] = [
 
 export const ANALYSIS_CASCADE: readonly CascadeItem[] = [
   {
-    model: 'anthropic/claude-haiku-4.5',
-    name: 'Claude Haiku 4.5',
+    model: 'anthropic/claude-3.5-haiku',
+    name: 'Claude 3.5 Haiku',
     cost: 0.0015,
   },
   {
-    model: 'anthropic/claude-haiku-4.5',
-    name: 'Claude Haiku 4.5 (Alternate Route)',
+    model: 'anthropic/claude-3.5-haiku',
+    name: 'Claude 3.5 Haiku (Alternate Route)',
     cost: 0.0015,
     providerOrder: ['google-vertex', 'amazon-bedrock'],
   },
   {
-    model: 'anthropic/claude-sonnet-4.6:nitro',
-    name: 'Claude Sonnet 4.6 (Nitro)',
+    model: 'anthropic/claude-3.5-sonnet',
+    name: 'Claude 3.5 Sonnet',
     cost: 0.003,
   },
 ] as const;
