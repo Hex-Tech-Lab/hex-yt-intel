@@ -73,3 +73,6 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 - [2026-06-11T13:45:00+00:00] [GC (Agent)] [IN_PROGRESS] Fixing OpenRouter cascade timeout/model names and ChatDock session coupling, running Cubic review, and merging PR.
 - [2026-06-11T13:50:00+00:00] [GC (Agent)] [DONE] Fixing OpenRouter cascade timeout/model names and ChatDock session coupling, running Cubic review, and merging PR.
+- [2026-06-11T14:15:00+00:00] [GC (Agent)] [IN_PROGRESS] Performing RCA on visualization component rendering failure (knowledge graph, word cloud, mind map). Target: web/components/templates/console/DashboardContainer.tsx, web/hooks/useKnowledgeGraph.ts, web/app/api/analyses/[id]/graph/route.ts
+- [2026-06-11T14:35:00+00:00] [GC (Agent)] [IN_PROGRESS] Performing RCA on data ingestion pipeline for Knowledge Graph (kg_entities/kg_relations). Target: worker/src/services/ReasoningEngine.ts, web/lib/adapters/SupabasePersistenceAdapter.ts
+- [2026-06-11T14:45:00+00:00] [GC (Agent)] [IN_PROGRESS] Refactoring video player: dock to center column, replace headline, add YT controls + multi-point seek. Target: web/components/templates/console/DashboardContainer.tsx, web/components/templates/console/VideoPlayerCard.tsx, web/store/useVideoStore.ts
