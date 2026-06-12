@@ -335,6 +335,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
   }
 
   async getConversations(userId: string): Promise<ChatConversation[]> {
+    if (!userId) return [];
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
@@ -465,6 +466,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
   async getMessages(params: {
     conversationId: string;
   }): Promise<ChatMessage[]> {
+    if (!params.conversationId) return [];
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
