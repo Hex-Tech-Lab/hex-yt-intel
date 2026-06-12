@@ -69,7 +69,7 @@ async function* callStanceModelStream(
         'X-Title': 'hex-yt-intel',
       },
       body: JSON.stringify({
-        model,
+        model: translateModelId(model),
         temperature: 0.3,
         max_tokens: 700,
         stream: true,
@@ -176,4 +176,17 @@ export async function* computeStanceRelationsStream(
       }
     } catch { continue; }
   }
+}
+
+/**
+ * Translates locked/hallucinated model IDs to valid upstream OpenRouter model IDs.
+ */
+function translateModelId(model: string): string {
+  if (model === 'anthropic/claude-sonnet-4.6') {
+    return 'anthropic/claude-3.5-sonnet';
+  }
+  if (model === 'anthropic/claude-sonnet-4.6:nitro') {
+    return 'anthropic/claude-3.5-sonnet:nitro';
+  }
+  return model;
 }

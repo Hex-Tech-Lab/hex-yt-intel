@@ -275,12 +275,24 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     };
 
     return nucleus.projection.visibleDimensions.map((dim) => {
-      const isPending = nucleus.projection?.pendingDimensions.has(dim.number);
       let dimStatus: 'idle' | 'streaming' | 'done' | 'error' = 'idle';
+      
+      const receivedList = nucleus.analysis?.streaming.dimensionsReceived || [];
+      const isReceived = receivedList.includes(dim.number);
+
       if (status === 'complete') {
-        dimStatus = isPending ? 'idle' : 'done';
+        dimStatus = isReceived ? 'done' : 'idle';
       } else if (status === 'analyzing' || status === 'downloading') {
-        dimStatus = isPending ? 'idle' : 'streaming';
+        if (!isReceived) {
+          dimStatus = 'idle';
+        } else {
+          const maxReceived = receivedList.length > 0 ? Math.max(...receivedList) : 0;
+          if (dim.number === maxReceived) {
+            dimStatus = 'streaming';
+          } else {
+            dimStatus = 'done';
+          }
+        }
       } else if (status === 'error') {
         dimStatus = 'error';
       }

@@ -166,6 +166,13 @@ export class LLMCascade implements LLMCascadePort {
       signal.addEventListener('abort', onAbort);
     }
 
+    const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
+    const requestModel = translateModelId(model);
+    const requestMaxTokens = isHaiku45 ? 8192 : 16000;
+    const requestProvider = isHaiku45
+      ? { order: ['Amazon', 'Anthropic', 'Google'], allow_fallbacks: false }
+      : (providerOrder ? { order: providerOrder, allow_fallbacks: true } : undefined);
+
     try {
       const response = await fetch(OPENROUTER_URL, {
         method: 'POST',
@@ -176,9 +183,9 @@ export class LLMCascade implements LLMCascadePort {
           'X-Title': 'Hex YT Intel',
         },
         body: JSON.stringify({
-          model,
+          model: requestModel,
           temperature: 1,
-          max_tokens: 16000,
+          max_tokens: requestMaxTokens,
           stream: true,
           // The system prompt (getUCISPrompt) already embeds the metadata + transcript
           // in its ACTIVE ANALYSIS SESSION block. Re-sending them here made the model
@@ -192,14 +199,7 @@ export class LLMCascade implements LLMCascadePort {
                 'Begin the analysis now. Output only the structured UCIS v5.1 report starting at "### DIMENSION 1". Do not echo the metadata, transcript, or framework instructions.',
             },
           ],
-          ...(providerOrder
-            ? {
-                provider: {
-                  order: providerOrder,
-                  allow_fallbacks: true,
-                },
-              }
-            : {}),
+          ...(requestProvider ? { provider: requestProvider } : {}),
         }),
         signal: controller.signal,
       });
@@ -280,6 +280,13 @@ export class LLMCascade implements LLMCascadePort {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
+    const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
+    const requestModel = translateModelId(model);
+    const requestMaxTokens = isHaiku45 ? 8192 : 16000;
+    const requestProvider = isHaiku45
+      ? { order: ['Amazon', 'Anthropic', 'Google'], allow_fallbacks: false }
+      : (providerOrder ? { order: providerOrder, allow_fallbacks: true } : undefined);
+
     try {
       const response = await fetch(OPENROUTER_URL, {
         method: 'POST',
@@ -290,12 +297,9 @@ export class LLMCascade implements LLMCascadePort {
           'X-Title': 'Hex YT Intel',
         },
         body: JSON.stringify({
-          model,
+          model: requestModel,
           temperature: 1,
-          // 16000 (not lower): nemotron-3-nano is a REASONING model that spends
-          // ~4000 tokens on reasoning before the answer. An 8000 cap truncated the
-          // 11-dimension output mid-stream and failed validation.
-          max_tokens: 16000,
+          max_tokens: requestMaxTokens,
           messages: [
             { role: 'system', content: systemPrompt },
             {
@@ -303,22 +307,15 @@ export class LLMCascade implements LLMCascadePort {
               content: `Analyze the following YouTube video transcript and metadata using the UCIS v5.1 framework.
 
  **Metadata**:
- ${JSON.stringify(metadata, null, 2)}
+  ${JSON.stringify(metadata, null, 2)}
 
  **Transcript**:
- ${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated...]' : ''}
+  ${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated...]' : ''}
 
  Generate the complete 11-dimension analysis.`,
             },
           ],
-          ...(providerOrder
-            ? {
-                provider: {
-                  order: providerOrder,
-                  allow_fallbacks: true,
-                },
-              }
-            : {}),
+          ...(requestProvider ? { provider: requestProvider } : {}),
         }),
         signal: controller.signal,
       });
@@ -405,5 +402,18 @@ function classifyError(errorMsg: string): string {
     return 'ERR_CONNECTION_TIMEOUT';
   }
   return 'ERR_INTERNAL_PROVIDER_FAULT';
+}
+
+/**
+ * Translates locked/hallucinated model IDs to valid upstream OpenRouter model IDs.
+ */
+function translateModelId(model: string): string {
+  if (model === 'anthropic/claude-sonnet-4.6') {
+    return 'anthropic/claude-3.5-sonnet';
+  }
+  if (model === 'anthropic/claude-sonnet-4.6:nitro') {
+    return 'anthropic/claude-3.5-sonnet:nitro';
+  }
+  return model;
 }
 

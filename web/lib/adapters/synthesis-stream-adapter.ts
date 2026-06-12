@@ -35,9 +35,54 @@ export class SynthesisStreamAdapter {
   private synthStore = useSynthesisNucleus;
   private analysisStore = useAnalysisStore;
   private options: StreamAdapterOptions;
+  private rawSink: string = '';
 
   constructor(options: StreamAdapterOptions = {}) {
     this.options = options;
+  }
+
+  private healJson(text: string): string | null {
+    const stack: string[] = [];
+    let inStr = false;
+    let esc = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (esc) {
+        esc = false;
+        continue;
+      }
+      if (char === '\\' && inStr) {
+        esc = true;
+        continue;
+      }
+      if (char === '"') {
+        inStr = !inStr;
+        continue;
+      }
+      if (inStr) continue;
+
+      if (char === '{' || char === '[') {
+        stack.push(char === '{' ? '}' : ']');
+      } else if (char === '}' || char === ']') {
+        stack.pop();
+      }
+    }
+
+    let healed = text;
+    if (inStr) healed += '"';
+    healed = healed.replace(/,\s*$/, '').trim();
+    while (stack.length > 0) {
+      const closer = stack.pop();
+      if (closer) healed += closer;
+    }
+
+    try {
+      JSON.parse(healed);
+      return healed;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -192,6 +237,49 @@ export class SynthesisStreamAdapter {
     const store = this.analysisStore.getState();
     store.appendMarkdown(fragment.content);
     console.debug('[Adapter] Delta received:', fragment.content.slice(0, 100));
+
+    // Progressive JSON Parsing (Dual-Accumulator Pattern)
+    this.rawSink += fragment.content;
+    const healed = this.healJson(this.rawSink);
+    if (healed) {
+      try {
+        const obj = JSON.parse(healed);
+        if (obj && obj.schemaVersion === '2.0') {
+          if (obj.persona) {
+            this.synthStore.getState().setPersonaConfig(obj.persona);
+          }
+          if (Array.isArray(obj.dimensions)) {
+            for (const dim of obj.dimensions) {
+              if (
+                dim &&
+                typeof dim.number === 'number' &&
+                dim.number >= 1 &&
+                dim.number <= 11 &&
+                typeof dim.content === 'string'
+              ) {
+                this.synthStore.getState().addDimension({
+                  number: dim.number,
+                  name: dim.name || `Dimension ${dim.number}`,
+                  content: dim.content,
+                });
+              }
+            }
+          }
+          if (obj.knowledgeGraph && Array.isArray(obj.knowledgeGraph.nodes)) {
+            this.synthStore.getState().setKnowledgeGraph({
+              nodes: obj.knowledgeGraph.nodes,
+              edges: obj.knowledgeGraph.edges || [],
+              rootId: obj.knowledgeGraph.rootId ?? null,
+            });
+          }
+          if (obj.classification) {
+            this.synthStore.getState().setClassification(obj.classification);
+          }
+        }
+      } catch {
+        // Silent catch for incomplete JSON
+      }
+    }
   }
 
   /**
@@ -326,6 +414,7 @@ export class SynthesisStreamAdapter {
    * Reset adapter state for new stream
    */
   reset() {
+    this.rawSink = '';
     this.synthStore.getState().reset();
     this.analysisStore.getState().clearTerminal();
   }

@@ -144,7 +144,7 @@ async function streamChatCascade(
           "HTTP-Referer": HTTP_REFERER,
         },
         body: JSON.stringify({
-          model,
+          model: translateModelId(model),
           temperature: 0.6,
           max_tokens: 1200,
           stream: true,
@@ -298,4 +298,17 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       "X-Accel-Buffering": "no",
     },
   });
+}
+
+/**
+ * Translates locked/hallucinated model IDs to valid upstream OpenRouter model IDs.
+ */
+function translateModelId(model: string): string {
+  if (model === 'anthropic/claude-sonnet-4.6') {
+    return 'anthropic/claude-3.5-sonnet';
+  }
+  if (model === 'anthropic/claude-sonnet-4.6:nitro') {
+    return 'anthropic/claude-3.5-sonnet:nitro';
+  }
+  return model;
 }

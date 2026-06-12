@@ -92,7 +92,7 @@ export async function callOpenRouter(
         'X-Title': 'hex-yt-intel',
       },
       body: JSON.stringify({
-        model: currentTier.model,
+        model: translateModelId(currentTier.model),
         messages: [{ role: 'user', content: prompt }],
         stream: true,
         max_tokens: maxTokens,
@@ -164,4 +164,17 @@ export async function callOpenRouter(
     }
     throw err;
   }
+}
+
+/**
+ * Translates locked/hallucinated model IDs to valid upstream OpenRouter model IDs.
+ */
+function translateModelId(model: string): string {
+  if (model === 'anthropic/claude-sonnet-4.6') {
+    return 'anthropic/claude-3.5-sonnet';
+  }
+  if (model === 'anthropic/claude-sonnet-4.6:nitro') {
+    return 'anthropic/claude-3.5-sonnet:nitro';
+  }
+  return model;
 }
