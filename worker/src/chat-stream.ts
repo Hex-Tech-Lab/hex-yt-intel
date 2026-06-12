@@ -88,13 +88,14 @@ function isValidAppUrl(
       }
     }
 
-    // 3. For non-production/preview environments, OR if it's a vercel preview domain, allow
+    // 3. For non-production/preview environments, OR if it's a vercel preview domain, OR it's the prod domain, allow
     const hostname = parsedUrl.hostname.toLowerCase();
-    if (!isProd || hostname.endsWith(".vercel.app")) {
+    if (!isProd || hostname.endsWith(".vercel.app") || hostname === "yt-intel.getmytestdrive.com") {
       if (
         hostname === "localhost" ||
         hostname === "127.0.0.1" ||
-        hostname.endsWith(".vercel.app")
+        hostname.endsWith(".vercel.app") ||
+        hostname === "yt-intel.getmytestdrive.com"
       ) {
         return true;
       }
