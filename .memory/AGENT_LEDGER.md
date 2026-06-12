@@ -65,6 +65,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-12T12:05:00+03:00] [Antigravity (Agent)] [DONE] Repaired remote database migrations (app_settings and health_ledger), applied all pending schema migrations (update_model_config, atomic_compare_and_reserve, parent_message_id) using Supabase CLI and verified successful schema and function deployment.
 - [2026-06-12T12:45:00+03:00] [Antigravity (Agent)] [DONE] Fixed pipeline environment validation fatal error by adding SKIP_ENV_VALIDATION bypass, resolved "supabase CLI not found" error in GitHub Actions by adding supabase to root devDependencies, and enforced 3s handshake + 25s stream timeouts in LLMCascade to prevent gateway timeouts.
 - [2026-06-12T13:10:00+03:00] [Antigravity (Agent)] [DONE] Propagated rawError detail from LLMCascade through ReasoningEngine stream status events to client-side SynthesisStreamAdapter logs to ensure exact RCA visibility on model failure without assumptions.
+- [2026-06-12T13:16:00+03:00] [Antigravity (Agent)] [DONE] Restored generous timeouts (15s handshake / 120s total stream) in LLMCascade since direct browser-to-worker SSE connections are immune to Vercel's Serverless 60s cap. This allows full processing of long (1-5h) video transcripts without early aborts.
 
 - [2026-06-11T13:30:00+00:00] [GC (Agent)] [IN_PROGRESS] Performing 10X Re-Audit v1.6.0. Target: docs/audit/10X_PREFLIGHT_REPORT_2026_06_11.md
 
