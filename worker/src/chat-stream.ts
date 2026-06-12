@@ -88,9 +88,9 @@ function isValidAppUrl(
       }
     }
 
-    // 3. For non-production/preview environments, allow localhost and vercel preview domains
-    if (!isProd) {
-      const hostname = parsedUrl.hostname.toLowerCase();
+    // 3. For non-production/preview environments, OR if it's a vercel preview domain, allow
+    const hostname = parsedUrl.hostname.toLowerCase();
+    if (!isProd || hostname.endsWith(".vercel.app")) {
       if (
         hostname === "localhost" ||
         hostname === "127.0.0.1" ||

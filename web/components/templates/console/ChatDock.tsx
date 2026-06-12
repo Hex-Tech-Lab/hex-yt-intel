@@ -49,7 +49,10 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   useEffect(() => { bindNetwork(); }, [bindNetwork]);
 
   useEffect(() => {
-    try { if (localStorage.getItem(OPEN_KEY) === '1') setOpen(true); } catch { /* noop */ }
+    try {
+      const savedOpen = localStorage.getItem(OPEN_KEY);
+      if (savedOpen === '1') setOpen(true);
+    } catch { /* noop */ }
   }, []);
 
   useEffect(() => {
@@ -65,8 +68,10 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       if (cancelled) return;
       requestAnimationFrame(() => inputRef.current?.focus());
 
+      const state = useChatStore.getState();
+      
+      // If we have an analysis, try to ground in that thread
       if (analysisId) {
-        const state = useChatStore.getState();
         const existing = state.conversations.find((c) => c.analysisId === analysisId);
         if (existing) {
           if (state.activeId !== existing.id) {
@@ -76,11 +81,9 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
           await newConversation({ analysisId });
         }
       } else {
-        const state = useChatStore.getState();
+        // If no analysis context, ensure we don't have a stale grounded conversation
         const activeConv = state.conversations.find((c) => c.id === state.activeId);
         if (activeConv && activeConv.analysisId) {
-          // If current conversation is bound to a video but analysis is now null,
-          // switch to a general conversation (where analysisId is null/falsy) or deselect.
           const generalConv = state.conversations.find((c) => !c.analysisId);
           if (generalConv) {
             await selectConversation(generalConv.id);
