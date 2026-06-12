@@ -192,6 +192,7 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion('type', [
     model: z.string().optional(),
     from: z.string().optional(),
     error: z.string().optional(),
+    rawError: z.string().optional(),
   }).strict(),
 
   z.object({
