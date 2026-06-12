@@ -7,6 +7,7 @@ import { getUCISPrompt } from '@/lib/prompts/factory';
 import type { PersonaId } from '@/lib/prompts';
 import type { VideoMetadata } from '@/lib/types';
 import { ANALYSIS_CASCADE } from '@/lib/config/cascade';
+import { translateModelId } from '@/lib/utils/model-id-translator';
 
 export class AnalysisEngineError extends Error {
   code: string;
@@ -166,15 +167,4 @@ export async function callOpenRouter(
   }
 }
 
-/**
- * Translates locked/hallucinated model IDs to valid upstream OpenRouter model IDs.
- */
-function translateModelId(model: string): string {
-  if (model === 'anthropic/claude-sonnet-4.6') {
-    return 'anthropic/claude-3.5-sonnet';
-  }
-  if (model === 'anthropic/claude-sonnet-4.6:nitro') {
-    return 'anthropic/claude-3.5-sonnet:nitro';
-  }
-  return model;
-}
+

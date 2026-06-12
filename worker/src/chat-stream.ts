@@ -3,6 +3,7 @@ import type { Context } from "hono";
 // getUCISPrompt import) — the protocol/model list stays a single source of truth.
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CHAT_CASCADE } from "../../web/lib/config/cascade";
+import { translateModelId } from "./services/model-id-translator";
 
 /**
  * Direct browser->worker chat streaming. Mirrors /analyze-llm-stream: the Vercel
@@ -300,15 +301,4 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   });
 }
 
-/**
- * Translates locked/hallucinated model IDs to valid upstream OpenRouter model IDs.
- */
-function translateModelId(model: string): string {
-  if (model === 'anthropic/claude-sonnet-4.6') {
-    return 'anthropic/claude-3.5-sonnet';
-  }
-  if (model === 'anthropic/claude-sonnet-4.6:nitro') {
-    return 'anthropic/claude-3.5-sonnet:nitro';
-  }
-  return model;
-}
+

@@ -240,6 +240,14 @@ export class SynthesisStreamAdapter {
 
     // Progressive JSON Parsing (Dual-Accumulator Pattern)
     this.rawSink += fragment.content;
+
+    // Check if the raw sink itself is already a fully valid complete JSON object
+    let isRawComplete = false;
+    try {
+      JSON.parse(this.rawSink);
+      isRawComplete = true;
+    } catch {}
+
     const healed = this.healJson(this.rawSink);
     if (healed) {
       try {
@@ -274,6 +282,11 @@ export class SynthesisStreamAdapter {
           }
           if (obj.classification) {
             this.synthStore.getState().setClassification(obj.classification);
+          }
+
+          // Reset the sink if we have processed the final complete unhealed object
+          if (isRawComplete) {
+            this.rawSink = '';
           }
         }
       } catch {

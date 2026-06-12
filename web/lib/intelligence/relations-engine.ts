@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
 import { STANCE_CASCADE } from '@/lib/config/cascade';
+import { translateModelId } from '@/lib/utils/model-id-translator';
 
 // See /docs/intelligence/relations-engine.md
 export interface StanceDimension {
@@ -178,15 +179,4 @@ export async function* computeStanceRelationsStream(
   }
 }
 
-/**
- * Translates locked/hallucinated model IDs to valid upstream OpenRouter model IDs.
- */
-function translateModelId(model: string): string {
-  if (model === 'anthropic/claude-sonnet-4.6') {
-    return 'anthropic/claude-3.5-sonnet';
-  }
-  if (model === 'anthropic/claude-sonnet-4.6:nitro') {
-    return 'anthropic/claude-3.5-sonnet:nitro';
-  }
-  return model;
-}
+

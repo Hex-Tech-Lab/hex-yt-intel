@@ -4,6 +4,7 @@
 
 import type { LLMCascadePort } from '../ports/LLMCascadePort';
 import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEnginePort';
+import { translateModelId } from './model-id-translator';
 
 // 3-free + 1-paid model cascade – ordered best-first by a real latency+quality
 // benchmark (2026-06-02) against the full v5.1 prompt. Under the ~55s request budget
@@ -404,16 +405,5 @@ function classifyError(errorMsg: string): string {
   return 'ERR_INTERNAL_PROVIDER_FAULT';
 }
 
-/**
- * Translates locked/hallucinated model IDs to valid upstream OpenRouter model IDs.
- */
-function translateModelId(model: string): string {
-  if (model === 'anthropic/claude-sonnet-4.6') {
-    return 'anthropic/claude-3.5-sonnet';
-  }
-  if (model === 'anthropic/claude-sonnet-4.6:nitro') {
-    return 'anthropic/claude-3.5-sonnet:nitro';
-  }
-  return model;
-}
+
 
