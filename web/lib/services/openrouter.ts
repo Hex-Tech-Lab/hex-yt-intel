@@ -7,6 +7,7 @@ import { getUCISPrompt } from '@/lib/prompts/factory';
 import type { PersonaId } from '@/lib/prompts';
 import type { VideoMetadata } from '@/lib/types';
 import { ANALYSIS_CASCADE } from '@/lib/config/cascade';
+import { translateModelId } from '@/lib/utils/model-id-translator';
 
 export class AnalysisEngineError extends Error {
   code: string;
@@ -92,7 +93,7 @@ export async function callOpenRouter(
         'X-Title': 'hex-yt-intel',
       },
       body: JSON.stringify({
-        model: currentTier.model,
+        model: translateModelId(currentTier.model),
         messages: [{ role: 'user', content: prompt }],
         stream: true,
         max_tokens: maxTokens,
@@ -165,3 +166,5 @@ export async function callOpenRouter(
     throw err;
   }
 }
+
+
