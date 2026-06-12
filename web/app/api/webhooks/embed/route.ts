@@ -70,7 +70,20 @@ export async function POST(request: NextRequest) {
       vectorToken.includes('placeholder');
 
     if (isPlaceholder) {
-      console.warn('[embed-webhook] Upstash Vector index is not configured or is a placeholder. Skipping embedding generation to avoid duplicate failures/retries.');
+      const isProduction =
+        process.env.VERCEL_ENV === 'production' ||
+        process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
+        (process.env.NODE_ENV === 'production' && !process.env.VERCEL);
+
+      if (isProduction) {
+        console.error('[embed-webhook] CRITICAL: Upstash Vector index credentials are placeholders or missing in PRODUCTION environment!');
+        return NextResponse.json({
+          success: false,
+          error: 'Service Unavailable: Upstash Vector credentials are not configured in production.'
+        }, { status: 503 });
+      }
+
+      console.warn('[embed-webhook] Upstash Vector index is not configured or is a placeholder. Skipping embedding generation in non-production to avoid duplicate failures/retries.');
       return NextResponse.json({
         success: true,
         skipped: true,

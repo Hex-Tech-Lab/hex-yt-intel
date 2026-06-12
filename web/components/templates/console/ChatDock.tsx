@@ -77,7 +77,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     const inputVideoId = extractVideoId(url);
     const loadedVideoId = nucleusAnalysis?.videoId || null;
 
-    if (inputVideoId && inputVideoId !== loadedVideoId) {
+    if (isValid && inputVideoId && inputVideoId !== 'unknown' && inputVideoId !== loadedVideoId) {
       const state = useChatStore.getState();
       const activeConv = state.conversations.find((c) => c.id === state.activeId);
       if (activeConv && activeConv.analysisId) {
@@ -104,7 +104,16 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       if (cancelled) return;
       requestAnimationFrame(() => inputRef.current?.focus());
 
-      if (analysisId) {
+      const currentVideoId = extractVideoId(url);
+      const isMatchingAnalysis =
+        isValid &&
+        nucleusAnalysis &&
+        nucleusAnalysis.id === analysisId &&
+        currentVideoId &&
+        currentVideoId !== 'unknown' &&
+        currentVideoId === nucleusAnalysis.videoId;
+
+      if (analysisId && isMatchingAnalysis) {
         const state = useChatStore.getState();
         const existing = state.conversations.find((c) => c.analysisId === analysisId);
         if (existing) {
@@ -142,7 +151,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     return () => {
       cancelled = true;
     };
-  }, [open, analysisId, loadConversations, selectConversation, newConversation]);
+  }, [open, analysisId, url, isValid, nucleusAnalysis, loadConversations, selectConversation, newConversation]);
 
   useEffect(() => {
     if (open && activeId) void selectConversation(activeId);
@@ -310,7 +319,11 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                         ol: ({ children }) => <ol className="list-decimal list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ol>,
                         li: ({ children }) => <li className="text-[12px] leading-relaxed text-[var(--ink-secondary)] pl-0.5">{renderChildren(children)}</li>,
                         p: ({ children }) => <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{renderChildren(children)}</p>,
-                        pre: ({ children }) => <>{children}</>,
+                        pre: ({ children }) => (
+                          <pre className="bg-slate-900/60 p-3 rounded-lg border border-[var(--line-faint)] overflow-x-auto my-3 font-mono text-[11px] leading-relaxed text-[var(--ink-secondary)]">
+                            {children}
+                          </pre>
+                        ),
                         code: ({ className, children }) => {
                           const codeText = String(children).replace(/\n$/, '');
                           const hasNewline = codeText.includes('\n');
@@ -325,9 +338,9 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                           }
 
                           return (
-                            <pre className="bg-slate-900/60 p-3 rounded-lg border border-[var(--line-faint)] overflow-x-auto my-3 font-mono text-[11px] leading-relaxed text-[var(--ink-secondary)]">
-                              <code>{parseAnsiToReact(codeText)}</code>
-                            </pre>
+                            <code className="block font-mono text-[11px] leading-relaxed text-[var(--ink-secondary)]">
+                              {parseAnsiToReact(codeText)}
+                            </code>
                           );
                         },
                         table: ({ children }) => (

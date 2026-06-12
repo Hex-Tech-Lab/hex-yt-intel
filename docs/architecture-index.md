@@ -131,11 +131,12 @@
 #### OpenRouter API (Claude Fallback Chain)
 **Purpose**: LLM inference for analysis generation  
 **Model Chain**:
-1. Primary: `anthropic/claude-haiku-4.5`
-2. Fallback: `anthropic/claude-haiku-4.5`
-3. Timeout: 25 seconds (adaptive based on transcript length)
+1. Primary: `anthropic/claude-haiku-4.5` (default OpenRouter routing)
+2. Alternate Route: `anthropic/claude-haiku-4.5` (explicit CSP routing via Google Vertex / Amazon Bedrock to bypass default route transit issues)
+3. Emergency Fallback: `anthropic/claude-sonnet-4.6:nitro`
+4. Timeouts: Early 3-second connection handshake timeout (early fault detection) followed by an adaptive ~25-second token streaming window.
 
-**Implementation**: `web/app/api/analyses/route.ts`
+**Implementation**: `web/lib/config/cascade.ts` and `web/lib/services/openrouter.ts`
 
 #### Sentry (Error Telemetry)
 **Purpose**: Error logging, performance monitoring, breadcrumbs  

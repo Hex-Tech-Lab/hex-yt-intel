@@ -39,18 +39,21 @@ This document presents a comprehensive, data-backed comparison of three frontier
 ## 3. Candidate Rankings & Ratings
 
 ### 🥇 Rank 1: OpenAI `o3-mini` (Rating: 9.6 / 10)
+
 * **Reasoning Power**: Exceptional (native CoT reinforcement learning).
 * **Cost Advantage**: Unmatched base rate ($1.10/$4.40) which is 3x cheaper than Claude 3.5 Sonnet on output tokens.
 * **UX/Latency**: High TPS makes it feel Snappy once generation begins. However, the CoT thinking phase adds a 2-second initial pause.
 * **Privacy Assurance**: 100% compliant via OpenAI API data policy.
 
 ### 🥈 Rank 2: Anthropic `claude-3.5-sonnet` (Rating: 9.2 / 10)
+
 * **Reasoning Power**: Exceptional for formatting, instruction-following, and structural consistency.
 * **Cost Advantage**: Expensive at base rate, but **prompt caching** changes the economics for repeat chat turns, bringing input costs down to $0.30/1M on cache hits.
 * **UX/Latency**: Steady, fast streaming response.
 * **Privacy Assurance**: 100% compliant under Anthropic Commercial Terms.
 
 ### 🥉 Rank 3: Google `gemini-1.5-pro` (Rating: 8.7 / 10)
+
 * **Reasoning Power**: Very high, especially with large-context inputs (video transcripts).
 * **Cost Advantage**: Cost-effective ($1.25/$5.00) with implicit caching support.
 * **UX/Latency**: Fastest time to first token.
@@ -68,6 +71,7 @@ This configuration guarantees that:
 3. We have triple provider redundancy (OpenAI -> Google -> Anthropic).
 
 ### Proposed Unified `REASONING_CASCADE` in `web/lib/config/cascade.ts`:
+
 ```typescript
 export const REASONING_CASCADE: Record<string, readonly CascadeItem[]> = {
   free: [
@@ -85,4 +89,5 @@ export const REASONING_CASCADE: Record<string, readonly CascadeItem[]> = {
   ]
 };
 ```
+
 *(Note: Since Pro and Enterprise are paid tiers, they receive identical access to the high-performance reasoning cascade, ensuring their paid fees cover operational costs.)*

@@ -118,8 +118,12 @@ function validateEnvVar(
     return `ci-mock-${name.toLowerCase().replace(/_/g, '-')}`;
   }
 
-  // During Vercel build, provide default values instead of throwing
-  if (required && !value && process.env.VERCEL) {
+  // During Vercel build, provide default values instead of throwing (only in non-production)
+  const isProductionVercel =
+    process.env.VERCEL_ENV === 'production' ||
+    process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
+
+  if (required && !value && process.env.VERCEL && !isProductionVercel) {
     if (name.toLowerCase().includes('url')) {
       return `https://${name.toLowerCase().replace(/_/g, '-')}-placeholder.co`;
     }

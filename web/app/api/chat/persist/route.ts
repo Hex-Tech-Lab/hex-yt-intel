@@ -40,11 +40,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
+    // Fetch conversation messages to associate this assistant reply with the corresponding user message.
+    const messages = await persistenceAdapter.getMessages({ conversationId });
+    const userMessages = messages.filter((m) => m.role === 'user');
+    const latestUserMessage = userMessages.length > 0
+      ? userMessages.reduce((latest, current) =>
+          new Date(current.createdAt).getTime() > new Date(latest.createdAt).getTime() ? current : latest
+        )
+      : undefined;
+
     const aRow = await persistenceAdapter.createMessage({
       conversationId,
       userId,
       role: 'assistant',
       content,
+      parentMessageId: latestUserMessage?.id || null,
     });
 
     return NextResponse.json({ ok: true, message: aRow });

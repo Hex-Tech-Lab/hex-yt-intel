@@ -98,11 +98,11 @@ export function reconstructMarkdown(payload: UCISPayloadV2): string {
   // Monetization verdicts (if present)
   if (payload.monetizationVerdict) {
     lines.push('=== MONETIZATION VERDICTS ===');
-    lines.push(`Creator:         ${payload.monetizationVerdict.creator}`);
-    lines.push(`Indie Maker:     ${payload.monetizationVerdict.indieMaker}`);
-    lines.push(`Consultant:      ${payload.monetizationVerdict.consultant}`);
-    lines.push(`Researcher:      ${payload.monetizationVerdict.researcher}`);
-    lines.push(`Product Manager: ${payload.monetizationVerdict.productManager}`);
+    lines.push(`Creator:         ${payload.monetizationVerdict.creator || 'N/A'}`);
+    lines.push(`Indie Maker:     ${payload.monetizationVerdict.indieMaker || 'N/A'}`);
+    lines.push(`Consultant:      ${payload.monetizationVerdict.consultant || 'N/A'}`);
+    lines.push(`Researcher:      ${payload.monetizationVerdict.researcher || 'N/A'}`);
+    lines.push(`Product Manager: ${payload.monetizationVerdict.productManager || 'N/A'}`);
     lines.push('');
   }
 

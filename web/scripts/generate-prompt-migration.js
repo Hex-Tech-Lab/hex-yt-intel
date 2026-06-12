@@ -50,5 +50,11 @@ if (!fs.existsSync(migrationDir)) {
   fs.mkdirSync(migrationDir, { recursive: true });
 }
 
-fs.writeFileSync(path.join(migrationDir, '20260611142500_add_prompt_config.sql'), sql, 'utf8');
+const targetPath = path.join(migrationDir, '20260611142500_add_prompt_config.sql');
+if (fs.existsSync(targetPath)) {
+  console.error('Error: Migration file already exists at supabase/migrations/20260611142500_add_prompt_config.sql. Blocked write to prevent state overwrite.');
+  process.exit(1);
+}
+
+fs.writeFileSync(targetPath, sql, 'utf8');
 console.log('SQL Migration generated successfully at supabase/migrations/20260611142500_add_prompt_config.sql');
