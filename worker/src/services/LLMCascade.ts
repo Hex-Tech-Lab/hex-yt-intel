@@ -173,6 +173,7 @@ export class LLMCascade implements LLMCascadePort {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': HTTP_REFERER,
+          'X-Title': 'Hex YT Intel',
         },
         body: JSON.stringify({
           model,
@@ -191,11 +192,14 @@ export class LLMCascade implements LLMCascadePort {
                 'Begin the analysis now. Output only the structured UCIS v5.1 report starting at "### DIMENSION 1". Do not echo the metadata, transcript, or framework instructions.',
             },
           ],
-          provider: {
-            sort: 'latency',
-            allow_fallbacks: false,
-            ...(providerOrder ? { order: providerOrder } : {}),
-          },
+          ...(providerOrder
+            ? {
+                provider: {
+                  order: providerOrder,
+                  allow_fallbacks: true,
+                },
+              }
+            : {}),
         }),
         signal: controller.signal,
       });
@@ -283,6 +287,7 @@ export class LLMCascade implements LLMCascadePort {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': HTTP_REFERER,
+          'X-Title': 'Hex YT Intel',
         },
         body: JSON.stringify({
           model,
@@ -306,11 +311,14 @@ export class LLMCascade implements LLMCascadePort {
  Generate the complete 11-dimension analysis.`,
             },
           ],
-          provider: {
-            sort: 'latency',
-            allow_fallbacks: false,
-            ...(providerOrder ? { order: providerOrder } : {}),
-          },
+          ...(providerOrder
+            ? {
+                provider: {
+                  order: providerOrder,
+                  allow_fallbacks: true,
+                },
+              }
+            : {}),
         }),
         signal: controller.signal,
       });
