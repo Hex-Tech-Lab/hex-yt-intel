@@ -51,6 +51,7 @@ export interface StreamStatusEvent {
   model?: string;
   from?: string;
   error?: string;
+  rawError?: string;
 }
 
 /** Domain event handlers the orchestrator wires to its transport (SSE). */

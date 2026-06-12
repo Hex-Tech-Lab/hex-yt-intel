@@ -95,7 +95,7 @@ export class LLMCascade implements LLMCascadePort {
       const rawError = result.error || 'No tokens produced';
       const classifiedError = classifyError(rawError);
       console.warn(`[LLMCascade] Model ${name} failed/skipped. Raw: ${rawError}, Classified: ${classifiedError}`);
-      onStatus?.({ stage: 'fallback', from: name, error: classifiedError });
+      onStatus?.({ stage: 'fallback', from: name, error: classifiedError, rawError });
     }
 
     return { started: produced, finalText, modelUsed };

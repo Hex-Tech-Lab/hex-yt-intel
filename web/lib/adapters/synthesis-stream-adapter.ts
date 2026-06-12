@@ -112,6 +112,7 @@ export class SynthesisStreamAdapter {
     model?: string;
     from?: string;
     error?: string;
+    rawError?: string;
   }) {
     const store = this.analysisStore.getState();
     if (fragment.stage === 'starting') {
@@ -166,6 +167,9 @@ export class SynthesisStreamAdapter {
       }
 
       store.logError(msg);
+      if (fragment.rawError) {
+        store.logError(`[RCA] Raw OpenRouter response: ${fragment.rawError}`);
+      }
       store.logInfo(`Attempting automated fallback routing...`);
     }
 
@@ -174,6 +178,7 @@ export class SynthesisStreamAdapter {
       stage: fragment.stage,
       model: fragment.model || fragment.from,
       error: fragment.error,
+      rawError: fragment.rawError,
     });
   }
 
