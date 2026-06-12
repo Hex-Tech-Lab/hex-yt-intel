@@ -131,8 +131,8 @@
 #### OpenRouter API (Claude Fallback Chain)
 **Purpose**: LLM inference for analysis generation  
 **Model Chain**:
-1. Primary: `anthropic/claude-3.5-haiku`
-2. Fallback: `anthropic/claude-3.5-haiku`
+1. Primary: `anthropic/claude-haiku-4.5`
+2. Fallback: `anthropic/claude-haiku-4.5`
 3. Timeout: 25 seconds (adaptive based on transcript length)
 
 **Implementation**: `web/app/api/analyses/route.ts`

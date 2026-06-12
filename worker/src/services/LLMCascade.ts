@@ -11,7 +11,7 @@ import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEngine
 //   - nemotron-3-nano-30b: ONLY free model that reliably produced valid 11-dim output
 //     (3s first-token, 19-33s total). Lead model.
 //   - gemini-2.0-flash: fast, sub-second TTFB, highly reliable.
-//   - claude-3.5-haiku: paid last resort (needs OpenRouter credit; 402 while overdrawn).
+//   - claude-haiku-4.5: paid last resort (needs OpenRouter credit; 402 while overdrawn).
 // NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
 import { ANALYSIS_CASCADE } from '../../../web/lib/config/cascade';
