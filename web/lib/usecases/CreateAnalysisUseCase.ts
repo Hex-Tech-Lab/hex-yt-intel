@@ -195,8 +195,19 @@ export class CreateAnalysisUseCase {
         },
       });
       analysisId = stub.id;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CreateAnalysisUseCase] Failed to initialize analysis stub:', error);
+      const isQuotaExhausted =
+        error?.message?.includes('Monthly quota exhausted') ||
+        error?.message?.includes('reserve_analysis_quota');
+      if (isQuotaExhausted) {
+        return {
+          type: 'error',
+          code: 'ERR_MONTHLY_QUOTA_EXHAUSTED',
+          status: 402,
+          message: 'Monthly quota exhausted.',
+        };
+      }
       return {
         type: 'error',
         code: 'ERR_ANALYSIS_ROW_INSERT',

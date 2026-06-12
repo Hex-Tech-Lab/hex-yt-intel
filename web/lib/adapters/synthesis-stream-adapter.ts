@@ -17,7 +17,13 @@
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { validateFragment, validateDimension } from '@/lib/validators/synthesis';
-import type { UCISDimension, PersonaConfigV2, KnowledgeGraphV2, ClassificationData } from '@/lib/types/synthesis-nucleus';
+import {
+  type UCISDimension,
+  type PersonaConfigV2,
+  type KnowledgeGraphV2,
+  type ClassificationData,
+  computePersonaProjection,
+} from '@/lib/types/synthesis-nucleus';
 
 export interface StreamAdapterOptions {
   onError?: (error: string) => void;
@@ -116,6 +122,34 @@ export class SynthesisStreamAdapter {
     } else if (fragment.stage === 'fallback') {
       // Clear any partial text written by the failed model so the next model starts fresh
       store.setAnalysis(store.analysis ? { ...store.analysis, analysis_markdown: '' } : null);
+
+      // Fully reset the synthesis projection state (dimensions, persona, etc.) upon a fallback transition,
+      // keeping the metadata of the current analysis intact.
+      const synthState = this.synthStore.getState();
+      if (synthState.analysis) {
+        this.synthStore.setState({
+          analysis: {
+            ...synthState.analysis,
+            dimensions: {},
+            streaming: {
+              ...synthState.analysis.streaming,
+              dimensionsReceived: [],
+            },
+          },
+          personaConfig: null,
+          knowledgeGraph: null,
+          classification: null,
+          projection: computePersonaProjection({
+            ...synthState.analysis,
+            dimensions: {},
+            streaming: {
+              ...synthState.analysis.streaming,
+              dimensionsReceived: [],
+            },
+          }, synthState.activePersona),
+          streamError: null,
+        });
+      }
 
       const code = fragment.error || '';
       let msg = 'Optimizing pipeline routing...';

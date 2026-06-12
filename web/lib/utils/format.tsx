@@ -19,9 +19,31 @@ export function preprocessMarkdown(content: string): string {
   const lines = processed.split('\n');
   let inTable = false;
   let tableHeaderIndex = -1;
+  let inFence = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
+    if (line.trim().startsWith('```')) {
+      inFence = !inFence;
+      if (inTable && tableHeaderIndex !== -1) {
+        // Exited tab table due to code block start: insert separator
+        const headerLine = lines[tableHeaderIndex]!;
+        const colCount = headerLine.split('|').length - 2;
+        if (colCount > 0) {
+          const sep = '| ' + Array(colCount).fill('---').join(' | ') + ' |';
+          lines.splice(tableHeaderIndex + 1, 0, sep);
+          i++;
+        }
+        inTable = false;
+        tableHeaderIndex = -1;
+      }
+      continue;
+    }
+
+    if (inFence) {
+      continue;
+    }
+
     if (line.includes('\t')) {
       const parts = line.split('\t').map((p) => p.trim());
       lines[i] = '| ' + parts.join(' | ') + ' |';
@@ -76,15 +98,15 @@ export function parseAnsiToReact(text: string): React.ReactNode[] | string {
 
   const result: React.ReactNode[] = [];
   let lastIndex = 0;
-  let currentStyle: React.CSSProperties = {};
+  let currentClasses: string[] = [];
   let match;
 
   while ((match = ansiRegex.exec(text)) !== null) {
     const textSegment = text.slice(lastIndex, match.index);
     if (textSegment) {
-      if (Object.keys(currentStyle).length > 0) {
+      if (currentClasses.length > 0) {
         result.push(
-          <span key={lastIndex} style={{ ...currentStyle }}>
+          <span key={lastIndex} className={currentClasses.join(' ')}>
             {textSegment}
           </span>
         );
@@ -95,22 +117,57 @@ export function parseAnsiToReact(text: string): React.ReactNode[] | string {
 
     const code = match[1] || '0';
     if (code === '0') {
-      currentStyle = {};
+      currentClasses = [];
     } else {
       const styles = code.split(';');
       for (const s of styles) {
         switch (s) {
-          case '30': currentStyle.color = '#000000'; break;
-          case '31': currentStyle.color = '#ef4444'; break; // red-500
-          case '32': currentStyle.color = '#22c55e'; break; // green-500
-          case '33': currentStyle.color = '#eab308'; break; // yellow-500
-          case '34': currentStyle.color = '#3b82f6'; break; // blue-500
-          case '35': currentStyle.color = '#a855f7'; break; // purple-500
-          case '36': currentStyle.color = '#06b6d4'; break; // cyan-500
-          case '37': currentStyle.color = '#ffffff'; break;
-          case '90': currentStyle.color = '#6b7280'; break; // gray-500
-          case '1': currentStyle.fontWeight = 'bold'; break;
-          case '4': currentStyle.textDecoration = 'underline'; break;
+          case '30':
+            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses.push('text-black');
+            break;
+          case '31':
+            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses.push('text-red-500');
+            break;
+          case '32':
+            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses.push('text-green-500');
+            break;
+          case '33':
+            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses.push('text-yellow-500');
+            break;
+          case '34':
+            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses.push('text-blue-500');
+            break;
+          case '35':
+            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses.push('text-purple-500');
+            break;
+          case '36':
+            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses.push('text-cyan-500');
+            break;
+          case '37':
+            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses.push('text-white');
+            break;
+          case '90':
+            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses.push('text-gray-500');
+            break;
+          case '1':
+            if (!currentClasses.includes('font-bold')) {
+              currentClasses.push('font-bold');
+            }
+            break;
+          case '4':
+            if (!currentClasses.includes('underline')) {
+              currentClasses.push('underline');
+            }
+            break;
         }
       }
     }
@@ -119,9 +176,9 @@ export function parseAnsiToReact(text: string): React.ReactNode[] | string {
 
   const remainingText = text.slice(lastIndex);
   if (remainingText) {
-    if (Object.keys(currentStyle).length > 0) {
+    if (currentClasses.length > 0) {
       result.push(
-        <span key={lastIndex} style={{ ...currentStyle }}>
+        <span key={lastIndex} className={currentClasses.join(' ')}>
           {remainingText}
         </span>
       );

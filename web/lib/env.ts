@@ -150,17 +150,20 @@ function validateEnvVar(
     ? allowPlaceholder
     : (isCIorPreview && !isProduction);
 
-  if (required && value && isPlaceholder(value) && !resolvedAllowPlaceholder && !isCI) {
-    throw new Error(
-      `Environment variable ${name} has a placeholder value in production.\n` +
-      `Please set a real value in your deployment environment.`
-    );
-  }
-
-  // If it's a placeholder, and we allow it, return a valid URL if it's a URL field
-  if (value && isPlaceholder(value) && resolvedAllowPlaceholder) {
-    if (name.toLowerCase().includes('url')) {
-      return `https://${name.toLowerCase().replace(/_/g, '-')}-placeholder.co`;
+  if (value && isPlaceholder(value)) {
+    if (resolvedAllowPlaceholder) {
+      if (name.toLowerCase().includes('url')) {
+        return `https://${name.toLowerCase().replace(/_/g, '-')}-placeholder.co`;
+      }
+      return value;
+    } else {
+      if (required && !isCI) {
+        throw new Error(
+          `Environment variable ${name} has a placeholder value in production.\n` +
+          `Please set a real value in your deployment environment.`
+        );
+      }
+      return undefined;
     }
   }
 

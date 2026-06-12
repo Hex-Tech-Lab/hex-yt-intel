@@ -34,7 +34,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
   } = useChatStore();
   const analysisStore = useAnalysisStore();
-  const { url } = useInputStore();
+  const { url, isValid } = useInputStore();
   const nucleusAnalysis = useSynthesisNucleus((state) => state.analysis);
 
   const logStatus = analysisStore.status;
@@ -58,15 +58,17 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   }, []);
 
   useEffect(() => {
-    if (!url) {
-      const state = useChatStore.getState();
-      const activeConv = state.conversations.find((c) => c.id === state.activeId);
-      if (activeConv && activeConv.analysisId) {
-        const generalConv = state.conversations.find((c) => !c.analysisId);
-        if (generalConv) {
-          void selectConversation(generalConv.id);
-        } else {
-          useChatStore.setState({ activeId: null });
+    if (!isValid) {
+      if (!url) {
+        const state = useChatStore.getState();
+        const activeConv = state.conversations.find((c) => c.id === state.activeId);
+        if (activeConv && activeConv.analysisId) {
+          const generalConv = state.conversations.find((c) => !c.analysisId);
+          if (generalConv) {
+            void selectConversation(generalConv.id);
+          } else {
+            useChatStore.setState({ activeId: null });
+          }
         }
       }
       return;
@@ -75,7 +77,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     const inputVideoId = extractVideoId(url);
     const loadedVideoId = nucleusAnalysis?.videoId || null;
 
-    if (inputVideoId !== loadedVideoId) {
+    if (inputVideoId && inputVideoId !== loadedVideoId) {
       const state = useChatStore.getState();
       const activeConv = state.conversations.find((c) => c.id === state.activeId);
       if (activeConv && activeConv.analysisId) {
@@ -87,7 +89,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
         }
       }
     }
-  }, [url, nucleusAnalysis?.videoId, selectConversation]);
+  }, [url, isValid, nucleusAnalysis?.videoId, selectConversation]);
 
   useEffect(() => {
     try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* noop */ }
@@ -308,6 +310,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                         ol: ({ children }) => <ol className="list-decimal list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ol>,
                         li: ({ children }) => <li className="text-[12px] leading-relaxed text-[var(--ink-secondary)] pl-0.5">{renderChildren(children)}</li>,
                         p: ({ children }) => <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{renderChildren(children)}</p>,
+                        pre: ({ children }) => <>{children}</>,
                         code: ({ className, children }) => {
                           const codeText = String(children).replace(/\n$/, '');
                           const hasNewline = codeText.includes('\n');
