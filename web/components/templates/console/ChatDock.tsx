@@ -7,6 +7,10 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { ProcessingLog } from './ProcessingLog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useInputStore } from '@/store/useInputStore';
+import { extractVideoId } from '@/lib/youtube';
+import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
+import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
 
 export interface ChatDockProps {
   /** Active analysis for grounding new threads (optional). */
@@ -30,6 +34,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
   } = useChatStore();
   const analysisStore = useAnalysisStore();
+  const { url, isValid } = useInputStore();
+  const nucleusAnalysis = useSynthesisNucleus((state) => state.analysis);
 
   const logStatus = analysisStore.status;
   const showLog = logStatus !== 'idle' && analysisStore.terminalLines.length > 0;
@@ -50,6 +56,40 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   useEffect(() => {
     try { if (localStorage.getItem(OPEN_KEY) === '1') setOpen(true); } catch { /* noop */ }
   }, []);
+
+  useEffect(() => {
+    if (!isValid) {
+      if (!url) {
+        const state = useChatStore.getState();
+        const activeConv = state.conversations.find((c) => c.id === state.activeId);
+        if (activeConv && activeConv.analysisId) {
+          const generalConv = state.conversations.find((c) => !c.analysisId);
+          if (generalConv) {
+            void selectConversation(generalConv.id);
+          } else {
+            useChatStore.setState({ activeId: null });
+          }
+        }
+      }
+      return;
+    }
+
+    const inputVideoId = extractVideoId(url);
+    const loadedVideoId = nucleusAnalysis?.videoId || null;
+
+    if (inputVideoId && inputVideoId !== loadedVideoId) {
+      const state = useChatStore.getState();
+      const activeConv = state.conversations.find((c) => c.id === state.activeId);
+      if (activeConv && activeConv.analysisId) {
+        const generalConv = state.conversations.find((c) => !c.analysisId);
+        if (generalConv) {
+          void selectConversation(generalConv.id);
+        } else {
+          useChatStore.setState({ activeId: null });
+        }
+      }
+    }
+  }, [url, isValid, nucleusAnalysis?.videoId, selectConversation]);
 
   useEffect(() => {
     try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* noop */ }
@@ -73,6 +113,19 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
           }
         } else {
           await newConversation({ analysisId });
+        }
+      } else {
+        const state = useChatStore.getState();
+        const activeConv = state.conversations.find((c) => c.id === state.activeId);
+        if (activeConv && activeConv.analysisId) {
+          // If current conversation is bound to a video but analysis is now null,
+          // switch to a general conversation (where analysisId is null/falsy) or deselect.
+          const generalConv = state.conversations.find((c) => !c.analysisId);
+          if (generalConv) {
+            await selectConversation(generalConv.id);
+          } else {
+            useChatStore.setState({ activeId: null });
+          }
         }
       }
       
@@ -250,8 +303,46 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                   {isUser ? (
                     body
                   ) : (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {body}
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        ul: ({ children }) => <ul className="list-disc list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ol>,
+                        li: ({ children }) => <li className="text-[12px] leading-relaxed text-[var(--ink-secondary)] pl-0.5">{renderChildren(children)}</li>,
+                        p: ({ children }) => <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{renderChildren(children)}</p>,
+                        pre: ({ children }) => <>{children}</>,
+                        code: ({ className, children }) => {
+                          const codeText = String(children).replace(/\n$/, '');
+                          const hasNewline = codeText.includes('\n');
+                          const isInline = !hasNewline && !className?.includes('language-');
+
+                          if (isInline) {
+                            return (
+                              <code className="bg-slate-800/80 px-1.5 py-0.5 rounded font-mono text-[11px] text-[var(--ink-secondary)]">
+                                {parseAnsiToReact(codeText)}
+                              </code>
+                            );
+                          }
+
+                          return (
+                            <pre className="bg-slate-900/60 p-3 rounded-lg border border-[var(--line-faint)] overflow-x-auto my-3 font-mono text-[11px] leading-relaxed text-[var(--ink-secondary)]">
+                              <code>{parseAnsiToReact(codeText)}</code>
+                            </pre>
+                          );
+                        },
+                        table: ({ children }) => (
+                          <div className="overflow-x-auto mt-4 mb-6 rounded-xl border border-[var(--line-faint)] bg-[var(--bg)]/30">
+                            <table className="min-w-full divide-y divide-[var(--line-faint)] text-[11px] text-[var(--ink-secondary)]">{children}</table>
+                          </div>
+                        ),
+                        thead: ({ children }) => <thead className="bg-[var(--bg)]/50">{children}</thead>,
+                        tbody: ({ children }) => <tbody className="divide-y divide-[var(--line-faint)]/50">{children}</tbody>,
+                        tr: ({ children }) => <tr>{children}</tr>,
+                        th: ({ children }) => <th className="px-4 py-2.5 text-left font-mono font-bold uppercase tracking-wider text-[var(--ink-muted)] border-r border-[var(--line-faint)] last:border-r-0">{renderChildren(children)}</th>,
+                        td: ({ children }) => <td className="px-4 py-2.5 border-r border-[var(--line-faint)] last:border-r-0 whitespace-pre-wrap">{renderChildren(children)}</td>,
+                      }}
+                    >
+                      {preprocessMarkdown(body)}
                     </ReactMarkdown>
                   )}
                 </div>
@@ -348,3 +439,11 @@ function parseAssistant(content: string): { body: string; options: string[] } {
   const body = content.slice(0, m.index).trim();
   return { body: body || content.trim(), options };
 }
+
+const renderChildren = (children: React.ReactNode) => {
+  if (typeof children === 'string') {
+    return parseAnsiToReact(children);
+  }
+  return children;
+};
+

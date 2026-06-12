@@ -29,6 +29,7 @@ interface ChatStreamRequest {
   models?: string[];
   sig: string;
   exp: number;
+  appUrl?: string;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -102,7 +103,7 @@ async function streamChatCascade(
           messages,
           provider: {
             sort: "latency",
-            allow_fallbacks: true,
+            allow_fallbacks: false,
             ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
@@ -162,8 +163,28 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   if (Date.now() > req.exp) {
     return c.json({ error: "Token expired" }, 401);
   }
-  const expected = await hmacHex(secret, `chat.${req.conversationId}.${req.userId}.${req.exp}.${JSON.stringify(req.models ?? [])}`);
-  if (!timingSafeEqualHex(expected, req.sig)) {
+  let activeSecret = secret;
+  let isTokenValid = false;
+
+  // Support both production secret and local/preview fallback secret
+  const secretsToTry = [secret];
+  if (c.env.DEV_HMAC_SECRET && c.env.NODE_ENV !== 'production') {
+    secretsToTry.push(c.env.DEV_HMAC_SECRET);
+  }
+  for (const s of secretsToTry) {
+    if (!s) continue;
+    const expected = await hmacHex(
+      s,
+      `chat.${req.conversationId}.${req.userId}.${req.exp}.${JSON.stringify(req.models ?? [])}`
+    );
+    if (timingSafeEqualHex(expected, req.sig)) {
+      activeSecret = s;
+      isTokenValid = true;
+      break;
+    }
+  }
+
+  if (!isTokenValid) {
     return c.json({ error: "Invalid token" }, 401);
   }
 
@@ -197,8 +218,8 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
 
       // Persist the assistant turn S2S so Postgres stays the source of truth. The
       // content signature proves to Vercel that this text came from the worker.
-      const contentSig = await hmacHex(secret, full);
-      const appUrl = c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
+      const contentSig = await hmacHex(activeSecret, full);
+      const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
       c.executionCtx.waitUntil(
         fetch(`${appUrl}/api/chat/persist`, {
           method: "POST",

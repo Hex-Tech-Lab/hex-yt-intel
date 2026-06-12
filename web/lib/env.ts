@@ -23,6 +23,7 @@ const OPTIONAL_ENV_VARS = [
   'NEXT_PUBLIC_APP_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
   'CLOUDFLARE_WORKER_URL',
+  'NEXT_PUBLIC_WORKER_URL',
   'SENTRY_AUTH_TOKEN',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
@@ -106,7 +107,7 @@ function isPlaceholder(value: string | undefined): boolean {
 function validateEnvVar(
   name: EnvVar,
   required: boolean = false,
-  allowPlaceholder: boolean = false
+  allowPlaceholder?: boolean
 ): string | undefined {
   let value = process.env[name];
 
@@ -115,6 +116,14 @@ function validateEnvVar(
   if (process.env.GITHUB_ACTIONS === 'true' && required && !value) {
     console.warn(`[ci-validation] Auto-injecting mock for missing required variable: ${name}`);
     return `ci-mock-${name.toLowerCase().replace(/_/g, '-')}`;
+  }
+
+  // During Vercel build, provide default values instead of throwing
+  if (required && !value && process.env.VERCEL) {
+    if (name.toLowerCase().includes('url')) {
+      return `https://${name.toLowerCase().replace(/_/g, '-')}-placeholder.co`;
+    }
+    return `[build-time-placeholder-${name}]`;
   }
 
   if (required && !value) {
@@ -128,13 +137,34 @@ function validateEnvVar(
     throw new Error(`Environment variable ${name} must be a string, got ${typeof value}`);
   }
 
-  // In production, reject placeholder values (but allow in CI environments)
+  // In production, reject placeholder values (but allow in CI and Vercel preview environments)
   const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
-  if (required && value && isPlaceholder(value) && !allowPlaceholder && !isCI) {
-    throw new Error(
-      `Environment variable ${name} has a placeholder value in production.\n` +
-      `Please set a real value in your deployment environment.`
-    );
+  const isProduction =
+    !isCI &&
+    (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
+      process.env.VERCEL_ENV === 'production' ||
+      (process.env.NODE_ENV === 'production' && !process.env.VERCEL));
+  const isCIorPreview = isCI || process.env.VERCEL_ENV === 'preview';
+
+  const resolvedAllowPlaceholder = allowPlaceholder !== undefined
+    ? allowPlaceholder
+    : (isCIorPreview && !isProduction);
+
+  if (value && isPlaceholder(value)) {
+    if (resolvedAllowPlaceholder) {
+      if (name.toLowerCase().includes('url')) {
+        return `https://${name.toLowerCase().replace(/_/g, '-')}-placeholder.co`;
+      }
+      return value;
+    } else {
+      if (required && !isCI) {
+        throw new Error(
+          `Environment variable ${name} has a placeholder value in production.\n` +
+          `Please set a real value in your deployment environment.`
+        );
+      }
+      return undefined;
+    }
   }
 
   return value;
@@ -156,11 +186,12 @@ function validateEnvironment(): void {
   const errors: string[] = [];
 
   // Detect environment context
-  const isCI = process.env.GITHUB_ACTIONS === 'true';
+  const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
   const isProduction =
     !isCI &&
     (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
-      process.env.NODE_ENV === 'production');
+      process.env.VERCEL_ENV === 'production' ||
+      (process.env.NODE_ENV === 'production' && !process.env.VERCEL));
   const isCIorPreview = isCI || process.env.VERCEL_ENV === 'preview';
 
   // Allow placeholders in CI/Preview, but enforce strict validation in production
@@ -222,7 +253,8 @@ export function getEnv(): EnvironmentConfig {
       authToken: validateEnvVar('SENTRY_AUTH_TOKEN', false),
     },
     cloudflare: {
-      workerUrl: validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
+      workerUrl: validateEnvVar('NEXT_PUBLIC_WORKER_URL', false) ||
+        validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
         'https://yt-intel.hex-tech-lab.workers.dev',
     },
     openrouter: {
@@ -275,7 +307,8 @@ export const env = {
     return validateEnvVar('OPENROUTER_API_KEY', true)!;
   },
   get cloudflareWorkerUrl(): string {
-    return validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
+    return validateEnvVar('NEXT_PUBLIC_WORKER_URL', false) ||
+      validateEnvVar('CLOUDFLARE_WORKER_URL', false) ||
       'https://yt-intel.hex-tech-lab.workers.dev';
   },
   get upstashRedisUrl(): string | undefined {

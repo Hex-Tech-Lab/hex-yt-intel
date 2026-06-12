@@ -9,6 +9,7 @@ import {
   StreamTokenAdapter,
   SettingsModelAdapter,
 } from '@/lib/adapters';
+import { ProcessChatMessageUseCase } from '@/lib/usecases/ProcessChatMessageUseCase';
 
   /* GET — load a thread's messages (RLS scopes to owner). */
 export async function GET(
@@ -41,8 +42,7 @@ export async function GET(
 }
 
 /*
- * POST — append a user message (idempotent on client_msg_id) and STREAM the assistant
- * reply via SSE. Events: user | title | delta | done | error.
+ * POST — append a user message and return token signed for streaming worker access
  */
 export async function POST(
   request: NextRequest,
@@ -58,144 +58,35 @@ export async function POST(
 
   try {
     const body = await request.json().catch(() => ({}));
-    const content = typeof body.content === 'string' ? body.content.trim() : '';
+    const rawContent = typeof body.content === 'string' ? body.content : '';
     const clientMsgId = typeof body.clientMsgId === 'string' ? body.clientMsgId : null;
-    if (!content) {
-      return NextResponse.json({ error: 'Empty message' }, { status: 400 });
-    }
 
     const persistenceAdapter = new SupabasePersistenceAdapter();
     const modelAdapter = new SettingsModelAdapter();
     const tokenAdapter = new StreamTokenAdapter();
 
-    const conv = await persistenceAdapter.getConversation({ conversationId: id });
-    if (!conv) {
-      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
-    }
-    if (conv.userId !== userId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const useCase = new ProcessChatMessageUseCase(
+      persistenceAdapter,
+      modelAdapter,
+      tokenAdapter
+    );
 
-    // --- Idempotent user-message write ---------------------------------------
-    let userRow = null;
-    let isRetry = false;
-
-    if (clientMsgId) {
-      const existing = await persistenceAdapter.findMessageByClientMsgId({
-        conversationId: id,
-        clientMsgId,
-      });
-      if (existing) {
-        userRow = existing;
-        isRetry = true;
-      }
-    }
-
-    if (!userRow) {
-      try {
-        userRow = await persistenceAdapter.createMessage({
-          conversationId: id,
-          userId,
-          role: 'user',
-          content,
-          clientMsgId,
-        });
-      } catch (error: any) {
-        // Unique violation or concurrency check
-        if (clientMsgId) {
-          const raced = await persistenceAdapter.findMessageByClientMsgId({
-            conversationId: id,
-            clientMsgId,
-          });
-          if (raced) {
-            userRow = raced;
-            isRetry = true;
-          } else {
-            throw error;
-          }
-        } else {
-          throw error;
-        }
-      }
-    }
-
-    // If this is a retry that already produced an assistant reply, return it (no regen).
-    if (isRetry && userRow) {
-      const laterAssistant = await persistenceAdapter.findAssistantMessageAfter({
-        conversationId: id,
-        timestamp: userRow.createdAt,
-      });
-      if (laterAssistant) {
-        return NextResponse.json({
-          user: userRow,
-          assistant: laterAssistant,
-        });
-      }
-    }
-
-    // Auto-title from the first user message.
-    let newTitle: string | undefined;
-    if (conv.title === 'New chat') {
-      const title = content.slice(0, 60);
-      newTitle = title;
-      await persistenceAdapter.updateConversationTitle({
-        conversationId: id,
-        title,
-      });
-    }
-
-    // Replay bounded history (model is stateless).
-    const allMessages = await persistenceAdapter.getMessages({ conversationId: id });
-    const HISTORY_TURNS = 20;
-    // Bounded history: get the last HISTORY_TURNS messages
-    const history = allMessages.slice(-HISTORY_TURNS);
-
-    // Grounding from the linked analysis.
-    let grounding = '';
-    if (conv.analysisId) {
-      const a = await persistenceAdapter.getAnalysisGrounding({ analysisId: conv.analysisId });
-      if (a) {
-        const md = typeof a.analysisMarkdown === 'string' ? a.analysisMarkdown : '';
-        const status = a.status;
-        if (md.trim().length > 0) {
-          grounding =
-            `You are the analyst for the YouTube video "${a.title}"${a.channelTitle ? ` by ${a.channelTitle}` : ''}. ` +
-            `Answer the user's questions using the structured analysis below; be concise and cite dimension names where relevant. ` +
-            `Do not ask which video — you have it.\n\n--- ANALYSIS ---\n` +
-            md.slice(0, 12000);
-        } else {
-          grounding =
-            `You are the analyst for the YouTube video "${a.title}"${a.channelTitle ? ` by ${a.channelTitle}` : ''}. ` +
-            `The full ${status === 'processing' ? 'analysis is still being generated' : 'analysis is not available yet'} — answer from the title/topic ` +
-            `and let the user know richer answers will be available once the synthesis finishes. Never claim you don't know which video this is.`;
-        }
-      }
-    }
-
-    // Resolve the per-tier chat cascade and bind it into the token
-    const chatModels = await modelAdapter.resolveModels(tier, 'chat');
-    const { sig, exp } = tokenAdapter.signChatToken({
+    const result = await useCase.execute({
       conversationId: id,
       userId,
-      models: chatModels,
+      tier,
+      content: rawContent,
+      clientMsgId,
     });
 
-    return NextResponse.json({
-      user: userRow,
-      ...(newTitle ? { title: newTitle } : {}),
-      stream: {
-        url: `${process.env.NEXT_PUBLIC_WORKER_URL || ''}/chat-stream`,
-        sig,
-        exp,
-      },
-      payload: {
-        conversationId: id,
-        userId,
-        grounding,
-        history: history.map((m) => ({ role: m.role, content: m.content })),
-        models: chatModels,
-      },
-    });
+    if (result.type === 'error') {
+      return NextResponse.json(
+        { error: result.message, code: result.code },
+        { status: result.status }
+      );
+    }
+
+    return NextResponse.json(result.data);
   } catch (error) {
     console.error('[chat POST] Exception:', error);
     return NextResponse.json({ error: 'Failed to process message' }, { status: 500 });

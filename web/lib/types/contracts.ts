@@ -126,6 +126,7 @@ export interface WorkerStreamRequest {
   models?: string[];
   sig: string;
   exp: number;
+  appUrl?: string;
 }
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────

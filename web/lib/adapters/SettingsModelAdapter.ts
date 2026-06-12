@@ -1,6 +1,6 @@
 import type { UserTier } from '@/lib/types/billing';
 import type { ModelResolutionPort } from '@/lib/ports';
-import { resolveModelCascade } from '@/lib/services/settings';
+import { resolveModelCascade, resolveReasoningCascade } from '@/lib/services/settings';
 import { CHAT_CASCADE, ANALYSIS_CASCADE } from '../config/cascade';
 
 export class SettingsModelAdapter implements ModelResolutionPort {
@@ -15,10 +15,13 @@ export class SettingsModelAdapter implements ModelResolutionPort {
   /**
    * Resolves the model list for ingestion requests.
    * @param tier - User tier.
-   * @param kind - Request kind: 'analysis' or 'chat'.
-   * @returns Promise resolving to model array (resolves via resolveModelCascade unless in trial mode).
+   * @param kind - Request kind: 'analysis', 'chat', or 'reasoning'.
+   * @returns Promise resolving to model array.
    */
-  async resolveModels(tier: UserTier, kind: 'analysis' | 'chat'): Promise<string[]> {
+  async resolveModels(tier: UserTier, kind: 'analysis' | 'chat' | 'reasoning'): Promise<string[]> {
+    if (kind === 'reasoning') {
+      return resolveReasoningCascade(tier);
+    }
     if (this.commercialTrialMode) {
       if (kind === 'chat') {
         return CHAT_CASCADE.map((c) => c.model);

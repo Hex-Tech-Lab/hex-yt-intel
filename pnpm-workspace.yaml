@@ -25,6 +25,7 @@ overrides:
   "eslint-plugin-react": "7.34.3"
   "eslint-config-next": "14.2.16"
   "@next/eslint-plugin-next": "14.2.16"
+  "glob@>=10.2.0 <10.5.0": "10.5.0"
 
 allowBuilds:
   "@sentry/cli": true

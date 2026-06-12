@@ -10,6 +10,7 @@ import type { PersonaId } from '@/lib/prompts';
 import type { UserTier } from '@/lib/types/billing';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import { extractVideoId } from '@/lib/youtube';
+import { env } from '@/lib/env';
 
 export interface CreateAnalysisUseCaseParams {
   userId: string;
@@ -167,19 +168,69 @@ export class CreateAnalysisUseCase {
       };
     }
 
-    // 2.5 Consume quota now that gates are passed
-    await this.billingQuota.consumeQuota({
-      userId,
-      tier,
-      email: userEmail,
-    });
+    // 2.5 Insert processing stub immediately (acts as the atomic quota charge & reservation)
+    // to prevent TOCTOU double-spend concurrency races
+    let analysisId: string;
+    try {
+      const stub = await this.persistence.upsertProcessingStub({
+        videoId,
+        userId,
+        title: 'Analyzing video...', // temp placeholder
+        validationReport: {
+          status: 'processing',
+          transcriptAvailable: false,
+          analysisType: 'full',
+          staleAfter: new Date(Date.now() + 180_000).toISOString(),
+          metadata: {
+            title: 'Analyzing video...',
+            channelTitle: '',
+            publishedAt: new Date().toISOString(),
+            duration: 0,
+            viewCount: '0',
+            likeCount: '0',
+            commentCount: '0',
+          },
+          persona: params.explicitPersona || 'p1',
+          timezone: params.timezone || 'UTC',
+        },
+      });
+      analysisId = stub.id;
+    } catch (error: any) {
+      console.error('[CreateAnalysisUseCase] Failed to initialize analysis stub:', error);
+      const isQuotaExhausted =
+        error?.message?.includes('Monthly quota exhausted') ||
+        error?.message?.includes('reserve_analysis_quota');
+      if (isQuotaExhausted) {
+        return {
+          type: 'error',
+          code: 'ERR_MONTHLY_QUOTA_EXHAUSTED',
+          status: 402,
+          message: 'Monthly quota exhausted.',
+        };
+      }
+      return {
+        type: 'error',
+        code: 'ERR_ANALYSIS_ROW_INSERT',
+        status: 500,
+        message: 'Failed to initialize analysis reservation',
+      };
+    }
+
+    const markReservationFailed = async () => {
+      try {
+        await this.persistence.updateBillingStatus({ analysisId, status: 'failed' });
+      } catch (refundError) {
+        console.error('[CreateAnalysisUseCase] Failed to mark reservation failed:', refundError);
+      }
+    };
 
     // 3. Metadata + Transcript Ingestion
     let ingestionResult;
     try {
       ingestionResult = await this.metadataIngestion.fetch(videoId);
     } catch {
-      await this.billingQuota.refund({ userId, email: userEmail });
+      // Refund: mark reservation as failed
+      await markReservationFailed();
       return {
         type: 'error',
         code: 'ERR_METADATA_FETCH',
@@ -189,7 +240,8 @@ export class CreateAnalysisUseCase {
     }
 
     if (!ingestionResult.transcriptAvailable || !ingestionResult.transcript.trim()) {
-      await this.billingQuota.refund({ userId, email: userEmail });
+      // Refund: mark reservation as failed
+      await markReservationFailed();
       return {
         type: 'error',
         code: 'ERR_TRANSCRIPT_REQUIRED',
@@ -205,10 +257,9 @@ export class CreateAnalysisUseCase {
     const timezone = params.timezone || 'UTC';
     const jobMetadata = this.metadataIngestion.buildJobMetadata(ingestionResult.metadata);
 
-    // 4. Persistence stub insertion
-    let analysisId: string;
+    // 4. Persistence stub update: update metadata on the reserved row
     try {
-      const stub = await this.persistence.upsertProcessingStub({
+      await this.persistence.upsertProcessingStub({
         videoId,
         userId,
         title: ingestionResult.metadata.title,
@@ -222,14 +273,14 @@ export class CreateAnalysisUseCase {
           timezone,
         },
       });
-      analysisId = stub.id;
     } catch {
-      await this.billingQuota.refund({ userId, email: userEmail });
+      // Refund: mark reservation as failed
+      await markReservationFailed();
       return {
         type: 'error',
         code: 'ERR_ANALYSIS_ROW_INSERT',
         status: 500,
-        message: 'Failed to initialize analysis',
+        message: 'Failed to finalize analysis metadata',
       };
     }
 
@@ -264,7 +315,7 @@ export class CreateAnalysisUseCase {
           dimensionsReceived: [],
         },
         stream: {
-          url: `${process.env.NEXT_PUBLIC_WORKER_URL || ''}/analyze-llm-stream`,
+          url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig,
           exp,
         },

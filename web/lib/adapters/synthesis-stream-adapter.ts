@@ -17,7 +17,13 @@
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { validateFragment, validateDimension } from '@/lib/validators/synthesis';
-import type { UCISDimension, PersonaConfigV2, KnowledgeGraphV2, ClassificationData } from '@/lib/types/synthesis-nucleus';
+import {
+  type UCISDimension,
+  type PersonaConfigV2,
+  type KnowledgeGraphV2,
+  type ClassificationData,
+  computePersonaProjection,
+} from '@/lib/types/synthesis-nucleus';
 
 export interface StreamAdapterOptions {
   onError?: (error: string) => void;
@@ -107,6 +113,62 @@ export class SynthesisStreamAdapter {
     from?: string;
     error?: string;
   }) {
+    const store = this.analysisStore.getState();
+    if (fragment.stage === 'starting') {
+      store.logInfo(`Edge pipeline start for video ID: ${fragment.videoId}`);
+    } else if (fragment.stage === 'model') {
+      store.logInfo(`Contacting OpenRouter endpoint...`);
+      store.logInfo(`Running model cascade node: ${fragment.model}`);
+    } else if (fragment.stage === 'fallback') {
+      // Clear any partial text written by the failed model so the next model starts fresh
+      store.setAnalysis(store.analysis ? { ...store.analysis, analysis_markdown: '' } : null);
+
+      // Fully reset the synthesis projection state (dimensions, persona, etc.) upon a fallback transition,
+      // keeping the metadata of the current analysis intact.
+      const synthState = this.synthStore.getState();
+      if (synthState.analysis) {
+        this.synthStore.setState({
+          analysis: {
+            ...synthState.analysis,
+            dimensions: {},
+            streaming: {
+              ...synthState.analysis.streaming,
+              dimensionsReceived: [],
+            },
+          },
+          personaConfig: null,
+          knowledgeGraph: null,
+          classification: null,
+          projection: computePersonaProjection({
+            ...synthState.analysis,
+            dimensions: {},
+            streaming: {
+              ...synthState.analysis.streaming,
+              dimensionsReceived: [],
+            },
+          }, synthState.activePersona),
+          streamError: null,
+        });
+      }
+
+      const code = fragment.error || '';
+      let msg = 'Optimizing pipeline routing...';
+      if (code === 'ERR_MODEL_REFUSAL') {
+        msg = 'Model response validation failed. Re-routing analysis...';
+      } else if (code === 'ERR_MODEL_OVERLOAD') {
+        msg = 'Provider capacity limit reached. Re-routing to alternate provider...';
+      } else if (code === 'ERR_CONNECTION_TIMEOUT') {
+        msg = 'Connection response delayed. Adjusting backup cascade path...';
+      } else if (code === 'ERR_MONTHLY_QUOTA_EXHAUSTED') {
+        msg = 'Model tier capacity overdrawn. Transitioning route...';
+      } else if (code === 'ERR_INTERNAL_PROVIDER_FAULT') {
+        msg = 'Cascade path fault detected. Switching node...';
+      }
+
+      store.logError(msg);
+      store.logInfo(`Attempting automated fallback routing...`);
+    }
+
     // Status messages are lifecycle events; log them for debugging
     console.debug('[Adapter] Status update:', {
       stage: fragment.stage,
@@ -123,7 +185,7 @@ export class SynthesisStreamAdapter {
     content: string;
   }) {
     const store = this.analysisStore.getState();
-    store.appendTerminalLine(fragment.content);
+    store.appendMarkdown(fragment.content);
     console.debug('[Adapter] Delta received:', fragment.content.slice(0, 100));
   }
 
@@ -152,6 +214,8 @@ export class SynthesisStreamAdapter {
     // Feed into store
     const store = this.synthStore.getState();
     store.addDimension(entityValidation.data);
+
+    this.analysisStore.getState().logOk(`Synthesized Dimension ${fragment.dimension}: ${fragment.name}`);
 
     // Notify progress
     if (this.options.onProgress) {
@@ -189,6 +253,13 @@ export class SynthesisStreamAdapter {
     const store = this.synthStore.getState();
     store.completeAnalysis();
 
+    const analysisStore = this.analysisStore.getState();
+    if (fragment.valid) {
+      analysisStore.logOk(`Synthesis verification complete. Structure check passed.`);
+    } else {
+      analysisStore.logError(`Content verification warning: output did not pass all 11-dimension checks.`);
+    }
+
     // Notify completion
     if (this.options.onComplete) {
       this.options.onComplete();
@@ -212,6 +283,8 @@ export class SynthesisStreamAdapter {
     const store = this.synthStore.getState();
     store.setStreamError(fragment.error);
 
+    this.analysisStore.getState().logError(`Edge stream error: ${fragment.error}`);
+
     // Notify error
     if (this.options.onError) {
       this.options.onError(fragment.error);
@@ -225,6 +298,7 @@ export class SynthesisStreamAdapter {
   private handlePersona(fragment: { type: 'persona'; config: PersonaConfigV2 }) {
     const store = this.synthStore.getState();
     store.setPersonaConfig(fragment.config);
+    this.analysisStore.getState().logOk(`Resolved persona schema: ${fragment.config.primary.label}`);
   }
 
   private handleKG(fragment: { type: 'kg'; nodes: KnowledgeGraphV2['nodes']; edges: KnowledgeGraphV2['edges']; rootId: string | null }) {
@@ -234,11 +308,13 @@ export class SynthesisStreamAdapter {
       edges: fragment.edges,
       rootId: fragment.rootId,
     });
+    this.analysisStore.getState().logOk(`Structured Knowledge Graph constructed (${fragment.nodes.length} nodes, ${fragment.edges.length} edges)`);
   }
 
   private handleClassification(fragment: { type: 'classification'; data: ClassificationData }) {
     const store = this.synthStore.getState();
     store.setClassification(fragment.data);
+    this.analysisStore.getState().logOk(`Actionable classification: ${fragment.data.recommendation}`);
   }
 
   /**

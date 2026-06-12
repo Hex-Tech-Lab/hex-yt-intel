@@ -111,16 +111,24 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     validationReport: ValidationReportInput;
   }): Promise<AnalysisStub> {
     const service = getSupabaseServiceClient();
-    const { data: prepared, error: insertError } = await service
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+
+    // 1. Look for an active processing stub created within the last 15 minutes
+    const { data: activeStub } = await service
       .from('analyses')
-      .upsert(
-        {
-          video_id: params.videoId,
-          user_id: params.userId,
+      .select('id')
+      .eq('video_id', params.videoId)
+      .eq('user_id', params.userId)
+      .eq('billing_status', 'processing')
+      .gte('created_at', fifteenMinutesAgo)
+      .maybeSingle();
+
+    if (activeStub) {
+      // Update the existing active processing stub in-place (second call metadata update)
+      const { data: updated, error: updateError } = await service
+        .from('analyses')
+        .update({
           title: params.title,
-          analysis_markdown: '',
-          analysis_payload: {},
-          model_used: 'edge-stream',
           validation_report: {
             status: params.validationReport.status,
             transcript_available: params.validationReport.transcriptAvailable,
@@ -130,22 +138,49 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
             persona: params.validationReport.persona,
             timezone: params.validationReport.timezone,
           },
-          validation_passed: false,
-        },
-        { onConflict: 'user_id,video_id' }
-      )
-      .select('id')
-      .single();
+        })
+        .eq('id', activeStub.id)
+        .select('id')
+        .single();
 
-    if (insertError || !prepared?.id) {
-      Sentry.captureException(insertError ?? new Error('upsert returned no row'), {
-        tags: { operation: 'analysis-prepare-upsert' },
-        extra: { videoId: params.videoId, userId: params.userId },
-      });
-      throw insertError ?? new Error('upsert returned no row');
+      if (updateError || !updated?.id) {
+        Sentry.captureException(updateError ?? new Error('update processing stub returned no row'), {
+          tags: { operation: 'analysis-update-processing-stub' },
+          extra: { videoId: params.videoId, userId: params.userId, stubId: activeStub.id },
+        });
+        throw updateError ?? new Error('update processing stub returned no row');
+      }
+
+      return { id: updated.id as string };
     }
 
-    return { id: prepared.id as string };
+    // 2. Otherwise, this is a fresh run (first call). Count quota and insert stub atomically.
+    const { data: rpcData, error: rpcError } = await service
+      .rpc('reserve_analysis_quota', {
+        p_user_id: params.userId,
+        p_video_id: params.videoId,
+        p_title: params.title,
+        p_validation_report: {
+          status: params.validationReport.status,
+          transcript_available: params.validationReport.transcriptAvailable,
+          analysis_type: params.validationReport.analysisType,
+          stale_after: params.validationReport.staleAfter,
+          metadata: params.validationReport.metadata,
+          persona: params.validationReport.persona,
+          timezone: params.validationReport.timezone,
+        },
+      });
+
+    if (rpcError || !rpcData) {
+      const errMsg = rpcError?.message || 'Failed to reserve analysis quota';
+      Sentry.captureException(rpcError ?? new Error(errMsg), {
+        tags: { operation: 'analysis-prepare-rpc' },
+        extra: { videoId: params.videoId, userId: params.userId },
+      });
+      throw new Error(errMsg);
+    }
+
+    return { id: rpcData as string };
   }
 
   async persistAnalysis(params: {
@@ -161,6 +196,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         analysis_payload: params.analysisPayload as Record<string, unknown> | null,
         analysis_markdown: params.analysisMarkdown,
         validation_passed: params.validationPassed,
+        billing_status: 'completed',
       })
       .eq('id', params.analysisId);
 
@@ -673,6 +709,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
           model_used: params.model || 'edge-stream',
           validation_passed: params.validationPassed,
           validation_report: params.validationReport,
+          billing_status: 'completed',
           updated_at: new Date().toISOString(),
         })
         .eq('id', params.analysisId);
@@ -771,6 +808,33 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       Sentry.captureException(error, {
         tags: { method: 'getKnowledgeGraph' },
         extra: { analysisId },
+      });
+      throw error;
+    }
+  }
+
+  async updateBillingStatus(params: {
+    analysisId: string;
+    status: 'processing' | 'completed' | 'failed';
+  }): Promise<void> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { error } = await service
+        .from('analyses')
+        .update({
+          billing_status: params.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.analysisId);
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] updateBillingStatus failed:', error.message);
+        throw error;
+      }
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'updateBillingStatus' },
+        extra: { analysisId: params.analysisId, status: params.status },
       });
       throw error;
     }

@@ -139,7 +139,12 @@ export const useChatStore = create<ChatState>((set, get) => {
     const streamRes = await fetch(job.stream.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...job.payload, sig: job.stream.sig, exp: job.stream.exp }),
+      body: JSON.stringify({
+        ...job.payload,
+        sig: job.stream.sig,
+        exp: job.stream.exp,
+        appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+      }),
     });
     if (!streamRes.ok) throw new Error(`worker ${streamRes.status}`);
 

@@ -32,7 +32,14 @@ export async function getSupabaseClientWithAuth() {
     throw new Error('Missing Supabase configuration');
   }
 
-  const cookieStore = await cookies();
+  let cookieStore: any;
+  let hasCookies = false;
+  try {
+    cookieStore = await cookies();
+    hasCookies = true;
+  } catch {
+    // Cookieless context (e.g., static generation / build-time page validation)
+  }
 
   return createServerClient(
     supabaseUrl,
@@ -40,9 +47,11 @@ export async function getSupabaseClientWithAuth() {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll().map((c) => ({ name: c.name, value: c.value }));
+          if (!hasCookies || !cookieStore) return [];
+          return cookieStore.getAll().map((c: any) => ({ name: c.name, value: c.value }));
         },
         setAll(cookiesToSet) {
+          if (!hasCookies || !cookieStore) return;
           // Supabase calls setAll when it auto-refreshes an expired access token
           // on read. In a Server Component render, cookie writes are illegal and
           // Next.js throws "Cookies can only be modified in a Server Action or

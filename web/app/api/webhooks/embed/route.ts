@@ -60,6 +60,24 @@ export async function POST(request: NextRequest) {
     userId = payload.userId;
     const { markdown } = payload;
 
+    // Check if Upstash Vector credentials are placeholder/missing (e.g. in preview/dev)
+    const vectorUrl = process.env.UPSTASH_VECTOR_REST_URL || '';
+    const vectorToken = process.env.UPSTASH_VECTOR_REST_TOKEN || '';
+    const isPlaceholder = 
+      !vectorUrl || 
+      vectorUrl.includes('placeholder') || 
+      !vectorToken || 
+      vectorToken.includes('placeholder');
+
+    if (isPlaceholder) {
+      console.warn('[embed-webhook] Upstash Vector index is not configured or is a placeholder. Skipping embedding generation to avoid duplicate failures/retries.');
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        message: 'Embedding generation skipped: Upstash Vector credentials are not configured.'
+      }, { status: 200 });
+    }
+
     if (!analysisId || !markdown) {
       return NextResponse.json(
         { error: 'Missing required payload fields: analysisId or markdown' },

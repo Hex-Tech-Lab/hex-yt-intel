@@ -14,9 +14,8 @@ export class PromptBuilder implements PromptBuilderPort {
   /**
    * Build the UCIS v5.1 system prompt from domain objects.
    */
-  build(context: EngineContext): string {
+  async build(context: EngineContext): Promise<string> {
     return getUCISPrompt({
-      version: '5.1',
       metadata: {
         title: context.metadata.title,
         channelTitle: context.metadata.channelTitle,

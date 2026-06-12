@@ -76,7 +76,7 @@ async function* callStanceModelStream(
         messages: [{ role: 'user', content: prompt }],
         provider: {
           sort: 'latency',
-          allow_fallbacks: true,
+          allow_fallbacks: false,
           ...(providerOrder ? { order: providerOrder } : {}),
         },
       }),

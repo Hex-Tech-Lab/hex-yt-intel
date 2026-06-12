@@ -7,6 +7,10 @@
 
 ## Current Status: 95% Complete, Ready for Skills Platform
 
+### 🏗️ Architectural & Security Constraints
+- **Architecture**: Hexagonal Lite + DDD. Core domain services (ReasoningEngine, PromptBuilder, LLMCascade) live in `worker/src/services/` and are NOT adapters. Only external DB/infra connectors go in `/adapters/`.
+- **LLM Ban**: Claude 3.5 Haiku is PERMANENTLY BANNED. We exclusively use `anthropic/claude-haiku-4.5` (or other verified fallbacks). Never suggest or convert to 3.5.
+
 ### ✅ What's Done
 - Ultimate Content Intelligence v3.2 (16 sections, fully integrated)
 - Cloudflare Worker (yt-intel.hex-tech-lab.workers.dev, LIVE, tested)
