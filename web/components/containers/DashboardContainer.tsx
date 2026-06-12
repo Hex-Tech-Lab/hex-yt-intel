@@ -67,7 +67,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
-  const [showVideoRunner, setShowVideoRunner] = useState(false);
 
   // Define Right Panel Accordion Items
   const rightPanelItems = useMemo(() => [
@@ -208,7 +207,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const handleAnalyze = useCallback(async () => {
     if (!url) return;
-    setShowVideoRunner(true);
     await startAnalysis(url, getUserTimezone());
   }, [url, startAnalysis]);
 
@@ -300,9 +298,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   return (
     <>
-      {showVideoRunner && (
-        <VideoPlayerCard onClose={() => setShowVideoRunner(false)} />
-      )}
       <DashboardLayout
         sidebar={
           <Sidebar
@@ -341,14 +336,17 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           />
 
           {videoMetadata && (
-            <BentoMetadata
-              title={videoMetadata.title}
-              channelTitle={videoMetadata.channelTitle}
-              viewCount={videoMetadata.viewCount}
-              likeCount={videoMetadata.likeCount}
-              duration={videoMetadata.duration || 0}
-              publishedAt={videoMetadata.publishedAt}
-            />
+            <div className="flex flex-col gap-4">
+              <VideoPlayerCard />
+              <BentoMetadata
+                title={videoMetadata.title}
+                channelTitle={videoMetadata.channelTitle}
+                viewCount={videoMetadata.viewCount}
+                likeCount={videoMetadata.likeCount}
+                duration={videoMetadata.duration || 0}
+                publishedAt={videoMetadata.publishedAt}
+              />
+            </div>
           )}
 
           {status !== 'idle' && (
