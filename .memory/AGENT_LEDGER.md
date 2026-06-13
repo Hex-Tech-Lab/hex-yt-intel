@@ -9,6 +9,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Active Ledger
+- [2026-06-13T17:40:00+03:00] [Antigravity (Agent)] [IN_PROGRESS] [SINK: Chunk 1.8.5 - UI Stabilization & Data Mapping Rectification] (PromptBuilder.ts, route.ts, useKnowledgeGraph.ts, Sidebar.tsx, ChatDock.tsx, DashboardLayout.tsx, AnalysisHero.tsx, VideoPlayerCard.tsx) Implementing prompt node ceilings, completion state updates, high-fidelity knowledge graph ingestion, SynthLog sidebar relocation, and layout scroll/video hydration fixes.
 - [2026-06-10T19:10:00+03:00] [GC (Agent)] [DONE] PR #62 review attempted; CI integration authentication failure; Snyk high-severity issues identified. Matrix: /docs/testing/chunk-62-review-matrix.md.
 - [2026-06-10T19:20:00+03:00] [GC (Agent)] [DONE] Upgraded workspace dependencies and fixed PostgresBillingAdapter type error. Verified via production build.
 - [2026-06-10T19:25:00+03:00] [GC (Agent)] [DONE] Hardened worker streaming pipeline and relations engine against LLM loops/timeouts using AbortSignals. Verified via build.
@@ -91,6 +92,8 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-13T15:52:00+03:00] [Antigravity (Agent)] [DONE] [SINK: Chunk 1.8.1 - Eleven-Stream Streaming Stabilization Remediations] Stabilized the 11-stream parallel synthesis pipeline by introducing idempotent settlement guards in useSSEStream.ts, strictly checking totalChunks in route.ts, isolating adapter mutations strictly by chunkIndex, extracting a shared Dimension specifications config, and enforcing a 400-word constraint. Run local checks (type-check, lint, build) and pushed to main after full CI greenlights.
 - [2026-06-13T16:00:00+03:00] [Antigravity (Agent)] [DONE] [SINK: Chunk 1.8.2 - PromptBuilder hardcoded bounds correction] Corrected remaining hardcoded dimension bounds in PromptBuilder.ts, ensuring full synchronization with the TOTAL_DIMENSIONS constant. Verified via full local compilation, linting, and build validation checks, and successfully merged to main after all CI pipelines passed.
 - [2026-06-13T16:15:00+03:00] [Antigravity (Agent)] [DONE] [SINK: Chunk 1.8.3 - Worker segmented JSON payload extraction stabilization] Fixed extractJsonPayload and reconstructMarkdown in worker to correctly handle chunk payloads missing the persona configuration, preventing full persistence fallbacks.
+- [2026-06-13T16:25:00+03:00] [Antigravity (Agent)] [DONE] [SINK: Chunk 1.8.4 - UI Accordion-to-Panel Overhaul & Right Panel Readout Canvas] Replaced the grid of cards and ApexSummaryCard with a selector-mode vertical accordion list (DimensionAccordion) in the middle column, and implemented a typography-spaced, live-streaming reading canvas in the right column for selected dimensions. Verified via build.
+
 
 
 

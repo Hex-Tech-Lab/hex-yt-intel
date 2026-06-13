@@ -253,7 +253,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         videoId: analysis.video_id,
         title: analysis.title || 'Untitled Analysis',
         createdAt: analysis.created_at,
-        status: analysis.validation_passed ? 'completed' :
+        status: (analysis.validation_passed || analysis.validation_report?.status === 'completed' || analysis.validation_report?.status === 'done') ? 'completed' :
                 (analysis.validation_report?.status === 'processing' ? 'processing' : 'incomplete'),
       }));
     } catch (error: any) {
