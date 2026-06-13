@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useChatStore } from '@/store/useChatStore';
-import { useAnalysisStore } from '@/store/useAnalysisStore';
-import { ProcessingLog } from './ProcessingLog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
@@ -29,13 +27,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   const {
     conversations, activeId, messagesByConv, sending,
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
+    isChatOpen: open, setChatOpen: setOpen,
   } = useChatStore();
-  const analysisStore = useAnalysisStore();
-
-  const logStatus = analysisStore.status;
-  const showLog = logStatus !== 'idle' && analysisStore.terminalLines.length > 0;
-
-  const [open, setOpen] = useState(false);
   const [showThreads, setShowThreads] = useState(false);
   const [input, setInput] = useState('');
 
@@ -161,11 +154,6 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   if (!open) {
     return (
       <div style={{ ...shell, height: BAR_H, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10 }}>
-        {showLog && (
-          <div style={{ position: 'absolute', bottom: 'calc(100% + 1px)', left: 0, right: 0, zIndex: 100 }}>
-            <ProcessingLog status={logStatus === 'analyzing' || logStatus === 'downloading' ? 'streaming' : logStatus === 'complete' ? 'done' : logStatus === 'error' ? 'error' : 'idle'} />
-          </div>
-        )}
         <button
           onClick={() => setOpen(true)}
           aria-label="Open chat"
@@ -191,11 +179,6 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       aria-label="Synthesis chat"
       style={{ ...shell, height: 'min(60vh, 560px)', display: 'flex', flexDirection: 'column' }}
     >
-      {showLog && (
-        <div style={{ position: 'absolute', bottom: 'calc(100% + 1px)', left: 0, right: 0, zIndex: 100 }}>
-          <ProcessingLog status={logStatus === 'analyzing' || logStatus === 'downloading' ? 'streaming' : logStatus === 'complete' ? 'done' : logStatus === 'error' ? 'error' : 'idle'} />
-        </div>
-      )}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', borderBottom: '1px solid var(--line)', background: 'rgb(26 31 43 / 0.6)' }}>
         <button

@@ -40,7 +40,7 @@ export class PromptBuilder implements PromptBuilderPort {
             return 'include the "persona" configuration block in the JSON root';
           }
           if (f === 'knowledgeGraph') {
-            return 'generate and include the full "knowledgeGraph" object representing entities and relationships extracted from this content in the JSON root';
+            return 'generate and include the full "knowledgeGraph" object representing entities and relationships extracted from this content in the JSON root (strictly limit the output to a maximum of 15 critical nodes and 20 relational edges to ensure token efficiency. The knowledge graph MUST form a single, weakly connected component. You are strictly forbidden from generating isolated nodes; every node must have at least one incoming or outgoing edge [degree >= 1]. If your extraction results in separate conceptual clusters, you must synthesize logical "Cross-Domain Bridges" to connect them to the primary root node. The "rootId" must be assigned to the node with the highest out-degree centrality, i.e., the concept that spawns the most sub-concepts)';
           }
           if (f === 'classification') {
             return 'generate and include the full "classification" object in the JSON root';

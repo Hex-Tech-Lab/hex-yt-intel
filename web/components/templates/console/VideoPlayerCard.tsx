@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import ReactPlayer from 'react-player';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
+import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 
 const Player = ReactPlayer as any;
 
@@ -11,6 +12,9 @@ export function VideoPlayerCard() {
   const playerRef = useRef<any>(null);
   const { seekTo, jumpToTimestamp } = useVideoStore();
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
+  const nucleus = useSynthesisNucleus();
+
+  const videoId = videoMetadata?.videoId || nucleus.analysis?.videoId;
 
   useEffect(() => {
     if (seekTo !== null && playerRef.current) {
@@ -19,13 +23,13 @@ export function VideoPlayerCard() {
     }
   }, [seekTo, jumpToTimestamp]);
 
-  if (!videoMetadata) return null;
+  if (!videoId) return null;
 
   return (
     <div className="w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
       <Player
         ref={playerRef}
-        url={`https://www.youtube.com/watch?v=${videoMetadata.videoId}`}
+        url={`https://www.youtube.com/watch?v=${videoId}`}
         width="100%"
         height="100%"
         controls

@@ -24,6 +24,7 @@ import { useRelations } from '@/hooks/useRelations';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 import { VideoPlayerCard } from '@/components/templates/console/VideoPlayerCard';
+import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
 
 // See /docs/ui/dashboard-container.md
 
@@ -47,6 +48,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const analysis = useAnalysisStore((s) => s.analysis);
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const error = useAnalysisStore((s) => s.error);
+  const terminalLines = useAnalysisStore((s) => s.terminalLines);
+
+  const showLog = status !== 'idle' && terminalLines.length > 0;
 
   const { url, setUrl } = useInputStore();
   const [mounted, setMounted] = useState(false);
@@ -337,7 +341,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           activeKey={activeNav}
           onNavigate={(key) => setActiveNav(key as 'console' | 'history' | 'settings')}
           repoScope={{ label: 'Main Graph', onClick: () => {} }}
-        />
+        >
+          {showLog && (
+            <ProcessingLog status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'} />
+          )}
+        </Sidebar>
       }
       topbar={
         <TopBar
@@ -412,17 +420,19 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             quota={quotaLabel}
           />
 
-          {videoMetadata && (
+          {(videoMetadata || nucleus.analysis?.videoId) && (
             <div className="flex flex-col gap-4">
               <VideoPlayerCard />
-              <BentoMetadata
-                title={videoMetadata.title}
-                channelTitle={videoMetadata.channelTitle}
-                viewCount={videoMetadata.viewCount}
-                likeCount={videoMetadata.likeCount}
-                duration={videoMetadata.duration || 0}
-                publishedAt={videoMetadata.publishedAt}
-              />
+              {videoMetadata && (
+                <BentoMetadata
+                  title={videoMetadata.title}
+                  channelTitle={videoMetadata.channelTitle}
+                  viewCount={videoMetadata.viewCount}
+                  likeCount={videoMetadata.likeCount}
+                  duration={videoMetadata.duration || 0}
+                  publishedAt={videoMetadata.publishedAt}
+                />
+              )}
             </div>
           )}
 
