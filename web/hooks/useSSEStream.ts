@@ -127,44 +127,60 @@ export function useSSEStream() {
             return;
           }
 
-          store.logInfo(`Connecting to Cloudflare edge worker with 3 parallel streams...`);
+          const resolvedTotal = 11;
+          store.logInfo(`Connecting to Cloudflare edge worker with ${resolvedTotal} parallel streams...`);
           initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result');
           initSynthesis(job);
           setStatus('analyzing');
 
-          const chunks = [
-            { index: 1, name: 'Dimensions 1-4' },
-            { index: 2, name: 'Dimensions 5-8' },
-            { index: 3, name: 'Dimensions 9-11' }
-          ];
+          const chunks = Array.from({ length: resolvedTotal }, (_, i) => ({
+            index: i + 1,
+            name: `Dimension ${i + 1}`,
+          }));
 
-          let completedCount = 0;
-          let hasError = false;
+          const completedIndexes = new Set<number>();
+          const failedIndexes = new Set<number>();
 
           const runStream = async (chunkIndex: number, chunkName: string) => {
+            const checkSettleState = () => {
+              const totalSettled = completedIndexes.size + failedIndexes.size;
+              if (totalSettled === resolvedTotal) {
+                const totalSucceeded = completedIndexes.size;
+                if (totalSucceeded === resolvedTotal) {
+                  store.logOk(`All ${resolvedTotal} analysis streams completed successfully.`);
+                  useSynthesisNucleus.getState().completeAnalysis();
+                  setStatus('complete');
+                  setIsLoading(false);
+                  archiveCurrentAnalysis();
+                } else if (totalSucceeded > 0) {
+                  store.logInfo(`Analysis completed with partial success (${totalSucceeded}/${resolvedTotal} dimensions).`);
+                  useSynthesisNucleus.getState().completeAnalysis();
+                  setStatus('complete');
+                  setIsLoading(false);
+                  archiveCurrentAnalysis();
+                } else {
+                  const msg = 'All analysis streams failed to complete. Please try again.';
+                  store.logError(msg);
+                  setError({ code: 'ERR_ALL_STREAMS_FAILED', status: 0, message: msg });
+                  setStatus('error');
+                  setIsLoading(false);
+                }
+              }
+            };
+
             const adapter = new SynthesisStreamAdapter({
               isPartialStream: true,
               onError: (error) => {
                 if (currentSignal.aborted) return;
                 store.logError(`[${chunkName}] stream error: ${error}`);
-                if (!hasError) {
-                  hasError = true;
-                  setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: error });
-                  setStatus('error');
-                  setIsLoading(false);
-                }
+                failedIndexes.add(chunkIndex);
+                checkSettleState();
               },
               onComplete: () => {
                 if (currentSignal.aborted) return;
-                completedCount++;
+                completedIndexes.add(chunkIndex);
                 store.logOk(`[${chunkName}] streaming completed.`);
-                if (completedCount === 3 && !hasError) {
-                  store.logOk(`All 3 analysis streams completed successfully.`);
-                  useSynthesisNucleus.getState().completeAnalysis();
-                  setStatus('complete');
-                  setIsLoading(false);
-                  archiveCurrentAnalysis();
-                }
+                checkSettleState();
               }
             });
 
@@ -180,6 +196,7 @@ export function useSSEStream() {
               exp: job.stream.exp,
               appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
               chunkIndex,
+              totalChunks: resolvedTotal,
             };
 
             const res = await fetch(job.stream.url, {
@@ -232,7 +249,7 @@ export function useSSEStream() {
             if (buffer.trim()) handleEvent(buffer);
           };
 
-          // Execute all 3 streams concurrently
+          // Execute all 11 streams concurrently
           await Sentry.startSpan(
             { name: 'stream worker /analyze-llm-stream concurrent', op: 'stream.parse' },
             async () => {
@@ -240,23 +257,34 @@ export function useSSEStream() {
                 chunks.map(chunk => runStream(chunk.index, chunk.name).catch((err) => {
                   if (currentSignal.aborted) return;
                   store.logError(`Concurrent stream dispatch failed for ${chunk.name}: ${err.message}`);
-                  if (!hasError) {
-                    hasError = true;
-                    setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: err.message });
-                    setStatus('error');
-                    setIsLoading(false);
+                  failedIndexes.add(chunk.index);
+                  
+                  // Track settle state check
+                  const totalSettled = completedIndexes.size + failedIndexes.size;
+                  if (totalSettled === resolvedTotal) {
+                    const totalSucceeded = completedIndexes.size;
+                    if (totalSucceeded === resolvedTotal) {
+                      store.logOk(`All ${resolvedTotal} analysis streams completed successfully.`);
+                      useSynthesisNucleus.getState().completeAnalysis();
+                      setStatus('complete');
+                      setIsLoading(false);
+                      archiveCurrentAnalysis();
+                    } else if (totalSucceeded > 0) {
+                      store.logInfo(`Analysis completed with partial success (${totalSucceeded}/${resolvedTotal} dimensions).`);
+                      useSynthesisNucleus.getState().completeAnalysis();
+                      setStatus('complete');
+                      setIsLoading(false);
+                      archiveCurrentAnalysis();
+                    } else {
+                      const msg = 'All analysis streams failed to complete. Please try again.';
+                      store.logError(msg);
+                      setError({ code: 'ERR_ALL_STREAMS_FAILED', status: 0, message: msg });
+                      setStatus('error');
+                      setIsLoading(false);
+                    }
                   }
                 }))
               );
-
-              // Interrupted check
-              if (completedCount < 3 && useAnalysisStore.getState().status !== 'error' && !currentSignal.aborted) {
-                const msg = 'One or more analysis streams ended unexpectedly. Please try again.';
-                store.logError(msg);
-                setError({ code: 'ERR_STREAM_INCOMPLETE', status: 0, message: msg });
-                setStatus('error');
-                setIsLoading(false);
-              }
             }
           );
         } catch (error) {
