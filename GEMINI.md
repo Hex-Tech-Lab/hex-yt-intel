@@ -193,6 +193,7 @@ The system is transitioning to a triple-redundant hybrid model (ADR 005) to solv
 
 ## 8. MASTER CHANGELOG LEDGER
 
+- **2026-06-13**: Fix (review): Processed Chunk 1.8.5; stabilized frontend layout flow with responsive padding, smooth maxHeight headers, optimized VideoPlayerCard subscriptions, type-safe validation checks on knowledge graph structures, and dynamic out-degree rootId derivation.
 - **2026-06-04**: Feat (ux): Stabilize frontend rehydration, fix chat persistence, and implement dark-theme scrollbars + export controls.
 - **2026-06-04**: Fix (hardening): Implement API resilience (Edge runtime, streaming, dual-timeout), refactor UI to Tailwind, and migrate docs to markdown.
 - **2026-06-04**: Fix (review): Processed structural UX epic recommendations; resolved PDFKit type issues and secured analysis route via getSupabaseClientWithAuth().
