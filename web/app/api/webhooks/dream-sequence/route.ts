@@ -22,12 +22,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing tenantId or analysisId' }, { status: 400 });
     }
 
+    // Config Validation
+    const url = process.env.UPSTASH_VECTOR_REST_URL;
+    const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
+    if (!url || !token) {
+      console.error('[dream-sequence] Missing vector store config');
+      return NextResponse.json({ error: 'Internal configuration error' }, { status: 500 });
+    }
+
     // Dependency Injection
     const persistence = new SupabasePersistenceAdapter();
-    const vectorDedup = new UpstashVectorAdapter(
-      process.env.UPSTASH_VECTOR_REST_URL!,
-      process.env.UPSTASH_VECTOR_REST_TOKEN!
-    );
+    const vectorDedup = new UpstashVectorAdapter(url, token);
     const useCase = new DeduplicateGraphUseCase(persistence, vectorDedup);
 
     // Execute use case
