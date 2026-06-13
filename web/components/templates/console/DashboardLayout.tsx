@@ -13,9 +13,6 @@ export interface DashboardLayoutProps {
   dock?: ReactNode;
 }
 
-const CHAT_DOCK_PADDING_BOTTOM_OPEN = 'min(calc(60vh + 20px), 580px)';
-const CHAT_DOCK_PADDING_BOTTOM_CLOSED = '72px';
-
 export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }: DashboardLayoutProps) {
   const isChatOpen = useChatStore((s) => s.isChatOpen);
 
@@ -32,7 +29,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           {topbar}
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 px-10 scroll-smooth" style={{ paddingBottom: isChatOpen ? CHAT_DOCK_PADDING_BOTTOM_OPEN : CHAT_DOCK_PADDING_BOTTOM_CLOSED }}>
+        <div className={`flex-1 overflow-y-auto p-8 px-10 scroll-smooth ${isChatOpen ? 'pb-[580px]' : 'pb-18'}`}>
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1">
               {children}

@@ -343,7 +343,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           repoScope={{ label: 'Main Graph', onClick: () => {} }}
         >
           {showLog && (
-            <ProcessingLog status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'} />
+            <ProcessingLog status={status === 'analyzing' || status === 'downloading' || status === 'parsing' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'} />
           )}
         </Sidebar>
       }

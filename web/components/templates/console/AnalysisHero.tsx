@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { MonoLabel, StatusBadge, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
 
 export interface AnalysisHeroProps {
@@ -16,6 +17,22 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
   const streaming = status === "streaming";
   const disabled = streaming || !url || url.trim().length === 0;
 
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [measuredHeight, setMeasuredHeight] = useState(0);
+
+  useEffect(() => {
+    if (heroRef.current) {
+      setMeasuredHeight(heroRef.current.scrollHeight);
+    }
+    const handleResize = () => {
+      if (heroRef.current) {
+        setMeasuredHeight(heroRef.current.scrollHeight);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [status]);
+
   return (
     <section className="hx-rise">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -24,11 +41,12 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
       </div>
 
       <div 
+        ref={heroRef}
         style={{ 
-          maxHeight: status !== 'idle' ? '0px' : '200px', 
+          maxHeight: status !== 'idle' ? '0px' : `${measuredHeight}px`, 
           opacity: status !== 'idle' ? 0 : 1, 
           overflow: 'hidden', 
-          transition: 'all 0.3s ease-out',
+          transition: 'max-height 0.3s ease-out, opacity 0.3s ease-out',
           marginBottom: status !== 'idle' ? 0 : 24
         }}
       >
