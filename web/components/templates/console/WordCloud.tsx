@@ -62,8 +62,8 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     const placed: PlacedWord[] = [];
 
     // Auxiliary canvas for measuring text dimensions
-    const testCanvas = document.createElement('canvas');
-    const testCtx = testCanvas.getContext('2d');
+    const testCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+    const testCtx = testCanvas ? testCanvas.getContext('2d') : null;
 
     const checkOverlap = (a: PlacedWord, b: PlacedWord) => {
       // Add padding for collision check
@@ -246,7 +246,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           onMouseMove={handleMouseMove}
           onMouseOut={() => setHoveredWordId(null)}
           onClick={handleMouseClick}
-          className="block w-full h-full"
+          className="block w-full h-full js-word-cloud-canvas"
         />
       ) : (
         <div className="flex h-full items-center justify-center text-[var(--ink-muted)] font-mono text-xs italic">

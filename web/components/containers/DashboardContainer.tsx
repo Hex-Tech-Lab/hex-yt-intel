@@ -118,7 +118,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       a.download = `${nucleus.analysis?.title || 'analysis'}-insights.txt`;
       a.click();
     } else if (id === 'knowledge-graph') {
-      const canvas = document.querySelector('div[style*="radial-gradient"] canvas') as HTMLCanvasElement;
+      const canvas = document.querySelector('.js-knowledge-graph-container canvas') as HTMLCanvasElement;
       if (canvas) {
         const url = canvas.toDataURL('image/png');
         const a = document.createElement('a');
@@ -129,7 +129,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         alert('Could not locate canvas element to export.');
       }
     } else if (id === 'word-cloud') {
-      const canvas = document.querySelector('canvas[className*="block w-full"]') as HTMLCanvasElement;
+      const canvas = document.querySelector('.js-word-cloud-canvas') as HTMLCanvasElement;
       if (canvas) {
         const url = canvas.toDataURL('image/png');
         const a = document.createElement('a');
@@ -140,7 +140,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         alert('Could not locate canvas element to export.');
       }
     } else if (id === 'mind-map') {
-      const svg = document.querySelector('div[style*="max-height: 350px"] svg') as SVGElement;
+      const svg = document.querySelector('.js-mind-map-container svg') as SVGElement;
       if (svg) {
         const serializer = new XMLSerializer();
         const svgString = serializer.serializeToString(svg);

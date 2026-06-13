@@ -29,7 +29,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           {topbar}
         </header>
 
-        <div className={`flex-1 overflow-y-auto p-8 px-10 scroll-smooth ${isChatOpen ? 'pb-[580px]' : 'pb-18'}`}>
+        <div className={`flex-1 overflow-y-auto p-8 px-10 scroll-smooth ${isChatOpen ? 'pb-[580px]' : 'pb-16'}`}>
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1">
               {children}
