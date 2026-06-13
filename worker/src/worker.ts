@@ -397,6 +397,7 @@ app.post("/analyze-llm-stream", async (c) => {
     exp: number;
     appUrl?: string;
     chunkIndex?: number;
+    totalChunks?: number;
   }
 
   const req = (await c.req.json()) as StreamRequest;
@@ -506,6 +507,7 @@ app.post("/analyze-llm-stream", async (c) => {
         contentSig,
         status,
         chunkIndex: req.chunkIndex,
+        totalChunks: req.totalChunks,
       }),
     }).catch((e) => {
       persisted = false;

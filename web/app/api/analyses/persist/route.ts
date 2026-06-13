@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     contentSig?: string; 
     status?: string;
     chunkIndex?: number;
+    totalChunks?: number;
   } | undefined;
 
   try {
@@ -47,11 +48,19 @@ export async function POST(request: NextRequest) {
       valid, 
       contentSig, 
       status = 'completed',
-      chunkIndex
+      chunkIndex,
+      totalChunks
     } = body || {};
 
     if (!analysisId || !videoId || typeof markdown !== 'string' || !contentSig) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const resolvedTotal = typeof totalChunks === 'number' ? totalChunks : 11;
+    if (chunkIndex !== undefined) {
+      if (typeof chunkIndex !== 'number' || !Number.isInteger(chunkIndex) || chunkIndex < 1 || chunkIndex > resolvedTotal) {
+        return NextResponse.json({ error: `Invalid chunkIndex. Must be an integer between 1 and ${resolvedTotal}` }, { status: 400 });
+      }
     }
 
     // Tamper check: proves this markdown+payload came from the worker, not a forged caller.
@@ -67,7 +76,14 @@ export async function POST(request: NextRequest) {
     if (payload !== undefined && payload !== null) {
       const isChunk = chunkIndex !== undefined;
       const parseResult = isChunk
-        ? z.object({ schemaVersion: z.literal('2.0'), dimensions: z.array(z.any()) }).safeParse(payload)
+        ? z.object({
+            schemaVersion: z.literal('2.0'),
+            dimensions: z.array(z.object({
+              number: z.number().int().min(1).max(11),
+              name: z.string(),
+              content: z.string()
+            }))
+          }).safeParse(payload)
         : UCISPayloadV2Schema.safeParse(payload);
 
       if (!parseResult.success) {
@@ -121,37 +137,70 @@ export async function POST(request: NextRequest) {
       const chunks = await persistenceAdapter.findAnalysisChunks({ analysisId });
       const completedChunks = chunks ? chunks.filter(c => c.status === 'completed') : [];
 
-      if (completedChunks.length === 3) {
+      const completedIndexes = new Set(completedChunks.map(c => c.chunk_index));
+      let allChunksCompleted = true;
+      for (let i = 1; i <= resolvedTotal; i++) {
+        if (!completedIndexes.has(i)) {
+          allChunksCompleted = false;
+          break;
+        }
+      }
+
+      if (allChunksCompleted) {
         // Stitch the payloads together
         const chunkMap = new Map<number, any>();
         completedChunks.forEach(c => {
           chunkMap.set(c.chunk_index, c.payload);
         });
 
-        const p1 = chunkMap.get(1) || {};
-        const p2 = chunkMap.get(2) || {};
-        const p3 = chunkMap.get(3) || {};
+        const stitchedDimensions: any[] = [];
+        let stitchedPersona: any = null;
+        let stitchedClassification: any = null;
+        let stitchedMonetization: any = null;
+        const stitchedNodes: any[] = [];
+        const stitchedEdges: any[] = [];
 
-        const stitchedDimensions = [
-          ...(p1.dimensions || []),
-          ...(p2.dimensions || []),
-          ...(p3.dimensions || [])
-        ].sort((a, b: any) => a.number - b.number);
+        for (let i = 1; i <= resolvedTotal; i++) {
+          const p = chunkMap.get(i) || {};
+          if (p.dimensions && Array.isArray(p.dimensions)) {
+            stitchedDimensions.push(...p.dimensions);
+          }
+          if (p.persona && !stitchedPersona) {
+            stitchedPersona = p.persona;
+          }
+          if (p.classification && !stitchedClassification) {
+            stitchedClassification = p.classification;
+          }
+          if (p.monetizationVerdict && !stitchedMonetization) {
+            stitchedMonetization = p.monetizationVerdict;
+          }
+          if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.nodes)) {
+            stitchedNodes.push(...p.knowledgeGraph.nodes);
+          }
+          if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.edges)) {
+            stitchedEdges.push(...p.knowledgeGraph.edges);
+          }
+        }
+
+        // Sort dimensions safely by dimension number, filtering out malformed entries
+        const cleanDimensions = stitchedDimensions
+          .filter(d => d && typeof d.number === 'number' && !isNaN(d.number))
+          .sort((a, b) => a.number - b.number);
 
         const stitchedPayload: UCISPayloadV2 = {
           schemaVersion: '2.0',
-          persona: p1.persona || {
+          persona: stitchedPersona || {
             primary: { id: 'analyst', label: 'Analyst', weight: 1.0 },
             cognitiveLenses: [],
             selectionRationale: ''
           },
-          dimensions: stitchedDimensions,
-          knowledgeGraph: p2.knowledgeGraph || {
-            nodes: [],
-            edges: [],
-            rootId: null
+          dimensions: cleanDimensions,
+          knowledgeGraph: {
+            nodes: stitchedNodes,
+            edges: stitchedEdges,
+            rootId: stitchedNodes[0]?.id || null
           },
-          classification: p3.classification || {
+          classification: stitchedClassification || {
             authoritative: false,
             practicallyActionable: false,
             knowledgeGraphReady: false,
@@ -159,7 +208,7 @@ export async function POST(request: NextRequest) {
             personaOptimised: false,
             recommendation: 'conditional'
           },
-          monetizationVerdict: p3.monetizationVerdict
+          monetizationVerdict: stitchedMonetization
         };
 
         const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
