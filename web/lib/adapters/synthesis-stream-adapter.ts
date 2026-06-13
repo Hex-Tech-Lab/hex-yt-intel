@@ -18,11 +18,13 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { validateFragment, validateDimension } from '@/lib/validators/synthesis';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 import {
   type UCISDimension,
   type PersonaConfigV2,
   type KnowledgeGraphV2,
   type ClassificationData,
+  type UCISPayloadV2,
   computePersonaProjection,
 } from '@/lib/types/synthesis-nucleus';
 
@@ -31,6 +33,7 @@ export interface StreamAdapterOptions {
   onComplete?: () => void;
   onProgress?: (received: number, expected: number) => void;
   isPartialStream?: boolean;
+  chunkIndex?: number;
 }
 
 export class SynthesisStreamAdapter {
@@ -152,6 +155,9 @@ export class SynthesisStreamAdapter {
   /**
    * Handle a status fragment: lifecycle updates (starting, model, fallback)
    */
+  /**
+   * Handle a status fragment: lifecycle updates (starting, model, fallback)
+   */
   private handleStatus(fragment: {
     type: 'status';
     stage: 'starting' | 'model' | 'fallback';
@@ -168,38 +174,53 @@ export class SynthesisStreamAdapter {
       store.logInfo(`Contacting OpenRouter endpoint...`);
       store.logInfo(`Running model cascade node: ${fragment.model}`);
     } else if (fragment.stage === 'fallback') {
-      // Clear any partial text written by the failed model so the next model starts fresh
-      store.setAnalysis(store.analysis ? { ...store.analysis, analysis_markdown: '' } : null);
       // Reset rawSink buffer to prevent stale partial JSON from corrupting the fallback model run
       this.rawSink = '';
 
-      // Fully reset the synthesis projection state (dimensions, persona, etc.) upon a fallback transition,
-      // keeping the metadata of the current analysis intact.
+      // Fully reset ONLY the specific dimension projection state upon a fallback transition,
+      // keeping the other concurrent dimensions intact.
       const synthState = this.synthStore.getState();
       if (synthState.analysis) {
+        const targetDim = this.options.chunkIndex;
+        const updatedDimensions = { ...synthState.analysis.dimensions };
+        let updatedReceived = [...synthState.analysis.streaming.dimensionsReceived];
+
+        if (targetDim !== undefined) {
+          delete updatedDimensions[targetDim];
+          updatedReceived = updatedReceived.filter(num => num !== targetDim);
+        } else {
+          // If no chunkIndex, do legacy full reset
+          Object.keys(updatedDimensions).forEach(k => delete updatedDimensions[Number(k)]);
+          updatedReceived = [];
+        }
+
         this.synthStore.setState({
           analysis: {
             ...synthState.analysis,
-            dimensions: {},
+            dimensions: updatedDimensions,
             streaming: {
               ...synthState.analysis.streaming,
-              dimensionsReceived: [],
+              dimensionsReceived: updatedReceived,
             },
           },
-          personaConfig: null,
-          knowledgeGraph: null,
-          classification: null,
-          monetizationVerdict: null,
+          // Do not reset persona, classification, or monetization unless doing full reset
+          personaConfig: targetDim === undefined ? null : synthState.personaConfig,
+          knowledgeGraph: targetDim === undefined ? null : synthState.knowledgeGraph,
+          classification: targetDim === undefined ? null : synthState.classification,
+          monetizationVerdict: targetDim === undefined ? null : synthState.monetizationVerdict,
           projection: computePersonaProjection({
             ...synthState.analysis,
-            dimensions: {},
+            dimensions: updatedDimensions,
             streaming: {
               ...synthState.analysis.streaming,
-              dimensionsReceived: [],
+              dimensionsReceived: updatedReceived,
             },
           }, synthState.activePersona),
           streamError: null,
         });
+
+        // Trigger rebuilding of display markdown from the remaining dimensions
+        this.rebuildDisplayMarkdown(store);
       }
 
       const code = fragment.error || '';
@@ -230,6 +251,33 @@ export class SynthesisStreamAdapter {
       error: fragment.error,
       rawError: fragment.rawError,
     });
+  }
+
+  /**
+   * Decoupled helper to rebuild and update display markdown in the store monotonically
+   */
+  private rebuildDisplayMarkdown(store: any) {
+    if (!store.analysis) return;
+    const latestState = this.synthStore.getState();
+    const allDimensions = Object.values(latestState.analysis?.dimensions || {}).sort((a, b) => a.number - b.number);
+    
+    const stitchedPayload = {
+      persona: latestState.personaConfig || undefined,
+      dimensions: allDimensions,
+      classification: latestState.classification || undefined,
+      monetizationVerdict: latestState.monetizationVerdict || undefined,
+    };
+
+    const reconstructed = this.reconstructMarkdown(stitchedPayload);
+    const prevMarkdown = store.analysis.analysis_markdown || '';
+
+    // Enforce monotonic updates: only advance or append, never clear out valid existing attributes
+    if (reconstructed.length >= prevMarkdown.length || prevMarkdown === '') {
+      store.setAnalysis({
+        ...store.analysis,
+        analysis_markdown: reconstructed,
+      });
+    }
   }
 
   /**
@@ -290,17 +338,22 @@ export class SynthesisStreamAdapter {
             }
           }
 
-          // 2. Validate and add Dimensions
+          // 2. Validate and add Dimensions (isolated strictly by chunkIndex criteria)
           if (Array.isArray(obj.dimensions)) {
             for (const dim of obj.dimensions) {
               if (
                 dim &&
                 typeof dim.number === 'number' &&
                 dim.number >= 1 &&
-                dim.number <= 11 &&
+                dim.number <= TOTAL_DIMENSIONS &&
                 typeof dim.content === 'string' &&
                 (typeof dim.name === 'string' || dim.name === undefined)
               ) {
+                const targetDim = this.options.chunkIndex;
+                if (targetDim !== undefined && dim.number !== targetDim) {
+                  continue; // Skip dimension updates that do not belong to this stream index
+                }
+
                 this.synthStore.getState().addDimension({
                   number: dim.number,
                   name: dim.name || `Dimension ${dim.number}`,
@@ -362,21 +415,7 @@ export class SynthesisStreamAdapter {
 
           // 6. Reconstruct displayed markdown from the global store (single source of truth)
           if (isJsonStream && store.analysis) {
-            const latestState = this.synthStore.getState();
-            const allDimensions = Object.values(latestState.analysis?.dimensions || {}).sort((a, b) => a.number - b.number);
-            
-            const stitchedPayload = {
-              persona: latestState.personaConfig,
-              dimensions: allDimensions,
-              classification: latestState.classification,
-              monetizationVerdict: latestState.monetizationVerdict,
-            };
-
-            const reconstructed = this.reconstructMarkdown(stitchedPayload);
-            store.setAnalysis({
-              ...store.analysis,
-              analysis_markdown: reconstructed,
-            });
+            this.rebuildDisplayMarkdown(store);
           }
 
           // Reset the sink if we have processed the final complete unhealed object
@@ -400,6 +439,11 @@ export class SynthesisStreamAdapter {
     content: string;
     metadata?: any;
   }) {
+    const targetDim = this.options.chunkIndex;
+    if (targetDim !== undefined && fragment.dimension !== targetDim) {
+      return; // Ignore updates that do not belong to this stream index
+    }
+
     // Create domain entity
     const dimension: UCISDimension = {
       number: fragment.dimension,
@@ -459,7 +503,7 @@ export class SynthesisStreamAdapter {
       if (fragment.valid) {
         analysisStore.logOk(`Synthesis verification complete. Structure check passed.`);
       } else {
-        analysisStore.logError(`Content verification warning: output did not pass all 11-dimension checks.`);
+        analysisStore.logError(`Content verification warning: output did not pass all ${TOTAL_DIMENSIONS}-dimension checks.`);
       }
     }
 
@@ -520,7 +564,7 @@ export class SynthesisStreamAdapter {
     this.analysisStore.getState().logOk(`Actionable classification: ${fragment.data.recommendation}`);
   }
 
-  private reconstructMarkdown(payload: any): string {
+  private reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
     return reconstructMarkdown(payload);
   }
 

@@ -9,6 +9,7 @@
 import { getUCISPrompt } from '../../../web/lib/prompts/factory';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
+import { DIMENSION_CONFIGS } from '../../../web/lib/config/synthesis';
 
 export class PromptBuilder implements PromptBuilderPort {
   /**
@@ -30,22 +31,8 @@ export class PromptBuilder implements PromptBuilderPort {
       duration: context.metadata.duration || 0,
     });
 
-    const DIMENSION_PROMPT_DETAILS: Record<number, { name: string; extraFields?: string[] }> = {
-      1: { name: 'APEX INTELLIGENCE', extraFields: ['persona'] },
-      2: { name: 'PROVENANCE, METADATA & VIRALITY PROFILE' },
-      3: { name: 'CONTENT ARCHITECTURE & FIRST PRINCIPLES' },
-      4: { name: 'PSYCHOLOGICAL & RHETORICAL LAYER' },
-      5: { name: 'CORE INTELLIGENCE EXTRACTION' },
-      6: { name: 'COMPARATIVE & QUANTITATIVE ANALYSIS' },
-      7: { name: 'IMPLEMENTATION SYSTEMS & WORKFLOWS' },
-      8: { name: 'SEMANTIC & KNOWLEDGE GRAPH FOUNDATION', extraFields: ['knowledgeGraph'] },
-      9: { name: 'FORWARD INTELLIGENCE & STRATEGIC FORESIGHT' },
-      10: { name: 'CREDIBILITY, RISK & META-ASSESSMENT' },
-      11: { name: 'COMMERCIAL YIELD & MONETIZATION PROFILING', extraFields: ['classification', 'monetizationVerdict'] },
-    };
-
     if (context.chunkIndex !== undefined && context.chunkIndex >= 1 && context.chunkIndex <= 11) {
-      const details = DIMENSION_PROMPT_DETAILS[context.chunkIndex];
+      const details = DIMENSION_CONFIGS[context.chunkIndex];
       if (details) {
         const name = details.name;
         const extraInstructions = details.extraFields?.map(f => {
@@ -72,6 +59,7 @@ You are performing a segmented analysis of the content. For this request, you mu
 - ### DIMENSION ${context.chunkIndex} - ${name}
 
 Your output JSON object must ONLY include this dimension inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". You must also ${extraInstructions}.
+Your response must enforce a strict maximum output restriction of 400 analytical words for the processed dimension payload.
 Do NOT output any other dimensions. Do NOT include any other JSON root fields. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`;
       }
     }
@@ -79,3 +67,4 @@ Do NOT output any other dimensions. Do NOT include any other JSON root fields. Y
     return basePrompt;
   }
 }
+

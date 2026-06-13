@@ -1,8 +1,10 @@
+import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
+
 /**
  * Markdown Reconstructor Utility
  * Reconstructs markdown text from the structured JSON v2.0 payload.
  */
-export function reconstructMarkdown(payload: any): string {
+export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
   const lines: string[] = [];
 
   // Persona header (text format for backward compat)
