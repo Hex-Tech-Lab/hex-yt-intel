@@ -84,3 +84,6 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-12T23:15:00+03:00] [Antigravity (Agent)] [DONE] Refactored DashboardContainer.tsx to compute the active streaming highlight card purely on currently visible received dimensions in arrival order, preventing streaming status suppression by hidden dimensions. Narrowed the silent catch block in SynthesisStreamAdapter.ts to only cover JSON.parse of the incomplete progressive stream, logging state update errors explicitly. Verified via type-check and build.
 - [2026-06-12T23:20:00+03:00] [Antigravity (Agent)] [DONE] Removed Claude 4.6 Sonnet translation to 3.5 Sonnet in model-id-translator.ts (Web/Worker) since OpenRouter natively supports Claude 4.6 Sonnet. Verified model availability and active endpoint responses via direct curl tests.
 - [2026-06-12T23:55:00+00:00] [GC (Agent)] [IN_PROGRESS] Conducting connectivity and performance benchmark for Analysis/Chat/Reasoning LLM cascades. Target: web/lib/config/cascade.ts, OpenRouter API
+- [2026-06-13T12:44:00+03:00] [Antigravity (Agent)] [DONE] Increased max_tokens for claude-haiku-4.5 to 62000 in LLMCascade.ts for diagnostic verification testing. Target: worker/src/services/LLMCascade.ts. Verified via clean type-check and workspace production build.
+
+
