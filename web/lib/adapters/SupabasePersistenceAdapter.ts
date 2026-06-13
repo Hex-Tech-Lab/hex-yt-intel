@@ -73,6 +73,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
           persona?: string;
           timezone?: string;
         },
+        analysisPayload: existing.analysis_payload as any,
       };
     }
 
@@ -129,6 +130,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         .from('analyses')
         .update({
           title: params.title,
+          channel_title: params.validationReport.metadata?.channelTitle || '',
           validation_report: {
             status: params.validationReport.status,
             transcript_available: params.validationReport.transcriptAvailable,
@@ -704,12 +706,13 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     title: string;
     validationReport: ValidationReportInput | unknown;
     createdAt: string;
+    channelTitle?: string | null;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analyses')
-        .select('id, user_id, title, validation_report, created_at')
+        .select('id, user_id, title, validation_report, created_at, channel_title')
         .eq('id', params.analysisId)
         .eq('video_id', params.videoId)
         .maybeSingle();
@@ -726,6 +729,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         title: data.title,
         validationReport: data.validation_report,
         createdAt: data.created_at,
+        channelTitle: data.channel_title,
       };
     } catch (error: any) {
       Sentry.captureException(error, {

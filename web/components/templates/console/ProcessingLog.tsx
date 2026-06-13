@@ -27,12 +27,11 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
   return (
     <div style={{
       border: "1px solid var(--line)",
-      borderRadius: "12px 12px 0 0",
+      borderRadius: "12px",
       overflow: "hidden",
       background: "rgb(11 14 20 / 0.96)",
       backdropFilter: "blur(12px)",
-      boxShadow: "0 -4px 20px -5px rgba(0,0,0,0.5)",
-      borderBottom: "none" // Seamless hairline transition to the chat box border
+      boxShadow: "0 4px 20px -5px rgba(0,0,0,0.5)",
     }}>
       {/* Title Bar */}
       <div style={{

@@ -16,6 +16,7 @@ export interface CachedAnalysis {
     persona?: string;
     timezone?: string;
   };
+  analysisPayload?: UCISPayloadV2 | null;
 }
 
 /** The freshly-created analysis stub row returned after upsert. */
@@ -99,6 +100,7 @@ export interface PersistencePort {
     title: string;
     validationReport: unknown;
     createdAt: string;
+    channelTitle?: string | null;
   } | null>;
 
   /**

@@ -42,7 +42,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       // Update Global Store (for header/metadata/button)
       initializeAnalysis(data.id, data.title, data.analysis_markdown);
       setVideoMetadata({
-        id: data.videoId,
+        videoId: data.videoId,
         title: data.title,
         channelTitle: data.channelTitle || 'Unknown',
         publishedAt: data.analysisAt || data.created_at || new Date().toISOString(),
@@ -64,6 +64,14 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         validation: data.validation_report,
         streaming: data.streaming,
       });
+
+      if (data.analysis_payload) {
+        const payload = data.analysis_payload;
+        if (payload.persona) useSynthesisNucleus.getState().setPersonaConfig(payload.persona);
+        if (payload.knowledgeGraph) useSynthesisNucleus.getState().setKnowledgeGraph(payload.knowledgeGraph);
+        if (payload.classification) useSynthesisNucleus.getState().setClassification(payload.classification);
+        if (payload.monetizationVerdict) useSynthesisNucleus.getState().setMonetizationVerdict(payload.monetizationVerdict);
+      }
 
       setStatus('complete');
       onSelectAnalysis?.();

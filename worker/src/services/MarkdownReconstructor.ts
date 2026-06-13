@@ -128,7 +128,15 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
  */
 export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | null {
   try {
-    const parsed = JSON.parse(finalText);
+    let cleanText = finalText.trim();
+    if (cleanText.startsWith('```')) {
+      const start = cleanText.indexOf('{');
+      const end = cleanText.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        cleanText = cleanText.slice(start, end + 1);
+      }
+    }
+    const parsed = JSON.parse(cleanText);
     if (parsed && parsed.schemaVersion === '2.0' && Array.isArray(parsed.dimensions)) {
       if (parsed.persona) {
         if (!parsed.persona.primary || typeof parsed.persona.primary !== 'object' || !('id' in parsed.persona.primary)) {

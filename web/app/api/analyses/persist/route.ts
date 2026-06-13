@@ -15,6 +15,30 @@ import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { z } from 'zod';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
+function buildValidationFilename(title: string, channelTitle?: string | null): string {
+  const cleanSlug = (text: string): string => {
+    return text
+      .replace(/[^a-zA-Z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      || 'unknown';
+  };
+  const getFormattedTimestamp = (): string => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
+  };
+  const titleSlug = cleanSlug(title || 'analysis');
+  const creatorSlug = cleanSlug(channelTitle || 'creator');
+  const timestamp = getFormattedTimestamp();
+  return `${titleSlug}-${creatorSlug}-${timestamp}.md`;
+}
+
 /**
  * Server-to-server persistence endpoint. The Cloudflare Worker calls this (from
  * ctx.waitUntil, after the stream completes or is interrupted) with the generated
@@ -94,7 +118,7 @@ export async function POST(request: NextRequest) {
               name: z.string(),
               content: z.string()
             }))
-          }).safeParse(payload)
+          }).passthrough().safeParse(payload)
         : UCISPayloadV2Schema.safeParse(payload);
 
       if (!parseResult.success) {
@@ -297,10 +321,10 @@ export async function POST(request: NextRequest) {
           await publishValidationTask({
             videoId,
             markdown: stitchedMarkdown,
-            filename: `${videoId}.md`,
+            filename: buildValidationFilename(row.title, row.channelTitle),
             userId: row.userId,
             analysisId,
-            metadata: { title: row.title, channelTitle: '' },
+            metadata: { title: row.title, channelTitle: row.channelTitle || '' },
           }).catch(() => {});
         }
       }
@@ -351,10 +375,10 @@ export async function POST(request: NextRequest) {
       await publishValidationTask({
         videoId,
         markdown,
-        filename: `${videoId}.md`,
+        filename: buildValidationFilename(row.title, row.channelTitle),
         userId: row.userId,
         analysisId,
-        metadata: { title: row.title, channelTitle: '' },
+        metadata: { title: row.title, channelTitle: row.channelTitle || '' },
       }).catch(() => {});
     }
 
