@@ -58,29 +58,42 @@ interface UCISPayloadV2 {
  * Reconstruct markdown from structured JSON payload.
  * Used for dual-write persistence (analysis_markdown column).
  */
-export function reconstructMarkdown(payload: UCISPayloadV2): string {
+export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
   const lines: string[] = [];
 
   // Persona header (text format for backward compat)
-  lines.push('=== PERSONA CONFIGURATION ===');
-  lines.push(`Primary Persona:    ${payload.persona.primary.label} (Weight: ${Math.round(payload.persona.primary.weight * 100)}%)`);
-  if (payload.persona.secondary) {
-    lines.push(`Secondary Persona:  ${payload.persona.secondary.label} (Weight: ${Math.round(payload.persona.secondary.weight * 100)}%)`);
+  if (payload.persona) {
+    lines.push('=== PERSONA CONFIGURATION ===');
+    if (payload.persona.primary) {
+      lines.push(`Primary Persona:    ${payload.persona.primary.label} (Weight: ${Math.round((payload.persona.primary.weight || 0) * 100)}%)`);
+    }
+    if (payload.persona.secondary) {
+      lines.push(`Secondary Persona:  ${payload.persona.secondary.label} (Weight: ${Math.round((payload.persona.secondary.weight || 0) * 100)}%)`);
+    }
+    if (payload.persona.tertiary) {
+      lines.push(`Tertiary Persona:   ${payload.persona.tertiary.label} (Weight: ${Math.round((payload.persona.tertiary.weight || 0) * 100)}%)`);
+    }
+    if (Array.isArray(payload.persona.cognitiveLenses)) {
+      lines.push(`Active Cognitive Lenses: [${payload.persona.cognitiveLenses.join(', ')}]`);
+    }
+    if (payload.persona.selectionRationale) {
+      lines.push(`Selection Rationale: ${payload.persona.selectionRationale}`);
+    }
+    lines.push('==============================');
+    lines.push('');
   }
-  if (payload.persona.tertiary) {
-    lines.push(`Tertiary Persona:   ${payload.persona.tertiary.label} (Weight: ${Math.round(payload.persona.tertiary.weight * 100)}%)`);
-  }
-  lines.push(`Active Cognitive Lenses: [${payload.persona.cognitiveLenses.join(', ')}]`);
-  lines.push(`Selection Rationale: ${payload.persona.selectionRationale}`);
-  lines.push('==============================');
-  lines.push('');
 
   // Dimensions
-  for (const dim of payload.dimensions) {
-    lines.push(`### DIMENSION ${dim.number} – ${dim.name.toUpperCase()}`);
-    lines.push('');
-    lines.push(dim.content);
-    lines.push('');
+  if (Array.isArray(payload.dimensions)) {
+    for (const dim of payload.dimensions) {
+      if (dim && typeof dim.number === 'number' && typeof dim.content === 'string') {
+        const name = dim.name || `Dimension ${dim.number}`;
+        lines.push(`### DIMENSION ${dim.number} – ${name.toUpperCase()}`);
+        lines.push('');
+        lines.push(dim.content);
+        lines.push('');
+      }
+    }
   }
 
   // Classification (if present)
@@ -113,14 +126,16 @@ export function reconstructMarkdown(payload: UCISPayloadV2): string {
  * Attempt to extract JSON payload from finalText.
  * Returns null if finalText is not valid v2.0 JSON.
  */
-export function extractJsonPayload(finalText: string): UCISPayloadV2 | null {
+export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | null {
   try {
     const parsed = JSON.parse(finalText);
     if (parsed && parsed.schemaVersion === '2.0' && Array.isArray(parsed.dimensions)) {
-      if (!parsed.persona?.primary || typeof parsed.persona.primary !== 'object' || !('id' in parsed.persona.primary)) {
-        return null;
+      if (parsed.persona) {
+        if (!parsed.persona.primary || typeof parsed.persona.primary !== 'object' || !('id' in parsed.persona.primary)) {
+          return null;
+        }
       }
-      return parsed as UCISPayloadV2;
+      return parsed as Partial<UCISPayloadV2>;
     }
   } catch {
     // Not JSON or invalid
