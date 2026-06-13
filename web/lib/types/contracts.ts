@@ -127,6 +127,7 @@ export interface WorkerStreamRequest {
   sig: string;
   exp: number;
   appUrl?: string;
+  chunkIndex?: number;
 }
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────

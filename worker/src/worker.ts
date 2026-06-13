@@ -396,6 +396,7 @@ app.post("/analyze-llm-stream", async (c) => {
     sig: string;
     exp: number;
     appUrl?: string;
+    chunkIndex?: number;
   }
 
   const req = (await c.req.json()) as StreamRequest;
@@ -504,6 +505,7 @@ app.post("/analyze-llm-stream", async (c) => {
         valid,
         contentSig,
         status,
+        chunkIndex: req.chunkIndex,
       }),
     }).catch((e) => {
       persisted = false;
@@ -533,6 +535,7 @@ app.post("/analyze-llm-stream", async (c) => {
             transcript: req.transcript || '',
             persona: req.persona,
             timezone: req.timezone,
+            chunkIndex: req.chunkIndex,
           },
           {
             onDelta: (delta) => {

@@ -127,100 +127,131 @@ export function useSSEStream() {
             return;
           }
 
-          store.logInfo(`Connecting to Cloudflare edge worker...`);
+          store.logInfo(`Connecting to Cloudflare edge worker with 3 parallel streams...`);
           initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result');
           initSynthesis(job);
           setStatus('analyzing');
 
-          let streamCompleted = false;
-          const adapter = new SynthesisStreamAdapter({
-            onError: (error) => {
-              if (currentSignal.aborted) return;
-              store.logError(`Worker stream error: ${error}`);
-              setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: error });
-              setStatus('error');
-              setIsLoading(false);
-            },
-            onComplete: () => {
-              if (currentSignal.aborted) return;
-              streamCompleted = true;
-              store.logOk(`Analysis streaming completed successfully.`);
-              setStatus('complete');
-              setIsLoading(false);
-              archiveCurrentAnalysis();
-            },
-          });
+          const chunks = [
+            { index: 1, name: 'Dimensions 1-4' },
+            { index: 2, name: 'Dimensions 5-8' },
+            { index: 3, name: 'Dimensions 9-11' }
+          ];
 
+          let completedCount = 0;
+          let hasError = false;
+
+          const runStream = async (chunkIndex: number, chunkName: string) => {
+            const adapter = new SynthesisStreamAdapter({
+              isPartialStream: true,
+              onError: (error) => {
+                if (currentSignal.aborted) return;
+                store.logError(`[${chunkName}] stream error: ${error}`);
+                if (!hasError) {
+                  hasError = true;
+                  setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: error });
+                  setStatus('error');
+                  setIsLoading(false);
+                }
+              },
+              onComplete: () => {
+                if (currentSignal.aborted) return;
+                completedCount++;
+                store.logOk(`[${chunkName}] streaming completed.`);
+                if (completedCount === 3 && !hasError) {
+                  store.logOk(`All 3 analysis streams completed successfully.`);
+                  useSynthesisNucleus.getState().completeAnalysis();
+                  setStatus('complete');
+                  setIsLoading(false);
+                  archiveCurrentAnalysis();
+                }
+              }
+            });
+
+            const streamPayload: WorkerStreamRequest = {
+              videoId: job.videoId,
+              analysisId: job.analysisId || job.id,
+              transcript: job.transcript || '',
+              metadata: job.metadata,
+              persona: job.persona,
+              timezone: job.timezone || safeTimezone,
+              models: job.models,
+              sig: job.stream.sig,
+              exp: job.stream.exp,
+              appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+              chunkIndex,
+            };
+
+            const res = await fetch(job.stream.url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(streamPayload),
+              signal: currentSignal,
+            });
+
+            if (!res.ok || !res.body) {
+              const errText = await res.text().catch(() => '');
+              throw new Error(`Worker stream for ${chunkName} failed (${res.status}): ${errText.slice(0, 160)}`);
+            }
+
+            store.logInfo(`[${chunkName}] handshaked. Streaming...`);
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            const handleEvent = (line: string) => {
+              const trimmed = line.trim();
+              if (!trimmed) return;
+
+              if (trimmed.startsWith('data:')) {
+                const jsonStr = trimmed.slice(5).trim();
+                adapter.processLine(jsonStr);
+                return;
+              }
+
+              try {
+                adapter.processLine(trimmed);
+              } catch {
+                // Not JSON, skip
+              }
+            };
+
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              if (currentSignal.aborted) {
+                reader.cancel();
+                break;
+              }
+              buffer += decoder.decode(value, { stream: true });
+              const events = buffer.split('\n\n');
+              buffer = events.pop() || '';
+              for (const e of events) handleEvent(e);
+            }
+            if (buffer.trim()) handleEvent(buffer);
+          };
+
+          // Execute all 3 streams concurrently
           await Sentry.startSpan(
-            { name: 'stream worker /analyze-llm-stream', op: 'stream.parse' },
+            { name: 'stream worker /analyze-llm-stream concurrent', op: 'stream.parse' },
             async () => {
-              // Typed against the worker contract: a missing/renamed field is now a
-              // compile error rather than a silent runtime stream failure.
-              const streamPayload: WorkerStreamRequest = {
-                videoId: job.videoId,
-                analysisId: job.analysisId || job.id,
-                transcript: job.transcript || '',
-                metadata: job.metadata,
-                persona: job.persona,
-                timezone: job.timezone || safeTimezone,
-                models: job.models,
-                sig: job.stream.sig,
-                exp: job.stream.exp,
-                appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
-              };
-              const res = await fetch(job.stream.url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(streamPayload),
-                signal: currentSignal,
-              });
+              await Promise.all(
+                chunks.map(chunk => runStream(chunk.index, chunk.name).catch((err) => {
+                  if (currentSignal.aborted) return;
+                  store.logError(`Concurrent stream dispatch failed for ${chunk.name}: ${err.message}`);
+                  if (!hasError) {
+                    hasError = true;
+                    setError({ code: 'ERR_ANALYSIS_FAILED', status: 0, message: err.message });
+                    setStatus('error');
+                    setIsLoading(false);
+                  }
+                }))
+              );
 
-              if (!res.ok || !res.body) {
-                const errText = await res.text().catch(() => '');
-                throw new Error(`Worker stream failed (${res.status}): ${errText.slice(0, 160)}`);
-              }
-
-              store.logInfo(`Worker handshaked successfully. Streaming UCIS dimensions...`);
-
-              const reader = res.body.getReader();
-              const decoder = new TextDecoder();
-              let buffer = '';
-
-              const handleEvent = (line: string) => {
-                const trimmed = line.trim();
-                if (!trimmed) return;
-
-                // Parse SSE format: "data: {...}"
-                if (trimmed.startsWith('data:')) {
-                  const jsonStr = trimmed.slice(5).trim();
-                  adapter.processLine(jsonStr);
-                  return;
-                }
-
-                // Also handle raw JSON (if worker emits JSON directly)
-                try {
-                  adapter.processLine(trimmed);
-                } catch {
-                  // Not JSON, skip
-                }
-              };
-
-              for (;;) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                const events = buffer.split('\n\n');
-                buffer = events.pop() || '';
-                for (const e of events) handleEvent(e);
-              }
-              if (buffer.trim()) handleEvent(buffer);
-
-              // Stream closed without an explicit complete/error event. Read the LIVE
-              // status from the store (not the stale render-time closure) so a partial
-              // interruption is classified correctly and never leaves the action button
-              // wedged in a loading state.
-              if (!streamCompleted && useAnalysisStore.getState().status !== 'error') {
-                const msg = 'The analysis stream ended unexpectedly. Please try again.';
+              // Interrupted check
+              if (completedCount < 3 && useAnalysisStore.getState().status !== 'error' && !currentSignal.aborted) {
+                const msg = 'One or more analysis streams ended unexpectedly. Please try again.';
                 store.logError(msg);
                 setError({ code: 'ERR_STREAM_INCOMPLETE', status: 0, message: msg });
                 setStatus('error');

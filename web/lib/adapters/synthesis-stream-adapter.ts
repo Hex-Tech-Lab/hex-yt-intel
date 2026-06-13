@@ -17,6 +17,7 @@
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { validateFragment, validateDimension } from '@/lib/validators/synthesis';
+import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import {
   type UCISDimension,
   type PersonaConfigV2,
@@ -29,6 +30,7 @@ export interface StreamAdapterOptions {
   onError?: (error: string) => void;
   onComplete?: () => void;
   onProgress?: (received: number, expected: number) => void;
+  isPartialStream?: boolean;
 }
 
 export class SynthesisStreamAdapter {
@@ -187,6 +189,7 @@ export class SynthesisStreamAdapter {
           personaConfig: null,
           knowledgeGraph: null,
           classification: null,
+          monetizationVerdict: null,
           projection: computePersonaProjection({
             ...synthState.analysis,
             dimensions: {},
@@ -271,7 +274,40 @@ export class SynthesisStreamAdapter {
         if (obj && obj.schemaVersion === '2.0') {
           // If this is a JSON stream, dynamically reconstruct clean markdown and update the store
           if (isJsonStream && store.analysis) {
-            const reconstructed = this.reconstructMarkdown(obj);
+            const synthState = this.synthStore.getState();
+            
+            // Gather existing dimensions from store
+            const allDimensions = Object.values(synthState.analysis?.dimensions || {}).sort((a, b) => a.number - b.number);
+            const dimensionsMap = new Map<number, any>();
+            allDimensions.forEach((d) => {
+              dimensionsMap.set(d.number, d);
+            });
+            
+            // Overwrite/add progressive dimensions from this stream chunk
+            if (Array.isArray(obj.dimensions)) {
+              obj.dimensions.forEach((d: any) => {
+                if (d && typeof d.number === 'number') {
+                  dimensionsMap.set(d.number, d);
+                }
+              });
+            }
+            const mergedDimensions = Array.from(dimensionsMap.values()).sort((a, b) => a.number - b.number);
+            
+            // Check if monetizationVerdict is in obj and cache it inside store
+            let finalMonetization = synthState.monetizationVerdict;
+            if (obj.monetizationVerdict && typeof obj.monetizationVerdict === 'object') {
+              finalMonetization = obj.monetizationVerdict;
+              this.synthStore.getState().setMonetizationVerdict(obj.monetizationVerdict);
+            }
+
+            const stitchedPayload = {
+              persona: synthState.personaConfig || obj.persona,
+              dimensions: mergedDimensions,
+              classification: synthState.classification || obj.classification,
+              monetizationVerdict: finalMonetization,
+            };
+
+            const reconstructed = this.reconstructMarkdown(stitchedPayload);
             store.setAnalysis({
               ...store.analysis,
               analysis_markdown: reconstructed,
@@ -433,13 +469,15 @@ export class SynthesisStreamAdapter {
     analysisId: string;
   }) {
     const store = this.synthStore.getState();
-    store.completeAnalysis();
-
     const analysisStore = this.analysisStore.getState();
-    if (fragment.valid) {
-      analysisStore.logOk(`Synthesis verification complete. Structure check passed.`);
-    } else {
-      analysisStore.logError(`Content verification warning: output did not pass all 11-dimension checks.`);
+    
+    if (!this.options.isPartialStream) {
+      store.completeAnalysis();
+      if (fragment.valid) {
+        analysisStore.logOk(`Synthesis verification complete. Structure check passed.`);
+      } else {
+        analysisStore.logError(`Content verification warning: output did not pass all 11-dimension checks.`);
+      }
     }
 
     // Notify completion
@@ -500,79 +538,7 @@ export class SynthesisStreamAdapter {
   }
 
   private reconstructMarkdown(payload: any): string {
-    const lines: string[] = [];
-
-    // Persona header (text format for backward compat)
-    if (payload.persona) {
-      lines.push('=== PERSONA CONFIGURATION ===');
-      if (payload.persona.primary?.label) {
-        lines.push(`Primary Persona:    ${payload.persona.primary.label} (Weight: ${Math.round((payload.persona.primary.weight || 0) * 100)}%)`);
-      }
-      if (payload.persona.secondary?.label) {
-        lines.push(`Secondary Persona:  ${payload.persona.secondary.label} (Weight: ${Math.round((payload.persona.secondary.weight || 0) * 100)}%)`);
-      }
-      if (payload.persona.tertiary?.label) {
-        lines.push(`Tertiary Persona:   ${payload.persona.tertiary.label} (Weight: ${Math.round((payload.persona.tertiary.weight || 0) * 100)}%)`);
-      }
-      if (Array.isArray(payload.persona.cognitiveLenses)) {
-        lines.push(`Active Cognitive Lenses: [${payload.persona.cognitiveLenses.join(', ')}]`);
-      }
-      if (payload.persona.selectionRationale) {
-        lines.push(`Selection Rationale: ${payload.persona.selectionRationale}`);
-      }
-      lines.push('==============================');
-      lines.push('');
-    }
-
-    // Dimensions
-    if (Array.isArray(payload.dimensions)) {
-      for (const dim of payload.dimensions) {
-        if (dim && typeof dim.number === 'number' && typeof dim.content === 'string') {
-          const name = dim.name || `Dimension ${dim.number}`;
-          lines.push(`### DIMENSION ${dim.number} – ${name.toUpperCase()}`);
-          lines.push('');
-          lines.push(dim.content);
-          lines.push('');
-        }
-      }
-    }
-
-    // Classification (if present)
-    if (payload.classification) {
-      lines.push('=== CLASSIFICATION ===');
-      if (payload.classification.authoritative !== undefined) {
-        lines.push(`Authoritative:           ${payload.classification.authoritative}`);
-      }
-      if (payload.classification.practicallyActionable !== undefined) {
-        lines.push(`Practically Actionable:  ${payload.classification.practicallyActionable}`);
-      }
-      if (payload.classification.knowledgeGraphReady !== undefined) {
-        lines.push(`Knowledge Graph Ready:   ${payload.classification.knowledgeGraphReady}`);
-      }
-      if (payload.classification.safe !== undefined) {
-        lines.push(`Safe:                    ${payload.classification.safe}`);
-      }
-      if (payload.classification.personaOptimised !== undefined) {
-        lines.push(`Persona Optimised:       ${payload.classification.personaOptimised}`);
-      }
-      if (payload.classification.recommendation !== undefined) {
-        lines.push(`Recommendation:          ${payload.classification.recommendation}`);
-      }
-      lines.push('');
-    }
-
-    // Monetization verdicts (if present)
-    if (payload.monetizationVerdict) {
-      lines.push('=== MONETIZATION VERDICTS ===');
-      lines.push(`Creator:         ${payload.monetizationVerdict.creator || 'N/A'}`);
-      lines.push(`Indie Maker:     ${payload.monetizationVerdict.indieMaker || 'N/A'}`);
-      lines.push(`Consultant:      ${payload.monetizationVerdict.consultant || 'N/A'}`);
-      lines.push(`Researcher:      ${payload.monetizationVerdict.researcher || 'N/A'}`);
-      lines.push(`Product Manager: ${payload.monetizationVerdict.productManager || 'N/A'}`);
-      lines.push('');
-    }
-
-    return lines.join('\n');
+    return reconstructMarkdown(payload);
   }
 
   /**
