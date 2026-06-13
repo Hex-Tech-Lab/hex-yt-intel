@@ -272,47 +272,6 @@ export class SynthesisStreamAdapter {
 
       try {
         if (obj && obj.schemaVersion === '2.0') {
-          // If this is a JSON stream, dynamically reconstruct clean markdown and update the store
-          if (isJsonStream && store.analysis) {
-            const synthState = this.synthStore.getState();
-            
-            // Gather existing dimensions from store
-            const allDimensions = Object.values(synthState.analysis?.dimensions || {}).sort((a, b) => a.number - b.number);
-            const dimensionsMap = new Map<number, any>();
-            allDimensions.forEach((d) => {
-              dimensionsMap.set(d.number, d);
-            });
-            
-            // Overwrite/add progressive dimensions from this stream chunk
-            if (Array.isArray(obj.dimensions)) {
-              obj.dimensions.forEach((d: any) => {
-                if (d && typeof d.number === 'number') {
-                  dimensionsMap.set(d.number, d);
-                }
-              });
-            }
-            const mergedDimensions = Array.from(dimensionsMap.values()).sort((a, b) => a.number - b.number);
-            
-            // Check if monetizationVerdict is in obj and cache it inside store
-            let finalMonetization = synthState.monetizationVerdict;
-            if (obj.monetizationVerdict && typeof obj.monetizationVerdict === 'object') {
-              finalMonetization = obj.monetizationVerdict;
-              this.synthStore.getState().setMonetizationVerdict(obj.monetizationVerdict);
-            }
-
-            const stitchedPayload = {
-              persona: synthState.personaConfig || obj.persona,
-              dimensions: mergedDimensions,
-              classification: synthState.classification || obj.classification,
-              monetizationVerdict: finalMonetization,
-            };
-
-            const reconstructed = this.reconstructMarkdown(stitchedPayload);
-            store.setAnalysis({
-              ...store.analysis,
-              analysis_markdown: reconstructed,
-            });
-          }
           // 1. Validate and set Persona
           if (obj.persona && typeof obj.persona === 'object') {
             const p = obj.persona;
@@ -394,6 +353,30 @@ export class SynthesisStreamAdapter {
             } else {
               console.warn('[Adapter] Invalid classification payload format, skipping setClassification');
             }
+          }
+
+          // 5. Validate and set Monetization Verdict
+          if (obj.monetizationVerdict && typeof obj.monetizationVerdict === 'object') {
+            this.synthStore.getState().setMonetizationVerdict(obj.monetizationVerdict);
+          }
+
+          // 6. Reconstruct displayed markdown from the global store (single source of truth)
+          if (isJsonStream && store.analysis) {
+            const latestState = this.synthStore.getState();
+            const allDimensions = Object.values(latestState.analysis?.dimensions || {}).sort((a, b) => a.number - b.number);
+            
+            const stitchedPayload = {
+              persona: latestState.personaConfig,
+              dimensions: allDimensions,
+              classification: latestState.classification,
+              monetizationVerdict: latestState.monetizationVerdict,
+            };
+
+            const reconstructed = this.reconstructMarkdown(stitchedPayload);
+            store.setAnalysis({
+              ...store.analysis,
+              analysis_markdown: reconstructed,
+            });
           }
 
           // Reset the sink if we have processed the final complete unhealed object

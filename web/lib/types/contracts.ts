@@ -128,6 +128,7 @@ export interface WorkerStreamRequest {
   exp: number;
   appUrl?: string;
   chunkIndex?: number;
+  totalChunks?: number;
 }
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────

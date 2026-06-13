@@ -30,45 +30,50 @@ export class PromptBuilder implements PromptBuilderPort {
       duration: context.metadata.duration || 0,
     });
 
-    if (context.chunkIndex === 1) {
-      return `${basePrompt}
+    const DIMENSION_PROMPT_DETAILS: Record<number, { name: string; extraFields?: string[] }> = {
+      1: { name: 'APEX INTELLIGENCE', extraFields: ['persona'] },
+      2: { name: 'PROVENANCE, METADATA & VIRALITY PROFILE' },
+      3: { name: 'CONTENT ARCHITECTURE & FIRST PRINCIPLES' },
+      4: { name: 'PSYCHOLOGICAL & RHETORICAL LAYER' },
+      5: { name: 'CORE INTELLIGENCE EXTRACTION' },
+      6: { name: 'COMPARATIVE & QUANTITATIVE ANALYSIS' },
+      7: { name: 'IMPLEMENTATION SYSTEMS & WORKFLOWS' },
+      8: { name: 'SEMANTIC & KNOWLEDGE GRAPH FOUNDATION', extraFields: ['knowledgeGraph'] },
+      9: { name: 'FORWARD INTELLIGENCE & STRATEGIC FORESIGHT' },
+      10: { name: 'CREDIBILITY, RISK & META-ASSESSMENT' },
+      11: { name: 'COMMERCIAL YIELD & MONETIZATION PROFILING', extraFields: ['classification', 'monetizationVerdict'] },
+    };
+
+    if (context.chunkIndex !== undefined && context.chunkIndex >= 1 && context.chunkIndex <= 11) {
+      const details = DIMENSION_PROMPT_DETAILS[context.chunkIndex];
+      if (details) {
+        const name = details.name;
+        const extraInstructions = details.extraFields?.map(f => {
+          if (f === 'persona') {
+            return 'include the "persona" configuration block in the JSON root';
+          }
+          if (f === 'knowledgeGraph') {
+            return 'generate and include the full "knowledgeGraph" object representing entities and relationships extracted from this content in the JSON root';
+          }
+          if (f === 'classification') {
+            return 'generate and include the full "classification" object in the JSON root';
+          }
+          if (f === 'monetizationVerdict') {
+            return 'generate and include the full "monetizationVerdict" object in the JSON root';
+          }
+          return '';
+        }).filter(Boolean).join(', and ') || 'do NOT include persona, knowledgeGraph, classification, or monetizationVerdict fields';
+
+        return `${basePrompt}
 
 ---
-CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (CHUNK 1):
-You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimensions:
-- ### DIMENSION 1 - APEX INTELLIGENCE
-- ### DIMENSION 2 - PROVENANCE, METADATA & VIRALITY PROFILE
-- ### DIMENSION 3 - CONTENT ARCHITECTURE & FIRST PRINCIPLES
-- ### DIMENSION 4 - PSYCHOLOGICAL & RHETORICAL LAYER
+CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (CHUNK ${context.chunkIndex}):
+You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimension:
+- ### DIMENSION ${context.chunkIndex} - ${name}
 
-Your output JSON object must ONLY include these dimensions inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0", include the "persona" config, and include the array of dimensions 1 to 4. Do NOT output dimensions 5 to 11. Do NOT include knowledgeGraph, classification, or monetizationVerdict fields. Your response must be strict, raw JSON without markdown formatting.`;
-    }
-
-    if (context.chunkIndex === 2) {
-      return `${basePrompt}
-
----
-CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (CHUNK 2):
-You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimensions:
-- ### DIMENSION 5 - CORE INTELLIGENCE EXTRACTION
-- ### DIMENSION 6 - COMPARATIVE & QUANTITATIVE ANALYSIS
-- ### DIMENSION 7 - IMPLEMENTATION SYSTEMS & WORKFLOWS
-- ### DIMENSION 8 - SEMANTIC & KNOWLEDGE GRAPH FOUNDATION
-
-Your output JSON object must ONLY include these dimensions inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0", and include the array of dimensions 5 to 8. You MUST generate and include the full "knowledgeGraph" object representing entities and relationships extracted from Dimension 8. Do NOT output dimensions 1 to 4 or 9 to 11. Do NOT include persona, classification, or monetizationVerdict fields. Your response must be strict, raw JSON without markdown formatting.`;
-    }
-
-    if (context.chunkIndex === 3) {
-      return `${basePrompt}
-
----
-CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (CHUNK 3):
-You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimensions:
-- ### DIMENSION 9 - FORWARD INTELLIGENCE & STRATEGIC FORESIGHT
-- ### DIMENSION 10 - CREDIBILITY, RISK & META-ASSESSMENT
-- ### DIMENSION 11 - COMMERCIAL YIELD & MONETIZATION PROFILING
-
-Your output JSON object must ONLY include these dimensions inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0", and include the array of dimensions 9 to 11. You MUST generate and include the full "classification" object and the "monetizationVerdict" object. Do NOT output dimensions 1 to 8. Do NOT include persona or knowledgeGraph fields. Your response must be strict, raw JSON without markdown formatting.`;
+Your output JSON object must ONLY include this dimension inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". You must also ${extraInstructions}.
+Do NOT output any other dimensions. Do NOT include any other JSON root fields. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`;
+      }
     }
 
     return basePrompt;
