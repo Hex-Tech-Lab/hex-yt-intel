@@ -1,3 +1,5 @@
+import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+
 /**
  * Synthesis Nucleus: Core data model for dynamic persona-aware analysis
  *
@@ -233,7 +235,7 @@ export const DIMENSION_NAMES: Record<number, string> = {
  * Validate that a dimension number is valid (1-11)
  */
 export function isValidDimensionNumber(num: unknown): num is number {
-  return typeof num === 'number' && num >= 1 && num <= 11;
+  return typeof num === 'number' && num >= 1 && num <= TOTAL_DIMENSIONS;
 }
 
 /**
