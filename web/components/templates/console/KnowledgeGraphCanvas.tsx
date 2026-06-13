@@ -143,6 +143,7 @@ export function KnowledgeGraphCanvas({
   return (
     <div
       ref={containerRef}
+      className="js-knowledge-graph-container"
       style={{
         position: 'relative',
         width: '100%',
