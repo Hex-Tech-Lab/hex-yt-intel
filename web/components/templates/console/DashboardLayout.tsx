@@ -13,7 +13,7 @@ export interface DashboardLayoutProps {
   dock?: ReactNode;
 }
 
-const CHAT_DOCK_PADDING_BOTTOM_OPEN = '580px';
+const CHAT_DOCK_PADDING_BOTTOM_OPEN = 'min(calc(60vh + 20px), 580px)';
 const CHAT_DOCK_PADDING_BOTTOM_CLOSED = '72px';
 
 export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }: DashboardLayoutProps) {
