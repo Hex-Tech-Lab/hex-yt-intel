@@ -665,6 +665,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
   }): Promise<{
     title: string;
     channelTitle: string | null;
+    description: string | null;
     analysisMarkdown: string | null;
     status: string;
   } | null> {
@@ -685,6 +686,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       return {
         title: data.title || '',
         channelTitle: data.channel_title || null,
+        description: isPersistedValidationReport(data.validation_report) ? data.validation_report.metadata?.description || null : null,
         analysisMarkdown: data.analysis_markdown || null,
         status: isPersistedValidationReport(data.validation_report) ? data.validation_report.status || 'incomplete' : 'incomplete',
       };

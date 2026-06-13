@@ -11,6 +11,7 @@ export interface GraphNode {
   polarity: number;
   keyTerms: string[];
   inPersona: boolean;
+  entityType?: string;
 }
 
 export interface GraphEdge {

@@ -21,9 +21,10 @@ export interface SidebarProps {
   onNavigate: (key: string) => void;
   repoScope?: RepoScope;
   children?: React.ReactNode;
+  footer?: React.ReactNode;
 }
 
-export function Sidebar({ items, activeKey, onNavigate, repoScope, children }: SidebarProps) {
+export function Sidebar({ items, activeKey, onNavigate, repoScope, children, footer }: SidebarProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "24px 14px" }}>
       {/* brand */}
@@ -104,8 +105,12 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope, children }: S
       {/* children (e.g. ProcessingLog) */}
       {children && <div style={{ marginTop: "auto", marginBottom: "12px" }}>{children}</div>}
 
-      {/* repo scope */}
-      {repoScope && (
+      {/* footer / profile */}
+      {footer ? (
+        <div style={{ marginTop: children ? "12px" : "auto", borderTop: "1px solid var(--line)", paddingTop: "16px" }}>
+          {footer}
+        </div>
+      ) : repoScope ? (
         <button
           type="button"
           onClick={repoScope.onClick}
@@ -132,7 +137,7 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope, children }: S
           </span>
           <Icon icon="solar:alt-arrow-down-linear" size={14} style={{ opacity: 0.5 }} />
         </button>
-      )}
+      ) : null}
     </div>
   );
 }

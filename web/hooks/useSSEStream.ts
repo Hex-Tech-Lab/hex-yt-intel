@@ -320,5 +320,14 @@ export function useSSEStream() {
     );
   };
 
-  return { startAnalysis };
+  const stopAnalysis = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    setStatus('idle');
+  };
+
+  return { startAnalysis, stopAnalysis };
 }

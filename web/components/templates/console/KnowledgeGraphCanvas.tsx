@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { forceCollide, forceCenter, forceManyBody } from 'd3-force';
 import type { KnowledgeGraph, RelationKind } from '@/lib/types/knowledge-graph';
 
 // react-force-graph-2d touches `window`, so it must be client-only.
@@ -16,6 +17,18 @@ const COL = {
   slate: '71 85 105',
   muted: '100 116 139',
   ink: '226 232 240',
+};
+
+// Colored rings colors by entityType
+const TYPE_COLOR: Record<string, string> = {
+  person: '244 63 94',       // rose
+  concept: '168 85 247',     // purple
+  framework: '234 179 8',    // yellow
+  tool: '6 182 212',         // cyan
+  organization: '59 130 246', // blue
+  study: '16 185 129',       // emerald
+  trend: '249 115 22',       // orange
+  metric: '236 72 153',      // pink
 };
 
 const KIND_COLOR: Record<RelationKind, string> = {
@@ -73,6 +86,26 @@ export function KnowledgeGraphCanvas({
     [graph]
   );
 
+  // Configure custom D3 forces on the engine to resolve isolated islands
+  useEffect(() => {
+    if (fgRef.current) {
+      // 1. Repulsion force
+      fgRef.current.d3Force('charge', forceManyBody().strength(compact ? -60 : -140));
+
+      // 2. Center gravity force (Black hole centering pulling disconnected nodes)
+      fgRef.current.d3Force('center', forceCenter(size.w / 2, size.h / 2));
+
+      // 3. Collision force to prevent overlapping nodes
+      fgRef.current.d3Force(
+        'collide',
+        forceCollide().radius((node: any) => {
+          const r = (compact ? 3 : 4) + (node.weight || 0) * (compact ? 3.5 : 5);
+          return r + (compact ? 4 : 8);
+        })
+      );
+    }
+  }, [size, compact, data]);
+
   // Neighborhood of the active (selected or hovered) node — drives highlight/dim.
   const activeId = hoverId || selectedId;
   const neighborhood = useMemo(() => {
@@ -126,10 +159,10 @@ export function KnowledgeGraphCanvas({
         height={size.h}
         graphData={data}
         backgroundColor="rgba(0,0,0,0)"
-        cooldownTicks={compact ? 60 : 120}
+        cooldownTicks={compact ? 80 : 160}
         onEngineStop={fit}
-        nodeRelSize={compact ? 4 : 6}
-        nodeVal={(n: any) => 1 + (n as FGNode).weight * 4}
+        nodeRelSize={compact ? 3 : 5}
+        nodeVal={(n: any) => 1 + (n as FGNode).weight * 3}
         nodeLabel={() => ''}
         enableNodeDrag={true}
         onNodeClick={(n: any) => onSelect((n as FGNode).id === selectedId ? null : (n as FGNode).id)}
@@ -153,12 +186,12 @@ export function KnowledgeGraphCanvas({
           const idx = data.links.indexOf(l);
           const dim = neighborhood ? !neighborhood.links.has(`${idx}`) : false;
           const base = KIND_COLOR[l.kind as RelationKind] || COL.slate;
-          return `rgb(${base} / ${dim ? 0.06 : 0.35 + l.strength * 0.4})`;
+          return `rgb(${base} / ${dim ? 0.05 : 0.3 + l.strength * 0.35})`;
         }}
         linkWidth={(l: any) => {
           const idx = data.links.indexOf(l);
           const active = neighborhood ? neighborhood.links.has(`${idx}`) : false;
-          return (active ? 2.2 : 1) + l.strength * 2;
+          return (active ? 2.0 : 0.8) + l.strength * 1.5;
         }}
         linkLineDash={(l: any) => (l.kind === 'contrarian' ? [4, 3] : null)}
         nodeCanvasObject={(n: any, ctx: CanvasRenderingContext2D, scale: number) => {
@@ -166,62 +199,91 @@ export function KnowledgeGraphCanvas({
           const dim = neighborhood ? !neighborhood.nodes.has(node.id) : false;
           const isRoot = graph.rootId === node.id;
           const isActive = node.id === activeId;
-          const r = (compact ? 3 : 4) + node.weight * (compact ? 5 : 7);
+          const r = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4);
 
-          // Base fill: root = bright cyan, in-persona = cyan-ish, else slate.
-          const fillRgb = isRoot ? COL.accent : node.inPersona ? COL.accent : COL.slate;
-          const alpha = dim ? 0.22 : node.inPersona || isRoot ? 0.95 : 0.55;
-
+          // Draw base backing container (slate/dark theme)
           ctx.beginPath();
           ctx.arc(node.x!, node.y!, r, 0, 2 * Math.PI);
-          ctx.fillStyle = `rgb(${fillRgb} / ${alpha})`;
+          ctx.fillStyle = dim ? 'rgba(30, 41, 59, 0.2)' : 'rgba(15, 23, 42, 0.9)';
           ctx.fill();
 
-          // Polarity rim: green (positive) / red (negative).
-          if (!dim && Math.abs(node.polarity) > 0.15) {
-            ctx.lineWidth = 1.5 / scale;
-            ctx.strokeStyle = `rgb(${node.polarity > 0 ? COL.ok : COL.err} / 0.9)`;
-            ctx.stroke();
-          }
+          // Colored border/ring based on entity type!
+          const typeRgb = TYPE_COLOR[node.entityType || ''] || COL.slate;
+          ctx.beginPath();
+          ctx.arc(node.x!, node.y!, r, 0, 2 * Math.PI);
+          ctx.lineWidth = (isActive || node.id === selectedId ? 2.5 : 1.25) / scale;
+          ctx.strokeStyle = dim ? `rgb(${COL.slate} / 0.15)` : `rgb(${typeRgb} / ${node.inPersona || isRoot ? '0.95' : '0.6'})`;
+          ctx.stroke();
 
-          // Active/selected ring.
+          // Active/selected double ring
           if (isActive || node.id === selectedId) {
             ctx.beginPath();
             ctx.arc(node.x!, node.y!, r + 3 / scale, 0, 2 * Math.PI);
-            ctx.lineWidth = 1.5 / scale;
-            ctx.strokeStyle = `rgb(${COL.accent} / 0.9)`;
+            ctx.lineWidth = 1 / scale;
+            ctx.strokeStyle = `rgb(${COL.accent} / 0.8)`;
             ctx.stroke();
           }
 
-          // Root halo.
+          // Root halo ring
           if (isRoot && !dim) {
             ctx.beginPath();
             ctx.arc(node.x!, node.y!, r + 6 / scale, 0, 2 * Math.PI);
             ctx.lineWidth = 1 / scale;
-            ctx.strokeStyle = `rgb(${COL.accent} / 0.35)`;
+            ctx.strokeStyle = `rgb(${COL.accent} / 0.3)`;
             ctx.stroke();
           }
 
-          const showLabel = isActive || node.id === selectedId || scale > (compact ? 1.6 : 1.2);
+          const showLabel = isActive || node.id === selectedId || scale > (compact ? 1.5 : 1.0);
           if (showLabel && !dim) {
-            const baseFontSize = compact ? 10 : 11;
-            const clampedFontSize = Math.max(7, baseFontSize / scale);
-            ctx.font = `${clampedFontSize}px "Courier New", Courier, monospace`;
+            const baseFontSize = compact ? 9 : 10.5;
+            const clampedFontSize = Math.max(7.5, baseFontSize / scale);
+            ctx.font = `bold ${clampedFontSize}px "Courier New", Courier, monospace`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillStyle = `rgb(${COL.ink} / ${isActive ? 1 : 0.8})`;
-            ctx.fillText(node.label, node.x!, node.y! + r + 2 / scale);
+            ctx.fillText(node.label, node.x!, node.y! + r + 3 / scale);
           }
         }}
         nodePointerAreaPaint={(n: any, color: string, ctx: CanvasRenderingContext2D) => {
           const node = n as FGNode;
-          const r = (compact ? 3 : 4) + node.weight * (compact ? 5 : 7) + 4;
+          const r = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4) + 4;
           ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(node.x!, node.y!, r, 0, 2 * Math.PI);
           ctx.fill();
         }}
       />
+
+      {/* Floating Legend */}
+      <div style={{
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        background: 'rgba(15, 23, 42, 0.85)',
+        border: '1px solid var(--line)',
+        padding: '8px 10px',
+        borderRadius: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        pointerEvents: 'none',
+        zIndex: 10,
+        fontFamily: 'var(--font-mono)',
+        fontSize: compact ? 9 : 10,
+      }}>
+        {Object.entries(TYPE_COLOR).map(([type, colorRgb]) => (
+          <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: `rgb(${colorRgb})`,
+              boxShadow: `0 0 8px rgb(${colorRgb})`
+            }} />
+            <span style={{ color: 'var(--ink-secondary)', textTransform: 'capitalize' }}>{type}</span>
+          </div>
+        ))}
+      </div>
 
       {/* Fit-to-view control */}
       <button
@@ -241,6 +303,7 @@ export function KnowledgeGraphCanvas({
           fontSize: 14,
           display: 'grid',
           placeItems: 'center',
+          zIndex: 10
         }}
       >
         ⤢

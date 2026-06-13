@@ -16,6 +16,7 @@ interface MetadataResponse {
   likeCount: string;
   commentCount: string;
   thumbnailUrl: string | null;
+  description?: string;
 }
 
 /** Fetch + shape video metadata for a resolved videoId. Throws on fetch failure. */
@@ -32,6 +33,7 @@ async function resolveMetadata(videoId: string): Promise<MetadataResponse> {
     likeCount: metadata.likeCount,
     commentCount: metadata.commentCount,
     thumbnailUrl: metadata.thumbnailUrl,
+    description: metadata.description,
   };
 }
 

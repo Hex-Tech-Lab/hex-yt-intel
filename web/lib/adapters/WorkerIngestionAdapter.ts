@@ -32,6 +32,7 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
       viewCount: Number(meta.viewCount) || 0,
       likeCount: Number(meta.likeCount) || 0,
       commentCount: Number(meta.commentCount) || 0,
+      description: meta.description,
     };
 
     return { metadata, transcript, transcriptAvailable };
@@ -57,6 +58,7 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
       viewCount: String(metadata.viewCount),
       likeCount: String(metadata.likeCount),
       commentCount: String(metadata.commentCount),
+      description: metadata.description || '',
     };
   }
 }
