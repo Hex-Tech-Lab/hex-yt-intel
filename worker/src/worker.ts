@@ -14,6 +14,7 @@ import { LLMCascade } from "./services/LLMCascade";
 import { ValidationService } from "./services/ValidationService";
 import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
 import { reconstructMarkdown, extractJsonPayload } from "./services/MarkdownReconstructor";
+import { KnowledgeGraphSynthesizer, TfIdfSimilarityEngine } from "./services/KnowledgeGraphSynthesizer";
 import type { ReasoningEnginePort } from "./ports/ReasoningEnginePort";
 
 type Env = {
@@ -485,7 +486,20 @@ app.post("/analyze-llm-stream", async (c) => {
     const extracted = extractJsonPayload(finalText);
     if (extracted) {
       jsonPayload = extracted;
-      markdown = reconstructMarkdown(extracted);
+      
+      const synthesizer = new KnowledgeGraphSynthesizer(new TfIdfSimilarityEngine());
+      const kg = await synthesizer.synthesize({
+        dimensions: jsonPayload.dimensions.map((d: any) => ({
+          number: d.number,
+          name: d.name,
+          content: d.content
+        }))
+      });
+      jsonPayload.knowledgeGraph = kg;
+      if (jsonPayload.classification) {
+        jsonPayload.classification.knowledgeGraphReady = true;
+      }
+      markdown = reconstructMarkdown(jsonPayload);
     }
 
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
