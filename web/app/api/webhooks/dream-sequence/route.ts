@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const url = process.env.UPSTASH_VECTOR_REST_URL;
     const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
     if (!url || !token) {
-      console.error('[dream-sequence] Missing vector store config');
+      console.error('[dream-sequence] Vector store config missing');
       return NextResponse.json({ error: 'Internal configuration error' }, { status: 500 });
     }
 
@@ -37,10 +37,12 @@ export async function POST(request: NextRequest) {
 
     // Execute use case
     await useCase.execute(tenantId, analysisId);
-
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[dream-sequence] Webhook failed:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('[dream-sequence] Webhook processing error:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }

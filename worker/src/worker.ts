@@ -477,6 +477,25 @@ app.post("/analyze-llm-stream", async (c) => {
   let modelUsed = '';
   let persisted = false;
 
+// Helper to normalize payload structure
+function normalizePayload(raw: any): any {
+  const normalized = {
+    schemaVersion: '2.0',
+    persona: raw.persona || { primary: { id: 'creator', label: 'Creator', weight: 1.0 }, cognitiveLenses: [], selectionRationale: '' },
+    dimensions: Array.isArray(raw.dimensions) ? raw.dimensions : [],
+    classification: {
+      authoritative: !!raw.classification?.authoritative,
+      practicallyActionable: !!raw.classification?.practicallyActionable,
+      knowledgeGraphReady: !!raw.knowledgeGraph && Array.isArray(raw.knowledgeGraph.nodes),
+      safe: raw.classification?.safe !== false,
+      personaOptimised: !!raw.classification?.personaOptimised,
+      recommendation: raw.classification?.recommendation || 'skip'
+    },
+    knowledgeGraph: raw.knowledgeGraph && Array.isArray(raw.knowledgeGraph.nodes) ? raw.knowledgeGraph : null
+  };
+  return normalized;
+}
+
   const persist = async (status: 'completed' | 'interrupted') => {
     if (persisted || !finalText) return;
 
@@ -484,26 +503,8 @@ app.post("/analyze-llm-stream", async (c) => {
     let jsonPayload: any = null;
     const extracted = extractJsonPayload(finalText);
     
-    if (extracted && Array.isArray(extracted.dimensions)) {
-      jsonPayload = extracted;
-      
-      // Ensure classification exists
-      if (!jsonPayload.classification) {
-        jsonPayload.classification = {
-          authoritative: false,
-          practicallyActionable: false,
-          knowledgeGraphReady: false,
-          safe: true,
-          personaOptimised: false,
-          recommendation: 'skip'
-        };
-      }
-      
-      // If KG exists in the payload, mark it ready
-      if (jsonPayload.knowledgeGraph && Array.isArray(jsonPayload.knowledgeGraph.nodes)) {
-        jsonPayload.classification.knowledgeGraphReady = true;
-      }
-      
+    if (extracted) {
+      jsonPayload = normalizePayload(extracted);
       markdown = reconstructMarkdown(jsonPayload);
     }
 

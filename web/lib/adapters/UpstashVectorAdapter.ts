@@ -15,7 +15,6 @@ export class UpstashVectorAdapter implements VectorDedupPort {
     for (const id of nodeIds) {
       const vectorData = await ns.fetch([id]);
       if (vectorData && vectorData[0] && vectorData[0].vector) {
-        // @ts-ignore: Temporary bypass for TS2322 type mismatch in Upstash SDK
         const results = await ns.query({
           vector: vectorData[0].vector as number[],
           topK: 5,
