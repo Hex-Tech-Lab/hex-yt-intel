@@ -1,6 +1,13 @@
 import { Index } from '@upstash/vector';
 import { VectorDedupPort } from '@/lib/ports/VectorDedupPort';
 
+interface QueryResult {
+  id: string;
+  score?: number | string;
+  metadata?: Record<string, any>;
+  vector?: number[];
+}
+
 export class UpstashVectorAdapter implements VectorDedupPort {
   private index: Index;
 
@@ -15,15 +22,16 @@ export class UpstashVectorAdapter implements VectorDedupPort {
     for (const id of nodeIds) {
       const vectorData = await ns.fetch([id]);
       if (vectorData && vectorData[0] && vectorData[0].vector) {
-        const results = await ns.query({
+        const results = (await ns.query({
           vector: vectorData[0].vector as number[],
           topK: 5,
           includeMetadata: true
-        });
+        })) as QueryResult[];
 
         for (const res of results) {
-          if (res.id !== id && typeof res.score === 'number' && res.score > 0.99) {
-            await ns.delete([String(res.id)]);
+          const score = typeof res.score === 'string' ? parseFloat(res.score) : res.score;
+          if (res.id !== id && typeof score === 'number' && score > 0.99) {
+            await ns.delete([res.id]);
             deletedCount++;
           }
         }
