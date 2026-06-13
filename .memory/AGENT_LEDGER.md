@@ -9,7 +9,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Active Ledger
-- [2026-06-13T17:40:00+03:00] [Antigravity (Agent)] [IN_PROGRESS] [SINK: Chunk 1.8.5 - UI Stabilization & Data Mapping Rectification] (PromptBuilder.ts, route.ts, useKnowledgeGraph.ts, Sidebar.tsx, ChatDock.tsx, DashboardLayout.tsx, AnalysisHero.tsx, VideoPlayerCard.tsx) Implementing prompt node ceilings, completion state updates, high-fidelity knowledge graph ingestion, SynthLog sidebar relocation, and layout scroll/video hydration fixes.
+- [2026-06-13T17:40:00+03:00] [Antigravity (Agent)] [DONE] [SINK: Chunk 1.8.5 - UI Stabilization & Data Mapping Rectification] (PromptBuilder.ts, route.ts, useKnowledgeGraph.ts, Sidebar.tsx, ChatDock.tsx, DashboardLayout.tsx, AnalysisHero.tsx, VideoPlayerCard.tsx) Successfully stabilized layout, scroll padding, maxHeight hero collapse, unified chat dock global state, optimized VideoPlayerCard selector re-renders, and implemented strict node/edge limits, type safety validation checks, and topology-based rootId extraction.
 - [2026-06-10T19:10:00+03:00] [GC (Agent)] [DONE] PR #62 review attempted; CI integration authentication failure; Snyk high-severity issues identified. Matrix: /docs/testing/chunk-62-review-matrix.md.
 - [2026-06-10T19:20:00+03:00] [GC (Agent)] [DONE] Upgraded workspace dependencies and fixed PostgresBillingAdapter type error. Verified via production build.
 - [2026-06-10T19:25:00+03:00] [GC (Agent)] [DONE] Hardened worker streaming pipeline and relations engine against LLM loops/timeouts using AbortSignals. Verified via build.
