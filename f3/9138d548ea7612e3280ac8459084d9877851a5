@@ -1,0 +1,45 @@
+web/app/api/analyses/persist/route.ts
+  s_795bd3c15d1041::t_5fe7c97c38c175 133-135
+  s_795bd3c15d1041::t_0453907d8681bf 86,93,109
+  s_795bd3c15d1041::t_4f0faab9eca0d7 16
+web/lib/adapters/synthesis-stream-adapter.ts
+  s_795bd3c15d1041::t_405bc1e473a677 567
+  s_795bd3c15d1041::t_0527f1a0ba040a 506
+  s_795bd3c15d1041::t_329c41bd6f09be 348
+  s_795bd3c15d1041::t_5029badbda96aa 21,27
+web/lib/types/synthesis-nucleus.ts
+  s_795bd3c15d1041::t_d936255a0c877e 1-2
+  s_795bd3c15d1041::t_7ddd2066968b46 238
+web/hooks/useSSEStream.ts
+  s_795bd3c15d1041::t_03262666ecd40b 7-8,10
+  s_795bd3c15d1041::t_12d243914cfb5f 133,163,165-171,236-237,278
+docs/history/HANDOVER_REPORT_2026_06_13_1200.md
+  s_795bd3c15d1041::t_a13ee8c728299f 55
+web/lib/utils/markdown-reconstructor.ts
+  s_795bd3c15d1041::t_0357d92fd16416 1-2,7
+web/lib/config/synthesis.ts
+  s_795bd3c15d1041::t_1c8703b940ac65 15
+  s_795bd3c15d1041::t_6ef8165414e4e9 1-14
+web/lib/validators/synthesis.ts
+  s_795bd3c15d1041::t_b0cab805603e82 28,72,123,174,206
+  s_795bd3c15d1041::t_ab35a2a3d7ca2a 12
+web/lib/prompts/factory.ts
+  s_795bd3c15d1041::t_ad325d625651f7 89
+  s_795bd3c15d1041::t_d5dd7a5e3b35f5 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "f39138d548ea7612e3280ac8459084d9877851a5",
+  "prompts": {},
+  "sessions": {
+    "s_795bd3c15d1041": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "5ede22f4-db4b-4d50-a45c-c1373bee8286",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
