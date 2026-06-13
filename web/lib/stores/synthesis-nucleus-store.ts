@@ -43,6 +43,7 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set, get) => (
   personaConfig: null,
   knowledgeGraph: null,
   classification: null,
+  monetizationVerdict: null,
   activePersona: 'analyst', // Default persona
   projection: null,
   isStreaming: false,
@@ -231,6 +232,7 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set, get) => (
       personaConfig: null,
       knowledgeGraph: null,
       classification: null,
+      monetizationVerdict: null,
       activePersona: 'analyst',
       projection: null,
       isStreaming: false,
@@ -256,6 +258,11 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set, get) => (
   setClassification: (data: ClassificationData) => {
     set({ classification: data });
     console.debug('[Nucleus] Classification received:', data.recommendation);
+  },
+
+  setMonetizationVerdict: (verdict) => {
+    set({ monetizationVerdict: verdict });
+    console.debug('[Nucleus] Monetization verdict received');
   },
 
   // ============= HELPERS =============

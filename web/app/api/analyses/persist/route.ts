@@ -11,6 +11,8 @@ import { publishValidationTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
 import { PersistedValidationReport, isPersistedValidationReport } from '@/lib/types/validation-report';
+import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+import { z } from 'zod';
 
 /**
  * Server-to-server persistence endpoint. The Cloudflare Worker calls this (from
@@ -22,10 +24,31 @@ import { PersistedValidationReport, isPersistedValidationReport } from '@/lib/ty
  * - analysis_payload: Structured JSON (v2.0 schema) for KG visualization + cache hits
  */
 export async function POST(request: NextRequest) {
-  let body: { analysisId?: string; videoId?: string; markdown?: string; payload?: unknown; model?: string; valid?: boolean; contentSig?: string; status?: string } | undefined;
+  let body: { 
+    analysisId?: string; 
+    videoId?: string; 
+    markdown?: string; 
+    payload?: unknown; 
+    model?: string; 
+    valid?: boolean; 
+    contentSig?: string; 
+    status?: string;
+    chunkIndex?: number;
+  } | undefined;
+
   try {
     body = await request.json();
-    const { analysisId, videoId, markdown, payload, model, valid, contentSig, status = 'completed' } = body || {};
+    const { 
+      analysisId, 
+      videoId, 
+      markdown, 
+      payload, 
+      model, 
+      valid, 
+      contentSig, 
+      status = 'completed',
+      chunkIndex
+    } = body || {};
 
     if (!analysisId || !videoId || typeof markdown !== 'string' || !contentSig) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -39,12 +62,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    // ADR 006: Validate payload schema before persisting to JSONB column.
-    let validPayload: UCISPayloadV2 | undefined;
+    // Validate payload schema before persisting.
+    let validPayload: any;
     if (payload !== undefined && payload !== null) {
-      const parseResult = UCISPayloadV2Schema.safeParse(payload);
+      const isChunk = chunkIndex !== undefined;
+      const parseResult = isChunk
+        ? z.object({ schemaVersion: z.literal('2.0'), dimensions: z.array(z.any()) }).safeParse(payload)
+        : UCISPayloadV2Schema.safeParse(payload);
+
       if (!parseResult.success) {
-        console.warn('[analyses/persist] Invalid payload schema', { analysisId, videoId, errors: parseResult.error.flatten() });
+        console.warn('[analyses/persist] Invalid payload schema', { 
+          analysisId, 
+          videoId, 
+          chunkIndex,
+          errors: parseResult.error.flatten() 
+        });
         return NextResponse.json({ error: 'Invalid payload schema' }, { status: 400 });
       }
       validPayload = parseResult.data;
@@ -56,9 +88,6 @@ export async function POST(request: NextRequest) {
     const row = await persistenceAdapter.findAnalysisForPersist({ analysisId, videoId });
 
     if (!row) {
-      // Authenticated (valid content sig) but no matching row. Usual cause: the bouncer
-      // wrote the processing row to a DIFFERENT environment's DB (e.g. a preview branch)
-      // while the worker's APP_URL points at prod. Capture so the orphan is visible.
       Sentry.captureMessage('analysis-persist: row not found', {
         level: 'warning',
         tags: { operation: 'analysis-persist', reason: 'row-not-found' },
@@ -68,9 +97,158 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
     }
 
-    const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport) ? row.validationReport : { status: 'processing' };
+    const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport) 
+      ? row.validationReport 
+      : { status: 'processing' };
     const isInterrupted = status === 'interrupted';
 
+    // === CHUNKED PERSISTENCE PATH ===
+    if (chunkIndex !== undefined) {
+      const dimensionsCovered = Array.isArray((payload as any)?.dimensions)
+        ? (payload as any).dimensions.map((d: any) => d.number)
+        : [];
+
+      // Save the segment chunk to the database
+      await persistenceAdapter.persistAnalysisChunk({
+        analysisId,
+        chunkIndex,
+        dimensionsCovered,
+        payload,
+        status: status as any,
+      });
+
+      // Query all chunks to see if we can perform a stitch
+      const chunks = await persistenceAdapter.findAnalysisChunks({ analysisId });
+      const completedChunks = chunks ? chunks.filter(c => c.status === 'completed') : [];
+
+      if (completedChunks.length === 3) {
+        // Stitch the payloads together
+        const chunkMap = new Map<number, any>();
+        completedChunks.forEach(c => {
+          chunkMap.set(c.chunk_index, c.payload);
+        });
+
+        const p1 = chunkMap.get(1) || {};
+        const p2 = chunkMap.get(2) || {};
+        const p3 = chunkMap.get(3) || {};
+
+        const stitchedDimensions = [
+          ...(p1.dimensions || []),
+          ...(p2.dimensions || []),
+          ...(p3.dimensions || [])
+        ].sort((a, b: any) => a.number - b.number);
+
+        const stitchedPayload: UCISPayloadV2 = {
+          schemaVersion: '2.0',
+          persona: p1.persona || {
+            primary: { id: 'analyst', label: 'Analyst', weight: 1.0 },
+            cognitiveLenses: [],
+            selectionRationale: ''
+          },
+          dimensions: stitchedDimensions,
+          knowledgeGraph: p2.knowledgeGraph || {
+            nodes: [],
+            edges: [],
+            rootId: null
+          },
+          classification: p3.classification || {
+            authoritative: false,
+            practicallyActionable: false,
+            knowledgeGraphReady: false,
+            safe: true,
+            personaOptimised: false,
+            recommendation: 'conditional'
+          },
+          monetizationVerdict: p3.monetizationVerdict
+        };
+
+        const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+        const fullParseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
+        const isStitchedValid = fullParseResult.success;
+
+        if (!isStitchedValid) {
+          console.warn('[analyses/persist] Stitched payload failed schema validation', {
+            analysisId,
+            videoId,
+            errors: fullParseResult.error.flatten()
+          });
+        }
+
+        const newReport: PersistedValidationReport = {
+          ...priorReport,
+          status: 'done',
+          model_used: model || null,
+          valid: isStitchedValid,
+        };
+
+        // Write complete stitched result to main tables
+        await persistenceAdapter.updateAnalysisResult({
+          analysisId,
+          markdown: stitchedMarkdown,
+          payload: stitchedPayload,
+          model: model || null,
+          validationPassed: isStitchedValid,
+          validationReport: newReport,
+        });
+
+        // Write knowledge graph entities & relations to the KG tables
+        if (stitchedPayload.knowledgeGraph && Array.isArray(stitchedPayload.knowledgeGraph.nodes)) {
+          const entities = stitchedPayload.knowledgeGraph.nodes.map((n: any) => ({
+            label: n.label,
+            type: n.entityType || n.type || 'concept',
+            weight: typeof n.weight === 'number' ? n.weight : 1,
+          }));
+          const relations = stitchedPayload.knowledgeGraph.edges.map((e: any) => ({
+            source: e.source,
+            target: e.target,
+            relation: e.kind || e.relation || 'related',
+            strength: typeof e.strength === 'number' ? e.strength : 1,
+          }));
+
+          await persistenceAdapter.persistKnowledgeGraph({
+            analysisId,
+            entities,
+            relations,
+          }).catch((err) => {
+            console.error('[analyses/persist] Failed to persist stitched KG:', err);
+          });
+        }
+
+        // Cache-aside updates
+        const cachedPayload: CachedAnalysisResult = {
+          id: analysisId,
+          video_id: videoId,
+          title: row.title,
+          analysis_markdown: stitchedMarkdown,
+          analysis_payload: stitchedPayload as any,
+          validation_report: {
+            transcript_available: !!priorReport.transcript_available,
+            analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
+          },
+          model_used: model || 'edge-stream',
+          created_at: row.createdAt,
+          cached_at: new Date().toISOString(),
+        };
+        const cacheKey = generateCacheKey('edge-stream', stitchedMarkdown, '5.1');
+        await setAnalysisCache(cacheKey, cachedPayload).catch(() => {});
+
+        // QStash verification queue
+        if (!!priorReport.transcript_available) {
+          await publishValidationTask({
+            videoId,
+            markdown: stitchedMarkdown,
+            filename: `${videoId}.md`,
+            userId: row.userId,
+            analysisId,
+            metadata: { title: row.title, channelTitle: '' },
+          }).catch(() => {});
+        }
+      }
+
+      return NextResponse.json({ ok: true, analysisId, chunkIndex, status: 'chunk_saved' });
+    }
+
+    // === BASELINE FULL PERSISTENCE PATH (Legacy/Single Stream fallback) ===
     const newReport: PersistedValidationReport = {
       ...priorReport,
       status: isInterrupted ? 'interrupted' : 'done',
@@ -78,23 +256,19 @@ export async function POST(request: NextRequest) {
       valid: isInterrupted ? false : !!valid,
     };
 
-    // ADR 006: Dual-write - update both markdown and JSON payload columns via adapter
     await persistenceAdapter.updateAnalysisResult({
       analysisId,
       markdown,
-      payload: validPayload ?? null, // Payload is cast to UCISPayloadV2 | null via interface
+      payload: validPayload ?? null,
       model: model || null,
       validationPassed: isInterrupted ? false : !!valid,
       validationReport: newReport,
     });
 
-    // Skip cache and validation for interrupted/partial streams.
     if (isInterrupted) {
       return NextResponse.json({ ok: true, analysisId, status: 'interrupted' });
     }
 
-    // ADR 006: Best-effort cache + validation task (never block the persist response).
-    // Cache includes both markdown and structured JSON payload for v2.0 cache hits.
     const transcriptAvailable = !!priorReport.transcript_available;
     const cachedPayload: CachedAnalysisResult = {
       id: analysisId,
@@ -127,7 +301,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, analysisId });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    Sentry.captureException(error, { tags: { operation: 'analysis-persist' }, contexts: { api: { endpoint: '/api/analyses/persist' } } });
+    Sentry.captureException(error, { 
+      tags: { operation: 'analysis-persist' }, 
+      contexts: { api: { endpoint: '/api/analyses/persist' } } 
+    });
     console.error('[analyses/persist] Failed:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }

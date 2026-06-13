@@ -140,4 +140,16 @@ export interface PersistencePort {
     analysisId: string;
     status: 'processing' | 'completed' | 'failed';
   }): Promise<void>;
+
+  persistAnalysisChunk(params: {
+    analysisId: string;
+    chunkIndex: number;
+    dimensionsCovered: number[];
+    payload: any;
+    status: 'completed' | 'failed' | 'interrupted';
+  }): Promise<void>;
+
+  findAnalysisChunks(params: {
+    analysisId: string;
+  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: any; status: string }> | null>;
 }
