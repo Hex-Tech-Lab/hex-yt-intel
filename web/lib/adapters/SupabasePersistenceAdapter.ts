@@ -11,6 +11,7 @@ import type {
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
+import type { GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
 
 interface AnalysisRow {
   id: string;
@@ -884,6 +885,34 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       });
       throw error;
     }
+  }
+
+  async persistGraph(params: {
+    analysisId: string;
+    nodes: GraphNode[];
+    relations: GraphEdge[];
+  }): Promise<void> {
+    const entities = params.nodes.map(n => ({
+      label: n.label,
+      type: n.entityType || 'concept',
+      weight: n.weight,
+    }));
+    const relations = params.relations.map(e => ({
+      source: e.source,
+      target: e.target,
+      relation: e.kind,
+      strength: e.strength,
+    }));
+    return this.persistKnowledgeGraph({ analysisId: params.analysisId, entities, relations });
+  }
+
+  async getGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
+    const data = await this.getKnowledgeGraph(analysisId);
+    if (!data) return null;
+    return {
+      nodes: data.entities.map(e => ({ ...e, dimension: 0, content: '', polarity: 0, keyTerms: [], inPersona: false })),
+      relations: data.relations.map(r => ({ source: r.source_entity_id, target: r.target_entity_id, kind: r.relation_label as any, strength: r.strength }))
+    };
   }
 
   async updateBillingStatus(params: {

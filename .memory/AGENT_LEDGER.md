@@ -99,3 +99,4 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-13T10:00:00+00:00] [GC (Agent)] [IN_PROGRESS] Auditing Knowledge Graph/Wiki data contract and Global Index preparedness. Target: SupabasePersistenceAdapter.ts, UCISPayloadV2 schema.
 - [2026-06-13T10:30:00+00:00] [GC (Agent)] [IN_PROGRESS] Phase 1: Hardening worker persistence and refining port contracts. Target: worker/src/worker.ts, web/lib/ports/GraphRAGPort.ts
 - [2026-06-13T11:00:00+00:00] [GC (Agent)] [DONE] Remediated KG persistence gap: integrated worker-side synthesis, hardened persistence flow, updated port contracts. Verified via type-check.
+- [2026-06-13T12:00:00+00:00] [GC (Agent)] [IN_PROGRESS] Syncing with origin/main and stripping KG synthesizer from worker. Targets: worker/src/worker.ts, web/lib/adapters/UpstashVectorAdapter.ts, web/lib/ports/GraphRAGPort.ts
