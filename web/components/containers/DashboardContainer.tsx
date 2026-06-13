@@ -6,14 +6,14 @@ import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
 import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
-import { StreamingGrid, Dimension } from '@/components/templates/console/StreamingGrid';
+import { DimensionAccordion, type Dimension } from '@/components/templates/console/DimensionAccordion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
-import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
-import { ApexSummaryCard } from '@/components/templates/console/ApexSummaryCard';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
@@ -313,6 +313,21 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     });
   }, [nucleus.projection, status, nucleus.analysis?.streaming.dimensionsReceived]);
 
+  const selectedDimension = useMemo(() => {
+    if (!selectedDimensionKey) return null;
+    return dimensions.find(d => d.key === selectedDimensionKey) || null;
+  }, [selectedDimensionKey, dimensions]);
+
+  // Default selection to first dimension when loaded
+  useEffect(() => {
+    if (dimensions.length > 0 && !selectedDimensionKey) {
+      const firstKey = dimensions[0]?.key;
+      if (firstKey) {
+        setSelectedDimensionKey(firstKey);
+      }
+    }
+  }, [dimensions, selectedDimensionKey]);
+
   return (
     <>
       <DashboardLayout
@@ -335,7 +350,52 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       }
       rightPanel={
         status !== 'idle' ? (
-          <RightPanelAccordion items={rightPanelItems} />
+          <div className="flex flex-col gap-6 h-full min-h-0 overflow-y-auto hx-custom-scrollbar">
+            {selectedDimension && (
+              <div className="border border-[var(--line)] rounded-xl bg-[rgb(26_31_43_/_0.3)] p-5 flex flex-col gap-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--accent)] font-bold">
+                      Dimension {dimensions.findIndex(d => d.key === selectedDimensionKey) + 1}
+                    </span>
+                    <h3 className="font-mono text-[11px] uppercase tracking-wider font-bold text-[var(--ink)] truncate">
+                      {selectedDimension.label}
+                    </h3>
+                  </div>
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    selectedDimension.status === 'streaming' ? 'bg-[var(--accent)] animate-pulse' :
+                    selectedDimension.status === 'done' ? 'bg-[var(--ok)]' :
+                    selectedDimension.status === 'error' ? 'bg-[var(--err)]' :
+                    'bg-[var(--ink-muted)]'
+                  }`} />
+                </div>
+                
+                <div className="flex-1 text-[13px] leading-relaxed text-[var(--ink-secondary)] max-h-[420px] overflow-y-auto pr-1 hx-custom-scrollbar">
+                  {selectedDimension.content ? (
+                    <div className="prose prose-invert max-w-none text-[12px] leading-relaxed text-[var(--ink-secondary)] prose-p:mb-3.5 prose-p:mt-0 prose-headings:text-[13px] prose-headings:font-bold prose-headings:mt-4 prose-headings:mb-2 prose-table:my-4 prose-table:text-[10px] prose-th:px-2 prose-th:py-1.5 prose-td:px-2 prose-td:py-1.5 prose-ul:list-disc prose-ul:pl-5 prose-ol:list-decimal prose-ol:pl-5 prose-li:mb-1">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {selectedDimension.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : selectedDimension.status === 'error' ? (
+                    <p className="font-mono text-[11px] text-[var(--err)] opacity-80">
+                      Synthesis failed for this dimension.
+                    </p>
+                  ) : (
+                    <div className="space-y-3 animate-pulse pt-2">
+                      <div className="h-3 bg-[var(--line-strong)] rounded w-3/4 opacity-20" />
+                      <div className="h-3 bg-[var(--line-strong)] rounded w-1/2 opacity-15" />
+                      <div className="h-3 bg-[var(--line-strong)] rounded w-5/6 opacity-10" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex-shrink-0">
+              <RightPanelAccordion items={rightPanelItems} />
+            </div>
+          </div>
         ) : undefined
       }
       dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
@@ -397,17 +457,14 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 <>
                   {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
                   
-                  {dimensions.length > 0 && (
-                    <ApexSummaryCard dimension={dimensions[0]!} />
-                  )}
-
-                  {dimensions.length > 1 ? (
-                    <StreamingGrid
-                      dimensions={dimensions.slice(1)}
+                  {dimensions.length > 0 ? (
+                    <DimensionAccordion
+                      dimensions={dimensions}
+                      selectedDimensionKey={selectedDimensionKey}
+                      onSelectDimension={setSelectedDimensionKey}
                       progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
-                      onOpenDimension={(key) => setSelectedDimensionKey(key)}
                     />
-                  ) : dimensions.length === 0 && (
+                  ) : (
                     <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
                       {status === 'complete' ? (
                         <p className="text-[var(--ink-secondary)] font-mono text-sm">No synthesis dimensions were produced for this analysis.</p>
@@ -445,17 +502,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       )}
 
     </DashboardLayout>
-
-      {activeNav === 'console' && (
-        <DimensionDrawer
-          dimension={
-            selectedDimensionKey
-              ? dimensions.find(d => d.key === selectedDimensionKey) || null
-              : null
-          }
-          onClose={() => setSelectedDimensionKey(null)}
-        />
-      )}
     </>
   );
 }
