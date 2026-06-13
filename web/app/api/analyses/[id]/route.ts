@@ -37,6 +37,7 @@ export async function GET(
       channelTitle: analysis.channel_title,
       model: analysis.model_used || 'unknown',
       analysis_markdown: analysis.analysis_markdown || '',
+      analysis_payload: analysis.analysis_payload || null,
       validation_report: report,
       analysisAt: analysis.analysis_at || analysis.created_at,
       detectedPersona: analysis.detected_persona || null,

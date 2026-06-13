@@ -33,9 +33,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-11T12:55:00+03:00] [Antigravity (Agent)] [DONE] Deep reviewed session history and transcripts, extracted outstanding system TODOs, analyzed prioritization logic, and produced a comprehensive session roadmap.
 - [2026-06-11T13:22:00+03:00] [Antigravity (Agent)] [DONE] Resolved UI white background flash during hydration by explicitly setting the bg-[var(--bg)] background on the main layout component. Resolved client-side dimension validation failure by making the metadata property optional in UCISDimensionSchema.
 - [2026-06-11T13:42:00+03:00] [Antigravity (Agent)] [DONE] Implemented 100ms debouncing logic in useRelations hook to prevent duplicate HTTP/API fetches and double OpenRouter requests caused by rapid, unbatched store state re-renders.
-
-
-
+- [2026-06-13T18:10:00+03:00] [Antigravity (Agent)] [DONE] Stabilized video player hydration guard and fixed history restore videoId mapping; resolved missing Knowledge Graph UI by returning and hydrating the analysis_payload in the GET and history restore flows; fixed sidebar log card borders and spacing; solved webhook validation failure by adding passthrough to chunk parsing, correcting the filename format, and repairing the emoji check regex to exclude literal table pipe separators. (VideoPlayerCard.tsx, AnalysisHistory.tsx, ProcessingLog.tsx, SupabasePersistenceAdapter.ts, PersistencePort.ts, route.ts, ucis-v5-validator.ts, MarkdownReconstructor.ts, synthesis-stream-adapter.ts)
 
 - [2026-06-10T23:55:00+03:00] [GC (Agent)] [DONE] Resolved Dependabot High-severity alert #30 by overriding 'glob' to safe version 10.5.0 in pnpm-workspace.yaml. Verified via pnpm audit. (2026-06-10)
 

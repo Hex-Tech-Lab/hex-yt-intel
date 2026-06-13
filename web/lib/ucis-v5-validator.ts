@@ -39,7 +39,7 @@ const PATTERNS = {
   filename: /^[a-zA-Z0-9\-\._]+\-[a-zA-Z0-9\-\._]+\-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md$/,
   inlineTimestamp: /`\d{2}:\d{2}:\d{2}`/,
   timestampFormat: /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+[^\s`]+(?:\s+\(Agent\))?)?/,
-  emoji: /[\u{1F300}-\u{1F9FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}|\u{1F600}-\u{1F64F}]/gu,
+  emoji: /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}]/gu,
 };
 
 export class UCISValidator {

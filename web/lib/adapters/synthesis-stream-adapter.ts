@@ -292,8 +292,16 @@ export class SynthesisStreamAdapter {
     // Progressive JSON Parsing (Dual-Accumulator Pattern)
     this.rawSink += fragment.content;
 
+    let cleanSink = this.rawSink.trim();
+    if (cleanSink.startsWith('```')) {
+      const braceIndex = cleanSink.indexOf('{');
+      if (braceIndex !== -1) {
+        cleanSink = cleanSink.slice(braceIndex);
+      }
+    }
+
     // Check if the raw sink starts with '{', indicating it is a structured JSON stream
-    const isJsonStream = this.rawSink.trim().startsWith('{');
+    const isJsonStream = cleanSink.startsWith('{');
 
     // Only append to raw display markdown if this is NOT a JSON stream (legacy/fallback plaintext)
     if (!isJsonStream) {
@@ -304,11 +312,11 @@ export class SynthesisStreamAdapter {
     // Check if the raw sink itself is already a fully valid complete JSON object
     let isRawComplete = false;
     try {
-      JSON.parse(this.rawSink);
+      JSON.parse(cleanSink);
       isRawComplete = true;
     } catch {}
 
-    const healed = this.healJson(this.rawSink);
+    const healed = this.healJson(cleanSink);
     if (healed) {
       let obj: any;
       try {

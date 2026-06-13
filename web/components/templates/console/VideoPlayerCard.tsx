@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactPlayer from 'react-player';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
@@ -13,8 +13,13 @@ export function VideoPlayerCard() {
   const { seekTo, jumpToTimestamp } = useVideoStore();
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
+  const [mounted, setMounted] = useState(false);
 
   const videoId = videoMetadata?.videoId || nucleusVideoId;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!videoMetadata?.videoId && nucleusVideoId) {
@@ -29,7 +34,7 @@ export function VideoPlayerCard() {
     }
   }, [seekTo, jumpToTimestamp]);
 
-  if (!videoId) return null;
+  if (!mounted || !videoId) return null;
 
   return (
     <div className="w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
