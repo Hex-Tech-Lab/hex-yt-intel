@@ -9,7 +9,7 @@
 import { getUCISPrompt } from '../../../web/lib/prompts/factory';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
-import { DIMENSION_CONFIGS } from '../../../web/lib/config/synthesis';
+import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS } from '../../../web/lib/config/synthesis';
 
 export class PromptBuilder implements PromptBuilderPort {
   /**
@@ -31,7 +31,7 @@ export class PromptBuilder implements PromptBuilderPort {
       duration: context.metadata.duration || 0,
     });
 
-    if (context.chunkIndex !== undefined && context.chunkIndex >= 1 && context.chunkIndex <= 11) {
+    if (context.chunkIndex !== undefined && context.chunkIndex >= 1 && context.chunkIndex <= TOTAL_DIMENSIONS) {
       const details = DIMENSION_CONFIGS[context.chunkIndex];
       if (details) {
         const name = details.name;
