@@ -315,6 +315,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         messagesByConv: {},
         error: null,
         sending: false,
+        isChatOpen: false,
       });
     },
   };

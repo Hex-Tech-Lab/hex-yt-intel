@@ -12,9 +12,15 @@ export function VideoPlayerCard() {
   const playerRef = useRef<any>(null);
   const { seekTo, jumpToTimestamp } = useVideoStore();
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
-  const nucleus = useSynthesisNucleus();
+  const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
 
-  const videoId = videoMetadata?.videoId || nucleus.analysis?.videoId;
+  const videoId = videoMetadata?.videoId || nucleusVideoId;
+
+  useEffect(() => {
+    if (!videoMetadata?.videoId && nucleusVideoId) {
+      console.warn('[VideoPlayerCard] VideoMetadata missing videoId; falling back to synthesis nucleus videoId:', nucleusVideoId);
+    }
+  }, [videoMetadata, nucleusVideoId]);
 
   useEffect(() => {
     if (seekTo !== null && playerRef.current) {
