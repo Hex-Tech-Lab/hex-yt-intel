@@ -13,6 +13,7 @@ import * as Sentry from '@sentry/nextjs';
 import { PersistedValidationReport, isPersistedValidationReport } from '@/lib/types/validation-report';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { z } from 'zod';
+import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /**
  * Server-to-server persistence endpoint. The Cloudflare Worker calls this (from
@@ -24,41 +25,50 @@ import { z } from 'zod';
  * - analysis_payload: Structured JSON (v2.0 schema) for KG visualization + cache hits
  */
 export async function POST(request: NextRequest) {
-  let body: { 
-    analysisId?: string; 
-    videoId?: string; 
-    markdown?: string; 
-    payload?: unknown; 
-    model?: string; 
-    valid?: boolean; 
-    contentSig?: string; 
-    status?: string;
-    chunkIndex?: number;
-    totalChunks?: number;
-  } | undefined;
+  let body: any;
 
   try {
     body = await request.json();
-    const { 
-      analysisId, 
-      videoId, 
-      markdown, 
-      payload, 
-      model, 
-      valid, 
-      contentSig, 
-      status = 'completed',
-      chunkIndex,
-      totalChunks
-    } = body || {};
+    
+    const bodySchema = z.object({
+      analysisId: z.string().uuid(),
+      videoId: z.string().min(1),
+      markdown: z.string(),
+      payload: z.unknown().optional(),
+      model: z.string().optional(),
+      valid: z.boolean().optional(),
+      contentSig: z.string(),
+      status: z.string().optional().default('completed'),
+      chunkIndex: z.number().int().min(1).max(TOTAL_DIMENSIONS).optional(),
+      totalChunks: z.number().int().refine((val) => val === TOTAL_DIMENSIONS, {
+        message: `totalChunks must match active configuration matrix of ${TOTAL_DIMENSIONS}`,
+      }),
+    });
 
-    if (!analysisId || !videoId || typeof markdown !== 'string' || !contentSig) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const parsedBody = bodySchema.safeParse(body);
+    if (!parsedBody.success) {
+      return NextResponse.json({ 
+        error: 'Invalid request payload schema', 
+        details: parsedBody.error.flatten() 
+      }, { status: 400 });
     }
 
-    const resolvedTotal = typeof totalChunks === 'number' ? totalChunks : 11;
+    const {
+      analysisId,
+      videoId,
+      markdown,
+      payload,
+      model,
+      valid,
+      contentSig,
+      status,
+      chunkIndex,
+      totalChunks
+    } = parsedBody.data;
+
+    const resolvedTotal = totalChunks;
     if (chunkIndex !== undefined) {
-      if (typeof chunkIndex !== 'number' || !Number.isInteger(chunkIndex) || chunkIndex < 1 || chunkIndex > resolvedTotal) {
+      if (chunkIndex < 1 || chunkIndex > resolvedTotal) {
         return NextResponse.json({ error: `Invalid chunkIndex. Must be an integer between 1 and ${resolvedTotal}` }, { status: 400 });
       }
     }
@@ -72,14 +82,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate payload schema before persisting.
-    let validPayload: any;
+    let validPayload: UCISPayloadV2 | undefined;
+
     if (payload !== undefined && payload !== null) {
       const isChunk = chunkIndex !== undefined;
       const parseResult = isChunk
         ? z.object({
             schemaVersion: z.literal('2.0'),
             dimensions: z.array(z.object({
-              number: z.number().int().min(1).max(11),
+              number: z.number().int().min(1).max(TOTAL_DIMENSIONS),
               name: z.string(),
               content: z.string()
             }))
@@ -95,7 +106,7 @@ export async function POST(request: NextRequest) {
         });
         return NextResponse.json({ error: 'Invalid payload schema' }, { status: 400 });
       }
-      validPayload = parseResult.data;
+      validPayload = parseResult.data as any;
     }
 
     const persistenceAdapter = new SupabasePersistenceAdapter();
@@ -119,9 +130,9 @@ export async function POST(request: NextRequest) {
     const isInterrupted = status === 'interrupted';
 
     // === CHUNKED PERSISTENCE PATH ===
-    if (chunkIndex !== undefined) {
-      const dimensionsCovered = Array.isArray((payload as any)?.dimensions)
-        ? (payload as any).dimensions.map((d: any) => d.number)
+    if (chunkIndex !== undefined && validPayload && 'dimensions' in validPayload) {
+      const dimensionsCovered = Array.isArray(validPayload.dimensions)
+        ? (validPayload.dimensions as any[]).map((d: any) => d.number)
         : [];
 
       // Save the segment chunk to the database

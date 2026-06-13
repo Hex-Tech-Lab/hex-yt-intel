@@ -9,6 +9,7 @@
  */
 
 import { z } from 'zod';
+import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /**
  * Validate individual dimension metadata
@@ -24,7 +25,7 @@ const DimensionMetadataSchema = z.object({
  * Validate a complete dimension
  */
 export const UCISDimensionSchema = z.object({
-  number: z.number().int().min(1).max(11),
+  number: z.number().int().min(1).max(TOTAL_DIMENSIONS),
   name: z.string().min(1).max(100),
   content: z.string().min(10),
   metadata: DimensionMetadataSchema.optional(),
@@ -68,7 +69,7 @@ export const UCISPayloadSchema = z.object({
  */
 export const KGNodeSchema = z.object({
   id: z.string().min(1).max(100),
-  dimension: z.number().int().min(1).max(11),
+  dimension: z.number().int().min(1).max(TOTAL_DIMENSIONS),
   label: z.string().min(1).max(200),
   content: z.string().min(10),
   weight: z.number().min(0).max(1),
@@ -119,7 +120,7 @@ export const PersonaConfigSchema = z.object({
  * Content is markdown (same richness as before) but properly JSON-escaped.
  */
 export const UCISDimensionV2Schema = z.object({
-  number: z.number().int().min(1).max(11),
+  number: z.number().int().min(1).max(TOTAL_DIMENSIONS),
   name: z.string().min(1).max(100),
   content: z.string().min(10),
   metadata: z.object({
@@ -170,7 +171,7 @@ export const KnowledgeGraphSchema = z.object({
 export const UCISPayloadV2Schema = z.object({
   schemaVersion: z.literal('2.0'),
   persona: PersonaConfigSchema,
-  dimensions: z.array(UCISDimensionV2Schema).min(1).max(11),
+  dimensions: z.array(UCISDimensionV2Schema).min(1).max(TOTAL_DIMENSIONS),
   knowledgeGraph: KnowledgeGraphSchema,
   classification: ClassificationDataSchema,
   monetizationVerdict: MonetizationVerdictSchema.optional(),
@@ -202,7 +203,7 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion('type', [
 
   z.object({
     type: z.literal('dimension'),
-    dimension: z.number().int().min(1).max(11),
+    dimension: z.number().int().min(1).max(TOTAL_DIMENSIONS),
     name: z.string().min(1),
     content: z.string().min(10),
     metadata: DimensionMetadataSchema.optional(),
