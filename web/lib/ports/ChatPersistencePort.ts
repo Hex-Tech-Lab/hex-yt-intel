@@ -51,6 +51,7 @@ export interface ChatPersistencePort {
   }): Promise<{
     title: string;
     channelTitle: string | null;
+    description: string | null;
     analysisMarkdown: string | null;
     status: string;
   } | null>;

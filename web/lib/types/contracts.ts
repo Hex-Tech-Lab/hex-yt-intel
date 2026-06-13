@@ -109,6 +109,7 @@ export const AnalysisJobMetadataSchema = z.object({
   viewCount: z.string(),
   likeCount: z.string(),
   commentCount: z.string(),
+  description: z.string().optional(),
 });
 export type AnalysisJobMetadata = z.infer<typeof AnalysisJobMetadataSchema>;
 

@@ -17,14 +17,14 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   const isChatOpen = useChatStore((s) => s.isChatOpen);
 
   return (
-    <div className={`grid h-screen w-full min-w-[1024px] bg-[var(--bg)] text-[var(--ink)] overflow-hidden ${
+    <div className={`grid h-screen w-full min-w-[1024px] bg-[var(--void)] text-[var(--ink)] overflow-hidden gap-[4px] p-[4px] ${
       rightPanel ? "grid-cols-[260px_1fr_390px]" : "grid-cols-[260px_1fr]"
     }`}>
-      <aside className="border-r border-[var(--line)] bg-[var(--void)] h-full w-[260px] flex-shrink-0 overflow-y-auto flex flex-col">
+      <aside className="border border-[var(--line)] bg-[var(--void)] h-full w-[260px] flex-shrink-0 overflow-y-auto flex flex-col rounded-xl">
         {sidebar}
       </aside>
 
-      <main className="relative flex flex-col h-full min-w-0 overflow-hidden isolate bg-[var(--bg)]">
+      <main className="relative flex flex-col h-full min-w-0 overflow-hidden isolate bg-[var(--bg)] border border-[var(--line)] rounded-xl">
         <header className="border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.8)] backdrop-blur-md z-20">
           {topbar}
         </header>
@@ -41,7 +41,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
       </main>
 
       {rightPanel && (
-        <aside className="border-l border-[var(--line)] bg-[var(--surface)] h-full w-[390px] flex-shrink-0 overflow-y-auto flex flex-col p-4 px-5">
+        <aside className="border border-[var(--line)] bg-[var(--surface)] h-full w-[390px] flex-shrink-0 overflow-y-auto flex flex-col p-4 px-5 rounded-xl">
           {rightPanel}
         </aside>
       )}

@@ -11,6 +11,7 @@ export interface VideoMetadata {
   viewCount: number;
   likeCount: number;
   commentCount: number;
+  description?: string;
 }
 
 /** Result of the parallel ingestion phase. */

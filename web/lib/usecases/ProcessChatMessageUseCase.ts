@@ -193,17 +193,25 @@ export class ProcessChatMessageUseCase {
     if (groundingResult) {
       const md = typeof groundingResult.analysisMarkdown === 'string' ? groundingResult.analysisMarkdown : '';
       const status = groundingResult.status;
+      const description = groundingResult.description;
+      const descriptionSection = description 
+        ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
+        : '';
+
       if (md.trim().length > 0) {
         grounding =
           `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
-          `Answer the user's questions using the structured analysis below; be concise and cite dimension names where relevant. ` +
-          `Do not ask which video — you have it.\n\n--- ANALYSIS ---\n` +
+          `Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. ` +
+          `Do not ask which video — you have it.` +
+          descriptionSection +
+          `--- ANALYSIS ---\n` +
           md.slice(0, 12000);
       } else {
         grounding =
           `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
-          `The full ${status === 'processing' ? 'analysis is still being generated' : 'analysis is not available yet'} — answer from the title/topic ` +
-          `and let the user know richer answers will be available once the synthesis finishes. Never claim you don't know which video this is.`;
+          `The full ${status === 'processing' ? 'analysis is still being generated' : 'analysis is not available yet'} — answer from the title/topic and description ` +
+          `and let the user know richer answers will be available once the synthesis finishes. Never claim you don't know which video this is.` +
+          descriptionSection;
       }
     }
 

@@ -10,6 +10,7 @@ export interface WorkerMetadataResponse {
   likeCount: string;
   commentCount: string;
   thumbnailUrl: string | null;
+  description?: string;
 }
 
 const USER_AGENTS = [
@@ -74,6 +75,7 @@ export async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetada
       likeCount: metadata.likeCount || '0',
       commentCount: metadata.commentCount || '0',
       thumbnailUrl: metadata.thumbnailUrl || null,
+      description: metadata.description || '',
     };
   } catch (error) {
     clearTimeout(timeout);

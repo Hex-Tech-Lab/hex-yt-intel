@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
 import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
@@ -15,6 +17,8 @@ import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGr
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
+import { WordCloud } from '@/components/templates/console/WordCloud';
+import { MindMap } from '@/components/templates/console/MindMap';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
@@ -62,7 +66,14 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
-  const { startAnalysis } = useSSEStream();
+  const supabase = createClient();
+  const router = useRouter();
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
+  const { startAnalysis, stopAnalysis } = useSSEStream();
   const nucleus = useSynthesisNucleus();
   const { graph } = useKnowledgeGraph(nucleus.analysis?.id);
   const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, status === 'complete');
@@ -72,6 +83,79 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
 
+  const [expandedPanel, setExpandedPanel] = useState<{
+    id: 'insights' | 'knowledge-graph' | 'word-cloud' | 'mind-map';
+    mode: 'vertical' | 'left' | 'diagonal';
+  } | null>(null);
+
+  const handleCopy = useCallback((id: string) => {
+    if (id === 'insights') {
+      const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
+      navigator.clipboard.writeText(text);
+      alert('Insights copied to clipboard!');
+    } else if (id === 'knowledge-graph') {
+      const text = graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
+      navigator.clipboard.writeText(text);
+      alert('Knowledge Graph nodes list copied!');
+    } else if (id === 'word-cloud') {
+      const text = graph.nodes.map((n) => n.label).join(', ');
+      navigator.clipboard.writeText(text);
+      alert('Word Cloud text copied!');
+    } else if (id === 'mind-map') {
+      const text = graph.nodes.map((n) => `- ${n.label}`).join('\n');
+      navigator.clipboard.writeText(text);
+      alert('Mind Map nodes list copied!');
+    }
+  }, [graph, insights]);
+
+  const handlePanelExport = useCallback((id: string) => {
+    if (id === 'insights') {
+      const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${nucleus.analysis?.title || 'analysis'}-insights.txt`;
+      a.click();
+    } else if (id === 'knowledge-graph') {
+      const canvas = document.querySelector('div[style*="radial-gradient"] canvas') as HTMLCanvasElement;
+      if (canvas) {
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${nucleus.analysis?.title || 'analysis'}-knowledge-graph.png`;
+        a.click();
+      } else {
+        alert('Could not locate canvas element to export.');
+      }
+    } else if (id === 'word-cloud') {
+      const canvas = document.querySelector('canvas[className*="block w-full"]') as HTMLCanvasElement;
+      if (canvas) {
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${nucleus.analysis?.title || 'analysis'}-word-cloud.png`;
+        a.click();
+      } else {
+        alert('Could not locate canvas element to export.');
+      }
+    } else if (id === 'mind-map') {
+      const svg = document.querySelector('div[style*="max-height: 350px"] svg') as SVGElement;
+      if (svg) {
+        const serializer = new XMLSerializer();
+        const svgString = serializer.serializeToString(svg);
+        const blob = new Blob([svgString], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${nucleus.analysis?.title || 'analysis'}-mind-map.svg`;
+        a.click();
+      } else {
+        alert('Could not locate SVG element to export.');
+      }
+    }
+  }, [nucleus.analysis?.title, graph, insights]);
+
   // Define Right Panel Accordion Items
   const rightPanelItems = useMemo(() => [
     {
@@ -80,111 +164,50 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       defaultOpen: true,
       content: (
         <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
-      )
+      ),
+      onAction: (action: any) => {
+        if (action === 'copy') handleCopy('insights');
+        else if (action === 'export') handlePanelExport('insights');
+        else setExpandedPanel(prev => prev?.id === 'insights' && prev?.mode === action ? null : { id: 'insights', mode: action });
+      }
+    },
+    {
+      id: 'knowledge-graph',
+      title: 'Knowledge Graph',
+      content: (
+        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} compact={true} />
+      ),
+      onAction: (action: any) => {
+        if (action === 'copy') handleCopy('knowledge-graph');
+        else if (action === 'export') handlePanelExport('knowledge-graph');
+        else setExpandedPanel(prev => prev?.id === 'knowledge-graph' && prev?.mode === action ? null : { id: 'knowledge-graph', mode: action });
+      }
     },
     {
       id: 'word-cloud',
       title: 'Word Cloud',
       content: (
-        graph.nodes.length > 0 ? (
-          <div className="flex flex-wrap gap-2 p-3 justify-center items-center max-h-[200px] overflow-y-auto hx-custom-scrollbar bg-[var(--bg)]/40 rounded-xl border border-[var(--line-faint)]">
-            {graph.nodes
-              .slice()
-              .sort((a, b) => b.weight - a.weight)
-              .map((node) => {
-                const fontSize = Math.max(10, Math.min(22, 9 + node.weight * 1.3));
-                const opacity = Math.max(0.4, Math.min(1.0, 0.3 + node.weight * 0.07));
-                return (
-                  <span
-                    key={node.id}
-                    onClick={() => setSelectedNodeId(node.id)}
-                    className={`cursor-pointer font-mono font-bold tracking-tight transition-all duration-150 hover:text-[var(--accent)] hover:scale-105 ${
-                      selectedNodeId === node.id ? 'text-[var(--accent)] underline decoration-2 underline-offset-4' : 'text-[var(--ink-secondary)]'
-                    }`}
-                    style={{ fontSize: `${fontSize}px`, opacity }}
-                  >
-                    {node.label}
-                  </span>
-                );
-              })}
-          </div>
-        ) : (
-          <div className="p-4 text-center text-[var(--ink-muted)]">No graph structure yet.</div>
-        )
-      )
+        <WordCloud graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
+      ),
+      onAction: (action: any) => {
+        if (action === 'copy') handleCopy('word-cloud');
+        else if (action === 'export') handlePanelExport('word-cloud');
+        else setExpandedPanel(prev => prev?.id === 'word-cloud' && prev?.mode === action ? null : { id: 'word-cloud', mode: action });
+      }
     },
     {
       id: 'mind-map',
       title: 'Mind Map',
       content: (
-        graph.nodes.length > 0 ? (
-          <div className="p-3 bg-[var(--bg)]/40 rounded-xl border border-[var(--line-faint)] max-h-[220px] overflow-y-auto hx-custom-scrollbar font-mono text-[11px] text-[var(--ink-secondary)]">
-            {(() => {
-              const root = graph.nodes.reduce((max, node) => node.weight > max.weight ? node : max, graph.nodes[0]!);
-              const connectedNodeIds = new Set(
-                graph.edges
-                  .filter(e => e.source === root.id || e.target === root.id)
-                  .map(e => e.source === root.id ? e.target : e.source)
-              );
-              const level1Nodes = graph.nodes.filter(n => connectedNodeIds.has(n.id) && n.id !== root.id);
-              
-              return (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1.5 font-bold text-[var(--accent-ink)]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-                    <span>{root.label}</span>
-                  </div>
-                  <div className="pl-3 border-l border-[var(--line)] space-y-2">
-                    {level1Nodes.map((child) => {
-                      const subConnectedIds = new Set(
-                        graph.edges
-                          .filter(e => e.source === child.id || e.target === child.id)
-                          .map(e => e.source === child.id ? e.target : e.source)
-                      );
-                      const level2Nodes = graph.nodes
-                        .filter(n => subConnectedIds.has(n.id) && n.id !== root.id && n.id !== child.id)
-                        .slice(0, 3);
-                      
-                      return (
-                        <div key={child.id} className="space-y-0.5">
-                          <div
-                            onClick={() => setSelectedNodeId(child.id)}
-                            className={`cursor-pointer hover:text-[var(--accent)] transition-colors font-semibold flex items-center gap-1 ${
-                              selectedNodeId === child.id ? 'text-[var(--accent)]' : 'text-[var(--ink)]'
-                            }`}
-                          >
-                            <span>↳</span>
-                            <span>{child.label}</span>
-                          </div>
-                          {level2Nodes.length > 0 && (
-                            <div className="pl-4 border-l border-[var(--line-strong)]/30 space-y-0.5 text-[9px] text-[var(--ink-muted)]">
-                              {level2Nodes.map(subNode => (
-                                <div
-                                  key={subNode.id}
-                                  onClick={() => setSelectedNodeId(subNode.id)}
-                                  className={`cursor-pointer hover:text-[var(--accent)] transition-colors ${
-                                    selectedNodeId === subNode.id ? 'text-[var(--accent)]' : ''
-                                  }`}
-                                >
-                                  • {subNode.label}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        ) : (
-          <div className="p-4 text-center text-[var(--ink-muted)]">No mind map structure yet.</div>
-        )
-      )
+        <MindMap graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
+      ),
+      onAction: (action: any) => {
+        if (action === 'copy') handleCopy('mind-map');
+        else if (action === 'export') handlePanelExport('mind-map');
+        else setExpandedPanel(prev => prev?.id === 'mind-map' && prev?.mode === action ? null : { id: 'mind-map', mode: action });
+      }
     }
-  ], [graph, selectedNodeId, insights, insightsLoading]);
+  ], [graph, selectedNodeId, insights, insightsLoading, handleCopy, handlePanelExport]);
 
 
 
@@ -333,20 +356,69 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [dimensions, selectedDimensionKey]);
 
   return (
-    <>
+    <div className="relative w-full h-screen overflow-hidden">
       <DashboardLayout
         sidebar={
           <Sidebar
-          items={sidebarItems}
-          activeKey={activeNav}
-          onNavigate={(key) => setActiveNav(key as 'console' | 'history' | 'settings')}
-          repoScope={{ label: 'Main Graph', onClick: () => {} }}
-        >
-          {showLog && (
-            <ProcessingLog status={status === 'analyzing' || status === 'downloading' || status === 'parsing' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'} />
-          )}
-        </Sidebar>
-      }
+            items={sidebarItems}
+            activeKey={activeNav}
+            onNavigate={(key) => setActiveNav(key as 'console' | 'history' | 'settings')}
+            footer={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+                <div 
+                  title={profile.email} 
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: 'var(--accent-strong)',
+                    color: 'var(--void)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontWeight: 'bold',
+                    fontSize: 12,
+                    flexShrink: 0
+                  }}
+                >
+                  {profile.initials}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {profile.email.split('@')[0]}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--ink-secondary)', textTransform: 'capitalize' }}>
+                    {profile.tier} Tier
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  title="Sign Out"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--ink-muted)',
+                    cursor: 'pointer',
+                    padding: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 6,
+                    transition: 'color var(--dur-fast), background var(--dur-fast)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--err)'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ink-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Icon icon="solar:logout-3-linear" size={16} />
+                </button>
+              </div>
+            }
+          >
+            {showLog && (
+              <ProcessingLog status={status === 'analyzing' || status === 'downloading' || status === 'parsing' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'} />
+            )}
+          </Sidebar>
+        }
       topbar={
         <TopBar
           search={search}
@@ -416,6 +488,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             onUrlChange={setUrl}
             onAnalyze={handleAnalyze}
             onReanalyze={handleReanalyze}
+            onCancel={stopAnalysis}
             error={error?.message}
             quota={quotaLabel}
           />
@@ -512,6 +585,135 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       )}
 
     </DashboardLayout>
-    </>
+
+    {expandedPanel && (() => {
+      const activeItem = rightPanelItems.find(item => item.id === expandedPanel.id);
+      if (!activeItem) return null;
+
+      let positioningStyles: React.CSSProperties = {};
+      if (expandedPanel.mode === 'vertical') {
+        positioningStyles = {
+          position: 'absolute',
+          right: '8px',
+          top: '8px',
+          bottom: '8px',
+          width: '390px',
+          zIndex: 60,
+        };
+      } else if (expandedPanel.mode === 'left') {
+        positioningStyles = {
+          position: 'absolute',
+          left: '280px',
+          width: 'calc(100% - 280px - 414px)',
+          top: '400px',
+          bottom: '100px',
+          zIndex: 60,
+        };
+      } else if (expandedPanel.mode === 'diagonal') {
+        positioningStyles = {
+          position: 'absolute',
+          left: '280px',
+          right: '20px',
+          top: '400px',
+          bottom: '100px',
+          zIndex: 60,
+        };
+      }
+
+      return (
+        <div 
+          style={positioningStyles}
+          className="border border-[var(--line-strong)] bg-[rgba(15,20,30,0.95)] backdrop-blur-xl rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_1px_rgba(0,242,254,0.15)] flex flex-col min-h-0 overflow-hidden"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--line)] bg-[rgba(20,25,35,0.4)]">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+              <h3 className="font-mono text-[11px] uppercase tracking-wider font-bold text-[var(--ink)]">
+                Expanded View: {activeItem.title}
+              </h3>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {/* Copy button */}
+              <button
+                type="button"
+                onClick={() => handleCopy(expandedPanel.id)}
+                title="Copy"
+                className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
+              >
+                <Icon icon="solar:copy-linear" size={14} />
+              </button>
+              
+              {/* Export button */}
+              <button
+                type="button"
+                onClick={() => handlePanelExport(expandedPanel.id)}
+                title="Export"
+                className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
+              >
+                <Icon icon="solar:download-linear" size={14} />
+              </button>
+
+              <div className="w-[1px] h-3 bg-[var(--line)] mx-1" />
+
+              {/* Mode switchers in header */}
+              <button
+                type="button"
+                onClick={() => setExpandedPanel({ id: expandedPanel.id, mode: 'vertical' })}
+                title="Vertical Mode"
+                className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
+                  expandedPanel.mode === 'vertical' ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
+                }`}
+              >
+                <Icon icon="solar:maximize-square-minimalistic-linear" size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpandedPanel({ id: expandedPanel.id, mode: 'left' })}
+                title="Left Mode"
+                className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
+                  expandedPanel.mode === 'left' ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
+                }`}
+              >
+                <Icon icon="solar:double-alt-arrow-left-linear" size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpandedPanel({ id: expandedPanel.id, mode: 'diagonal' })}
+                title="Diagonal Mode"
+                className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
+                  expandedPanel.mode === 'diagonal' ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
+                }`}
+              >
+                <Icon icon="solar:scale-linear" size={14} />
+              </button>
+
+              <div className="w-[1px] h-3 bg-[var(--line)] mx-1" />
+
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={() => setExpandedPanel(null)}
+                title="Close overlay"
+                className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--err)] cursor-pointer flex items-center justify-center transition-colors"
+              >
+                <Icon icon="solar:close-circle-linear" size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 hx-custom-scrollbar">
+            {expandedPanel.id === 'knowledge-graph' ? (
+              <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} compact={false} />
+            ) : (
+              activeItem.content
+            )}
+          </div>
+        </div>
+      );
+    })()}
+    </div>
   );
 }

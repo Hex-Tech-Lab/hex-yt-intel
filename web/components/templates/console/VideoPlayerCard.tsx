@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import ReactPlayer from 'react-player';
+import dynamic from 'next/dynamic';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 
-const Player = ReactPlayer as any;
+// Dynamically import ReactPlayer to prevent SSR/hydration mismatch issues
+const Player = dynamic(() => import('react-player'), { ssr: false }) as any;
 
 export function VideoPlayerCard() {
   const playerRef = useRef<any>(null);
-  const { seekTo, jumpToTimestamp } = useVideoStore();
+  const { isPlaying, setPlaying, seekTo, jumpToTimestamp } = useVideoStore();
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
   const [mounted, setMounted] = useState(false);
@@ -43,7 +44,10 @@ export function VideoPlayerCard() {
         url={`https://www.youtube.com/watch?v=${videoId}`}
         width="100%"
         height="100%"
+        playing={isPlaying}
         controls
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
       />
     </div>
   );

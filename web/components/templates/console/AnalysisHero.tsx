@@ -9,16 +9,18 @@ export interface AnalysisHeroProps {
   onUrlChange: (url: string) => void;
   onAnalyze: () => void;
   onReanalyze: () => void;
+  onCancel?: () => void;
   error?: string;
   quota?: string;
 }
 
-export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze, error, quota }: AnalysisHeroProps) {
+export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze, onCancel, error, quota }: AnalysisHeroProps) {
   const streaming = status === "streaming";
   const disabled = streaming || !url || url.trim().length === 0;
 
   const heroRef = useRef<HTMLDivElement>(null);
   const [measuredHeight, setMeasuredHeight] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (heroRef.current) {
@@ -32,6 +34,17 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [status]);
+
+  const handleCopy = async () => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
 
   return (
     <section className="hx-rise">
@@ -105,7 +118,49 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                   color: "var(--ink)" 
                 }}
               />
-              <div style={{ display: "flex", gap: 8 }}>
+              {url && (
+                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    title="Copy URL"
+                    onClick={handleCopy}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: copied ? "var(--accent)" : "var(--ink-muted)",
+                      cursor: "pointer",
+                      padding: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 6,
+                      transition: "color var(--dur-fast)",
+                    }}
+                  >
+                    <Icon icon={copied ? "solar:check-read-linear" : "solar:copy-linear"} size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Clear input"
+                    onClick={() => onUrlChange('')}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--ink-muted)",
+                      cursor: "pointer",
+                      padding: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 6,
+                      transition: "color var(--dur-fast)",
+                    }}
+                  >
+                    <Icon icon="solar:close-circle-linear" size={16} />
+                  </button>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 {status === "done" && (
                   <button
                     type="button"
@@ -127,6 +182,30 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                     }}
                   >
                     <Icon icon="solar:refresh-linear" size={16} />
+                  </button>
+                )}
+                {streaming && onCancel && (
+                  <button
+                    type="button"
+                    title="Cancel analysis"
+                    onClick={onCancel}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 10,
+                      border: "1px solid var(--err)",
+                      background: "rgba(239, 68, 68, 0.15)",
+                      color: "var(--err)",
+                      padding: "12px 16px",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all var(--dur-fast)",
+                    }}
+                  >
+                    <Icon icon="solar:stop-circle-linear" size={16} style={{ color: "var(--err)" }} />
                   </button>
                 )}
                 <button
