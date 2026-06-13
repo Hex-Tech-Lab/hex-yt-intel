@@ -22,6 +22,9 @@ interface ChatState {
   error: string | null;
   networkBound: boolean;
 
+  isChatOpen: boolean;
+  setChatOpen: (open: boolean) => void;
+
   loadConversations: () => Promise<void>;
   selectConversation: (id: string) => Promise<void>;
   newConversation: (opts?: { analysisId?: string | null; title?: string }) => Promise<string | null>;
@@ -182,6 +185,8 @@ export const useChatStore = create<ChatState>((set, get) => {
     sending: false,
     error: null,
     networkBound: false,
+    isChatOpen: false,
+    setChatOpen: (open: boolean) => set({ isChatOpen: open }),
 
     loadConversations: async () => {
       set({ loadingList: true, error: null });

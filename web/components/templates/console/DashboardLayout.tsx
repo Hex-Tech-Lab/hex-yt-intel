@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { useChatStore } from '@/store/useChatStore';
 
 // See /docs/ui/dashboard-layout.md
 
@@ -12,7 +13,12 @@ export interface DashboardLayoutProps {
   dock?: ReactNode;
 }
 
+const CHAT_DOCK_PADDING_BOTTOM_OPEN = 'min(calc(60vh + 20px), 580px)';
+const CHAT_DOCK_PADDING_BOTTOM_CLOSED = '72px';
+
 export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }: DashboardLayoutProps) {
+  const isChatOpen = useChatStore((s) => s.isChatOpen);
+
   return (
     <div className={`grid h-screen w-full min-w-[1024px] bg-[var(--bg)] text-[var(--ink)] overflow-hidden ${
       rightPanel ? "grid-cols-[260px_1fr_390px]" : "grid-cols-[260px_1fr]"
@@ -26,7 +32,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           {topbar}
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 px-10 pb-[72px] scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-8 px-10 scroll-smooth" style={{ paddingBottom: isChatOpen ? CHAT_DOCK_PADDING_BOTTOM_OPEN : CHAT_DOCK_PADDING_BOTTOM_CLOSED }}>
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1">
               {children}

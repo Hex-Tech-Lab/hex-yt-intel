@@ -20,9 +20,10 @@ export interface SidebarProps {
   activeKey: string;
   onNavigate: (key: string) => void;
   repoScope?: RepoScope;
+  children?: React.ReactNode;
 }
 
-export function Sidebar({ items, activeKey, onNavigate, repoScope }: SidebarProps) {
+export function Sidebar({ items, activeKey, onNavigate, repoScope, children }: SidebarProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "24px 14px" }}>
       {/* brand */}
@@ -100,6 +101,9 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope }: SidebarProp
         })}
       </nav>
 
+      {/* children (e.g. ProcessingLog) */}
+      {children && <div style={{ marginTop: "auto", marginBottom: "12px" }}>{children}</div>}
+
       {/* repo scope */}
       {repoScope && (
         <button
@@ -107,7 +111,7 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope }: SidebarProp
           onClick={repoScope.onClick}
           className="hx-navitem"
           style={{
-            marginTop: "auto",
+            marginTop: children ? "0" : "auto",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",

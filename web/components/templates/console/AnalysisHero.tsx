@@ -23,12 +23,22 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
         <StatusBadge status={status} />
       </div>
 
-      <h1 className="hx-h1" style={{ maxWidth: "20ch" }}>
-        Drop a YouTube URL. Get a structured synthesis across 11 dimensions.
-      </h1>
-      <p className="hx-body-lg" style={{ marginTop: 12, maxWidth: "54ch" }}>
-        Transcript, claims, frameworks, and contrarian takes, mapped into your knowledge graph and searchable in seconds.
-      </p>
+      <div 
+        style={{ 
+          maxHeight: status !== 'idle' ? '0px' : '200px', 
+          opacity: status !== 'idle' ? 0 : 1, 
+          overflow: 'hidden', 
+          transition: 'all 0.3s ease-out',
+          marginBottom: status !== 'idle' ? 0 : 24
+        }}
+      >
+        <h1 className="hx-h1" style={{ maxWidth: "20ch" }}>
+          Drop a YouTube URL. Get a structured synthesis across 11 dimensions.
+        </h1>
+        <p className="hx-body-lg" style={{ marginTop: 12, maxWidth: "54ch" }}>
+          Transcript, claims, frameworks, and contrarian takes, mapped into your knowledge graph and searchable in seconds.
+        </p>
+      </div>
 
       <div style={{ marginTop: 32, maxWidth: 640 }}>
         <CornerFrame tone={streaming ? "accent" : "line"}>

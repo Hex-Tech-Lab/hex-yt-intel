@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
 
         const newReport: PersistedValidationReport = {
           ...priorReport,
-          status: 'done',
+          status: 'completed',
           model_used: model || null,
           valid: isStitchedValid,
         };
