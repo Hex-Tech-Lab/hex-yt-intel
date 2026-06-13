@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
           ...priorReport,
           status: 'completed',
           model_used: model || null,
-          valid: true,
+          valid: isStitchedValid,
         };
 
         // Write complete stitched result to main tables
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
           markdown: stitchedMarkdown,
           payload: stitchedPayload,
           model: model || null,
-          validationPassed: true,
+          validationPassed: isStitchedValid,
           validationReport: newReport,
         });
 

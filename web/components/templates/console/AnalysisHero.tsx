@@ -25,7 +25,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
 
       <div 
         style={{ 
-          height: status !== 'idle' ? '0px' : 'auto', 
+          maxHeight: status !== 'idle' ? '0px' : '200px', 
           opacity: status !== 'idle' ? 0 : 1, 
           overflow: 'hidden', 
           transition: 'all 0.3s ease-out',
