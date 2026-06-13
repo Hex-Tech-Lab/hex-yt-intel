@@ -95,3 +95,5 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-13T08:00:00+00:00] [GC (Agent)] [IN_PROGRESS] Initiating 10X Full-Spectrum Re-Audit. Phase 0: Preflight. Mapping deltas and reviewing recent work.
 - [2026-06-13T08:30:00+00:00] [GC (Agent)] [IN_PROGRESS] Phase 2: Applying multi-skill audit (database-architect-10x, vercel-react-best-practices, code-reviewer) to investigate visualization failure.
 - [2026-06-13T09:05:00+00:00] [GC (Agent)] [IN_PROGRESS] Remediating KG persistence gap: Integrating KG data in worker's persist flow. Target: worker/src/worker.ts
+- [2026-06-13T10:00:00+00:00] [GC (Agent)] [IN_PROGRESS] Auditing Knowledge Graph/Wiki data contract and Global Index preparedness. Target: SupabasePersistenceAdapter.ts, UCISPayloadV2 schema.
+- [2026-06-13T10:30:00+00:00] [GC (Agent)] [IN_PROGRESS] Phase 1: Hardening worker persistence and refining port contracts. Target: worker/src/worker.ts, web/lib/ports/GraphRAGPort.ts

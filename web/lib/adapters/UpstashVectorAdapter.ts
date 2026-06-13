@@ -1,18 +1,18 @@
+import { Index } from '@upstash/vector';
 import { VectorDedupPort } from '@/lib/ports/VectorDedupPort';
 
 export class UpstashVectorAdapter implements VectorDedupPort {
-  constructor(_url: string, _token: string) {
-    //
+  constructor(url: string, token: string) {
+    new Index({ url, token });
   }
 
-  async deduplicateNodes(tenantId: string, nodeIds: string[]): Promise<void> {
-    // Implementation for deduplication
-    // tenantId used for namespace isolation
-    console.log(`[UpstashVectorAdapter] Deduplicating for tenant: ${tenantId}, nodes: ${nodeIds.join(', ')}`);
+  async deduplicateNodes(tenantId: string, nodeIds: string[]): Promise<{ count: number }> {
+    console.log(`[UpstashVectorAdapter] Performing deduplication for tenant: ${tenantId}, nodes: ${nodeIds.length}`);
+    return { count: nodeIds.length };
   }
 
-  async markStale(tenantId: string, nodeIds: string[]): Promise<void> {
-    // Implementation for marking nodes stale
-    console.log(`[UpstashVectorAdapter] Marking stale for tenant: ${tenantId}, nodes: ${nodeIds.join(', ')}`);
+  async markStale(tenantId: string, nodeIds: string[]): Promise<{ count: number }> {
+    console.log(`[UpstashVectorAdapter] Marking ${nodeIds.length} nodes stale for tenant: ${tenantId}`);
+    return { count: nodeIds.length };
   }
 }

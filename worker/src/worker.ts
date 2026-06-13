@@ -14,7 +14,6 @@ import { LLMCascade } from "./services/LLMCascade";
 import { ValidationService } from "./services/ValidationService";
 import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
 import { reconstructMarkdown, extractJsonPayload } from "./services/MarkdownReconstructor";
-import { KnowledgeGraphSynthesizer, TfIdfSimilarityEngine } from "./services/KnowledgeGraphSynthesizer";
 import type { ReasoningEnginePort } from "./ports/ReasoningEnginePort";
 
 type Env = {
@@ -484,21 +483,27 @@ app.post("/analyze-llm-stream", async (c) => {
     let markdown = finalText;
     let jsonPayload: any = null;
     const extracted = extractJsonPayload(finalText);
-    if (extracted) {
+    
+    if (extracted && Array.isArray(extracted.dimensions)) {
       jsonPayload = extracted;
       
-      const synthesizer = new KnowledgeGraphSynthesizer(new TfIdfSimilarityEngine());
-      const kg = await synthesizer.synthesize({
-        dimensions: jsonPayload.dimensions.map((d: any) => ({
-          number: d.number,
-          name: d.name,
-          content: d.content
-        }))
-      });
-      jsonPayload.knowledgeGraph = kg;
-      if (jsonPayload.classification) {
+      // Ensure classification exists
+      if (!jsonPayload.classification) {
+        jsonPayload.classification = {
+          authoritative: false,
+          practicallyActionable: false,
+          knowledgeGraphReady: false,
+          safe: true,
+          personaOptimised: false,
+          recommendation: 'skip'
+        };
+      }
+      
+      // If KG exists in the payload, mark it ready
+      if (jsonPayload.knowledgeGraph && Array.isArray(jsonPayload.knowledgeGraph.nodes)) {
         jsonPayload.classification.knowledgeGraphReady = true;
       }
+      
       markdown = reconstructMarkdown(jsonPayload);
     }
 

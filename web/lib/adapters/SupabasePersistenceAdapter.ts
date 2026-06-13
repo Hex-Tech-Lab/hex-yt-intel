@@ -778,6 +778,28 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     }
   }
 
+  async getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string }>> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analyses')
+        .select('id, title')
+        .eq('user_id', tenantId);
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] getAnalysesByTenant failed:', error.message);
+        throw error;
+      }
+      return data || [];
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'getAnalysesByTenant' },
+        extra: { tenantId },
+      });
+      throw error;
+    }
+  }
+
   async persistKnowledgeGraph(params: {
     analysisId: string;
     entities: Array<{
