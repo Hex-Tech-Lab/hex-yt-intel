@@ -129,6 +129,9 @@ export interface SynthesisNucleusState {
   /** Classification data from JSON stream */
   classification: ClassificationData | null;
 
+  /** Monetization verdict from JSON stream */
+  monetizationVerdict: MonetizationVerdict | null;
+
   // ============= PERSONA VIEW (Derived/computed state) =============
   /** Active persona for filtering */
   activePersona: PersonaId;
@@ -171,6 +174,9 @@ export interface SynthesisNucleusState {
 
   /** Set classification data from stream */
   setClassification: (data: ClassificationData) => void;
+
+  /** Set monetization verdict from stream */
+  setMonetizationVerdict: (verdict: MonetizationVerdict) => void;
 
   // ============= HELPERS =============
   /** Get dimension by number */

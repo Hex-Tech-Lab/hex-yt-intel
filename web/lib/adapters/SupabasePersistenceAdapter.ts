@@ -884,4 +884,63 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       throw error;
     }
   }
+
+  async persistAnalysisChunk(params: {
+    analysisId: string;
+    chunkIndex: number;
+    dimensionsCovered: number[];
+    payload: any;
+    status: 'completed' | 'failed' | 'interrupted';
+  }): Promise<void> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { error } = await service
+        .from('analysis_chunks')
+        .upsert({
+          analysis_id: params.analysisId,
+          chunk_index: params.chunkIndex,
+          dimensions_covered: params.dimensionsCovered,
+          payload: params.payload ?? {},
+          status: params.status,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'analysis_id,chunk_index'
+        });
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] persistAnalysisChunk failed:', error.message);
+        throw error;
+      }
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'persistAnalysisChunk' },
+        extra: { analysisId: params.analysisId, chunkIndex: params.chunkIndex },
+      });
+      throw error;
+    }
+  }
+
+  async findAnalysisChunks(params: {
+    analysisId: string;
+  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: any; status: string }> | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analysis_chunks')
+        .select('chunk_index, dimensions_covered, payload, status')
+        .eq('analysis_id', params.analysisId);
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] findAnalysisChunks failed:', error.message);
+        throw error;
+      }
+      return data || [];
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'findAnalysisChunks' },
+        extra: { analysisId: params.analysisId },
+      });
+      throw error;
+    }
+  }
 }
