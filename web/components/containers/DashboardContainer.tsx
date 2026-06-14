@@ -268,8 +268,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   ], [historyBadge]);
 
   const dimensions: Dimension[] = useMemo(() => {
-    if (!nucleus.projection) return [];
-
     const DIMENSION_LABELS: Record<number, string> = {
       1: "Apex Intelligence",
       2: "Provenance & Metadata",
@@ -301,6 +299,20 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     const DIMENSION_SPANS: Record<number, 1 | 2 | 3> = {
       1: 3, 5: 2, 11: 2
     };
+
+    // If projection isn't ready but we're analyzing, show all 11 as idle/streaming skeletons
+    if (!nucleus.projection && (status === 'analyzing' || status === 'downloading')) {
+      return Array.from({ length: 11 }, (_, i) => ({
+        key: `dim-skeleton-${i + 1}`,
+        label: DIMENSION_LABELS[i + 1] || `Dimension ${i + 1}`,
+        icon: DIMENSION_ICONS[i + 1] || "solar:bolt-linear",
+        status: i === 0 ? 'streaming' : 'idle', // Stream first one as a visual cue
+        content: '',
+        span: (DIMENSION_SPANS[i + 1] || 1) as 1 | 2 | 3,
+      }));
+    }
+
+    if (!nucleus.projection) return [];
 
     const rawReceived = nucleus.analysis?.streaming.dimensionsReceived;
     const receivedList = Array.isArray(rawReceived)
@@ -435,56 +447,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           account={<div title={profile.email} className="w-8 h-8 rounded-lg bg-[var(--accent)] grid place-items-center text-[var(--void)] font-bold text-xs">{profile.initials}</div>}
         />
       }
-      rightPanel={
-        status !== 'idle' ? (
-          <div className="flex flex-col gap-6 h-full min-h-0 overflow-y-auto hx-custom-scrollbar">
-            {selectedDimension && (
-              <div className="border border-[var(--line)] rounded-xl bg-[rgb(26_31_43_/_0.3)] p-5 flex flex-col gap-4">
-                <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--accent)] font-bold">
-                      Dimension {dimensions.findIndex(d => d.key === selectedDimensionKey) + 1}
-                    </span>
-                    <h3 className="font-mono text-[11px] uppercase tracking-wider font-bold text-[var(--ink)] truncate">
-                      {selectedDimension.label}
-                    </h3>
-                  </div>
-                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    selectedDimension.status === 'streaming' ? 'bg-[var(--accent)] animate-pulse' :
-                    selectedDimension.status === 'done' ? 'bg-[var(--ok)]' :
-                    selectedDimension.status === 'error' ? 'bg-[var(--err)]' :
-                    'bg-[var(--ink-muted)]'
-                  }`} />
-                </div>
-                
-                <div className="flex-1 text-[13px] leading-relaxed text-[var(--ink-secondary)] max-h-[420px] overflow-y-auto pr-1 hx-custom-scrollbar">
-                  {selectedDimension.content ? (
-                    <div className="prose prose-invert max-w-none text-[12px] leading-relaxed text-[var(--ink-secondary)] prose-p:mb-3.5 prose-p:mt-0 prose-headings:text-[13px] prose-headings:font-bold prose-headings:mt-4 prose-headings:mb-2 prose-table:my-4 prose-table:text-[10px] prose-th:px-2 prose-th:py-1.5 prose-td:px-2 prose-td:py-1.5 prose-ul:list-disc prose-ul:pl-5 prose-ol:list-decimal prose-ol:pl-5 prose-li:mb-1">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {selectedDimension.content}
-                      </ReactMarkdown>
-                    </div>
-                  ) : selectedDimension.status === 'error' ? (
-                    <p className="font-mono text-[11px] text-[var(--err)] opacity-80">
-                      Synthesis failed for this dimension.
-                    </p>
-                  ) : (
-                    <div className="space-y-3 animate-pulse pt-2">
-                      <div className="h-3 bg-[var(--line-strong)] rounded w-3/4 opacity-20" />
-                      <div className="h-3 bg-[var(--line-strong)] rounded w-1/2 opacity-15" />
-                      <div className="h-3 bg-[var(--line-strong)] rounded w-5/6 opacity-10" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            <div className="flex-shrink-0">
-              <RightPanelAccordion items={rightPanelItems} />
-            </div>
-          </div>
-        ) : undefined
-      }
       dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
@@ -518,6 +480,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
           {status !== 'idle' && (
             <div className="flex flex-col gap-8">
+              <div className="flex-shrink-0">
+                <RightPanelAccordion items={rightPanelItems} />
+              </div>
+
               {/* Tab bar: Synthesis grid vs. Knowledge Graph */}
               <div className="flex gap-1 p-1 rounded-xl border border-[var(--line)] bg-[rgb(11_14_20_/_0.5)] self-start">
                 {([
@@ -548,12 +514,64 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
                   
                   {dimensions.length > 0 ? (
-                    <DimensionAccordion
-                      dimensions={dimensions}
-                      selectedDimensionKey={selectedDimensionKey}
-                      onSelectDimension={setSelectedDimensionKey}
-                      progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
-                    />
+                    <div className="flex flex-col gap-8">
+                      <DimensionAccordion
+                        dimensions={dimensions}
+                        selectedDimensionKey={selectedDimensionKey}
+                        onSelectDimension={setSelectedDimensionKey}
+                        progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
+                      />
+
+                      {/* Selected Dimension Content */}
+                      {selectedDimension && (
+                        <div className="border border-[var(--line)] rounded-xl bg-[rgb(26_31_43_/_0.3)] p-6 md:p-8 flex flex-col gap-6 min-h-[500px] transition-all duration-300">
+                          <div className="flex items-center justify-between pb-4 border-b border-[var(--line)]">
+                            <div className="flex flex-col gap-1 min-w-0">
+                              <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--accent)] font-bold">
+                                Dimension {dimensions.findIndex(d => d.key === selectedDimensionKey) + 1}
+                              </span>
+                              <h3 className="font-mono text-sm md:text-base uppercase tracking-wider font-bold text-[var(--ink)] truncate">
+                                {selectedDimension.label}
+                              </h3>
+                            </div>
+                            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                              selectedDimension.status === 'streaming' ? 'bg-[var(--accent)] animate-pulse shadow-[0_0_8px_var(--accent)]' :
+                              selectedDimension.status === 'done' ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' :
+                              selectedDimension.status === 'error' ? 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]' :
+                              'bg-[var(--ink-muted)]'
+                            }`} />
+                          </div>
+                          
+                          <div className="flex-1 text-sm md:text-base leading-relaxed text-[var(--ink-secondary)]">
+                            {selectedDimension.content ? (
+                              <div className="prose prose-invert max-w-none text-sm md:text-base leading-relaxed text-[var(--ink-secondary)] prose-p:mb-4 prose-p:mt-0 prose-headings:text-base md:prose-headings:text-lg prose-headings:font-bold prose-headings:mt-6 prose-headings:mb-3 prose-table:my-6 prose-table:text-xs md:prose-table:text-sm prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-ul:list-disc prose-ul:pl-6 prose-ol:list-decimal prose-ol:pl-6 prose-li:mb-2">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {selectedDimension.content}
+                                </ReactMarkdown>
+                              </div>
+                            ) : selectedDimension.status === 'error' ? (
+                              <div className="flex items-center gap-3 p-4 bg-[var(--err)]/10 text-[var(--err)] rounded-lg border border-[var(--err)]/20 font-mono text-xs md:text-sm">
+                                <Icon icon="solar:danger-triangle-linear" size={20} />
+                                Synthesis failed for this dimension. Check the processing log.
+                              </div>
+                            ) : (
+                              <div className="space-y-6 animate-pulse pt-4">
+                                <div className="space-y-3">
+                                  <div className="h-4 bg-[var(--line-strong)] rounded w-full opacity-20" />
+                                  <div className="h-4 bg-[var(--line-strong)] rounded w-11/12 opacity-15" />
+                                  <div className="h-4 bg-[var(--line-strong)] rounded w-3/4 opacity-10" />
+                                </div>
+                                <div className="space-y-3 pt-4">
+                                  <div className="h-4 bg-[var(--line-strong)] rounded w-5/6 opacity-20" />
+                                  <div className="h-4 bg-[var(--line-strong)] rounded w-full opacity-15" />
+                                  <div className="h-4 bg-[var(--line-strong)] rounded w-2/3 opacity-10" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
                       {status === 'complete' ? (
