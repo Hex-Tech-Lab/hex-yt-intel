@@ -99,8 +99,8 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
             </span>
           )}
           
-          <button onClick={handleCopy} type="button" aria-label="Copy logs" title="Copy logs" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:copy-linear" size={14} /></button>
-          <button onClick={() => handleDownload('md')} type="button" aria-label="Download MD" title="Download MD" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:download-linear" size={14} /></button>
+          <button type="button" onClick={handleCopy} aria-label="Copy logs" title="Copy logs" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:copy-linear" size={14} /></button>
+          <button type="button" onClick={() => handleDownload('md')} aria-label="Download MD" title="Download MD" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:download-linear" size={14} /></button>
           
           <button
             type="button"

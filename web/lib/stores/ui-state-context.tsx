@@ -1,4 +1,6 @@
-import { createContext, useContext, useState } from 'react';
+"use client";
+
+import { createContext, useContext, useState, useMemo } from 'react';
 
 interface UIState {
   isAtlasVisible: boolean;
@@ -26,8 +28,10 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const toggleSynthesisLog = () => setState(prev => ({ ...prev, isSynthesisLogVisible: !prev.isSynthesisLogVisible }));
   const toggleVideoPlayer = () => setState(prev => ({ ...prev, isVideoPlayerVisible: !prev.isVideoPlayerVisible }));
 
+  const value = useMemo(() => ({ state, toggleAtlas, toggleSynthesisLog, toggleVideoPlayer }), [state]);
+
   return (
-    <UIStateContext.Provider value={{ state, toggleAtlas, toggleSynthesisLog, toggleVideoPlayer }}>
+    <UIStateContext.Provider value={value}>
       {children}
     </UIStateContext.Provider>
   );
