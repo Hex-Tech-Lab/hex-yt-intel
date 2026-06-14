@@ -262,6 +262,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const sidebarItems: SidebarItem[] = useMemo(() => [
     { key: 'console', label: 'Synthesis Console', icon: 'solar:graph-up-linear' },
+    { key: 'atlas', label: 'The Atlas', icon: 'solar:globus-linear' },
     { key: 'history', label: 'Analysis History', icon: 'solar:folder-with-files-linear', badge: historyBadge },
     { key: 'settings', label: 'Settings', icon: 'solar:settings-linear' },
   ], [historyBadge]);
@@ -362,7 +363,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           <Sidebar
             items={sidebarItems}
             activeKey={activeNav}
-            onNavigate={(key) => setActiveNav(key as 'console' | 'history' | 'settings')}
+            onNavigate={(key) => {
+              if (key === 'atlas') {
+                router.push('/atlas');
+              } else {
+                setActiveNav(key as 'console' | 'history' | 'settings');
+              }
+            }}
             footer={
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
                 <div 

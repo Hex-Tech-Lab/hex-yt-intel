@@ -18,7 +18,9 @@ export function GlobalKnowledgeMap() {
     const width = canvas.width;
     const height = canvas.height;
     
-    // Use any casting for d3-force members to resolve type definition mismatches
+    // Access d3-force members through the imported d3 object directly.
+    // The TypeScript issue seems to be with specific sub-path imports
+    // not being recognized or supported in this build environment.
     const d3Any = d3 as any;
 
     // Simulation
