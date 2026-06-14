@@ -1,0 +1,28 @@
+web/components/templates/console/VideoPlayerCard.tsx
+  s_087b46dfa55670::t_77b8ea0bfbe822 34,36
+  s_087b46dfa55670::t_6590adceb0702c 14
+web/lib/stores/ui-state-context.tsx
+  s_087b46dfa55670::t_ef615f42d9e1c5 1-40
+web/store/useVideoStore.ts
+  s_087b46dfa55670::t_ef252d15e0e2fe 8,16
+web/components/templates/console/ProcessingLog.tsx
+  s_087b46dfa55670::t_afdb7257831536 27-47,97-100
+worker/src/worker.ts
+  s_087b46dfa55670::t_9b97fccb6e0453 422,424
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "33bc12766633358348f4de723611e10b6bf11f2c",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
