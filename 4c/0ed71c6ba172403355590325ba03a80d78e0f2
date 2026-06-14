@@ -1,0 +1,38 @@
+web/app/page.tsx
+  s_087b46dfa55670::t_4a14084939f09b 8
+web/app/api/atlas/global-graph/route.ts
+  s_087b46dfa55670::t_378e98e0d26b6f 24-25
+web/app/atlas/AtlasClient.tsx
+  s_795bd3c15d1041::t_bc2217277a43c3 12
+  s_087b46dfa55670::t_d435538f0653f7 1-11,13-87
+web/components/ui/skeleton.tsx
+  s_087b46dfa55670::t_806c2e0d285935 1,3
+web/app/atlas/page.tsx
+  s_087b46dfa55670::t_1c34f392dea394 1-3,5,7-13,15
+web/components/containers/DashboardContainer.tsx
+  s_795bd3c15d1041::t_3128e5b3456524 483-486,517-574
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "4c0ed71c6ba172403355590325ba03a80d78e0f2",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_795bd3c15d1041": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "5ede22f4-db4b-4d50-a45c-c1373bee8286",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
