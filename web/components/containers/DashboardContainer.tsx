@@ -268,8 +268,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   ], [historyBadge]);
 
   const dimensions: Dimension[] = useMemo(() => {
-    if (!nucleus.projection) return [];
-
     const DIMENSION_LABELS: Record<number, string> = {
       1: "Apex Intelligence",
       2: "Provenance & Metadata",
@@ -301,6 +299,20 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     const DIMENSION_SPANS: Record<number, 1 | 2 | 3> = {
       1: 3, 5: 2, 11: 2
     };
+
+    // If projection isn't ready but we're analyzing, show all 11 as idle/streaming skeletons
+    if (!nucleus.projection && (status === 'analyzing' || status === 'downloading')) {
+      return Array.from({ length: 11 }, (_, i) => ({
+        key: `dim-skeleton-${i + 1}`,
+        label: DIMENSION_LABELS[i + 1] || `Dimension ${i + 1}`,
+        icon: DIMENSION_ICONS[i + 1] || "solar:bolt-linear",
+        status: i === 0 ? 'streaming' : 'idle', // Stream first one as a visual cue
+        content: '',
+        span: (DIMENSION_SPANS[i + 1] || 1) as 1 | 2 | 3,
+      }));
+    }
+
+    if (!nucleus.projection) return [];
 
     const rawReceived = nucleus.analysis?.streaming.dimensionsReceived;
     const receivedList = Array.isArray(rawReceived)

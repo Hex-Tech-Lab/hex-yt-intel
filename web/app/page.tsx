@@ -1,23 +1,30 @@
-import { loadConsoleProfile } from '@/lib/services/console-profile';
-import { DashboardContainer } from '@/components/containers/DashboardContainer';
+import { redirect } from "next/navigation";
+import { getSupabaseClientWithAuth } from "@/lib/supabase"; // Corrected path
 import { LandingPage } from './landing-page';
 
 export const dynamic = 'force-dynamic';
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
-  const profile = await loadConsoleProfile();
-  const params = await searchParams;
-  const forceLanding = params.v === 'landing';
+interface PageProps {
+  searchParams: { [key: string]: string | string[] | undefined };
+}
 
-  if (profile && !forceLanding) {
-    // Authenticated users see the new Synthesis Console unless landing is forced
-    return <DashboardContainer profile={profile} />;
+export default async function RootPage({ searchParams }: PageProps) {
+  // Resolve search parameters directly
+  const forceLanding = searchParams?.v === "landing";
+
+  if (forceLanding) {
+    // Render public marketing landing component cleanly
+    return <LandingPage />;
   }
 
-  // Unauthenticated users (or forced) see landing page
-  return <LandingPage />;
+  // Evaluate active session status to prevent auth middleware leaks
+  const supabase = await getSupabaseClientWithAuth();
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    return <LandingPage />;
+  }
+
+  // Redirect authenticated sessions directly into the Atlas workflow
+  redirect("/atlas");
 }
