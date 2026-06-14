@@ -5,7 +5,7 @@ import { LandingPage } from './landing-page';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 export default async function RootPage({ searchParams }: PageProps) {
