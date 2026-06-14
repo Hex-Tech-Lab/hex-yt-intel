@@ -1,0 +1,19 @@
+web/app/page.tsx
+  s_795bd3c15d1041::t_10321022f9a204 5-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "b5a3d81ad9af3a19ec5ced8a9785e6d44ed9750d",
+  "prompts": {},
+  "sessions": {
+    "s_795bd3c15d1041": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "5ede22f4-db4b-4d50-a45c-c1373bee8286",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
