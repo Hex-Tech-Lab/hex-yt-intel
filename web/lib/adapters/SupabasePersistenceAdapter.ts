@@ -779,19 +779,29 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     }
   }
 
-  async getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string }>> {
+  async getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analyses')
-        .select('id, title')
+        .select('id, title, analysis_payload')
         .eq('user_id', tenantId);
 
       if (error) {
         console.error('[SupabasePersistenceAdapter] getAnalysesByTenant failed:', error.message);
         throw error;
       }
-      return data || [];
+      
+      return (data || []).map(row => {
+        const payload = row.analysis_payload as any;
+        const kg = payload?.knowledgeGraph || { nodes: [], edges: [] };
+        return {
+          id: row.id,
+          title: row.title || 'Untitled Analysis',
+          nodes: kg.nodes || [],
+          edges: kg.edges || []
+        };
+      });
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'getAnalysesByTenant' },
