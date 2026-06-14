@@ -14,10 +14,11 @@ import { LLMCascade } from "./services/LLMCascade";
 import { ValidationService } from "./services/ValidationService";
 import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
 import { reconstructMarkdown, extractJsonPayload } from "./services/MarkdownReconstructor";
-import { KnowledgeGraphSynthesizer, TfIdfSimilarityEngine } from "./services/KnowledgeGraphSynthesizer";
+import { UCISPayloadSchema } from "./services/ZodSchemas";
 import type { ReasoningEnginePort } from "./ports/ReasoningEnginePort";
 
 type Env = {
+// ... (lines omitted for brevity, will be handled by the tool)
   YOUTUBE_API_KEY: string;
   CLOUDFLARE_SECRET_TOKEN: string;
   RESIDENTIAL_PROXY_URL?: string;
@@ -483,23 +484,33 @@ app.post("/analyze-llm-stream", async (c) => {
 
     let markdown = finalText;
     let jsonPayload: any = null;
+    
+    // Attempt to extract JSON from the raw LLM output
     const extracted = extractJsonPayload(finalText);
+
     if (extracted) {
-      jsonPayload = extracted;
+      // Deterministic validation via Zod (ADR 006)
+      const result = UCISPayloadSchema.safeParse(extracted);
       
-      const synthesizer = new KnowledgeGraphSynthesizer(new TfIdfSimilarityEngine());
-      const kg = await synthesizer.synthesize({
-        dimensions: jsonPayload.dimensions.map((d: any) => ({
-          number: d.number,
-          name: d.name,
-          content: d.content
-        }))
-      });
-      jsonPayload.knowledgeGraph = kg;
-      if (jsonPayload.classification) {
-        jsonPayload.classification.knowledgeGraphReady = true;
+      if (result.success) {
+        jsonPayload = result.data;
+        try {
+          // Reconstruct markdown from valid JSON to ensure consistency
+          markdown = reconstructMarkdown(jsonPayload);
+        } catch (error) {
+          console.error('[persist] reconstructMarkdown failed:', error);
+          // Fallback to original text if reconstruction fails
+          markdown = finalText;
+        }
+      } else {
+        // Explicitly log Zod parsing errors for telemetry visibility
+        console.error('[persist] Zod validation failed:', JSON.stringify(result.error.format(), null, 2));
+        
+        // FALLBACK: If validation fails, we treat it as raw markdown only.
+        // We do NOT swallow the error, but we ensure the user still gets their analysis.
+        jsonPayload = null;
+        markdown = finalText;
       }
-      markdown = reconstructMarkdown(jsonPayload);
     }
 
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
