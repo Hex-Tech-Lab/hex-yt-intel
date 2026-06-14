@@ -1,0 +1,19 @@
+worker/src/worker.ts
+  s_087b46dfa55670::t_e8ee2d44d32f95 488,491,497-508
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ff117a2fe5e0377fcf8a060d8f89e75adfdd0584",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
