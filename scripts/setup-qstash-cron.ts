@@ -4,8 +4,8 @@ const token = process.env.QSTASH_TOKEN;
 const productionUrl = process.env.PRODUCTION_URL;
 
 if (!token || !productionUrl) {
-  console.error("Missing QSTASH_TOKEN or PRODUCTION_URL environment variables.");
-  process.exit(1);
+  console.warn("Skipping QStash cron registration: Missing QSTASH_TOKEN or PRODUCTION_URL.");
+  process.exit(0);
 }
 
 const client = new Client({ token });
