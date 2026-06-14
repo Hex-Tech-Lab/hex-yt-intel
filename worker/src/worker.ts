@@ -501,11 +501,34 @@ function normalizePayload(raw: any): any {
 
     let markdown = finalText;
     let jsonPayload: any = null;
-    const extracted = extractJsonPayload(finalText);
-    
+    let extracted: any = null;
+    try {
+      extracted = extractJsonPayload(finalText);
+    } catch (error) {
+      console.error('[persist] extractJsonPayload failed:', error);
+    }
+
     if (extracted) {
-      jsonPayload = normalizePayload(extracted);
-      markdown = reconstructMarkdown(jsonPayload);
+      let normalized: any = null;
+      try {
+        normalized = normalizePayload(extracted);
+      } catch (error) {
+        console.error('[persist] normalizePayload failed:', error);
+      }
+
+      if (normalized) {
+        try {
+          jsonPayload = normalized;
+          markdown = reconstructMarkdown(jsonPayload);
+        } catch (error) {
+          console.error('[persist] reconstructMarkdown failed:', error);
+          jsonPayload = null;
+          markdown = finalText;
+        }
+      } else {
+        jsonPayload = null;
+        markdown = finalText;
+      }
     }
 
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
