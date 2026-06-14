@@ -1,0 +1,32 @@
+web/components/organisms/GlobalKnowledgeMap.tsx
+  s_087b46dfa55670::t_48eecfd76a6a4b 4-12
+  s_795bd3c15d1041::t_cd69d6dfc67e5f 14-30,47-54,62-66,71-78,82-84
+package.json
+  s_087b46dfa55670::t_663ff438bb2e88 13-14
+scripts/setup-qstash-cron.ts
+  s_087b46dfa55670::t_bfaeae814675b2 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "fec43e6b53be3fcdc20ba8e8da4189366f126365",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_795bd3c15d1041": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "5ede22f4-db4b-4d50-a45c-c1373bee8286",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
