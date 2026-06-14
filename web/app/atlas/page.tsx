@@ -1,21 +1,16 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { getSupabaseClientWithAuth } from '@/lib/supabase';
+import { AtlasClient } from './AtlasClient';
 
-import dynamic from 'next/dynamic';
-import { Skeleton } from '@/components/ui/skeleton';
+export const dynamic = 'force-dynamic';
 
-const GlobalKnowledgeMap = dynamic(
-  () => import('@/components/organisms/GlobalKnowledgeMap').then((mod) => mod.GlobalKnowledgeMap),
-  {
-    ssr: false,
-    loading: () => <Skeleton />,
+export default async function AtlasPage() {
+  const supabase = await getSupabaseClientWithAuth();
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    redirect('/auth/signin');
   }
-);
 
-export default function WikiPage() {
-  return (
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-2xl font-bold">Macro-Memory Wiki</h1>
-      <GlobalKnowledgeMap />
-    </div>
-  );
+  return <AtlasClient />;
 }
