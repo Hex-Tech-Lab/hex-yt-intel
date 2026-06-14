@@ -9,7 +9,7 @@ export function useGlobalGraph() {
   useEffect(() => {
     async function fetchGraph() {
       try {
-        const response = await fetch('/api/wiki/global-graph');
+        const response = await fetch('/api/atlas/global-graph');
         if (!response.ok) {
           throw new Error('Failed to fetch global knowledge graph');
         }

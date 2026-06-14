@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSSEStream } from '@/hooks/useSSEStream';
 
 // Lazy load the GlobalKnowledgeMap component
 const GlobalKnowledgeMap = dynamic(
@@ -15,6 +16,7 @@ const GlobalKnowledgeMap = dynamic(
 export default function AtlasPage() {
   const router = useRouter();
   const [videoUrl, setVideoUrl] = useState('');
+  const { startAnalysis } = useSSEStream();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAnalyze = async (e: React.FormEvent) => {
@@ -23,19 +25,11 @@ export default function AtlasPage() {
 
     setIsSubmitting(true);
     try {
-      // Dispatch the payload directly to your streaming API endpoint
-      const response = await fetch("/api/analyses/persist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: videoUrl }),
-      });
-
-      if (!response.ok) throw new Error("Ingestion payload distribution failed");
-
-      const data = await response.json();
+      // Use the analysis pipeline properly via the hook
+      await startAnalysis(videoUrl, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
       
-      // Navigate to the live 11-dimension stream view instantly
-      router.push(`/analyses/${data.analysisId}`);
+      // Navigate to the dashboard or console after triggering analysis
+      router.push('/dashboard');
     } catch (error) {
       console.error("[ATLAS_INGESTION_ERROR]:", error);
       setIsSubmitting(false);
