@@ -24,6 +24,7 @@ const nextConfig: NextConfig = {
       "@supabase/supabase-js",
       "@supabase/auth-helpers-nextjs",
       "@sentry/nextjs",
+      "d3-force",
     ],
   },
 
