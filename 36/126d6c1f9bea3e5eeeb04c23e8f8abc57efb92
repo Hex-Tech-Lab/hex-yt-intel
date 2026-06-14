@@ -1,0 +1,65 @@
+web/app/api/analyses/persist/route.ts
+  s_087b46dfa55670::t_677e8834d3d116 269
+web/lib/usecases/AggregateGlobalGraphUseCase.ts
+  s_795bd3c15d1041::t_7e8934d8757112 1-44
+supabase/migrations/20260614100000_add_raw_graph_columns.sql
+  s_087b46dfa55670::t_99be47267caaa7 1-9
+worker/src/services/ZodSchemas.ts
+  s_087b46dfa55670::t_8001e32b3ace27 1-40,42-45,47-50,52-64,66-75,77-90,92
+  s_087b46dfa55670::t_95c78ff5c8f694 41,46,51,65,76
+  s_087b46dfa55670::t_fec001f4c7e71a 91
+web/app/api/wiki/global-graph/route.ts
+  s_795bd3c15d1041::t_c1d00593a1efa0 1-26
+web/app/api/webhooks/dream-sequence/route.ts
+  s_795bd3c15d1041::t_fc7af3b808e8cb 15
+web/lib/adapters/UpstashVectorAdapter.ts
+  s_795bd3c15d1041::t_b4e60684cff56e 2
+  s_795bd3c15d1041::t_9cea78ed5fa042 18-22,26-34,36-45,49-52
+web/lib/ports/PersistencePort.ts
+  s_087b46dfa55670::t_bf05e0b18d5704 124,131,136-137
+web/hooks/useGlobalGraph.ts
+  s_795bd3c15d1041::t_6dabee48c3e752 1-29
+web/components/organisms/GlobalKnowledgeMap.tsx
+  s_795bd3c15d1041::t_7730616b101565 4
+  s_795bd3c15d1041::t_d215a0c9b64498 1-3,51,55-56,58,61
+  s_795bd3c15d1041::t_4b0438d55a95f3 65
+  s_795bd3c15d1041::t_3ee796455cc882 5-6,16-30,36-50,52-54,57,59-60,62-64,66-67
+  s_795bd3c15d1041::t_92ad5db71f8219 7-15,31-35
+web/lib/ports/VectorDedupPort.ts
+  s_795bd3c15d1041::t_fba6fb373983cc 1-6,8-12
+web/lib/usecases/DeduplicateGraphUseCase.ts
+  s_795bd3c15d1041::t_31be38d0620db0 21-25,27-31
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_087b46dfa55670::t_af7ea8903c8110 905-906,912-913,941,948,957-979
+  s_795bd3c15d1041::t_eb1797fc5ec50e 812-817,829-830
+  s_087b46dfa55670::t_69bcf9e2c44383 219-222,225-229
+  s_087b46dfa55670::t_5613fe383a7c71 775-797
+  s_087b46dfa55670::t_5be5e3576caa1a 848,855,875-876,891-892
+worker/src/worker.ts
+  s_087b46dfa55670::t_8c5ed341850c5e 17,21
+  s_087b46dfa55670::t_ca9238189a5e05 487-489,492-496,498,502,506-510
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "36126d6c1f9bea3e5eeeb04c23e8f8abc57efb92",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_795bd3c15d1041": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "5ede22f4-db4b-4d50-a45c-c1373bee8286",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
