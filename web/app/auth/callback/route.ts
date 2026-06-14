@@ -93,12 +93,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply Supabase SSR session tokens to the redirect response
-    console.log('[callback] Exchange succeeded', {
-      pendingTokenCount: pendingTokens.length,
+    console.log('[callback] Exchange succeeded, setting cookies', {
       tokenNames: pendingTokens.map(t => t.name),
       redirectTo: decodedNext,
     });
     for (const { name, value, options } of pendingTokens) {
+      console.log(`[callback] Setting cookie: ${name}`);
       response.cookies.set(name, value, options as any);
     }
 
