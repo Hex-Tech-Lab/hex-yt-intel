@@ -485,31 +485,27 @@ app.post("/analyze-llm-stream", async (c) => {
     let markdown = finalText;
     let jsonPayload: any = null;
     
-    // Attempt to extract JSON from the raw LLM output
+    // 1. Extraction (Boundary 1)
     const extracted = extractJsonPayload(finalText);
 
+    // 2. Validation (Boundary 2)
     if (extracted) {
-      // Deterministic validation via Zod (ADR 006)
       const result = UCISPayloadSchema.safeParse(extracted);
-      
       if (result.success) {
         jsonPayload = result.data;
-        try {
-          // Reconstruct markdown from valid JSON to ensure consistency
-          markdown = reconstructMarkdown(jsonPayload);
-        } catch (error) {
-          console.error('[persist] reconstructMarkdown failed:', error);
-          // Fallback to original text if reconstruction fails
-          markdown = finalText;
-        }
       } else {
-        // Explicitly log Zod parsing errors for telemetry visibility
-        console.error('[persist] Zod validation failed:', JSON.stringify(result.error.format(), null, 2));
-        
-        // FALLBACK: If validation fails, we treat it as raw markdown only.
-        // We do NOT swallow the error, but we ensure the user still gets their analysis.
-        jsonPayload = null;
-        markdown = finalText;
+        console.error('[persist] Zod validation failed:', result.error.format());
+        jsonPayload = null; // Proceed with raw markdown
+      }
+    }
+
+    // 3. Reconstruction (Boundary 3)
+    if (jsonPayload) {
+      try {
+        markdown = reconstructMarkdown(jsonPayload);
+      } catch (error) {
+        console.error('[persist] reconstructMarkdown failed:', error);
+        markdown = finalText; // Fallback
       }
     }
 

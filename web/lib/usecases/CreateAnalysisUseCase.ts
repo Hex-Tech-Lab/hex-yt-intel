@@ -239,17 +239,6 @@ export class CreateAnalysisUseCase {
       };
     }
 
-    if (!ingestionResult.transcriptAvailable || !ingestionResult.transcript.trim()) {
-      // Refund: mark reservation as failed
-      await markReservationFailed();
-      return {
-        type: 'error',
-        code: 'ERR_TRANSCRIPT_REQUIRED',
-        status: 400,
-        message: 'Transcript unavailable: video has no subtitles or extraction failed. Full synthesis requires a textual source.',
-      };
-    }
-
     const persona = params.explicitPersona || this.metadataIngestion.detectPersona({
       title: ingestionResult.metadata.title,
       channelTitle: ingestionResult.metadata.channelTitle,

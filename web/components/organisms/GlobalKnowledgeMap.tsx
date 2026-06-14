@@ -4,15 +4,6 @@ import { useEffect, useRef } from 'react';
 import * as d3 from 'd3-force';
 import { useGlobalGraph } from '@/hooks/useGlobalGraph';
 
-// Manually extract the simulation functions to bypass type issues
-const { 
-  forceSimulation, 
-  forceLink, 
-  forceManyBody, 
-  forceCenter, 
-  forceCollide 
-} = d3 as any;
-
 export function GlobalKnowledgeMap() {
   const { graph, loading, error } = useGlobalGraph();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -26,13 +17,16 @@ export function GlobalKnowledgeMap() {
 
     const width = canvas.width;
     const height = canvas.height;
+    
+    // Use any casting for d3-force members to resolve type definition mismatches
+    const d3Any = d3 as any;
 
     // Simulation
-    const simulation = forceSimulation(graph.nodes as any)
-      .force('link', forceLink(graph.edges).id((d: any) => d.label).distance(50))
-      .force('charge', forceManyBody().strength(-100))
-      .force('center', forceCenter(width / 2, height / 2))
-      .force('collision', forceCollide().radius((d: any) => (d.weight || 1) * 5 + 2));
+    const simulation = d3Any.forceSimulation(graph.nodes as any)
+      .force('link', d3Any.forceLink(graph.edges).id((d: any) => d.label).distance(50))
+      .force('charge', d3Any.forceManyBody().strength(-100))
+      .force('center', d3Any.forceCenter(width / 2, height / 2))
+      .force('collision', d3Any.forceCollide().radius((d: any) => (d.weight || 1) * 5 + 2));
 
     simulation.on('tick', () => {
       ctx.clearRect(0, 0, width, height);

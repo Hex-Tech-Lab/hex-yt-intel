@@ -1,5 +1,4 @@
 import { fetchWorkerMetadata } from '@/lib/services/metadata';
-import { fetchSubtitles } from '@/lib/services/decodo';
 import { detectPersona } from '@/lib/prompts';
 import type { VideoMetadata, IngestionResult, MetadataIngestionPort } from '@/lib/ports';
 import type { PersonaId } from '@/lib/prompts';
@@ -7,20 +6,12 @@ import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 
 export class WorkerIngestionAdapter implements MetadataIngestionPort {
   async fetch(videoId: string): Promise<IngestionResult> {
-    const [metadataResult, transcriptResult] = await Promise.allSettled([
+    const [metadataResult] = await Promise.allSettled([
       fetchWorkerMetadata(videoId),
-      fetchSubtitles(videoId),
     ]);
 
     if (metadataResult.status === 'rejected') {
       throw new Error('Failed to fetch video metadata');
-    }
-
-    let transcript = '';
-    let transcriptAvailable = false;
-    if (transcriptResult.status === 'fulfilled' && transcriptResult.value.success) {
-      transcript = transcriptResult.value.transcript ?? '';
-      transcriptAvailable = transcript.trim().length > 0;
     }
 
     const meta = metadataResult.value;
@@ -35,7 +26,8 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
       description: meta.description,
     };
 
-    return { metadata, transcript, transcriptAvailable };
+    // Return empty transcript, validation will be handled by the worker
+    return { metadata, transcript: '', transcriptAvailable: true };
   }
 
   detectPersona(params: {
