@@ -12,8 +12,7 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('upstash-signature') || '';
     
     // Verify QStash signature
-    const isDev = process.env.NODE_ENV === 'development';
-    const verified = isDev || (await verifyQStashSignature(signature, bodyText));
+    const verified = await verifyQStashSignature(signature, bodyText);
     if (!verified) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

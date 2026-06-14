@@ -1,5 +1,5 @@
 import { Index } from '@upstash/vector';
-import { VectorDedupPort } from '@/lib/ports/VectorDedupPort';
+import { VectorDedupPort, DedupResult } from '@/lib/ports/VectorDedupPort';
 
 interface QueryResult {
   id: string;
@@ -15,30 +15,42 @@ export class UpstashVectorAdapter implements VectorDedupPort {
     this.index = new Index({ url, token });
   }
 
-  async deduplicateNodes(tenantId: string, nodeIds: string[]): Promise<{ count: number }> {
+  async deduplicateNodes(
+    tenantId: string, 
+    nodeIds: string[],
+    config: { similarityThreshold: number; maxDeletes: number }
+  ): Promise<DedupResult> {
     const ns = this.index.namespace(tenantId);
     let deletedCount = 0;
 
-    for (const id of nodeIds) {
-      const vectorData = await ns.fetch([id]);
-      if (vectorData && vectorData[0] && vectorData[0].vector) {
-        const results = (await ns.query({
-          vector: vectorData[0].vector as number[],
-          topK: 5,
-          includeMetadata: true
-        })) as QueryResult[];
+    try {
+      for (const id of nodeIds) {
+        const vectorData = await ns.fetch([id]);
+        if (vectorData && vectorData[0] && vectorData[0].vector) {
+          const results = (await ns.query({
+            vector: vectorData[0].vector as number[],
+            topK: 5,
+            includeMetadata: true
+          })) as QueryResult[];
 
-        for (const res of results) {
-          const score = typeof res.score === 'string' ? parseFloat(res.score) : res.score;
-          if (res.id !== id && typeof score === 'number' && score > 0.99) {
-            await ns.delete([res.id]);
-            deletedCount++;
+          for (const res of results) {
+            const score = typeof res.score === 'string' ? parseFloat(res.score) : res.score;
+            if (res.id !== id && typeof score === 'number' && score >= config.similarityThreshold) {
+              if (deletedCount >= config.maxDeletes) {
+                console.warn(`[UpstashVectorAdapter] Max deletion limit reached: ${config.maxDeletes}`);
+                return { success: true, deletedCount, error: 'Max deletion limit reached' };
+              }
+              await ns.delete([res.id]);
+              deletedCount++;
+            }
           }
         }
       }
+      return { success: true, deletedCount };
+    } catch (error) {
+      console.error('[UpstashVectorAdapter] DeduplicateNodes failed:', error);
+      return { success: false, deletedCount, error: error instanceof Error ? error.message : 'Unknown error' };
     }
-    console.log(`[UpstashVectorAdapter] Deduplicated ${deletedCount} nodes for tenant: ${tenantId}`);
-    return { count: deletedCount };
   }
 
   async markStale(tenantId: string, nodeIds: string[]): Promise<{ count: number }> {

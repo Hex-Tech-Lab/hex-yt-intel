@@ -216,15 +216,17 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       await this.persistKnowledgeGraph({
         analysisId: params.analysisId,
         entities: params.analysisPayload.knowledgeGraph.nodes.map(n => ({
-          label: n.label,
-          type: n.entityType || 'concept',
-          weight: n.weight || 1
+          label: (n as any).label,
+          type: (n as any).entityType || 'concept',
+          weight: (n as any).weight || 1,
+          rawNode: n // LOSSLESS
         })),
         relations: params.analysisPayload.knowledgeGraph.edges.map(e => ({
-          source: e.source,
-          target: e.target,
-          relation: e.kind || 'related',
-          strength: e.strength || 1
+          source: (e as any).source,
+          target: (e as any).target,
+          relation: (e as any).kind || 'related',
+          strength: (e as any).strength || 1,
+          rawEdge: e // LOSSLESS
         }))
       });
     }
@@ -770,6 +772,29 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         console.error('[SupabasePersistenceAdapter] updateAnalysisResult failed:', error.message);
         throw error;
       }
+
+      // NEW: Persist Knowledge Graph data if payload exists (ADR 006 Lossless)
+      if (params.payload && params.payload.knowledgeGraph) {
+        await this.persistKnowledgeGraph({
+          analysisId: params.analysisId,
+          entities: params.payload.knowledgeGraph.nodes.map(n => ({
+            label: n.label,
+            type: n.entityType || 'concept',
+            weight: n.weight || 1,
+            rawNode: n // LOSSLESS
+          })),
+          relations: params.payload.knowledgeGraph.edges.map(e => ({
+            source: e.source,
+            target: e.target,
+            relation: e.kind || 'related',
+            strength: e.strength || 1,
+            rawEdge: e // LOSSLESS
+          }))
+        }).catch(err => {
+          console.error('[SupabasePersistenceAdapter] KG persistence failed during updateAnalysisResult:', err);
+          // We don't throw here to ensure the main analysis update is preserved
+        });
+      }
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'updateAnalysisResult' },
@@ -784,7 +809,12 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analyses')
-        .select('id, title, analysis_payload')
+        .select(`
+          id, 
+          title, 
+          nodes:analysis_payload->knowledgeGraph->nodes, 
+          edges:analysis_payload->knowledgeGraph->edges
+        `)
         .eq('user_id', tenantId);
 
       if (error) {
@@ -793,13 +823,11 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       }
       
       return (data || []).map(row => {
-        const payload = row.analysis_payload as any;
-        const kg = payload?.knowledgeGraph || { nodes: [], edges: [] };
         return {
           id: row.id,
           title: row.title || 'Untitled Analysis',
-          nodes: kg.nodes || [],
-          edges: kg.edges || []
+          nodes: (row.nodes as unknown as GraphNode[]) || [],
+          edges: (row.edges as unknown as GraphEdge[]) || []
         };
       });
     } catch (error: any) {
@@ -817,12 +845,14 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       label: string;
       type: string;
       weight: number;
+      rawNode?: any;
     }>;
     relations: Array<{
       source: string;
       target: string;
       relation: string;
       strength: number;
+      rawEdge?: any;
     }>;
   }): Promise<void> {
     const service = getSupabaseServiceClient();
@@ -842,7 +872,8 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         analysis_id: params.analysisId,
         label: e.label,
         type: e.type,
-        weight: e.weight
+        weight: e.weight,
+        raw_node: e.rawNode ?? null
       })))
       .select('id, label');
 
@@ -857,7 +888,8 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       source_entity_id: labelToId.get(r.source),
       target_entity_id: labelToId.get(r.target),
       relation_label: r.relation,
-      strength: r.strength
+      strength: r.strength,
+      raw_edge: r.rawEdge ?? null
     })).filter(r => r.source_entity_id && r.target_entity_id);
 
     if (relationRows.length > 0) {
@@ -870,15 +902,15 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
   }
 
   async getKnowledgeGraph(analysisId: string): Promise<{
-    entities: Array<{ id: string; label: string; type: string; weight: number }>;
-    relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number }>;
+    entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>;
+    relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }>;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
 
       const [entities, relations] = await Promise.all([
-        service.from('kg_entities').select('id, label, type, weight').eq('analysis_id', analysisId),
-        service.from('kg_relations').select('source_entity_id, target_entity_id, relation_label, strength').eq('analysis_id', analysisId)
+        service.from('kg_entities').select('id, label, type, weight, raw_node').eq('analysis_id', analysisId),
+        service.from('kg_relations').select('source_entity_id, target_entity_id, relation_label, strength, raw_edge').eq('analysis_id', analysisId)
       ]);
 
       if (entities.error) throw entities.error;
@@ -906,12 +938,14 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       label: n.label,
       type: n.entityType || 'concept',
       weight: n.weight,
+      rawNode: n
     }));
     const relations = params.relations.map(e => ({
       source: e.source,
       target: e.target,
       relation: e.kind,
       strength: e.strength,
+      rawEdge: e
     }));
     return this.persistKnowledgeGraph({ analysisId: params.analysisId, entities, relations });
   }
@@ -920,8 +954,29 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     const data = await this.getKnowledgeGraph(analysisId);
     if (!data) return null;
     return {
-      nodes: data.entities.map(e => ({ ...e, dimension: 0, content: '', polarity: 0, keyTerms: [], inPersona: false })),
-      relations: data.relations.map(r => ({ source: r.source_entity_id, target: r.target_entity_id, kind: r.relation_label as any, strength: r.strength }))
+      nodes: data.entities.map(e => {
+        if (e.raw_node) return e.raw_node as GraphNode;
+        return { 
+          id: e.id, 
+          label: e.label, 
+          dimension: 0, 
+          content: '', 
+          polarity: 0, 
+          keyTerms: [], 
+          inPersona: false,
+          entityType: e.type,
+          weight: e.weight
+        };
+      }),
+      relations: data.relations.map(r => {
+        if (r.raw_edge) return r.raw_edge as GraphEdge;
+        return { 
+          source: r.source_entity_id, 
+          target: r.target_entity_id, 
+          kind: r.relation_label as any, 
+          strength: r.strength 
+        };
+      })
     };
   }
 

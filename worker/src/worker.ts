@@ -14,9 +14,11 @@ import { LLMCascade } from "./services/LLMCascade";
 import { ValidationService } from "./services/ValidationService";
 import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
 import { reconstructMarkdown, extractJsonPayload } from "./services/MarkdownReconstructor";
+import { UCISPayloadSchema } from "./services/ZodSchemas";
 import type { ReasoningEnginePort } from "./ports/ReasoningEnginePort";
 
 type Env = {
+// ... (lines omitted for brevity, will be handled by the tool)
   YOUTUBE_API_KEY: string;
   CLOUDFLARE_SECRET_TOKEN: string;
   RESIDENTIAL_PROXY_URL?: string;
@@ -477,55 +479,35 @@ app.post("/analyze-llm-stream", async (c) => {
   let modelUsed = '';
   let persisted = false;
 
-// Helper to normalize payload structure
-function normalizePayload(raw: any): any {
-  const normalized = {
-    schemaVersion: '2.0',
-    persona: raw.persona || { primary: { id: 'creator', label: 'Creator', weight: 1.0 }, cognitiveLenses: [], selectionRationale: '' },
-    dimensions: Array.isArray(raw.dimensions) ? raw.dimensions : [],
-    classification: {
-      authoritative: !!raw.classification?.authoritative,
-      practicallyActionable: !!raw.classification?.practicallyActionable,
-      knowledgeGraphReady: !!raw.knowledgeGraph && Array.isArray(raw.knowledgeGraph.nodes),
-      safe: raw.classification?.safe !== false,
-      personaOptimised: !!raw.classification?.personaOptimised,
-      recommendation: raw.classification?.recommendation || 'skip'
-    },
-    knowledgeGraph: raw.knowledgeGraph && Array.isArray(raw.knowledgeGraph.nodes) ? raw.knowledgeGraph : null
-  };
-  return normalized;
-}
-
   const persist = async (status: 'completed' | 'interrupted') => {
     if (persisted || !finalText) return;
 
     let markdown = finalText;
     let jsonPayload: any = null;
-    let extracted: any = null;
-    try {
-      extracted = extractJsonPayload(finalText);
-    } catch (error) {
-      console.error('[persist] extractJsonPayload failed:', error);
-    }
+    
+    // Attempt to extract JSON from the raw LLM output
+    const extracted = extractJsonPayload(finalText);
 
     if (extracted) {
-      let normalized: any = null;
-      try {
-        normalized = normalizePayload(extracted);
-      } catch (error) {
-        console.error('[persist] normalizePayload failed:', error);
-      }
-
-      if (normalized) {
+      // Deterministic validation via Zod (ADR 006)
+      const result = UCISPayloadSchema.safeParse(extracted);
+      
+      if (result.success) {
+        jsonPayload = result.data;
         try {
-          jsonPayload = normalized;
+          // Reconstruct markdown from valid JSON to ensure consistency
           markdown = reconstructMarkdown(jsonPayload);
         } catch (error) {
           console.error('[persist] reconstructMarkdown failed:', error);
-          jsonPayload = null;
+          // Fallback to original text if reconstruction fails
           markdown = finalText;
         }
       } else {
+        // Explicitly log Zod parsing errors for telemetry visibility
+        console.error('[persist] Zod validation failed:', JSON.stringify(result.error.format(), null, 2));
+        
+        // FALLBACK: If validation fails, we treat it as raw markdown only.
+        // We do NOT swallow the error, but we ensure the user still gets their analysis.
         jsonPayload = null;
         markdown = finalText;
       }

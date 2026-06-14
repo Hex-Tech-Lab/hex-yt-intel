@@ -121,18 +121,20 @@ export interface PersistencePort {
       label: string;
       type: string;
       weight: number;
+      rawNode?: any;
     }>;
     relations: Array<{
       source: string;
       target: string;
       relation: string;
       strength: number;
+      rawEdge?: any;
     }>;
   }): Promise<void>;
 
   getKnowledgeGraph(analysisId: string): Promise<{
-    entities: Array<{ id: string; label: string; type: string; weight: number }>;
-    relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number }>;
+    entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>;
+    relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }>;
   } | null>;
 
   /**

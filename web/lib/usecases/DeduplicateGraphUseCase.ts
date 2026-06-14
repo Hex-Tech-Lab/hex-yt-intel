@@ -18,9 +18,16 @@ export class DeduplicateGraphUseCase {
     // 3. Mark stale in Upstash
     await this.vectorDedupPort.markStale(tenantId, nodeIds);
 
-    // 4. Deduplicate
-    await this.vectorDedupPort.deduplicateNodes(tenantId, nodeIds);
+    // 4. Deduplicate with safety thresholds
+    const result = await this.vectorDedupPort.deduplicateNodes(tenantId, nodeIds, {
+      similarityThreshold: 0.95,
+      maxDeletes: 50
+    });
     
-    console.log(`[DeduplicateGraphUseCase] Deduplication completed for tenant: ${tenantId}, analysis: ${analysisId}`);
+    if (!result.success) {
+      console.error(`[DeduplicateGraphUseCase] Deduplication failed for tenant: ${tenantId}, analysis: ${analysisId}, error: ${result.error}`);
+    } else {
+      console.log(`[DeduplicateGraphUseCase] Deduplication completed for tenant: ${tenantId}, analysis: ${analysisId}, deleted: ${result.deletedCount}`);
+    }
   }
 }
