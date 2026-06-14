@@ -1,8 +1,33 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import * as d3 from 'd3-force';
+import { 
+  forceSimulation, 
+  forceLink, 
+  forceManyBody, 
+  forceCenter, 
+  forceCollide,
+  SimulationNodeDatum,
+  SimulationLinkDatum
+} from 'd3-force';
 import { useGlobalGraph } from '@/hooks/useGlobalGraph';
+import { GraphNode } from '@/lib/types/knowledge-graph';
+
+interface SimulationNode extends GraphNode, SimulationNodeDatum {
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number | null;
+  fy?: number | null;
+}
+
+interface SimulationLink extends SimulationLinkDatum<SimulationNode> {
+  source: SimulationNode;
+  target: SimulationNode;
+  kind?: string;
+  strength?: number;
+}
 
 export function GlobalKnowledgeMap() {
   const { graph, loading, error } = useGlobalGraph();
@@ -17,18 +42,16 @@ export function GlobalKnowledgeMap() {
 
     const width = canvas.width;
     const height = canvas.height;
-    
-    // Access d3-force members through the imported d3 object directly.
-    // The TypeScript issue seems to be with specific sub-path imports
-    // not being recognized or supported in this build environment.
-    const d3Any = d3 as any;
 
     // Simulation
-    const simulation = d3Any.forceSimulation(graph.nodes as any)
-      .force('link', d3Any.forceLink(graph.edges).id((d: any) => d.label).distance(50))
-      .force('charge', d3Any.forceManyBody().strength(-100))
-      .force('center', d3Any.forceCenter(width / 2, height / 2))
-      .force('collision', d3Any.forceCollide().radius((d: any) => (d.weight || 1) * 5 + 2));
+    const nodes: SimulationNode[] = graph.nodes.map(n => ({ ...n }));
+    const edges = graph.edges.map(edge => ({ ...edge })) as unknown as SimulationLink[];
+
+    const simulation = forceSimulation<SimulationNode, SimulationLink>(nodes)
+      .force('link', forceLink<SimulationNode, SimulationLink>(edges).id((d: SimulationNode) => d.label).distance(50))
+      .force('charge', forceManyBody<SimulationNode>().strength(-100))
+      .force('center', forceCenter<SimulationNode>(width / 2, height / 2))
+      .force('collision', forceCollide<SimulationNode>().radius((d: SimulationNode) => (d.weight || 1) * 5 + 2));
 
     simulation.on('tick', () => {
       ctx.clearRect(0, 0, width, height);
@@ -36,23 +59,29 @@ export function GlobalKnowledgeMap() {
       // Draw edges
       ctx.beginPath();
       ctx.strokeStyle = '#aaa';
-      graph.edges.forEach((edge: any) => {
-        ctx.moveTo(edge.source.x, edge.source.y);
-        ctx.lineTo(edge.target.x, edge.target.y);
+      edges.forEach((edge: SimulationLink) => {
+        if (edge.source.x !== undefined && edge.source.y !== undefined && edge.target.x !== undefined && edge.target.y !== undefined) {
+          ctx.moveTo(edge.source.x, edge.source.y);
+          ctx.lineTo(edge.target.x, edge.target.y);
+        }
       });
       ctx.stroke();
 
       // Draw nodes
-      graph.nodes.forEach((node: any) => {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, (node.weight || 1) * 5, 0, 2 * Math.PI);
-        ctx.fillStyle = '#00f';
-        ctx.fill();
-        ctx.stroke();
+      nodes.forEach((node: SimulationNode) => {
+        if (node.x !== undefined && node.y !== undefined) {
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, (node.weight || 1) * 5, 0, 2 * Math.PI);
+          ctx.fillStyle = '#00f';
+          ctx.fill();
+          ctx.stroke();
+        }
       });
     });
 
-    return () => simulation.stop();
+    return () => {
+      simulation.stop();
+    };
   }, [graph, loading, error]);
 
   if (loading) return <div>Loading Global Map...</div>;
