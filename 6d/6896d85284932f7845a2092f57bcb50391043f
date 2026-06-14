@@ -1,0 +1,31 @@
+web/app/page.tsx
+  s_087b46dfa55670::t_91104be56f6e02 1-2,7-22,24-25,28-29
+web/components/containers/DashboardContainer.tsx
+  s_795bd3c15d1041::t_797484d132ae5b 303-315
+web/app/atlas/page.tsx
+  s_087b46dfa55670::t_b6b7e23f2b3984 7,12,17-18,20-42,66,70-72,76-77,80,82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6d6896d85284932f7845a2092f57bcb50391043f",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_795bd3c15d1041": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "5ede22f4-db4b-4d50-a45c-c1373bee8286",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
