@@ -1,0 +1,22 @@
+docs/audit/10X_PREFLIGHT_REPORT_2026_06_14.md
+  s_087b46dfa55670::t_47ca48cecb16cb 5,18,27-28
+web/app/atlas/page.tsx
+  s_087b46dfa55670::t_988a35409cce3b 28-40
+  s_087b46dfa55670::t_82a2a1e7c27fb3 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "997d4c904c3744157a50825693b0d10c38c3eee5",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
