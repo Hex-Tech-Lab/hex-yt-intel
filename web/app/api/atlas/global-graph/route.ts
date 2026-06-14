@@ -9,7 +9,7 @@ export async function GET() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json([], { status: 401 });
     }
 
     const persistence = new SupabasePersistenceAdapter();
@@ -20,7 +20,8 @@ export async function GET() {
 
     return NextResponse.json(globalGraph);
   } catch (error) {
-    console.error('[wiki/global-graph] Processing error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('[atlas/global-graph] Processing error:', error);
+    // Return empty graph on failure to prevent dashboard crash
+    return NextResponse.json({ nodes: [], edges: [] });
   }
 }
