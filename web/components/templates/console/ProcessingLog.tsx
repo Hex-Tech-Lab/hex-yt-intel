@@ -24,6 +24,27 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
     }
   }, [terminalLines, collapsed]);
 
+  const handleCopy = () => {
+    const text = terminalLines.map(l => `[${l.timestamp}] ${l.message}`).join('\n');
+    navigator.clipboard.writeText(text);
+  };
+
+  const handleDownload = (format: 'md' | 'json') => {
+    const content = format === 'md' 
+      ? terminalLines.map(l => `* [${l.timestamp}] ${l.message}`).join('\n')
+      : JSON.stringify(terminalLines, null, 2);
+    
+    const blob = new Blob([content], { type: format === 'md' ? 'text/markdown' : 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `synthesis-log.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div style={{
       border: "1px solid var(--line)",
@@ -73,11 +94,10 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
               LIVE
             </span>
           )}
-          {collapsed && terminalLines.length > 0 && (
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-muted)" }}>
-              {terminalLines.length} lines
-            </span>
-          )}
+          
+          <button onClick={handleCopy} title="Copy logs" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:copy-linear" size={14} /></button>
+          <button onClick={() => handleDownload('md')} title="Download MD" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:download-linear" size={14} /></button>
+          
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}

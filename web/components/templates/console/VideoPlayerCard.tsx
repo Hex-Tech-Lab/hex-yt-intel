@@ -11,7 +11,7 @@ const Player = dynamic(() => import('react-player'), { ssr: false }) as any;
 
 export function VideoPlayerCard() {
   const playerRef = useRef<any>(null);
-  const { isPlaying, setPlaying, seekTo, jumpToTimestamp } = useVideoStore();
+  const { isPlaying, setPlaying, seekTo, clearSeek } = useVideoStore();
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
   const [mounted, setMounted] = useState(false);
@@ -31,9 +31,9 @@ export function VideoPlayerCard() {
   useEffect(() => {
     if (seekTo !== null && playerRef.current) {
       playerRef.current.seekTo(seekTo, 'seconds');
-      jumpToTimestamp(0); 
+      clearSeek(); 
     }
-  }, [seekTo, jumpToTimestamp]);
+  }, [seekTo, clearSeek]);
 
   if (!mounted || !videoId) return null;
 

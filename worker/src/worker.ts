@@ -419,9 +419,9 @@ app.post("/analyze-llm-stream", async (c) => {
   if (!req.transcript || req.transcript.trim().length === 0) {
     console.error('[analyze-llm-stream] Empty transcript received at edge');
     return c.json({ 
-      error: 'Empty transcript payload. The edge worker requires a source transcript to generate a synthesis.',
+      error: 'Transcript unavailable',
       code: 'ERR_EDGE_EMPTY_SOURCE' 
-    }, 400);
+    }, 500);
   }
 
   if (!secret || !apiKey) {
