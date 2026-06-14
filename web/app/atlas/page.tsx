@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSSEStream } from '@/hooks/useSSEStream';
+import { useAnalysisStore } from '@/store/useAnalysisStore';
 
 // Lazy load the GlobalKnowledgeMap component
 const GlobalKnowledgeMap = dynamic(
@@ -24,16 +25,19 @@ export default function AtlasPage() {
     if (!videoUrl.trim()) return;
 
     setIsSubmitting(true);
-    try {
-      // Use the analysis pipeline properly via the hook
-      await startAnalysis(videoUrl, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
-      
-      // Navigate to the dashboard or console after triggering analysis
-      router.push('/dashboard');
-    } catch (error) {
-      console.error("[ATLAS_INGESTION_ERROR]:", error);
-      setIsSubmitting(false);
-    }
+    // Use the analysis pipeline properly via the hook
+    await startAnalysis(videoUrl, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+    
+    // The hook updates the store. If an immediate error occurred, redirect should not happen.
+    // We check the store status after a brief tick to allow the store to update.
+    setTimeout(() => {
+      const currentStatus = useAnalysisStore.getState().status;
+      if (currentStatus === 'analyzing' || currentStatus === 'downloading') {
+        router.push('/dashboard');
+      } else {
+        setIsSubmitting(false);
+      }
+    }, 500);
   };
 
   return (
