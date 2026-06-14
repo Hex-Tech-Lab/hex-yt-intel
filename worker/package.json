@@ -20,7 +20,8 @@
   "dependencies": {
     "@sentry/cloudflare": "10.57.0",
     "@sentry/hono": "10.57.0",
-    "hono": "^4.12.25"
+    "hono": "^4.12.25",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260609.1",

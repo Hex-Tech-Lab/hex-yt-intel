@@ -266,6 +266,7 @@ export async function POST(request: NextRequest) {
         };
 
         // Write complete stitched result to main tables
+        // updateAnalysisResult now automatically handles Knowledge Graph persistence (ADR 006)
         await persistenceAdapter.updateAnalysisResult({
           analysisId,
           markdown: stitchedMarkdown,
@@ -274,29 +275,6 @@ export async function POST(request: NextRequest) {
           validationPassed: isStitchedValid,
           validationReport: newReport,
         });
-
-        // Write knowledge graph entities & relations to the KG tables
-        if (stitchedPayload.knowledgeGraph && Array.isArray(stitchedPayload.knowledgeGraph.nodes)) {
-          const entities = stitchedPayload.knowledgeGraph.nodes.map((n: any) => ({
-            label: n.label,
-            type: n.entityType || n.type || 'concept',
-            weight: typeof n.weight === 'number' ? n.weight : 1,
-          }));
-          const relations = stitchedPayload.knowledgeGraph.edges.map((e: any) => ({
-            source: e.source,
-            target: e.target,
-            relation: e.kind || e.relation || 'related',
-            strength: typeof e.strength === 'number' ? e.strength : 1,
-          }));
-
-          await persistenceAdapter.persistKnowledgeGraph({
-            analysisId,
-            entities,
-            relations,
-          }).catch((err) => {
-            console.error('[analyses/persist] Failed to persist stitched KG:', err);
-          });
-        }
 
         // Cache-aside updates
         const cachedPayload: CachedAnalysisResult = {
