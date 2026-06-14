@@ -421,7 +421,7 @@ app.post("/analyze-llm-stream", async (c) => {
     return c.json({ 
       error: 'Transcript unavailable',
       code: 'ERR_EDGE_EMPTY_SOURCE' 
-    }, 500);
+    }, 400);
   }
 
   if (!secret || !apiKey) {

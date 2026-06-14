@@ -24,9 +24,13 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
     }
   }, [terminalLines, collapsed]);
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     const text = terminalLines.map(l => `[${l.timestamp}] ${l.message}`).join('\n');
-    navigator.clipboard.writeText(text);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
   };
 
   const handleDownload = (format: 'md' | 'json') => {
@@ -42,7 +46,7 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   return (
@@ -95,8 +99,8 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
             </span>
           )}
           
-          <button onClick={handleCopy} title="Copy logs" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:copy-linear" size={14} /></button>
-          <button onClick={() => handleDownload('md')} title="Download MD" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:download-linear" size={14} /></button>
+          <button onClick={handleCopy} type="button" aria-label="Copy logs" title="Copy logs" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:copy-linear" size={14} /></button>
+          <button onClick={() => handleDownload('md')} type="button" aria-label="Download MD" title="Download MD" style={{ background: "transparent", border: "none", color: "var(--ink-muted)", cursor: "pointer" }}><Icon icon="solar:download-linear" size={14} /></button>
           
           <button
             type="button"
