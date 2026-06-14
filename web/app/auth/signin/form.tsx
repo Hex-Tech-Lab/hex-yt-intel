@@ -12,10 +12,11 @@ export default function SignInForm() {
     setError(null);
     try {
       const supabase = createClient();
+      const callbackUrl = `${window.location.origin}/auth/callback?next=${window.location.pathname}`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: oauthProvider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl,
         },
       });
       if (error) {
