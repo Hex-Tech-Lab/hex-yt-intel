@@ -1,0 +1,25 @@
+web/app/atlas/page.tsx
+  s_087b46dfa55670::t_f889745faa840c 27-35
+web/app/api/atlas/global-graph/route.ts
+  s_087b46dfa55670::t_21be9be99eef15 12,24-25
+worker/src/worker.ts
+  s_087b46dfa55670::t_8605d4c4470d5b 424
+web/components/templates/console/ProcessingLog.tsx
+  s_087b46dfa55670::t_7adbcea22d29a9 27,29-33,49,102-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "b3a7b54e6a8dd1beec44e31b3cef91d39bbae220",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
