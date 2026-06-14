@@ -1,0 +1,21 @@
+.github/workflows/ci-cd.yml
+  s_087b46dfa55670::t_1d86b071c2aacf 285-306
+scripts/setup-qstash-cron.ts
+  s_087b46dfa55670::t_481133b57334e9 7-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "16c58d28de26a5826a89e2856d2db7cdc079534d",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
