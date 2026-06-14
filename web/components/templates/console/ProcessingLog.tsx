@@ -13,7 +13,6 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
   const { terminalLines } = useAnalysisStore();
   const [collapsed, setCollapsed] = useState(false);
 
-  // Auto-expand when a new stream starts so the user sees live output.
   useEffect(() => {
     if (status === 'streaming') setCollapsed(false);
   }, [status]);
@@ -28,8 +27,8 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
     const text = terminalLines.map(l => `[${l.timestamp}] ${l.message}`).join('\n');
     try {
       await navigator.clipboard.writeText(text);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -58,7 +57,6 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
       backdropFilter: "blur(12px)",
       boxShadow: "0 4px 20px -5px rgba(0,0,0,0.5)",
     }}>
-      {/* Title Bar */}
       <div style={{
         display: "flex",
         alignItems: "center",
@@ -125,7 +123,6 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
         </div>
       </div>
 
-      {/* Terminal Lines Container */}
       {!collapsed && (
         <div
           ref={scrollRef}

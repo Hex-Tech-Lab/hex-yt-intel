@@ -21,6 +21,6 @@ export async function GET() {
     return NextResponse.json(globalGraph);
   } catch (error) {
     console.error('[atlas/global-graph] Processing error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ nodes: [], edges: [] }, { status: 500 });
   }
 }
