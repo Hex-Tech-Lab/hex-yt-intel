@@ -1,0 +1,19 @@
+worker/src/services/TranscriptExtractor.ts
+  s_087b46dfa55670::t_47cd71a265825b 76-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "66bebad23b306ad0ca91cd0d8cc4ec4023ba2ffb",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
