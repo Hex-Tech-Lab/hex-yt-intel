@@ -13,7 +13,6 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
   const { terminalLines } = useAnalysisStore();
   const [collapsed, setCollapsed] = useState(false);
 
-  // Auto-expand when a new stream starts so the user sees live output.
   useEffect(() => {
     if (status === 'streaming') setCollapsed(false);
   }, [status]);
@@ -24,127 +23,88 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
     }
   }, [terminalLines, collapsed]);
 
+  const handleCopy = async () => {
+    const text = terminalLines.map(l => `[${l.timestamp}] ${l.message}`).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDownload = (format: 'md' | 'json') => {
+    const content = format === 'md' 
+      ? terminalLines.map(l => `* [${l.timestamp}] ${l.message}`).join('\n')
+      : JSON.stringify(terminalLines, null, 2);
+    
+    const blob = new Blob([content], { type: format === 'md' ? 'text/markdown' : 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `synthesis-log.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  };
+
   return (
-    <div style={{
-      border: "1px solid var(--line)",
-      borderRadius: "12px",
-      overflow: "hidden",
-      background: "rgb(11 14 20 / 0.96)",
-      backdropFilter: "blur(12px)",
-      boxShadow: "0 4px 20px -5px rgba(0,0,0,0.5)",
-    }}>
-      {/* Title Bar */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "8px 14px",
-        borderBottom: "1px solid var(--line)",
-        background: "rgb(26 31 43 / 0.7)"
-      }}>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "rgb(239 68 68 / 0.8)" }} />
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "rgb(245 158 11 / 0.8)" }} />
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "rgb(34 197 94 / 0.8)" }} />
-          <span style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: "var(--ink-muted)",
-            marginLeft: 8
-          }}>
+    <div className="border border-[var(--line)] rounded-xl overflow-hidden bg-[rgb(11_14_20_/_0.96)] backdrop-blur-md shadow-[0_4px_20px_-5px_rgba(0,0,0,0.5)]">
+      <div className="flex items-center justify-between px-3.5 py-2 border-b border-[var(--line)] bg-[rgb(26_31_43_/_0.7)]">
+        <div className="flex gap-1.5 items-center">
+          <span className="w-2 h-2 rounded-full bg-[rgb(239_68_68_/_0.8)]" />
+          <span className="w-2 h-2 rounded-full bg-[rgb(245_158_11_/_0.8)]" />
+          <span className="w-2 h-2 rounded-full bg-[rgb(34_197_94_/_0.8)]" />
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[var(--ink-muted)] ml-2">
             synthesis.log
           </span>
         </div>
         
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="flex items-center gap-2.5">
           {status === 'streaming' && (
-            <span style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              color: "var(--accent-ink)",
-              display: "flex",
-              alignItems: "center",
-              gap: 4
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", animation: "hx-blink 1.2s infinite" }} />
+            <span className="font-mono text-[10px] text-[var(--accent-ink)] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-[hx-blink_1.2s_infinite]" />
               LIVE
             </span>
           )}
-          {collapsed && terminalLines.length > 0 && (
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-muted)" }}>
-              {terminalLines.length} lines
-            </span>
-          )}
+          
+          <button type="button" onClick={handleCopy} aria-label="Copy logs" title="Copy logs" className="bg-transparent border-none text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:copy-linear" size={14} /></button>
+          <button type="button" onClick={() => handleDownload('md')} aria-label="Download MD" title="Download MD" className="bg-transparent border-none text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:download-linear" size={14} /></button>
+          
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
             aria-label={collapsed ? 'Expand processing log' : 'Collapse processing log'}
             aria-expanded={!collapsed}
-            style={{
-              display: "grid",
-              placeItems: "center",
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              border: "1px solid var(--line)",
-              background: "transparent",
-              color: "var(--ink-secondary)",
-              cursor: "pointer",
-              transition: "all 0.15s ease"
-            }}
+            className="grid place-items-center w-[22px] h-[22px] rounded-md border border-[var(--line)] bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-all duration-150"
           >
             <Icon icon={collapsed ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} size={12} />
           </button>
         </div>
       </div>
 
-      {/* Terminal Lines Container */}
       {!collapsed && (
         <div
           ref={scrollRef}
-          className="hx-custom-scrollbar"
-          style={{
-            padding: "10px 14px",
-            fontFamily: "var(--font-mono)",
-            fontSize: 11.5,
-            lineHeight: 1.6,
-            maxHeight: 160,
-            overflowY: "auto",
-            scrollBehavior: "smooth"
-          }}
+          className="hx-custom-scrollbar p-[10px_14px] font-mono text-[11.5px] leading-[1.6] max-h-[160px] overflow-y-auto scroll-smooth"
         >
           {terminalLines.length === 0 ? (
-            <div style={{ color: "var(--ink-muted)", fontStyle: "italic", fontSize: 11 }}>
+            <div className="text-[var(--ink-muted)] italic text-[11px]">
               Initializing analysis pipeline...
             </div>
           ) : (
             terminalLines.map((line, i) => (
-              <div key={i} style={{ display: "flex", gap: 12, marginBottom: 2 }}>
-                <span style={{ color: "var(--ink-muted)", flexShrink: 0 }}>[{line.timestamp}]</span>
-                <span style={{
-                  color: line.type === 'ok' ? "var(--ok)" :
-                         line.type === 'error' ? "var(--err)" :
-                         "var(--ink-secondary)",
-                  wordBreak: "break-all"
-                }}>
+              <div key={i} className="flex gap-3 mb-0.5">
+                <span className="text-[var(--ink-muted)] flex-shrink-0">[{line.timestamp}]</span>
+                <span className={`break-all ${line.type === 'ok' ? "text-[var(--ok)]" : line.type === 'error' ? "text-[var(--err)]" : "text-[var(--ink-secondary)]"}`}>
                   {line.message}
                 </span>
               </div>
             ))
           )}
           {status === 'streaming' && (
-            <div style={{ marginTop: 2 }}>
-              <span style={{
-                display: "inline-block",
-                width: 6,
-                height: 12,
-                background: "var(--accent)",
-                verticalAlign: -1.5,
-                animation: "hx-blink 1s step-end infinite"
-              }} />
+            <div className="mt-0.5">
+              <span className="inline-block w-1.5 h-3 bg-[var(--accent)] align-[-1.5px] animate-[hx-blink_1s_step-end_infinite]" />
             </div>
           )}
         </div>

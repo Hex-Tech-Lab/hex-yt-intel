@@ -85,29 +85,17 @@ async function hasSupabaseAuth(
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
       
-      // CI/Test Bypass: If token starts with test-token- or user-, accept it immediately — DEV ONLY
-      if ((token.startsWith('test-token-') || token.startsWith('user-')) && process.env.NODE_ENV === 'development') {
-        diag.outcome = 'bearer_test_bypass';
-        console.log('[middleware] auth-diag', diag);
-        return true;
-      }
-
       const { data: { user: bearerUser }, error: bearerError } = await client.auth.getUser(token);
       if (bearerError || !bearerUser) {
         diag.outcome = 'bearer_invalid';
-        diag.bearerError = bearerError?.message ?? null;
-        console.error('[middleware] auth-diag', diag);
         return false;
       }
-      diag.outcome = 'bearer_accepted';
-      console.log('[middleware] auth-diag', diag);
       return true;
     }
 
     const { data: { user }, error } = await client.auth.getUser();
     diag.outcome = user ? 'authenticated' : 'rejected';
     diag.supabaseError = error?.message ?? null;
-    console.log('[middleware] auth-diag', diag);
     return !!user;
   } catch (err) {
     diag.outcome = 'threw';
