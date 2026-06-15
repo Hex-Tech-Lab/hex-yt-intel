@@ -13,7 +13,7 @@ export default function SignInForm() {
     try {
       const supabase = createClient();
       const searchParams = new URLSearchParams(window.location.search);
-      const nextTarget = searchParams.get('next') || '/atlas';
+      const nextTarget = searchParams.get('next') || '/dashboard';
       const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
       
       const { error } = await supabase.auth.signInWithOAuth({

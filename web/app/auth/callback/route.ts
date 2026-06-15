@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-export function getSafeRedirectPath(nextValue: string | null, fallback = '/atlas') {
+export function getSafeRedirectPath(nextValue: string | null, fallback = '/dashboard') {
   if (!nextValue) return fallback;
 
   let decodedNext: string;

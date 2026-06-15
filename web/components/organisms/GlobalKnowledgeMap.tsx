@@ -45,10 +45,15 @@ export function GlobalKnowledgeMap() {
 
     // Simulation
     const nodes: SimulationNode[] = graph.nodes.map(n => ({ ...n }));
-    const edges = graph.edges.map(edge => ({ ...edge })) as unknown as SimulationLink[];
+    
+    // Filter edges to ensure source/target existence
+    const validNodeIds = new Set(nodes.map(n => n.id));
+    const edges = graph.edges
+      .filter(e => validNodeIds.has(e.source) && validNodeIds.has(e.target))
+      .map(edge => ({ ...edge })) as unknown as SimulationLink[];
 
     const simulation = forceSimulation<SimulationNode, SimulationLink>(nodes)
-      .force('link', forceLink<SimulationNode, SimulationLink>(edges).id((d: SimulationNode) => d.label).distance(50))
+      .force('link', forceLink<SimulationNode, SimulationLink>(edges).id((d: SimulationNode) => d.id).distance(50))
       .force('charge', forceManyBody<SimulationNode>().strength(-100))
       .force('center', forceCenter<SimulationNode>(width / 2, height / 2))
       .force('collision', forceCollide<SimulationNode>().radius((d: SimulationNode) => (d.weight || 1) * 5 + 2));
