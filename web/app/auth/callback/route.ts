@@ -12,10 +12,6 @@ export function getSafeRedirectPath(nextValue: string | null, fallback = '/atlas
     return fallback;
   }
 
-  // Internal-only redirect rules:
-  // - must start with a single "/"
-  // - must not start with "//" (protocol-relative)
-  // - must not contain "://"
   if (
     !decodedNext.startsWith('/') ||
     decodedNext.startsWith('//') ||
@@ -56,10 +52,18 @@ export async function GET(request: NextRequest) {
     }
   );
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  let sessionError = null;
+  try {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    sessionError = error;
+  } catch (err: any) {
+    sessionError = err;
+  }
 
-  if (error) {
-    return NextResponse.redirect(new URL(`/auth/error?error=${encodeURIComponent(error.message)}`, request.url));
+  if (sessionError) {
+    return NextResponse.redirect(
+      new URL(`/auth/error?error=${encodeURIComponent(sessionError.message || 'Authentication failed')}`, request.url)
+    );
   }
 
   return response;

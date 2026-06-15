@@ -12,7 +12,10 @@ export default function SignInForm() {
     setError(null);
     try {
       const supabase = createClient();
-      const callbackUrl = `${window.location.origin}/auth/callback?next=${window.location.pathname}`;
+      const searchParams = new URLSearchParams(window.location.search);
+      const nextTarget = searchParams.get('next') || '/atlas';
+      const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: oauthProvider,
         options: {
@@ -25,7 +28,6 @@ export default function SignInForm() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
-      // Note: redirectTo will handle the actual navigation if successful
       setIsLoading(false);
     }
   };
