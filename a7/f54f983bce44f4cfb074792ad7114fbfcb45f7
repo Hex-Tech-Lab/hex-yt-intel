@@ -1,0 +1,25 @@
+web/app/auth/signin/form.tsx
+  s_087b46dfa55670::t_3bd6f62b82fd47 16
+web/app/auth/callback/route.test.ts
+  s_087b46dfa55670::t_9a607a0b99a1dd 13,31
+web/app/auth/callback/route.ts
+  s_087b46dfa55670::t_043d68685a5594 5
+web/components/organisms/GlobalKnowledgeMap.tsx
+  s_087b46dfa55670::t_25bc46d0666a39 48-53,56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "a7f54f983bce44f4cfb074792ad7114fbfcb45f7",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
