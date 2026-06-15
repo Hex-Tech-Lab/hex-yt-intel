@@ -1,0 +1,25 @@
+web/lib/player-manager.ts
+  s_86988102fae394::t_0cab9552c74fad 1-10
+worker/src/services/TranscriptExtractor.ts
+  s_86988102fae394::t_13026f622194fc 2,4-7,12,22,26,28-30,33-37,40-45,49-54,56-64,66-68,71-81,83-88
+worker/src/ports/TranscriptProviderPort.ts
+  s_86988102fae394::t_1d7a63e33ba2b3 8-12
+web/components/templates/console/VideoPlayerCard.tsx
+  s_86988102fae394::t_4302047a328480 8,24-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "e7652f51c6c9227c60b38ed8978cc739515bb012",
+  "prompts": {},
+  "sessions": {
+    "s_86988102fae394": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "ea666339-85c3-47f2-a5e8-30ef6cb21bdf",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
