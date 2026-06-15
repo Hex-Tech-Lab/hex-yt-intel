@@ -1,27 +1,15 @@
 /**
- * TranscriptExtractor - Pure Service
+ * TranscriptExtractor - Adapter implementing TranscriptProviderPort
  *
- * HEXAGONAL ARCHITECTURE:
- * - PORT: TranscriptProviderPort (fetch(videoId: string): Promise<TranscriptResult>)
- * - ADAPTER: YouTube Caption API + Decodo fallback
- * - DOMAIN: Caption parsing, language fallback, timeout protection
- *
- * Extracts video transcripts from YouTube's timedtext API with:
- * - English language prioritization
- * - Fallback to first available language
- * - 5-second timeout per request
- * - XML/JSON parsing and reconstruction
+ * Implements 3-tier fallback chain:
+ * 1. Primary: YouTube Native
+ * 2. Secondary: Decodo API
+ * 3. Tertiary: Placeholder/Fallback
  */
 
 import { fetchWithProxy } from './http-utils';
 import { getRandomUserAgent } from './user-agent';
-import type { TranscriptProviderPort } from '../ports/TranscriptProviderPort';
-
-export interface TranscriptResult {
-  videoId: string;
-  transcript: string;
-  language: string;
-}
+import type { TranscriptProviderPort, TranscriptResult } from '../ports/TranscriptProviderPort';
 
 export class TranscriptExtractor implements TranscriptProviderPort {
   private residentialProxyUrl?: string;
@@ -30,155 +18,73 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     this.residentialProxyUrl = residentialProxyUrl;
   }
 
-  /**
-   * Fetch and parse video transcript from YouTube
-   */
   async fetch(videoId: string): Promise<TranscriptResult> {
-    if (!this.isValidVideoId(videoId)) {
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
       throw new Error(`Invalid video ID format: ${videoId}`);
     }
 
-    // Step 1: Fetch caption track metadata (XML)
+    // Cascade 1: Primary (YouTube)
+    try {
+      return await this.fetchWithPrimary(videoId);
+    } catch (e) {
+      console.warn(`[TranscriptExtractor] Primary fetch failed for ${videoId}, trying Decodo...`);
+    }
+
+    // Cascade 2: Decodo API
+    try {
+      return await this.fetchWithDecodo(videoId);
+    } catch (e) {
+      console.warn(`[TranscriptExtractor] Decodo fetch failed for ${videoId}, trying Tertiary...`);
+    }
+
+    // Cascade 3: Tertiary Fallback
+    try {
+      return await this.fetchWithTertiary(videoId);
+    } catch (e) {
+      console.error(`[TranscriptExtractor] All cascade tiers failed for ${videoId}`);
+      throw new Error('ERR_EDGE_EMPTY_SOURCE');
+    }
+  }
+
+  private async fetchWithPrimary(videoId: string): Promise<TranscriptResult> {
     const { langCode } = await this.fetchCaptionMetadata(videoId);
-
-    // Step 2: Fetch actual transcript (JSON)
     const transcript = await this.fetchTranscriptContent(videoId, langCode);
-
-    return {
-      videoId,
-      transcript,
-      language: langCode,
-    };
+    if (!transcript) throw new Error('Empty');
+    return { videoId, transcript, language: langCode };
   }
 
-  /**
-   * Validate video ID format (11 chars, alphanumeric + hyphen + underscore)
-   */
-  private isValidVideoId(videoId: string): boolean {
-    return /^[a-zA-Z0-9_-]{11}$/.test(videoId);
+  private async fetchWithDecodo(videoId: string): Promise<TranscriptResult> {
+    // Placeholder URL for Decodo - must be replaced with real configuration
+    const decodoUrl = `https://api.decodo.com/v1/transcript/${videoId}`;
+    const response = await fetch(decodoUrl);
+    if (!response.ok) throw new Error('Decodo fail');
+    const data = await response.json() as { transcript: string; lang: string };
+    if (!data.transcript) throw new Error('Empty');
+    return { videoId, transcript: data.transcript, language: data.lang };
   }
 
-  /**
-   * Fetch caption track list and find English or first available language
-   */
-  private async fetchCaptionMetadata(
-    videoId: string
-  ): Promise<{ langCode: string }> {
+  private async fetchWithTertiary(videoId: string): Promise<TranscriptResult> {
+    // Placeholder Fallback
+    throw new Error('Tertiary fail');
+  }
+
+  private async fetchCaptionMetadata(videoId: string): Promise<{ langCode: string }> {
     const metadataUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&type=list`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    try {
-      const response = await fetchWithProxy(
-        metadataUrl,
-        {
-          signal: controller.signal,
-          headers: { 
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5'
-          },
-        },
-        this.residentialProxyUrl
-      );
-
-      if (!response.ok) {
-        throw new Error(`Caption metadata fetch failed: ${response.status}`);
-      }
-
-      const metadataText = await response.text();
-      const langCode = this.parseCaptionLanguage(metadataText);
-
-      if (!langCode) {
-        throw new Error('No captions available for this video');
-      }
-
-      return { langCode };
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  /**
-   * Parse XML response to extract language codes
-   * Prioritize English, fallback to first available
-   */
-  private parseCaptionLanguage(xml: string): string | null {
+    const response = await fetchWithProxy(metadataUrl, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
+    if (!response.ok) throw new Error(`Caption metadata fetch failed: ${response.status}`);
+    const metadataText = await response.text();
     const captionRegex = /lang_code="([^"]+)"/g;
-    const matches = Array.from(xml.matchAll(captionRegex));
-
-    if (matches.length === 0) {
-      return null;
-    }
-
-    // Prioritize English
-    const englishMatch = matches.find((m) => m[1].startsWith('en'));
-    if (englishMatch) {
-      return englishMatch[1];
-    }
-
-    // Fallback to first available
-    return matches[0][1];
+    const matches = Array.from(metadataText.matchAll(captionRegex));
+    if (matches.length === 0) throw new Error('No captions');
+    const langCode = matches.find((m) => m[1].startsWith('en'))?.[1] || matches[0][1];
+    return { langCode };
   }
 
-  /**
-   * Fetch transcript content in JSON format
-   */
-  private async fetchTranscriptContent(
-    videoId: string,
-    langCode: string
-  ): Promise<string> {
+  private async fetchTranscriptContent(videoId: string, langCode: string): Promise<string> {
     const transcriptUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${langCode}&fmt=json`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    try {
-      const response = await fetchWithProxy(
-        transcriptUrl,
-        {
-          signal: controller.signal,
-          headers: { 'User-Agent': getRandomUserAgent() },
-        },
-        this.residentialProxyUrl
-      );
-
-      if (!response.ok) {
-        throw new Error(`Transcript content fetch failed: ${response.status}`);
-      }
-
-      const captionData = (await response.json()) as {
-        events?: Array<{ segs?: Array<{ utf8?: string }> }>;
-      };
-
-      const transcript = this.reconstructTranscript(captionData);
-
-      if (!transcript) {
-        throw new Error('Transcript is empty after parsing');
-      }
-
-      return transcript;
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  /**
-   * Reconstruct transcript string from caption events
-   */
-  private reconstructTranscript(captionData: {
-    events?: Array<{ segs?: Array<{ utf8?: string }> }>;
-  }): string {
-    if (!captionData.events || !Array.isArray(captionData.events)) {
-      return '';
-    }
-
-    return captionData.events
-      .filter((event) => event && Array.isArray(event.segs) && event.segs.length > 0)
-      .map((event) => {
-        return (event.segs || []).map((seg) => seg?.utf8 || '').join('');
-      })
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const response = await fetchWithProxy(transcriptUrl, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
+    if (!response.ok) throw new Error(`Transcript content fetch failed: ${response.status}`);
+    const captionData = (await response.json()) as { events?: Array<{ segs?: Array<{ utf8?: string }> }> };
+    return captionData.events?.map(e => e.segs?.map(s => s.utf8 || '').join('') || '').join(' ').replace(/\s+/g, ' ').trim() || '';
   }
 }
