@@ -1,0 +1,21 @@
+web/app/auth/callback/route.ts
+  s_087b46dfa55670::t_1c88d8bbba976c 5-29,33,40
+web/app/auth/callback/route.test.ts
+  s_087b46dfa55670::t_fd80899564c4f4 1-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5d517caf2c56fab176ac35720b50afe5678c379b",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
