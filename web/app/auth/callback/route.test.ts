@@ -10,7 +10,7 @@ describe('getSafeRedirectPath', () => {
     ['%2Fdashboard%3Ftab%3Doverview', '/dashboard?tab=overview'],
     ['%2Fdashboard%23section-2', '/dashboard#section-2'],
   ])('allows %s', (next, expected) => {
-    expect(getSafeRedirectPath(next, '/atlas')).toBe(expected);
+    expect(getSafeRedirectPath(next, '/dashboard')).toBe(expected);
   });
 
   it.each([
@@ -28,6 +28,6 @@ describe('getSafeRedirectPath', () => {
     ['not/a/path'],
     ['%E0%A4%A'],
   ])('rejects unsafe %s', (next) => {
-    expect(getSafeRedirectPath(next as string | null, '/atlas')).toBe('/atlas');
+    expect(getSafeRedirectPath(next as string | null, '/dashboard')).toBe('/dashboard');
   });
 });
