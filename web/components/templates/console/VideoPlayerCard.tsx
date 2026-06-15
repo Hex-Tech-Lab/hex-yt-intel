@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
+import { setPlayerInstance } from '@/lib/player-manager';
 
 // Dynamically import ReactPlayer to prevent SSR/hydration mismatch issues
 const Player = dynamic(() => import('react-player'), { ssr: false }) as any;
@@ -20,6 +21,8 @@ export function VideoPlayerCard() {
 
   useEffect(() => {
     setMounted(true);
+    setPlayerInstance(playerRef.current);
+    return () => setPlayerInstance(null);
   }, []);
 
   useEffect(() => {

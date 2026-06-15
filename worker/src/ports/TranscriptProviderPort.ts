@@ -5,9 +5,11 @@
  * shape; the port lets the orchestrator depend on the contract, not the adapter.
  */
 
-import type { TranscriptResult } from '../services/TranscriptExtractor';
-
-export type { TranscriptResult };
+export interface TranscriptResult {
+  videoId: string;
+  transcript: string;
+  language: string;
+}
 
 export interface TranscriptProviderPort {
   fetch(videoId: string): Promise<TranscriptResult>;
