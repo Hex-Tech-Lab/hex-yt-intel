@@ -1,0 +1,23 @@
+web/components/templates/console/ProcessingLog.tsx
+  s_087b46dfa55670::t_5f4b86510d06ce 52-58,63,65-66,71-72,79,89,92,97-99,106-107
+web/app/auth/signin/form.tsx
+  s_087b46dfa55670::t_e0fad16ced8077 15-18
+web/app/auth/callback/route.ts
+  s_087b46dfa55670::t_628e9037d02dca 55-61,63-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "e69675fd9e00d3861c008d1674ac0ff0e0008ad2",
+  "prompts": {},
+  "sessions": {
+    "s_087b46dfa55670": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "422b4c2b-fc89-471b-983d-bbc70d1f430f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
