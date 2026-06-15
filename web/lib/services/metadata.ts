@@ -25,6 +25,24 @@ function getRandomUserAgent(): string {
   return USER_AGENTS[index] as string;
 }
 
+export async function fetchWorkerTranscript(videoId: string): Promise<string> {
+  const workerUrl = env.cloudflareWorkerUrl;
+  if (!workerUrl) throw new Error('Worker URL not configured');
+
+  const response = await fetch(`${workerUrl}/fetch-transcript`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ videoId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Worker returned ${response.status} fetching transcript`);
+  }
+
+  const data = await response.json();
+  return data.transcript || '';
+}
+
 export async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetadataResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 3000);
