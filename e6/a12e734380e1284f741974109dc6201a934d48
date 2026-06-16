@@ -1,0 +1,25 @@
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_749a5385eae1fb::t_fee5f2c0d3c000 839
+scripts/quality-engine/rules.ts
+  s_749a5385eae1fb::t_8784e478fb52a3 1,7,14-25,36,56,59,62,65-74,76,83,87-104,115
+scripts/validate-env.js
+  s_749a5385eae1fb::t_cd1013b5e976a2 1
+package.json
+  s_749a5385eae1fb::t_25892f417424a6 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "e6a12e734380e1284f741974109dc6201a934d48",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
