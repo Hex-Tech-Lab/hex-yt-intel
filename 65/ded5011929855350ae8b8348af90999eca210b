@@ -1,0 +1,21 @@
+scripts/validate-env.js
+  s_749a5385eae1fb::t_bf4e3ea6c54d70 3-10
+web/lib/env.ts
+  s_749a5385eae1fb::t_b61c896730a2c0 145,151-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "65ded5011929855350ae8b8348af90999eca210b",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
