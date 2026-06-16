@@ -1,0 +1,55 @@
+web/app/api/chat/conversations/route.ts
+  s_749a5385eae1fb::t_03b90608f52608 5
+  s_749a5385eae1fb::t_c6e80575a99628 31-46
+web/app/api/chat/route.ts
+  s_749a5385eae1fb::t_c057b73fa9e505 54
+  s_749a5385eae1fb::t_9765e5d5be6c4c 6
+  s_749a5385eae1fb::t_41d07e667a9029 36-41,43-45
+  s_749a5385eae1fb::t_b079070b63d98a 48
+.github/workflows/ci-cd.yml
+  s_749a5385eae1fb::t_df823f7ab16f72 110
+  s_749a5385eae1fb::t_1123830c242937 109
+  s_749a5385eae1fb::t_d0089c5ef8cd17 112-116
+web/app/api/chat/persist/route.ts
+  s_749a5385eae1fb::t_8e2488abc73ebd 6
+  s_749a5385eae1fb::t_fd366bbddc5ae7 21-27,29-30,34
+scripts/pre-flight.sh
+  s_749a5385eae1fb::t_63779b8bf276c1 60
+worker/src/worker.ts
+  s_749a5385eae1fb::t_8feaec4da7a929 507
+worker/src/services/MetadataScraper.ts
+  s_749a5385eae1fb::t_28e29e8c13fc29 88-94
+scripts/migrate-routes-to-adapter.ts
+  s_749a5385eae1fb::t_bcd293d3e45fd3 1-26
+scripts/verify-quality-engine.ts
+  s_749a5385eae1fb::t_109674c4f64fe5 29-35
+package.json
+  s_749a5385eae1fb::t_863208bed2f31e 5
+web/lib/services/billing.ts
+  s_749a5385eae1fb::t_4eeb291d6a6b85 109-110,148-149
+web/lib/services/traffic.ts
+  s_749a5385eae1fb::t_7d6cae7294b707 349
+web/app/api/chat/conversations/[id]/messages/route.ts
+  s_749a5385eae1fb::t_d068056beb2703 61-72
+  s_749a5385eae1fb::t_a2ff8d627e9f22 6
+scripts/quality-engine/engine.ts
+  s_749a5385eae1fb::t_efbda942e52d3b 3,21,24,39,54
+web/app/api/chat/conversations/[id]/route.ts
+  s_749a5385eae1fb::t_2f5d04f0aba5fa 5,15-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "6536b25b4053dabaeb2912315710f9d5d09f4988",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
