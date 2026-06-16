@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
 
 const authAdapter = new SupabaseAuthAdapter();
@@ -27,9 +28,22 @@ export async function POST(request: NextRequest) {
   if (!identity) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = await request.json().catch(() => ({}));
-    const analysisId = typeof body.analysisId === 'string' ? body.analysisId : null;
-    const title = typeof body.title === 'string' && body.title.trim() ? body.title.trim().slice(0, 120) : 'New chat';
+    const body: unknown = await request.json().catch(() => ({}));
+    const payloadSchema = z.object({
+      analysisId: z.string().nullable().optional().default(null),
+      title: z.string()
+        .transform(val => val.trim())
+        .transform(val => val ? val.slice(0, 120) : 'New chat')
+        .optional()
+        .default('New chat')
+    });
+
+    const parsed = payloadSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    const { analysisId, title } = parsed.data;
 
     const conversation = await persistenceAdapter.createConversation({
       userId: identity.userId,

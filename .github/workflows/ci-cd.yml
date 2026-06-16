@@ -103,11 +103,16 @@ jobs:
 
       - name: Hex Intel Environment
         uses: ./
-      - name: Run QA Intel Quality Gate
-        run: pnpm tsx scripts/verify-quality-engine.ts
-
       - name: Run linter
         run: pnpm --filter @hex-yt-intel/web run lint
+
+      - name: Run QA Intel Quality Gate
+        run: pnpm dlx tsx scripts/verify-quality-engine.ts
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Comment lint results on PR
         if: failure() && github.event_name == 'pull_request'

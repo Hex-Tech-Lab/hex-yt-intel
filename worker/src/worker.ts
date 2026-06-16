@@ -504,7 +504,7 @@ app.post("/analyze-llm-stream", async (c) => {
     if (persisted || !finalText) return;
 
     let markdown = finalText;
-    let jsonPayload: any = null;
+    let jsonPayload: Record<string, unknown> | null = null;
     
     // 1. Extraction (Boundary 1)
     const extracted = extractJsonPayload(finalText);
