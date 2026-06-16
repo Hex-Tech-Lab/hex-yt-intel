@@ -18,7 +18,7 @@ export interface DecodoResponse {
   };
 }
 
-export interface TranscriptResponse {
+export interface DecodoTranscriptResult {
   success: boolean;
   transcript?: string;
   language?: string;
@@ -83,9 +83,9 @@ function parseDecodoTranscript(content: any): string | null {
  * Fetch subtitles/transcript from a YouTube video using Decodo API.
  * 
  * @param videoId - The YouTube video ID
- * @returns Promise<TranscriptResponse> with transcript data or error reason
+ * @returns Promise<DecodoTranscriptResult> with transcript data or error reason
  */
-export async function fetchSubtitles(videoId: string): Promise<TranscriptResponse> {
+export async function fetchSubtitles(videoId: string): Promise<DecodoTranscriptResult> {
   const apiKey = env.decodoApiKey;
 
   if (!apiKey) {

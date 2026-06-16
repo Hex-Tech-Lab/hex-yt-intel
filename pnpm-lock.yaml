@@ -19,21 +19,15 @@ importers:
 
   .:
     devDependencies:
-      '@upstash/qstash':
-        specifier: 2.11.0
-        version: 2.11.0
-      pnpm:
-        specifier: 11.1.3
-        version: 11.1.3
-      supabase:
-        specifier: 2.100.1
-        version: 2.100.1
       tailwindcss:
-        specifier: ^4.3.0
+        specifier: 4.3.0
         version: 4.3.0
-      tsx:
-        specifier: 4.22.4
-        version: 4.22.4
+      ts-morph:
+        specifier: ^28.0.0
+        version: 28.0.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
   web:
     dependencies:
@@ -64,6 +58,9 @@ importers:
       '@upstash/vector':
         specifier: 1.2.3
         version: 1.2.3
+      '@vercel/analytics':
+        specifier: ^2.0.1
+        version: 2.0.1(next@16.2.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       d3:
         specifier: ^7.9.0
         version: 7.9.0
@@ -216,6 +213,9 @@ importers:
       esbuild:
         specifier: ^0.28.0
         version: 0.28.0
+      tsx:
+        specifier: 4.22.4
+        version: 4.22.4
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1708,50 +1708,6 @@ packages:
     resolution: {integrity: sha512-Lle5rKU8f9LF3K5dDd8Or8mkkG+ptzRZZWKPVMm9B9UuovH65Ss2+iFnQqRsCqaGouvJEcTWyl0cj2riNrrDLQ==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/cli-darwin-arm64@2.100.1':
-    resolution: {integrity: sha512-6P1JevgrnWUK2kIz+Y2FyARYU40MAixWCwpsa1esysiyymsnPmldcHKXLdy0ZMUZ3DWbKoricm2ouS1xEaWfog==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@supabase/cli-darwin-x64@2.100.1':
-    resolution: {integrity: sha512-jZnv8uoHyB7C59Wc/iWbqmdUx56GwR9dPXeImMC/GXlrZcUjGXt+3kGmJq7AJ9LAK7f4Qkt1+DxBhgOjP77QPQ==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@supabase/cli-linux-arm64-musl@2.100.1':
-    resolution: {integrity: sha512-7SyKLYu40zvR3WbryQA7kD18DzbQ6KsMQFq+63OzFzdm0rV4AMHUGvRgqmEBDLTnorG5ZqDonqn4pBzbBGh8ww==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
-  '@supabase/cli-linux-arm64@2.100.1':
-    resolution: {integrity: sha512-0MMU1S1SXAhzuzViqOikEUwEy8Sd8vv3kkg/YbC+/i+d1D9fshUnZaCrQtsnSNs+iF4Qkw4+xZH9/RXBwUa8eA==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
-  '@supabase/cli-linux-x64-musl@2.100.1':
-    resolution: {integrity: sha512-00bEAy+T3mzo6LkOqse4AfmppY9eqImQ9Fxar5OLFN7caeRxx7U+xLVXbS4i/ubMNCCK8+/xLsKBgs2kip1arw==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
-  '@supabase/cli-linux-x64@2.100.1':
-    resolution: {integrity: sha512-3B4hzW3hmiT6XR4Yf1IaJVpvpoY6UDjHK6GNvYakEEOGURpk9ThatMGU8kUUp74a+9eTe3lTiW7usweHGc1Olw==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@supabase/cli-windows-arm64@2.100.1':
-    resolution: {integrity: sha512-Op/PcCmbfH2XfIWzouhcR/MdTclCqyevpLingrSLOfHQjJxP/UVbHGdrytNb8kJGUHLVbmgaO2RyW8HSsWCjyw==}
-    cpu: [arm64]
-    os: [win32]
-
-  '@supabase/cli-windows-x64@2.100.1':
-    resolution: {integrity: sha512-m6m3Wg6QcYHnSYVpDaImYx+iewGtfIcM5C7zhqgwRDCyowFP+yKYtSTZ1ldqCN8U1BxJivGELMUhX6uOb0tzcw==}
-    cpu: [x64]
-    os: [win32]
-
   '@supabase/functions-js@2.108.1':
     resolution: {integrity: sha512-fxBRW/A4IG7ADQztVt0NaEy5ysiO1WJ2pbldsnBchrkHuyepX0Krek9qA9T4gUQBVVTCE9Ea4pdsM5hfn3nc4A==}
     engines: {node: '>=20.0.0'}
@@ -1954,6 +1910,9 @@ packages:
 
   '@ts-morph/common@0.11.1':
     resolution: {integrity: sha512-7hWZS0NRpEsNV8vWJzg7FEz6V8MaLNeJOmwmghqUXTpzk16V1LLZhdo+4QvE/+zv4cVci0OviuJFnqhEfoV3+g==}
+
+  '@ts-morph/common@0.29.0':
+    resolution: {integrity: sha512-35oUmphHbJvQ/+UTwFNme/t2p3FoKiGJ5auTjjpNTop2dyREspirjMy82PLSC1pnDJ8ah1GU98hwpVt64YXQsg==}
 
   '@tweenjs/tween.js@23.1.3':
     resolution: {integrity: sha512-vJmvvwFxYuGnF2axRtPYocag6Clbb5YS7kLL+SO/TeVFzHqDIWrNKYtcsPMibjDx9O+bu+psAy9NKfWklassUA==}
@@ -2342,6 +2301,35 @@ packages:
 
   '@upstash/vector@1.2.3':
     resolution: {integrity: sha512-yXsWKeuHNYyH72BcSZd3bV5ZD5MybAoTvKxkMaeV2UzuGfNzbHBVh5eO+ysTWTFAf8I9XcOueF4tZfAGjCa4Iw==}
+
+  '@vercel/analytics@2.0.1':
+    resolution: {integrity: sha512-MTQG6V9qQrt1tsDeF+2Uoo5aPjqbVPys1xvnIftXSJYG2SrwXRHnqEvVoYID7BTruDz4lCd2Z7rM1BdkUehk2g==}
+    peerDependencies:
+      '@remix-run/react': ^2
+      '@sveltejs/kit': ^1 || ^2
+      next: '>= 13'
+      nuxt: '>= 3'
+      react: ^18 || ^19 || ^19.0.0-rc
+      svelte: '>= 4'
+      vue: ^3
+      vue-router: ^4
+    peerDependenciesMeta:
+      '@remix-run/react':
+        optional: true
+      '@sveltejs/kit':
+        optional: true
+      next:
+        optional: true
+      nuxt:
+        optional: true
+      react:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
+      vue-router:
+        optional: true
 
   '@vercel/backends@0.8.10':
     resolution: {integrity: sha512-74k8PeIzKZ3/Cl20mrU3uBf1U+EsTYJZrhjehwBqwzLrm+NQsRY6UUhEID0rWMQS8jdW+iTYMtjlscXYmmtIVQ==}
@@ -2889,6 +2877,9 @@ packages:
 
   code-block-writer@10.1.1:
     resolution: {integrity: sha512-67ueh2IRGst/51p0n6FvPrnRjAGHY5F8xdjkgrYE7DDzpJe6qA07RYQ9VcoUeo5ATOjSOiWpSL3SWBRRbempMw==}
+
+  code-block-writer@13.0.3:
+    resolution: {integrity: sha512-Oofo0pq3IKnsFtuHqSF7TqBfr71aeyZDVJ0HpmqB7FBM2qEigL0iPONSCZSO9pE9dZTAxANe5XHG9Uy0YMv8cg==}
 
   codem-isoboxer@0.3.10:
     resolution: {integrity: sha512-eNk3TRV+xQMJ1PEj0FQGY8KD4m0GPxT487XJ+Iftm7mVa9WpPFDMWqPt+46buiP5j5Wzqe5oMIhqBcAeKfygSA==}
@@ -4776,11 +4767,6 @@ packages:
   png-js@1.1.0:
     resolution: {integrity: sha512-PM/uYGzGdNSzqeOgly68+6wKQDL1SY0a/N+OEa/+br6LnHWOAJB0Npiamnodfq3jd2LS/i2fMeOKSAILjA+m5Q==}
 
-  pnpm@11.1.3:
-    resolution: {integrity: sha512-yFNX/hfKEt0j3XBxgiZm39fjy3b+IU4zcLXqL7NPKiMRhVCbY+cX880KyzjdP42CvNXoFyQArmeLcOpPvtCJbQ==}
-    engines: {node: '>=22.13'}
-    hasBin: true
-
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
     engines: {node: '>= 0.4'}
@@ -5246,10 +5232,6 @@ packages:
       babel-plugin-macros:
         optional: true
 
-  supabase@2.100.1:
-    resolution: {integrity: sha512-DZ9DWoicMuGfjggYuDImqVm7UP8ujFWyxKEd+dW8zqVJQgHb+5uPk1bq8VbPcleMuj9vdsGqOQEAvjI6rR6MeA==}
-    hasBin: true
-
   super-media-element@1.4.2:
     resolution: {integrity: sha512-9pP/CVNp4NF2MNlRzLwQkjiTgKKe9WYXrLh9+8QokWmMxz+zt2mf1utkWLco26IuA3AfVcTb//qtlTIjY3VHxA==}
 
@@ -5409,6 +5391,9 @@ packages:
 
   ts-morph@12.0.0:
     resolution: {integrity: sha512-VHC8XgU2fFW7yO1f/b3mxKDje1vmyzFXHWzOYmKEkCEwcLjDtbdLgBQviqj4ZwP4MJkQtRo6Ha2I29lq/B+VxA==}
+
+  ts-morph@28.0.0:
+    resolution: {integrity: sha512-Wp3tnZ2bzwxyTZMtgWVzXDfm7lB1Drz+y9DmmYH/L702PQhPyVrp3pkou3yIz4qjS14GY9kcpmLiOOMvl8oG1g==}
 
   ts-toolbelt@6.15.5:
     resolution: {integrity: sha512-FZIXf1ksVyLcfr7M317jbB67XFJhOO1YqdTcuGaq9q5jLUoTikukZ+98TPjKiP2jC5CgmYdWWYs0s2nLSU0/1A==}
@@ -6954,30 +6939,6 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@supabase/cli-darwin-arm64@2.100.1':
-    optional: true
-
-  '@supabase/cli-darwin-x64@2.100.1':
-    optional: true
-
-  '@supabase/cli-linux-arm64-musl@2.100.1':
-    optional: true
-
-  '@supabase/cli-linux-arm64@2.100.1':
-    optional: true
-
-  '@supabase/cli-linux-x64-musl@2.100.1':
-    optional: true
-
-  '@supabase/cli-linux-x64@2.100.1':
-    optional: true
-
-  '@supabase/cli-windows-arm64@2.100.1':
-    optional: true
-
-  '@supabase/cli-windows-x64@2.100.1':
-    optional: true
-
   '@supabase/functions-js@2.108.1':
     dependencies:
       tslib: 2.8.1
@@ -7145,6 +7106,12 @@ snapshots:
       minimatch: 3.1.5
       mkdirp: 1.0.4
       path-browserify: 1.0.1
+
+  '@ts-morph/common@0.29.0':
+    dependencies:
+      minimatch: 10.2.5
+      path-browserify: 1.0.1
+      tinyglobby: 0.2.17
 
   '@tweenjs/tween.js@23.1.3': {}
 
@@ -7548,6 +7515,11 @@ snapshots:
       uncrypto: 0.1.3
 
   '@upstash/vector@1.2.3': {}
+
+  '@vercel/analytics@2.0.1(next@16.2.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+    optionalDependencies:
+      next: 16.2.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react: 19.2.7
 
   '@vercel/backends@0.8.10(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(rollup@4.61.1)':
     dependencies:
@@ -8313,6 +8285,8 @@ snapshots:
   cloudflare-video-element@1.3.5: {}
 
   code-block-writer@10.1.1: {}
+
+  code-block-writer@13.0.3: {}
 
   codem-isoboxer@0.3.10: {}
 
@@ -10636,8 +10610,6 @@ snapshots:
     dependencies:
       browserify-zlib: 0.2.0
 
-  pnpm@11.1.3: {}
-
   possible-typed-array-names@1.1.0: {}
 
   postcss-selector-parser@6.0.10:
@@ -11288,17 +11260,6 @@ snapshots:
     optionalDependencies:
       '@babel/core': 7.29.7
 
-  supabase@2.100.1:
-    optionalDependencies:
-      '@supabase/cli-darwin-arm64': 2.100.1
-      '@supabase/cli-darwin-x64': 2.100.1
-      '@supabase/cli-linux-arm64': 2.100.1
-      '@supabase/cli-linux-arm64-musl': 2.100.1
-      '@supabase/cli-linux-x64': 2.100.1
-      '@supabase/cli-linux-x64-musl': 2.100.1
-      '@supabase/cli-windows-arm64': 2.100.1
-      '@supabase/cli-windows-x64': 2.100.1
-
   super-media-element@1.4.2: {}
 
   supports-color@10.2.2: {}
@@ -11417,6 +11378,11 @@ snapshots:
     dependencies:
       '@ts-morph/common': 0.11.1
       code-block-writer: 10.1.1
+
+  ts-morph@28.0.0:
+    dependencies:
+      '@ts-morph/common': 0.29.0
+      code-block-writer: 13.0.3
 
   ts-toolbelt@6.15.5: {}
 

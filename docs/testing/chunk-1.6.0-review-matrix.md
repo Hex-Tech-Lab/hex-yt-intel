@@ -1,18 +1,23 @@
-# Chunk 1.6.0 Review Matrix
+# Review Matrix: Decodo Player Fix (1.6.0)
 
-This matrix tracks incoming feedback and resolutions for the feature branch `feature/openrouter-haiku-fix-and-stream-accumulator`.
+## Overview
+This PR implements a 3-tier fallback chain for YouTube transcript ingestion (Primary: Native, Secondary: Decodo API, Tertiary: Placeholder) and exposes the `react-player` instance globally to fix timestamp seeking.
 
-## CodeRabbit Findings (0 items)
+## Status
+- [x] Local Type Check: Pass
+- [x] Local Lint: Pass (warnings only)
+- [x] Local Build: Pass
+- [ ] CodeRabbit: Pending
+- [ ] Snyk: Pending
+- [ ] Sonar: Pending
 
-- [ ] Pending CI run → Fix: N/A
+## Tasks
+1. [x] Implement 3-tier cascade in TranscriptExtractor.ts
+2. [x] Create player-manager.ts
+3. [x] Update VideoPlayerCard.tsx
+4. [ ] Run Automated Toolchain
+5. [ ] Resolve findings
+6. [ ] Final Merge
 
-## SonarCloud (0 items)
-
-- [ ] Pending CI run → Fix: N/A
-
-## Snyk (0 items)
-
-- [ ] Pending CI run → Fix: N/A
-
-## Status: CodeRabbit 0/0 ✅ | Sonar 0/0 ✅ | Snyk 0/0 ✅
-
+## Findings
+- None

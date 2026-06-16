@@ -1,3 +1,4 @@
+export type { DecodoPort } from './DecodoPort';
 export type { AuthPort, AuthIdentity } from './AuthPort';
 export type { QuotaGateResult, QuotaEndpoint } from './QuotaPort';
 export type { TrafficGuardPort } from './TrafficGuardPort';

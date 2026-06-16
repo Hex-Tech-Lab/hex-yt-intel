@@ -14,7 +14,7 @@ export function LegalPage({ content }: LegalPageProps) {
   // But standard ReactMarkdown is fine if we style it perfectly.
   
   return (
-    <div className="min-h-screen bg-[#0B0E14] text-[#E2E8F0] selection:bg-[#06B6D430] font-sans">
+    <div className="min-h-screen min-w-[320px] bg-[#0B0E14] text-[#E2E8F0] selection:bg-[#06B6D430] font-sans">
       {/* Brand Aesthetic Background */}
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_-20%,#06B6D415,transparent_50%)] pointer-events-none" />
       

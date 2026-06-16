@@ -39,7 +39,11 @@ export class QualityIntelligenceEngine {
 
     for (const source of files) {
       for (const rule of this.rules) {
-        findings.push(...rule.check(source));
+        try {
+          findings.push(...rule.check(source));
+        } catch (error) {
+          console.error(`Rule "${rule.name}" failed on file ${source.getFilePath()}:`, error);
+        }
       }
     }
     return findings;

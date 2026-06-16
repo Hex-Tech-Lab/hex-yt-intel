@@ -17,14 +17,14 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   const isChatOpen = useChatStore((s) => s.isChatOpen);
 
   return (
-    <div className={`grid h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden gap-[4px] p-[4px] ${
+    <div className={`grid h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-hidden gap-[4px] p-[4px] ${
       rightPanel ? "grid-cols-[260px_1fr_390px]" : "grid-cols-[260px_1fr]"
     }`}>
       <aside className="border border-[var(--line)] bg-[var(--void)] h-full w-[260px] flex-shrink-0 overflow-y-auto flex flex-col rounded-xl">
         {sidebar}
       </aside>
 
-      <main className="relative flex flex-col h-full min-w-0 overflow-hidden isolate bg-[var(--bg)] border border-[var(--line)] rounded-xl">
+      <main className="relative flex flex-col h-full min-w-[320px] overflow-hidden isolate bg-[var(--bg)] border border-[var(--line)] rounded-xl">
         <header className="border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.8)] backdrop-blur-md z-20">
           {topbar}
         </header>

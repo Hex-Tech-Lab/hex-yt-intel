@@ -138,7 +138,7 @@ function Features() {
 
 export function LandingPage() {
   return (
-    <div style={{ background: "var(--void)", color: "var(--ink)", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ background: "var(--void)", color: "var(--ink)", minHeight: "100vh", minWidth: "320px", display: "flex", flexDirection: "column" }}>
       <Nav />
       <main style={{ flex: 1 }}>
         <Hero />
