@@ -232,10 +232,10 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
 
   for (const s of secretsToTry) {
     if (!s) continue;
-    const expected = await hmacHex(
-      s,
-      `chat.${req.conversationId}.${req.userId}.${req.exp}.${JSON.stringify(req.models ?? [])}`
-    );
+    const modelStr = [...(req.models ?? [])].sort().join(',');
+    const msg = `chat:${req.conversationId}:${req.userId}:${req.exp}:${modelStr}`;
+    const expected = await hmacHex(s, msg);
+    
     if (timingSafeEqualHex(expected, req.sig)) {
       activeSecret = s;
       isTokenValid = true;
@@ -244,6 +244,25 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   }
 
   if (!isTokenValid) {
+    const isPreview = c.env.NODE_ENV !== "production";
+    const modelStr = [...(req.models ?? [])].sort().join(',');
+    const msg = `chat:${req.conversationId}:${req.userId}:${req.exp}:${modelStr}`;
+
+    if (isPreview) {
+      console.warn("[chat-stream] HMAC Mismatch Diagnostic:", {
+        providedSig: req.sig,
+        message: msg,
+        secretUsed: activeSecret === "dev-hmac-secret-123" ? "FALLBACK" : "CONFIGURED",
+      });
+      return c.json({
+        error: "Invalid token",
+        debug: {
+          msg: msg,
+          sig: req.sig,
+          secret: activeSecret === "dev-hmac-secret-123" ? "FALLBACK" : "CONFIGURED"
+        }
+      }, 401);
+    }
     return c.json({ error: "Invalid token" }, 401);
   }
 
