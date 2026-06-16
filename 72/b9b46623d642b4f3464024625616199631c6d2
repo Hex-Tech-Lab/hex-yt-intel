@@ -1,0 +1,22 @@
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_749a5385eae1fb::t_c6dfa8120d09ad 14-15,32
+  s_749a5385eae1fb::t_91e813b89996d2 154
+web/lib/env.ts
+  s_749a5385eae1fb::t_d3e7dfeabe1dce 401
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "72b9b46623d642b4f3464024625616199631c6d2",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
