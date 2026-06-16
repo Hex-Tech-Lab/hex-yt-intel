@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
+import { env } from '@/lib/env';
+
 /**
  * Shared-secret HMAC for the direct browser->worker streaming flow.
  *
@@ -14,14 +16,8 @@ import { createHmac, timingSafeEqual } from 'crypto';
  */
 const TOKEN_TTL_MS = 120_000;
 
-function secret(): string {
-  const s = process.env.STREAM_HMAC_SECRET;
-  if (!s) throw new Error('STREAM_HMAC_SECRET is not configured');
-  return s;
-}
-
 function hmacHex(message: string): string {
-  return createHmac('sha256', secret()).update(message).digest('hex');
+  return createHmac('sha256', env.streamHmacSecret).update(message).digest('hex');
 }
 
 export function signStreamToken(videoId: string, analysisId: string, models: string[] = []): { sig: string; exp: number } {
