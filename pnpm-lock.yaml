@@ -19,6 +19,9 @@ importers:
 
   .:
     devDependencies:
+      glob:
+        specifier: ^13.0.6
+        version: 13.0.6
       tailwindcss:
         specifier: 4.3.0
         version: 4.3.0
