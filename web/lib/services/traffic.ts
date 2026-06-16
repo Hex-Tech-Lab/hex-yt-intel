@@ -15,11 +15,11 @@
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '@/lib/supabase';
-import { getRedisValue, incrementRedisValue, setRedisExpiration, executeRedisScript } from '@/lib/redis';
+import { executeRedisScript } from '@/lib/redis';
 import * as Sentry from '@sentry/nextjs';
 
 /** Admin account exempt from traffic limits and billing charges. */
-export const ADMIN_EMAIL = 'kellybakri@gmail.com';
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 /**
  * Rate limit configuration per tier. Expressed as requests per minute.
@@ -99,6 +99,26 @@ redis.call('EXPIRE', key, ttl)
 
 -- Return { allowed, count } tuple
 return { allowed, count }
+`;
+
+/**
+ * Non-incrementing sliding-window status check.
+ *   KEYS[1] redis key | ARGV[1] now(ms) | ARGV[2] window(ms)
+ * Returns { count }.
+ */
+const SLIDING_WINDOW_STATUS_SCRIPT = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+
+-- Remove timestamps older than window
+local cutoff = now - window
+redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
+
+-- Count remaining requests in window
+local count = redis.call('ZCARD', key)
+
+return count
 `;
 
 /** Centralized graceful degradation response (fail-open pattern). */
@@ -229,67 +249,47 @@ export async function checkRateLimitSlidingWindow(
   }
 }
 
-/**
- * Legacy per-minute fixed-window check (INCR + EXPIRE). Retained to back
- * getRateLimitStatus, which reports remaining quota to the client.
- */
-export async function checkRateLimit(
-  userId: string,
-  tier: Tier,
-  endpoint: Endpoint
-): Promise<{ allowed: boolean; status: RateLimitStatus }> {
-  const limitPerMinute = getRateLimit(tier);
-  const now = Math.floor(Date.now() / 1000);
-  const minuteWindow = Math.floor(now / 60);
-  const redisKey = `ratelimit:${userId}:${endpoint}:${minuteWindow}`;
-
-  try {
-    const redisValue = await getRedisValue(redisKey);
-    const requestCount = parseRedisNumber(redisValue);
-    const allowed = requestCount < limitPerMinute;
-
-    if (!allowed) {
-      await logRateLimitHit(userId, endpoint, tier, requestCount, limitPerMinute);
-    }
-    if (allowed) {
-      await incrementRedisValue(redisKey, 1);
-    }
-    if (requestCount === 0) {
-      await setRedisExpiration(redisKey, 60);
-    }
-
-    const nextMinute = (minuteWindow + 1) * 60;
-    const resetAt = nextMinute * 1000;
-    const retryAfter = Math.max(1, nextMinute - now);
-
-    const status: RateLimitStatus = {
-      remaining: Math.max(0, limitPerMinute - (requestCount + 1)),
-      limit: limitPerMinute,
-      resetAt,
-      retryAfter,
-      tier,
-      requestTime: requestCount + 1,
-    };
-
-    return { allowed, status };
-  } catch (error) {
-    console.error(`[traffic] Error checking rate limit for user ${userId}:`, error);
-    Sentry.captureException(error, {
-      contexts: { rateLimit: { userId, endpoint, tier } },
-      tags: { severity: 'medium' },
-    });
-    return { allowed: true, status: gracefulDegradation(tier, limitPerMinute) };
-  }
-}
-
 /** Current rate-limit status for a user (used by /api/rate-limit-status). */
 export async function getRateLimitStatus(
   userId: string,
   tier: Tier,
   endpoint: Endpoint
 ): Promise<RateLimitStatus> {
-  const { status } = await checkRateLimit(userId, tier, endpoint);
-  return status;
+  const limitPerMinute = getRateLimit(tier);
+  const now = Date.now();
+  const redisKey = `ratelimit:${userId}:${endpoint}:sliding`;
+
+  try {
+    const requestCount = await executeRedisScript(SLIDING_WINDOW_STATUS_SCRIPT, [redisKey], [
+      now,
+      60000, // 60-second window in milliseconds
+    ]);
+
+    // Sentinel guard: if Redis unavailable, requestCount is -1
+    if (requestCount === -1) {
+      return gracefulDegradation(tier, limitPerMinute);
+    }
+
+    const count = typeof requestCount === 'number' ? requestCount : 0;
+    const resetAt = now + 60000;
+    const retryAfter = 60;
+
+    return {
+      remaining: Math.max(0, limitPerMinute - count),
+      limit: limitPerMinute,
+      resetAt,
+      retryAfter,
+      tier,
+      requestTime: count,
+    };
+  } catch (error) {
+    console.error(`[traffic] getRateLimitStatus failed for user ${userId}:`, error);
+    Sentry.captureException(error, {
+      contexts: { rateLimitStatus: { userId, endpoint, tier } },
+      tags: { component: 'rate-limiter-status', severity: 'medium' },
+    });
+    return gracefulDegradation(tier, limitPerMinute);
+  }
 }
 
 /** HTTP headers assignment utility (RFC 6585 compliance). */
@@ -346,7 +346,7 @@ export async function guardTraffic(
   _userAgent?: string
 ): Promise<{ allowed: boolean; response?: NextResponse; headers?: Record<string, string> }> {
   // Admin bypass: grant immediate access, skip the limiter entirely.
-  if (userEmail === ADMIN_EMAIL || userId === 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb') {
+  if (userEmail === ADMIN_EMAIL || userId === process.env.TEST_USER_BYPASS_ID) {
     return { allowed: true, headers: { 'X-RateLimit-Admin': 'bypassed' } };
   }
 

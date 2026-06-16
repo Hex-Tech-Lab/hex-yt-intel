@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
@@ -28,8 +29,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-bg text-primary antialiased font-sans">
-        <Providers>{children}</Providers>
+      <body className="bg-bg text-primary antialiased font-sans min-w-[320px]">
+        <Providers>
+          {children}
+          <Analytics />
+        </Providers>
         <Script
           src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"
           strategy="beforeInteractive"

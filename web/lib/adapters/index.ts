@@ -1,7 +1,9 @@
+export { DecodoAdapter } from './DecodoAdapter';
 export { SupabaseAuthAdapter } from './SupabaseAuthAdapter';
 export { RedisTrafficAdapter } from './RedisTrafficAdapter';
 export { PostgresBillingAdapter } from './PostgresBillingAdapter';
 export { WorkerIngestionAdapter } from './WorkerIngestionAdapter';
 export { SettingsModelAdapter } from './SettingsModelAdapter';
+export { UpstashVectorAdapter } from './UpstashVectorAdapter';
 export { StreamTokenAdapter } from './StreamTokenAdapter';
 export { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';

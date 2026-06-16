@@ -40,6 +40,26 @@ export class MetadataScraper {
   }
 
   /**
+   * Fetch channel details from YouTube API
+   */
+  async fetchChannelDetails(channelId: string): Promise<{ title: string; description: string }> {
+    const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${this.apiKey}`;
+    const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
+    
+    if (!response.ok) {
+      throw new Error(`YouTube API channel fetch failed: ${response.status}`);
+    }
+
+    const data = (await response.json()) as { items?: Array<{ snippet?: any }> };
+    const snippet = data.items?.[0]?.snippet;
+
+    return {
+      title: snippet?.title || 'Unknown Channel',
+      description: snippet?.description || '',
+    };
+  }
+
+  /**
    * Fetch video metadata from YouTube API
    */
   async fetch(videoId: string): Promise<VideoMetadata> {

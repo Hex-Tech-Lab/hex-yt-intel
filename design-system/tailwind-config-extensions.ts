@@ -1,3 +1,4 @@
+// @ts-ignore - Workspace boundary resolution issue with tailwindcss/plugin
 import plugin from 'tailwindcss/plugin';
 
 /**
@@ -91,7 +92,10 @@ export const hexYtIntelConfig = {
       },
       },
       plugins: [
-      plugin(function ({ addComponents, addUtilities }) {
+        plugin(function ({ addComponents, addUtilities }: { 
+          addComponents: (components: Record<string, any>) => void, 
+          addUtilities: (utilities: Record<string, any>) => void 
+        }) {
       addUtilities({
         '.beautiful-shadow-sm': {
           boxShadow: '0 2px 4px rgba(0,0,0,0.05), 0 4px 8px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.1)',

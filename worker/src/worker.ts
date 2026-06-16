@@ -213,7 +213,21 @@ app.get("/fetch-metadata", async (c) => {
     }
 
     const scraper = new MetadataScraper(apiKey, c.env.RESIDENTIAL_PROXY_URL);
-    const metadata = await scraper.fetch(videoId);
+    let metadata = await scraper.fetch(videoId);
+
+    // Metadata Hardening: Fallback fetch for channel details
+    if (!metadata.channelTitle && metadata.channelId) {
+      console.info(`[fetch-metadata] Incomplete metadata, fetching channel details for ${metadata.channelId}`);
+      try {
+        const channelDetails = await scraper.fetchChannelDetails(metadata.channelId);
+        metadata = {
+          ...metadata,
+          channelTitle: channelDetails.title,
+        };
+      } catch (e) {
+        console.error(`[fetch-metadata] Channel detail fetch failed: ${e instanceof Error ? e.message : 'Unknown'}`);
+      }
+    }
 
     return c.json(metadata, 200, {
       "Cache-Control": "public, max-age=3600",
@@ -415,13 +429,20 @@ app.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: 'Invalid appUrl callback destination' }, 400);
   }
 
-  // Edge Hardening: Defensive check for empty transcript to prevent prompt collapse
-  if (!req.transcript || req.transcript.trim().length === 0) {
-    console.error('[analyze-llm-stream] Empty transcript received at edge');
-    return c.json({ 
-      error: 'Transcript unavailable',
-      code: 'ERR_EDGE_EMPTY_SOURCE' 
-    }, 400);
+  // Edge Hardening: If transcript is missing, try to fetch it
+  let transcript = req.transcript;
+  if (!transcript || transcript.trim().length === 0) {
+    console.info(`[analyze-llm-stream] Empty transcript, attempting pre-fetch for ${req.videoId}`);
+    try {
+      const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL);
+      const result = await extractor.fetch(req.videoId);
+      transcript = result.transcript;
+      console.info(`[analyze-llm-stream] Pre-fetch successful for ${req.videoId}`);
+    } catch (e) {
+      console.error(`[analyze-llm-stream] Pre-fetch failed for ${req.videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
+      // Fallback to placeholder if fetch fails
+      transcript = '[Transcript unavailable for this video - content ingestion failed across all available sources]';
+    }
   }
 
   if (!secret || !apiKey) {
@@ -555,7 +576,7 @@ app.post("/analyze-llm-stream", async (c) => {
         const result = await engine.executeAndStream(
           {
             metadata: req.metadata,
-            transcript: req.transcript || '',
+            transcript: transcript || '',
             persona: req.persona,
             timezone: req.timezone,
             chunkIndex: req.chunkIndex,

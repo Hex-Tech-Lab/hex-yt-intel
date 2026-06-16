@@ -746,63 +746,109 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
   }
 
   async updateAnalysisResult(params: {
-    analysisId: string;
-    markdown: string;
-    payload: UCISPayloadV2 | null;
-    model: string | null;
-    validationPassed: boolean;
-    validationReport: ValidationReportInput | unknown;
-  }): Promise<void> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { error } = await service
-        .from('analyses')
-        .update({
-          analysis_markdown: params.markdown,
-          analysis_payload: params.payload ?? null,
-          model_used: params.model || 'edge-stream',
-          validation_passed: params.validationPassed,
-          validation_report: params.validationReport,
-          billing_status: 'completed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', params.analysisId);
+  analysisId: string;
+  markdown: string;
+  payload: UCISPayloadV2 | null;
+  model: string | null;
+  validationPassed: boolean;
+  validationReport: ValidationReportInput | unknown;
+}): Promise<void> {
+  try {
+    const service = getSupabaseServiceClient();
 
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] updateAnalysisResult failed:', error.message);
-        throw error;
-      }
+    // 1️⃣ Fetch analysis meta to obtain video_id, title and user_id
+    const { data: analysisMeta } = await service
+      .from('analyses')
+      .select('video_id, title, user_id')
+      .eq('id', params.analysisId)
+      .single();
 
-      // NEW: Persist Knowledge Graph data if payload exists (ADR 006 Lossless)
-      if (params.payload && params.payload.knowledgeGraph) {
-        await this.persistKnowledgeGraph({
-          analysisId: params.analysisId,
-          entities: params.payload.knowledgeGraph.nodes.map(n => ({
-            label: n.label,
-            type: n.entityType || 'concept',
-            weight: n.weight || 1,
-            rawNode: n // LOSSLESS
-          })),
-          relations: params.payload.knowledgeGraph.edges.map(e => ({
-            source: e.source,
-            target: e.target,
-            relation: e.kind || 'related',
-            strength: e.strength || 1,
-            rawEdge: e // LOSSLESS
-          }))
-        }).catch(err => {
-          console.error('[SupabasePersistenceAdapter] KG persistence failed during updateAnalysisResult:', err);
-          // We don't throw here to ensure the main analysis update is preserved
-        });
+    // 2️⃣ Upsert video record ensuring FK user_id
+    if (analysisMeta?.video_id) {
+      try {
+        await service
+          .from('videos')
+          .upsert(
+            {
+              id: analysisMeta.video_id,
+              title: analysisMeta.title ?? '',
+              user_id: analysisMeta.user_id,
+            },
+            { onConflict: 'id' }
+          )
+          .single();
+      } catch (e) {
+        console.warn('[SupabasePersistenceAdapter] video upsert skipped:', e);
       }
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'updateAnalysisResult' },
-        extra: { analysisId: params.analysisId },
-      });
-      throw error;
     }
+
+    // 3️⃣ Update the primary analysis row
+    const { error: analysisError } = await service
+      .from('analyses')
+      .update({
+        analysis_markdown: params.markdown,
+        analysis_payload: params.payload ?? null,
+        model_used: params.model || 'edge-stream',
+        validation_passed: params.validationPassed,
+        validation_report: params.validationReport,
+        billing_status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', params.analysisId);
+
+    if (analysisError) {
+      console.error('[SupabasePersistenceAdapter] updateAnalysisResult failed:', analysisError.message);
+      throw analysisError;
+    }
+
+    // 4️⃣ Persist Knowledge Graph if present (ADR 006)
+    if (params.payload?.knowledgeGraph) {
+      await this.persistKnowledgeGraph({
+        analysisId: params.analysisId,
+        entities: params.payload.knowledgeGraph.nodes.map(n => ({
+          label: n.label,
+          type: n.entityType || 'concept',
+          weight: n.weight || 1,
+          rawNode: n,
+        })),
+        relations: params.payload.knowledgeGraph.edges.map(e => ({
+          source: e.source,
+          target: e.target,
+          relation: e.kind || 'related',
+          strength: e.strength || 1,
+          rawEdge: e,
+        })),
+      }).catch(err => {
+        console.error('[SupabasePersistenceAdapter] KG persistence failed during updateAnalysisResult:', err);
+      });
+    }
+
+    // 5️⃣ Persist analysis chunks if payload contains them
+    const anyPayload = params.payload as any;
+    if (Array.isArray(anyPayload?.chunks) && anyPayload.chunks.length > 0) {
+      const chunkRows = anyPayload.chunks.map((c: any, idx: number) => ({
+        analysis_id: params.analysisId,
+        chunk_index: idx,
+        content_text: c.text ?? String(c),
+        metadata_payload: c.metadata ?? {},
+        updated_at: new Date().toISOString(),
+      }));
+      try {
+        await service
+          .from('analysis_chunks')
+          .upsert(chunkRows, { onConflict: 'id' });
+      } catch (err) {
+        console.error('[SupabasePersistenceAdapter] chunk upsert failed:', err);
+      }
+    }
+  } catch (error: any) {
+    Sentry.captureException(error, {
+      tags: { method: 'updateAnalysisResult' },
+      extra: { analysisId: params.analysisId },
+    });
+    throw error;
   }
+}
 
   async getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
     try {

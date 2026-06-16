@@ -105,7 +105,12 @@ export async function chargeMonthlyQuota(
   tier: Tier,
   userEmail?: string
 ): Promise<{ allowed: boolean; response?: NextResponse }> {
-  if (userEmail === ADMIN_EMAIL || userId === 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb') return { allowed: true }; // admin is never charged
+  if (
+    (ADMIN_EMAIL && userEmail === ADMIN_EMAIL) ||
+    (process.env.TEST_USER_BYPASS_ID && userId === process.env.TEST_USER_BYPASS_ID)
+  ) {
+    return { allowed: true };
+  }
 
   const quotaResult = await enforceMonthlyQuota(userId, tier);
 
@@ -139,7 +144,12 @@ export async function checkMonthlyQuota(
   tier: Tier,
   userEmail?: string
 ): Promise<{ allowed: boolean }> {
-  if (userEmail === ADMIN_EMAIL || userId === 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb') return { allowed: true };
+  if (
+    (ADMIN_EMAIL && userEmail === ADMIN_EMAIL) ||
+    (process.env.TEST_USER_BYPASS_ID && userId === process.env.TEST_USER_BYPASS_ID)
+  ) {
+    return { allowed: true };
+  }
   if (tier === 'pro' || tier === 'enterprise') return { allowed: true };
   
   const supabase = getSupabaseServiceClient();

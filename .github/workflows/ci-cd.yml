@@ -103,6 +103,8 @@ jobs:
 
       - name: Hex Intel Environment
         uses: ./
+      - name: Run QA Intel Quality Gate
+        run: pnpm tsx scripts/verify-quality-engine.ts
 
       - name: Run linter
         run: pnpm --filter @hex-yt-intel/web run lint

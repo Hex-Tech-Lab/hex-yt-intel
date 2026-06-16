@@ -16,10 +16,17 @@ engine.addRule(WorkflowRule);
 engine.addRule(ComplexityRule);
 
 // Scan files
-const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' });
+const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' }).map(f => f.replace(/\\/g, "/"));
+
+if (files.length === 0) {
+  console.error('❌ Quality Intelligence Engine: No files found to scan.');
+  process.exit(1);
+}
+
 const findings = engine.analyze(files);
 
 if (findings.length > 0) {
+  console.error('❌ Quality Intelligence Engine: Issues found:');
   console.error(JSON.stringify(findings, null, 2));
   process.exit(1);
 }
