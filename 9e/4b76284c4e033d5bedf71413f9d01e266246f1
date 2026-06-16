@@ -1,0 +1,22 @@
+worker/src/services/MetadataScraper.ts
+  s_749a5385eae1fb::t_ff3e727046133c 160,162,164-166
+  s_749a5385eae1fb::t_4698ee3b61dbab 53
+worker/src/worker.ts
+  s_749a5385eae1fb::t_fa3d298190f4d1 569
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "9e4b76284c4e033d5bedf71413f9d01e266246f1",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
