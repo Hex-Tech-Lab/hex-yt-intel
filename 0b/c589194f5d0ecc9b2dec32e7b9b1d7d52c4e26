@@ -1,0 +1,35 @@
+web/components/templates/console/DashboardLayout.tsx
+  s_749a5385eae1fb::t_33f4e38489492b 20
+scripts/verify-quality-engine.ts
+  s_749a5385eae1fb::t_8c01986dea43ab 1-28
+scripts/quality-engine/engine.ts
+  s_749a5385eae1fb::t_9f6b62e0f3923d 1-48
+.memory/AGENT_LEDGER.md
+  s_749a5385eae1fb::t_2fcfab4c975f8b 2
+  s_749a5385eae1fb::t_fbd88ebfdfb2fe 1
+web/lib/adapters/WorkerIngestionAdapter.ts
+  s_749a5385eae1fb::t_5bcf142c1df492 2,20-29
+web/components/organisms/GlobalKnowledgeMap.tsx
+  s_749a5385eae1fb::t_e8a43f8f6dd135 68-69,96,98
+scripts/pre-flight.sh
+  s_749a5385eae1fb::t_a087ca9e7d2524 57-58,60
+  s_749a5385eae1fb::t_b84d2bb3c68db3 59,61
+scripts/quality-engine/rules.ts
+  s_749a5385eae1fb::t_4e5cb600d1afe5 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "0bc589194f5d0ecc9b2dec32e7b9b1d7d52c4e26",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
