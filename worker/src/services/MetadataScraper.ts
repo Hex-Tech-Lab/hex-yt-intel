@@ -50,7 +50,7 @@ export class MetadataScraper {
       throw new Error(`YouTube API channel fetch failed: ${response.status}`);
     }
 
-    const data = (await response.json()) as { items?: Array<{ snippet?: any }> };
+    const data = (await response.json()) as { items?: Array<{ snippet?: Record<string, unknown> }> };
     const snippet = data.items?.[0]?.snippet;
 
     return {
@@ -157,12 +157,13 @@ export class MetadataScraper {
   /**
    * Get thumbnail URL with fallback chain: high → medium → default
    */
-  private getThumbnailUrl(thumbnails: any): string {
+  private getThumbnailUrl(thumbnails: Record<string, Record<string, string>> | unknown): string {
     if (!thumbnails || typeof thumbnails !== 'object') return '';
+    const t = thumbnails as Record<string, Record<string, string>>;
     return (
-      thumbnails.high?.url ||
-      thumbnails.medium?.url ||
-      thumbnails.default?.url ||
+      t.high?.url ||
+      t.medium?.url ||
+      t.default?.url ||
       ''
     );
   }
