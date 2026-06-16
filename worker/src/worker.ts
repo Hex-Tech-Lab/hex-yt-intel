@@ -421,7 +421,13 @@ app.post("/analyze-llm-stream", async (c) => {
   const apiKey = c.env.OPENROUTER_API_KEY;
 
   if (!req.videoId || !req.analysisId || !req.metadata || !req.sig || !req.exp) {
-    return c.json({ error: 'Missing required fields' }, 400);
+    const missing = [];
+    if (!req.videoId) missing.push('videoId');
+    if (!req.analysisId) missing.push('analysisId');
+    if (!req.metadata) missing.push('metadata');
+    if (!req.sig) missing.push('sig');
+    if (!req.exp) missing.push('exp');
+    return c.json({ error: `Missing required fields: ${missing.join(', ')}` }, 400);
   }
 
   if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, c.env.NODE_ENV === 'production')) {

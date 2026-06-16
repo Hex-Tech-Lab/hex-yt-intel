@@ -24,10 +24,16 @@ export interface CreateAnalysisUseCaseParams {
 }
 
 export interface UseCaseSuccess {
+  id: string;
   analysisId: string;
+  videoId: string;
+  status: 'processing';
+  title: string;
   persona: PersonaId;
   metadata: AnalysisJobMetadata;
   transcript: string;
+  timezone: string;
+  models: string[];
   stream: {
     url: string;
     sig: string;
@@ -62,7 +68,12 @@ export class CreateAnalysisUseCase {
       if (cached) {
         return { 
           type: 'cache_hit', 
-          data: cached,
+          data: {
+            ...cached,
+            status: 'done',
+            markdown: cached.analysisMarkdown,
+            metadata: cached.cachedReport?.metadata,
+          },
           persona: (cached.cachedReport?.persona as PersonaId) || 'p1'
         };
       }
@@ -146,10 +157,16 @@ export class CreateAnalysisUseCase {
       persona,
       headers: quota.headers,
       data: {
+        id: stub.id,
         analysisId: stub.id,
-        persona,
+        videoId,
+        status: 'processing',
+        title: ingestionResult.metadata.title,
         metadata: jobMetadata,
         transcript: ingestionResult.transcript,
+        persona,
+        timezone: params.timezone,
+        models,
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,
