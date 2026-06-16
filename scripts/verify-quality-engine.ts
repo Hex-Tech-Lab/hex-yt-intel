@@ -1,0 +1,28 @@
+import { QualityIntelligenceEngine } from "./quality-engine/engine";
+import { 
+    HexagonalBoundaryRule, 
+    CredentialLeakRule, 
+    WorkflowRule, 
+    ComplexityRule 
+} from "./quality-engine/rules";
+import * as glob from "glob";
+
+const engine = new QualityIntelligenceEngine(process.cwd());
+
+// Register Rules
+engine.addRule(HexagonalBoundaryRule);
+engine.addRule(CredentialLeakRule);
+engine.addRule(WorkflowRule);
+engine.addRule(ComplexityRule);
+
+// Scan files
+const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' });
+const findings = engine.analyze(files);
+
+if (findings.length > 0) {
+  console.error(JSON.stringify(findings, null, 2));
+  process.exit(1);
+}
+
+console.log('✅ Quality Intelligence Engine: No issues found.');
+process.exit(0);

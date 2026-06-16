@@ -65,6 +65,8 @@ export function GlobalKnowledgeMap() {
       ctx.beginPath();
       ctx.strokeStyle = '#aaa';
       edges.forEach((edge: SimulationLink) => {
+        // Guard: Ensure source/target are objects (d3-force might leave them as IDs if link fails)
+        if (typeof edge.source !== 'object' || typeof edge.target !== 'object') return;
         if (edge.source.x !== undefined && edge.source.y !== undefined && edge.target.x !== undefined && edge.target.y !== undefined) {
           ctx.moveTo(edge.source.x, edge.source.y);
           ctx.lineTo(edge.target.x, edge.target.y);
@@ -91,7 +93,7 @@ export function GlobalKnowledgeMap() {
 
   if (loading) return <div>Loading Global Map...</div>;
   if (error) return <div>Error loading graph: {error}</div>;
-  if (!graph || graph.nodes.length === 0) return <div>No history found.</div>;
+  if (!graph || !graph.nodes || graph.nodes.length === 0) return <div>No history found.</div>;
 
-  return <canvas ref={canvasRef} width={800} height={600} className="border border-gray-700" />;
+  return <canvas ref={canvasRef} width={800} height={600} className="border border-gray-700 max-w-full" />;
 }

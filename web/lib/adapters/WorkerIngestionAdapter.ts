@@ -1,4 +1,5 @@
 import { fetchWorkerMetadata, fetchWorkerTranscript } from '@/lib/services/metadata';
+import { fetchSubtitles } from '@/lib/services/decodo';
 import { detectPersona } from '@/lib/prompts';
 import type { VideoMetadata, IngestionResult, MetadataIngestionPort } from '@/lib/ports';
 import type { PersonaId } from '@/lib/prompts';
@@ -16,7 +17,16 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
     }
 
     const meta = metadataResult.value;
-    const transcript = transcriptResult.status === 'fulfilled' ? transcriptResult.value : '';
+    let transcript = transcriptResult.status === 'fulfilled' ? transcriptResult.value : '';
+
+    if (!transcript) {
+      console.log(`[WorkerIngestionAdapter] Native transcript empty for ${videoId}, attempting Decodo fallback...`);
+      const decodoResult = await fetchSubtitles(videoId);
+      if (decodoResult.success && decodoResult.transcript) {
+        transcript = decodoResult.transcript;
+        console.log(`[WorkerIngestionAdapter] Decodo fallback successful for ${videoId}`);
+      }
+    }
 
     const metadata: VideoMetadata = {
       title: meta.title,

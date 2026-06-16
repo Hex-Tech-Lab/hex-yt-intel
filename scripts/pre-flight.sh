@@ -54,5 +54,10 @@ if grep -E "project\-[a-z0-9]{20}|eyJ[A-Za-z0-9_-]{100,}" "$FILE" | grep -v "pla
   echo "   Verify these are NOT production secrets before committing."
 fi
 
+echo "🔍 Running Quality Intelligence Engine..."
+# Move to root to run engine correctly
+cd "$(dirname "$0")/.."
+pnpm tsx scripts/verify-quality-engine.ts
+
 echo "✅ Pre-flight checks passed. Safe to commit."
 exit 0
