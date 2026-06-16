@@ -1,0 +1,19 @@
+scripts/verify-quality-engine.ts
+  s_749a5385eae1fb::t_a2f9d3f385e475 33-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "c244a0c82c1edb4a1cfc6eb33f9e31b041a74461",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
