@@ -1,0 +1,25 @@
+web/utils/supabase/client.ts
+  s_749a5385eae1fb::t_bfac8c44e00bc4 2,4-6,10-11
+scripts/validate-env.js
+  s_749a5385eae1fb::t_a2c38ad87d597d 1-6,8-17,19,21,24-32,38
+web/lib/env.ts
+  s_749a5385eae1fb::t_d2463b97c28903 3-6,40-52,69,71,74-75,77-78,80-86,88-93,95,99-102,106,108-110,112-116,119-125,129-139,142,145-146,151-155,157-166,169-177,181-182,185-186
+scripts/pre-flight.sh
+  s_749a5385eae1fb::t_9b551ac80162e6 7-8,21,23-27,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "72abe730274fb49238e1a40f79e230a970488c0a",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
