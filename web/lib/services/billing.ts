@@ -106,8 +106,8 @@ export async function chargeMonthlyQuota(
   userEmail?: string
 ): Promise<{ allowed: boolean; response?: NextResponse }> {
   if (
-    (ADMIN_EMAIL && userEmail === ADMIN_EMAIL) ||
-    (process.env.TEST_USER_BYPASS_ID && userId === process.env.TEST_USER_BYPASS_ID)
+    (ADMIN_EMAIL && userEmail && userEmail === ADMIN_EMAIL) ||
+    (process.env.TEST_USER_BYPASS_ID && userId && userId === process.env.TEST_USER_BYPASS_ID)
   ) {
     return { allowed: true };
   }
@@ -145,8 +145,8 @@ export async function checkMonthlyQuota(
   userEmail?: string
 ): Promise<{ allowed: boolean }> {
   if (
-    (ADMIN_EMAIL && userEmail === ADMIN_EMAIL) ||
-    (process.env.TEST_USER_BYPASS_ID && userId === process.env.TEST_USER_BYPASS_ID)
+    (ADMIN_EMAIL && userEmail && userEmail === ADMIN_EMAIL) ||
+    (process.env.TEST_USER_BYPASS_ID && userId && userId === process.env.TEST_USER_BYPASS_ID)
   ) {
     return { allowed: true };
   }

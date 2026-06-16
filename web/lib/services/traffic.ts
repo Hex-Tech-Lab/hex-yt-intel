@@ -346,7 +346,7 @@ export async function guardTraffic(
   _userAgent?: string
 ): Promise<{ allowed: boolean; response?: NextResponse; headers?: Record<string, string> }> {
   // Admin bypass: grant immediate access, skip the limiter entirely.
-  if (userEmail === ADMIN_EMAIL || userId === process.env.TEST_USER_BYPASS_ID) {
+  if ((ADMIN_EMAIL && userEmail && userEmail === ADMIN_EMAIL) || (process.env.TEST_USER_BYPASS_ID && userId && userId === process.env.TEST_USER_BYPASS_ID)) {
     return { allowed: true, headers: { 'X-RateLimit-Admin': 'bypassed' } };
   }
 

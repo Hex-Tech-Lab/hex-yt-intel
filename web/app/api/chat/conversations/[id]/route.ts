@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 
 /** PATCH /api/chat/conversations/[id] — rename a thread. */
@@ -11,8 +12,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json().catch(() => ({}));
-  const title = typeof body.title === 'string' ? body.title.trim().slice(0, 120) : '';
+  const body: unknown = await request.json().catch(() => ({}));
+  const payloadSchema = z.object({
+    title: z.string().transform(v => v.trim().slice(0, 120)).default(''),
+  });
+
+  const parsed = payloadSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+  }
+  const { title } = parsed.data;
+
   if (!title) return NextResponse.json({ error: 'Title required' }, { status: 400 });
 
   // RLS scopes the update to the owner.

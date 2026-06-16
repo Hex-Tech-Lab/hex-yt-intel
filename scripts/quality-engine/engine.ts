@@ -1,5 +1,6 @@
 import { Project, Node, SourceFile } from "ts-morph";
 import * as path from "path";
+import * as fs from "fs";
 
 export interface Finding {
   file: string;
@@ -17,8 +18,10 @@ export interface IRule {
 export class QualityIntelligenceEngine {
   private project: Project;
   private rules: IRule[] = [];
+  private rootDir: string;
 
   constructor(rootDir: string) {
+    this.rootDir = rootDir;
     this.project = new Project({
       tsConfigFilePath: path.join(rootDir, "tsconfig.json"),
       skipAddingFilesFromTsConfig: true,
@@ -33,7 +36,7 @@ export class QualityIntelligenceEngine {
     const findings: Finding[] = [];
     // Only analyze files that exist in the project
     const files = changedFiles
-        .map(f => path.join(process.cwd(), f))
+        .map(f => path.resolve(this.rootDir, f))
         .filter(f => fs.existsSync(f))
         .map(f => this.project.addSourceFileAtPath(f));
 
@@ -49,4 +52,3 @@ export class QualityIntelligenceEngine {
     return findings;
   }
 }
-import * as fs from "fs";

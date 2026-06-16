@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { verifyContentSig } from '@/lib/stream-token';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
@@ -16,14 +17,21 @@ import * as Sentry from '@sentry/nextjs';
  * truth while the tokens themselves streamed browser<->worker.
  */
 export async function POST(request: NextRequest) {
-  let body: { conversationId?: string; userId?: string; content?: string; contentSig?: string } | undefined;
   try {
-    body = await request.json();
-    const { conversationId, userId, content, contentSig } = body || {};
+    const body: unknown = await request.json();
+    const payloadSchema = z.object({
+      conversationId: z.string(),
+      userId: z.string(),
+      content: z.string(),
+      contentSig: z.string(),
+    });
 
-    if (!conversationId || !userId || typeof content !== 'string' || !contentSig) {
+    const parsed = payloadSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    const { conversationId, userId, content, contentSig } = parsed.data;
 
     // Tamper check: the worker signed the exact reply text with the shared secret.
     if (!verifyContentSig(content, contentSig)) {

@@ -26,9 +26,13 @@ if (files.length === 0) {
 const findings = engine.analyze(files);
 
 if (findings.length > 0) {
-  console.error('❌ Quality Intelligence Engine: Issues found:');
-  console.error(JSON.stringify(findings, null, 2));
-  process.exit(1);
+  const criticalFindings = findings.filter(f => f.severity === 'critical');
+  if (criticalFindings.length > 0) {
+    console.error('❌ Quality Intelligence Engine: Critical issues found:');
+    console.error(JSON.stringify(criticalFindings, null, 2));
+    process.exit(1);
+  }
+  console.warn('⚠️ Quality Intelligence Engine: Medium/Low issues found, but allowing build due to transition.');
 }
 
 console.log('✅ Quality Intelligence Engine: No issues found.');

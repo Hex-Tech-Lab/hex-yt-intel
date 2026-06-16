@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import {
   SupabaseAuthAdapter,
   SupabasePersistenceAdapter,
@@ -57,9 +58,18 @@ export async function POST(
   const { userId, tier } = identity;
 
   try {
-    const body = await request.json().catch(() => ({}));
-    const rawContent = typeof body.content === 'string' ? body.content : '';
-    const clientMsgId = typeof body.clientMsgId === 'string' ? body.clientMsgId : null;
+    const body: unknown = await request.json().catch(() => ({}));
+    const payloadSchema = z.object({
+      content: z.string().default(''),
+      clientMsgId: z.string().nullable().optional().default(null)
+    });
+
+    const parsed = payloadSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    const { content: rawContent, clientMsgId } = parsed.data;
 
     const persistenceAdapter = new SupabasePersistenceAdapter();
     const modelAdapter = new SettingsModelAdapter();

@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 30; // seconds, allow longer processing on Vercel Edge
 
 import { NextRequest, NextResponse } from 'next/server';
-
+import { z } from 'zod';
 
 import * as Sentry from '@sentry/nextjs';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
@@ -33,25 +33,25 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
-    const { scope, videoId, query } = body as {
-      scope?: string;
-      videoId?: string;
-      query?: string;
-    };
+    const body: unknown = await req.json();
+    const payloadSchema = z.object({
+      scope: z.enum(['video', 'global']),
+      videoId: z.string().optional(),
+      query: z.string().min(1),
+    });
 
-    if (!scope || (scope !== 'video' && scope !== 'global')) {
-      return NextResponse.json({ error: 'Invalid or missing scope' }, { status: 400 });
+    const parsed = payloadSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
-    if (!query || typeof query !== 'string') {
-      return NextResponse.json({ error: 'Missing query string' }, { status: 400 });
-    }
+
+    const { scope, videoId } = parsed.data;
 
     // Prepare adapters
 
 
     // Business logic implementation
-    const userId = (identity as any).id;
+    const userId = identity.userId;
     const persistence = new SupabasePersistenceAdapter();
 
     if (scope === 'video') {

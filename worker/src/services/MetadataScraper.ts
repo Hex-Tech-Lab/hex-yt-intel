@@ -85,9 +85,13 @@ export class MetadataScraper {
         throw new Error(`YouTube API returned ${response.status}`);
       }
 
-      const data = (await response.json()) as {
-        items?: Array<{ snippet?: any; statistics?: any; contentDetails?: any }>;
-        error?: any;
+      const data = (await response.json()) as { 
+        items?: Array<{ 
+          snippet?: Record<string, unknown>; 
+          statistics?: Record<string, unknown>; 
+          contentDetails?: Record<string, unknown> 
+        }>;
+        error?: unknown;
       };
 
       if (data.error) {

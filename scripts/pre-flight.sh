@@ -57,7 +57,7 @@ fi
 echo "🔍 Running Quality Intelligence Engine..."
 # Move to root to run engine correctly
 cd "$(dirname "$0")/.."
-pnpm tsx scripts/verify-quality-engine.ts
+pnpm exec tsx scripts/verify-quality-engine.ts
 
 echo "✅ Pre-flight checks passed. Safe to commit."
 exit 0
