@@ -477,10 +477,10 @@ app.post("/analyze-llm-stream", async (c) => {
 
   for (const s of secretsToTry) {
     if (!s) continue;
-    const expected = await hmacHex(
-      s,
-      `${req.videoId}.${req.analysisId}.${req.exp}.${JSON.stringify(req.models ?? [])}`
-    );
+    const modelStr = [...(req.models ?? [])].sort().join(',');
+    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
+    const expected = await hmacHex(s, msg);
+    
     if (timingSafeEqualHex(expected, req.sig)) {
       activeSecret = s;
       isTokenValid = true;
@@ -489,6 +489,25 @@ app.post("/analyze-llm-stream", async (c) => {
   }
 
   if (!isTokenValid) {
+    const isPreview = c.env.NODE_ENV !== 'production';
+    const modelStr = [...(req.models ?? [])].sort().join(',');
+    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
+    
+    if (isPreview) {
+      console.warn('[analyze-llm-stream] HMAC Mismatch Diagnostic:', {
+        providedSig: req.sig,
+        message: msg,
+        secretUsed: activeSecret === 'dev-hmac-secret-123' ? 'FALLBACK' : 'CONFIGURED',
+      });
+      return c.json({ 
+        error: 'Invalid token', 
+        debug: {
+          msg: msg,
+          sig: req.sig,
+          secret: activeSecret === 'dev-hmac-secret-123' ? 'FALLBACK' : 'CONFIGURED'
+        }
+      }, 401);
+    }
     return c.json({ error: 'Invalid token' }, 401);
   }
 
