@@ -566,7 +566,7 @@ app.post("/analyze-llm-stream", async (c) => {
 
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (obj: any) => {
+      const send = (obj: Record<string, unknown>) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`)); } catch { /* client gone */ }
       };
 
