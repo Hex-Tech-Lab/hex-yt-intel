@@ -1,0 +1,25 @@
+scripts/pre-flight.sh
+  s_749a5385eae1fb::t_e0d93e582253b0 14-16,26,30
+web/utils/supabase/server.ts
+  s_749a5385eae1fb::t_ceba7940f0562e 3,7-8
+web/lib/env.ts
+  s_749a5385eae1fb::t_f4098f4c45a254 4-7,41,43,50,69,73,75,81-86,88,91,97,99,112,120-121,123,125,130,153,155
+web/lib/stream-token.ts
+  s_749a5385eae1fb::t_64d6427eb873cd 25-28,38-40,45-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "ae4acaeab5e5979705e859f3c4a194771d2ff3d0",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
