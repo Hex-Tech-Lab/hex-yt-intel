@@ -141,14 +141,23 @@ function validateEnvVar(
     throw new Error(`Environment variable ${name} must be a string, got ${typeof value}`);
   }
 
-  // In production, reject placeholder values (but allow in CI and Vercel preview environments)
   const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
+  const isPreview = process.env.VERCEL_ENV === 'preview' || process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview';
   const isProduction =
     !isCI &&
     (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
       process.env.VERCEL_ENV === 'production' ||
       (process.env.NODE_ENV === 'production' && !process.env.VERCEL));
-  const isCIorPreview = isCI || process.env.VERCEL_ENV === 'preview';
+
+  // Context-aware fallback for Worker URL in preview environments
+  if (name === 'NEXT_PUBLIC_WORKER_URL' && !value && isPreview && !isProduction) {
+    const fallback = 'https://yt-intel.hex-tech-lab.workers.dev';
+    console.info(`[env-telemetry] NEXT_PUBLIC_WORKER_URL missing in preview; assigning fallback: ${fallback}`);
+    return fallback;
+  }
+
+  // In production, reject placeholder values (but allow in CI and Vercel preview environments)
+  const isCIorPreview = isCI || isPreview;
 
   const resolvedAllowPlaceholder = allowPlaceholder !== undefined
     ? allowPlaceholder
