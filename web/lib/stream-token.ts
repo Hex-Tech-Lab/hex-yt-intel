@@ -22,11 +22,10 @@ function hmacHex(message: string): string {
 
 export function signStreamToken(videoId: string, analysisId: string, models: string[] = []): { sig: string; exp: number } {
   const exp = Date.now() + TOKEN_TTL_MS;
-  // Bind analysisId so the browser can't swap it to overwrite another row, and the
-  // model cascade so the browser can't escalate to expensive models. JSON.stringify
-  // (not join) so model ids containing a comma can't alias to a different cascade.
-  // The worker verifies the byte-identical `videoId.analysisId.exp.JSON(models)`.
-  return { sig: hmacHex(`${videoId}.${analysisId}.${exp}.${JSON.stringify(models)}`), exp };
+  // Use a stable, simple separator format. Sort models to ensure order-independence.
+  const modelStr = [...models].sort().join(',');
+  const msg = `${videoId}:${analysisId}:${exp}:${modelStr}`;
+  return { sig: hmacHex(msg), exp };
 }
 
 /**
@@ -36,14 +35,16 @@ export function signStreamToken(videoId: string, analysisId: string, models: str
  */
 export function signChatToken(conversationId: string, userId: string, models: string[] = []): { sig: string; exp: number } {
   const exp = Date.now() + TOKEN_TTL_MS;
-  // Bind the per-tier chat model cascade so the worker runs exactly this list.
-  // JSON.stringify (not join) — see signStreamToken; worker verifies byte-identically.
-  return { sig: hmacHex(`chat.${conversationId}.${userId}.${exp}.${JSON.stringify(models)}`), exp };
+  const modelStr = [...models].sort().join(',');
+  const msg = `chat:${conversationId}:${userId}:${exp}:${modelStr}`;
+  return { sig: hmacHex(msg), exp };
 }
 
 export function verifyChatToken(conversationId: string, userId: string, exp: number, sig: string, models: string[] = []): boolean {
   if (Date.now() > exp) return false;
-  return safeEqualHex(hmacHex(`chat.${conversationId}.${userId}.${exp}.${JSON.stringify(models)}`), sig);
+  const modelStr = [...models].sort().join(',');
+  const msg = `chat:${conversationId}:${userId}:${exp}:${modelStr}`;
+  return safeEqualHex(hmacHex(msg), sig);
 }
 
 function safeEqualHex(a: string, b: string): boolean {
