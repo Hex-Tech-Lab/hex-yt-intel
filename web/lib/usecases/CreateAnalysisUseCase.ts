@@ -11,6 +11,8 @@ import type { UserTier } from '@/lib/types/billing';
 import type { PersonaId } from '@/lib/prompts';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 
+import { env } from '@/lib/env';
+
 export interface CreateAnalysisUseCaseParams {
   url: string;
   userId: string;
@@ -27,6 +29,7 @@ export interface UseCaseSuccess {
   metadata: AnalysisJobMetadata;
   transcript: string;
   stream: {
+    url: string;
     sig: string;
     exp: number;
   };
@@ -148,6 +151,7 @@ export class CreateAnalysisUseCase {
         metadata: jobMetadata,
         transcript: ingestionResult.transcript,
         stream: {
+          url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,
           exp: token.exp,
         },
