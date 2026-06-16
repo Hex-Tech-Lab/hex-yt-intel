@@ -17,7 +17,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   const isChatOpen = useChatStore((s) => s.isChatOpen);
 
   return (
-    <div className={`grid h-screen w-full min-w-[1024px] bg-[var(--void)] text-[var(--ink)] overflow-hidden gap-[4px] p-[4px] ${
+    <div className={`grid h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden gap-[4px] p-[4px] ${
       rightPanel ? "grid-cols-[260px_1fr_390px]" : "grid-cols-[260px_1fr]"
     }`}>
       <aside className="border border-[var(--line)] bg-[var(--void)] h-full w-[260px] flex-shrink-0 overflow-y-auto flex flex-col rounded-xl">

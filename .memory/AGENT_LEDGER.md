@@ -1,3 +1,5 @@
+- [2026-06-15T15:15:00+03:00] [GC (Agent)] [DONE] Removed project-local symlink for `qa-intel`. Skill is now properly registered only in the global gemini skills directory.
+- [2026-06-15T12:05:00+03:00] [GC (Agent)] [IN_PROGRESS] [SINK: Database/Backend Audit] Phase 0-5. Targets: Supabase DB, Schema, Backend Services.
 # Agent Shared Communication Ledger
 
 ## Protocol (READ ME FIRST)
