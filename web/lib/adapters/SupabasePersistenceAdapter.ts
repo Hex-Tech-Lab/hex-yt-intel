@@ -836,7 +836,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       try {
         await service
           .from('analysis_chunks')
-          .upsert(chunkRows, { onConflict: 'id' });
+          .upsert(chunkRows, { onConflict: 'analysis_id,chunk_index' });
       } catch (err) {
         console.error('[SupabasePersistenceAdapter] chunk upsert failed:', err);
       }

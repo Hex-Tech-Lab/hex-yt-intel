@@ -1,4 +1,4 @@
-const requiredVars = ['DECODO_API_KEY', 'YOUTUBE_API_KEY', 'CLOUDFLARE_SECRET_TOKEN'];
+const requiredVars = ['DECODO_API_KEY', 'YOUTUBE_API_KEY', 'CLOUDFLARE_SECRET_TOKEN', 'NEXT_PUBLIC_WORKER_URL'];
 
 const missing = requiredVars.filter(varName => !process.env[varName]);
 
