@@ -1,0 +1,21 @@
+web/package.json
+  s_749a5385eae1fb::t_9532e3a2d4dea8 8
+scripts/pre-flight.sh
+  s_749a5385eae1fb::t_541ab4fa0ebe07 10-11,21,25,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "2a23af86034a3039b0a73bfe20fdaa4f8f94fb51",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
