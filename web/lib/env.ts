@@ -15,6 +15,7 @@ const REQUIRED_ENV_VARS = [
   'STRIPE_WEBHOOK_SECRET',
   'UPSTASH_VECTOR_REST_URL',
   'UPSTASH_VECTOR_REST_TOKEN',
+  'STREAM_HMAC_SECRET',
 ] as const;
 
 const OPTIONAL_ENV_VARS = [
@@ -31,7 +32,6 @@ const OPTIONAL_ENV_VARS = [
   'QSTASH_CURRENT_SIGNING_KEY',
   'QSTASH_NEXT_SIGNING_KEY',
   'DECODO_API_KEY',
-  'STREAM_HMAC_SECRET',
 ] as const;
 
 type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];
@@ -365,9 +365,16 @@ export const env = {
   get decodoApiKey(): string | undefined {
     return validateEnvVar('DECODO_API_KEY', false);
   },
-  get streamHmacSecret(): string | undefined {
-    return validateEnvVar('STREAM_HMAC_SECRET', false) || 
-      (process.env.NODE_ENV === 'development' ? 'dev-hmac-secret-123' : undefined);
+  get streamHmacSecret(): string {
+    const val = validateEnvVar('STREAM_HMAC_SECRET', true);
+    const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
+    const isPreview = process.env.VERCEL_ENV === 'preview' || process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview';
+
+    if (val && !isPlaceholder(val)) return val;
+    if (isCI || isPreview || process.env.NODE_ENV === 'development') {
+      return 'dev-hmac-secret-123';
+    }
+    return val!;
   },
 };
 
