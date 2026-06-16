@@ -1,0 +1,31 @@
+package.json
+  s_749a5385eae1fb::t_91cf23406aead7 3
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_749a5385eae1fb::t_50df0242a344ee 4-7,10-11,16-21,24-38,43-47,56-83,102-103,105-155,157
+  s_749a5385eae1fb::t_b05e289ca05ffa 12
+web/lib/env.ts
+  s_749a5385eae1fb::t_b6f9d33cabd62a 289-291
+  s_749a5385eae1fb::t_866e5f703a969a 208-211
+web/package.json
+  s_749a5385eae1fb::t_4aad26b8f8b47c 3
+worker/package.json
+  s_749a5385eae1fb::t_56b5c3f147dd52 3
+web/app/api/analyses/route.ts
+  s_749a5385eae1fb::t_5c805f0c49c1ed 17-19,21,27-29,35-39,43,61-66,76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "b8b84bed0d21f8f503ba24b52d4e01781378d5e7",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
