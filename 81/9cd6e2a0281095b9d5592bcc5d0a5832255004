@@ -1,0 +1,28 @@
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_749a5385eae1fb::t_dfef3461f045d7 27,29-31
+  s_749a5385eae1fb::t_5cbb76eb2d9601 36
+  s_749a5385eae1fb::t_bedc01aba9edc2 75
+  s_749a5385eae1fb::t_2a10e6feb9f12e 71-74,76
+  s_749a5385eae1fb::t_08f490b5da0f43 168
+  s_749a5385eae1fb::t_83a60269c0abb1 35
+  s_749a5385eae1fb::t_40832807ac09ac 160,162-164,167
+  s_749a5385eae1fb::t_76da114b85dabe 169
+worker/src/worker.ts
+  s_749a5385eae1fb::t_79d684717c2728 424-430
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "819cd6e2a0281095b9d5592bcc5d0a5832255004",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
