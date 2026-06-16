@@ -1,0 +1,98 @@
+worker/src/worker.ts
+  s_86988102fae394::t_15d6bc1d868c6f 216-230
+  s_86988102fae394::t_4e118f4b4cd8c6 432-445
+  s_86988102fae394::t_0fc7a622f24abf 579
+web/app/landing-page.tsx
+  s_749a5385eae1fb::t_ea83eadcd90ba3 141
+web/lib/ports/DecodoPort.ts
+  s_749a5385eae1fb::t_b0d95f9995948c 1-5
+web/lib/adapters/WorkerIngestionAdapter.ts
+  s_749a5385eae1fb::t_513ef80680507a 19
+web/components/templates/console/DashboardLayout.tsx
+  s_749a5385eae1fb::t_522bf77fa84b37 20,27
+package.json
+  s_749a5385eae1fb::t_3f313772a7202d 3,5,7-9
+worker/src/services/TranscriptExtractor.ts
+  s_86988102fae394::t_48e5e6fab9e504 30,35,38,42-43,64-69
+web/app/api/analyses/route.ts
+  s_749a5385eae1fb::t_8fdce5f5117279 73
+  s_749a5385eae1fb::t_c785c28e552ab9 15,21
+  s_749a5385eae1fb::t_ed9405c49d56d6 28
+  s_749a5385eae1fb::t_88562ce30d1065 61
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_749a5385eae1fb::t_0f84464fa36504 17
+web/tests/decodo-repro.spec.ts
+  s_86988102fae394::t_48bff2d15bf037 1-22
+web/lib/services/decodo.ts
+  s_749a5385eae1fb::t_0683620f75c87e 21
+  s_749a5385eae1fb::t_c48ecf95062f85 86,88
+web/lib/services/traffic.ts
+  s_749a5385eae1fb::t_2dee674c7eb4b7 22,104-121
+  s_749a5385eae1fb::t_4ddd0df8a913fe 252-253,257,259-260,263-266,268-270,273-275,277-278,283,286,288-289,291
+  s_749a5385eae1fb::t_3f94ac254d6908 18
+  s_749a5385eae1fb::t_3f1690f3909cf1 349
+scripts/verify-quality-engine.ts
+  s_749a5385eae1fb::t_4815c0d43f4d1f 19,21,23-24
+  s_749a5385eae1fb::t_91beb56ec41a84 20,22,25,29
+.memory/AGENT_LEDGER.md
+  s_749a5385eae1fb::t_c9e366dcbca99d 88-97
+scripts/quality-engine/rules.ts
+  s_749a5385eae1fb::t_5c39739b7f7f09 52,54-56,58-60,63-64,68,70-74,77-80
+  s_749a5385eae1fb::t_ea1218eb971e9d 1-2,34,40,61,66-67
+  s_749a5385eae1fb::t_5be297e4b420db 65,88,92,101
+  s_749a5385eae1fb::t_aa718e1bc96a75 9-10,16,57,62,69
+worker/src/services/MetadataScraper.ts
+  s_86988102fae394::t_9d7385acd77030 43-61
+docs/history/10x-synthesis-2026-06-15.md
+  s_86988102fae394::t_3063f3cc8cf1f1 1-20
+web/components/templates/LegalPage.tsx
+  s_749a5385eae1fb::t_3e538898548a1d 17
+scripts/quality-engine/engine.ts
+  s_749a5385eae1fb::t_396ef86cba3ee4 42-46
+web/lib/services/billing.ts
+  s_749a5385eae1fb::t_d0682397d59119 108-113
+  s_749a5385eae1fb::t_36b5dfb8ae4ccb 147-152
+web/lib/adapters/DecodoAdapter.ts
+  s_749a5385eae1fb::t_3371e5c030bbc5 1-8
+web/app/layout.tsx
+  s_749a5385eae1fb::t_5082c0d06c3a49 32
+  s_749a5385eae1fb::t_a4ebff3a6ea988 1,33-36
+web/lib/ports/index.ts
+  s_749a5385eae1fb::t_2e1a3759aaa3d0 1
+design-system/tailwind-config-extensions.ts
+  s_749a5385eae1fb::t_d8bfdfeb827267 1
+  s_749a5385eae1fb::t_9b7faeda06fb8f 95-98
+docs/testing/chunk-1.6.0-review-matrix.md
+  s_86988102fae394::t_369d0bbfeb0cd4 1-23
+worker/src/services/test-extractor.ts
+  s_86988102fae394::t_ec9fb382723d88 12
+  s_86988102fae394::t_a02aaf15944d3c 1-11,13-24
+web/lib/adapters/index.ts
+  s_749a5385eae1fb::t_3222369996c7ef 1
+worker/src/services/TranscriptExtractor.test.ts
+  s_86988102fae394::t_3365c557737c24 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "daba5b6c3b55fe67e00b97d5f64ebaa7a77ab72d",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_86988102fae394": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "ea666339-85c3-47f2-a5e8-30ef6cb21bdf",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
