@@ -1,0 +1,21 @@
+worker/src/chat-stream.ts
+  s_749a5385eae1fb::t_c1dc2d7679d99f 235-238,247-265
+worker/src/worker.ts
+  s_749a5385eae1fb::t_f79b3c2137eade 480-483,492-510
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "3df6f2bae6f0c67662a062b61f16f361e8b49be8",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
