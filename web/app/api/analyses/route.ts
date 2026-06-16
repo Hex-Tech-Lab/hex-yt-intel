@@ -14,22 +14,33 @@ import {
   WorkerIngestionAdapter,
   DecodoAdapter,
   SupabasePersistenceAdapter,
+  PostgresBillingAdapter,
+  SettingsModelAdapter,
+  StreamTokenAdapter,
 } from '@/lib/adapters';
+
 // Module-level singleton adapters — created once per cold-start, reused across requests.
 const authAdapter = new SupabaseAuthAdapter();
 const ingestionAdapter = new WorkerIngestionAdapter();
 const decodoAdapter = new DecodoAdapter();
 const persistenceAdapter = new SupabasePersistenceAdapter();
+const billingAdapter = new PostgresBillingAdapter();
+const modelResolutionAdapter = new SettingsModelAdapter();
+const tokenAdapter = new StreamTokenAdapter();
 
 import { CreateAnalysisUseCase } from '@/lib/usecases/CreateAnalysisUseCase';
 
 const createAnalysisUseCase = new CreateAnalysisUseCase(
   ingestionAdapter,
-  decodoAdapter
+  decodoAdapter,
+  persistenceAdapter,
+  billingAdapter,
+  modelResolutionAdapter,
+  tokenAdapter
 );
 
 export async function POST(request: NextRequest) {
-  let body: { url?: string } | undefined;
+  let body: { url?: string; timezone?: string; persona?: string; forceRefresh?: boolean } | undefined;
   try {
     body = await request.json();
     const validation = AnalysisCreateSchema.safeParse(body);
@@ -47,6 +58,12 @@ export async function POST(request: NextRequest) {
     // 2. Delegate business logic to the UseCase
     const useCaseResult = await createAnalysisUseCase.execute({
       url: validation.data.url,
+      userId: identity.userId,
+      tier: identity.tier,
+      email: identity.email,
+      timezone: validation.data.timezone,
+      persona: validation.data.persona,
+      forceRefresh: validation.data.forceRefresh,
     });
 
     if (useCaseResult.type === 'error') {
@@ -56,7 +73,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const responseHeaders = new Headers({ 'X-Active-Persona': useCaseResult.data.persona });
+    const responseHeaders = new Headers({ 'X-Active-Persona': useCaseResult.persona });
     if (useCaseResult.headers) {
       Object.entries(useCaseResult.headers).forEach(([k, v]) => responseHeaders.set(k, String(v)));
     }

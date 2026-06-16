@@ -205,7 +205,10 @@ function validateEnvironment(): void {
     (process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
       process.env.VERCEL_ENV === 'production' ||
       (process.env.NODE_ENV === 'production' && !process.env.VERCEL));
-  const isCIorPreview = isCI || process.env.VERCEL_ENV === 'preview';
+  const isCIorPreview =
+    isCI ||
+    process.env.VERCEL_ENV === 'preview' ||
+    process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview';
 
   // Allow placeholders in CI/Preview, but enforce strict validation in production
   const allowPlaceholder = isCIorPreview && !isProduction;
@@ -283,7 +286,9 @@ export function getEnv(): EnvironmentConfig {
       version: validateEnvVar('NEXT_PUBLIC_APP_VERSION', false) || '1.0.0',
       isDevelopment: process.env.NODE_ENV === 'development',
       isProduction: process.env.NODE_ENV === 'production',
-      isPreview: process.env.VERCEL_ENV === 'preview',
+      isPreview:
+        process.env.VERCEL_ENV === 'preview' ||
+        process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview',
     },
   };
 }
