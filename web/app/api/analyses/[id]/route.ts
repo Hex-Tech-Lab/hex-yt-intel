@@ -16,6 +16,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (error === 'InternalError') {
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
+
     if (error === 'NotFound' || !analysis) {
       return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
     }
