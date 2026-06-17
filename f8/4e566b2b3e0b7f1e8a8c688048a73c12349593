@@ -1,0 +1,32 @@
+web/hooks/useSSEStream.ts
+  s_18b04957a1f679::t_c368d346cfb7ac 203-213
+worker/src/worker.ts
+  s_18b04957a1f679::t_c12f2f2b56aa06 574-599
+web/lib/adapters/synthesis-stream-adapter.ts
+  s_18b04957a1f679::t_83cb46272f74b2 386-392
+docs/testing/chunk-1.8.6-review-matrix.md
+  s_18b04957a1f679::t_2b555801968b5c 27-28
+  s_18b04957a1f679::t_04b81a95766438 26
+  s_18b04957a1f679::t_637a3db90f62d6 1-25,29-76
+web/components/templates/console/DimensionDrawer.tsx
+  s_18b04957a1f679::t_c597a618236c7e 17,27,30,34,36,42,64
+web/components/templates/console/MindMap.tsx
+  s_18b04957a1f679::t_1027c8f2b28b74 90,92-105,109
+  s_18b04957a1f679::t_2f0be61d7bd0b4 210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "f84e566b2b3e0b7f1e8a8c688048a73c12349593",
+  "prompts": {},
+  "sessions": {
+    "s_18b04957a1f679": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a942208ffeeQA17vRw1XeaYM",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
