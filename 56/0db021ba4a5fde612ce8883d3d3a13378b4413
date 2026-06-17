@@ -1,0 +1,19 @@
+web/app/api/auth/signin/route.ts
+  s_18b04957a1f679::t_141f69ece63c00 8,12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "560db021ba4a5fde612ce8883d3d3a13378b4413",
+  "prompts": {},
+  "sessions": {
+    "s_18b04957a1f679": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a942208ffeeQA17vRw1XeaYM",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
