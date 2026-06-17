@@ -2,7 +2,6 @@
 
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
-import DOMPurify from 'isomorphic-dompurify';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 import { Icon, MonoLabel } from '@/components/templates/_shared/primitives';
@@ -68,7 +67,7 @@ export function LegalPage({ content }: LegalPageProps) {
         PIXEL-PERFECT DESIGN SYSTEM INJECTION
         Directly mapping from colors_and_type.css and motion.css specs
       */}
-      <style dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(`
+      <style>{`
         @keyframes hx-rise { 
           from { opacity: 0; transform: translateY(12px); } 
           to { opacity: 1; transform: translateY(0); } 
@@ -162,7 +161,7 @@ export function LegalPage({ content }: LegalPageProps) {
           border: 1px solid #1E293B !important;
           color: #E2E8F0 !important;
         }
-      `)}} />
+      `}</style>
     </div>
   );
 }
