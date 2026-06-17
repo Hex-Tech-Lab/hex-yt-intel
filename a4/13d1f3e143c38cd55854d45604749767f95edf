@@ -1,0 +1,97 @@
+worker/src/services/TranscriptExtractor.ts
+  s_8c292d720914af::t_e202a8e6f9ad0c 87
+scripts/verify-production.sh
+  s_b53bf37df1f9da::t_e3fe2731b7107b 374
+web/hooks/useSSEStream.ts
+  s_fa57efb3016ed9::t_a61dedba639f39 253
+web/lib/adapters/synthesis-stream-adapter.ts
+  s_8c292d720914af::t_207f51d519d791 372
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_fa57efb3016ed9::t_31d6016a042778 1171
+AGENTS.md
+  s_6dedbdbb4107df::t_221f41b0107ee8 14
+  s_6dedbdbb4107df::t_4f2c72a9fedf21 16
+.memory/AGENT_LEDGER.md
+  s_4a4b7b419d5e90::t_402ac0aa0148ff 100-102
+design-system/tailwind-config-extensions.ts
+  s_4a4b7b419d5e90::t_d752d4ce0d9111 74
+web/app/api/auth/signin/route.ts
+  s_4a4b7b419d5e90::t_ee576e267c1c83 9-16,20-27
+web/components/templates/console/KnowledgeGraphCanvas.tsx
+  s_71edae0141cf3a::t_916cc634b74cb6 258
+web/app/share/[token]/page.tsx
+  s_fa57efb3016ed9::t_31d6016a042778 74
+web/components/templates/console/WordCloud.tsx
+  s_71edae0141cf3a::t_be7a2ddd08a908 59
+  s_71edae0141cf3a::t_b5d475c2ecfbf3 72-73,77-81
+worker/src/services/PromptBuilder.ts
+  s_8c292d720914af::t_5b46c9c2be0ce3 77
+pnpm-lock.yaml
+  s_18b04957a1f679::t_dbcb161be61b76 91-93,214,253-267,335-338,392-427,634-642,2163-2165,2824-2826,3007-3010,3173-3176,3215-3217,3277-3279,3319-3322,3820-3823,4021-4023,4077-4080,4139-4147,4390-4392,4782-4784,5090-5093,5344-5346,5453-5459,5468-5471,5475-5478,5729-5732,5747-5750,5765-5772,5859-5865,5937-5956,6057-6060,6092-6115,6247-6250,7481-7483,8331-8334,8483-8487,8693-8699,8730-8731,8786-8789,8836-8837,9565-9570,9759-9760,9814-9821,9898-9923,10236-10237,10744-10747,11173-11176,11477-11478,11553-11558,11565-11568,11571-11574,11848,11874,11878-11881,11893-11894,11936-11945,12061-12063
+web/store/useChatStore.ts
+  s_fa57efb3016ed9::t_ad581cd98766ad 83-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "a413d1f3e143c38cd55854d45604749767f95edf",
+  "prompts": {},
+  "sessions": {
+    "s_18b04957a1f679": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a942208ffeeQA17vRw1XeaYM",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_4a4b7b419d5e90": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a13e66affeTXa8tqa4LyW7wU",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_6dedbdbb4107df": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a14075bffeALLnMH7vycj3oo",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_71edae0141cf3a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a141148ffea0V15RoZbE57eh",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_8c292d720914af": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a13f1a7ffeVP52OPkgKc3nrv",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_b53bf37df1f9da": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a13ffd9ffen7mMsMi3yZ1mOn",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_fa57efb3016ed9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a13f839ffeQTA8I0bIGSADlr",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
