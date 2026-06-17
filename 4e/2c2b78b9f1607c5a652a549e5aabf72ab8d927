@@ -1,0 +1,24 @@
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_06c43d89bc5597 541
+worker/src/services/PersistService.ts
+  s_e6750ccfff01b1::t_f8c610394ec01d 66-69
+web/components/templates/LegalPage.tsx
+  s_e6750ccfff01b1::t_1018d3afa1cbc5 70
+  s_e6750ccfff01b1::t_c930b4c007f1fa 164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "4e2c2b78b9f1607c5a652a549e5aabf72ab8d927",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
