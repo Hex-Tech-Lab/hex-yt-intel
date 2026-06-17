@@ -1,0 +1,23 @@
+scripts/quality-engine/rules.ts
+  s_18b04957a1f679::t_ad435f67409829 1
+  s_18b04957a1f679::t_0334a39914a45f 130-292
+scripts/verify-quality-engine.ts
+  s_18b04957a1f679::t_7658fac85481d9 23-28
+  s_18b04957a1f679::t_168ea11e05773e 6-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "fec321fd2770a501e400d87aab1ea6d79c406fb8",
+  "prompts": {},
+  "sessions": {
+    "s_18b04957a1f679": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a942208ffeeQA17vRw1XeaYM",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
