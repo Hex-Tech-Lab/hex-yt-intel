@@ -447,6 +447,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           account={<div title={profile.email} className="w-8 h-8 rounded-lg bg-[var(--accent)] grid place-items-center text-[var(--void)] font-bold text-xs">{profile.initials}</div>}
         />
       }
+      rightPanel={
+        <div className="h-full overflow-y-auto">
+          <RightPanelAccordion items={rightPanelItems} />
+        </div>
+      }
       dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
@@ -480,10 +485,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
           {status !== 'idle' && (
             <div className="flex flex-col gap-8">
-              <div className="flex-shrink-0">
-                <RightPanelAccordion items={rightPanelItems} />
-              </div>
-
               {/* Tab bar: Synthesis grid vs. Knowledge Graph */}
               <div className="flex gap-1 p-1 rounded-xl border border-[var(--line)] bg-[rgb(11_14_20_/_0.5)] self-start">
                 {([

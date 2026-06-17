@@ -5,11 +5,11 @@ export interface CryptographicTokenPort {
     videoId: string;
     analysisId: string;
     models: string[];
-  }): StreamToken;
+  }): Promise<StreamToken>;
 
   signChatToken(params: {
     conversationId: string;
     userId: string;
     models: string[];
-  }): StreamToken;
+  }): Promise<StreamToken>;
 }
