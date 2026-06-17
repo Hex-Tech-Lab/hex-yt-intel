@@ -21,28 +21,12 @@ export const useAnalysisDimensionsStore = create<AnalysisDimensionsStore>(() => 
       return;
     }
 
-    const analysisState = useAnalysisStateStore.getState();
-    if (!analysisState.analysis) return;
+    useAnalysisStateStore.getState().addDimension(dimension);
 
-    const { analysis } = analysisState;
-    const updatedAnalysis = {
-      ...analysis,
-      dimensions: {
-        ...analysis.dimensions,
-        [dimension.number]: dimension,
-      },
-      streaming: {
-        ...analysis.streaming,
-        dimensionsReceived: [
-          ...new Set([...analysis.streaming.dimensionsReceived, dimension.number]),
-        ].sort((a, b) => a - b),
-      },
-    };
-
-    useAnalysisStateStore.setState({ analysis: updatedAnalysis });
-
+    const analysis = useAnalysisStateStore.getState().analysis;
+    if (!analysis) return;
     const activePersona = useAnalysisMetadataStore.getState().activePersona;
-    const projection = computePersonaProjection(updatedAnalysis, activePersona);
+    const projection = computePersonaProjection(analysis, activePersona);
     useAnalysisStreamingStore.getState().setProjection(projection);
   },
 
@@ -52,5 +36,19 @@ export const useAnalysisDimensionsStore = create<AnalysisDimensionsStore>(() => 
     return analysisState.analysis?.dimensions[number];
   },
 
-  reset: () => {},
+  reset: () => {
+    useAnalysisStateStore.setState((state) => {
+      if (!state.analysis) return state;
+      return {
+        analysis: {
+          ...state.analysis,
+          dimensions: {},
+          streaming: {
+            ...state.analysis.streaming,
+            dimensionsReceived: [],
+          },
+        },
+      };
+    });
+  },
 }));

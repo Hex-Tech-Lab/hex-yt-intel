@@ -15,80 +15,34 @@ import {
   computePersonaProjection,
 } from '@/lib/types/synthesis-nucleus';
 
-let syncInit = false;
-
-function syncUnifiedStore(set: (partial: Partial<SynthesisNucleusState>) => void) {
-  if (!syncInit) {
-    syncInit = true;
-    useAnalysisStateStore.subscribe(() => {
-      const as = useAnalysisStateStore.getState();
-      const ms = useAnalysisMetadataStore.getState();
-      const ss = useAnalysisStreamingStore.getState();
-      set({
-        analysis: as.analysis,
-        isStreaming: as.isStreaming,
-        activePersona: ms.activePersona,
-        personaConfig: ms.personaConfig,
-        knowledgeGraph: ms.knowledgeGraph,
-        classification: ms.classification,
-        monetizationVerdict: ms.monetizationVerdict,
-        streamError: ss.streamError,
-        projection: ss.projection,
-      });
-    });
-    useAnalysisMetadataStore.subscribe(() => {
-      const as = useAnalysisStateStore.getState();
-      const ms = useAnalysisMetadataStore.getState();
-      const ss = useAnalysisStreamingStore.getState();
-      set({
-        analysis: as.analysis,
-        isStreaming: as.isStreaming,
-        activePersona: ms.activePersona,
-        personaConfig: ms.personaConfig,
-        knowledgeGraph: ms.knowledgeGraph,
-        classification: ms.classification,
-        monetizationVerdict: ms.monetizationVerdict,
-        streamError: ss.streamError,
-        projection: ss.projection,
-      });
-    });
-    useAnalysisStreamingStore.subscribe(() => {
-      const as = useAnalysisStateStore.getState();
-      const ss = useAnalysisStreamingStore.getState();
-      set({
-        analysis: as.analysis,
-        isStreaming: as.isStreaming,
-        streamError: ss.streamError,
-        projection: ss.projection,
-      });
-    });
-  }
-}
-
-export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
+function readSubStores() {
   const as = useAnalysisStateStore.getState();
   const ms = useAnalysisMetadataStore.getState();
   const ss = useAnalysisStreamingStore.getState();
-
-  syncUnifiedStore(set);
-
+  const projection = computePersonaProjection(as.analysis, ms.activePersona);
   return {
     analysis: as.analysis,
+    isStreaming: as.isStreaming,
+    activePersona: ms.activePersona,
     personaConfig: ms.personaConfig,
     knowledgeGraph: ms.knowledgeGraph,
     classification: ms.classification,
     monetizationVerdict: ms.monetizationVerdict,
-    activePersona: ms.activePersona,
-    projection: ss.projection,
-    isStreaming: as.isStreaming,
     streamError: ss.streamError,
+    projection,
+  };
+}
+
+export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
+  useAnalysisStateStore.subscribe(() => set(readSubStores()));
+  useAnalysisMetadataStore.subscribe(() => set(readSubStores()));
+  useAnalysisStreamingStore.subscribe(() => set(readSubStores()));
+
+  return {
+    ...readSubStores(),
 
     initializeAnalysis: (payload: Partial<UCISPayload>) => {
       useAnalysisStateStore.getState().initializeAnalysis(payload);
-      const syncedAnalysis = useAnalysisStateStore.getState().analysis;
-      const activePersona = useAnalysisMetadataStore.getState().activePersona;
-      const projection = computePersonaProjection(syncedAnalysis, activePersona);
-      useAnalysisStreamingStore.getState().setProjection(projection);
     },
 
     addDimension: (dimension: UCISDimension) => {
