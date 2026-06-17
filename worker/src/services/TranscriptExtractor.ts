@@ -93,24 +93,27 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
     const trackList = Array.isArray(tracks) ? tracks : [tracks];
 
+    const langCode = (t: Record<string, unknown>): string | undefined =>
+      typeof t['@_lang_code'] === 'string' ? t['@_lang_code'] : undefined;
+
     // Prioritize ASR English, then English, then first ASR, then first available
     const asrEn = trackList.find((t: Record<string, unknown>) =>
-      typeof t === 'object' && t['@_lang_code'] === 'en' && t['@_kind'] === 'asr'
+      typeof t === 'object' && langCode(t) === 'en' && t['@_kind'] === 'asr'
     );
     if (asrEn) return { langCode: 'en' };
 
     const en = trackList.find((t: Record<string, unknown>) =>
-      typeof t === 'object' && (t['@_lang_code'] as string)?.startsWith('en')
+      typeof t === 'object' && langCode(t)?.startsWith('en')
     );
-    if (en) return { langCode: (en as Record<string, string>)['@_lang_code'] };
+    if (en) return { langCode: langCode(en)! };
 
     const asr = trackList.find((t: Record<string, unknown>) =>
-      typeof t === 'object' && t['@_kind'] === 'asr'
+      typeof t === 'object' && t['@_kind'] === 'asr' && langCode(t)
     );
-    if (asr) return { langCode: (asr as Record<string, string>)['@_lang_code'] };
+    if (asr) return { langCode: langCode(asr)! };
 
-    const first = trackList[0] as Record<string, string> | undefined;
-    if (first?.['@_lang_code']) return { langCode: first['@_lang_code'] };
+    const first = trackList.find((t): t is Record<string, unknown> => typeof t === 'object' && !!langCode(t));
+    if (first) return { langCode: langCode(first)! };
 
     throw new Error('No captions available for this video');
   }

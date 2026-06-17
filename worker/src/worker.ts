@@ -520,28 +520,34 @@ app.post("/analyze-llm-stream", async (c) => {
   let finalText = '';
   let modelUsed = '';
   let persisted = false;
+  let persisting = false;
 
   const persistService = new PersistService();
 
   const persistFn = async (status: 'completed' | 'interrupted') => {
-    if (persisted || !finalText) return;
-    const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
-    const ok = await persistService.persist({
-      analysisId: req.analysisId,
-      videoId: req.videoId,
-      finalText,
-      modelUsed,
-      status,
-      activeSecret,
-      appUrl,
-      validate12D: (text: string) => engine.validate12D(text),
-    });
-    persisted = ok;
+    if (persisted || persisting || !finalText) return;
+    persisting = true;
+    try {
+      const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
+      const ok = await persistService.persist({
+        analysisId: req.analysisId,
+        videoId: req.videoId,
+        finalText,
+        modelUsed,
+        status,
+        activeSecret,
+        appUrl,
+        validate12D: (text: string) => engine.validate12D(text),
+      });
+      persisted = ok;
+    } finally {
+      persisting = false;
+    }
   };
 
   // Detect browser disconnect immediately and save partial progress.
   c.req.raw.signal.addEventListener('abort', () => {
-    if (!persisted) {
+    if (!persisted && !persisting) {
       c.executionCtx.waitUntil(persistFn('interrupted'));
     }
   });
