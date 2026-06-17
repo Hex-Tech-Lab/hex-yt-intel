@@ -19,7 +19,10 @@ function readSubStores() {
   const as = useAnalysisStateStore.getState();
   const ms = useAnalysisMetadataStore.getState();
   const ss = useAnalysisStreamingStore.getState();
-  const projection = computePersonaProjection(as.analysis, ms.activePersona);
+  const hasAnyDimension = Boolean(as.analysis && Object.keys(as.analysis.dimensions).length > 0);
+  const projection = hasAnyDimension
+    ? computePersonaProjection(as.analysis, ms.activePersona)
+    : null;
   return {
     analysis: as.analysis,
     isStreaming: as.isStreaming,
