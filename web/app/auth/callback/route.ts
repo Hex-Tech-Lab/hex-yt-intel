@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { env } from '@/lib/env';
 
 export function getSafeRedirectPath(nextValue: string | null, fallback = '/dashboard') {
   if (!nextValue) return fallback;
@@ -36,8 +37,8 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(new URL(safeNext, request.url));
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.supabaseUrl,
+    env.supabaseAnonKey,
     {
       cookies: {
         getAll() {
