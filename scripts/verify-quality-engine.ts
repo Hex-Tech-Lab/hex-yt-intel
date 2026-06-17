@@ -3,7 +3,13 @@ import {
     HexagonalBoundaryRule, 
     CredentialLeakRule, 
     WorkflowRule, 
-    ComplexityRule 
+    ComplexityRule,
+    SanitizationRule,
+    SecretsExposureRule,
+    AuthSecurityRule,
+    ErrorTaxonomyRule,
+    CrossPlatformRule,
+    StreamResilienceRule
 } from "./quality-engine/rules";
 import * as glob from "glob";
 
@@ -14,6 +20,12 @@ engine.addRule(HexagonalBoundaryRule);
 engine.addRule(CredentialLeakRule);
 engine.addRule(WorkflowRule);
 engine.addRule(ComplexityRule);
+engine.addRule(SanitizationRule);
+engine.addRule(SecretsExposureRule);
+engine.addRule(AuthSecurityRule);
+engine.addRule(ErrorTaxonomyRule);
+engine.addRule(CrossPlatformRule);
+engine.addRule(StreamResilienceRule);
 
 // Scan files
 const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' }).map(f => f.replace(/\\/g, "/"));

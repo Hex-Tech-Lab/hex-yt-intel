@@ -1,4 +1,4 @@
-import { Node, SyntaxKind, SourceFile } from "ts-morph";
+import { Node, SyntaxKind, SourceFile, ScriptKind } from "ts-morph";
 import { Finding, IRule } from "./engine";
 
 // 1. Hexagonal Boundary Rule
@@ -127,4 +127,167 @@ export const ComplexityRule: IRule = {
       }
       return findings;
     }
+};
+
+// 5. Sanitization Rule — detect dangerouslySetInnerHTML without sanitization
+export const SanitizationRule: IRule = {
+  name: "sanitization-check",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes('dangerouslySetInnerHTML')) {
+      const hasSanitizer = text.includes('DOMPurify') || text.includes('sanitize') || text.includes('escapeHtml');
+      if (!hasSanitizer) {
+        findings.push({
+          file: filePath,
+          severity: "critical",
+          title: "XSS Risk: Unescaped dangerouslySetInnerHTML",
+          why: "dangerouslySetInnerHTML used without DOMPurify or sanitizer — injects raw HTML into DOM.",
+          fix: "Import DOMPurify from 'isomorphic-dompurify' and wrap: DOMPurify.sanitize(html) before dangerouslySetInnerHTML."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 6. Secrets Exposure Rule — detect secrets/keys in Sentry/logs telemetry
+export const SecretsExposureRule: IRule = {
+  name: "secrets-exposure-detector",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    
+    source.forEachDescendant((node) => {
+      if (Node.isCallExpression(node)) {
+        const expr = node.getExpression().getText();
+        const isSentryCall = expr.includes('Sentry.capture') || expr.includes('addBreadcrumb');
+        const isLogCall = expr.includes('console.') || expr.includes('logInfo') || expr.includes('logError');
+        
+        if ((isSentryCall || isLogCall) && node.getArguments().length > 0) {
+          const args = node.getArguments().map(a => a.getText()).join(' ');
+          const sensitivePatterns = ['token', 'secret', 'password', 'apiKey', 'bearer', 'authorization'];
+          if (sensitivePatterns.some(p => args.toLowerCase().includes(p))) {
+            findings.push({
+              file: filePath,
+              severity: "high",
+              title: "Secrets Exposure: Sensitive data in telemetry",
+              why: `Potential secret/key field '${sensitivePatterns.find(p => args.toLowerCase().includes(p))}' passed to ${expr}.`,
+              fix: "Redact sensitive values before passing to Sentry/logs: replace with '[REDACTED]' or hash."
+            });
+          }
+        }
+      }
+    });
+    return findings;
+  }
+};
+
+// 7. Auth Security Rule — detect insecure auth patterns
+export const AuthSecurityRule: IRule = {
+  name: "auth-security-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Check for 307 redirect with POST (should be 303)
+    if (text.includes('307') && text.includes('POST')) {
+      findings.push({
+        file: filePath,
+        severity: "high",
+        title: "Auth: POST 307 redirect preserves POST method",
+        why: "307 redirect preserves the POST method but target may only handle GET. Use 303 to force GET.",
+        fix: "Change 307 to 303 redirect when redirecting POST to a GET-only route."
+      });
+    }
+
+    // Check for localhost fallbacks in production routes
+    if (text.includes('localhost') && (text.includes('NEXT_PUBLIC_APP_URL') || text.includes('APP_URL'))) {
+      findings.push({
+        file: filePath,
+        severity: "high",
+        title: "Auth: localhost fallback in production route",
+        why: "Environment variable missing fallback to localhost can redirect production users to localhost:3000.",
+        fix: "Fail closed (return 500) when APP_URL is missing, or derive origin from request headers."
+      });
+    }
+    return findings;
+  }
+};
+
+// 8. Error Taxonomy Rule — detect DB errors collapsed into NotFound
+export const ErrorTaxonomyRule: IRule = {
+  name: "error-taxonomy-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    
+    source.forEachDescendant((node) => {
+      if (Node.isIfStatement(node)) {
+        const condition = node.getExpression().getText();
+        // Pattern: if (error || !data) return { error: 'NotFound' }
+        if (condition.includes('error') && condition.includes('!data') || condition.includes('!result')) {
+          const block = node.getThenStatement()?.getText() || '';
+          if (block.includes('NotFound')) {
+            findings.push({
+              file: filePath,
+              severity: "high",
+              title: "Error Taxonomy: DB errors collapsed into NotFound",
+              why: "Database/query errors are returned as NotFound, hiding real failures as missing resources.",
+              fix: "Separate error cases: return 'InternalError' (-> 500) for query failures, 'NotFound' (-> 404) only when no rows match."
+            });
+          }
+        }
+      }
+    });
+    return findings;
+  }
+};
+
+// 9. Cross-Platform Rule — detect LF-only splitting in CRLF-sensitive code
+export const CrossPlatformRule: IRule = {
+  name: "cross-platform-compatibility",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+    
+    // Match .split('\n') but not .split(/\r?\n/)
+    const lfSplitMatches = text.match(/\.split\(['"]\\n['"]\)/g);
+    if (lfSplitMatches) {
+      findings.push({
+        file: filePath,
+        severity: "medium",
+        title: "Cross-Platform: LF-only string splitting",
+        why: `${lfSplitMatches.length} instance(s) of .split('\\n') detected. CRLF line endings (Windows) will not be handled.`,
+        fix: "Replace .split('\\n') with .split(/\\r?\\n/) for cross-platform compatibility."
+      });
+    }
+    return findings;
+  }
+};
+
+// 10. Stream Resilience Rule — detect missing error state on timeout/abort
+export const StreamResilienceRule: IRule = {
+  name: "stream-resilience-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Check for setTimeout abort patterns without error state
+    if (text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError')) {
+      findings.push({
+        file: filePath,
+        severity: "high",
+        title: "Stream: Timeout abort does not settle error state",
+        why: "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+        fix: "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+      });
+    }
+    return findings;
+  }
 };
