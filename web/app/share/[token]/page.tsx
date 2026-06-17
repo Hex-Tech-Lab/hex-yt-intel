@@ -3,19 +3,7 @@ export const dynamic = 'force-dynamic';
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import remarkGfm from 'remark-gfm';
-import remarkRehype from 'remark-rehype';
-import rehypeSanitize from 'rehype-sanitize';
-import rehypeStringify from 'rehype-stringify';
-
-const markdownProcessor = unified()
-  .use(remarkParse)
-  .use(remarkGfm)
-  .use(remarkRehype)
-  .use(rehypeSanitize)
-  .use(rehypeStringify);
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 export default async function SharePage(props: {
   params: Promise<{ token: string }>;
@@ -46,10 +34,6 @@ export default async function SharePage(props: {
     }
   }
 
-  // Server-side: process markdown -> safe HTML (XSS-safe via rehype-sanitize)
-  const file = await markdownProcessor.process(analysis.analysisMarkdown || '');
-  const htmlContent = String(file);
-
   return (
     <div className="bg-surface min-h-screen">
       {/* Header */}
@@ -67,10 +51,7 @@ export default async function SharePage(props: {
       {/* Content (Read-Only) */}
       <div className="px-6 py-12 max-w-4xl mx-auto">
         <div className="prose prose-blue max-w-none">
-          <div
-            className="whitespace-pre-wrap text-gray-800 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: htmlContent }}
-          />
+          <MarkdownRenderer content={analysis.analysisMarkdown || ''} />
         </div>
       </div>
 
