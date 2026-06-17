@@ -1,0 +1,58 @@
+web/lib/utils/markdown-reconstructor.ts
+  s_46f9b40be250de::t_d3bd1cbbd501a7 73-76
+web/lib/stores/analysis-state-store.ts
+  s_f987a0211d7322::t_2c393a5035f264 58
+  s_f987a0211d7322::t_ae7b8efc8d2d9b 2,8,21-23,25-51,53-57,59-80,82,84-85,87-89,91-103
+  s_f987a0211d7322::t_4f20431a11bcc4 52
+web/lib/validators/synthesis.ts
+  s_46f9b40be250de::t_a53ca3bc33e55f 151-154
+web/lib/stores/analysis-dimensions-store.ts
+  s_f987a0211d7322::t_fc98a6735c7c0f 24,26-27,29
+  s_002ba10578a978::t_de855578125f7e 39-53
+web/lib/prompts/ucis-v5.1.ts
+  s_46f9b40be250de::t_16eadb7ed72a0a 546-549
+web/lib/stores/synthesis-nucleus-store.ts
+  s_f0c5a32ec0fff0::t_f3a4db47c3005b 18,22,25-26,32-42
+web/lib/types/monetization.ts
+  s_46f9b40be250de::t_db5a7da4c40a3c 6,9-10,13,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "fca70e9d05a57da2d63bba994066c5fe351efe0f",
+  "prompts": {},
+  "sessions": {
+    "s_002ba10578a978": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129640880ffeZ6WV0ia40FH3sH",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_46f9b40be250de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12963fffeffeWexgfVnJam6FBS",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f0c5a32ec0fff0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129640ffcffeNMKzi2jFZ0TM0m",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f987a0211d7322": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129641c85ffeNKi4GxCE179epI",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
