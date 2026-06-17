@@ -1,0 +1,22 @@
+web/lib/stores/analysis-streaming-store.ts
+  s_e6750ccfff01b1::t_2fbeb0fc1c6fdc 13
+  s_e6750ccfff01b1::t_451eaf00921caf 50-53
+web/lib/stores/synthesis-nucleus-store.ts
+  s_e6750ccfff01b1::t_6940f9a47ad1af 49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "76ab04ba4d99ac927d21615c782bc59fbda84f58",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
