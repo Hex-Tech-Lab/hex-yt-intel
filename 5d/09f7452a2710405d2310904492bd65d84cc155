@@ -1,0 +1,26 @@
+web/package.json
+  s_e6750ccfff01b1::t_59011ac89f06eb 44
+web/lib/stores/analysis-state-store.ts
+  s_e6750ccfff01b1::t_27d1ca125cbf06 58-60
+  s_e6750ccfff01b1::t_c330e3f76d8fbc 14-44,53-54,56,62
+web/next-env.d.ts
+  s_e6750ccfff01b1::t_4f35e71355220f 3
+pnpm-lock.yaml
+  s_e6750ccfff01b1::t_ac61597c985cd7 136-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "5d09f7452a2710405d2310904492bd65d84cc155",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
