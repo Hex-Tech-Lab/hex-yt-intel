@@ -94,7 +94,29 @@ worker/
 
 ---
 
-## 4. SHARED COMMUNICATION PROTOCOL
+## 4. PR REVIEW CONFIDENCE DEGREE
+
+Minimum gate: **Cubic + CodeRabbit + Snyk + DeepSource + CI/CD + qa-intel**
+Local gates (must pass): `tsc --noEmit`, `lint`, `qa-intel`
+
+Confidence = weighted sum of passing tools, re-normalized when tools timeout.
+
+| Tool | Weight | Wait Limit |
+|---|---|---|
+| Cubic | 30 | 3 min |
+| CodeRabbit | 20 | 15 min (free tier may timeout) |
+| Snyk | 15 | 3 min |
+| DeepSource | 15 | 5 min |
+| CI/CD Pipeline | 10 | 5 min |
+| Vercel | 5 | 5 min |
+| CodeQL | 5 | 5 min |
+
+**Penalties**: CodeRabbit timeout -15, FAILURE with findings -20, unaddressed P0 -100.
+**Decision**: ≥85 → merge, 60-84 → human review, <60 → fix & repeat.
+
+---
+
+## 5. SHARED COMMUNICATION PROTOCOL
 
 **Before starting any task**:
 1. Read `.memory/AGENT_LEDGER.md` to avoid conflicting with active agents
