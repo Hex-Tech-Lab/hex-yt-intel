@@ -1,0 +1,49 @@
+worker/src/services/TranscriptExtractor.ts
+  s_e6750ccfff01b1::t_244a610427ca6b 10,78-88,90-115
+worker/package.json
+  s_e6750ccfff01b1::t_244a610427ca6b 23
+pnpm-lock.yaml
+  s_e6750ccfff01b1::t_ed103e1d3a18f1 121-126,133-138,145-147,239-241,2705-2707,3600-3603,3829-3834,3861-3863,5019-5024,5346-5348,8242-8243,9319-9322,9580-9599,9644-9645,11049-11059,11530-11532
+worker/src/crypto.ts
+  s_19947c18ecbf4a::t_ed2b8322f7f82b 1-11
+worker/src/services/PersistService.ts
+  s_306df23acf7b1f::t_5bc615c2a01eac 1-77
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_244a610427ca6b 16-17,524,526-527,529-541,547,597
+web/package.json
+  s_e6750ccfff01b1::t_244a610427ca6b 39-40,43-44,47
+web/app/share/[token]/page.tsx
+  s_e6750ccfff01b1::t_ec5541b1a245c5 6-18,49-51,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "a5160447c476188bdceb95cf575eb69c2f37385a",
+  "prompts": {},
+  "sessions": {
+    "s_19947c18ecbf4a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b8fc16ffezh4KKXX4yV4c0p",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_306df23acf7b1f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b93460ffe8bwkkSCp2fDCPr",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
