@@ -13,7 +13,7 @@ import * as Sentry from '@sentry/nextjs';
 import { PersistedValidationReport, isPersistedValidationReport } from '@/lib/types/validation-report';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { z } from 'zod';
-import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 
 function buildValidationFilename(title: string, channelTitle?: string | null): string {
   const cleanSlug = (text: string): string => {
@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
       contentSig: z.string(),
       status: z.string().optional().default('completed'),
       chunkIndex: z.number().int().min(1).max(TOTAL_DIMENSIONS).optional(),
-      totalChunks: z.number().int().refine((val) => val === TOTAL_DIMENSIONS, {
-        message: `totalChunks must match active configuration matrix of ${TOTAL_DIMENSIONS}`,
+      totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
+        message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
       }).optional(),
     });
 

@@ -398,7 +398,7 @@ app.post("/analyze-llm-stream", async (c) => {
     sig: string;
     exp: number;
     appUrl?: string;
-    chunkIndex?: number;
+    dimensions?: number[];
     totalChunks?: number;
   }
 
@@ -567,7 +567,7 @@ app.post("/analyze-llm-stream", async (c) => {
             transcript: transcript || '',
             persona: req.persona,
             timezone: req.timezone,
-            chunkIndex: req.chunkIndex,
+            dimensions: req.dimensions,
           },
           {
             onDelta: (delta) => {

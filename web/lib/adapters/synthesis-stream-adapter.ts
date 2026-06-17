@@ -33,7 +33,7 @@ export interface StreamAdapterOptions {
   onComplete?: () => void;
   onProgress?: (received: number, expected: number) => void;
   isPartialStream?: boolean;
-  chunkIndex?: number;
+  dimensions?: number[];
 }
 
 export class SynthesisStreamAdapter {
@@ -183,15 +183,17 @@ export class SynthesisStreamAdapter {
       // keeping the other concurrent dimensions intact.
       const synthState = this.synthStore.getState();
       if (synthState.analysis) {
-        const targetDim = this.options.chunkIndex;
+        const targetDims = this.options.dimensions;
         const updatedDimensions = { ...synthState.analysis.dimensions };
         let updatedReceived = [...synthState.analysis.streaming.dimensionsReceived];
 
-        if (targetDim !== undefined) {
-          delete updatedDimensions[targetDim];
-          updatedReceived = updatedReceived.filter(num => num !== targetDim);
+        if (targetDims !== undefined && targetDims.length > 0) {
+          for (const dim of targetDims) {
+            delete updatedDimensions[dim];
+          }
+          updatedReceived = updatedReceived.filter(num => !targetDims.includes(num));
         } else {
-          // If no chunkIndex, do legacy full reset
+          // If no dimensions, do legacy full reset
           Object.keys(updatedDimensions).forEach(k => delete updatedDimensions[Number(k)]);
           updatedReceived = [];
         }
@@ -206,10 +208,10 @@ export class SynthesisStreamAdapter {
             },
           },
           // Do not reset persona, classification, or monetization unless doing full reset
-          personaConfig: targetDim === undefined ? null : synthState.personaConfig,
-          knowledgeGraph: targetDim === undefined ? null : synthState.knowledgeGraph,
-          classification: targetDim === undefined ? null : synthState.classification,
-          monetizationVerdict: targetDim === undefined ? null : synthState.monetizationVerdict,
+          personaConfig: targetDims === undefined ? null : synthState.personaConfig,
+          knowledgeGraph: targetDims === undefined ? null : synthState.knowledgeGraph,
+          classification: targetDims === undefined ? null : synthState.classification,
+          monetizationVerdict: targetDims === undefined ? null : synthState.monetizationVerdict,
           projection: computePersonaProjection({
             ...synthState.analysis,
             dimensions: updatedDimensions,
@@ -425,9 +427,9 @@ export class SynthesisStreamAdapter {
     content: string;
     metadata?: any;
   }) {
-    const targetDim = this.options.chunkIndex;
-    if (targetDim !== undefined && fragment.dimension !== targetDim) {
-      return; // Ignore updates that do not belong to this stream index
+    const targetDims = this.options.dimensions;
+    if (targetDims !== undefined && !targetDims.includes(fragment.dimension)) {
+      return; // Ignore updates that do not belong to this stream's dimension bundle
     }
 
     // Create domain entity
