@@ -1,0 +1,23 @@
+web/store/useAnalysisStore.ts
+  s_749a5385eae1fb::t_9ffdd59e654cc4 220
+web/app/auth/callback/route.ts
+  s_749a5385eae1fb::t_83b80a21ef71fa 49-53
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_749a5385eae1fb::t_ea35479b57f381 66-75,81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "f25b6462176241548cdc60b9b1f478a396df69a2",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
