@@ -1,0 +1,24 @@
+web/lib/services/ownership.ts
+  s_18b04957a1f679::t_6c77cba10dae7b 31-32,34-35
+  s_18b04957a1f679::t_f054e6ea9e79f9 33
+docs/testing/chunk-1.8.6-review-matrix.md
+  s_18b04957a1f679::t_cd2033b34b2ecd 5,17,22,27,29-33,56,68,71-87,95-102
+web/app/api/analyses/[id]/route.ts
+  s_18b04957a1f679::t_80a8386b4e96ab 19-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "7daa3158b1610ebce05c5ab0f64407cd36f7609c",
+  "prompts": {},
+  "sessions": {
+    "s_18b04957a1f679": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a942208ffeeQA17vRw1XeaYM",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
