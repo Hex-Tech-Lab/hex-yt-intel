@@ -53,6 +53,7 @@ export function useSSEStream() {
     }
     
     const videoId = extractTelemetryId(url);
+    setVideoMetadata({ videoId, title: '', channelTitle: '', channelId: '', publishedAt: '', duration: null, viewCount: '', likeCount: '', commentCount: '', thumbnailUrl: null });
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
 
     const myController = new AbortController();
