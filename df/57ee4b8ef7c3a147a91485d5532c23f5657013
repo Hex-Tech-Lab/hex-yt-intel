@@ -1,0 +1,29 @@
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_749a5385eae1fb::t_4b92f39ed948a9 149
+web/lib/adapters/StreamTokenAdapter.ts
+  s_749a5385eae1fb::t_fd988e756f2f95 5,9,13,17,20
+web/lib/stream-token.ts
+  s_749a5385eae1fb::t_c4c4f54c70ff7d 6-7,11-29,32,36,39,43,46,50-51,54-56
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_749a5385eae1fb::t_a536c0b1f6a981 224
+web/components/containers/DashboardContainer.tsx
+  s_749a5385eae1fb::t_a990c42d4f90a5 450-454
+web/lib/ports/CryptographicTokenPort.ts
+  s_749a5385eae1fb::t_9957beefe75070 8,14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "df57ee4b8ef7c3a147a91485d5532c23f5657013",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
