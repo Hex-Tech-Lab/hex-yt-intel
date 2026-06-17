@@ -1,0 +1,61 @@
+web/app/api/analyses/[id]/relations/route.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 7
+web/lib/stores/analysis-state-store.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1-115
+web/lib/utils/markdown-reconstructor.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 73-76
+web/lib/stores/analysis-dimensions-store.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1-54
+web/lib/types/classification.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1-18
+web/lib/types/synthesis-nucleus.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 14-35,47-48,71,181-214
+package.json
+  s_e6750ccfff01b1::t_c28804306ec99b 7-9
+web/lib/validators/synthesis.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 151-154
+web/lib/types/monetization.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1-15
+web/package.json
+  s_e6750ccfff01b1::t_5de4ae1f0d9706 44
+web/lib/types/knowledge-graph.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1
+web/lib/types/dimension.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1-52
+web/lib/stores/analysis-metadata-store.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1-96
+web/lib/types/persona.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1-66
+web/hooks/useKnowledgeGraph.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 14
+web/lib/prompts/ucis-v5.1.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 546-549
+web/lib/stores/synthesis-nucleus-store.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 2-5,14,18-103
+pnpm-lock.yaml
+  s_e6750ccfff01b1::t_5de4ae1f0d9706 136-138
+web/components/templates/LegalPage.tsx
+  s_e6750ccfff01b1::t_5de4ae1f0d9706 5,71,162
+web/components/templates/console/PersonaSelector.tsx
+  s_e6750ccfff01b1::t_c28804306ec99b 4
+web/lib/stores/analysis-streaming-store.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1-61
+web/lib/utils/ucis-parser.ts
+  s_e6750ccfff01b1::t_c28804306ec99b 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "404af57075e907bc5fbe399eb182684a8b238d4d",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
