@@ -217,7 +217,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
     })),
 
   initializeAnalysis: (id, title, initialMarkdown = '') =>
-    set((state) => ({
+    set(() => ({
       analysis: { 
         id, 
         title, 

@@ -63,12 +63,22 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
 
     if (existing.analysis_payload && typeof existing.analysis_payload === 'object' && Object.keys(existing.analysis_payload).length > 0) {
       const payload = existing.analysis_payload as Record<string, unknown>;
+      
+      let dimensions: Record<string, unknown> = {};
+      if (Array.isArray(payload.dimensions)) {
+        payload.dimensions.forEach((d: any) => {
+          if (d && typeof d.number === 'number') dimensions[d.number] = d;
+        });
+      } else if (typeof payload.dimensions === 'object') {
+        dimensions = payload.dimensions as Record<string, unknown>;
+      }
+
       return {
         id: existing.id,
         title: existing.title,
         analysisMarkdown: existing.analysis_markdown ?? JSON.stringify(existing.analysis_payload),
         createdAt: existing.created_at,
-        dimensions: (payload.dimensions as Record<string, unknown>) ?? {},
+        dimensions,
         cachedReport: (existing.validation_report ?? {}) as {
           metadata?: AnalysisJobMetadata;
           persona?: string;
