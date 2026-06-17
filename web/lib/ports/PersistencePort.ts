@@ -5,6 +5,7 @@ import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 /** A cached analysis row retrieved for potential cache-hit return. */
 export interface CachedAnalysis {
   id: string;
+  videoId: string;
   title: string;
   analysisMarkdown: string;
   createdAt: string;
@@ -156,4 +157,25 @@ export interface PersistencePort {
   findAnalysisChunks(params: {
     analysisId: string;
   }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: any; status: string }> | null>;
+
+  /**
+   * Find analysis by share token for public view.
+   */
+  findAnalysisByShareToken(token: string): Promise<{
+    id: string;
+    title: string;
+    channelTitle: string | null;
+    analysisMarkdown: string | null;
+    sharedExpiresAt: string | null;
+    createdAt: string;
+  } | null>;
+
+  /**
+   * Update validation report and status.
+   */
+  updateValidationReport(params: {
+    analysisId: string;
+    report: any;
+    passed: boolean;
+  }): Promise<void>;
 }

@@ -190,15 +190,9 @@ export class LLMCascade implements LLMCascadePort {
           stream: true,
           // The system prompt (getUCISPrompt) already embeds the metadata + transcript
           // in its ACTIVE ANALYSIS SESSION block. Re-sending them here made the model
-          // echo the prompt header instead of analyzing — so the user turn is just a
-          // clean execution nudge.
+          // echo the prompt header instead of analyzing.
           messages: [
             { role: 'system', content: systemPrompt },
-            {
-              role: 'user',
-              content:
-                'Begin the analysis now. Output only the structured UCIS v5.1 report starting at "### DIMENSION 1". Do not echo the metadata, transcript, or framework instructions.',
-            },
           ],
           ...(requestProvider ? { provider: requestProvider } : {}),
         }),
@@ -303,18 +297,6 @@ export class LLMCascade implements LLMCascadePort {
           max_tokens: requestMaxTokens,
           messages: [
             { role: 'system', content: systemPrompt },
-            {
-              role: 'user',
-              content: `Analyze the following YouTube video transcript and metadata using the UCIS v5.1 framework.
-
- **Metadata**:
-  ${JSON.stringify(metadata, null, 2)}
-
- **Transcript**:
-  ${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated...]' : ''}
-
- Generate the complete 11-dimension analysis.`,
-            },
           ],
           ...(requestProvider ? { provider: requestProvider } : {}),
         }),

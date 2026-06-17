@@ -101,16 +101,22 @@ export class CreateAnalysisUseCase {
     try {
       ingestionResult = await this.metadataIngestion.fetch(videoId);
       
-      if (!ingestionResult.transcriptAvailable) {
+      const isTranscriptEmpty = !ingestionResult.transcript || ingestionResult.transcript.trim().length === 0;
+      
+      if (isTranscriptEmpty) {
         console.log(`[CreateAnalysisUseCase] Native transcript empty for ${videoId}, attempting Decodo fallback...`);
         const decodoResult = await this.decodo.fetchTranscript(videoId);
-        if (decodoResult.success && decodoResult.transcript) {
+        if (decodoResult.success && decodoResult.transcript && decodoResult.transcript.trim().length > 0) {
           ingestionResult.transcript = decodoResult.transcript.trim();
           ingestionResult.transcriptAvailable = true;
           console.log(`[CreateAnalysisUseCase] Decodo fallback successful for ${videoId}`);
+        } else {
+          ingestionResult.transcript = '';
+          ingestionResult.transcriptAvailable = false;
         }
       } else {
         ingestionResult.transcript = ingestionResult.transcript.trim();
+        ingestionResult.transcriptAvailable = true;
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

@@ -22,6 +22,18 @@ interface MindNode {
 export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   const [collapsedNodes, setCollapsedNodes] = useState<Record<string, boolean>>({});
 
+  // Hierarchy score: lower is higher in the tree (Theme -> Concept -> Implementation -> Detail)
+  const typePriority: Record<string, number> = {
+    trend: 0,        // Theme level
+    study: 0,        // Theme level
+    person: 1,       // Concept level
+    concept: 2,      // Implementation level
+    organization: 3, // Detail level
+    framework: 4,    // Detail level
+    tool: 5,         // Detail level
+    metric: 6        // Detail level
+  };
+
   const toggleCollapse = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setCollapsedNodes((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -49,39 +61,52 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
       };
     });
 
-    // Determine edges/connections. Map parent-child based on edges
+    // Determine edges/connections. Map parent-child based on edges with hierarchy logic
     const visited = new Set<string>([rootNode.id]);
     const queue = [rootNode.id];
 
     while (queue.length > 0) {
+      // Sort queue by priority to process "Themes" first and build depth
+      queue.sort((a, b) => (typePriority[nodeMap[a]!.type] ?? 99) - (typePriority[nodeMap[b]!.type] ?? 99));
       const currentId = queue.shift()!;
       const parentNode = nodeMap[currentId]!;
 
       // Find neighbors
       const neighbors = graph.edges
         .filter((e) => e.source === currentId || e.target === currentId)
-        .map((e) => (e.source === currentId ? e.target : e.source));
+        .map((e) => (e.source === currentId ? e.target : e.source))
+        // Only take neighbors that are "lower" in priority or equal if not visited
+        .filter(id => !visited.has(id) && nodeMap[id]);
 
       neighbors.forEach((neighborId) => {
-        if (!visited.has(neighborId) && nodeMap[neighborId]) {
-          visited.add(neighborId);
-          nodeMap[neighborId]!.parentId = currentId;
-          parentNode.children.push(nodeMap[neighborId]!);
-          queue.push(neighborId);
-        }
+        visited.add(neighborId);
+        nodeMap[neighborId]!.parentId = currentId;
+        parentNode.children.push(nodeMap[neighborId]!);
+        queue.push(neighborId);
       });
     }
 
-    // Capture isolated/disconnected nodes and attach them to root as backup leaves
+    // Capture isolated/disconnected nodes and slot them into the hierarchy
+    const rootMindNode = nodeMap[rootNode.id];
     graph.nodes.forEach((n) => {
-      if (!visited.has(n.id) && nodeMap[n.id] && n.id !== rootNode!.id) {
-        nodeMap[n.id]!.parentId = rootNode!.id;
-        nodeMap[rootNode!.id]!.children.push(nodeMap[n.id]!);
+      const mindNode = nodeMap[n.id];
+      if (!mindNode || visited.has(n.id) || n.id === rootNode.id) return;
+      const myTypePri = typePriority[mindNode.type] ?? 99;
+      // Find a visited node with lower priority (higher in tree)
+      const candidates = Object.values(nodeMap).filter(
+        v => visited.has(v.id) && (typePriority[v.type] ?? 99) < myTypePri
+      );
+      const bestParent = candidates.length > 0
+        ? candidates.sort((a, b) => b.weight - a.weight)[0]
+        : rootMindNode;
+      if (bestParent) {
+        mindNode.parentId = bestParent.id;
+        bestParent.children.push(mindNode);
         visited.add(n.id);
       }
     });
 
-    return nodeMap[rootNode.id]!;
+    return rootMindNode!;
   }, [graph]);
 
   // Compute positions for SVG rendering
@@ -91,8 +116,8 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     const nodesList: { node: MindNode; x: number; y: number; level: number }[] = [];
     const linksList: { sourceX: number; sourceY: number; targetX: number; targetY: number; targetId: string }[] = [];
 
-    const colWidth = 180;
-    const rowHeight = 44;
+    const colWidth = 190;
+    const rowHeight = 48;
 
     const countVisibleLeaves = (node: MindNode): number => {
       if (collapsedNodes[node.id] || node.children.length === 0) return 1;
@@ -101,22 +126,25 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
 
     const traverse = (node: MindNode, level: number, startY: number): number => {
       const totalLeaves = countVisibleLeaves(node);
-      const x = 30 + level * colWidth;
+      const x = 20 + level * colWidth;
       const y = startY + (totalLeaves * rowHeight) / 2 - rowHeight / 2;
 
       nodesList.push({ node, x, y, level });
 
       if (!collapsedNodes[node.id]) {
         let currentY = startY;
-        node.children.forEach((child) => {
+        // Sort children by priority for consistent vertical layout
+        const sortedChildren = [...node.children].sort((a, b) => (typePriority[a.type] ?? 99) - (typePriority[b.type] ?? 99));
+        
+        sortedChildren.forEach((child) => {
           const childLeaves = countVisibleLeaves(child);
           const childY = currentY + (childLeaves * rowHeight) / 2 - rowHeight / 2;
 
           linksList.push({
-            sourceX: x + 120, // offset right border of node container
-            sourceY: y + 15,  // center vertical
+            sourceX: x + 150, // offset right border of node container
+            sourceY: y + 16,  // center vertical
             targetX: x + colWidth,
-            targetY: childY + 15,
+            targetY: childY + 16,
             targetId: child.id,
           });
 
@@ -132,9 +160,9 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
 
     // Dynamic width & height calculation
     const maxX = Math.max(...nodesList.map((n) => n.x)) + colWidth + 50;
-    const maxY = Math.max(...nodesList.map((n) => n.y)) + 50;
+    const maxY = Math.max(...nodesList.map((n) => n.y)) + 60;
 
-    return { nodes: nodesList, links: linksList, w: maxX, h: Math.max(260, maxY) };
+    return { nodes: nodesList, links: linksList, w: maxX, h: Math.max(300, maxY) };
   }, [treeData, collapsedNodes]);
 
   if (!layout) {
@@ -142,20 +170,20 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   }
 
   const colors: Record<string, string> = {
-    person: 'border-rose-500 text-rose-400 bg-rose-950/20',
-    concept: 'border-purple-500 text-purple-400 bg-purple-950/20',
-    framework: 'border-yellow-500 text-yellow-400 bg-yellow-950/20',
-    tool: 'border-cyan-500 text-cyan-400 bg-cyan-950/20',
-    organization: 'border-blue-500 text-blue-400 bg-blue-950/20',
-    study: 'border-emerald-500 text-emerald-400 bg-emerald-950/20',
-    trend: 'border-orange-500 text-orange-400 bg-orange-950/20',
-    metric: 'border-pink-500 text-pink-400 bg-pink-950/20',
+    person: 'border-rose-500/50 text-rose-400 bg-rose-950/20',
+    concept: 'border-purple-500/50 text-purple-400 bg-purple-950/20',
+    framework: 'border-yellow-500/50 text-yellow-400 bg-yellow-950/20',
+    tool: 'border-cyan-500/50 text-cyan-400 bg-cyan-950/20',
+    organization: 'border-blue-500/50 text-blue-400 bg-blue-950/20',
+    study: 'border-emerald-500/50 text-emerald-400 bg-emerald-950/20',
+    trend: 'border-orange-500/50 text-orange-400 bg-orange-950/20',
+    metric: 'border-pink-500/50 text-pink-400 bg-pink-950/20',
   };
 
   return (
     <div 
-      className="relative w-full overflow-auto hx-custom-scrollbar border border-[var(--line-faint)] bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-xl p-2 js-mind-map-container"
-      style={{ maxHeight: '350px' }}
+      className="relative w-full overflow-auto hx-custom-scrollbar border border-[var(--line-faint)] bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-xl p-4 js-mind-map-container"
+      style={{ maxHeight: '420px' }}
     >
       <svg 
         width={layout.w} 
@@ -163,7 +191,6 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
         className="absolute inset-0 pointer-events-none"
       >
         {layout.links.map((link, idx) => {
-          // Draw a smooth bezier curve between nodes
           const midX = (link.sourceX + link.targetX) / 2;
           const path = `M ${link.sourceX} ${link.sourceY} C ${midX} ${link.sourceY}, ${midX} ${link.targetY}, ${link.targetX} ${link.targetY}`;
           return (
@@ -173,14 +200,14 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
               fill="none"
               stroke="var(--accent)"
               strokeWidth={1.5}
-              strokeOpacity={0.25}
+              strokeOpacity={0.15}
             />
           );
         })}
       </svg>
 
       <div style={{ width: layout.w, height: layout.h, position: 'relative' }}>
-        {layout.nodes.map(({ node, x, y }) => {
+        {layout.nodes.map(({ node, x, y, level: _level }) => {
           const isSelected = selectedId === node.id;
           const isCollapsed = collapsedNodes[node.id];
           const hasChildren = node.children.length > 0;
@@ -194,25 +221,30 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
                 position: 'absolute',
                 left: x,
                 top: y,
-                width: 140,
+                width: 160,
                 cursor: 'pointer',
                 zIndex: isSelected ? 20 : 10,
               }}
-              className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-[11px] font-mono leading-none transition-all duration-150 ${typeStyle} ${
-                isSelected ? 'ring-2 ring-[var(--accent)] border-[var(--accent)] scale-[1.03] shadow-md shadow-[var(--accent-glow)]' : 'hover:scale-[1.01] hover:border-[var(--ink-muted)]'
+              className={`flex items-center justify-between px-3 py-2 rounded-lg border text-[10.5px] font-sans leading-tight transition-all duration-200 ${typeStyle} ${
+                isSelected ? 'ring-2 ring-[var(--accent)] border-[var(--accent)] scale-[1.03] shadow-lg shadow-[var(--accent-glow)]' : 'hover:scale-[1.02] hover:border-[var(--ink-muted)]'
               }`}
             >
-              <span className="truncate pr-1 font-bold" title={node.label}>
-                {node.label}
-              </span>
+              <div className="flex flex-col truncate pr-1">
+                <span className="truncate font-bold" title={node.label}>
+                  {node.label}
+                </span>
+                <span className="text-[8px] opacity-60 uppercase tracking-widest font-mono">
+                  {node.type}
+                </span>
+              </div>
               {hasChildren && (
                 <button
                   onClick={(e) => toggleCollapse(node.id, e)}
-                  className="flex-shrink-0 ml-1 hover:text-[var(--accent)] border-none bg-transparent cursor-pointer p-0 flex items-center justify-center text-[10px]"
+                  className="flex-shrink-0 ml-1 hover:text-[var(--accent)] border-none bg-transparent cursor-pointer p-0 flex items-center justify-center"
                 >
                   <Icon 
                     icon={isCollapsed ? 'solar:add-square-linear' : 'solar:minimize-square-linear'} 
-                    size={12} 
+                    size={14} 
                     style={{ color: isCollapsed ? 'var(--accent)' : 'inherit' }}
                   />
                 </button>
@@ -224,3 +256,4 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     </div>
   );
 }
+

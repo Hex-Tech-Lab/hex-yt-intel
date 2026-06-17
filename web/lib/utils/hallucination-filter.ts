@@ -15,7 +15,7 @@ export function filterHallucinationContent(markdown: string): string {
     return markdown;
   }
 
-  const lines = markdown.split('\n');
+  const lines = markdown.split(/\r?\n/);
   const filtered = lines
     .map((line) => {
       if (line.includes(HALLUCINATION_BLOCK)) {

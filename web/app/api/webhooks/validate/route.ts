@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/lib/supabase';
+import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { UCISValidator } from '@/lib/ucis-v5-validator';
 import { publishEmbeddingTask, verifyQStashSignature, type ValidationPayload } from '@/lib/qstash-client';
 import * as Sentry from '@sentry/nextjs';
@@ -66,22 +66,17 @@ export async function POST(request: NextRequest) {
       checks: `${report.passedChecks}/${report.totalChecks}`,
     }, 'validation');
 
-    // Save validation report to database
-    const supabase = getSupabaseClient();
+    // Save validation report to database via Persistence Adapter
+    const persistence = new SupabasePersistenceAdapter();
     await trackDatabaseQuery(
       'update',
       'analyses',
       async () => {
-        const { error } = await supabase
-          .from('analyses')
-          .update({
-            validation_report: report,
-            validation_passed: report.passed,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', analysisId);
-
-        if (error) throw error;
+        await persistence.updateValidationReport({
+          analysisId,
+          report,
+          passed: report.passed,
+        });
       },
       { analysisId, videoId }
     ).catch((err) => {
