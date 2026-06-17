@@ -7,6 +7,7 @@
  * 3. Tertiary: Placeholder/Fallback
  */
 
+import { XMLParser } from 'fast-xml-parser';
 import { fetchWithProxy } from './http-utils';
 import { getRandomUserAgent } from './user-agent';
 import type { TranscriptProviderPort, TranscriptResult } from '../ports/TranscriptProviderPort';
@@ -74,24 +75,44 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     const response = await fetchWithProxy(metadataUrl, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
     if (!response.ok) throw new Error(`Caption metadata fetch failed: ${response.status}`);
     const metadataText = await response.text();
-    
-    // Improved regex to handle various XML formats
-    const langCodeRegex = /lang_code="([^"]+)"/g;
-    const matches = Array.from(metadataText.matchAll(langCodeRegex));
-    
-    if (matches.length === 0) {
-      // Fallback: check for asr (automated speech recognition)
-      if (metadataText.includes('kind="asr"')) {
-        const asrMatch = metadataText.match(/lang_code="([^"]+)"[^>]*kind="asr"/);
-        if (asrMatch) return { langCode: asrMatch[1] };
-        return { langCode: 'en' };
-      }
-      throw new Error('No captions available for this video');
+
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: '@_',
+    });
+
+    let parsed: { transcript_list?: { track?: unknown } };
+    try {
+      parsed = parser.parse(metadataText);
+    } catch {
+      throw new Error('Failed to parse caption metadata XML');
     }
-    
-    // Prioritize English, then first available
-    const langCode = matches.find((m) => m[1].startsWith('en'))?.[1] || matches[0][1];
-    return { langCode };
+
+    const tracks = parsed.transcript_list?.track;
+    if (!tracks) throw new Error('No captions available for this video');
+
+    const trackList = Array.isArray(tracks) ? tracks : [tracks];
+
+    // Prioritize ASR English, then English, then first ASR, then first available
+    const asrEn = trackList.find((t: Record<string, unknown>) =>
+      typeof t === 'object' && t['@_lang_code'] === 'en' && t['@_kind'] === 'asr'
+    );
+    if (asrEn) return { langCode: 'en' };
+
+    const en = trackList.find((t: Record<string, unknown>) =>
+      typeof t === 'object' && (t['@_lang_code'] as string)?.startsWith('en')
+    );
+    if (en) return { langCode: (en as Record<string, string>)['@_lang_code'] };
+
+    const asr = trackList.find((t: Record<string, unknown>) =>
+      typeof t === 'object' && t['@_kind'] === 'asr'
+    );
+    if (asr) return { langCode: (asr as Record<string, string>)['@_lang_code'] };
+
+    const first = trackList[0] as Record<string, string> | undefined;
+    if (first?.['@_lang_code']) return { langCode: first['@_lang_code'] };
+
+    throw new Error('No captions available for this video');
   }
 
   private async fetchTranscriptContent(videoId: string, langCode: string): Promise<string> {

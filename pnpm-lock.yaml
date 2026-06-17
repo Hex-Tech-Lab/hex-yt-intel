@@ -118,18 +118,33 @@ importers:
       react-player:
         specifier: ^3.4.0
         version: 3.4.0(@svta/cml-cta@1.0.6(@svta/cml-structured-field-values@1.1.3(@svta/cml-utils@1.5.0))(@svta/cml-utils@1.5.0))(@svta/cml-structured-field-values@1.1.3(@svta/cml-utils@1.5.0))(@svta/cml-utils@1.5.0)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      rehype-sanitize:
+        specifier: ^6.0.0
+        version: 6.0.0
+      rehype-stringify:
+        specifier: ^10.0.1
+        version: 10.0.1
       remark:
         specifier: ^15.0.1
         version: 15.0.1
       remark-gfm:
         specifier: ^4.0.1
         version: 4.0.1
+      remark-parse:
+        specifier: ^11.0.0
+        version: 11.0.0
+      remark-rehype:
+        specifier: ^11.1.2
+        version: 11.1.2
       stripe:
         specifier: 15.7.0
         version: 15.7.0
       three:
         specifier: ^0.184.0
         version: 0.184.0
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
       unist-util-visit:
         specifier: ^5.1.0
         version: 5.1.0
@@ -221,6 +236,9 @@ importers:
       '@sentry/hono':
         specifier: 10.57.0
         version: 10.57.0(@cloudflare/workers-types@4.20260609.1)(@sentry/cloudflare@10.57.0(@cloudflare/workers-types@4.20260609.1))(@sentry/node@10.57.0)(hono@4.12.25)
+      fast-xml-parser:
+        specifier: 5.0.6
+        version: 5.0.6
       hono:
         specifier: ^4.12.25
         version: 4.12.25
@@ -2684,6 +2702,9 @@ packages:
   any-promise@1.3.0:
     resolution: {integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==}
 
+  anynum@1.0.0:
+    resolution: {integrity: sha512-xjR9/zBVnUOP6ztMIIgShjsxui80nQUQH+5xJnvrYLs+90bF25/KJqaAi8mk+B4RDtX1Nspi6fmp4YTEts8SfA==}
+
   arg@4.1.0:
     resolution: {integrity: sha512-ZWc51jO3qegGkVh8Hwpv636EkbesNV5ZNQPCtRa+0qytRYPEs9IYT9qITY9buezqUH5uqyzlWLcufrzU2rffdg==}
 
@@ -3576,6 +3597,10 @@ packages:
   fast-uri@3.1.2:
     resolution: {integrity: sha512-rVjf7ArG3LTk+FS6Yw81V1DLuZl1bRbNrev6Tmd/9RaroeeRRJhAt7jg/6YFxbvAQXUCavSoZhPPj6oOx+5KjQ==}
 
+  fast-xml-parser@5.0.6:
+    resolution: {integrity: sha512-5zIl0jWsewL5LdneswG6aJXx1YH1FXQ02UVIe/CZI3wXhI3SqP62bjcIYRNOgU43/MnN1t/MCpH6UoOtBrDNug==}
+    hasBin: true
+
   fastq@1.20.1:
     resolution: {integrity: sha512-GGToxJ/w1x32s/D2EKND7kTil4n8OVk/9mycTc4VDza13lOvpUZTGX3mFSCtV9ksdGBVzvsyAVLM6mHFThxXxw==}
 
@@ -3801,6 +3826,12 @@ packages:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
 
+  hast-util-sanitize@5.0.2:
+    resolution: {integrity: sha512-3yTWghByc50aGS7JlGhk61SPenfE/p1oaFeNwkOOyrscaOkMGrcW9+Cy/QAIOBpZxP1yqDIzFMR0+Np0i0+usg==}
+
+  hast-util-to-html@9.0.5:
+    resolution: {integrity: sha512-OguPdidb+fbHQSU4Q4ZiLKnzWo8Wwsf5bZfbvu7//a9oTYoqD/fWpe96NuHkoS9h0ccGOTe0C4NGXdtS0iObOw==}
+
   hast-util-to-jsx-runtime@2.3.6:
     resolution: {integrity: sha512-zl6s8LwNyo1P9uw+XJGvZtdFF1GdAkOg8ujOw+4Pyb76874fLps4ueHXDhXWdk6YHQ6OgUtinliG7RsYvCbbBg==}
 
@@ -3826,6 +3857,9 @@ packages:
 
   html-url-attributes@3.0.1:
     resolution: {integrity: sha512-ol6UPyBWqsrO6EJySPz2O7ZSr856WDrEzM5zMqp+FJJLGMW35cLYmmZnl0vztAZxRUoNZJFTCohfjuIJ8I4QBQ==}
+
+  html-void-elements@3.0.0:
+    resolution: {integrity: sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg==}
 
   http-errors@1.7.3:
     resolution: {integrity: sha512-ZTTX0MWrsQ2ZAhA1cejAwDLycFsd7I7nVtnkT3Ol0aqodaKW+0CTZDQ1uBv5whptCnc8e8HeRRJxRs0kmm/Qfw==}
@@ -4982,6 +5016,12 @@ packages:
     resolution: {integrity: sha512-dYqgNSZbDwkaJ2ceRd9ojCGjBq+mOm9LmtXnAnEGyHhN/5R7iDW2TRw3h+o/jCFxus3P2LfWIIiwowAjANm7IA==}
     engines: {node: '>= 0.4'}
 
+  rehype-sanitize@6.0.0:
+    resolution: {integrity: sha512-CsnhKNsyI8Tub6L4sm5ZFsme4puGfc6pYylvXo1AeqaGbjOYyzNv3qZPwvs0oMJ39eryyeOdmxwUIo94IpEhqg==}
+
+  rehype-stringify@10.0.1:
+    resolution: {integrity: sha512-k9ecfXHmIPuFVI61B9DeLPN0qFHfawM6RsuX48hoqlaKSF61RskNjSm1lI8PhBEM0MRdLxVVm4WmTqJQccH9mA==}
+
   remark-gfm@4.0.1:
     resolution: {integrity: sha512-1quofZ2RQ9EWdeN34S79+KExV1764+wCUGop5CPL1WGdD0ocPpu91lzPGbwWMECpEpd42kJGQwzRfyov9j4yNg==}
 
@@ -5302,6 +5342,9 @@ packages:
   stripe@15.7.0:
     resolution: {integrity: sha512-hTJhh0Gc+l+hj2vuzaFCh0T46l7793W3wg4J9Oyy3Wu+Ofswd0OgTS4XNt7G9XHJAyHpTmNRNbWgGwn73P4j7g==}
     engines: {node: '>=12.*'}
+
+  strnum@2.4.0:
+    resolution: {integrity: sha512-sHrVyWWdq28RbhjuJdZsA1SnGRJV6NiXbk6AXBxDOsgAcA+lmpUZCYjOdLBxkXMwis6RRe7dlZt4VlIWFVzkmg==}
 
   style-to-js@1.1.21:
     resolution: {integrity: sha512-RjQetxJrrUJLQPHbLku6U/ocGtzyjbJMP9lCNK7Ag0CNh690nSH8woqWH9u16nMjYBAok+i7JO1NP2pOy8IsPQ==}
@@ -8196,6 +8239,8 @@ snapshots:
 
   any-promise@1.3.0: {}
 
+  anynum@1.0.0: {}
+
   arg@4.1.0: {}
 
   argparse@2.0.1: {}
@@ -9271,6 +9316,10 @@ snapshots:
 
   fast-uri@3.1.2: {}
 
+  fast-xml-parser@5.0.6:
+    dependencies:
+      strnum: 2.4.0
+
   fastq@1.20.1:
     dependencies:
       reusify: 1.1.0
@@ -9528,6 +9577,26 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
+  hast-util-sanitize@5.0.2:
+    dependencies:
+      '@types/hast': 3.0.4
+      '@ungap/structured-clone': 1.3.1
+      unist-util-position: 5.0.0
+
+  hast-util-to-html@9.0.5:
+    dependencies:
+      '@types/hast': 3.0.4
+      '@types/unist': 3.0.3
+      ccount: 2.0.1
+      comma-separated-tokens: 2.0.3
+      hast-util-whitespace: 3.0.0
+      html-void-elements: 3.0.0
+      mdast-util-to-hast: 13.2.1
+      property-information: 7.2.0
+      space-separated-tokens: 2.0.2
+      stringify-entities: 4.0.4
+      zwitch: 2.0.4
+
   hast-util-to-jsx-runtime@2.3.6:
     dependencies:
       '@types/estree': 1.0.9
@@ -9571,6 +9640,8 @@ snapshots:
   html-entities@2.6.0: {}
 
   html-url-attributes@3.0.1: {}
+
+  html-void-elements@3.0.0: {}
 
   http-errors@1.7.3:
     dependencies:
@@ -10975,6 +11046,17 @@ snapshots:
       gopd: 1.2.0
       set-function-name: 2.0.2
 
+  rehype-sanitize@6.0.0:
+    dependencies:
+      '@types/hast': 3.0.4
+      hast-util-sanitize: 5.0.2
+
+  rehype-stringify@10.0.1:
+    dependencies:
+      '@types/hast': 3.0.4
+      hast-util-to-html: 9.0.5
+      unified: 11.0.5
+
   remark-gfm@4.0.1:
     dependencies:
       '@types/mdast': 4.0.4
@@ -11444,6 +11526,10 @@ snapshots:
     dependencies:
       '@types/node': 25.9.2
       qs: 6.15.2
+
+  strnum@2.4.0:
+    dependencies:
+      anynum: 1.0.0
 
   style-to-js@1.1.21:
     dependencies:

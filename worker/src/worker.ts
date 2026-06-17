@@ -13,8 +13,8 @@ import { PromptBuilder } from "./services/PromptBuilder";
 import { LLMCascade } from "./services/LLMCascade";
 import { ValidationService } from "./services/ValidationService";
 import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
-import { reconstructMarkdown, extractJsonPayload } from "./services/MarkdownReconstructor";
-import { UCISPayloadSchema } from "./services/ZodSchemas";
+import { PersistService } from "./services/PersistService";
+import { hmacHex } from "./crypto";
 import type { ReasoningEnginePort } from "./ports/ReasoningEnginePort";
 
 type Env = {
@@ -46,20 +46,6 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3005',
 ];
-
-// --- HMAC (Web Crypto) ----------------------------------------------------
-// Shared-secret signing for the direct-streaming gate + tamper-proof persistence.
-async function hmacHex(secret: string, message: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
-  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 
 // Constant-time hex compare (avoids early-exit timing leaks).
 function timingSafeEqualHex(a: string, b: string): boolean {
@@ -535,74 +521,30 @@ app.post("/analyze-llm-stream", async (c) => {
   let modelUsed = '';
   let persisted = false;
 
-  const persist = async (status: 'completed' | 'interrupted') => {
+  const persistService = new PersistService();
+
+  const persistFn = async (status: 'completed' | 'interrupted') => {
     if (persisted || !finalText) return;
-
-    let markdown = finalText;
-    let jsonPayload: Record<string, unknown> | null = null;
-    
-    // 1. Extraction (Boundary 1)
-    const extracted = extractJsonPayload(finalText);
-
-    // 2. Validation (Boundary 2)
-    if (extracted) {
-      const result = UCISPayloadSchema.safeParse(extracted);
-      if (result.success) {
-        jsonPayload = result.data;
-      } else {
-        console.error('[persist] Zod validation failed:', result.error.format());
-        jsonPayload = null; // Proceed with raw markdown
-      }
-    }
-
-    // 3. Reconstruction (Boundary 3)
-    if (jsonPayload) {
-      try {
-        markdown = reconstructMarkdown(jsonPayload);
-      } catch (error) {
-        console.error('[persist] reconstructMarkdown failed:', error);
-        markdown = finalText; // Fallback
-      }
-    }
-
-    const canonical = JSON.stringify({ markdown, payload: jsonPayload });
-    const valid = engine.validate12D(markdown);
-    const contentSig = await hmacHex(activeSecret, canonical);
-    const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
-
     persisted = true;
-    const maxRetries = 2;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        const persistRes = await fetch(`${appUrl}/api/analyses/persist`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            analysisId: req.analysisId,
-            videoId: req.videoId,
-            markdown,
-            payload: jsonPayload,
-            model: modelUsed,
-            valid,
-            contentSig,
-            status,
-          }),
-        });
-        if (persistRes.ok) break;
-        console.warn(`[analyze-llm-stream] ${status} persist returned ${persistRes.status}, retrying...`);
-      } catch (e) {
-        console.error(`[analyze-llm-stream] ${status} persist attempt ${attempt + 1}/${maxRetries + 1} failed`, e);
-      }
-      if (attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
-      }
-    }
+    const valid = engine.validate12D(finalText);
+    const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
+    await persistService.persist({
+      analysisId: req.analysisId,
+      videoId: req.videoId,
+      finalText,
+      jsonPayload: null,
+      modelUsed,
+      valid,
+      status,
+      activeSecret,
+      appUrl,
+    });
   };
 
   // Detect browser disconnect immediately and save partial progress.
   c.req.raw.signal.addEventListener('abort', () => {
     if (!persisted) {
-      c.executionCtx.waitUntil(persist('interrupted'));
+      c.executionCtx.waitUntil(persistFn('interrupted'));
     }
   });
 
@@ -652,7 +594,7 @@ app.post("/analyze-llm-stream", async (c) => {
       } finally {
         // Last-ditch persistence on success or crash (if not already triggered by abort).
         if (finalText && !persisted) {
-          c.executionCtx.waitUntil(persist('completed'));
+          c.executionCtx.waitUntil(persistFn('completed'));
         }
         controller.close();
       }
