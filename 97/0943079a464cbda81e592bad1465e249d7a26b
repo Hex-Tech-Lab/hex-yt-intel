@@ -1,0 +1,20 @@
+web/app/api/analyses/persist/route.ts
+  s_18b04957a1f679::t_1bd98a08f5687c 69
+  s_18b04957a1f679::t_00122547739c3f 93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "970943079a464cbda81e592bad1465e249d7a26b",
+  "prompts": {},
+  "sessions": {
+    "s_18b04957a1f679": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a942208ffeeQA17vRw1XeaYM",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
