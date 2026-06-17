@@ -14,6 +14,7 @@ export interface DimensionDrawerProps {
 export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const setOverlayOpen = useUIStore((s) => s.setOverlayOpen);
 
   useEffect(() => {
@@ -23,18 +24,22 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     }
 
     setOverlayOpen(true, 'dimension-drawer');
+    previousFocusRef.current = document.activeElement as HTMLElement;
 
     // Focus the close button when the drawer opens
-    closeBtnRef.current?.focus();
+    requestAnimationFrame(() => closeBtnRef.current?.focus());
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.stopPropagation();
         onClose();
+        return;
       }
       if (e.key === 'Tab' && drawerRef.current) {
         const focusableElements = drawerRef.current.querySelectorAll(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
+        if (focusableElements.length === 0) return;
         const firstElement = focusableElements[0] as HTMLElement;
         const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
 
@@ -56,6 +61,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       setOverlayOpen(false);
+      previousFocusRef.current?.focus();
     };
   }, [dimension, onClose, setOverlayOpen]);
 

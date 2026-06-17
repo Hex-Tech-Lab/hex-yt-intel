@@ -571,22 +571,32 @@ app.post("/analyze-llm-stream", async (c) => {
     const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
 
     persisted = true;
-    await fetch(`${appUrl}/api/analyses/persist`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        analysisId: req.analysisId,
-        videoId: req.videoId,
-        markdown,
-        payload: jsonPayload,
-        model: modelUsed,
-        valid,
-        contentSig,
-        status,
-      }),
-    }).catch((e) => {
-      console.error(`[analyze-llm-stream] ${status} persist failed`, e);
-    });
+    const maxRetries = 2;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const persistRes = await fetch(`${appUrl}/api/analyses/persist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            analysisId: req.analysisId,
+            videoId: req.videoId,
+            markdown,
+            payload: jsonPayload,
+            model: modelUsed,
+            valid,
+            contentSig,
+            status,
+          }),
+        });
+        if (persistRes.ok) break;
+        console.warn(`[analyze-llm-stream] ${status} persist returned ${persistRes.status}, retrying...`);
+      } catch (e) {
+        console.error(`[analyze-llm-stream] ${status} persist attempt ${attempt + 1}/${maxRetries + 1} failed`, e);
+      }
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
   };
 
   // Detect browser disconnect immediately and save partial progress.

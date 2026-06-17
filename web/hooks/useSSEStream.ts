@@ -200,14 +200,17 @@ export function useSSEStream() {
               if (!hasSettled) myController.abort();
             }, 10000);
 
-            const res = await fetch(job.stream.url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(streamPayload),
-              signal: currentSignal,
-            });
-
-            clearTimeout(timeoutId);
+            let res;
+            try {
+              res = await fetch(job.stream.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(streamPayload),
+                signal: currentSignal,
+              });
+            } finally {
+              clearTimeout(timeoutId);
+            }
 
             if (!res.ok || !res.body) {
               const errText = await res.text().catch(() => '');

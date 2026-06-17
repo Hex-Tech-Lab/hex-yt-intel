@@ -383,7 +383,13 @@ export class SynthesisStreamAdapter {
           // 4. Validate and set Classification
           if (obj.classification && typeof obj.classification === 'object') {
             const c = obj.classification;
-            if (typeof c.authoritative === 'boolean' && typeof c.recommendation === 'string') {
+            if (
+              typeof c.authoritative === 'boolean' &&
+              typeof c.recommendation === 'string' &&
+              typeof c.practicallyActionable === 'boolean' &&
+              typeof c.knowledgeGraphReady === 'boolean' &&
+              typeof c.safe === 'boolean'
+            ) {
               this.synthStore.getState().setClassification(c);
             }
           }

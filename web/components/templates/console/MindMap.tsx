@@ -87,23 +87,26 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     }
 
     // Capture isolated/disconnected nodes and slot them into the hierarchy
+    const rootMindNode = nodeMap[rootNode.id];
     graph.nodes.forEach((n) => {
-      if (!visited.has(n.id) && nodeMap[n.id] && n.id !== rootNode!.id) {
-        const myTypePri = typePriority[n.entityType || ''] ?? 99;
-        // Find a visited node with lower priority (higher in tree)
-        const potentialParent = Object.values(nodeMap)
-          .filter(v => visited.has(v.id) && (typePriority[v.type] ?? 99) < myTypePri)
-          .sort((a, b) => b.weight - a.weight)[0] || nodeMap[rootNode!.id];
-        
-        if (potentialParent) {
-          nodeMap[n.id]!.parentId = potentialParent.id;
-          potentialParent.children.push(nodeMap[n.id]!);
-          visited.add(n.id);
-        }
+      const mindNode = nodeMap[n.id];
+      if (!mindNode || visited.has(n.id) || n.id === rootNode.id) return;
+      const myTypePri = typePriority[mindNode.type] ?? 99;
+      // Find a visited node with lower priority (higher in tree)
+      const candidates = Object.values(nodeMap).filter(
+        v => visited.has(v.id) && (typePriority[v.type] ?? 99) < myTypePri
+      );
+      const bestParent = candidates.length > 0
+        ? candidates.sort((a, b) => b.weight - a.weight)[0]
+        : rootMindNode;
+      if (bestParent) {
+        mindNode.parentId = bestParent.id;
+        bestParent.children.push(mindNode);
+        visited.add(n.id);
       }
     });
 
-    return nodeMap[rootNode.id]!;
+    return rootMindNode!;
   }, [graph]);
 
   // Compute positions for SVG rendering
@@ -204,7 +207,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
       </svg>
 
       <div style={{ width: layout.w, height: layout.h, position: 'relative' }}>
-        {layout.nodes.map(({ node, x, y }) => {
+        {layout.nodes.map(({ node, x, y, level: _level }) => {
           const isSelected = selectedId === node.id;
           const isCollapsed = collapsedNodes[node.id];
           const hasChildren = node.children.length > 0;
