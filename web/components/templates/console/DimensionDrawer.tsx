@@ -29,6 +29,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     // Focus the close button when the drawer opens
     requestAnimationFrame(() => closeBtnRef.current?.focus());
 
+    // Cache focusable elements — avoid querySelectorAll on every keystroke
+    let focusableElements: NodeListOf<HTMLElement>;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
@@ -36,12 +39,14 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
         return;
       }
       if (e.key === 'Tab' && drawerRef.current) {
-        const focusableElements = drawerRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
+        if (!focusableElements || focusableElements.length === 0) {
+          focusableElements = drawerRef.current.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+        }
         if (focusableElements.length === 0) return;
-        const firstElement = focusableElements[0] as HTMLElement;
-        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+        const firstElement = focusableElements[0]!;
+        const lastElement = focusableElements[focusableElements.length - 1]!;
 
         if (e.shiftKey) {
           if (document.activeElement === firstElement) {
@@ -61,7 +66,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       setOverlayOpen(false);
-      previousFocusRef.current?.focus();
+      // RAF to avoid layout thrash from focus restore
+      const prev = previousFocusRef.current;
+      requestAnimationFrame(() => prev?.focus());
     };
   }, [dimension, onClose, setOverlayOpen]);
 
