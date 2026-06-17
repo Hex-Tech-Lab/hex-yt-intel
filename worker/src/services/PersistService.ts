@@ -7,18 +7,14 @@ export interface PersistOptions {
   videoId: string;
   finalText: string;
   modelUsed: string;
-  valid: boolean;
   status: 'completed' | 'interrupted';
   activeSecret: string;
   appUrl: string;
+  validate12D: (text: string) => boolean;
 }
 
 export class PersistService {
-  private persisted = false;
-
-  async persist(options: PersistOptions): Promise<void> {
-    if (this.persisted || !options.finalText) return;
-
+  async persist(options: PersistOptions): Promise<boolean> {
     let markdown = options.finalText;
     let jsonPayload: Record<string, unknown> | null = null;
 
@@ -42,6 +38,7 @@ export class PersistService {
       }
     }
 
+    const valid = options.validate12D(markdown);
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
     const contentSig = await hmacHex(options.activeSecret, canonical);
 
@@ -57,15 +54,12 @@ export class PersistService {
             markdown,
             payload: jsonPayload,
             model: options.modelUsed,
-            valid: options.valid,
+            valid,
             contentSig,
             status: options.status,
           }),
         });
-        if (persistRes.ok) {
-          this.persisted = true;
-          break;
-        }
+        if (persistRes.ok) return true;
         console.warn(`[persist] ${options.status} persist returned ${persistRes.status}, retrying...`);
       } catch (e) {
         console.error(`[persist] ${options.status} persist attempt ${attempt + 1}/${maxRetries + 1} failed`, e);
@@ -74,5 +68,6 @@ export class PersistService {
         await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
       }
     }
+    return false;
   }
 }
