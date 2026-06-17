@@ -52,9 +52,10 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     const service = getSupabaseServiceClient();
     const { data: existing } = await service
       .from('analyses')
-      .select('id, title, analysis_markdown, analysis_payload, created_at, validation_report')
+      .select('id, video_id, title, analysis_markdown, analysis_payload, created_at, validation_report, billing_status')
       .eq('video_id', params.videoId)
       .eq('user_id', params.userId)
+      .neq('billing_status', 'processing') // Skip active jobs
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -73,8 +74,9 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         dimensions = payload.dimensions as Record<string, unknown>;
       }
 
-      return {
+      const res = {
         id: existing.id,
+        videoId: existing.video_id,
         title: existing.title,
         analysisMarkdown: existing.analysis_markdown ?? JSON.stringify(existing.analysis_payload),
         createdAt: existing.created_at,
@@ -86,6 +88,12 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         },
         analysisPayload: existing.analysis_payload as any,
       };
+
+      if (res.cachedReport.metadata && !res.cachedReport.metadata.videoId) {
+        res.cachedReport.metadata.videoId = existing.video_id;
+      }
+      
+      return res;
     }
 
     if (!existing.analysis_markdown) return null;
@@ -106,8 +114,13 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       timezone?: string;
     };
 
+    if (cachedReport.metadata && !cachedReport.metadata.videoId) {
+      cachedReport.metadata.videoId = existing.video_id;
+    }
+
     return {
       id: existing.id,
+      videoId: existing.video_id,
       title: existing.title,
       analysisMarkdown: existing.analysis_markdown,
       createdAt: existing.created_at,
@@ -1116,6 +1129,74 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisChunks' },
+        extra: { analysisId: params.analysisId },
+      });
+      throw error;
+    }
+  }
+
+  async findAnalysisByShareToken(token: string): Promise<{
+    id: string;
+    title: string;
+    channelTitle: string | null;
+    analysisMarkdown: string | null;
+    sharedExpiresAt: string | null;
+    createdAt: string;
+  } | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analyses')
+        .select('id, title, channel_title, analysis_markdown, shared_expires_at, created_at')
+        .eq('shared_token', token)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] findAnalysisByShareToken failed:', error.message);
+        throw error;
+      }
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        title: data.title || 'Untitled',
+        channelTitle: data.channel_title,
+        analysisMarkdown: data.analysis_markdown || null,
+        sharedExpiresAt: data.shared_expires_at,
+        createdAt: data.created_at,
+      };
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'findAnalysisByShareToken' },
+        extra: { token },
+      });
+      throw error;
+    }
+  }
+
+  async updateValidationReport(params: {
+    analysisId: string;
+    report: any;
+    passed: boolean;
+  }): Promise<void> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { error } = await service
+        .from('analyses')
+        .update({
+          validation_report: params.report,
+          validation_passed: params.passed,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.analysisId);
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] updateValidationReport failed:', error.message);
+        throw error;
+      }
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'updateValidationReport' },
         extra: { analysisId: params.analysisId },
       });
       throw error;

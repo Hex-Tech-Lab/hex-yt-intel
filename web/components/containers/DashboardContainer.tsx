@@ -9,8 +9,6 @@ import { TopBar } from '@/components/templates/console/TopBar';
 import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import { DimensionAccordion, type Dimension } from '@/components/templates/console/DimensionAccordion';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
@@ -29,6 +27,7 @@ import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 import { VideoPlayerCard } from '@/components/templates/console/VideoPlayerCard';
 import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
+import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
 
 // See /docs/ui/dashboard-container.md
 
@@ -523,55 +522,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                         progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
                       />
 
-                      {/* Selected Dimension Content */}
-                      {selectedDimension && (
-                        <div className="border border-[var(--line)] rounded-xl bg-[rgb(26_31_43_/_0.3)] p-6 md:p-8 flex flex-col gap-6 min-h-[500px] transition-all duration-300">
-                          <div className="flex items-center justify-between pb-4 border-b border-[var(--line)]">
-                            <div className="flex flex-col gap-1 min-w-0">
-                              <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--accent)] font-bold">
-                                Dimension {dimensions.findIndex(d => d.key === selectedDimensionKey) + 1}
-                              </span>
-                              <h3 className="font-mono text-sm md:text-base uppercase tracking-wider font-bold text-[var(--ink)] truncate">
-                                {selectedDimension.label}
-                              </h3>
-                            </div>
-                            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                              selectedDimension.status === 'streaming' ? 'bg-[var(--accent)] animate-pulse shadow-[0_0_8px_var(--accent)]' :
-                              selectedDimension.status === 'done' ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' :
-                              selectedDimension.status === 'error' ? 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]' :
-                              'bg-[var(--ink-muted)]'
-                            }`} />
-                          </div>
-                          
-                          <div className="flex-1 text-sm md:text-base leading-relaxed text-[var(--ink-secondary)]">
-                            {selectedDimension.content ? (
-                              <div className="prose prose-invert max-w-none text-sm md:text-base leading-relaxed text-[var(--ink-secondary)] prose-p:mb-4 prose-p:mt-0 prose-headings:text-base md:prose-headings:text-lg prose-headings:font-bold prose-headings:mt-6 prose-headings:mb-3 prose-table:my-6 prose-table:text-xs md:prose-table:text-sm prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2 prose-ul:list-disc prose-ul:pl-6 prose-ol:list-decimal prose-ol:pl-6 prose-li:mb-2">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {selectedDimension.content}
-                                </ReactMarkdown>
-                              </div>
-                            ) : selectedDimension.status === 'error' ? (
-                              <div className="flex items-center gap-3 p-4 bg-[var(--err)]/10 text-[var(--err)] rounded-lg border border-[var(--err)]/20 font-mono text-xs md:text-sm">
-                                <Icon icon="solar:danger-triangle-linear" size={20} />
-                                Synthesis failed for this dimension. Check the processing log.
-                              </div>
-                            ) : (
-                              <div className="space-y-6 animate-pulse pt-4">
-                                <div className="space-y-3">
-                                  <div className="h-4 bg-[var(--line-strong)] rounded w-full opacity-20" />
-                                  <div className="h-4 bg-[var(--line-strong)] rounded w-11/12 opacity-15" />
-                                  <div className="h-4 bg-[var(--line-strong)] rounded w-3/4 opacity-10" />
-                                </div>
-                                <div className="space-y-3 pt-4">
-                                  <div className="h-4 bg-[var(--line-strong)] rounded w-5/6 opacity-20" />
-                                  <div className="h-4 bg-[var(--line-strong)] rounded w-full opacity-15" />
-                                  <div className="h-4 bg-[var(--line-strong)] rounded w-2/3 opacity-10" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                      {/* Dimension Detail Drawer */}
+                      <DimensionDrawer 
+                        dimension={selectedDimension ? {
+                          label: selectedDimension.label,
+                          content: selectedDimension.content,
+                          icon: selectedDimension.icon
+                        } : null}
+                        onClose={() => setSelectedDimensionKey(null)}
+                      />
                     </div>
                   ) : (
                     <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
@@ -661,7 +620,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             </div>
             
             <div className="flex items-center gap-2">
-              {/* Copy button */}
               <button
                 type="button"
                 onClick={() => handleCopy(expandedPanel.id)}
@@ -671,7 +629,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 <Icon icon="solar:copy-linear" size={14} />
               </button>
               
-              {/* Export button */}
               <button
                 type="button"
                 onClick={() => handlePanelExport(expandedPanel.id)}
@@ -683,7 +640,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
               <div className="w-[1px] h-3 bg-[var(--line)] mx-1" />
 
-              {/* Mode switchers in header */}
               <button
                 type="button"
                 onClick={() => setExpandedPanel({ id: expandedPanel.id, mode: 'vertical' })}
@@ -717,7 +673,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
               <div className="w-[1px] h-3 bg-[var(--line)] mx-1" />
 
-              {/* Close button */}
               <button
                 type="button"
                 onClick={() => setExpandedPanel(null)}

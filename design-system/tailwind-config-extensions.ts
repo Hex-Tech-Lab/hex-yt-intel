@@ -63,10 +63,18 @@ export const hexYtIntelConfig = {
         'caption': ['11px', { lineHeight: '1.5', letterSpacing: '0px', fontWeight: '400' }],
       },
       borderRadius: {
+        DEFAULT: '0px',
         none: '0px',
-        card: '0px',     // Banned per AGY/User
-        control: '0px',  // Banned per AGY/User
-        pill: '0px',     // Banned per AGY/User
+        sm: '0px',
+        md: '0px',
+        lg: '0px',
+        xl: '0px',
+        '2xl': '0px',
+        '3xl': '0px',
+        full: '0px',
+        card: '0px',
+        control: '0px',
+        pill: '0px',
       },
       transitionTimingFunction: {
         'hex-ease': 'cubic-bezier(0.16, 1, 0.3, 1)',

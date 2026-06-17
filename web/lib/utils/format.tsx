@@ -16,7 +16,7 @@ export function preprocessMarkdown(content: string): string {
   processed = processed.replace(/\|[ \t]*[•●]\s*/g, '| - ');
 
   // 2. Detect and transform tab-separated lines into pipe-separated tables
-  const lines = processed.split('\n');
+  const lines = processed.split(/\r?\n/);
   let inTable = false;
   let tableHeaderIndex = -1;
   let inFence = false;

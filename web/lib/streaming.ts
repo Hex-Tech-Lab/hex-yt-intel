@@ -11,7 +11,7 @@ export function createClaudeStreamNormalizer(): TransformStream<Uint8Array, Uint
   return new TransformStream({
     async transform(chunk: Uint8Array, controller: TransformStreamDefaultController<Uint8Array>) {
       const chunkText = new TextDecoder().decode(chunk);
-      const lines = chunkText.split('\n');
+      const lines = chunkText.split(/\r?\n/);
 
       for (const line of lines) {
         const trimmed = line.trim();

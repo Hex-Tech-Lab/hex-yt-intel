@@ -236,13 +236,38 @@ export function KnowledgeGraphCanvas({
 
           const showLabel = isActive || node.id === selectedId || scale > (compact ? 1.5 : 1.0);
           if (showLabel && !dim) {
-            const baseFontSize = compact ? 9 : 10.5;
+            const baseFontSize = compact ? 9 : 10;
             const clampedFontSize = Math.max(7.5, baseFontSize / scale);
-            ctx.font = `bold ${clampedFontSize}px "Courier New", Courier, monospace`;
+            ctx.font = `500 ${clampedFontSize}px Inter, system-ui, -apple-system, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillStyle = `rgb(${COL.ink} / ${isActive ? 1 : 0.8})`;
-            ctx.fillText(node.label, node.x!, node.y! + r + 3 / scale);
+
+            const label = node.label;
+            const maxWidth = (compact ? 60 : 80) / scale;
+            const lineHeight = (compact ? 10 : 12) / scale;
+            
+            // Simple text wrapping
+            const words = label.split(' ');
+            let line = '';
+            const lines = [];
+            
+            for (let n = 0; n < words.length; n++) {
+              const testLine = line + words[n] + ' ';
+              const metrics = ctx.measureText(testLine);
+              if (metrics.width > maxWidth && n > 0) {
+                lines.push(line.trim());
+                line = words[n] + ' ';
+              } else {
+                line = testLine;
+              }
+            }
+            lines.push(line.trim());
+
+            const startY = node.y! + r + 4 / scale;
+            lines.forEach((l, i) => {
+              ctx.fillText(l, node.x!, startY + i * lineHeight);
+            });
           }
         }}
         nodePointerAreaPaint={(n: any, color: string, ctx: CanvasRenderingContext2D) => {

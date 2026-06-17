@@ -163,16 +163,17 @@ check_api_metadata() {
   fi
 }
 
-check_auth_endpoint() {
-  log_info "Checking auth configuration..."
+check_auth_status() {
+  log_info "Checking auth session endpoint..."
 
-  local response=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL/api/auth/signin")
+  # /api/auth/session is the standard Supabase/Next.js check
+  local http_code=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL/api/auth/session")
 
-  if [ "$response" = "200" ] || [ "$response" = "307" ]; then
-    log_pass "Auth endpoint accessible"
+  if [ "$http_code" = "200" ]; then
+    log_pass "Auth session endpoint accessible"
     return 0
   else
-    log_warn "Auth endpoint returned HTTP $response (may be expected)"
+    log_warn "Auth session endpoint returned HTTP $http_code (expected if not logged in)"
     return 0
   fi
 }

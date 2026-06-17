@@ -1,4 +1,4 @@
-import { getSupabaseClientWithAuth } from '@/lib/supabase';
+import { verifyResourceOwnership } from '@/lib/services/ownership';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
@@ -10,21 +10,13 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const supabase = await getSupabaseClientWithAuth();
+    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses');
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (error === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: analysis, error } = await supabase
-      .from('analyses')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
-
-    if (error || !analysis) {
+    if (error === 'NotFound' || !analysis) {
       return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
     }
 

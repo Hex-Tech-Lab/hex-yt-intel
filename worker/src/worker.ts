@@ -437,17 +437,22 @@ app.post("/analyze-llm-stream", async (c) => {
 
   // Edge Hardening: If transcript is missing, try to fetch it
   let transcript = req.transcript;
-  if (!transcript || transcript.trim().length === 0) {
-    console.info(`[analyze-llm-stream] Empty transcript, attempting pre-fetch for ${req.videoId}`);
+  const isPlaceholder = transcript?.includes('Transcript unavailable for this video');
+  
+  if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
+    console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${req.videoId}`);
     try {
       const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL);
       const result = await extractor.fetch(req.videoId);
-      transcript = result.transcript;
-      console.info(`[analyze-llm-stream] Pre-fetch successful for ${req.videoId}`);
+      if (result.transcript && result.transcript.trim().length > 0 && !result.transcript.includes('Transcript unavailable')) {
+        transcript = result.transcript;
+        console.info(`[analyze-llm-stream] Fetch successful for ${req.videoId}`);
+      }
     } catch (e) {
-      console.error(`[analyze-llm-stream] Pre-fetch failed for ${req.videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
-      // Fallback to placeholder if fetch fails
-      transcript = '[Transcript unavailable for this video - content ingestion failed across all available sources]';
+      console.error(`[analyze-llm-stream] Fetch failed for ${req.videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
+      if (!transcript) {
+        transcript = '[Transcript unavailable for this video - content ingestion failed across all available sources]';
+      }
     }
   }
 
@@ -578,11 +583,8 @@ app.post("/analyze-llm-stream", async (c) => {
         valid,
         contentSig,
         status,
-        chunkIndex: req.chunkIndex,
-        totalChunks: req.totalChunks,
       }),
     }).catch((e) => {
-      persisted = false;
       console.error(`[analyze-llm-stream] ${status} persist failed`, e);
     });
   };
