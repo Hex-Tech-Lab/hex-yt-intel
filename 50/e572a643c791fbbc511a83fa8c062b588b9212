@@ -1,0 +1,22 @@
+web/components/templates/LegalPage.tsx
+  s_e6750ccfff01b1::t_48aea7b3f75f0c 71
+  s_e6750ccfff01b1::t_e264ee57b0635c 165
+  s_e6750ccfff01b1::t_f5db95ea202251 4-5
+  s_e6750ccfff01b1::t_35035cfd73f23a 58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "50e572a643c791fbbc511a83fa8c062b588b9212",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
