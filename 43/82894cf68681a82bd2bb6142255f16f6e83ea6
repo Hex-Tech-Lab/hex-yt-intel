@@ -1,0 +1,21 @@
+web/utils/supabase/middleware.ts
+  s_749a5385eae1fb::t_8f2f86bfd34d61 3,14-15
+web/app/auth/callback/route.ts
+  s_749a5385eae1fb::t_618b0d327eb6a4 4,40-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "4382894cf68681a82bd2bb6142255f16f6e83ea6",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
