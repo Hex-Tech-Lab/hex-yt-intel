@@ -48,5 +48,5 @@ export const DIMENSION_NAMES: Record<number, string> = {
  * Validate that a dimension number is valid (1-11)
  */
 export function isValidDimensionNumber(num: unknown): num is number {
-  return typeof num === 'number' && num >= 1 && num <= TOTAL_DIMENSIONS;
+  return typeof num === 'number' && Number.isInteger(num) && num >= 1 && num <= TOTAL_DIMENSIONS;
 }
