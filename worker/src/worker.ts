@@ -525,19 +525,18 @@ app.post("/analyze-llm-stream", async (c) => {
 
   const persistFn = async (status: 'completed' | 'interrupted') => {
     if (persisted || !finalText) return;
-    const valid = engine.validate12D(finalText);
     const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
-    await persistService.persist({
+    const ok = await persistService.persist({
       analysisId: req.analysisId,
       videoId: req.videoId,
       finalText,
       modelUsed,
-      valid,
       status,
       activeSecret,
       appUrl,
+      validate12D: (text: string) => engine.validate12D(text),
     });
-    persisted = true;
+    persisted = ok;
   };
 
   // Detect browser disconnect immediately and save partial progress.
