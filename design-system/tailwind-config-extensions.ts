@@ -71,7 +71,7 @@ export const hexYtIntelConfig = {
         xl: '0px',
         '2xl': '0px',
         '3xl': '0px',
-        full: '0px',
+        full: '9999px',
         card: '0px',
         control: '0px',
         pill: '0px',

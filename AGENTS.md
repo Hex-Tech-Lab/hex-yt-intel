@@ -11,9 +11,9 @@ All commands run from repo root via `pnpm --filter`:
 | Task | Command |
 |---|---|
 | Dev (web) | `pnpm --filter @hex-yt-intel/web dev` |
-| Dev (worker) | `pnpm --filter @hex-yt-intel/web exec wrangler dev` — run from `worker/` |
+| Dev (worker) | `pnpm --filter youtube-intelligence-worker dev` |
 | Build (web) | `pnpm --filter @hex-yt-intel/web build` |
-| Build (worker) | `pnpm --filter @hex-yt-intel/web run build` — run from `worker/` |
+| Build (worker) | `pnpm --filter youtube-intelligence-worker build` |
 | Type-check (web) | `pnpm --filter @hex-yt-intel/web type-check` |
 | Lint (web) | `pnpm --filter @hex-yt-intel/web lint` |
 | Format (web) | `pnpm --filter @hex-yt-intel/web format` |

@@ -1168,7 +1168,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisByShareToken' },
-        extra: { token },
+        extra: { token: '[REDACTED]' },
       });
       throw error;
     }
