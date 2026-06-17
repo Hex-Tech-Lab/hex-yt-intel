@@ -1,0 +1,90 @@
+web/lib/types/dimension.ts
+  s_8abcb0c4443f8b::t_8b6ff7474f71f9 1-52
+web/lib/utils/ucis-parser.ts
+  s_ccf252fd5755b5::t_8e085619ae5107 1
+web/lib/types/monetization.ts
+  s_451fad6d1a8e73::t_46f5174ca2e621 1-17
+web/lib/stores/analysis-dimensions-store.ts
+  s_19947c18ecbf4a::t_54db6ffc1d449b 1-16,18-56
+  s_6769eea59b8368::t_4f85ab65623943 17
+web/lib/types/synthesis-nucleus.ts
+  s_ccf252fd5755b5::t_8e085619ae5107 14-35,47-48,71,181-214
+web/lib/types/knowledge-graph.ts
+  s_ccf252fd5755b5::t_8e085619ae5107 1
+web/lib/stores/analysis-metadata-store.ts
+  s_19947c18ecbf4a::t_e7141192f21ce7 1-96
+web/lib/stores/analysis-streaming-store.ts
+  s_19947c18ecbf4a::t_6d94c9bd25b19c 41-42
+  s_19947c18ecbf4a::t_f3947707ad7619 1-40,43-56
+web/lib/stores/analysis-state-store.ts
+  s_19947c18ecbf4a::t_1d37b9587ef59f 1-82
+web/lib/types/persona.ts
+  s_e6750ccfff01b1::t_2e9658e9e700e5 8-9
+  s_8abcb0c4443f8b::t_8b6ff7474f71f9 1-7,10-66
+web/components/templates/console/PersonaSelector.tsx
+  s_ccf252fd5755b5::t_8e085619ae5107 4
+web/lib/types/classification.ts
+  s_451fad6d1a8e73::t_8365a46de4a1da 1-18
+web/app/api/analyses/[id]/relations/route.ts
+  s_ccf252fd5755b5::t_8e085619ae5107 7
+web/hooks/useKnowledgeGraph.ts
+  s_ccf252fd5755b5::t_8e085619ae5107 14
+web/lib/stores/synthesis-nucleus-store.ts
+  s_ccf252fd5755b5::t_8e085619ae5107 2-5,14,18-37,39-53,55-63,65-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "8bb9fbec00fc3879e8ab6028de74099877ecc706",
+  "prompts": {},
+  "sessions": {
+    "s_19947c18ecbf4a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b8fc16ffezh4KKXX4yV4c0p",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_451fad6d1a8e73": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b91100ffekbRAm04vWJAttA",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_6769eea59b8368": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b94424ffe0j65rmLF7Udqsa",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_8abcb0c4443f8b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b91dc4ffewYiAPirGC64STM",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_ccf252fd5755b5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129963db0ffeEwHAmKe6jMz01W",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
