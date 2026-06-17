@@ -4,6 +4,7 @@ export type { StreamToken };
 
 /** Video metadata fetched from the YouTube/Worker pipeline. */
 export interface VideoMetadata {
+  videoId: string;
   title: string;
   channelTitle: string;
   publishedAt: string;

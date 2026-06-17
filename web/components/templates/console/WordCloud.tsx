@@ -20,17 +20,18 @@ interface PlacedWord {
   h: number;
   fontSize: number;
   color: string;
+  bgRgb: string;
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  person: '#f43f5e', // rose
-  concept: '#a855f7', // purple
-  framework: '#eab308', // yellow
-  tool: '#06b6d4', // cyan
-  organization: '#3b82f6', // blue
-  study: '#10b981', // green
-  trend: '#f97316', // orange
-  metric: '#ec4899', // pink
+const TYPE_COLORS: Record<string, { text: string; bg: string }> = {
+  person: { text: '#f43f5e', bg: '244 63 94' },
+  concept: { text: '#a855f7', bg: '168 85 247' },
+  framework: { text: '#eab308', bg: '234 179 8' },
+  tool: { text: '#06b6d4', bg: '6 182 212' },
+  organization: { text: '#3b82f6', bg: '59 130 246' },
+  study: { text: '#10b981', bg: '16 185 129' },
+  trend: { text: '#f97316', bg: '249 115 22' },
+  metric: { text: '#ec4899', bg: '236 72 153' },
 };
 
 export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
@@ -54,9 +55,31 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   const wordsLayout = useMemo(() => {
     if (!graph.nodes || graph.nodes.length === 0) return [];
 
-    const nodes = graph.nodes
-      .slice()
-      .sort((a, b) => (b.weight || 0) - (a.weight || 0));
+    // 1. Tokenize labels and aggregate weights
+    const tokenMap: Record<string, { label: string; weight: number; type: string; id: string }> = {};
+    
+    graph.nodes.forEach(node => {
+      const words = node.label.split(/\s+/).filter(w => w.length > 2);
+      words.forEach(word => {
+        const key = word.toLowerCase().replace(/[^\w]/g, '');
+        if (!key || key.length < 3) return;
+        
+        if (!tokenMap[key]) {
+          tokenMap[key] = {
+            label: word,
+            weight: node.weight || 1,
+            type: node.entityType || 'concept',
+            id: node.id
+          };
+        } else {
+          tokenMap[key].weight += (node.weight || 1) * 0.6;
+        }
+      });
+    });
+
+    const sortedTokens = Object.values(tokenMap)
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 35);
 
     const center = { x: size.w / 2, y: size.h / 2 };
     const placed: PlacedWord[] = [];
@@ -66,60 +89,59 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     const testCtx = testCanvas ? testCanvas.getContext('2d') : null;
 
     const checkOverlap = (a: PlacedWord, b: PlacedWord) => {
-      // Add padding for collision check
-      const padding = 6;
+      const padding = 8;
       return (
         Math.abs(a.x - b.x) * 2 < a.w + b.w + padding &&
         Math.abs(a.y - b.y) * 2 < a.h + b.h + padding
       );
     };
 
-    nodes.forEach((node) => {
-      const weight = node.weight || 1;
-      const fontSize = Math.max(10, Math.min(26, 9 + weight * 2));
-      const text = node.label;
+    sortedTokens.forEach((token) => {
+      const weight = token.weight;
+      const fontSize = Math.max(10, Math.min(15, 9 + weight * 0.8));
+      const text = token.label;
 
       if (testCtx) {
-        testCtx.font = `bold ${fontSize}px "Courier New", Courier, monospace`;
+        testCtx.font = `600 ${fontSize}px Inter, sans-serif`;
       }
       const textMetrics = testCtx ? testCtx.measureText(text) : { width: text.length * fontSize * 0.6 };
-      const w = textMetrics.width;
-      const h = fontSize;
+      
+      // Pill dimensions
+      const w = textMetrics.width + 16; 
+      const h = fontSize + 10;
 
       let placedWord: PlacedWord | null = null;
       let theta = Math.random() * Math.PI * 2;
-      const step = 0.15;
-      const spiralSpread = 2.4;
+      const step = 0.12;
+      const spiralSpread = 2.2;
       let iterations = 0;
 
-      // Archimedean spiral search for collision-free spot
-      while (!placedWord && iterations < 350) {
+      while (!placedWord && iterations < 400) {
         const distance = step * theta * spiralSpread;
         const x = center.x + distance * Math.cos(theta);
-        const y = center.y + distance * Math.sin(theta) * 0.85; // slightly squished oval
+        const y = center.y + distance * Math.sin(theta) * 0.8;
 
+        const theme = TYPE_COLORS[token.type] || { text: '#94a3b8', bg: '148 163 184' };
         const candidate: PlacedWord = {
-          id: node.id,
+          id: token.id,
           label: text,
-          type: node.entityType || 'concept',
+          type: token.type,
           weight,
           x,
           y,
           w,
           h,
           fontSize,
-          color: TYPE_COLORS[node.entityType || ''] || '#94a3b8',
+          color: theme.text,
+          bgRgb: theme.bg,
         };
 
-        // Check if overlaps with any already placed words
         const hasOverlap = placed.some((other) => checkOverlap(candidate, other));
-
-        // Check canvas bounds
         const isOutOfBounds =
-          x - w / 2 < 10 ||
-          x + w / 2 > size.w - 10 ||
-          y - h / 2 < 10 ||
-          y + h / 2 > size.h - 10;
+          x - w / 2 < 5 ||
+          x + w / 2 > size.w - 5 ||
+          y - h / 2 < 5 ||
+          y + h / 2 > size.h - 5;
 
         if (!hasOverlap && !isOutOfBounds) {
           placedWord = candidate;
@@ -129,23 +151,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         iterations++;
       }
 
-      // If we couldn't find a spot within bounds, place it anyway at backup coordinates
-      if (!placedWord) {
-        placedWord = {
-          id: node.id,
-          label: text,
-          type: node.entityType || 'concept',
-          weight,
-          x: center.x + (Math.random() - 0.5) * 80,
-          y: center.y + (Math.random() - 0.5) * 60,
-          w,
-          h,
-          fontSize,
-          color: TYPE_COLORS[node.entityType || ''] || '#94a3b8',
-        };
-      }
-
-      placed.push(placedWord);
+      if (placedWord) placed.push(placedWord);
     });
 
     return placed;
@@ -158,34 +164,33 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear canvas
     ctx.clearRect(0, 0, size.w, size.h);
 
     wordsLayout.forEach((word) => {
       const isSelected = selectedId === word.id;
       const isHovered = hoveredWordId === word.id;
+      const active = isSelected || isHovered;
 
-      // Draw highlighting backing rect if active
-      if (isSelected || isHovered) {
-        ctx.fillStyle = isSelected ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.05)';
-        ctx.beginPath();
-        ctx.roundRect(
-          word.x - word.w / 2 - 4,
-          word.y - word.h / 2 - 2,
-          word.w + 8,
-          word.h + 4,
-          4
-        );
-        ctx.fill();
-        if (isSelected) {
-          ctx.strokeStyle = '#06b6d4';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
-      }
+      // Draw Pill Background
+      ctx.beginPath();
+      ctx.roundRect(
+        word.x - word.w / 2,
+        word.y - word.h / 2,
+        word.w,
+        word.h,
+        word.h / 2
+      );
+      
+      ctx.fillStyle = `rgba(${word.bgRgb}, ${active ? 0.25 : 0.12})`;
+      ctx.fill();
+      
+      ctx.strokeStyle = active ? word.color : `rgba(${word.bgRgb}, 0.3)`;
+      ctx.lineWidth = active ? 1.5 : 0.8;
+      ctx.stroke();
 
-      ctx.fillStyle = word.color;
-      ctx.font = `bold ${word.fontSize}px "Courier New", Courier, monospace`;
+      // Draw Text
+      ctx.fillStyle = active ? '#ffffff' : word.color;
+      ctx.font = `${active ? '700' : '600'} ${word.fontSize}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(word.label, word.x, word.y);

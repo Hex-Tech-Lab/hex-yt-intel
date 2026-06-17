@@ -68,10 +68,10 @@
   --err: #EF4444;
   --info: #06B6D4;            /* aliases accent — info == processing hue    */
 
-  /* --- Radii (capped at 16px on cards; pill for tags/controls) ----------- */
-  --radius-control: 8px;
-  --radius-card: 16px;
-  --radius-pill: 9999px;
+  /* --- Radii (Frozen Design System: 0px mandate) ------------------------ */
+  --radius-control: 0px;
+  --radius-card: 0px;
+  --radius-pill: 0px;
 
   /* --- Type families ----------------------------------------------------- */
   --font-sans: var(--inter-font), ui-sans-serif, system-ui, -apple-system, sans-serif;

@@ -48,21 +48,35 @@ async function readSSE(res: Response, onEvent: (e: any) => void): Promise<void> 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const frames = buffer.split('\n\n');
-    buffer = frames.pop() || '';
-    for (const frame of frames) {
-      const line = frame.split('\n').find((l) => l.startsWith('data:'));
-      if (!line) continue;
-      try {
-        onEvent(JSON.parse(line.slice(5).trim()));
-      } catch {
-        /* partial */
+
+  // 25s maximum streaming read per Law #2 in GEMINI.md
+  const timeout = setTimeout(() => {
+    reader.cancel().catch(() => {});
+  }, 25000);
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop() || '';
+      for (const frame of frames) {
+        const line = frame.split('\n').find((l) => l.startsWith('data:'));
+        if (!line) continue;
+        try {
+          onEvent(JSON.parse(line.slice(5).trim()));
+        } catch {
+          /* partial */
+        }
       }
     }
+  } catch (err) {
+    console.error('[ChatStore] SSE stream read error:', err);
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+    reader.releaseLock();
   }
 }
 
