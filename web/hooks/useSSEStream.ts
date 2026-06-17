@@ -4,6 +4,7 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
+import { STREAM_BUNDLES, TOTAL_STREAMS, ABORT_ON_PARTIAL_FAILURE } from '@/lib/config/synthesis';
 
 export function useSSEStream() {
 
@@ -167,118 +168,149 @@ export function useSSEStream() {
             }
           };
 
-          const runStream = async () => {
-            const adapter = new SynthesisStreamAdapter({
-              isPartialStream: false,
-              onError: (error) => {
-                if (currentSignal.aborted || hasSettled) return;
-                store.logError(`Stream error: ${error}`);
-                settleAnalysis('error', `Critical stream failure: ${error}`);
-              },
-              onComplete: () => {
-                if (currentSignal.aborted || hasSettled) return;
-                store.logOk(`Streaming completed.`);
-                settleAnalysis('complete');
-              }
-            });
+          const runStreams = async () => {
+            const completedIndexes = new Set<number>();
+            const failedIndexes = new Set<number>();
 
-            const streamPayload: WorkerStreamRequest = {
-              videoId: job.videoId,
-              analysisId: job.analysisId || job.id,
-              transcript: job.transcript || '',
-              metadata: job.metadata,
-              persona: job.persona,
-              timezone: job.timezone || safeTimezone,
-              models: job.models,
-              sig: job.stream.sig,
-              exp: job.stream.exp,
-              appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
-              // chunkIndex omitted for full single-stream synthesis
-            };
-
-            // Harden fetch with 10s timeout for handshake
-            const timeoutId = setTimeout(() => {
-              if (!hasSettled) settleAnalysis('error', 'Handshake timed out after 10s. Please try again.');
-            }, 10000);
-
-            let res;
-            try {
-              res = await fetch(job.stream.url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(streamPayload),
-                signal: currentSignal,
-              });
-            } finally {
-              clearTimeout(timeoutId);
-            }
-
-            if (!res.ok || !res.body) {
-              const errText = await res.text().catch(() => '');
-              const msg = `Worker stream failed (${res.status}): ${errText.slice(0, 160)}`;
-              throw new Error(msg);
-            }
-
-            store.logInfo(`Handshaked with edge node. Streaming intelligence...`);
-
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            const handleEvent = (line: string) => {
-              const trimmed = line.trim();
-              if (!trimmed) return;
-
-              if (trimmed.startsWith('data:')) {
-                const jsonStr = trimmed.slice(5).trim();
-                adapter.processLine(jsonStr);
-                return;
-              }
-
-              try {
-                adapter.processLine(trimmed);
-              } catch {
-                // Not JSON, skip
-              }
-            };
-
-            try {
-              for (;;) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                if (currentSignal.aborted) {
-                  await reader.cancel();
-                  break;
+            const checkSettleState = () => {
+              if (hasSettled) return;
+              const totalSettled = completedIndexes.size + failedIndexes.size;
+              if (totalSettled === TOTAL_STREAMS) {
+                if (completedIndexes.size > 0) {
+                  store.logOk(`${completedIndexes.size}/${TOTAL_STREAMS} streams completed.`);
+                  settleAnalysis('complete');
+                } else {
+                  settleAnalysis('error', 'All analysis streams failed.');
                 }
-                buffer += decoder.decode(value, { stream: true });
-                const events = buffer.split(/\r?\n\r?\n/);
-                buffer = events.pop() || '';
-                for (const e of events) handleEvent(e);
               }
-              if (buffer.trim()) handleEvent(buffer);
-            } catch (readErr: any) {
-              if (readErr.name === 'AbortError') return;
-              throw readErr;
-            } finally {
-              reader.releaseLock();
+            };
+
+            const handleStreamError = (i: number, error: string) => {
+              if (hasSettled) return;
+              failedIndexes.add(i);
+              if (ABORT_ON_PARTIAL_FAILURE) {
+                settleAnalysis('error', `Critical stream failure: [Bundle ${i + 1}] ${error}`);
+              } else {
+                checkSettleState();
+              }
+            };
+
+            const streamFetches: Promise<void>[] = [];
+            for (let i = 0; i < TOTAL_STREAMS; i++) {
+              const dimensions = STREAM_BUNDLES[i]!;
+
+              const adapter = new SynthesisStreamAdapter({
+                isPartialStream: true,
+                dimensions,
+                onError: (error) => {
+                  if (currentSignal.aborted || hasSettled) return;
+                  store.logError(`[Bundle ${i + 1}] error: ${error}`);
+                  handleStreamError(i, error);
+                },
+                onComplete: () => {
+                  if (currentSignal.aborted || hasSettled) return;
+                  completedIndexes.add(i);
+                  store.logOk(`[Bundle ${i + 1}] completed.`);
+                  checkSettleState();
+                },
+              });
+
+              streamFetches.push((async () => {
+                const streamPayload: WorkerStreamRequest = {
+                  videoId: job.videoId,
+                  analysisId: job.analysisId || job.id,
+                  transcript: job.transcript || '',
+                  metadata: job.metadata,
+                  persona: job.persona,
+                  timezone: job.timezone || safeTimezone,
+                  models: job.models,
+                  sig: job.stream.sig,
+                  exp: job.stream.exp,
+                  appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+                  dimensions,
+                  totalChunks: TOTAL_STREAMS,
+                };
+
+                const timeoutId = setTimeout(() => {
+                  handleStreamError(i, 'Handshake timed out after 10s.');
+                }, 10000);
+
+                let res;
+                try {
+                  res = await fetch(job.stream.url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(streamPayload),
+                    signal: currentSignal,
+                  });
+                } finally {
+                  clearTimeout(timeoutId);
+                }
+
+                if (!res.ok || !res.body) {
+                  throw new Error(`Worker stream ${i + 1} failed (${res.status})`);
+                }
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                const handleEvent = (line: string) => {
+                  const trimmed = line.trim();
+                  if (!trimmed) return;
+                  if (trimmed.startsWith('data:')) {
+                    adapter.processLine(trimmed.slice(5).trim());
+                    return;
+                  }
+                  try { adapter.processLine(trimmed); } catch { /* skip */ }
+                };
+
+                try {
+                  for (;;) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    if (currentSignal.aborted) { await reader.cancel(); break; }
+                    buffer += decoder.decode(value, { stream: true });
+                    const events = buffer.split(/\r?\n\r?\n/);
+                    buffer = events.pop() || '';
+                    for (const e of events) handleEvent(e);
+                  }
+                  if (buffer.trim()) handleEvent(buffer);
+                } catch (readErr: any) {
+                  if (readErr.name === 'AbortError') return;
+                  throw readErr;
+                } finally {
+                  reader.releaseLock();
+                }
+              })());
             }
+
+            store.logInfo(`Connecting to Cloudflare edge worker for parallel synthesis (${TOTAL_STREAMS} streams)...`);
+            await Promise.all(
+              streamFetches.map(p => p.catch((err) => {
+                if (currentSignal.aborted || hasSettled) return;
+                const i = streamFetches.indexOf(p);
+                store.logError(`Stream ${i + 1} failed: ${err.message}`);
+                handleStreamError(i, err.message);
+              }))
+            );
+
+            if (!hasSettled) checkSettleState();
           };
 
-          // Execute single unified stream
+          // Execute parallel streams
           await Sentry.startSpan(
-            { name: 'stream worker /analyze-llm-stream unified', op: 'stream.parse' },
+            { name: 'stream worker /analyze-llm-stream parallel', op: 'stream.parse' },
             async () => {
               try {
-                await runStream();
+                await runStreams();
               } catch (err: any) {
                 if (currentSignal.aborted || hasSettled) return;
                 store.logError(`Stream dispatch failed: ${err.message}`);
                 settleAnalysis('error', err.message);
               }
-
-              // Interrupted check / fallback settle
               if (!hasSettled) {
-                settleAnalysis('error', 'Analysis stream ended unexpectedly. Please try again.');
+                settleAnalysis('error', 'Analysis stream ended unexpectedly.');
               }
             }
           );

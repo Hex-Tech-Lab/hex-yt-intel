@@ -129,7 +129,7 @@ export interface WorkerStreamRequest {
   sig: string;
   exp: number;
   appUrl?: string;
-  chunkIndex?: number;
+  dimensions?: number[];
   totalChunks?: number;
 }
 

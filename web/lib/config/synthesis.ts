@@ -7,6 +7,14 @@
  * This matches the prompt structure in ucis-v5.1.ts.
  */
 export const TOTAL_DIMENSIONS = 11;
+export const TOTAL_STREAMS = 4;
+
+export const STREAM_BUNDLES: number[][] = [
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8],
+  [9, 10, 11],
+];
 
 /**
  * Whether to abort all parallel streams if a single stream fails.

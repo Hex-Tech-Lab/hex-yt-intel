@@ -31,37 +31,52 @@ export class PromptBuilder implements PromptBuilderPort {
       duration: context.metadata.duration || 0,
     });
 
-    if (context.chunkIndex !== undefined && context.chunkIndex >= 1 && context.chunkIndex <= TOTAL_DIMENSIONS) {
-      const details = DIMENSION_CONFIGS[context.chunkIndex];
-      if (details) {
-        const name = details.name;
-        const extraInstructions = details.extraFields?.map(f => {
-          if (f === 'persona') {
-            return 'include the "persona" configuration block in the JSON root';
-          }
-          if (f === 'knowledgeGraph') {
-            return 'generate and include the full "knowledgeGraph" object representing entities and relationships extracted from this content in the JSON root (strictly limit the output to a maximum of 15 critical nodes and 20 relational edges to ensure token efficiency. The knowledge graph MUST form a single, weakly connected component. You are strictly forbidden from generating isolated nodes; every node must have at least one incoming or outgoing edge [degree >= 1]. If your extraction results in separate conceptual clusters, you must synthesize logical "Cross-Domain Bridges" to connect them to the primary root node. The "rootId" must be assigned to the node with the highest out-degree centrality, i.e., the concept that spawns the most sub-concepts. If the extraction exceeds these limits, prioritize the most central entities, prune peripheral leaf nodes, and note any omitted clusters or truncation in the node content where relevant)';
-          }
-          if (f === 'classification') {
-            return 'generate and include the full "classification" object in the JSON root';
-          }
-          if (f === 'monetizationVerdict') {
-            return 'generate and include the full "monetizationVerdict" object in the JSON root';
-          }
-          return '';
-        }).filter(Boolean).join(', and ') || 'do NOT include persona, knowledgeGraph, classification, or monetizationVerdict fields';
+    if (context.dimensions !== undefined && context.dimensions.length > 0) {
+      const dimensionEntries = context.dimensions
+        .map(d => {
+          const cfg = DIMENSION_CONFIGS[d];
+          return cfg ? `DIMENSION ${d} - ${cfg.name}` : `DIMENSION ${d}`;
+        })
+        .join(', ');
 
-        return `${basePrompt}
+      const allExtraFields = new Set<string>();
+      const extraInstrParts: string[] = [];
+      for (const d of context.dimensions) {
+        const cfg = DIMENSION_CONFIGS[d];
+        if (cfg?.extraFields) {
+          for (const f of cfg.extraFields) {
+            if (!allExtraFields.has(f)) {
+              allExtraFields.add(f);
+              if (f === 'persona') {
+                extraInstrParts.push('include the "persona" configuration block in the JSON root');
+              } else if (f === 'knowledgeGraph') {
+                extraInstrParts.push('generate and include the full "knowledgeGraph" object representing entities and relationships extracted from this content in the JSON root (strictly limit the output to a maximum of 15 critical nodes and 20 relational edges to ensure token efficiency. The knowledge graph MUST form a single, weakly connected component. You are strictly forbidden from generating isolated nodes; every node must have at least one incoming or outgoing edge [degree >= 1]. If your extraction results in separate conceptual clusters, you must synthesize logical "Cross-Domain Bridges" to connect them to the primary root node. The "rootId" must be assigned to the node with the highest out-degree centrality, i.e., the concept that spawns the most sub-concepts. If the extraction exceeds these limits, prioritize the most central entities, prune peripheral leaf nodes, and note any omitted clusters or truncation in the node content where relevant)');
+              } else if (f === 'classification') {
+                extraInstrParts.push('generate and include the full "classification" object in the JSON root');
+              } else if (f === 'monetizationVerdict') {
+                extraInstrParts.push('generate and include the full "monetizationVerdict" object in the JSON root');
+              }
+            }
+          }
+        }
+      }
+      const extraInstructions = extraInstrParts.length > 0
+        ? extraInstrParts.join(', and ')
+        : 'do NOT include persona, knowledgeGraph, classification, or monetizationVerdict fields';
+
+      return `${basePrompt}
 
 ---
-CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (CHUNK ${context.chunkIndex}):
-You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimension:
-- ### DIMENSION ${context.chunkIndex} - ${name}
+CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (BUNDLE ${context.dimensions.join(',')}):
+You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimensions:
+${context.dimensions.map(d => {
+  const cfg = DIMENSION_CONFIGS[d];
+  return cfg ? `- ### DIMENSION ${d} - ${cfg.name}` : `- ### DIMENSION ${d}`;
+}).join('\n')}
 
-Your output JSON object must ONLY include this dimension inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". You must also ${extraInstructions}.
-Your response must enforce a strict maximum output restriction of 400 analytical words for the processed dimension payload.
+Your output JSON object must ONLY include these dimensions inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". You must also ${extraInstructions}.
+Your response must enforce a strict maximum output restriction of 400 analytical words per dimension.
 Do NOT output any other dimensions. Do NOT include any other JSON root fields. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`;
-      }
     }
 
     return `${basePrompt}
