@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       chunkIndex: z.number().int().min(1).max(TOTAL_DIMENSIONS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_DIMENSIONS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_DIMENSIONS}`,
-      }),
+      }).optional(),
     });
 
     const parsedBody = bodySchema.safeParse(body);
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       totalChunks
     } = parsedBody.data;
 
-    const resolvedTotal = totalChunks;
+    const resolvedTotal = totalChunks ?? TOTAL_DIMENSIONS;
     if (chunkIndex !== undefined) {
       if (chunkIndex < 1 || chunkIndex > resolvedTotal) {
         return NextResponse.json({ error: `Invalid chunkIndex. Must be an integer between 1 and ${resolvedTotal}` }, { status: 400 });
