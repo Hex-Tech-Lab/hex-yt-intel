@@ -1,0 +1,23 @@
+package.json
+  s_e6750ccfff01b1::t_ce77bc0c6e181f 7-9
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_3639b7cc374fb9 529,537,539
+worker/src/services/PersistService.ts
+  s_e6750ccfff01b1::t_8d9b55347c4e8d 13,17,41,57,62,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "28dbb24d173e025bd96559058806ceda90a99439",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
