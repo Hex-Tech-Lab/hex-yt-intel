@@ -291,3 +291,80 @@ export const StreamResilienceRule: IRule = {
     return findings;
   }
 };
+
+// 11. Schema Contract Rule — detect Zod refinements on optional fields or required fields not sent by all callers
+export const SchemaContractRule: IRule = {
+  name: "schema-contract-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Detect .refine() on non-optional fields — caller may not send them
+    if (text.includes('.refine(') && !text.includes('.optional()')) {
+      const refineMatches = text.match(/\.refine\(/g);
+      if (refineMatches && text.includes('z.object({')) {
+        findings.push({
+          file: filePath,
+          severity: "critical",
+          title: "Schema: Refinement on required field may reject valid requests",
+          why: "z.refine() used without .optional() on the chained field. If a caller doesn't send this field, the entire request is rejected with 400.",
+          fix: "Add .optional() before .refine() if the field isn't guaranteed from all call paths: .refine(...).optional()"
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 12. Redundant Validation Rule — detect manual validation that duplicates Zod schema
+export const RedundantValidationRule: IRule = {
+  name: "redundant-validation-detector",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Detect: Zod schema validates min/max AND there's a manual if-check on same field
+    if (text.includes('.min(') && text.includes('.max(') && text.includes('z.object({')) {
+      const hasManualRange = text.match(/if\s*\([^)]*(?:<|>)\s*\d+[^)]*\)/g);
+      const zodMin = text.match(/\.min\(\d+\)/g);
+      if (hasManualRange && zodMin) {
+        findings.push({
+          file: filePath,
+          severity: "medium",
+          title: "Validation: Manual range check duplicates Zod schema",
+          why: "Zod already enforces .min()/.max() bounds. Manual if-check after schema parse is redundant and can drift.",
+          fix: "Remove manual range validation after schema.safeParse() — Zod handles it. Keep only post-parse semantic checks."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 13. Persist Resilience Rule — detect missing error state in persist flows
+export const PersistResilienceRule: IRule = {
+  name: "persist-resilience-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Detect persist/fetch patterns without error state propagation
+    if (text.includes('/api/analyses/persist') || text.includes('persistAnalysis')) {
+      const hasErrorState = text.includes('setStreamError') || text.includes('settleAnalysis');
+      const hasRetry = text.includes('maxRetries') || text.includes('retry');
+      if (!hasErrorState && !hasRetry) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "Persist: No error state or retry on failure",
+          why: "Persist endpoint call without error state propagation or retry logic. A transient failure silently loses the analysis.",
+          fix: "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
+        });
+      }
+    }
+    return findings;
+  }
+};
