@@ -1,0 +1,23 @@
+web/lib/types/dimension.ts
+  s_e6750ccfff01b1::t_c29baf19503d60 51
+web/lib/stores/synthesis-nucleus-store.ts
+  s_e6750ccfff01b1::t_f94c561d3c242d 22-25
+web/next-env.d.ts
+  s_e6750ccfff01b1::t_27345140ab797a 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "68075d42fb4dd62c5998505211c5293ad86e45e5",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
