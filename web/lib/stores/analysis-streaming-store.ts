@@ -10,6 +10,7 @@ export interface AnalysisStreamingStore {
   streamError: string | null;
   projection: PersonaProjection | null;
   setStreamError: (error: string) => void;
+  clearStreamError: () => void;
   setProjection: (projection: PersonaProjection | null) => void;
   reset: () => void;
 }
@@ -44,6 +45,10 @@ export const useAnalysisStreamingStore = create<AnalysisStreamingStore>((set) =>
       streamError: error,
       projection,
     });
+  },
+
+  clearStreamError: () => {
+    set({ streamError: null });
   },
 
   setProjection: (projection: PersonaProjection | null) => {

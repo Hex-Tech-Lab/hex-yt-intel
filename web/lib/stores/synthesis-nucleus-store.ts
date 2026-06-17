@@ -46,6 +46,7 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
 
     initializeAnalysis: (payload: Partial<UCISPayload>) => {
       useAnalysisStateStore.getState().initializeAnalysis(payload);
+      useAnalysisStreamingStore.getState().clearStreamError();
     },
 
     addDimension: (dimension: UCISDimension) => {
