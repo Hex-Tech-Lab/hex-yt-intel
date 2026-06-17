@@ -165,7 +165,7 @@ async function exportSummaryPDF(analysis: ExportableAnalysis) {
     drawHeader(doc, analysis, 'Executive Summary');
 
     const content: string = filterHallucinationContent(analysis.analysis_markdown || '');
-  const sections = content.split(/\n(?=#{1,3}\s)/).filter((s) => s.trim().length > 0);
+  const sections = content.split(/\r?\n(?=#{1,3}\s)/).filter((s) => s.trim().length > 0);
   const MAX_CHARS = 2400;
   let used = 0;
 
@@ -174,7 +174,7 @@ async function exportSummaryPDF(analysis: ExportableAnalysis) {
 
   for (const section of sections) {
     if (used >= MAX_CHARS) break;
-    const lines = section.split('\n');
+    const lines = section.split(/\r?\n/);
     const heading = (lines[0] || '').replace(/^#+\s/, '').trim();
     const body = lines.slice(1).join(' ').replace(/\s+/g, ' ').trim();
     if (!heading && !body) continue;
@@ -207,17 +207,17 @@ async function exportFullPDF(analysis: ExportableAnalysis) {
     drawHeader(doc, analysis, 'Full Synthesis Report');
 
     const content: string = filterHallucinationContent(analysis.analysis_markdown || '');
-  const sections = content.split(/\n(?=#{1,3}\s)/).filter((s) => s.trim().length > 0);
+  const sections = content.split(/\r?\n(?=#{1,3}\s)/).filter((s) => s.trim().length > 0);
 
   doc.fontSize(13).font('Helvetica-Bold').text('Table of Contents');
   doc.moveDown(0.3);
   sections.forEach((section, i) => {
-    const heading = (section.split('\n')[0] || '').replace(/^#+\s/, '').trim();
+    const heading = (section.split(/\r?\n/)[0] || '').replace(/^#+\s/, '').trim();
     if (heading) doc.fontSize(10).font('Helvetica').fillColor('#333333').text(`${i + 1}.  ${heading}`);
   });
   doc.addPage();
 
-  const lines = content.split('\n');
+  const lines = content.split(/\r?\n/);
   for (const line of lines) {
     if (line.trim() === '') {
       doc.moveDown(0.5);

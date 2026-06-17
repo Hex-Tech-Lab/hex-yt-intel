@@ -102,6 +102,7 @@ export const CheckoutSchema = z.object({
 // them interchangeably. viewCount/likeCount/commentCount are strings to match the
 // worker's StreamRequest contract (YouTube returns them as numeric strings).
 export const AnalysisJobMetadataSchema = z.object({
+  videoId: z.string(),
   title: z.string(),
   channelTitle: z.string(),
   publishedAt: z.string(),

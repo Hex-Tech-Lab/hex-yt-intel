@@ -19,6 +19,7 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
     const transcript = (transcriptResult.status === 'fulfilled' ? transcriptResult.value : '').trim();
 
     const metadata: VideoMetadata = {
+      videoId,
       title: meta.title,
       channelTitle: meta.channelTitle,
       publishedAt: meta.publishedAt,
@@ -45,6 +46,7 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
 
   buildJobMetadata(metadata: VideoMetadata): AnalysisJobMetadata {
     return {
+      videoId: metadata.videoId,
       title: metadata.title,
       channelTitle: metadata.channelTitle,
       publishedAt: metadata.publishedAt,

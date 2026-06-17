@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { getSupabaseClient } from '@/lib/supabase';
+import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -9,21 +9,17 @@ export default async function SharePage(props: {
 }) {
   const { token } = await props.params;
 
-  // Fetch analysis by share token (no auth required)
-  const supabase = getSupabaseClient();
-  const { data: analysis, error } = await supabase
-    .from('analyses')
-    .select('*')
-    .eq('shared_token', token)
-    .maybeSingle();
+  // Fetch analysis by share token via Persistence Adapter (no auth required for public links)
+  const adapter = new SupabasePersistenceAdapter();
+  const analysis = await adapter.findAnalysisByShareToken(token);
 
-  if (error || !analysis) {
+  if (!analysis) {
     notFound();
   }
 
   // Check expiry
-  if (analysis.shared_expires_at) {
-    const expiryDate = new Date(analysis.shared_expires_at);
+  if (analysis.sharedExpiresAt) {
+    const expiryDate = new Date(analysis.sharedExpiresAt);
     if (expiryDate < new Date()) {
       return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -44,9 +40,9 @@ export default async function SharePage(props: {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900">{analysis.title}</h1>
           <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-600">
-            <span>Channel: <span className="font-medium">{analysis.channel_title}</span></span>
+            <span>Channel: <span className="font-medium">{analysis.channelTitle}</span></span>
             <span>•</span>
-            <span>Generated: {new Date(analysis.created_at).toLocaleDateString()}</span>
+            <span>Generated: {new Date(analysis.createdAt).toLocaleDateString()}</span>
           </div>
         </div>
       </div>
@@ -57,8 +53,8 @@ export default async function SharePage(props: {
           <div
             className="whitespace-pre-wrap text-gray-800 leading-relaxed"
             dangerouslySetInnerHTML={{
-              __html: (analysis.analysis_markdown || '')
-                .split('\n')
+              __html: (analysis.analysisMarkdown || '')
+                .split(/\r?\n/)
                 .map((line: string) => {
                   if (line.startsWith('### ')) {
                     return `<h3 class="text-xl font-bold mt-8 mb-4">${line.replace(/^### /, '')}</h3>`;

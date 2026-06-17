@@ -64,7 +64,20 @@ Do NOT output any other dimensions. Do NOT include any other JSON root fields. Y
       }
     }
 
-    return basePrompt;
+    return `${basePrompt}
+
+---
+CRITICAL INSTRUCTION:
+Generate a complete 11-dimension UCIS v2.0 structured analysis in raw JSON format.
+Your output must be a single JSON object with the following root fields:
+- "schemaVersion": "2.0"
+- "persona": Full persona configuration
+- "dimensions": An array containing all 11 dimensions (number, name, content)
+- "knowledgeGraph": A weakly connected graph (max 15 nodes, 20 edges)
+- "classification": The 5-point quality assessment and recommendation
+- "monetizationVerdict": Target-specific commercial yield profiles
+
+Output strictly raw JSON. Do NOT include markdown code blocks or any preamble/postamble.`;
   }
 }
 

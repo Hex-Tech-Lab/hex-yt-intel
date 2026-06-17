@@ -177,7 +177,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     <div
       role="dialog"
       aria-label="Synthesis chat"
-      style={{ ...shell, height: 'min(60vh, 560px)', display: 'flex', flexDirection: 'column' }}
+      style={{ ...shell, height: 'min(40vh, 420px)', display: 'flex', flexDirection: 'column' }}
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', borderBottom: '1px solid var(--line)', background: 'rgb(26 31 43 / 0.6)' }}>

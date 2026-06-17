@@ -74,9 +74,21 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     const response = await fetchWithProxy(metadataUrl, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
     if (!response.ok) throw new Error(`Caption metadata fetch failed: ${response.status}`);
     const metadataText = await response.text();
-    const captionRegex = /lang_code="([^"]+)"/g;
-    const matches = Array.from(metadataText.matchAll(captionRegex));
-    if (matches.length === 0) throw new Error('No captions');
+    
+    // Improved regex to handle various XML formats
+    const langCodeRegex = /lang_code="([^"]+)"/g;
+    const matches = Array.from(metadataText.matchAll(langCodeRegex));
+    
+    if (matches.length === 0) {
+      // Fallback: check for asr (automated speech recognition)
+      if (metadataText.includes('kind="asr"')) {
+        const asrMatch = metadataText.match(/lang_code="([^"]+)"[^>]*kind="asr"/);
+        if (asrMatch) return { langCode: asrMatch[1] };
+      }
+      throw new Error('No captions available for this video');
+    }
+    
+    // Prioritize English, then first available
     const langCode = matches.find((m) => m[1].startsWith('en'))?.[1] || matches[0][1];
     return { langCode };
   }
@@ -85,7 +97,23 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     const transcriptUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${langCode}&fmt=json`;
     const response = await fetchWithProxy(transcriptUrl, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
     if (!response.ok) throw new Error(`Transcript content fetch failed: ${response.status}`);
-    const captionData = (await response.json()) as { events?: Array<{ segs?: Array<{ utf8?: string }> }> };
-    return captionData.events?.map(e => e.segs?.map(s => s.utf8 || '').join('') || '').join(' ').replace(/\s+/g, ' ').trim() || '';
+    
+    const captionData = (await response.json()) as { 
+      events?: Array<{ 
+        segs?: Array<{ utf8?: string }> 
+      }> 
+    };
+
+    if (!captionData.events || captionData.events.length === 0) {
+      throw new Error('Transcript data structure empty');
+    }
+
+    const transcript = captionData.events
+      .map(e => e.segs?.map(s => s.utf8 || '').join('') || '')
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return transcript;
   }
 }

@@ -311,13 +311,6 @@ export class SynthesisStreamAdapter {
     }
     console.debug('[Adapter] Delta received:', fragment.content.slice(0, 100));
 
-    // Check if the raw sink itself is already a fully valid complete JSON object
-    let isRawComplete = false;
-    try {
-      JSON.parse(cleanSink);
-      isRawComplete = true;
-    } catch {}
-
     const healed = this.healJson(cleanSink);
     if (healed) {
       let obj: any;
@@ -330,6 +323,13 @@ export class SynthesisStreamAdapter {
 
       try {
         if (obj && obj.schemaVersion === '2.0') {
+          // Check if the raw sink itself is already a fully valid complete JSON object
+          let isRawComplete = false;
+          try {
+            JSON.parse(cleanSink);
+            isRawComplete = true;
+          } catch {}
+
           // 1. Validate and set Persona
           if (obj.persona && typeof obj.persona === 'object') {
             const p = obj.persona;
@@ -343,12 +343,10 @@ export class SynthesisStreamAdapter {
               typeof p.selectionRationale === 'string'
             ) {
               this.synthStore.getState().setPersonaConfig(p);
-            } else {
-              console.warn('[Adapter] Invalid persona payload format, skipping setPersonaConfig');
             }
           }
 
-          // 2. Validate and add Dimensions (isolated strictly by chunkIndex criteria)
+          // 2. Validate and add Dimensions
           if (Array.isArray(obj.dimensions)) {
             for (const dim of obj.dimensions) {
               if (
@@ -356,21 +354,13 @@ export class SynthesisStreamAdapter {
                 typeof dim.number === 'number' &&
                 dim.number >= 1 &&
                 dim.number <= TOTAL_DIMENSIONS &&
-                typeof dim.content === 'string' &&
-                (typeof dim.name === 'string' || dim.name === undefined)
+                typeof dim.content === 'string'
               ) {
-                const targetDim = this.options.chunkIndex;
-                if (targetDim !== undefined && dim.number !== targetDim) {
-                  continue; // Skip dimension updates that do not belong to this stream index
-                }
-
                 this.synthStore.getState().addDimension({
                   number: dim.number,
                   name: dim.name || `Dimension ${dim.number}`,
                   content: dim.content,
                 });
-              } else {
-                console.warn('[Adapter] Invalid dimension entry format, skipping addDimension:', dim);
               }
             }
           }
@@ -379,42 +369,22 @@ export class SynthesisStreamAdapter {
           if (obj.knowledgeGraph && typeof obj.knowledgeGraph === 'object') {
             const kg = obj.knowledgeGraph;
             if (Array.isArray(kg.nodes)) {
-              // Ensure nodes are actually objects
-              const validNodes = kg.nodes.every(
-                (node: any) =>
-                  node &&
-                  typeof node === 'object' &&
-                  typeof node.id === 'string' &&
-                  typeof node.label === 'string'
-              );
+              const validNodes = kg.nodes.every((n: any) => n && typeof n === 'object' && typeof n.id === 'string');
               if (validNodes) {
                 this.synthStore.getState().setKnowledgeGraph({
                   nodes: kg.nodes,
                   edges: Array.isArray(kg.edges) ? kg.edges : [],
                   rootId: typeof kg.rootId === 'string' || kg.rootId === null ? kg.rootId : null,
                 });
-              } else {
-                console.warn('[Adapter] Invalid knowledge graph nodes format, skipping setKnowledgeGraph');
               }
-            } else {
-              console.warn('[Adapter] Knowledge graph nodes is not an array, skipping setKnowledgeGraph');
             }
           }
 
           // 4. Validate and set Classification
           if (obj.classification && typeof obj.classification === 'object') {
             const c = obj.classification;
-            if (
-              typeof c.authoritative === 'boolean' &&
-              typeof c.practicallyActionable === 'boolean' &&
-              typeof c.knowledgeGraphReady === 'boolean' &&
-              typeof c.safe === 'boolean' &&
-              typeof c.personaOptimised === 'boolean' &&
-              typeof c.recommendation === 'string'
-            ) {
+            if (typeof c.authoritative === 'boolean' && typeof c.recommendation === 'string') {
               this.synthStore.getState().setClassification(c);
-            } else {
-              console.warn('[Adapter] Invalid classification payload format, skipping setClassification');
             }
           }
 
@@ -423,7 +393,7 @@ export class SynthesisStreamAdapter {
             this.synthStore.getState().setMonetizationVerdict(obj.monetizationVerdict);
           }
 
-          // 6. Reconstruct displayed markdown from the global store (single source of truth)
+          // 6. Reconstruct displayed markdown
           if (isJsonStream && store.analysis) {
             this.rebuildDisplayMarkdown(store);
           }
