@@ -1,0 +1,25 @@
+pnpm-lock.yaml
+  s_e6750ccfff01b1::t_d330ed2f9f6dc9 121-123,3807-3809,4991-4993,9540-9545,10993-10996
+web/package.json
+  s_e6750ccfff01b1::t_2d783931bef38d 39
+web/components/templates/LegalPage.tsx
+  s_e6750ccfff01b1::t_0056068602fc0e 58
+  s_e6750ccfff01b1::t_74b6af7166dfc5 4-5
+  s_e6750ccfff01b1::t_441267ca6796ae 71,162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "00a3cada21026c591c629f1b1557efdbb1d91622",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
