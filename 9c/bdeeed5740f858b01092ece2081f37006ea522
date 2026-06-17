@@ -1,0 +1,19 @@
+web/app/share/[token]/page.tsx
+  s_18b04957a1f679::t_92a88b6145dc6f 36-58,78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "9cbdeeed5740f858b01092ece2081f37006ea522",
+  "prompts": {},
+  "sessions": {
+    "s_18b04957a1f679": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a942208ffeeQA17vRw1XeaYM",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
