@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
-import { PERSONA_DIMENSIONS } from '@/lib/types/synthesis-nucleus';
+import { PERSONA_DIMENSIONS } from '@/lib/types/persona';
 import { KnowledgeGraphSynthesizer } from '@/lib/intelligence/knowledge-graph';
 import { TfIdfSimilarityEngine } from '@/lib/intelligence/similarity';
 import type { KnowledgeGraph, GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';

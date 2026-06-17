@@ -1,4 +1,4 @@
-import type { PersonaId } from './synthesis-nucleus';
+import type { PersonaId } from './persona';
 
 // See /docs/types/knowledge-graph.md
 
