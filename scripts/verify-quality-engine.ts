@@ -9,7 +9,10 @@ import {
     AuthSecurityRule,
     ErrorTaxonomyRule,
     CrossPlatformRule,
-    StreamResilienceRule
+    StreamResilienceRule,
+    SchemaContractRule,
+    RedundantValidationRule,
+    PersistResilienceRule
 } from "./quality-engine/rules";
 import * as glob from "glob";
 
@@ -26,6 +29,9 @@ engine.addRule(AuthSecurityRule);
 engine.addRule(ErrorTaxonomyRule);
 engine.addRule(CrossPlatformRule);
 engine.addRule(StreamResilienceRule);
+engine.addRule(SchemaContractRule);
+engine.addRule(RedundantValidationRule);
+engine.addRule(PersistResilienceRule);
 
 // Scan files
 const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' }).map(f => f.replace(/\\/g, "/"));
