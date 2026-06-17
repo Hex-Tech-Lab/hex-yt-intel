@@ -1,9 +1,9 @@
-export const dynamic = 'force-dynamic';
-
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { MarkdownRenderer } from './MarkdownRenderer';
+
+export const dynamic = 'force-dynamic';
 
 export default async function SharePage(props: {
   params: Promise<{ token: string }>;

@@ -6,7 +6,6 @@ export interface PersistOptions {
   analysisId: string;
   videoId: string;
   finalText: string;
-  jsonPayload: Record<string, unknown> | null;
   modelUsed: string;
   valid: boolean;
   status: 'completed' | 'interrupted';
