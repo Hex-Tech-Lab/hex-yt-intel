@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import DOMPurify from 'isomorphic-dompurify';
 
 export default async function SharePage(props: {
   params: Promise<{ token: string }>;
@@ -34,6 +33,29 @@ export default async function SharePage(props: {
     }
   }
 
+  // Escape HTML entities in content strings to prevent XSS via dangerouslySetInnerHTML
+  const htmlEscape = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const renderedHtml = (analysis.analysisMarkdown || '')
+    .split(/\r?\n/)
+    .map((line: string) => {
+      if (line.startsWith('### ')) {
+        return `<h3 class="text-xl font-bold mt-8 mb-4">${htmlEscape(line.replace(/^### /, ''))}</h3>`;
+      }
+      if (line.startsWith('## ')) {
+        return `<h2 class="text-2xl font-bold mt-10 mb-6 border-b pb-2">${htmlEscape(line.replace(/^## /, ''))}</h2>`;
+      }
+      if (line.startsWith('# ')) {
+        return `<h1 class="text-3xl font-bold mt-12 mb-8">${htmlEscape(line.replace(/^# /, ''))}</h1>`;
+      }
+      if (line.trim() === '') {
+        return '<div class="h-4"></div>';
+      }
+      return `<p class="mb-4">${htmlEscape(line)}</p>`;
+    })
+    .join('');
+
   return (
     <div className="bg-surface min-h-screen">
       {/* Header */}
@@ -53,26 +75,7 @@ export default async function SharePage(props: {
         <div className="prose prose-blue max-w-none">
           <div
             className="whitespace-pre-wrap text-gray-800 leading-relaxed"
-            dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize((analysis.analysisMarkdown || '')
-                .split(/\r?\n/)
-                .map((line: string) => {
-                  if (line.startsWith('### ')) {
-                    return `<h3 class="text-xl font-bold mt-8 mb-4">${line.replace(/^### /, '')}</h3>`;
-                  }
-                  if (line.startsWith('## ')) {
-                    return `<h2 class="text-2xl font-bold mt-10 mb-6 border-b pb-2">${line.replace(/^## /, '')}</h2>`;
-                  }
-                  if (line.startsWith('# ')) {
-                    return `<h1 class="text-3xl font-bold mt-12 mb-8">${line.replace(/^# /, '')}</h1>`;
-                  }
-                  if (line.trim() === '') {
-                    return '<div class="h-4"></div>';
-                  }
-                  return `<p class="mb-4">${line}</p>`;
-                })
-                .join(''), { USE_PROFILES: { html: true } }),
-            }}
+            dangerouslySetInnerHTML={{ __html: renderedHtml }}
           />
         </div>
       </div>
