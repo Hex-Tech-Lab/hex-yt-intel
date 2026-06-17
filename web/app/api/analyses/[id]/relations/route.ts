@@ -4,7 +4,7 @@ export const runtime = 'edge';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { getRedisValue, setRedisValue, deleteRedisKey } from '@/lib/redis';
 import { computeStanceRelationsStream, type StanceDimension } from '@/lib/intelligence/relations-engine';
-import { DIMENSION_NAMES } from '@/lib/types/synthesis-nucleus';
+import { DIMENSION_NAMES } from '@/lib/types/dimension';
 import type { RelationsResult, RelationInsight } from '@/lib/types/knowledge-graph';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';

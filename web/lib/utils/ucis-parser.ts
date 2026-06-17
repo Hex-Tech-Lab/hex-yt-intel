@@ -1,4 +1,4 @@
-import { type UCISDimension, DIMENSION_NAMES } from '@/lib/types/synthesis-nucleus';
+import { type UCISDimension, DIMENSION_NAMES } from '@/lib/types/dimension';
 
 export interface UCISSections {
   apex: string;
