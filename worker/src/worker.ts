@@ -531,7 +531,6 @@ app.post("/analyze-llm-stream", async (c) => {
       analysisId: req.analysisId,
       videoId: req.videoId,
       finalText,
-      jsonPayload: null,
       modelUsed,
       valid,
       status,

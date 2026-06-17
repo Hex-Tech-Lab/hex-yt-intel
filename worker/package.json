@@ -20,7 +20,7 @@
   "dependencies": {
     "@sentry/cloudflare": "10.57.0",
     "@sentry/hono": "10.57.0",
-    "fast-xml-parser": "5.0.6",
+    "fast-xml-parser": "5.7.0",
     "hono": "^4.12.25",
     "zod": "4.4.3"
   },
