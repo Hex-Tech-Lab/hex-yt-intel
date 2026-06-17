@@ -56,7 +56,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     if (!graph.nodes || graph.nodes.length === 0) return [];
 
     // 1. Tokenize labels and aggregate weights
-    const tokenMap: Record<string, { label: string; weight: number; type: string; id: string }> = {};
+    const tokenMap: Record<string, { label: string; weight: number; type: string; id: string; maxWeight: number }> = {};
     
     graph.nodes.forEach(node => {
       const words = node.label.split(/\s+/).filter(w => w.length > 2);
@@ -69,10 +69,16 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
             label: word,
             weight: node.weight || 1,
             type: node.entityType || 'concept',
-            id: node.id
+            id: node.id,
+            maxWeight: node.weight || 1,
           };
         } else {
           tokenMap[key].weight += (node.weight || 1) * 0.6;
+          const nw = node.weight || 1;
+          if (nw > (tokenMap[key].maxWeight ?? 0)) {
+            tokenMap[key].maxWeight = nw;
+            tokenMap[key].id = node.id;
+          }
         }
       });
     });

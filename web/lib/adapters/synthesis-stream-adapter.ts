@@ -369,7 +369,7 @@ export class SynthesisStreamAdapter {
           if (obj.knowledgeGraph && typeof obj.knowledgeGraph === 'object') {
             const kg = obj.knowledgeGraph;
             if (Array.isArray(kg.nodes)) {
-              const validNodes = kg.nodes.every((n: any) => n && typeof n === 'object' && typeof n.id === 'string');
+              const validNodes = kg.nodes.every((n: any) => n && typeof n === 'object' && typeof n.id === 'string' && typeof n.label === 'string' && n.label.trim().length > 0);
               if (validNodes) {
                 this.synthStore.getState().setKnowledgeGraph({
                   nodes: kg.nodes,

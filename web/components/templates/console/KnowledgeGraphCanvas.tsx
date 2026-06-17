@@ -255,7 +255,7 @@ export function KnowledgeGraphCanvas({
             for (let n = 0; n < words.length; n++) {
               const testLine = line + words[n] + ' ';
               const metrics = ctx.measureText(testLine);
-              if (metrics.width > maxWidth && n > 0) {
+              if (metrics.width > maxWidth && line !== '') {
                 lines.push(line.trim());
                 line = words[n] + ' ';
               } else {

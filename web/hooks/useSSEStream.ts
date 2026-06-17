@@ -197,7 +197,7 @@ export function useSSEStream() {
 
             // Harden fetch with 10s timeout for handshake
             const timeoutId = setTimeout(() => {
-              if (!hasSettled) myController.abort();
+              if (!hasSettled) settleAnalysis('error', 'Handshake timed out after 10s. Please try again.');
             }, 10000);
 
             let res;
@@ -250,7 +250,7 @@ export function useSSEStream() {
                   break;
                 }
                 buffer += decoder.decode(value, { stream: true });
-                const events = buffer.split('\n\n');
+                const events = buffer.split(/\r?\n\r?\n/);
                 buffer = events.pop() || '';
                 for (const e of events) handleEvent(e);
               }

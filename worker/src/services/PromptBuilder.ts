@@ -74,7 +74,7 @@ Your output must be a single JSON object with the following root fields:
 - "persona": Full persona configuration
 - "dimensions": An array containing all 11 dimensions (number, name, content)
 - "knowledgeGraph": A weakly connected graph (max 15 nodes, 20 edges)
-- "classification": The 5-point quality assessment and recommendation
+- "classification": Object with boolean flags (authoritative, practicallyActionable, knowledgeGraphReady, safe) and a recommendation string
 - "monetizationVerdict": Target-specific commercial yield profiles
 
 Output strictly raw JSON. Do NOT include markdown code blocks or any preamble/postamble.`;

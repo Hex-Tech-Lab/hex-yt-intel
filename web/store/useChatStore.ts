@@ -50,7 +50,9 @@ async function readSSE(res: Response, onEvent: (e: any) => void): Promise<void> 
   let buffer = '';
 
   // 25s maximum streaming read per Law #2 in GEMINI.md
+  let timedOut = false;
   const timeout = setTimeout(() => {
+    timedOut = true;
     reader.cancel().catch(() => {});
   }, 25000);
 
@@ -59,10 +61,10 @@ async function readSSE(res: Response, onEvent: (e: any) => void): Promise<void> 
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const frames = buffer.split('\n\n');
+      const frames = buffer.split(/\r?\n\r?\n/);
       buffer = frames.pop() || '';
       for (const frame of frames) {
-        const line = frame.split('\n').find((l) => l.startsWith('data:'));
+        const line = frame.split(/\r?\n/).find((l) => l.startsWith('data:'));
         if (!line) continue;
         try {
           onEvent(JSON.parse(line.slice(5).trim()));
@@ -77,6 +79,9 @@ async function readSSE(res: Response, onEvent: (e: any) => void): Promise<void> 
   } finally {
     clearTimeout(timeout);
     reader.releaseLock();
+  }
+  if (timedOut) {
+    throw new Error('Chat stream timed out after 25s');
   }
 }
 

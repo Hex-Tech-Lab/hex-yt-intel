@@ -84,6 +84,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       if (metadataText.includes('kind="asr"')) {
         const asrMatch = metadataText.match(/lang_code="([^"]+)"[^>]*kind="asr"/);
         if (asrMatch) return { langCode: asrMatch[1] };
+        return { langCode: 'en' };
       }
       throw new Error('No captions available for this video');
     }

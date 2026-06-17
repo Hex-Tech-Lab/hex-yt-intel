@@ -371,7 +371,7 @@ main() {
   start_stage
   check_health_endpoint || true
   check_home_page || true
-  check_auth_endpoint || true
+  check_auth_status || true
   check_api_metadata || true
   end_stage
   print_separator

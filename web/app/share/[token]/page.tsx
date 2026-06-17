@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import DOMPurify from 'isomorphic-dompurify';
 
 export default async function SharePage(props: {
   params: Promise<{ token: string }>;
@@ -53,7 +54,7 @@ export default async function SharePage(props: {
           <div
             className="whitespace-pre-wrap text-gray-800 leading-relaxed"
             dangerouslySetInnerHTML={{
-              __html: (analysis.analysisMarkdown || '')
+              __html: DOMPurify.sanitize((analysis.analysisMarkdown || '')
                 .split(/\r?\n/)
                 .map((line: string) => {
                   if (line.startsWith('### ')) {
@@ -70,7 +71,7 @@ export default async function SharePage(props: {
                   }
                   return `<p class="mb-4">${line}</p>`;
                 })
-                .join(''),
+                .join(''), { USE_PROFILES: { html: true } }),
             }}
           />
         </div>
