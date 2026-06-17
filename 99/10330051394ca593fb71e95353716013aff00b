@@ -1,0 +1,26 @@
+web/hooks/useSSEStream.ts
+  s_749a5385eae1fb::t_35a2b0d0983958 47-51
+web/store/useAnalysisStore.ts
+  s_749a5385eae1fb::t_79a294ac56c559 224
+web/lib/adapters/synthesis-stream-adapter.ts
+  s_749a5385eae1fb::t_5f6ba54b9afdcb 44
+  s_749a5385eae1fb::t_f92a085d73593d 508
+  s_749a5385eae1fb::t_3c9eaad653fb7c 99
+  s_749a5385eae1fb::t_db9a692a61b2bb 541
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "9910330051394ca593fb71e95353716013aff00b",
+  "prompts": {},
+  "sessions": {
+    "s_749a5385eae1fb": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e97f8bf8-722b-48e1-98bc-1ac7ad61bb64",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
