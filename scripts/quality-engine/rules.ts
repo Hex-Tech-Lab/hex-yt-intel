@@ -138,7 +138,7 @@ export const SanitizationRule: IRule = {
     const text = source.getText();
 
     if (text.includes('dangerouslySetInnerHTML')) {
-      const hasSanitizer = text.includes('DOMPurify') || text.includes('sanitize') || text.includes('escapeHtml');
+      const hasSanitizer = text.includes('DOMPurify') || text.includes('sanitize') || text.includes('escapeHtml') || text.includes('htmlEscape');
       if (!hasSanitizer) {
         findings.push({
           file: filePath,

@@ -164,16 +164,16 @@ check_api_metadata() {
 }
 
 check_auth_status() {
-  log_info "Checking auth session endpoint..."
+  log_info "Checking health endpoint..."
 
-  # /api/auth/session is the standard Supabase/Next.js check
-  local http_code=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL/api/auth/session")
+  # /api/health is the stateless health check (Supabase auth has no /api/auth/session)
+  local http_code=$(curl -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL/api/health")
 
   if [ "$http_code" = "200" ]; then
-    log_pass "Auth session endpoint accessible"
+    log_pass "Health endpoint accessible"
     return 0
   else
-    log_warn "Auth session endpoint returned HTTP $http_code (expected if not logged in)"
+    log_warn "Health endpoint returned HTTP $http_code"
     return 0
   fi
 }

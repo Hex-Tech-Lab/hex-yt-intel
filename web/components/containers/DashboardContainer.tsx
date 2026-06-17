@@ -522,15 +522,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                         progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
                       />
 
-                      {/* Dimension Detail Drawer */}
-                      <DimensionDrawer 
-                        dimension={selectedDimension ? {
-                          label: selectedDimension.label,
-                          content: selectedDimension.content,
-                          icon: selectedDimension.icon
-                        } : null}
-                        onClose={() => setSelectedDimensionKey(null)}
-                      />
                     </div>
                   ) : (
                     <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
@@ -570,6 +561,16 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       )}
 
     </DashboardLayout>
+
+    {/* Dimension Drawer — outside DashboardLayout to avoid inert conflict */}
+    <DimensionDrawer 
+      dimension={selectedDimension ? {
+        label: selectedDimension.label,
+        content: selectedDimension.content,
+        icon: selectedDimension.icon
+      } : null}
+      onClose={() => setSelectedDimensionKey(null)}
+    />
 
     {expandedPanel && (() => {
       const activeItem = rightPanelItems.find(item => item.id === expandedPanel.id);
