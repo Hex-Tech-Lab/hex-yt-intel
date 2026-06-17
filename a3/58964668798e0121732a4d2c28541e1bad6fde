@@ -1,0 +1,35 @@
+scripts/quality-engine/rules.ts
+  s_18b04957a1f679::t_0d606f36d16fa8 141
+web/components/containers/DashboardContainer.tsx
+  s_18b04957a1f679::t_cc7594f8d47731 565-574
+web/components/templates/console/DimensionDrawer.tsx
+  s_18b04957a1f679::t_7f3e21a770264f 32-34,42-46,48-49,69-71
+scripts/verify-production.sh
+  s_18b04957a1f679::t_ede8455ef9410e 167,169-170,173,176
+.memory/qa_intel_report.md
+  s_11c98460731ee4::t_377605cbae8ebb 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "a358964668798e0121732a4d2c28541e1bad6fde",
+  "prompts": {},
+  "sessions": {
+    "s_11c98460731ee4": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "96776107-ed02-42bf-a55c-dc06027f006f",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_18b04957a1f679": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12a942208ffeeQA17vRw1XeaYM",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
