@@ -1,0 +1,50 @@
+web/lib/config/synthesis.ts
+  s_e6750ccfff01b1::t_5c172c39a94d72 10-17
+web/lib/types/contracts.ts
+  s_e6750ccfff01b1::t_4353e07a25bd19 132
+web/lib/adapters/synthesis-stream-adapter.ts
+  s_39e7355097a0ea::t_5b4a6d23dcb4a8 186,190-194,196,211-214
+  s_39e7355097a0ea::t_bc8439dab39fae 36
+  s_39e7355097a0ea::t_37c9b224a8067e 430-432
+web/hooks/useSSEStream.ts
+  s_39e7355097a0ea::t_db5e2c6b0f10c4 198-200,218-232,238-245,248,250,252,254-256,268-271,273-275,279-283,285
+  s_39e7355097a0ea::t_1d3b2ba390d45c 171,174,237,267,277,287,297,301,303,306
+  s_e6750ccfff01b1::t_e59a58deb9c4cd 7
+  s_e6750ccfff01b1::t_799228e5273be6 172-173,175-184,188-194,201-216,233-236,246-247,251,257-266,272,276,278,288-296,298,313
+worker/src/services/PromptBuilder.ts
+  s_39e7355097a0ea::t_02cb6619e8bf19 34-59,61-65,67,70-75,77-78
+pnpm-lock.yaml
+  s_e6750ccfff01b1::t_cb9760623b0f5b 230-232,1043-1045,2699-2701,3594-3600,4817-4820,5338-5340,5898-5901,6599-6600,8240-8241,9317-9328,10813-10814,11516-11519,12135
+worker/src/worker.ts
+  s_39e7355097a0ea::t_8fbec31fa19c99 401
+  s_39e7355097a0ea::t_771f4b18bb86ad 570
+worker/src/ports/ReasoningEnginePort.ts
+  s_39e7355097a0ea::t_d66a793f365a14 46-47
+web/app/api/analyses/persist/route.ts
+  s_39e7355097a0ea::t_d77e1169328cc3 16
+  s_39e7355097a0ea::t_c13d0e59bcd389 67-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "bc46bb76629ac7cbc7f6609749562534a9b50012",
+  "prompts": {},
+  "sessions": {
+    "s_39e7355097a0ea": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1283001eeffeHKCCLztXtkLwsj",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
