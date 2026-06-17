@@ -46,7 +46,6 @@ export class PersistService {
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
     const contentSig = await hmacHex(options.activeSecret, canonical);
 
-    this.persisted = true;
     const maxRetries = 2;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -64,7 +63,10 @@ export class PersistService {
             status: options.status,
           }),
         });
-        if (persistRes.ok) break;
+        if (persistRes.ok) {
+          this.persisted = true;
+          break;
+        }
         console.warn(`[persist] ${options.status} persist returned ${persistRes.status}, retrying...`);
       } catch (e) {
         console.error(`[persist] ${options.status} persist attempt ${attempt + 1}/${maxRetries + 1} failed`, e);
