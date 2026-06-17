@@ -41,6 +41,7 @@ export class SynthesisStreamAdapter {
   private analysisStore = useAnalysisStore;
   private options: StreamAdapterOptions;
   private rawSink: string = '';
+  private isComplete: boolean = false;
 
   constructor(options: StreamAdapterOptions = {}) {
     this.options = options;
@@ -95,6 +96,7 @@ export class SynthesisStreamAdapter {
    * Lines are delimited by newlines and contain JSON
    */
   processLine(line: string) {
+    if (this.isComplete) return;
     if (!line.trim()) return;
 
     // Parse JSON
@@ -503,6 +505,7 @@ export class SynthesisStreamAdapter {
     videoId: string;
     analysisId: string;
   }) {
+    this.isComplete = true;
     const store = this.synthStore.getState();
     const analysisStore = this.analysisStore.getState();
     
@@ -535,6 +538,7 @@ export class SynthesisStreamAdapter {
     error: string;
     code?: string;
   }) {
+    this.isComplete = true;
     const store = this.synthStore.getState();
     store.setStreamError(fragment.error);
 

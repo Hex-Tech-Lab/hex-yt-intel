@@ -44,6 +44,11 @@ export function useSSEStream() {
   };
 
   const startAnalysis = async (url: string, timezone: string, forceRefresh: boolean = false) => {
+    // 1. Abort any previous stream to prevent bifurcation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
     const videoId = extractTelemetryId(url);
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
 
