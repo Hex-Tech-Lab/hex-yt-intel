@@ -91,11 +91,6 @@ export async function POST(request: NextRequest) {
     } = parsedBody.data;
 
     const resolvedTotal = totalChunks ?? TOTAL_DIMENSIONS;
-    if (chunkIndex !== undefined) {
-      if (chunkIndex < 1 || chunkIndex > resolvedTotal) {
-        return NextResponse.json({ error: `Invalid chunkIndex. Must be an integer between 1 and ${resolvedTotal}` }, { status: 400 });
-      }
-    }
 
     // Tamper check: proves this markdown+payload came from the worker, not a forged caller.
     // Canonical signable matches the worker's canonical = JSON.stringify({ markdown, payload }).
