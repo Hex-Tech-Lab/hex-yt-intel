@@ -70,10 +70,10 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
   if (payload.monetizationVerdict) {
     lines.push('=== MONETIZATION VERDICTS ===');
     lines.push(`Creator:         ${payload.monetizationVerdict.creator || 'N/A'}`);
-    lines.push(`Indie Maker:     ${payload.monetizationVerdict.indieMaker || 'N/A'}`);
-    lines.push(`Consultant:      ${payload.monetizationVerdict.consultant || 'N/A'}`);
-    lines.push(`Researcher:      ${payload.monetizationVerdict.researcher || 'N/A'}`);
-    lines.push(`Product Manager: ${payload.monetizationVerdict.productManager || 'N/A'}`);
+    lines.push(`Indie Maker:     ${payload.monetizationVerdict.critic || 'N/A'}`);
+    lines.push(`Consultant:      ${payload.monetizationVerdict.analyst || 'N/A'}`);
+    lines.push(`Researcher:      ${payload.monetizationVerdict.educator || 'N/A'}`);
+    lines.push(`Product Manager: ${payload.monetizationVerdict.philosopher || 'N/A'}`);
     lines.push('');
   }
 

@@ -543,10 +543,10 @@ For Dimension 11, compute:
   },
   "monetizationVerdict": {
     "creator": "Highly Viable – ...",
-    "indieMaker": "Viable – ...",
-    "consultant": "Conditional – ...",
-    "researcher": "Conditional – ...",
-    "productManager": "Conditional – ..."
+    "critic": "Viable – ...",
+    "analyst": "Conditional – ...",
+    "educator": "Conditional – ...",
+    "philosopher": "Conditional – ..."
   }
 }
 \`\`\`
