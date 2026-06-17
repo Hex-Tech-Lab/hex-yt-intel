@@ -221,7 +221,7 @@ export class ProcessChatMessageUseCase {
       : await this.modelResolution.resolveModels(tier, 'chat');
 
     // 10. Generate cryptographic stream token
-    const { sig, exp } = this.tokenCrypto.signChatToken({
+    const { sig, exp } = await this.tokenCrypto.signChatToken({
       conversationId,
       userId,
       models: chatModels,

@@ -146,7 +146,7 @@ export class CreateAnalysisUseCase {
     });
 
     // Mint HMAC token for streaming worker access
-    const token = this.tokenCrypto.signAnalysisToken({
+    const token = await this.tokenCrypto.signAnalysisToken({
       videoId,
       analysisId: stub.id,
       models,
