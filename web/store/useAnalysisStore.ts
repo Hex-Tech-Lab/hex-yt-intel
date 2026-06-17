@@ -221,7 +221,7 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
       analysis: { 
         id, 
         title, 
-        analysis_markdown: initialMarkdown || state.analysis?.analysis_markdown || '' 
+        analysis_markdown: initialMarkdown
       },
       terminalLines: [],
       status: initialMarkdown ? 'complete' : 'idle',
