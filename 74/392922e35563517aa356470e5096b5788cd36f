@@ -1,0 +1,25 @@
+web/app/share/[token]/MarkdownRenderer.tsx
+  s_e6750ccfff01b1::t_75e322c4eba20b 1-8,17-18
+  s_e6750ccfff01b1::t_955898a8b08a5d 9-16
+worker/src/crypto.ts
+  s_e6750ccfff01b1::t_d1f26afbaa7f62 1,11
+web/app/share/[token]/page.tsx
+  s_e6750ccfff01b1::t_e431968e4af957 6
+  s_e6750ccfff01b1::t_8202e99aa823f0 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "74392922e35563517aa356470e5096b5788cd36f",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
