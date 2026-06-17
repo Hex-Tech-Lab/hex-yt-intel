@@ -1,0 +1,21 @@
+pnpm-lock.yaml
+  s_e6750ccfff01b1::t_339ed86bb35037 17,5612-5613,7753,7957,8022,9976,10531,11753
+pnpm-workspace.yaml
+  s_e6750ccfff01b1::t_eb64f29ace0bd1 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "da1fdf4a9d54b368c772a9a2bd58084ede96bd28",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
