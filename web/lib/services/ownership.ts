@@ -2,7 +2,7 @@ import { getSupabaseClientWithAuth } from '@/lib/supabase';
 
 export interface OwnershipResult<T> {
   data: T | null;
-  error: 'Unauthorized' | 'NotFound' | null;
+  error: 'Unauthorized' | 'NotFound' | 'InternalError' | null;
 }
 
 /**
@@ -28,7 +28,11 @@ export async function verifyResourceOwnership<T>(
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
+    console.error('[ownership] DB query failed:', error);
+    return { data: null, error: 'InternalError' };
+  }
+  if (!data) {
     return { data: null, error: 'NotFound' };
   }
 
