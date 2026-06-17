@@ -11,6 +11,37 @@ export interface AnalysisStateStore {
   getAnalysisForPersist: () => UCISPayload | null;
 }
 
+function mergePayload(base: UCISPayload, patch: Partial<UCISPayload>): UCISPayload {
+  return {
+    ...base,
+    id: patch.id || base.id,
+    videoId: patch.videoId || base.videoId,
+    title: patch.title || base.title,
+    analysisAt: patch.analysisAt || base.analysisAt,
+    model: patch.model || base.model,
+    detectedPersona: patch.detectedPersona || base.detectedPersona,
+    dimensions: patch.dimensions
+      ? { ...base.dimensions, ...patch.dimensions }
+      : base.dimensions,
+    validation: patch.validation || base.validation,
+    streaming: patch.streaming || base.streaming,
+  };
+}
+
+function newPayload(payload: Partial<UCISPayload>, now: string): UCISPayload {
+  return {
+    id: payload.id || '',
+    videoId: payload.videoId || '',
+    title: payload.title || '',
+    analysisAt: payload.analysisAt || now,
+    model: payload.model || 'edge-stream',
+    detectedPersona: payload.detectedPersona || 'analyst',
+    dimensions: payload.dimensions || {},
+    validation: payload.validation || { passed: false, errors: [], warnings: [] },
+    streaming: payload.streaming || { started: now, interrupted: false, dimensionsReceived: [] },
+  };
+}
+
 export const useAnalysisStateStore = create<AnalysisStateStore>((set, get) => ({
   analysis: null,
   isStreaming: false,
@@ -19,68 +50,16 @@ export const useAnalysisStateStore = create<AnalysisStateStore>((set, get) => ({
     set((state) => {
       const now = new Date().toISOString();
       const existing = state.analysis;
-      const hasFreshId = payload.id && payload.id.length > 0;
-      const hasDimensions = payload.dimensions && Object.keys(payload.dimensions).length > 0;
+      const hasFreshId = !!(payload.id && payload.id.length > 0);
+      const hasDimensions = !!(payload.dimensions && Object.keys(payload.dimensions).length > 0);
 
-      // Case 1: New analysis — no existing state, full initialization
-      if (!existing) {
-        return {
-          analysis: {
-            id: payload.id || '',
-            videoId: payload.videoId || '',
-            title: payload.title || '',
-            analysisAt: payload.analysisAt || now,
-            model: payload.model || 'edge-stream',
-            detectedPersona: payload.detectedPersona || 'analyst',
-            dimensions: payload.dimensions || {},
-            validation: payload.validation || { passed: false, errors: [], warnings: [] },
-            streaming: payload.streaming || {
-              started: now,
-              interrupted: false,
-              dimensionsReceived: [],
-            },
-          },
-          isStreaming: !hasDimensions,
-        };
-      }
-
-      // Case 2: Restore — existing analysis + complete payload with id and dimensions
+      if (!existing) return { analysis: newPayload(payload, now), isStreaming: !hasDimensions };
       if (hasFreshId && hasDimensions) {
-        return {
-          analysis: {
-            ...existing,
-            id: payload.id!,
-            videoId: payload.videoId || existing.videoId,
-            title: payload.title || existing.title,
-            analysisAt: payload.analysisAt || existing.analysisAt,
-            model: payload.model || existing.model,
-            detectedPersona: payload.detectedPersona || existing.detectedPersona,
-            dimensions: payload.dimensions!,
-            validation: payload.validation || existing.validation,
-            streaming: payload.streaming || existing.streaming,
-          },
-          isStreaming: false,
-        };
+        const restored = mergePayload(existing, payload);
+        restored.dimensions = payload.dimensions!;
+        return { analysis: restored, isStreaming: false };
       }
-
-      // Case 3: Partial payload — streaming update, merge into existing
-      return {
-        analysis: {
-          ...existing,
-          id: payload.id || existing.id,
-          videoId: payload.videoId || existing.videoId,
-          title: payload.title || existing.title,
-          analysisAt: payload.analysisAt || existing.analysisAt,
-          model: payload.model || existing.model,
-          detectedPersona: payload.detectedPersona || existing.detectedPersona,
-          dimensions: hasDimensions
-            ? { ...existing.dimensions, ...payload.dimensions }
-            : existing.dimensions,
-          validation: payload.validation || existing.validation,
-          streaming: payload.streaming || existing.streaming,
-        },
-        isStreaming: true,
-      };
+      return { analysis: mergePayload(existing, payload), isStreaming: true };
     });
   },
 

@@ -41,6 +41,7 @@
     "remark-gfm": "^4.0.1",
     "stripe": "15.7.0",
     "three": "^0.184.0",
+    "undici": "6.21.2",
     "unist-util-visit": "^5.1.0",
     "zod": "4.4.3",
     "zustand": "5.0.13"
