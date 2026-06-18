@@ -185,7 +185,6 @@ export async function POST(request: NextRequest) {
         if (completedChunks.length >= minQuorum) {
           const now = Date.now();
           const timestamps = completedChunks.map((c: any) => new Date(c.updated_at).getTime());
-          const oldestTime = Math.min(...timestamps);
           const newestTime = Math.max(...timestamps);
           // Only activate grace period if the LATEST chunk is also >30s old
           // (no new chunks arriving), preventing premature stitch of a slow stream.

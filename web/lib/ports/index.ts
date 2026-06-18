@@ -9,4 +9,4 @@ export type { ModelResolutionPort } from './ModelResolutionPort';
 export type { CryptographicTokenPort } from './CryptographicTokenPort';
 export type { PersistencePort, CachedAnalysis, AnalysisStub, ValidationReportInput } from './PersistencePort';
 export type { ChatPersistencePort } from './ChatPersistencePort';
-export type { VideoPlayerPort, VideoPlayerCallbacks, ChapterMarker } from './VideoPlayerPort';
+export type { VideoPlayerPort, VideoPlayerCallbacks } from './VideoPlayerPort';
