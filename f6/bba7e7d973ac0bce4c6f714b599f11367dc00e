@@ -1,0 +1,46 @@
+web/app/api/analyses/persist/route.ts
+  s_49ac51cd2fe763::t_2545f4e45a03c1 179-191
+.memory/AGENT_LEDGER.md
+  s_e6750ccfff01b1::t_b0b0e5eefb4516 131
+web/lib/ports/VideoPlayerPort.ts
+  s_e6750ccfff01b1::t_e2ccb71fdebc1a 1-18
+web/lib/ports/index.ts
+  s_e6750ccfff01b1::t_7b4b9b1efa0245 11-12
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_49ac51cd2fe763::t_b28437f55df37c 1116
+  s_49ac51cd2fe763::t_9f49000f4d334a 1121
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_e6750ccfff01b1::t_8c86b58da2f0ce 1-17,19-21,23-32,34-38,40-60
+  s_e6750ccfff01b1::t_dd3a095f30faad 18,22,33,39
+web/components/templates/console/VideoPlayerCard.tsx
+  s_e6750ccfff01b1::t_e8d42abdf6cd64 3,7-8,11-12,17,25-45,47-49,51,54-58,60,66
+  s_e6750ccfff01b1::t_99827e518991fa 13
+web/lib/adapters/synthesis-stream-adapter.ts
+  s_49ac51cd2fe763::t_c3907191114e18 277-282
+web/lib/ports/PersistencePort.ts
+  s_49ac51cd2fe763::t_b33304b328ac8b 159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "f6bba7e7d973ac0bce4c6f714b599f11367dc00e",
+  "prompts": {},
+  "sessions": {
+    "s_49ac51cd2fe763": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1250d40c1ffeMzJyZ30rEF0elG",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
