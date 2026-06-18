@@ -1,0 +1,27 @@
+worker/wrangler.toml
+  s_e6750ccfff01b1::t_c409d225378948 29
+worker/src/services/TranscriptExtractor.ts
+  s_e6750ccfff01b1::t_562ccdc0690f9c 54-60,62,64-67
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_0f060402d19271 38
+  s_e6750ccfff01b1::t_e0d923ffb813ba 249
+  s_e6750ccfff01b1::t_707e6107daf21b 432
+web/lib/config/synthesis.ts
+  s_e6750ccfff01b1::t_512dae05d6f79c 13-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "3b5c842f0fe971a355ef3bf0473e65f44143eda5",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
