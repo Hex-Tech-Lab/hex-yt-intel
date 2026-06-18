@@ -14,8 +14,8 @@ vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "producti
 #   wrangler secret put CLOUDFLARE_SECRET_TOKEN --env production
 #   wrangler secret put OPENROUTER_API_KEY --env production
 #
-# Current RESIDENTIAL_PROXY_URL value:
-#   brd-customer-hl_da92bd7c-zone-yt_intel_prx1:qa0ffc1kewsa@brd.superproxy.io:33335
+# RESIDENTIAL_PROXY_URL set via `wrangler secret put RESIDENTIAL_PROXY_URL --env production`
+# Format: brd-customer-<CUSTOMER_ID>-zone-<ZONE>:<PASSWORD>@brd.superproxy.io:33335
 
 [build]
 command = "pnpm run build"

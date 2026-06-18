@@ -72,14 +72,21 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
   private async fetchWithDecodo(videoId: string): Promise<TranscriptResult> {
     if (!this.decodoApiKey) throw new Error('Decodo API key not configured');
-    const decodoUrl = `https://api.decodo.com/v1/transcript/${videoId}`;
-    const response = await fetch(decodoUrl, {
-      headers: { 'Authorization': `Bearer ${this.decodoApiKey}` },
-    });
-    if (!response.ok) throw new Error(`Decodo fail: ${response.status}`);
-    const data = await response.json() as { transcript: string; lang: string };
-    if (!data.transcript) throw new Error('Empty');
-    return { videoId, transcript: data.transcript, language: data.lang };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const decodoUrl = `https://api.decodo.com/v1/transcript/${videoId}`;
+      const response = await fetch(decodoUrl, {
+        signal: controller.signal,
+        headers: { 'Authorization': `Bearer ${this.decodoApiKey}` },
+      });
+      if (!response.ok) throw new Error(`Decodo fail: ${response.status}`);
+      const data = await response.json() as { transcript: string; lang: string };
+      if (!data.transcript) throw new Error('Empty');
+      return { videoId, transcript: data.transcript, language: data.lang };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   private async fetchWithTertiary(videoId: string): Promise<TranscriptResult> {

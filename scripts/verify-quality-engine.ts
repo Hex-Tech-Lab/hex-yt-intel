@@ -61,7 +61,7 @@ if (findings.length > 0) {
     console.warn('⚠️ Bypassing hard exit for legacy debt during PR #82 freeze. This tool is an internal helper.');
     process.exit(0);
   }
-  console.warn('⚠️ Quality Intelligence Engine: Medium/Low issues found, but allowing build due to transition.');
+  console.warn(JSON.stringify(findings, null, 2));
 }
 
 console.log('✅ Quality Intelligence Engine: No issues found.');
