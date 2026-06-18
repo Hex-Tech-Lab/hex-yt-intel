@@ -1,20 +1,9 @@
-/**
- * PromptBuilder - Pure Service (stateless)
- *
- * Implements PromptBuilderPort. Wraps getUCISPrompt — the prompt IP is constructed
- * here and bundled into the worker by esbuild, so it never leaves the server.
- * Config-only / stateless: safe to share across requests.
- */
-
 import { getUCISPrompt } from '../../../web/lib/prompts/factory';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
 import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS } from '../../../web/lib/config/synthesis';
 
 export class PromptBuilder implements PromptBuilderPort {
-  /**
-   * Build the UCIS v5.1 system prompt from domain objects.
-   */
   async build(context: EngineContext): Promise<string> {
     const basePrompt = await getUCISPrompt({
       metadata: {
@@ -29,55 +18,55 @@ export class PromptBuilder implements PromptBuilderPort {
       persona: (context.persona as any) || 'p1',
       timezone: context.timezone || 'UTC',
       duration: context.metadata.duration || 0,
+      skipAllDimensionsInstruction: true,
     });
 
-    if (context.chunkIndex !== undefined && context.chunkIndex >= 1 && context.chunkIndex <= TOTAL_DIMENSIONS) {
-      const details = DIMENSION_CONFIGS[context.chunkIndex];
-      if (details) {
-        const name = details.name;
-        const extraInstructions = details.extraFields?.map(f => {
-          if (f === 'persona') {
-            return 'include the "persona" configuration block in the JSON root';
+    if (context.dimensions !== undefined && context.dimensions.length > 0) {
+      const dims = context.dimensions
+        .filter(d => Number.isInteger(d) && d >= 1 && d <= TOTAL_DIMENSIONS)
+        .filter((d, i, arr) => arr.indexOf(d) === i);
+      if (dims.length === 0) return basePrompt;
+      const allExtraFields = new Set<string>();
+      const extraInstrParts: string[] = [];
+      for (const d of dims) {
+        const cfg = DIMENSION_CONFIGS[d];
+        if (cfg?.extraFields) {
+          for (const f of cfg.extraFields) {
+            if (!allExtraFields.has(f)) {
+              allExtraFields.add(f);
+              if (f === 'persona') extraInstrParts.push('include the "persona" configuration block in the JSON root');
+              else if (f === 'knowledgeGraph') extraInstrParts.push('generate and include the full "knowledgeGraph" object in the JSON root (max 15 nodes, 20 edges)');
+              else if (f === 'classification') extraInstrParts.push('generate and include the full "classification" object in the JSON root');
+              else if (f === 'monetizationVerdict') extraInstrParts.push('generate and include the full "monetizationVerdict" object in the JSON root');
+            }
           }
-          if (f === 'knowledgeGraph') {
-            return 'generate and include the full "knowledgeGraph" object representing entities and relationships extracted from this content in the JSON root (strictly limit the output to a maximum of 15 critical nodes and 20 relational edges to ensure token efficiency. The knowledge graph MUST form a single, weakly connected component. You are strictly forbidden from generating isolated nodes; every node must have at least one incoming or outgoing edge [degree >= 1]. If your extraction results in separate conceptual clusters, you must synthesize logical "Cross-Domain Bridges" to connect them to the primary root node. The "rootId" must be assigned to the node with the highest out-degree centrality, i.e., the concept that spawns the most sub-concepts. If the extraction exceeds these limits, prioritize the most central entities, prune peripheral leaf nodes, and note any omitted clusters or truncation in the node content where relevant)';
-          }
-          if (f === 'classification') {
-            return 'generate and include the full "classification" object in the JSON root';
-          }
-          if (f === 'monetizationVerdict') {
-            return 'generate and include the full "monetizationVerdict" object in the JSON root';
-          }
-          return '';
-        }).filter(Boolean).join(', and ') || 'do NOT include persona, knowledgeGraph, classification, or monetizationVerdict fields';
+        }
+      }
+      const extraInstr = extraInstrParts.length > 0
+        ? extraInstrParts.join(', and ')
+        : 'do NOT include persona, knowledgeGraph, classification, or monetizationVerdict fields';
 
-        return `${basePrompt}
+      const dimLabels = dims.map(d => {
+        const cfg = DIMENSION_CONFIGS[d];
+        return cfg ? `- ### DIMENSION ${d} - ${cfg.name}` : `- ### DIMENSION ${d}`;
+      }).join('\n');
+
+      const label = dims.length === 1
+        ? `DIMENSION ${dims[0]}`
+        : `DIMENSIONS ${dims.join(', ')}`;
+
+      return `${basePrompt}
 
 ---
-CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (CHUNK ${context.chunkIndex}):
-You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimension:
-- ### DIMENSION ${context.chunkIndex} - ${name}
+CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (${label}):
+You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimension(s):
+${dimLabels}
 
-Your output JSON object must ONLY include this dimension inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". You must also ${extraInstructions}.
-Your response must enforce a strict maximum output restriction of 400 analytical words for the processed dimension payload.
+Your output JSON object must ONLY include these dimension(s) inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". You must also ${extraInstr}.
+Your response must enforce a strict maximum output restriction of 400 analytical words per dimension.
 Do NOT output any other dimensions. Do NOT include any other JSON root fields. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`;
-      }
     }
 
-    return `${basePrompt}
-
----
-CRITICAL INSTRUCTION:
-Generate a complete 11-dimension UCIS v2.0 structured analysis in raw JSON format.
-Your output must be a single JSON object with the following root fields:
-- "schemaVersion": "2.0"
-- "persona": Full persona configuration
-- "dimensions": An array containing all 11 dimensions (number, name, content)
-- "knowledgeGraph": A weakly connected graph (max 15 nodes, 20 edges)
-- "classification": Object with boolean flags (authoritative, practicallyActionable, knowledgeGraphReady, safe) and a recommendation string
-- "monetizationVerdict": Target-specific commercial yield profiles
-
-Output strictly raw JSON. Do NOT include markdown code blocks or any preamble/postamble.`;
+    return basePrompt;
   }
 }
-

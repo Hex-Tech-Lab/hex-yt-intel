@@ -12,7 +12,12 @@ import {
     StreamResilienceRule,
     SchemaContractRule,
     RedundantValidationRule,
-    PersistResilienceRule
+    PersistResilienceRule,
+    BundleContradictionRule,
+    TranscriptGuardRule,
+    StreamSettleRule,
+    CascadeOrderRule,
+    ProxyPromotionRule
 } from "./quality-engine/rules";
 import * as glob from "glob";
 
@@ -32,6 +37,11 @@ engine.addRule(StreamResilienceRule);
 engine.addRule(SchemaContractRule);
 engine.addRule(RedundantValidationRule);
 engine.addRule(PersistResilienceRule);
+engine.addRule(BundleContradictionRule);
+engine.addRule(TranscriptGuardRule);
+engine.addRule(StreamSettleRule);
+engine.addRule(CascadeOrderRule);
+engine.addRule(ProxyPromotionRule);
 
 // Scan files
 const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' }).map(f => f.replace(/\\/g, "/"));
@@ -43,15 +53,20 @@ if (files.length === 0) {
 
 const findings = engine.analyze(files);
 
-if (findings.length > 0) {
-  const criticalFindings = findings.filter(f => f.severity === 'critical');
-  if (criticalFindings.length > 0) {
-    console.error('❌ Quality Intelligence Engine: Critical issues found:');
-    console.error(JSON.stringify(criticalFindings, null, 2));
-    console.warn('⚠️ Bypassing hard exit for legacy debt during PR #82 freeze. This tool is an internal helper.');
-    process.exit(0);
-  }
-  console.warn('⚠️ Quality Intelligence Engine: Medium/Low issues found, but allowing build due to transition.');
+const criticalFindings = findings.filter(f => f.severity === 'critical');
+if (criticalFindings.length > 0) {
+  console.error('❌ Quality Intelligence Engine: Critical issues found:');
+  console.error(JSON.stringify(criticalFindings, null, 2));
+  console.warn('⚠️ Bypassing hard exit for legacy debt during PR #82 freeze. This tool is an internal helper.');
+  process.exit(0);
+}
+
+const nonCritical = findings.filter(f => f.severity !== 'critical');
+if (nonCritical.length > 0) {
+  console.warn('⚠️ Quality Intelligence Engine: Medium/Low issues found:');
+  console.warn(JSON.stringify(nonCritical, null, 2));
+  console.error('✅ No critical issues. Medium/low findings listed above.');
+  process.exit(0);
 }
 
 console.log('✅ Quality Intelligence Engine: No issues found.');

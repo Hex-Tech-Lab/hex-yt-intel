@@ -2,8 +2,8 @@
  * TranscriptExtractor - Adapter implementing TranscriptProviderPort
  *
  * Implements 3-tier fallback chain:
- * 1. Primary: YouTube Native
- * 2. Secondary: Decodo API
+ * 1. Primary: Decodo API
+ * 2. Secondary: YouTube Native
  * 3. Tertiary: Placeholder/Fallback
  */
 
@@ -14,9 +14,11 @@ import type { TranscriptProviderPort, TranscriptResult } from '../ports/Transcri
 
 export class TranscriptExtractor implements TranscriptProviderPort {
   private residentialProxyUrl?: string;
+  private decodoApiKey?: string;
 
-  constructor(residentialProxyUrl?: string) {
+  constructor(residentialProxyUrl?: string, decodoApiKey?: string) {
     this.residentialProxyUrl = residentialProxyUrl;
+    this.decodoApiKey = decodoApiKey;
   }
 
   async fetch(videoId: string): Promise<TranscriptResult> {
@@ -24,19 +26,23 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       throw new Error(`Invalid video ID format: ${videoId}`);
     }
 
-    // Cascade 1: Primary (YouTube)
-    try {
-      return await this.fetchWithPrimary(videoId);
-    } catch (e) {
-      console.warn(`[TranscriptExtractor] Primary fetch failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
+    // Cascade 1: Decodo API (primary)
+    if (this.decodoApiKey) {
+      try {
+        console.info(`[TranscriptExtractor] Trying Decodo for ${videoId}...`);
+        return await this.fetchWithDecodo(videoId);
+      } catch (e) {
+        console.warn(`[TranscriptExtractor] Decodo failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
+      }
+    } else {
+      console.warn(`[TranscriptExtractor] Decodo API key not configured, skipping`);
     }
 
-    // Cascade 2: Decodo API
+    // Cascade 2: YouTube Native (fallback)
     try {
-      console.info(`[TranscriptExtractor] Trying Decodo for ${videoId}...`);
-      return await this.fetchWithDecodo(videoId);
+      return await this.fetchWithYouTubeNative(videoId);
     } catch (e) {
-      console.warn(`[TranscriptExtractor] Decodo fetch failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
+      console.warn(`[TranscriptExtractor] YouTube fetch failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
     }
 
     // Cascade 3: Tertiary Fallback
@@ -44,21 +50,45 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     return await this.fetchWithTertiary(videoId);
   }
 
-  private async fetchWithPrimary(videoId: string): Promise<TranscriptResult> {
+  private async fetchWithYouTubeNative(videoId: string): Promise<TranscriptResult> {
     const { langCode } = await this.fetchCaptionMetadata(videoId);
     const transcript = await this.fetchTranscriptContent(videoId, langCode);
     if (!transcript) throw new Error('Empty');
     return { videoId, transcript, language: langCode };
   }
 
+  async fetchChannelMetadata(channelId: string): Promise<Record<string, unknown> | null> {
+    if (!this.decodoApiKey) return null;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(`https://api.decodo.com/v1/channel/${channelId}`, {
+        signal: controller.signal,
+        headers: { 'Authorization': `Bearer ${this.decodoApiKey}` },
+      });
+      if (!res.ok) return null;
+      return await res.json() as Record<string, unknown>;
+    } catch { return null; }
+    finally { clearTimeout(timeout); }
+  }
+
   private async fetchWithDecodo(videoId: string): Promise<TranscriptResult> {
-    // Placeholder URL for Decodo - must be replaced with real configuration
-    const decodoUrl = `https://api.decodo.com/v1/transcript/${videoId}`;
-    const response = await fetch(decodoUrl);
-    if (!response.ok) throw new Error('Decodo fail');
-    const data = await response.json() as { transcript: string; lang: string };
-    if (!data.transcript) throw new Error('Empty');
-    return { videoId, transcript: data.transcript, language: data.lang };
+    if (!this.decodoApiKey) throw new Error('Decodo API key not configured');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const decodoUrl = `https://api.decodo.com/v1/transcript/${videoId}`;
+      const response = await fetch(decodoUrl, {
+        signal: controller.signal,
+        headers: { 'Authorization': `Bearer ${this.decodoApiKey}` },
+      });
+      if (!response.ok) throw new Error(`Decodo fail: ${response.status}`);
+      const data = await response.json() as { transcript: string; lang: string };
+      if (!data.transcript) throw new Error('Empty');
+      return { videoId, transcript: data.transcript, language: data.lang };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   private async fetchWithTertiary(videoId: string): Promise<TranscriptResult> {
