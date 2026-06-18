@@ -45,6 +45,13 @@ export function VideoPlayerCard() {
       <Player
         ref={playerRef}
         url={`https://www.youtube.com/watch?v=${videoId}`}
+        config={{
+          youtube: {
+            embedOptions: {
+              host: 'https://www.youtube-nocookie.com',
+            },
+          },
+        }}
         width="100%"
         height="100%"
         playing={isPlaying}

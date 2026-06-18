@@ -31,6 +31,10 @@ export class PromptBuilder implements PromptBuilderPort {
       duration: context.metadata.duration || 0,
     });
 
+    if (context.transcript === '[Transcript unavailable' || !context.transcript || context.transcript.length < 20) {
+      return basePrompt;
+    }
+
     if (context.dimensions !== undefined && context.dimensions.length > 0) {
       const dimensionEntries = context.dimensions
         .map(d => {
@@ -64,19 +68,37 @@ export class PromptBuilder implements PromptBuilderPort {
         ? extraInstrParts.join(', and ')
         : 'do NOT include persona, knowledgeGraph, classification, or monetizationVerdict fields';
 
-      return `${basePrompt}
+      const dimensionList = context.dimensions.map(d => {
+        const cfg = DIMENSION_CONFIGS[d];
+        return cfg ? `- ### DIMENSION ${d} - ${cfg.name}` : `- ### DIMENSION ${d}`;
+      }).join('\n');
 
----
-CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (BUNDLE ${context.dimensions.join(',')}):
-You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimensions:
-${context.dimensions.map(d => {
-  const cfg = DIMENSION_CONFIGS[d];
-  return cfg ? `- ### DIMENSION ${d} - ${cfg.name}` : `- ### DIMENSION ${d}`;
-}).join('\n')}
+      const executionLine = 'Analyse the provided content using the framework above. You are operating in a CLOSED UNIVERSE. The transcript is your only source of truth. Output MUST be a raw JSON object.';
 
-Your output JSON object must ONLY include these dimensions inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". You must also ${extraInstructions}.
-Your response must enforce a strict maximum output restriction of 400 analytical words per dimension.
-Do NOT output any other dimensions. Do NOT include any other JSON root fields. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`;
+      const focusBlock = `## FOCUS — THIS REQUEST ONLY
+You are performing a SEGMENTED analysis. Generate ONLY the following dimensions:
+${dimensionList}
+
+Your JSON object must contain ONLY these dimensions in the "dimensions" array. Start the JSON envelope with "schemaVersion": "2.0". You must also ${extraInstructions}.
+Maximum 400 analytical words per dimension.
+Do NOT output any other dimensions. Do NOT include persona, knowledgeGraph, classification, or monetizationVerdict in the root unless instructed above.`;
+
+      const executionBlock = `## EXECUTION
+${executionLine}
+
+**CRITICAL REMINDER**: External data enrichment, web searching, and inference beyond the transcript boundary are FORBIDDEN. When data is absent, use the circuit breaker.
+
+**FOCUS OVERRIDE — MANDATORY**: The ## FOCUS section above specifies exactly which dimensions to generate. Generate ONLY those dimensions. Do NOT generate any others. This takes precedence over all other instructions.`;
+
+      const strippedPrompt = basePrompt.includes('## EXECUTION')
+        ? basePrompt.slice(0, basePrompt.indexOf('## EXECUTION'))
+        : basePrompt;
+
+      return `${strippedPrompt}
+
+${focusBlock}
+
+${executionBlock}`;
     }
 
     return `${basePrompt}
