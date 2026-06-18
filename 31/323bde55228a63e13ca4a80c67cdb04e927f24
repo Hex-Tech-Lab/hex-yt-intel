@@ -1,0 +1,23 @@
+worker/src/services/PromptBuilder.ts
+  s_e6750ccfff01b1::t_bba0465a266c1d 24,27,33-36,41,45,50-52,54,56-59,61-63,66
+web/components/templates/console/VideoPlayerCard.tsx
+  s_e6750ccfff01b1::t_068334a62c0358 53-57
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_dedc3e0a44e361 445-451
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "31323bde55228a63e13ca4a80c67cdb04e927f24",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
