@@ -415,7 +415,7 @@ async function verifyStreamToken(
     return { isValid: false, secret: '', msg: '' };
   }
 
-  let activeSecret = secret;
+  const activeSecret = secret;
   const secretsToTry = [secret];
 
   if (env.DEV_HMAC_SECRET) {

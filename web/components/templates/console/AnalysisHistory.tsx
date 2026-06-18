@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, startTransition } from 'react';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -39,42 +39,45 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       
       const dimensions = parseToUCISDimensions(data.analysis_markdown || '');
       
-      // Update Global Store (for header/metadata/button)
-      initializeAnalysis(data.id, data.title, data.analysis_markdown);
-      setVideoMetadata({
-        videoId: data.videoId,
-        title: data.title,
-        channelTitle: data.channelTitle || 'Unknown',
-        publishedAt: data.analysisAt || data.created_at || new Date().toISOString(),
-        duration: data.duration || 0,
-        viewCount: data.viewCount || 0,
-        likeCount: data.likeCount || 0,
-      } as any);
+      startTransition(() => {
+        // Update Global Store (for header/metadata/button)
+        initializeAnalysis(data.id, data.title, data.analysis_markdown);
+        setVideoMetadata({
+          videoId: data.videoId,
+          title: data.title,
+          channelTitle: data.channelTitle || 'Unknown',
+          publishedAt: data.analysisAt || data.created_at || new Date().toISOString(),
+          duration: data.duration || 0,
+          viewCount: data.viewCount || 0,
+          likeCount: data.likeCount || 0,
+        } as any);
 
-      // Update Nucleus Store (for grid/graph/relations)
-      initSynthesis({
-        id: data.id,
-        videoId: data.videoId,
-        title: data.title,
-        channelTitle: data.channelTitle,
-        model: data.model,
-        analysisAt: data.analysisAt,
-        detectedPersona: data.detectedPersona,
-        dimensions,
-        validation: data.validation_report,
-        streaming: data.streaming,
+        // Update Nucleus Store (for grid/graph/relations)
+        initSynthesis({
+          id: data.id,
+          videoId: data.videoId,
+          title: data.title,
+          channelTitle: data.channelTitle,
+          model: data.model,
+          analysisAt: data.analysisAt,
+          detectedPersona: data.detectedPersona,
+          dimensions,
+          validation: data.validation_report,
+          streaming: data.streaming,
+        });
+
+        if (data.analysis_payload) {
+          const payload = data.analysis_payload;
+          const state = useSynthesisNucleus.getState();
+          if (payload.persona) state.setPersonaConfig(payload.persona);
+          if (payload.knowledgeGraph) state.setKnowledgeGraph(payload.knowledgeGraph);
+          if (payload.classification) state.setClassification(payload.classification);
+          if (payload.monetizationVerdict) state.setMonetizationVerdict(payload.monetizationVerdict);
+        }
+
+        setStatus('complete');
+        onSelectAnalysis?.();
       });
-
-      if (data.analysis_payload) {
-        const payload = data.analysis_payload;
-        if (payload.persona) useSynthesisNucleus.getState().setPersonaConfig(payload.persona);
-        if (payload.knowledgeGraph) useSynthesisNucleus.getState().setKnowledgeGraph(payload.knowledgeGraph);
-        if (payload.classification) useSynthesisNucleus.getState().setClassification(payload.classification);
-        if (payload.monetizationVerdict) useSynthesisNucleus.getState().setMonetizationVerdict(payload.monetizationVerdict);
-      }
-
-      setStatus('complete');
-      onSelectAnalysis?.();
     } catch (err) {
       console.error('Error restoring analysis:', err);
       setRestoreError(err instanceof Error ? err.message : 'Unknown restoration error');
