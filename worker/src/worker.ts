@@ -488,9 +488,7 @@ app.post("/analyze-llm-stream", async (c) => {
   for (const s of secretsToTry) {
     if (!s) continue;
     const modelStr = [...(req.models ?? [])].sort().join(',');
-    const dimStr = JSON.stringify(req.dimensions ?? []);
-    const chunkStr = `${req.chunkIndex ?? ''}:${req.totalChunks ?? ''}`;
-    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}:${dimStr}:${chunkStr}`;
+    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
     const expected = await hmacHex(s, msg);
     
     if (timingSafeEqualHex(expected, req.sig)) {
@@ -503,9 +501,7 @@ app.post("/analyze-llm-stream", async (c) => {
   if (!isTokenValid) {
     const isPreview = c.env.NODE_ENV !== 'production';
     const modelStr = [...(req.models ?? [])].sort().join(',');
-    const dimStr = JSON.stringify(req.dimensions ?? []);
-    const chunkStr = `${req.chunkIndex ?? ''}:${req.totalChunks ?? ''}`;
-    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}:${dimStr}:${chunkStr}`;
+    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
     
     if (isPreview) {
       console.warn('[analyze-llm-stream] HMAC Mismatch Diagnostic:', {
