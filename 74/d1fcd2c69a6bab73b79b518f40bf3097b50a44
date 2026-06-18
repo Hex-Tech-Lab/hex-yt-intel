@@ -1,0 +1,20 @@
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_5379c702126655 504
+  s_e6750ccfff01b1::t_fc2f5904303bb5 491
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "74d1fcd2c69a6bab73b79b518f40bf3097b50a44",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
