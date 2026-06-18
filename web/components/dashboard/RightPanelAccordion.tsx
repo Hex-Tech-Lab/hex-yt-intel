@@ -6,7 +6,7 @@ import { Icon } from '@/components/templates/_shared/primitives';
 export interface AccordionItem {
   id: string;
   title: string;
-  content: React.ReactNode;
+  content: React.ReactNode | (() => React.ReactNode);
   defaultOpen?: boolean;
   onAction?: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => void;
 }
@@ -97,7 +97,7 @@ export function RightPanelAccordion({ items }: RightPanelAccordionProps) {
           </div>
           {openStates[item.id] && (
             <div className="p-4 text-[13px] text-[var(--ink-secondary)]">
-              {item.content}
+              {typeof item.content === 'function' ? item.content() : item.content}
             </div>
           )}
         </div>
