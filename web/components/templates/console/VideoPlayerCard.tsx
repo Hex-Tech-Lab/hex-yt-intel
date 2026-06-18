@@ -10,6 +10,8 @@ import type { VideoPlayerPort } from '@/lib/ports/VideoPlayerPort';
 export function VideoPlayerCard() {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<VideoPlayerPort | null>(null);
+  const seekQueueRef = useRef<number | null>(null);
+  const videoIdRef = useRef<string | null>(null);
   const { isPlaying, seekTo, clearSeek } = useVideoStore();
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
@@ -22,40 +24,63 @@ export function VideoPlayerCard() {
     setMounted(true);
   }, []);
 
-  const initPlayer = useCallback(async () => {
-    if (!containerRef.current || !videoId) return;
+  const initPlayer = useCallback(async (id: string) => {
+    if (!containerRef.current) return;
     const adapter = new YouTubePlayerAdapter();
     playerRef.current = adapter;
-    await adapter.mount(containerRef.current, videoId, {
-      onReady: () => setReady(true),
+    videoIdRef.current = id;
+    await adapter.mount(containerRef.current, id, {
+      onReady: () => {
+        if (videoIdRef.current !== id) {
+          adapter.destroy();
+          return;
+        }
+        setReady(true);
+        if (seekQueueRef.current !== null) {
+          adapter.seekTo(seekQueueRef.current);
+          seekQueueRef.current = null;
+        }
+        if (isPlaying) adapter.play();
+      },
       onError: (err) => console.error('[VideoPlayerCard]', err.message),
     });
-  }, [videoId]);
+  }, [isPlaying]);
 
   useEffect(() => {
     if (!mounted || !videoId) return;
-    playerRef.current?.destroy();
-    setReady(false);
-    initPlayer();
-    return () => {
-      playerRef.current?.destroy();
+    if (playerRef.current) {
+      playerRef.current.destroy();
       playerRef.current = null;
+    }
+    setReady(false);
+    videoIdRef.current = videoId;
+    initPlayer(videoId);
+    return () => {
+      if (playerRef.current) {
+        playerRef.current.destroy();
+        playerRef.current = null;
+      }
+      videoIdRef.current = null;
     };
   }, [mounted, videoId, initPlayer]);
 
   useEffect(() => {
-    if (seekTo !== null && ready) {
-      playerRef.current?.seekTo(seekTo);
+    if (seekTo === null) return;
+    if (ready && playerRef.current) {
+      playerRef.current.seekTo(seekTo);
+      clearSeek();
+    } else if (seekTo !== null) {
+      seekQueueRef.current = seekTo;
       clearSeek();
     }
   }, [seekTo, ready, clearSeek]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !playerRef.current) return;
     if (isPlaying) {
-      playerRef.current?.play();
+      playerRef.current.play();
     } else {
-      playerRef.current?.pause();
+      playerRef.current.pause();
     }
   }, [isPlaying, ready]);
 
