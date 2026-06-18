@@ -185,10 +185,7 @@ export function useSSEStream() {
             };
 
             const streamController = new AbortController();
-            const timeoutId = setTimeout(() => {
-              streamController.abort();
-              onError(i, 'Handshake timed out after 10s.');
-            }, 10000);
+            const timeoutId = setTimeout(() => streamController.abort(), 10000);
 
             const controller = new AbortController();
             currentSignal.addEventListener('abort', () => controller.abort(), { once: true });
@@ -196,6 +193,7 @@ export function useSSEStream() {
             const combinedSignal = controller.signal;
 
             let res;
+            let timedOut = false;
             try {
               res = await fetch(job.stream.url, {
                 method: 'POST',
@@ -203,6 +201,13 @@ export function useSSEStream() {
                 body: JSON.stringify(streamPayload),
                 signal: combinedSignal,
               });
+            } catch (fetchErr: any) {
+              clearTimeout(timeoutId);
+              if (streamController.signal.aborted) timedOut = true;
+              if (fetchErr.name === 'AbortError') {
+                throw new Error(timedOut ? 'Handshake timed out after 10s.' : 'Request aborted.');
+              }
+              throw fetchErr;
             } finally {
               clearTimeout(timeoutId);
             }
