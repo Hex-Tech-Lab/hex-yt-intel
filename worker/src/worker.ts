@@ -443,7 +443,8 @@ app.post("/analyze-llm-stream", async (c) => {
     }
   }
 
-  if (transcript.includes('Transcript unavailable') || transcript.includes('content ingestion failed')) {
+  const transcriptText = transcript || '';
+  if (transcriptText.includes('Transcript unavailable') || transcriptText.includes('content ingestion failed')) {
     return c.json({
       error: 'No transcript available',
       details: 'Transcript could not be fetched from any source. LLM analysis skipped to avoid unnecessary costs.',
@@ -477,7 +478,8 @@ app.post("/analyze-llm-stream", async (c) => {
   for (const s of secretsToTry) {
     if (!s) continue;
     const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
+    const dimStr = JSON.stringify(req.dimensions ?? []);
+    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}:${dimStr}`;
     const expected = await hmacHex(s, msg);
     
     if (timingSafeEqualHex(expected, req.sig)) {
@@ -490,7 +492,8 @@ app.post("/analyze-llm-stream", async (c) => {
   if (!isTokenValid) {
     const isPreview = c.env.NODE_ENV !== 'production';
     const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
+    const dimStr = JSON.stringify(req.dimensions ?? []);
+    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}:${dimStr}`;
     
     if (isPreview) {
       console.warn('[analyze-llm-stream] HMAC Mismatch Diagnostic:', {

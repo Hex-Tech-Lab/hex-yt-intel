@@ -144,7 +144,7 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
   ```
   [2026-06-18T12:00+03:00] [OCT2] [NOTE for GCT1] worker/foo.ts:15 – function bar() has unused param. Fix: remove or prefix with _. Confirmed by owner? no
   [2026-06-18T12:30+03:00] [GCT1] [ACK OCT2] worker/foo.ts:15 – fixed in commit abc123.
-  [2026-06-18T12:31+03:00] [OCT2] [RESOLVED GCT1] worker/foo.ts:15 – confirmed.
+  [2026-06-18T12:31+03:00] [OCT2] [RESOLVED OCT2] worker/foo.ts:15 – confirmed.
   ```
 
 **ADR Requirement (MANDATORY)**:
@@ -157,7 +157,7 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
 
 ---
 
-## 5. ESLint & FORMATTING
+## 6. ESLint & FORMATTING
 
 - ESLint 8.x (`web/.eslintrc.json`) — extends `next/core-web-vitals` + `@typescript-eslint/recommended`
   - `@typescript-eslint/no-unused-vars`: warn
@@ -167,7 +167,7 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
 
 ---
 
-## 6. TESTING
+## 7. TESTING
 
 - **Primary**: Playwright 1.60 — `web/tests/` (E2E, Chromium only, full parallel)
 - **Secondary**: Vitest 4.x — `web/lib/__tests__/` (unit tests, no dedicated config yet)
@@ -176,6 +176,6 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
 
 ---
 
-## 7. GCT2 AGENT PROTOCOL & SCHEDULE
+## 8. GCT2 AGENT PROTOCOL & SCHEDULE
 - **Protocol**: Always follow the set agent protocol without being reminded. Inform others and get updates from others before and after every task and during with every subtask.
 - **Parallel Workflow**: Orchestrate parallel agents. Estimate effort + file/LOC deltas. If >10m, run ≤5 concurrent agents; as one finishes, spawn another and rebalance remaining tasks for max throughput. Ensure no toe stepping and no work repeated.

@@ -22,7 +22,10 @@ export class PromptBuilder implements PromptBuilderPort {
     });
 
     if (context.dimensions !== undefined && context.dimensions.length > 0) {
-      const dims = context.dimensions;
+      const dims = context.dimensions
+        .filter(d => Number.isInteger(d) && d >= 1 && d <= TOTAL_DIMENSIONS)
+        .filter((d, i, arr) => arr.indexOf(d) === i);
+      if (dims.length === 0) return basePrompt;
       const allExtraFields = new Set<string>();
       const extraInstrParts: string[] = [];
       for (const d of dims) {
