@@ -17,7 +17,18 @@ import {
     TranscriptGuardRule,
     StreamSettleRule,
     CascadeOrderRule,
-    ProxyPromotionRule
+    ProxyPromotionRule,
+    InpAlertBlockerRule,
+    CanvasHoverReRenderRule,
+    OverlayCloseCascadeRule,
+    ValidationOnChangeRule,
+    HmacMessageFormatRule,
+    UnhandledClipboardPromiseRule,
+    RetryFlagInterferenceRule,
+    PersistAbortScopeRule,
+    UnsafePropertyAccessRule,
+    StartTransitionWrappingRule,
+    TranscriptUnsafeAccessRule
 } from "./quality-engine/rules";
 import * as glob from "glob";
 
@@ -42,6 +53,18 @@ engine.addRule(TranscriptGuardRule);
 engine.addRule(StreamSettleRule);
 engine.addRule(CascadeOrderRule);
 engine.addRule(ProxyPromotionRule);
+// PR #91: INP, Security, Retry, Type Safety rules
+engine.addRule(InpAlertBlockerRule);
+engine.addRule(CanvasHoverReRenderRule);
+engine.addRule(OverlayCloseCascadeRule);
+engine.addRule(ValidationOnChangeRule);
+engine.addRule(HmacMessageFormatRule);
+engine.addRule(UnhandledClipboardPromiseRule);
+engine.addRule(RetryFlagInterferenceRule);
+engine.addRule(PersistAbortScopeRule);
+engine.addRule(UnsafePropertyAccessRule);
+engine.addRule(StartTransitionWrappingRule);
+engine.addRule(TranscriptUnsafeAccessRule);
 
 // Scan files
 const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' }).map(f => f.replace(/\\/g, "/"));
