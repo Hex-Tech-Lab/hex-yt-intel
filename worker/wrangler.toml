@@ -31,9 +31,6 @@ command = "pnpm run build"
 #   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env production
 #   wrangler secret put DECODO_API_KEY --env production
 #
-# Current RESIDENTIAL_PROXY_URL value (Bright Data - with authentication):
-#   brd-customer-hl_da92bd7c-zone-yt_intel_prx1:qa0ffc1kewsa@brd.superproxy.io:33335
-#
 # Upstash KV REST API endpoints (from Upstash console):
 #   UPSTASH_REDIS_REST_URL: https://your-project-region.upstash.io
 #   UPSTASH_REDIS_REST_TOKEN: Default::your-token-here

@@ -299,11 +299,10 @@ export function useSSEStream() {
               runSingleStream(i, dimensionsList[i]!, adapter, currentSignal, job, safeTimezone, handleStreamError)
             );
             await Promise.all(
-              streamFetches.map(p => p.catch((err) => {
+              streamFetches.map((p, idx) => p.catch((err) => {
                 if (currentSignal.aborted || hasSettled) return;
-                const i = streamFetches.indexOf(p);
-                store.logError(`Stream ${i + 1} failed: ${err.message}`);
-                handleStreamError(i, err.message);
+                store.logError(`Stream ${idx + 1} failed: ${err.message}`);
+                handleStreamError(idx, err.message);
               }))
             );
 
