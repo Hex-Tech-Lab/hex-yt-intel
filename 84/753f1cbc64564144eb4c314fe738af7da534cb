@@ -1,0 +1,19 @@
+docs/LESSONS_LEARNED.md
+  s_e6750ccfff01b1::t_dd01a06db78dbf 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "84753f1cbc64564144eb4c314fe738af7da534cb",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
