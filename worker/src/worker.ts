@@ -371,182 +371,128 @@ app.post("/analyze-llm", async (c) => {
   }
 });
 
-/**
- * Direct browser->worker SSE streaming. Vercel mints the HMAC token (after auth +
- * quota) and the browser connects here directly, so the slow LLM stream never goes
- * through Vercel's 60s function ceiling. The worker holds the connection open (no
- * Cloudflare duration limit while the client is connected), builds the UCIS prompt
- * internally (IP stays server-side), streams tokens, and signs the final markdown.
- */
-app.post("/analyze-llm-stream", async (c) => {
-  interface StreamRequest {
-    videoId: string;
-    analysisId: string;
-    transcript: string;
-    metadata: {
-      title: string;
-      channelTitle: string;
-      publishedAt: string;
-      duration: number;
-      viewCount: string | number;
-      likeCount: string | number;
-      commentCount: string | number;
-    };
-    persona: string;
-    timezone: string;
-    // Per-tier model cascade resolved by the bouncer (app_settings). Bound into the
-    // HMAC below so a client can't swap in expensive models. Absent → worker default.
-    models?: string[];
-    sig: string;
-    exp: number;
-    appUrl?: string;
-    dimensions?: number[];
-    chunkIndex?: number;
-    totalChunks?: number;
+interface StreamRequest {
+  videoId: string;
+  analysisId: string;
+  transcript: string;
+  metadata: {
+    title: string;
+    channelTitle: string;
+    publishedAt: string;
+    duration: number;
+    viewCount: string | number;
+    likeCount: string | number;
+    commentCount: string | number;
+  };
+  persona: string;
+  timezone: string;
+  models?: string[];
+  sig: string;
+  exp: number;
+  appUrl?: string;
+  dimensions?: number[];
+  chunkIndex?: number;
+  totalChunks?: number;
+}
+
+interface TokenVerificationResult {
+  isValid: boolean;
+  secret: string;
+  msg: string;
+}
+
+async function verifyStreamToken(
+  videoId: string,
+  analysisId: string,
+  exp: number,
+  sig: string,
+  models: string[] | undefined,
+  env: Env
+): Promise<TokenVerificationResult> {
+  const secret = env.STREAM_HMAC_SECRET;
+
+  if (Date.now() > exp) {
+    return { isValid: false, secret: '', msg: '' };
   }
 
-  const req = (await c.req.json()) as StreamRequest;
-  const secret = c.env.STREAM_HMAC_SECRET;
-  const apiKey = c.env.OPENROUTER_API_KEY;
+  let activeSecret = secret;
+  const secretsToTry = [secret];
 
-  if (!req.videoId || !req.analysisId || !req.metadata || !req.sig || !req.exp) {
-    const missing = [];
-    if (!req.videoId) missing.push('videoId');
-    if (!req.analysisId) missing.push('analysisId');
-    if (!req.metadata) missing.push('metadata');
-    if (!req.sig) missing.push('sig');
-    if (!req.exp) missing.push('exp');
-    return c.json({ error: `Missing required fields: ${missing.join(', ')}` }, 400);
+  if (env.DEV_HMAC_SECRET) {
+    secretsToTry.push(env.DEV_HMAC_SECRET);
+  }
+  secretsToTry.push('dev-hmac-secret-123');
+
+  for (const s of secretsToTry) {
+    if (!s) continue;
+    const modelStr = [...(models ?? [])].sort().join(',');
+    const msg = `${videoId}:${analysisId}:${exp}:${modelStr}`;
+    const expected = await hmacHex(s, msg);
+
+    if (timingSafeEqualHex(expected, sig)) {
+      return { isValid: true, secret: s, msg: '' };
+    }
   }
 
-  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, c.env.NODE_ENV === 'production')) {
-    console.warn('[analyze-llm-stream] Blocked untrusted appUrl callback redirect:', req.appUrl);
-    return c.json({ error: 'Invalid appUrl callback destination' }, 400);
-  }
+  const modelStr = [...(models ?? [])].sort().join(',');
+  const msg = `${videoId}:${analysisId}:${exp}:${modelStr}`;
+  return { isValid: false, secret: activeSecret, msg };
+}
 
-  // Edge Hardening: If transcript is missing, try to fetch it
-  let transcript = req.transcript;
+async function fetchTranscriptIfMissing(
+  transcript: string | undefined,
+  videoId: string,
+  env: Pick<Env, 'RESIDENTIAL_PROXY_URL' | 'DECODO_API_KEY'>,
+  channelId?: string
+): Promise<string | undefined> {
   const isPlaceholder = transcript?.includes('Transcript unavailable for this video');
-  
+
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
-    console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${req.videoId}`);
+    console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${videoId}`);
     try {
-      const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY);
+      const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY);
       const [result, channelMeta] = await Promise.all([
-        extractor.fetch(req.videoId),
-        req.metadata?.channelId && !req.metadata?.channelTitle
-          ? extractor.fetchChannelMetadata(req.metadata.channelId).catch(() => null)
+        extractor.fetch(videoId),
+        channelId
+          ? extractor.fetchChannelMetadata(channelId).catch(() => null)
           : Promise.resolve(null),
       ]);
       if (result.transcript && result.transcript.trim().length > 0 && !result.transcript.includes('Transcript unavailable')) {
         transcript = result.transcript;
-        console.info(`[analyze-llm-stream] Fetch successful for ${req.videoId}`);
+        console.info(`[analyze-llm-stream] Fetch successful for ${videoId}`);
       }
       if (channelMeta) {
-        console.info(`[analyze-llm-stream] Channel metadata enriched for ${req.metadata?.channelId}`);
+        console.info(`[analyze-llm-stream] Channel metadata enriched for ${channelId}`);
       }
     } catch (e) {
-      console.error(`[analyze-llm-stream] Fetch failed for ${req.videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
+      console.error(`[analyze-llm-stream] Fetch failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
       if (!transcript) {
         transcript = '[Transcript unavailable for this video - content ingestion failed across all available sources]';
       }
     }
   }
 
-  const transcriptText = transcript || '';
-  if (!transcriptText.trim() || transcriptText.includes('Transcript unavailable') || transcriptText.includes('content ingestion failed')) {
-    return c.json({
-      error: 'No transcript available',
-      details: 'Transcript could not be fetched from any source. LLM analysis skipped to avoid unnecessary costs.',
-    }, 400);
-  }
+  return transcript;
+}
 
-  if (!secret || !apiKey) {
-    console.error('[analyze-llm-stream] Server misconfigured: missing STREAM_HMAC_SECRET or OPENROUTER_API_KEY');
-    return c.json({ error: 'Server misconfigured' }, 500);
-  }
-
-  // Verify the Vercel-minted token: bound to videoId + analysisId + expiry. Without
-  // this anyone could hit the worker directly and burn OpenRouter quota.
-  if (Date.now() > req.exp) {
-    return c.json({ error: 'Token expired' }, 401);
-  }
-  
-  let activeSecret = secret;
-  let isTokenValid = false;
-
-  // Support both production secret and local/preview fallback secret
-  const secretsToTry = [secret];
-  // ALWAYS try DEV_HMAC_SECRET if provided, even in production mode, to allow
-  // preview deployments to handshake with production worker if they share this fallback.
-  if (c.env.DEV_HMAC_SECRET) {
-    secretsToTry.push(c.env.DEV_HMAC_SECRET);
-  }
-  // Hardcoded recovery fallback for unconfigured preview branches
-  secretsToTry.push('dev-hmac-secret-123');
-
-  for (const s of secretsToTry) {
-    if (!s) continue;
-    const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
-    const expected = await hmacHex(s, msg);
-    
-    if (timingSafeEqualHex(expected, req.sig)) {
-      activeSecret = s;
-      isTokenValid = true;
-      break;
-    }
-  }
-
-  if (!isTokenValid) {
-    const isPreview = c.env.NODE_ENV !== 'production';
-    const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
-    
-    if (isPreview) {
-      console.warn('[analyze-llm-stream] HMAC Mismatch Diagnostic:', {
-        providedSig: req.sig,
-        message: msg,
-        secretUsed: activeSecret === 'dev-hmac-secret-123' ? 'FALLBACK' : 'CONFIGURED',
-      });
-      return c.json({ 
-        error: 'Invalid token', 
-        debug: {
-          msg: msg,
-          sig: req.sig,
-          secret: activeSecret === 'dev-hmac-secret-123' ? 'FALLBACK' : 'CONFIGURED'
-        }
-      }, 401);
-    }
-    return c.json({ error: 'Invalid token' }, 401);
-  }
-
-  // Instantiate the reasoning engine via DI. It builds the UCIS prompt server-side
-  // and runs the model cascade — the orchestrator only wires domain events to SSE.
-  // No cache on the streaming path (partial-progress persistence handled by worker).
-  const engine: ReasoningEnginePort = new ReasoningEngine(
-    new PromptBuilder(),
-    new LLMCascade(apiKey, req.models),
-    new ValidationService(),
-    undefined
-  );
-
+function buildStreamResponse(
+  engine: ReasoningEnginePort,
+  req: StreamRequest,
+  activeSecret: string,
+  appUrl: string | undefined,
+  signal: AbortSignal,
+  waitUntil: (p: Promise<unknown>) => void
+): Response {
   const encoder = new TextEncoder();
-
-  // The orchestrator keeps its own copy of the accumulating markdown + model name so
-  // it can persist partial progress on browser disconnect (the engine is transport-
-  // and persistence-agnostic by design).
   let finalText = '';
   let modelUsed = '';
-  const persisted = false;
-  const persisting = false;
 
   const persistService = new PersistService();
 
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
     persist: async (status) => {
-      const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
+      const url = appUrl || 'https://yt-intel.getmytestdrive.com';
       return persistService.persist({
         analysisId: req.analysisId,
         videoId: req.videoId,
@@ -554,14 +500,14 @@ app.post("/analyze-llm-stream", async (c) => {
         modelUsed,
         status,
         activeSecret,
-        appUrl,
+        appUrl: url,
         validate12D: (text: string) => engine.validate12D(text),
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
       });
     },
-    signal: c.req.raw.signal,
-    waitUntil: (p) => c.executionCtx.waitUntil(p),
+    signal,
+    waitUntil,
   });
 
   const stream = new ReadableStream({
@@ -576,7 +522,7 @@ app.post("/analyze-llm-stream", async (c) => {
         const result = await engine.executeAndStream(
           {
             metadata: req.metadata,
-            transcript: transcript || '',
+            transcript: req.transcript || '',
             persona: req.persona,
             timezone: req.timezone,
             dimensions: req.dimensions,
@@ -594,7 +540,7 @@ app.post("/analyze-llm-stream", async (c) => {
               send({ type: 'status', ...statusEvent });
             },
           },
-          c.req.raw.signal
+          signal
         );
 
         if (!result.produced && !result.finalText) {
@@ -603,7 +549,6 @@ app.post("/analyze-llm-stream", async (c) => {
           return;
         }
 
-        // Mark stream complete
         send({ type: 'complete', model: result.modelUsed, valid: result.valid, videoId: req.videoId, analysisId: req.analysisId });
       } catch (error) {
         send({ type: 'error', error: error instanceof Error ? error.message : 'stream failed' });
@@ -621,6 +566,87 @@ app.post("/analyze-llm-stream", async (c) => {
       'X-Accel-Buffering': 'no',
     },
   });
+}
+
+/**
+ * Direct browser->worker SSE streaming. Vercel mints the HMAC token (after auth +
+ * quota) and the browser connects here directly, so the slow LLM stream never goes
+ * through Vercel's 60s function ceiling. The worker holds the connection open (no
+ * Cloudflare duration limit while the client is connected), builds the UCIS prompt
+ * internally (IP stays server-side), streams tokens, and signs the final markdown.
+ */
+app.post("/analyze-llm-stream", async (c) => {
+  const req = (await c.req.json()) as StreamRequest;
+  const apiKey = c.env.OPENROUTER_API_KEY;
+
+  if (!req.videoId || !req.analysisId || !req.metadata || !req.sig || !req.exp) {
+    const missing = [];
+    if (!req.videoId) missing.push('videoId');
+    if (!req.analysisId) missing.push('analysisId');
+    if (!req.metadata) missing.push('metadata');
+    if (!req.sig) missing.push('sig');
+    if (!req.exp) missing.push('exp');
+    return c.json({ error: `Missing required fields: ${missing.join(', ')}` }, 400);
+  }
+
+  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, c.env.NODE_ENV === 'production')) {
+    console.warn('[analyze-llm-stream] Blocked untrusted appUrl callback redirect:', req.appUrl);
+    return c.json({ error: 'Invalid appUrl callback destination' }, 400);
+  }
+
+  const transcript = await fetchTranscriptIfMissing(
+    req.transcript, req.videoId,
+    { RESIDENTIAL_PROXY_URL: c.env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: c.env.DECODO_API_KEY },
+    (req.metadata as { channelId?: string }).channelId
+  );
+
+  if (!transcript || !transcript.trim() || transcript.includes('Transcript unavailable') || transcript.includes('content ingestion failed')) {
+    return c.json({
+      error: 'No transcript available',
+      details: 'Transcript could not be fetched from any source. LLM analysis skipped to avoid unnecessary costs.',
+    }, 400);
+  }
+
+  if (!c.env.STREAM_HMAC_SECRET || !apiKey) {
+    console.error('[analyze-llm-stream] Server misconfigured: missing STREAM_HMAC_SECRET or OPENROUTER_API_KEY');
+    return c.json({ error: 'Server misconfigured' }, 500);
+  }
+
+  const { isValid: isTokenValid, secret: activeSecret, msg } = await verifyStreamToken(
+    req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env
+  );
+
+  if (!isTokenValid) {
+    const isPreview = c.env.NODE_ENV !== 'production';
+    if (isPreview) {
+      console.warn('[analyze-llm-stream] HMAC Mismatch Diagnostic:', {
+        providedSig: req.sig,
+        message: msg,
+        secretUsed: activeSecret === 'dev-hmac-secret-123' ? 'FALLBACK' : 'CONFIGURED',
+      });
+      return c.json({
+        error: 'Invalid token',
+        debug: {
+          msg,
+          sig: req.sig,
+          secret: activeSecret === 'dev-hmac-secret-123' ? 'FALLBACK' : 'CONFIGURED',
+        },
+      }, 401);
+    }
+    return c.json({ error: 'Invalid token' }, 401);
+  }
+
+  const engine: ReasoningEnginePort = new ReasoningEngine(
+    new PromptBuilder(),
+    new LLMCascade(apiKey, req.models),
+    new ValidationService(),
+    undefined
+  );
+
+  return buildStreamResponse(
+    engine, req, activeSecret, req.appUrl || c.env.APP_URL,
+    c.req.raw.signal, (p) => c.executionCtx.waitUntil(p)
+  );
 });
 
 // Direct browser->worker chat streaming (HMAC-gated; persists S2S). Keeps

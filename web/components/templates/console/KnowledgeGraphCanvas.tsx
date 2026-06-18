@@ -140,6 +140,7 @@ export function KnowledgeGraphCanvas({
     [onHover]
   );
 
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   return (
     <div
       ref={containerRef}
@@ -337,4 +338,5 @@ export function KnowledgeGraphCanvas({
       </button>
     </div>
   );
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }

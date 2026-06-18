@@ -43,7 +43,7 @@ export default function SignInForm() {
           <h2 className="mb-6 text-center text-2xl font-bold text-gray-900">Sign In</h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded border border-red-200">
+            <div role="alert" className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded border border-red-200">
               {error}
             </div>
           )}
@@ -51,6 +51,7 @@ export default function SignInForm() {
           <button
             onClick={handleSupabaseAuth}
             disabled={loading}
+            aria-busy={loading}
             className="w-full rounded-lg bg-surface px-4 py-2 text-gray-900 font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {loading ? 'Signing in...' : 'Sign in with Google'}

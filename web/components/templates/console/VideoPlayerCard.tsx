@@ -88,9 +88,10 @@ export function VideoPlayerCard() {
     if (seekTo === null) return;
     if (ready && playerRef.current) {
       playerRef.current.seekTo(seekTo);
-      clearSeek();
+      requestAnimationFrame(() => {
+        clearSeek();
+      });
     } else {
-      // Queue the seek - don't clear until it's applied
       seekQueueRef.current = seekTo;
     }
   }, [seekTo, ready, clearSeek]);

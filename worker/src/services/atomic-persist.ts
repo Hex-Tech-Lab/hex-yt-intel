@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/cloudflare';
+
 export interface AtomicPersistOptions {
   hasContent: () => boolean;
   persist: (status: 'completed' | 'interrupted') => Promise<boolean>;
@@ -6,46 +8,88 @@ export interface AtomicPersistOptions {
   maxRetries?: number;
 }
 
-export function createAtomicPersist(options: AtomicPersistOptions): { flush: () => void } {
+export type AtomicPersistResult =
+  | { type: 'idle' }
+  | { type: 'running' }
+  | { type: 'success' }
+  | { type: 'failed'; error?: string };
+
+export function createAtomicPersist(options: AtomicPersistOptions): {
+  flush: () => void;
+  result: () => AtomicPersistResult;
+} {
   const maxRetries = options.maxRetries ?? 3;
-  let result: 'none' | 'running' | 'success' | 'failed' = 'none';
+  let state: AtomicPersistResult = { type: 'idle' };
   let attempts = 0;
 
   const persistFn = async (status: 'completed' | 'interrupted') => {
-    // Only prevent concurrent attempts, allow retry after failure
-    if (result === 'running') return;
+    if (state.type === 'running') return;
     if (attempts >= maxRetries) return;
-    if (!options.hasContent()) {
-      // No content to persist yet, don't mark as success
-      return;
+    if (!options.hasContent()) return;
+
+    state = { type: 'running' };
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (options.signal.aborted && attempt > 0) {
+        break;
+      }
+
+      attempts++;
+      try {
+        const ok = await options.persist(status);
+        if (ok) {
+          state = { type: 'success' };
+          return;
+        }
+        if (attempt < maxRetries - 1) {
+          const delay = Math.min(1000 * 2 ** attempt, 8000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      } catch (error) {
+        const isAbort =
+          error instanceof DOMException && error.name === 'AbortError';
+        if (isAbort) {
+          state = { type: 'failed', error: 'aborted' };
+          return;
+        }
+        Sentry.captureException(error, {
+          contexts: { atomicPersist: { attempt, status, maxRetries } },
+        });
+        console.error('[atomic-persist]', {
+          message: error instanceof Error ? error.message : String(error),
+          attempt,
+          status,
+        });
+        if (attempt < maxRetries - 1) {
+          const delay = Math.min(1000 * 2 ** attempt, 8000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
     }
-    attempts++;
-    result = 'running';
-    try {
-      const ok = await options.persist(status);
-      result = ok ? 'success' : (attempts >= maxRetries ? 'failed' : 'failed');
-    } catch {
-      result = 'failed';
-    }
+
+    state = { type: 'failed', error: 'max_retries_exceeded' };
   };
 
-  // If signal is already aborted, persist immediately
   if (options.signal.aborted) {
     options.waitUntil(persistFn('interrupted'));
   } else {
-    options.signal.addEventListener('abort', () => {
-      if (result === 'none' || result === 'failed') {
-        options.waitUntil(persistFn('interrupted'));
-      }
-    }, { once: true });
+    options.signal.addEventListener(
+      'abort',
+      () => {
+        if (state.type === 'idle' || state.type === 'failed') {
+          options.waitUntil(persistFn('interrupted'));
+        }
+      },
+      { once: true },
+    );
   }
 
   return {
     flush: () => {
-      // Allow retry after failure, but prevent double-run if already running or succeeded
-      if (result === 'none' || result === 'failed') {
+      if (state.type === 'idle' || state.type === 'failed') {
         options.waitUntil(persistFn('completed'));
       }
     },
+    result: () => state,
   };
 }

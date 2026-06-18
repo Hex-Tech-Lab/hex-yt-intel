@@ -1,9 +1,40 @@
 import * as Sentry from '@sentry/nextjs';
 import type { VideoPlayerPort, VideoPlayerCallbacks } from '@/lib/ports/VideoPlayerPort';
 
+interface YTPlayerEvent {
+  data: number;
+}
+
+interface YTPlayerInstance {
+  seekTo(seconds: number, allowSeekAhead: boolean): void;
+  playVideo(): void;
+  pauseVideo(): void;
+  destroy(): void;
+  getCurrentTime(): number;
+}
+
+interface YTPlayerConstructor {
+  new (
+    container: HTMLElement | string,
+    config: {
+      videoId: string;
+      playerVars?: Record<string, number | string>;
+      events?: {
+        onReady?: () => void;
+        onError?: (event: YTPlayerEvent) => void;
+        onStateChange?: (event: YTPlayerEvent) => void;
+      };
+    },
+  ): YTPlayerInstance;
+}
+
+interface YTNamespace {
+  Player: YTPlayerConstructor;
+}
+
 declare global {
   interface Window {
-    YT?: any;
+    YT?: YTNamespace;
     onYouTubeIframeAPIReady?: () => void;
   }
 }
@@ -11,47 +42,48 @@ declare global {
 let apiLoadPromise: Promise<void> | null = null;
 let resolvers: Array<{ resolve: () => void; reject: (err: Error) => void }> = [];
 
+let loadTimeout: ReturnType<typeof setTimeout> | null = null;
+
 function loadYouTubeAPI(): Promise<void> {
-  // If already loaded, return immediately
   if (typeof window !== 'undefined' && window.YT?.Player) {
     return Promise.resolve();
   }
-  
-  // If loading in progress, queue this caller
+
   if (apiLoadPromise) return apiLoadPromise;
-  
+
   apiLoadPromise = new Promise((resolve, reject) => {
     resolvers.push({ resolve, reject });
-    
-    // If script tag exists from a previous attempt, settle queued callers
+
     const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
     if (existingScript) {
       if (window.YT?.Player) {
         for (const r of resolvers) r.resolve();
-      } else {
-        for (const r of resolvers) {
-          r.reject(new Error('YouTube IFrame API script exists but Player is unavailable'));
-        }
+        resolvers = [];
+        apiLoadPromise = null;
+        return;
       }
-      resolvers = [];
-      apiLoadPromise = null;
+      const previousExisting = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previousExisting === 'function') previousExisting();
+        for (const r of resolvers) r.resolve();
+        resolvers = [];
+        apiLoadPromise = null;
+      };
       return;
     }
-    
-    const previous = (window as any).onYouTubeIframeAPIReady;
-    (window as any).onYouTubeIframeAPIReady = () => {
+
+    const previous = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
       if (typeof previous === 'function') previous();
-      // Resolve all queued callers
       for (const r of resolvers) r.resolve();
       resolvers = [];
       apiLoadPromise = null;
     };
-    
+
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
     tag.onerror = () => {
-      (window as any).onYouTubeIframeAPIReady = previous;
-      // Reject all queued callers
+      window.onYouTubeIframeAPIReady = previous;
       for (const r of resolvers) r.reject(new Error('Failed to load YouTube IFrame API'));
       resolvers = [];
       apiLoadPromise = null;
@@ -62,19 +94,29 @@ function loadYouTubeAPI(): Promise<void> {
   return apiLoadPromise;
 }
 
-function getApi(): any {
-  return (window as any).YT;
+function getApi(): YTNamespace | undefined {
+  return window.YT;
 }
 
 export class YouTubePlayerAdapter implements VideoPlayerPort {
-  private player: any = null;
+  private player: YTPlayerInstance | null = null;
   private destroyed = false;
 
   async mount(container: HTMLElement, videoId: string, callbacks?: VideoPlayerCallbacks): Promise<void> {
     this.destroyed = false;
-    
+
+    const timeout = new Promise<never>((_, reject) => {
+      loadTimeout = setTimeout(() => {
+        reject(new Error('YouTube Player mount timed out after 15s'));
+      }, 15000);
+    });
+
     try {
-      await loadYouTubeAPI();
+      await Promise.race([loadYouTubeAPI(), timeout]);
+      if (loadTimeout) { clearTimeout(loadTimeout); loadTimeout = null; }
+
+      if (this.destroyed) return;
+
       const YT = getApi();
       if (!YT?.Player) {
         callbacks?.onError?.(new Error('YouTube Player API not available'));
@@ -93,18 +135,18 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
             if (this.destroyed) { this.destroy(); return; }
             callbacks?.onReady?.();
           },
-          onError: (e: any) => {
+          onError: (e: YTPlayerEvent) => {
             if (!this.destroyed) callbacks?.onError?.(new Error(`YouTube error: ${e.data}`));
           },
-          onStateChange: (e: any) => {
+          onStateChange: (e: YTPlayerEvent) => {
             if (this.destroyed) return;
-            // YT.PlayerState.PLAYING = 1, PAUSED = 2
             if (e.data === 1) callbacks?.onPlay?.();
             else if (e.data === 2) callbacks?.onPause?.();
           },
         },
       });
     } catch (err) {
+      if (loadTimeout) { clearTimeout(loadTimeout); loadTimeout = null; }
       const error = err instanceof Error ? err : new Error(String(err));
       Sentry.captureException(error, { tags: { operation: 'youtube-player-mount' }, extra: { videoId } });
       console.error('[YouTubePlayerAdapter]', { message: error.message, videoId });

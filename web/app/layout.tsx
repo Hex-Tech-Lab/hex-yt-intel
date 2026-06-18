@@ -41,6 +41,7 @@ export default function RootLayout({
           src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"
           strategy="beforeInteractive"
         />
+        {/* codacy-disable <script>dangerouslySetInnerHTML</script> */}
         <Script
           id="iconify-preload"
           strategy="beforeInteractive"
