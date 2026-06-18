@@ -1,0 +1,25 @@
+worker/src/services/atomic-persist.ts
+  s_e6750ccfff01b1::t_d7cc485e4043d2 6,10,12,17,22,26
+worker/src/chat-stream.ts
+  s_e6750ccfff01b1::t_c2966e40a1bef3 299,304-305,308-319,330,335-337,339-341
+web/components/templates/console/VideoPlayerCard.tsx
+  s_e6750ccfff01b1::t_c2bab6c5aab5ef 77
+  s_e6750ccfff01b1::t_c9da5ab44e755b 42-49
+  s_e6750ccfff01b1::t_8abf79d37c455e 91,93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "6fb89f2368b38ac64b9e286488bea36ca6784e27",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
