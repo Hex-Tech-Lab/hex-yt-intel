@@ -1,0 +1,65 @@
+web/store/useInputStore.ts
+  s_e6750ccfff01b1::t_12e887bef79ef8 20
+web/components/templates/console/DimensionDrawer.tsx
+  s_e6750ccfff01b1::t_25879e2e7023ef 80
+  s_e6750ccfff01b1::t_8d7668f80716b8 6
+  s_e6750ccfff01b1::t_6ded4b78f62015 99
+web/components/containers/DashboardContainer.tsx
+  s_e6750ccfff01b1::t_ffda493950b1ed 670
+  s_e6750ccfff01b1::t_c70e475d031075 185
+  s_e6750ccfff01b1::t_8c3eeff2c50fd3 523
+  s_e6750ccfff01b1::t_ff1647ae5c30d9 680
+  s_e6750ccfff01b1::t_258a5308571a2f 690
+  s_e6750ccfff01b1::t_157856d1999b06 209
+  s_e6750ccfff01b1::t_6a636452d2eb9c 197
+  s_e6750ccfff01b1::t_d918ea3b2a6b33 715
+  s_e6750ccfff01b1::t_6dc933351dccfd 264-266
+  s_e6750ccfff01b1::t_a36a63f9948590 467
+  s_e6750ccfff01b1::t_1374037d5ea71b 214,226,229
+  s_e6750ccfff01b1::t_38fd86e83f3efe 221
+  s_e6750ccfff01b1::t_dc05741393f198 34-43
+  s_e6750ccfff01b1::t_1f7e48e6ec8db0 267
+  s_e6750ccfff01b1::t_7810b54bc572de 173-178,190,202
+  s_e6750ccfff01b1::t_2398cc2009404e 3
+  s_e6750ccfff01b1::t_65edf1c8ad6a7d 703
+  s_e6750ccfff01b1::t_0e0afe7bbf64ee 142,153,167
+  s_e6750ccfff01b1::t_683538d45b3add 101-120
+web/components/templates/console/KnowledgeGraphCanvas.tsx
+  s_e6750ccfff01b1::t_41624f2aca1964 3
+  s_e6750ccfff01b1::t_14e6ae820fed0d 169
+  s_e6750ccfff01b1::t_1d7c8ac995b305 176
+  s_e6750ccfff01b1::t_cd940df5fa41e6 200-201,203
+  s_e6750ccfff01b1::t_050bea3f9a5832 136
+  s_e6750ccfff01b1::t_228d07fb8453ee 109-110,112-113,116,123
+  s_e6750ccfff01b1::t_8bd7f960635e62 67
+  s_e6750ccfff01b1::t_f39d625214a1b8 185
+web/app/search/page.tsx
+  s_e6750ccfff01b1::t_e828c1ef81e3d0 94,96
+  s_e6750ccfff01b1::t_8d4efbd6a650ae 11-20
+web/lib/icon-data.ts
+  s_e6750ccfff01b1::t_09390c5fd75856 1
+web/app/layout.tsx
+  s_e6750ccfff01b1::t_33234b22a073eb 46,48
+  s_e6750ccfff01b1::t_8d533cf31cc0d0 26
+web/components/templates/console/WordCloud.tsx
+  s_e6750ccfff01b1::t_ab7e0c8f6a0729 41-42
+  s_e6750ccfff01b1::t_a6482f0a2b8131 167,169-173,181,183,187,200-203
+  s_e6750ccfff01b1::t_9c0a4c3b75a664 227-231,237-239,254
+  s_e6750ccfff01b1::t_e5cb3a2ac913bf 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "40d442e7ff294bf4528ddbe50a649ff9ea5caa65",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
