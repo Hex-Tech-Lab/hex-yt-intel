@@ -20,6 +20,7 @@ import { MindMap } from '@/components/templates/console/MindMap';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
+import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
@@ -83,6 +84,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   };
 
   const { startAnalysis, stopAnalysis } = useSSEStream();
+  useEagerVideoMetadata();
   const nucleus = useSynthesisNucleus();
   const { graph } = useKnowledgeGraph(nucleus.analysis?.id);
   const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, status === 'complete');
@@ -167,7 +169,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         showToast('Could not locate SVG element to export.', 'error');
       }
     }
-  }, [nucleus.analysis?.title, graph, insights]);
+  }, [nucleus.analysis?.title, insights]);
+
+  const handleSelectNode = useCallback((id: string | null) => {
+    startTransition(() => setSelectedNodeId(id));
+  }, []);
 
   // Define Right Panel Accordion Items
   const handleExpandPanel = useCallback((id: string, mode: string) => {
@@ -181,7 +187,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       id: 'insights',
       title: 'Insights',
       defaultOpen: true,
-      content: (
+      content: () => (
         <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} insights={insights} insightsLoading={insightsLoading} />
       ),
       onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
@@ -193,7 +199,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     {
       id: 'knowledge-graph',
       title: 'Knowledge Graph',
-      content: (
+      content: () => (
         <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact={true} />
       ),
       onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
@@ -205,7 +211,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     {
       id: 'word-cloud',
       title: 'Word Cloud',
-      content: (
+      content: () => (
         <WordCloud graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} />
       ),
       onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
@@ -217,7 +223,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     {
       id: 'mind-map',
       title: 'Mind Map',
-      content: (
+      content: () => (
         <MindMap graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} />
       ),
       onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
@@ -226,7 +232,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         else handleExpandPanel('mind-map', action);
       }
     }
-  ], [graph, selectedNodeId, insights, insightsLoading, handleCopy, handlePanelExport, handleExpandPanel]);
+  ], [graph, selectedNodeId, insights, insightsLoading, handleCopy, handlePanelExport, handleExpandPanel, handleSelectNode]);
 
 
 
@@ -260,10 +266,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     if (!url) return;
     await startAnalysis(url, getUserTimezone(), true);
   }, [url, startAnalysis]);
-
-  const handleSelectNode = useCallback((id: string | null) => {
-    startTransition(() => setSelectedNodeId(id));
-  }, []);
 
   const handleExport = useCallback((format: 'pdf' | 'markdown') => {
     if (!nucleus.analysis?.id) return;
@@ -565,7 +567,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               ) : (
                 <div className="flex flex-col gap-3">
                   <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
-                    <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={520} />
+                    <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} height={520} />
                   </div>
                   <p className="text-[var(--ink-muted)] font-mono text-[10px] uppercase tracking-wider pl-1">
                     Left-click node to inspect · drag to pan/reposition · scroll to zoom
@@ -714,7 +716,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             {expandedPanel.id === 'knowledge-graph' ? (
               <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact={false} />
             ) : (
-              activeItem.content
+              activeItem.content()
             )}
           </div>
         </div>
