@@ -1,0 +1,23 @@
+scripts/quality-engine/rules.ts
+  s_e6750ccfff01b1::t_b565d35a909852 480-725,744-746,749-803
+  s_e6750ccfff01b1::t_6009b7cc232c58 726-743,747-748
+scripts/verify-quality-engine.ts
+  s_e6750ccfff01b1::t_bfcb4136852e60 20-31
+  s_e6750ccfff01b1::t_5ef09b44b31773 56-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "61dfa55e3353189264a8b6f4353cfd560ee9a178",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
