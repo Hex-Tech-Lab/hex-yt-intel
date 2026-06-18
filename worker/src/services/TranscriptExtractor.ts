@@ -14,9 +14,11 @@ import type { TranscriptProviderPort, TranscriptResult } from '../ports/Transcri
 
 export class TranscriptExtractor implements TranscriptProviderPort {
   private residentialProxyUrl?: string;
+  private decodoApiKey?: string;
 
-  constructor(residentialProxyUrl?: string) {
+  constructor(residentialProxyUrl?: string, decodoApiKey?: string) {
     this.residentialProxyUrl = residentialProxyUrl;
+    this.decodoApiKey = decodoApiKey;
   }
 
   async fetch(videoId: string): Promise<TranscriptResult> {

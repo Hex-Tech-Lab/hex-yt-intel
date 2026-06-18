@@ -7,13 +7,14 @@
  * This matches the prompt structure in ucis-v5.1.ts.
  */
 export const TOTAL_DIMENSIONS = 11;
-export const TOTAL_STREAMS = 4;
+export const TOTAL_STREAMS = 5;
 
 export const STREAM_BUNDLES: number[][] = [
-  [1],
-  [2, 4, 6, 8],
-  [5, 7, 9, 10],
-  [3, 11],
+  [1],             // Apex (largest, has persona)
+  [8],             // Semantic / KG (large, has knowledgeGraph)
+  [2, 4, 6],       // Provenance, Psychological, Comparative
+  [5, 7, 10],      // CoreIntel, Implementation, Credibility
+  [3, 9, 11],      // Architecture, Forward, Monetization (has classification + monetization)
 ];
 
 /**
