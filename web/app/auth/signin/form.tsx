@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useTransition, lazy, Suspense } from 'react';
+import { useState, useTransition } from 'react';
 
-// Lazy-load Supabase client to avoid blocking initial render
-const supabasePromise = import('@/utils/supabase/client').then(m => m.createClient());
+// Lazy-load Supabase client module to avoid blocking initial render
+const supabaseModulePromise = import('@/utils/supabase/client');
 
 export default function SignInForm() {
   const [error, setError] = useState<string | null>(null);
@@ -13,7 +13,7 @@ export default function SignInForm() {
     setError(null);
     startTransition(async () => {
       try {
-        const createClient = await supabasePromise;
+        const { createClient } = await supabaseModulePromise;
         const supabase = createClient();
         const searchParams = new URLSearchParams(window.location.search);
         const nextTarget = searchParams.get('next') || '/dashboard';
