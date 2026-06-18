@@ -1,0 +1,38 @@
+.memory/AGENT_LEDGER.md
+  s_e6750ccfff01b1::t_f996388817fd5a 132
+  s_e6750ccfff01b1::t_2133f25a3862ca 133
+  s_e6750ccfff01b1::t_f7be52fdd107c5 134
+web/components/containers/DashboardContainer.tsx
+  s_e6750ccfff01b1::t_d66764031148fe 87
+  s_e6750ccfff01b1::t_a402eafb10f631 23
+  s_e6750ccfff01b1::t_0b966a9c01dc06 719
+  s_e6750ccfff01b1::t_30faef603e1bf1 174-176
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_01b02a2c43b219 418
+web/hooks/useEagerVideoMetadata.ts
+  s_e6750ccfff01b1::t_ef21bdd8274d71 1-38,40,42-65
+  s_e6750ccfff01b1::t_57208ea0f1e5b8 39,41
+web/components/templates/console/AnalysisHistory.tsx
+  s_e6750ccfff01b1::t_aa1ebe6926bc8c 3
+web/components/templates/console/ChatDock.tsx
+  s_e6750ccfff01b1::t_bc7a81f2bd4e0a 3
+  s_e6750ccfff01b1::t_fe4f090210ca48 70-72
+web/hooks/useSSEStream.ts
+  s_e6750ccfff01b1::t_344ec70d436db1 57-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "4f4a248594fef7960c9fe71da3b6bfe5e2380252",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
