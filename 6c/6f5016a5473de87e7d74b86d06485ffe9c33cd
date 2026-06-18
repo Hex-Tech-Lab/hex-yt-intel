@@ -1,0 +1,19 @@
+worker/src/services/TranscriptExtractor.ts
+  s_e6750ccfff01b1::t_02d698fac77b2c 54-129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "6c6f5016a5473de87e7d74b86d06485ffe9c33cd",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
