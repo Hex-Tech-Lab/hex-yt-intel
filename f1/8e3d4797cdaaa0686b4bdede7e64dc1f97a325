@@ -1,0 +1,26 @@
+worker/package.json
+  s_e6750ccfff01b1::t_a4ad8e39747db6 32
+web/app/auth/signin/form.tsx
+  s_e6750ccfff01b1::t_23fa3d05bab2ed 16
+  s_e6750ccfff01b1::t_1f9485eb637f3d 3,5-6
+worker/src/chat-stream.ts
+  s_e6750ccfff01b1::t_1124f3ffc52cd9 305,311-312,314,317,331,333
+  s_e6750ccfff01b1::t_b5125d0faa8e8e 227-228
+  s_e6750ccfff01b1::t_937c445af11955 231-234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "f18e3d4797cdaaa0686b4bdede7e64dc1f97a325",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
