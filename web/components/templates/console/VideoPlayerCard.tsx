@@ -51,8 +51,8 @@ export function VideoPlayerCard() {
               host: 'https://www.youtube-nocookie.com',
             },
             playerVars: {
-              // Safe: 'use client' + mounted guard before render ensures window is available
-              origin: typeof window !== 'undefined' ? window.location.origin : '',
+              // 'use client' + mounted guard ensures window is available at render time
+              origin: window.location.origin,
               modestbranding: 1,
               rel: 0,
             },
