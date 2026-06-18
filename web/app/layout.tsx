@@ -42,6 +42,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         {/* codacy-disable <script>dangerouslySetInnerHTML</script> */}
+        {/* DOMPurify / sanitize bypass: this is static javascript code, not user-generated HTML */}
         <Script
           id="iconify-preload"
           strategy="beforeInteractive"

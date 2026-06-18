@@ -35,7 +35,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        startTransition(() => {
+          onClose();
+        });
         return;
       }
       if (e.key === 'Tab' && drawerRef.current) {
