@@ -135,6 +135,18 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
 2. Notify sibling agents who may be affected
 3. Check ledger for any new entries that appeared during your task
 
+**Cross-Agent Corrections (Two-Way Communication)**:
+- If Agent A finds an issue in Agent B's work: add `[NOTE for AgentB]` to the ledger with: file, issue, fix needed
+- Agent B MUST respond with `[ACK AgentA]` or `[DISPUTE AgentA]` once reviewed
+- The original poster clears the note with `[RESOLVED AgentA]` only after Agent B confirms or the issue is fixed
+- If unresolved after 2 rounds, escalate to `[SINK: escalation]` for the orchestrator
+- Format:
+  ```
+  [2026-06-18T12:00+03:00] [OCT2] [NOTE for GCT1] worker/foo.ts:15 – function bar() has unused param. Fix: remove or prefix with _. Confirmed by owner? no
+  [2026-06-18T12:30+03:00] [GCT1] [ACK OCT2] worker/foo.ts:15 – fixed in commit abc123.
+  [2026-06-18T12:31+03:00] [OCT2] [RESOLVED GCT1] worker/foo.ts:15 – confirmed.
+  ```
+
 **ADR Requirement (MANDATORY)**:
 - ANY decision involving cost, logic changes, or architecture must be written as an ADR in `.memory/ADRS.md`
 - Format: `[YYYY-MM-DD] [OCT1|GCT1|...] [DECISION] Brief title. Rationale: ... Alternatives: ... Confirmed by user: yes/no`
@@ -161,3 +173,9 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
 - **Secondary**: Vitest 4.x — `web/lib/__tests__/` (unit tests, no dedicated config yet)
 - Playwright config auto-boots `pnpm dev` locally, skips when `DEPLOYMENT_URL` is set
 - Test helper: `vitest run` works via tsconfig defaults
+
+---
+
+## 7. GCT2 AGENT PROTOCOL & SCHEDULE
+- **Protocol**: Always follow the set agent protocol without being reminded. Inform others and get updates from others before and after every task and during with every subtask.
+- **Parallel Workflow**: Orchestrate parallel agents. Estimate effort + file/LOC deltas. If >10m, run ≤5 concurrent agents; as one finishes, spawn another and rebalance remaining tasks for max throughput. Ensure no toe stepping and no work repeated.
