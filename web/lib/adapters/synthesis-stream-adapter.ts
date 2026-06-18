@@ -179,49 +179,49 @@ export class SynthesisStreamAdapter {
       // Reset rawSink buffer to prevent stale partial JSON from corrupting the fallback model run
       this.rawSink = '';
 
-      // Fully reset ONLY the specific dimension projection state upon a fallback transition,
-      // keeping the other concurrent dimensions intact.
-      const synthState = this.synthStore.getState();
-      if (synthState.analysis) {
-        const targetDims = this.options.dimensions;
-        const updatedDimensions = { ...synthState.analysis.dimensions };
-        let updatedReceived = [...synthState.analysis.streaming.dimensionsReceived];
+          // Reset ALL dimensions in the bundle upon fallback transition.
+          // In bundle mode, only the bundle's dimensions are cleared; persona,
+          // knowledgeGraph, classification, and monetizationVerdict are global
+          // state shared across bundles and must NOT be cleared.
+          const synthState = this.synthStore.getState();
+          if (synthState.analysis) {
+            const targetDims = this.options.dimensions;
+            const updatedDimensions = { ...synthState.analysis.dimensions };
+            let updatedReceived = [...synthState.analysis.streaming.dimensionsReceived];
 
-        if (targetDims !== undefined && targetDims.length > 0) {
-          for (const dim of targetDims) {
-            delete updatedDimensions[dim];
-          }
-          updatedReceived = updatedReceived.filter(num => !targetDims.includes(num));
-        } else {
-          // If no dimensions, do legacy full reset
-          Object.keys(updatedDimensions).forEach(k => delete updatedDimensions[Number(k)]);
-          updatedReceived = [];
-        }
+            if (targetDims !== undefined && targetDims.length > 0) {
+              for (const dim of targetDims) {
+                delete updatedDimensions[dim];
+              }
+              updatedReceived = updatedReceived.filter(num => !targetDims.includes(num));
+            } else {
+              Object.keys(updatedDimensions).forEach(k => delete updatedDimensions[Number(k)]);
+              updatedReceived = [];
+            }
 
-        this.synthStore.setState({
-          analysis: {
-            ...synthState.analysis,
-            dimensions: updatedDimensions,
-            streaming: {
-              ...synthState.analysis.streaming,
-              dimensionsReceived: updatedReceived,
-            },
-          },
-          // Do not reset persona, classification, or monetization unless doing full reset
-          personaConfig: targetDims === undefined ? null : synthState.personaConfig,
-          knowledgeGraph: targetDims === undefined ? null : synthState.knowledgeGraph,
-          classification: targetDims === undefined ? null : synthState.classification,
-          monetizationVerdict: targetDims === undefined ? null : synthState.monetizationVerdict,
-          projection: computePersonaProjection({
-            ...synthState.analysis,
-            dimensions: updatedDimensions,
-            streaming: {
-              ...synthState.analysis.streaming,
-              dimensionsReceived: updatedReceived,
-            },
-          }, synthState.activePersona),
-          streamError: null,
-        });
+            this.synthStore.setState({
+              analysis: {
+                ...synthState.analysis,
+                dimensions: updatedDimensions,
+                streaming: {
+                  ...synthState.analysis.streaming,
+                  dimensionsReceived: updatedReceived,
+                },
+              },
+              personaConfig: targetDims === undefined ? null : synthState.personaConfig,
+              knowledgeGraph: targetDims === undefined ? null : synthState.knowledgeGraph,
+              classification: targetDims === undefined ? null : synthState.classification,
+              monetizationVerdict: targetDims === undefined ? null : synthState.monetizationVerdict,
+              projection: computePersonaProjection({
+                ...synthState.analysis,
+                dimensions: updatedDimensions,
+                streaming: {
+                  ...synthState.analysis.streaming,
+                  dimensionsReceived: updatedReceived,
+                },
+              }, synthState.activePersona),
+              streamError: null,
+            });
 
         // Trigger rebuilding of display markdown from the remaining dimensions
         this.rebuildDisplayMarkdown(store);
@@ -348,8 +348,9 @@ export class SynthesisStreamAdapter {
             }
           }
 
-          // 2. Validate and add Dimensions
+          // 2. Validate and add Dimensions (filtered by bundle)
           if (Array.isArray(obj.dimensions)) {
+            const targetDims = this.options.dimensions;
             for (const dim of obj.dimensions) {
               if (
                 dim &&
@@ -358,6 +359,9 @@ export class SynthesisStreamAdapter {
                 dim.number <= TOTAL_DIMENSIONS &&
                 typeof dim.content === 'string'
               ) {
+                if (targetDims !== undefined && !targetDims.includes(dim.number)) {
+                  continue;
+                }
                 this.synthStore.getState().addDimension({
                   number: dim.number,
                   name: dim.name || `Dimension ${dim.number}`,

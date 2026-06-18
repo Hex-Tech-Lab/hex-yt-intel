@@ -18,6 +18,7 @@ export class PromptBuilder implements PromptBuilderPort {
       persona: (context.persona as any) || 'p1',
       timezone: context.timezone || 'UTC',
       duration: context.metadata.duration || 0,
+      skipAllDimensionsInstruction: true,
     });
 
     if (context.dimensions !== undefined && context.dimensions.length > 0) {

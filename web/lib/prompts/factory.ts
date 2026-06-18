@@ -18,6 +18,7 @@ export interface GetUCISPromptParams {
   persona: PersonaId;
   timezone: string;
   duration?: number;
+  skipAllDimensionsInstruction?: boolean;
 }
 
 /**
@@ -31,6 +32,7 @@ export async function getUCISPrompt({
   persona,
   timezone,
   duration,
+  skipAllDimensionsInstruction,
 }: GetUCISPromptParams): Promise<string> {
   const systemPrompt = await resolveUCISPromptTemplate(version);
   const personas = rankPersonas(persona);
@@ -65,6 +67,9 @@ ${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript t
   }
 
   const promptVersion = version || '5.1';
+  const dimensionsInstruction = skipAllDimensionsInstruction
+    ? ''
+    : `\n\n**Execution**: Generate the complete v${promptVersion} analysis output using the framework above. All ${TOTAL_DIMENSIONS} dimensions must be present. Satisfy the quality enforcement checklist before delivering output. Remember: Transcript Absolutism (section 0.5) and the Insufficient Data Protocol (section 0.6) override all other instructions.`;
   return `${systemPrompt}
 
 ---
@@ -82,11 +87,7 @@ ${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.we
 **Timezone**: ${timezone}${shortFormNotice}
 
 **Transcript**:
-${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}
-
----
-
-**Execution**: Generate the complete v${promptVersion} analysis output using the framework above. All ${TOTAL_DIMENSIONS} dimensions must be present. Satisfy the quality enforcement checklist before delivering output. Remember: Transcript Absolutism (section 0.5) and the Insufficient Data Protocol (section 0.6) override all other instructions.
+${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}${dimensionsInstruction}
 
 **CRITICAL**: Do NOT include any closing tags, summary lines, or metadata markers (e.g., "End of UCIS v${promptVersion} Report") at the end of your response. The output must end immediately after the final dimension content.`;
 

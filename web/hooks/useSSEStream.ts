@@ -231,9 +231,15 @@ export function useSSEStream() {
                   totalChunks: TOTAL_STREAMS,
                 };
 
+                const streamController = new AbortController();
                 const timeoutId = setTimeout(() => {
+                  streamController.abort();
                   handleStreamError(i, 'Handshake timed out after 10s.');
                 }, 10000);
+
+                const combinedSignal = typeof AbortSignal.any !== 'undefined'
+                  ? AbortSignal.any([currentSignal, streamController.signal])
+                  : currentSignal;
 
                 let res;
                 try {
@@ -241,7 +247,7 @@ export function useSSEStream() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(streamPayload),
-                    signal: currentSignal,
+                    signal: combinedSignal,
                   });
                 } finally {
                   clearTimeout(timeoutId);
