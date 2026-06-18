@@ -1,0 +1,23 @@
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_e6750ccfff01b1::t_4c2a7455c98d75 4,8-10,13-16,25,27-57,61,67-69,73-75,79-82,87-90
+web/components/templates/console/VideoPlayerCard.tsx
+  s_e6750ccfff01b1::t_de002cfa37c510 13-14,27-28,31-44,47,51-54,56-57,59-63,68-73,79,81,83
+worker/src/services/atomic-persist.ts
+  s_e6750ccfff01b1::t_7fa457682ae48f 9,12-14,16-19,24,27,31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "3e785d90c7606f05df278161834116797b458002",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
