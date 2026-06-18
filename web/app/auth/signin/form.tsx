@@ -1,33 +1,34 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 
 // Lazy-load Supabase client module to avoid blocking initial render
 const supabaseModulePromise = import('@/utils/supabase/client');
 
 export default function SignInForm() {
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [loading, setLoading] = useState(false);
 
-  const handleSupabaseAuth = () => {
+  const handleSupabaseAuth = async () => {
     setError(null);
-    startTransition(async () => {
-      try {
-        const { createClient } = await supabaseModulePromise;
-        const supabase = createClient();
-        const searchParams = new URLSearchParams(window.location.search);
-        const nextTarget = searchParams.get('next') || '/dashboard';
-        const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
-        
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: callbackUrl },
-        });
-        if (error) setError(error.message);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Authentication failed');
-      }
-    });
+    setLoading(true);
+    try {
+      const { createClient } = await supabaseModulePromise;
+      const supabase = createClient();
+      const searchParams = new URLSearchParams(window.location.search);
+      const nextTarget = searchParams.get('next') || '/dashboard';
+      const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: callbackUrl },
+      });
+      if (error) setError(error.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,10 +50,10 @@ export default function SignInForm() {
 
           <button
             onClick={handleSupabaseAuth}
-            disabled={isPending}
+            disabled={loading}
             className="w-full rounded-lg bg-surface px-4 py-2 text-gray-900 font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
-            {isPending ? 'Signing in...' : 'Sign in with Google'}
+            {loading ? 'Signing in...' : 'Sign in with Google'}
           </button>
 
           <div className="mt-4 text-center text-sm text-gray-500">
