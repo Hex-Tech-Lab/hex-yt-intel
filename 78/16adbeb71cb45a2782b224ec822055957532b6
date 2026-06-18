@@ -1,0 +1,27 @@
+web/hooks/useSSEStream.ts
+  s_e6750ccfff01b1::t_d3652c9ff74f09 184
+web/lib/types/contracts.ts
+  s_e6750ccfff01b1::t_6d513be43f3f78 133
+worker/src/services/PersistService.ts
+  s_e6750ccfff01b1::t_c6f4c2e8de62e9 14-15
+  s_e6750ccfff01b1::t_ffdcd7b3315a5a 62-63
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_1c6a127d2df6ce 404
+  s_e6750ccfff01b1::t_744454504499af 561-562
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "7816adbeb71cb45a2782b224ec822055957532b6",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
