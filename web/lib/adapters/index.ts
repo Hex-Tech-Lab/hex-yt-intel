@@ -7,3 +7,4 @@ export { SettingsModelAdapter } from './SettingsModelAdapter';
 export { UpstashVectorAdapter } from './UpstashVectorAdapter';
 export { StreamTokenAdapter } from './StreamTokenAdapter';
 export { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
+export { YouTubePlayerAdapter } from './YouTubePlayerAdapter';
