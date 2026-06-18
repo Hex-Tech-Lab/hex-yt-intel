@@ -287,7 +287,6 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           send({ type: "delta", content: chunk });
         }, req.models);
         if (!full) {
-          send({ type: "error", error: "All chat models failed to respond" });
           full = "No response generated.";
           send({ type: "delta", content: full });
         }

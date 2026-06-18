@@ -153,7 +153,7 @@ export async function* computeStanceRelationsStream(
         fullText += delta;
       }
     } catch (err) {
-      console.warn(`[relations/engine] Model ${item.model} aborted, trying next:`, (err as Error)?.message);
+      console.warn(`[relations/engine] Model ${item.model} aborted, trying next:`, err instanceof Error ? err.message : String(err));
       continue;
     }
 
