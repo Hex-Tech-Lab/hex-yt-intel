@@ -39,6 +39,14 @@ export function VideoPlayerCard() {
     videoIdRef.current = videoId;
 
     const adapter = new YouTubePlayerAdapter();
+    
+    // Timeout fallback: if onReady never fires, log and don't hang forever
+    const readyTimeout = setTimeout(() => {
+      if (!cancelled && !playerRef.current) {
+        console.warn('[VideoPlayerCard] Player ready timeout - API may have failed to initialize', { videoId });
+      }
+    }, 15000);
+    
     adapter.mount(containerRef.current, videoId, {
       onReady: () => {
         if (cancelled || videoIdRef.current !== videoId) {
@@ -66,6 +74,7 @@ export function VideoPlayerCard() {
 
     return () => {
       cancelled = true;
+      clearTimeout(readyTimeout);
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
@@ -79,10 +88,11 @@ export function VideoPlayerCard() {
     if (seekTo === null) return;
     if (ready && playerRef.current) {
       playerRef.current.seekTo(seekTo);
+      clearSeek();
     } else {
+      // Queue the seek - don't clear until it's applied
       seekQueueRef.current = seekTo;
     }
-    clearSeek();
   }, [seekTo, ready, clearSeek]);
 
   useEffect(() => {

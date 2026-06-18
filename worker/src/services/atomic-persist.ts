@@ -3,22 +3,27 @@ export interface AtomicPersistOptions {
   persist: (status: 'completed' | 'interrupted') => Promise<boolean>;
   signal: AbortSignal;
   waitUntil: (promise: Promise<unknown>) => void;
+  maxRetries?: number;
 }
 
 export function createAtomicPersist(options: AtomicPersistOptions): { flush: () => void } {
+  const maxRetries = options.maxRetries ?? 3;
   let result: 'none' | 'running' | 'success' | 'failed' = 'none';
+  let attempts = 0;
 
   const persistFn = async (status: 'completed' | 'interrupted') => {
     // Only prevent concurrent attempts, allow retry after failure
     if (result === 'running') return;
+    if (attempts >= maxRetries) return;
     if (!options.hasContent()) {
       // No content to persist yet, don't mark as success
       return;
     }
+    attempts++;
     result = 'running';
     try {
       const ok = await options.persist(status);
-      result = ok ? 'success' : 'failed';
+      result = ok ? 'success' : (attempts >= maxRetries ? 'failed' : 'failed');
     } catch {
       result = 'failed';
     }

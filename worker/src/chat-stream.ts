@@ -296,13 +296,27 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       }
 
       let persisted = false;
+      let persistAttempted = false;
 
       const atomicPersist = createAtomicPersist({
         hasContent: () => full.length > 0,
         persist: async () => {
-          if (persisted) return false;
+          if (persisted || persistAttempted) return false;
+          persistAttempted = true;
           const contentSig = await hmacHex(activeSecret, full);
           const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
+
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10_000);
+
+          const onAbort = () => controller.abort();
+          const signal = c.req.raw.signal;
+          if (signal.aborted) {
+            controller.abort();
+          } else {
+            signal.addEventListener("abort", onAbort, { once: true });
+          }
+
           try {
             const res = await fetch(`${appUrl}/api/chat/persist`, {
               method: "POST",
@@ -313,12 +327,18 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
                 content: full,
                 contentSig,
               }),
+              signal: controller.signal,
             });
             if (res.ok) persisted = true;
             return persisted;
           } catch (e) {
-            console.error("[chat-stream] persist failed", e);
+            const isAbort = e instanceof DOMException && e.name === "AbortError";
+            const reason = isAbort && signal.aborted ? "client_disconnect" : isAbort ? "persist_timeout" : "persist_error";
+            console.error("[chat-stream]", { reason, videoId: req.conversationId });
             return false;
+          } finally {
+            clearTimeout(timeout);
+            signal.removeEventListener("abort", onAbort);
           }
         },
         signal: c.req.raw.signal,
