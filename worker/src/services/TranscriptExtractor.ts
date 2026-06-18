@@ -40,7 +40,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
     // Cascade 2: YouTube Native (fallback)
     try {
-      return await this.fetchWithPrimary(videoId);
+      return await this.fetchWithYouTubeNative(videoId);
     } catch (e) {
       console.warn(`[TranscriptExtractor] YouTube fetch failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
     }
@@ -50,7 +50,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     return await this.fetchWithTertiary(videoId);
   }
 
-  private async fetchWithPrimary(videoId: string): Promise<TranscriptResult> {
+  private async fetchWithYouTubeNative(videoId: string): Promise<TranscriptResult> {
     const { langCode } = await this.fetchCaptionMetadata(videoId);
     const transcript = await this.fetchTranscriptContent(videoId, langCode);
     if (!transcript) throw new Error('Empty');
@@ -59,15 +59,17 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
   async fetchChannelMetadata(channelId: string): Promise<Record<string, unknown> | null> {
     if (!this.decodoApiKey) return null;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await fetch(`https://api.decodo.com/v1/channel/${channelId}`, {
+        signal: controller.signal,
         headers: { 'Authorization': `Bearer ${this.decodoApiKey}` },
       });
       if (!res.ok) return null;
       return await res.json() as Record<string, unknown>;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
+    finally { clearTimeout(timeout); }
   }
 
   private async fetchWithDecodo(videoId: string): Promise<TranscriptResult> {

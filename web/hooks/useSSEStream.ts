@@ -168,6 +168,83 @@ export function useSSEStream() {
             }
           };
 
+          const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, onError: (i: number, error: string) => void) => {
+            const streamPayload: WorkerStreamRequest = {
+              videoId: job.videoId,
+              analysisId: job.analysisId || job.id,
+              transcript: job.transcript || '',
+              metadata: job.metadata,
+              persona: job.persona,
+              timezone: job.timezone || safeTimezone,
+              models: job.models,
+              sig: job.stream.sig,
+              exp: job.stream.exp,
+              appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+              dimensions,
+              totalChunks: TOTAL_STREAMS,
+            };
+
+            const streamController = new AbortController();
+            const timeoutId = setTimeout(() => {
+              streamController.abort();
+              onError(i, 'Handshake timed out after 10s.');
+            }, 10000);
+
+            const controller = new AbortController();
+            currentSignal.addEventListener('abort', () => controller.abort(), { once: true });
+            streamController.signal.addEventListener('abort', () => controller.abort(), { once: true });
+            const combinedSignal = controller.signal;
+
+            let res;
+            try {
+              res = await fetch(job.stream.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(streamPayload),
+                signal: combinedSignal,
+              });
+            } finally {
+              clearTimeout(timeoutId);
+            }
+
+            if (!res.ok || !res.body) {
+              const errBody = await res.text().catch(() => '').then(t => t.slice(0, 120));
+              throw new Error(`Worker stream ${i + 1} failed (${res.status}): ${errBody}`);
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            const handleEvent = (line: string) => {
+              const trimmed = line.trim();
+              if (!trimmed) return;
+              if (trimmed.startsWith('data:')) {
+                adapter.processLine(trimmed.slice(5).trim());
+                return;
+              }
+              try { adapter.processLine(trimmed); } catch { /* skip */ }
+            };
+
+            try {
+              for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (currentSignal.aborted) { await reader.cancel(); break; }
+                buffer += decoder.decode(value, { stream: true });
+                const events = buffer.split(/\r?\n\r?\n/);
+                buffer = events.pop() || '';
+                for (const e of events) handleEvent(e);
+              }
+              if (buffer.trim()) handleEvent(buffer);
+            } catch (readErr: any) {
+              if (readErr.name === 'AbortError') return;
+              throw readErr;
+            } finally {
+              reader.releaseLock();
+            }
+          };
+
           const runStreams = async () => {
             const completedIndexes = new Set<number>();
             const failedIndexes = new Set<number>();
@@ -195,11 +272,12 @@ export function useSSEStream() {
               }
             };
 
-            const streamFetches: Promise<void>[] = [];
+            const adapters: SynthesisStreamAdapter[] = [];
+            const dimensionsList: number[][] = [];
             for (let i = 0; i < TOTAL_STREAMS; i++) {
               const dimensions = STREAM_BUNDLES[i]!;
-
-              const adapter = new SynthesisStreamAdapter({
+              dimensionsList.push(dimensions);
+              adapters.push(new SynthesisStreamAdapter({
                 isPartialStream: true,
                 dimensions,
                 onError: (error) => {
@@ -213,85 +291,13 @@ export function useSSEStream() {
                   store.logOk(`[Bundle ${i + 1}] completed.`);
                   checkSettleState();
                 },
-              });
-
-              streamFetches.push((async () => {
-                const streamPayload: WorkerStreamRequest = {
-                  videoId: job.videoId,
-                  analysisId: job.analysisId || job.id,
-                  transcript: job.transcript || '',
-                  metadata: job.metadata,
-                  persona: job.persona,
-                  timezone: job.timezone || safeTimezone,
-                  models: job.models,
-                  sig: job.stream.sig,
-                  exp: job.stream.exp,
-                  appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
-                  dimensions,
-                  totalChunks: TOTAL_STREAMS,
-                };
-
-                const streamController = new AbortController();
-                const timeoutId = setTimeout(() => {
-                  streamController.abort();
-                  handleStreamError(i, 'Handshake timed out after 10s.');
-                }, 10000);
-
-                const combinedSignal = typeof AbortSignal.any !== 'undefined'
-                  ? AbortSignal.any([currentSignal, streamController.signal])
-                  : currentSignal;
-
-                let res;
-                try {
-                  res = await fetch(job.stream.url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(streamPayload),
-                    signal: combinedSignal,
-                  });
-                } finally {
-                  clearTimeout(timeoutId);
-                }
-
-                if (!res.ok || !res.body) {
-                  throw new Error(`Worker stream ${i + 1} failed (${res.status})`);
-                }
-
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-
-                const handleEvent = (line: string) => {
-                  const trimmed = line.trim();
-                  if (!trimmed) return;
-                  if (trimmed.startsWith('data:')) {
-                    adapter.processLine(trimmed.slice(5).trim());
-                    return;
-                  }
-                  try { adapter.processLine(trimmed); } catch { /* skip */ }
-                };
-
-                try {
-                  for (;;) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    if (currentSignal.aborted) { await reader.cancel(); break; }
-                    buffer += decoder.decode(value, { stream: true });
-                    const events = buffer.split(/\r?\n\r?\n/);
-                    buffer = events.pop() || '';
-                    for (const e of events) handleEvent(e);
-                  }
-                  if (buffer.trim()) handleEvent(buffer);
-                } catch (readErr: any) {
-                  if (readErr.name === 'AbortError') return;
-                  throw readErr;
-                } finally {
-                  reader.releaseLock();
-                }
-              })());
+              }));
             }
 
             store.logInfo(`Connecting to Cloudflare edge worker for parallel synthesis (${TOTAL_STREAMS} streams)...`);
+            const streamFetches = adapters.map((adapter, i) =>
+              runSingleStream(i, dimensionsList[i]!, adapter, currentSignal, job, safeTimezone, handleStreamError)
+            );
             await Promise.all(
               streamFetches.map(p => p.catch((err) => {
                 if (currentSignal.aborted || hasSettled) return;

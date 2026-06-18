@@ -396,8 +396,8 @@ export const TranscriptGuardRule: IRule = {
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
     const text = source.getText();
-    const isEntryPoint = text.includes('app.post') || text.includes('app.get') || text.includes('export default');
-    if (isEntryPoint && (text.includes('analyze') || text.includes('stream')) && text.includes('transcript') && !text.includes('TranscriptGuard')) {
+    const isEntryPoint = text.includes('app.post') || text.includes('app.get');
+    if (isEntryPoint && (text.includes('analyze') || text.includes('stream')) && text.includes('transcript')) {
       const hasGuard = text.includes('transcript unavailable') || text.includes('TranscriptGuard') || text.includes('400');
       if (!hasGuard) {
         findings.push({
@@ -445,7 +445,7 @@ export const CascadeOrderRule: IRule = {
     const text = source.getText();
     const decodoIdx = text.indexOf('Decodo');
     const ytIdx = text.indexOf('fetchWithPrimary');
-    if (decodoIdx > ytIdx) {
+    if (decodoIdx !== -1 && ytIdx !== -1 && decodoIdx > ytIdx) {
       findings.push({
         file: filePath,
         severity: "high",
