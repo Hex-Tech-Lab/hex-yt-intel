@@ -1,23 +1,30 @@
 import type { VideoPlayerPort, VideoPlayerCallbacks } from '@/lib/ports/VideoPlayerPort';
 
 let apiLoadPromise: Promise<void> | null = null;
-let previousCallback: (() => void) | null = null;
 
 function loadYouTubeAPI(): Promise<void> {
   if (apiLoadPromise) return apiLoadPromise;
   apiLoadPromise = new Promise((resolve, reject) => {
-    previousCallback = (window as any).onYouTubeIframeAPIReady;
-    (window as any).onYouTubeIframeAPIReady = resolve;
+    const previous = (window as any).onYouTubeIframeAPIReady;
+    (window as any).onYouTubeIframeAPIReady = () => {
+      if (typeof previous === 'function') previous();
+      resolve();
+    };
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
     tag.onerror = () => {
-      (window as any).onYouTubeIframeAPIReady = previousCallback;
+      (window as any).onYouTubeIframeAPIReady = previous;
+      apiLoadPromise = null;
       reject(new Error('Failed to load YouTube IFrame API'));
     };
     const firstScript = document.getElementsByTagName('script')[0];
     firstScript?.parentNode?.insertBefore(tag, firstScript);
   });
   return apiLoadPromise;
+}
+
+function getApi(): any {
+  return (window as any).YT;
 }
 
 export class YouTubePlayerAdapter implements VideoPlayerPort {
@@ -27,14 +34,15 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
   async mount(container: HTMLElement, videoId: string, callbacks?: VideoPlayerCallbacks): Promise<void> {
     this.destroyed = false;
     try {
-      const YT = (window as any).YT;
-      if (!YT) await loadYouTubeAPI();
-      const YT_API = (window as any).YT;
-      if (!YT_API || !YT_API.Player) {
-        callbacks?.onError?.(new Error('YouTube API not available'));
+      if (!getApi()) {
+        await loadYouTubeAPI();
+      }
+      const YT = getApi();
+      if (!YT?.Player) {
+        callbacks?.onError?.(new Error('YouTube Player API not available'));
         return;
       }
-      this.player = new YT_API.Player(container, {
+      this.player = new YT.Player(container, {
         videoId,
         playerVars: {
           modestbranding: 1,
@@ -58,35 +66,32 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
   }
 
   seekTo(seconds: number): void {
-    if (this.player && this.player.seekTo && !this.destroyed) {
+    if (this.player?.seekTo && !this.destroyed) {
       this.player.seekTo(seconds, true);
     }
   }
 
   play(): void {
-    if (this.player && this.player.playVideo && !this.destroyed) {
+    if (this.player?.playVideo && !this.destroyed) {
       this.player.playVideo();
     }
   }
 
   pause(): void {
-    if (this.player && this.player.pauseVideo && !this.destroyed) {
+    if (this.player?.pauseVideo && !this.destroyed) {
       this.player.pauseVideo();
     }
   }
 
   destroy(): void {
     this.destroyed = true;
-    if (this.player && this.player.destroy) {
+    if (this.player?.destroy) {
       try { this.player.destroy(); } catch { /* already destroyed */ }
     }
     this.player = null;
   }
 
   getCurrentTime(): number {
-    if (this.player && this.player.getCurrentTime && !this.destroyed) {
-      return this.player.getCurrentTime();
-    }
-    return 0;
+    return this.player?.getCurrentTime?.() ?? 0;
   }
 }
