@@ -1,0 +1,25 @@
+web/lib/intelligence/relations-engine.ts
+  s_591c13a726f08a::t_8bf5db653f09a1 188-189
+  s_591c13a726f08a::t_3f8c47b50b29aa 144-157
+  s_591c13a726f08a::t_f5119aafb6409b 115-117
+worker/src/chat-stream.ts
+  s_591c13a726f08a::t_9952d710cdcc2f 290
+web/lib/embeddings.ts
+  s_591c13a726f08a::t_c63c6282b47f08 103-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "97ac7f721cd1595453e18115383b29268d9075bf",
+  "prompts": {},
+  "sessions": {
+    "s_591c13a726f08a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_124db873affeJS6oow01CBkVm7",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
