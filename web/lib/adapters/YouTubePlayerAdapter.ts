@@ -23,8 +23,18 @@ function loadYouTubeAPI(): Promise<void> {
   apiLoadPromise = new Promise((resolve, reject) => {
     resolvers.push({ resolve, reject });
     
-    // Only set up the script once
-    if (document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+    // If script tag exists from a previous attempt, settle queued callers
+    const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+    if (existingScript) {
+      if (window.YT?.Player) {
+        for (const r of resolvers) r.resolve();
+      } else {
+        for (const r of resolvers) {
+          r.reject(new Error('YouTube IFrame API script exists but Player is unavailable'));
+        }
+      }
+      resolvers = [];
+      apiLoadPromise = null;
       return;
     }
     
