@@ -12,7 +12,12 @@ import {
     StreamResilienceRule,
     SchemaContractRule,
     RedundantValidationRule,
-    PersistResilienceRule
+    PersistResilienceRule,
+    BundleContradictionRule,
+    TranscriptGuardRule,
+    StreamSettleRule,
+    CascadeOrderRule,
+    ProxyPromotionRule
 } from "./quality-engine/rules";
 import * as glob from "glob";
 
@@ -32,6 +37,11 @@ engine.addRule(StreamResilienceRule);
 engine.addRule(SchemaContractRule);
 engine.addRule(RedundantValidationRule);
 engine.addRule(PersistResilienceRule);
+engine.addRule(BundleContradictionRule);
+engine.addRule(TranscriptGuardRule);
+engine.addRule(StreamSettleRule);
+engine.addRule(CascadeOrderRule);
+engine.addRule(ProxyPromotionRule);
 
 // Scan files
 const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' }).map(f => f.replace(/\\/g, "/"));
