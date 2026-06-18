@@ -1,0 +1,27 @@
+web/components/templates/console/VideoPlayerCard.tsx
+  s_e6750ccfff01b1::t_4d99085897adef 60,63
+  s_e6750ccfff01b1::t_8389eaaf2ccddb 76
+  s_e6750ccfff01b1::t_c7cb9b0b9181df 30-33,42,44,48,56-59,61-62,64,68
+  s_e6750ccfff01b1::t_744464a72e2bc5 16
+web/lib/ports/VideoPlayerPort.ts
+  s_e6750ccfff01b1::t_687f1f8344f17a 4-5
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_e6750ccfff01b1::t_1d97e9f2ca446a 3-9
+  s_e6750ccfff01b1::t_c5911468029f00 11,14-19,21,23-29,33-36,38,43-45,64,66,88-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "0bb26daf9fd7268182bcb476464c9aed45e6035a",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
