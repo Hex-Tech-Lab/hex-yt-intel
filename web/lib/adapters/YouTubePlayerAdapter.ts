@@ -42,8 +42,6 @@ declare global {
 let apiLoadPromise: Promise<void> | null = null;
 let resolvers: Array<{ resolve: () => void; reject: (err: Error) => void }> = [];
 
-let loadTimeout: ReturnType<typeof setTimeout> | null = null;
-
 function loadYouTubeAPI(): Promise<void> {
   if (typeof window !== 'undefined' && window.YT?.Player) {
     return Promise.resolve();
@@ -101,19 +99,20 @@ function getApi(): YTNamespace | undefined {
 export class YouTubePlayerAdapter implements VideoPlayerPort {
   private player: YTPlayerInstance | null = null;
   private destroyed = false;
+  private loadTimeout: ReturnType<typeof setTimeout> | null = null;
 
   async mount(container: HTMLElement, videoId: string, callbacks?: VideoPlayerCallbacks): Promise<void> {
     this.destroyed = false;
 
     const timeout = new Promise<never>((_, reject) => {
-      loadTimeout = setTimeout(() => {
+      this.loadTimeout = setTimeout(() => {
         reject(new Error('YouTube Player mount timed out after 15s'));
       }, 15000);
     });
 
     try {
       await Promise.race([loadYouTubeAPI(), timeout]);
-      if (loadTimeout) { clearTimeout(loadTimeout); loadTimeout = null; }
+      if (this.loadTimeout) { clearTimeout(this.loadTimeout); this.loadTimeout = null; }
 
       if (this.destroyed) return;
 
@@ -146,7 +145,7 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
         },
       });
     } catch (err) {
-      if (loadTimeout) { clearTimeout(loadTimeout); loadTimeout = null; }
+      if (this.loadTimeout) { clearTimeout(this.loadTimeout); this.loadTimeout = null; }
       const error = err instanceof Error ? err : new Error(String(err));
       Sentry.captureException(error, { tags: { operation: 'youtube-player-mount' }, extra: { videoId } });
       console.error('[YouTubePlayerAdapter]', { message: error.message, videoId });
