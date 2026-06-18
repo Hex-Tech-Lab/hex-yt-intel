@@ -1,0 +1,32 @@
+web/components/templates/console/TimestampLink.tsx
+  s_e6750ccfff01b1::t_c4044995c2a8fa 31
+  s_e6750ccfff01b1::t_0b04033203ad3d 20,28
+  s_e6750ccfff01b1::t_41785db9f9812a 58-59
+  s_e6750ccfff01b1::t_33c63625eb98b8 1-19,21-27,29-30,32-34,39-44,46-57,60-63
+  s_e6750ccfff01b1::t_f8e6802e1fad69 35-38
+  s_e6750ccfff01b1::t_ffba3eab6fc8ca 45
+web/components/templates/console/StreamingGrid.tsx
+  s_e6750ccfff01b1::t_b885831d1985ac 82-100
+  s_e6750ccfff01b1::t_c22c56adebed72 6
+web/components/templates/console/DimensionDrawer.tsx
+  s_e6750ccfff01b1::t_31d99e33e0e39c 6
+  s_e6750ccfff01b1::t_05d8f885152300 112-158
+web/store/useVideoStore.ts
+  s_e6750ccfff01b1::t_2fa0a09a7d94b4 7,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "408ded0c7593f0f8d3252704747c76eb0a638b1a",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
