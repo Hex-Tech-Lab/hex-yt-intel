@@ -1,0 +1,67 @@
+web/lib/validators/synthesis.ts
+  s_9094b8734749d0::t_5d13e5ce93dc16 45
+  s_9094b8734749d0::t_5227001a1e5d25 215
+  s_9094b8734749d0::t_8a99d916dbb842 151-154
+  s_9094b8734749d0::t_a659877d87ee31 100,105,110
+web/lib/stores/analysis-metadata-store.ts
+  s_9094b8734749d0::t_af4f08f31cb58b 31
+  s_9094b8734749d0::t_e57b16dfc110c8 89
+web/lib/prompts/ucis-v5.1.ts
+  s_9094b8734749d0::t_8eef8e1689e7d4 512
+  s_9094b8734749d0::t_e14dc32f0e75b6 544,546-549
+web/app/api/analyses/persist/route.ts
+  s_9094b8734749d0::t_33f66c2d742aa3 236
+worker/src/chat-stream.ts
+  s_e6750ccfff01b1::t_74086d3a50ead1 298-328
+  s_72559f63f629fa::t_a6acfbb37462ff 7
+web/components/templates/console/PersonaSelector.tsx
+  s_9094b8734749d0::t_27b39cdeb38ed2 17,23,29,35
+worker/src/services/atomic-persist.ts
+  s_72559f63f629fa::t_476e4e3127de84 1-36
+web/app/auth/callback/route.ts
+  s_e6750ccfff01b1::t_543d3f47abe8b8 53-55
+web/lib/stores/analysis-state-store.ts
+  s_9094b8734749d0::t_48376d047cbca3 38
+web/lib/utils/markdown-reconstructor.ts
+  s_9094b8734749d0::t_bfade56005893b 73-76
+worker/src/worker.ts
+  s_72559f63f629fa::t_fb63781d7f7acf 17
+  s_72559f63f629fa::t_c6ad84c4eca395 547-549,551,561-563
+  s_72559f63f629fa::t_5235aef91ac86e 610
+web/lib/types/persona.ts
+  s_9094b8734749d0::t_d0fabf356bd0b4 10
+  s_9094b8734749d0::t_aac21ef5c5cd96 21-24
+  s_9094b8734749d0::t_365d491f9c0907 65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "14d05020a4be49b5997a836e3a3cf7d24cd60752",
+  "prompts": {},
+  "sessions": {
+    "s_72559f63f629fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12506268efferJsvUTMITctFQE",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_9094b8734749d0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_125063239ffeAWgWplDKqKgvYO",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
