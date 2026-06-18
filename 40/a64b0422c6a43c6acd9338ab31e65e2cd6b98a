@@ -1,0 +1,21 @@
+web/components/templates/console/VideoPlayerCard.tsx
+  s_e6750ccfff01b1::t_188613b75897d6 54-55
+web/hooks/useSSEStream.ts
+  s_e6750ccfff01b1::t_9e6ea9a1cd3af6 188,196,204-210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "40a64b0422c6a43c6acd9338ab31e65e2cd6b98a",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
