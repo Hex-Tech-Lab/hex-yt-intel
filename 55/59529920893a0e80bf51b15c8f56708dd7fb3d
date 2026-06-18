@@ -1,0 +1,41 @@
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_e6750ccfff01b1::t_ff71d2c7f607aa 1116
+web/lib/types/persona.ts
+  s_e6750ccfff01b1::t_f0b379068068cb 65-66
+web/lib/intelligence/relations-engine.ts
+  s_e6750ccfff01b1::t_6b8d8a8e565de9 156
+worker/src/services/atomic-persist.ts
+  s_e6750ccfff01b1::t_3930caff11b57d 27-36
+web/app/api/analyses/[id]/graph/route.ts
+  s_e6750ccfff01b1::t_fe6c61a8ca5746 2-3,16,24-26,28,36-37,42
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_e6750ccfff01b1::t_3370dac7489670 126-128
+  s_e6750ccfff01b1::t_05e8403b5d41a6 1
+  s_e6750ccfff01b1::t_1fa5eb91430c89 98-101
+web/app/auth/callback/route.ts
+  s_e6750ccfff01b1::t_06caf62f17343b 4
+  s_e6750ccfff01b1::t_142d041631a9b1 68-69
+  s_e6750ccfff01b1::t_e0c96588cd9204 74,76
+web/lib/ports/index.ts
+  s_e6750ccfff01b1::t_b1ae437c9f8339 1-12
+web/components/templates/console/VideoPlayerCard.tsx
+  s_e6750ccfff01b1::t_25497e5a656bee 57
+web/lib/ports/PersistencePort.ts
+  s_e6750ccfff01b1::t_3f8029fbc07f5b 159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "5559529920893a0e80bf51b15c8f56708dd7fb3d",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
