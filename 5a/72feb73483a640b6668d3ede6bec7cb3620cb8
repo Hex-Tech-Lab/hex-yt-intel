@@ -1,0 +1,146 @@
+web/components/templates/console/VideoPlayerCard.tsx
+  s_d4e642d07e5e6a::t_5283391ebcde3d 91-93
+web/components/containers/DashboardContainer.tsx
+  s_8c07d70d3fa02b::t_edfbb31dacd023 223
+  s_8c07d70d3fa02b::t_c901abec08d900 175
+  s_8c07d70d3fa02b::t_5eb4afdea2ea0d 187
+  s_8c07d70d3fa02b::t_d82b3d886e3a57 211
+  s_8c07d70d3fa02b::t_d6a6bed86dcbb0 199
+worker/src/worker.ts
+  s_5fb15a210e0d46::t_f07b611d6ff68a 600
+  s_5fb15a210e0d46::t_adf08840fc0aff 374-415,418-419,421-422,424,426-434,437-447,449,451,453,455-457,462,465,468,475-476,478-485,495,503,509-510,525,543,569-599,601-649
+web/types/react-force-graph-2d.d.ts
+  s_6dd7f0a2a68031::t_65c465a65ad0b3 1-38
+worker/src/services/atomic-persist.ts
+  s_97e0d79c4c3546::t_c15e37b0a639f7 1-2,11-20,22,26,28-67,69-70,76-84,89,93
+worker/src/services/TranscriptExtractor.ts
+  s_7b386b4e78bfef::t_1426dba0897153 11,32,35-37,40,46-48,51,61-63,83,86,88,91,100,102,107,110,112,116,119,122,126,128,134,136,138-140,151,165,182,194,243-252,254-257,259-261,266-267,269-270,272,274-275,277-280,282-285,287-290,292-293,295-298,302-310,312-316,318-326,328,332-334
+  s_de76da4c55b159::t_713fce9e5f3780 169-174
+  s_de76da4c55b159::t_f7719bf666b12b 208,213
+  s_de76da4c55b159::t_f9cb2a35629023 329-331
+  s_de76da4c55b159::t_13ec751b1213a4 66-73
+  s_de76da4c55b159::t_c71ed46bb363e0 92-95
+  s_de76da4c55b159::t_261397f76c5eda 262-265
+  s_de76da4c55b159::t_597b0e4ae77712 234
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_d4e642d07e5e6a::t_84552fd42f7ec6 107-113,115-119,149
+  s_d4e642d07e5e6a::t_ffb64171948652 45-46,51,53,56,61-63,67-71,74,82
+  s_03e3a2ab964b26::t_c727614ec3ec67 4-34,37
+  s_03e3a2ab964b26::t_f6fc1d378dc5d2 97-98,102
+  s_03e3a2ab964b26::t_8e7c800afaa00b 65-66,75-76,86
+  s_03e3a2ab964b26::t_fbf4d0d66a2b99 138,141
+web/app/auth/signin/form.tsx
+  s_232d3e66bf2dd2::t_1cde17fedce69d 46
+  s_232d3e66bf2dd2::t_9233e990bbe3d0 54
+worker/src/chat-stream.ts
+  s_66503622107def::t_a59c02220bd665 305,329-331
+web/app/layout.tsx
+  s_f9bbd555c6665f::t_969ed1f699510f 44
+web/components/templates/console/KnowledgeGraphCanvas.tsx
+  s_e6750ccfff01b1::t_cdaf06a7f06848 143
+  s_e6750ccfff01b1::t_094649bb348048 341
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "5a72feb73483a640b6668d3ede6bec7cb3620cb8",
+  "prompts": {},
+  "sessions": {
+    "s_03e3a2ab964b26": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_123a14300ffeLREiz1HLD1muX3",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_232d3e66bf2dd2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_123ac0467ffeOvkrjAoCaArED9",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_5fb15a210e0d46": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12391e557ffer2Z24J9KuDpkjq",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_66503622107def": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_123ac327affeXRmnlTVDuL47qg",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_6dd7f0a2a68031": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_123a13210ffeV7tEtHtNwycOby",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_7b386b4e78bfef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_123ac0ffdffe48FgEUQ55LbaQU",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_8c07d70d3fa02b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_123a137b0ffeTMsXKLIth04EyJ",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_97e0d79c4c3546": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_123ac2a52ffe08GDU9SyHth0du",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_d4e642d07e5e6a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_123ac15c8ffejhRRNU5jdaJhER",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_de76da4c55b159": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_123a152a1ffefweRAHkDsyENQg",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f9bbd555c6665f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_12391ef49ffePQm2o0yvfUbp4d",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
