@@ -1,6 +1,8 @@
 export interface VideoPlayerCallbacks {
   onReady?: () => void;
   onError?: (error: Error) => void;
+  onPlay?: () => void;
+  onPause?: () => void;
 }
 
 export interface VideoPlayerPort {

@@ -13,7 +13,7 @@ export function VideoPlayerCard() {
   const seekQueueRef = useRef<number | null>(null);
   const videoIdRef = useRef<string | null>(null);
   const isPlayingRef = useRef(false);
-  const { isPlaying, seekTo, clearSeek } = useVideoStore();
+  const { isPlaying, seekTo, clearSeek, setPlaying } = useVideoStore();
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
   const [mounted, setMounted] = useState(false);
@@ -27,7 +27,10 @@ export function VideoPlayerCard() {
   }, []);
 
   useEffect(() => {
-    if (!mounted || !videoId) return;
+    if (!mounted || !videoId || !containerRef.current) return;
+    
+    let cancelled = false;
+    
     if (playerRef.current) {
       playerRef.current.destroy();
       playerRef.current = null;
@@ -36,13 +39,13 @@ export function VideoPlayerCard() {
     videoIdRef.current = videoId;
 
     const adapter = new YouTubePlayerAdapter();
-    playerRef.current = adapter;
-    adapter.mount(containerRef.current!, videoId, {
+    adapter.mount(containerRef.current, videoId, {
       onReady: () => {
-        if (videoIdRef.current !== videoId) {
+        if (cancelled || videoIdRef.current !== videoId) {
           adapter.destroy();
           return;
         }
+        playerRef.current = adapter;
         setReady(true);
         if (seekQueueRef.current !== null) {
           adapter.seekTo(seekQueueRef.current);
@@ -50,10 +53,19 @@ export function VideoPlayerCard() {
         }
         if (isPlayingRef.current) adapter.play();
       },
-      onError: (err) => console.error('[VideoPlayerCard]', err.message),
+      onError: (err) => {
+        if (!cancelled) console.error('[VideoPlayerCard]', err.message);
+      },
+      onPlay: () => {
+        if (!cancelled) setPlaying(true);
+      },
+      onPause: () => {
+        if (!cancelled) setPlaying(false);
+      },
     });
 
     return () => {
+      cancelled = true;
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
@@ -61,7 +73,7 @@ export function VideoPlayerCard() {
       videoIdRef.current = null;
       setReady(false);
     };
-  }, [mounted, videoId]);
+  }, [mounted, videoId, setPlaying]);
 
   useEffect(() => {
     if (seekTo === null) return;
