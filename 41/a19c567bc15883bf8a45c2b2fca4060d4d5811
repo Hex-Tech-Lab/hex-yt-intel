@@ -1,0 +1,33 @@
+web/next-env.d.ts
+  s_e6750ccfff01b1::t_1c0e32b425cba3 3
+worker/src/services/PromptBuilder.ts
+  s_e6750ccfff01b1::t_94f4703126cd17 71-74,76-92,98-101
+  s_e6750ccfff01b1::t_3e57780ff24623 93-97
+  s_e6750ccfff01b1::t_524e0140e3625a 34-37
+filtered_qa.json
+  s_e6750ccfff01b1::t_1c0605652d0897 1
+qa_output.json
+  s_e6750ccfff01b1::t_1c0605652d0897 1-555
+dump_qa.ts
+  s_e6750ccfff01b1::t_1c0e32b425cba3 1-23
+web/components/templates/console/VideoPlayerCard.tsx
+  s_e6750ccfff01b1::t_34588e2b61cce4 48-54
+.memory/BASE_CHECKLIST.tmp
+  s_e6750ccfff01b1::t_1c0605652d0897 1-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "41a19c567bc15883bf8a45c2b2fca4060d4d5811",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
