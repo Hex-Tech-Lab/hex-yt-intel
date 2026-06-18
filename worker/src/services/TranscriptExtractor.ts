@@ -53,11 +53,17 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     return { videoId, transcript, language: langCode };
   }
 
-  private decodoApiKey?: string;
-
-  constructor(residentialProxyUrl?: string, decodoApiKey?: string) {
-    this.residentialProxyUrl = residentialProxyUrl;
-    this.decodoApiKey = decodoApiKey;
+  async fetchChannelMetadata(channelId: string): Promise<Record<string, unknown> | null> {
+    if (!this.decodoApiKey) return null;
+    try {
+      const res = await fetch(`https://api.decodo.com/v1/channel/${channelId}`, {
+        headers: { 'Authorization': `Bearer ${this.decodoApiKey}` },
+      });
+      if (!res.ok) return null;
+      return await res.json() as Record<string, unknown>;
+    } catch {
+      return null;
+    }
   }
 
   private async fetchWithDecodo(videoId: string): Promise<TranscriptResult> {
