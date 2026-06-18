@@ -186,6 +186,10 @@ export async function* computeStanceRelationsStream(
     } catch { continue; }
   }
 
+  if (handshakeSignal?.aborted) {
+    return;
+  }
+
   throw new Error('All models in relations cascade failed or timed out');
 }
 
