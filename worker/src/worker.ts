@@ -401,6 +401,7 @@ app.post("/analyze-llm-stream", async (c) => {
     exp: number;
     appUrl?: string;
     dimensions?: number[];
+    chunkIndex?: number;
     totalChunks?: number;
   }
 
@@ -557,6 +558,8 @@ app.post("/analyze-llm-stream", async (c) => {
         activeSecret,
         appUrl,
         validate12D: (text: string) => engine.validate12D(text),
+        chunkIndex: req.chunkIndex,
+        totalChunks: req.totalChunks,
       });
     },
     signal: c.req.raw.signal,
