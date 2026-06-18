@@ -51,11 +51,20 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     return { videoId, transcript, language: langCode };
   }
 
+  private decodoApiKey?: string;
+
+  constructor(residentialProxyUrl?: string, decodoApiKey?: string) {
+    this.residentialProxyUrl = residentialProxyUrl;
+    this.decodoApiKey = decodoApiKey;
+  }
+
   private async fetchWithDecodo(videoId: string): Promise<TranscriptResult> {
-    // Placeholder URL for Decodo - must be replaced with real configuration
+    if (!this.decodoApiKey) throw new Error('Decodo API key not configured');
     const decodoUrl = `https://api.decodo.com/v1/transcript/${videoId}`;
-    const response = await fetch(decodoUrl);
-    if (!response.ok) throw new Error('Decodo fail');
+    const response = await fetch(decodoUrl, {
+      headers: { 'Authorization': `Bearer ${this.decodoApiKey}` },
+    });
+    if (!response.ok) throw new Error(`Decodo fail: ${response.status}`);
     const data = await response.json() as { transcript: string; lang: string };
     if (!data.transcript) throw new Error('Empty');
     return { videoId, transcript: data.transcript, language: data.lang };

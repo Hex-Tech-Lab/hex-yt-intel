@@ -35,6 +35,7 @@ type Env = {
   ALLOWED_APP_ORIGINS?: string;
   NODE_ENV?: string;
   DEV_HMAC_SECRET?: string;
+  DECODO_API_KEY?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -245,7 +246,7 @@ app.post("/fetch-transcript", async (c) => {
   }
 
   try {
-    const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL);
+    const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY);
     const result = await extractor.fetch(videoId);
 
     return c.json(
@@ -428,7 +429,7 @@ app.post("/analyze-llm-stream", async (c) => {
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${req.videoId}`);
     try {
-      const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL);
+      const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY);
       const result = await extractor.fetch(req.videoId);
       if (result.transcript && result.transcript.trim().length > 0 && !result.transcript.includes('Transcript unavailable')) {
         transcript = result.transcript;

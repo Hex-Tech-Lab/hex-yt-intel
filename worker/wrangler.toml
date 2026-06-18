@@ -26,6 +26,7 @@ command = "pnpm run build"
 #   wrangler secret put OPENROUTER_API_KEY --env production
 #   wrangler secret put UPSTASH_REDIS_REST_URL --env production
 #   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env production
+#   wrangler secret put DECODO_API_KEY --env production
 #
 # Current RESIDENTIAL_PROXY_URL value (Bright Data - with authentication):
 #   brd-customer-hl_da92bd7c-zone-yt_intel_prx1:qa0ffc1kewsa@brd.superproxy.io:33335
