@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     sessionError = error;
   } catch (err: unknown) {
-    Sentry.captureException(err, { tags: { operation: 'auth-callback' }, extra: { code } });
+    Sentry.captureException(err, { tags: { operation: 'auth-callback' } });
     sessionError = err;
   }
 
