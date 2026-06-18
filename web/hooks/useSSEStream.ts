@@ -181,6 +181,7 @@ export function useSSEStream() {
               exp: job.stream.exp,
               appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
               dimensions,
+              chunkIndex: i + 1,
               totalChunks: TOTAL_STREAMS,
             };
 
