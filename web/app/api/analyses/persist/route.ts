@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
           const newestTime = Math.max(...timestamps);
           // Only activate grace period if the LATEST chunk is also >30s old
           // (no new chunks arriving), preventing premature stitch of a slow stream.
-          if (now - Math.min(oldestTime, newestTime) >= 30000) {
+          if (now - newestTime >= 30000) {
             allChunksCompleted = true;
           }
         }
