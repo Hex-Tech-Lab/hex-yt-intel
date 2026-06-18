@@ -50,6 +50,11 @@ export function VideoPlayerCard() {
             embedOptions: {
               host: 'https://www.youtube-nocookie.com',
             },
+            playerVars: {
+              origin: typeof window !== 'undefined' ? window.location.origin : '',
+              modestbranding: 1,
+              rel: 0,
+            },
           },
         }}
         width="100%"

@@ -442,6 +442,13 @@ app.post("/analyze-llm-stream", async (c) => {
     }
   }
 
+  if (transcript.includes('Transcript unavailable') || transcript.includes('content ingestion failed')) {
+    return c.json({
+      error: 'No transcript available',
+      details: 'Transcript could not be fetched from any source. LLM analysis skipped to avoid unnecessary costs.',
+    }, 400);
+  }
+
   if (!secret || !apiKey) {
     console.error('[analyze-llm-stream] Server misconfigured: missing STREAM_HMAC_SECRET or OPENROUTER_API_KEY');
     return c.json({ error: 'Server misconfigured' }, 500);
