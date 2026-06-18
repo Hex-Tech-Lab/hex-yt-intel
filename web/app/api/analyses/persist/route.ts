@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       valid: z.boolean().optional(),
       contentSig: z.string(),
       status: z.string().optional().default('completed'),
-      chunkIndex: z.number().int().min(1).max(TOTAL_DIMENSIONS).optional(),
+      chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
       }).optional(),
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       totalChunks
     } = parsedBody.data;
 
-    const resolvedTotal = totalChunks ?? TOTAL_DIMENSIONS;
+    const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
 
     // Tamper check: proves this markdown+payload came from the worker, not a forged caller.
     // Canonical signable matches the worker's canonical = JSON.stringify({ markdown, payload }).

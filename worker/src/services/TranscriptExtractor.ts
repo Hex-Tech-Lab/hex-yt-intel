@@ -2,8 +2,8 @@
  * TranscriptExtractor - Adapter implementing TranscriptProviderPort
  *
  * Implements 3-tier fallback chain:
- * 1. Primary: YouTube Native
- * 2. Secondary: Decodo API
+ * 1. Primary: Decodo API
+ * 2. Secondary: YouTube Native
  * 3. Tertiary: Placeholder/Fallback
  */
 
