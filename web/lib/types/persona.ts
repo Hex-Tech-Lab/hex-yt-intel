@@ -62,5 +62,6 @@ export interface PersonaConfigV2 {
  * Validate that a persona ID is valid
  */
 export function isValidPersona(persona: unknown): persona is PersonaId {
-  return ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'].includes(String(persona));
+  if (typeof persona !== 'string') return false;
+  return ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'].includes(persona);
 }

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import type { VideoPlayerPort, VideoPlayerCallbacks } from '@/lib/ports/VideoPlayerPort';
 
 declare global {
@@ -94,7 +95,10 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
         },
       });
     } catch (err) {
-      callbacks?.onError?.(err instanceof Error ? err : new Error(String(err)));
+      const error = err instanceof Error ? err : new Error(String(err));
+      Sentry.captureException(error, { tags: { operation: 'youtube-player-mount' }, extra: { videoId } });
+      console.error('[YouTubePlayerAdapter]', { message: error.message, videoId });
+      callbacks?.onError?.(error);
     }
   }
 
@@ -119,7 +123,9 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
   destroy(): void {
     this.destroyed = true;
     if (this.player?.destroy) {
-      try { this.player.destroy(); } catch { /* already destroyed */ }
+      try { this.player.destroy(); } catch (err) {
+        Sentry.captureException(err, { tags: { operation: 'youtube-player-destroy' } });
+      }
     }
     this.player = null;
   }

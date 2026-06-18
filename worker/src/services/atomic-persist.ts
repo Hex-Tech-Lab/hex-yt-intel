@@ -24,13 +24,16 @@ export function createAtomicPersist(options: AtomicPersistOptions): { flush: () 
     }
   };
 
-  options.signal.addEventListener('abort', () => {
-    // When abort fires, signal.aborted is always true - that's expected.
-    // We want to persist on abort if we haven't already started or succeeded.
-    if (result === 'none' || result === 'failed') {
-      options.waitUntil(persistFn('interrupted'));
-    }
-  }, { once: true });
+  // If signal is already aborted, persist immediately
+  if (options.signal.aborted) {
+    options.waitUntil(persistFn('interrupted'));
+  } else {
+    options.signal.addEventListener('abort', () => {
+      if (result === 'none' || result === 'failed') {
+        options.waitUntil(persistFn('interrupted'));
+      }
+    }, { once: true });
+  }
 
   return {
     flush: () => {

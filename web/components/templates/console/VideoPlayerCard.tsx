@@ -54,7 +54,7 @@ export function VideoPlayerCard() {
         if (isPlayingRef.current) adapter.play();
       },
       onError: (err) => {
-        if (!cancelled) console.error('[VideoPlayerCard]', err.message);
+        if (!cancelled) console.error('[VideoPlayerCard]', { message: err.message, videoId });
       },
       onPlay: () => {
         if (!cancelled) setPlaying(true);
