@@ -1,0 +1,23 @@
+web/package.json
+  s_e6750ccfff01b1::t_10699bf6c4b484 16
+pnpm-lock.yaml
+  s_e6750ccfff01b1::t_2886bb9d270cfc 52-54,668-675,6313-6318
+.memory/AGENT_LEDGER.md
+  s_e6750ccfff01b1::t_55a2917663d2c2 104-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "8783f098cf887e50cc969de14998fdfb394def43",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
