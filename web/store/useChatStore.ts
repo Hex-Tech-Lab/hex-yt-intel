@@ -214,7 +214,8 @@ export const useChatStore = create<ChatState>((set, get) => {
         set((s) => ({
           conversations,
           loadingList: false,
-          activeId: s.activeId && conversations.some((c) => c.id === s.activeId) ? s.activeId : conversations[0]?.id ?? null,
+          // Only keep activeId if it exists in the new list; don't default to first conversation
+          activeId: s.activeId && conversations.some((c) => c.id === s.activeId) ? s.activeId : null,
         }));
       } catch (e) {
         set({ loadingList: false, error: e instanceof Error ? e.message : 'Failed to load chats' });
@@ -293,7 +294,8 @@ export const useChatStore = create<ChatState>((set, get) => {
         const conversations = s.conversations.filter((c) => c.id !== id);
         const rest = { ...s.messagesByConv };
         delete rest[id];
-        return { conversations, messagesByConv: rest, activeId: s.activeId === id ? conversations[0]?.id ?? null : s.activeId };
+        // Don't default to first conversation - let the user choose
+        return { conversations, messagesByConv: rest, activeId: s.activeId === id ? null : s.activeId };
       });
       try {
         await api(`/api/chat/conversations/${id}`, { method: 'DELETE' });
