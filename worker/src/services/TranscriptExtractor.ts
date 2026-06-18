@@ -26,19 +26,23 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       throw new Error(`Invalid video ID format: ${videoId}`);
     }
 
-    // Cascade 1: Primary (YouTube)
+    // Cascade 1: Decodo API (primary)
+    if (this.decodoApiKey) {
+      try {
+        console.info(`[TranscriptExtractor] Trying Decodo for ${videoId}...`);
+        return await this.fetchWithDecodo(videoId);
+      } catch (e) {
+        console.warn(`[TranscriptExtractor] Decodo failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
+      }
+    } else {
+      console.warn(`[TranscriptExtractor] Decodo API key not configured, skipping`);
+    }
+
+    // Cascade 2: YouTube Native (fallback)
     try {
       return await this.fetchWithPrimary(videoId);
     } catch (e) {
-      console.warn(`[TranscriptExtractor] Primary fetch failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
-    }
-
-    // Cascade 2: Decodo API
-    try {
-      console.info(`[TranscriptExtractor] Trying Decodo for ${videoId}...`);
-      return await this.fetchWithDecodo(videoId);
-    } catch (e) {
-      console.warn(`[TranscriptExtractor] Decodo fetch failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
+      console.warn(`[TranscriptExtractor] YouTube fetch failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
     }
 
     // Cascade 3: Tertiary Fallback
