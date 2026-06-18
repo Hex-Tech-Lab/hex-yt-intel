@@ -538,8 +538,8 @@ app.post("/analyze-llm-stream", async (c) => {
   // and persistence-agnostic by design).
   let finalText = '';
   let modelUsed = '';
-  let persisted = false;
-  let persisting = false;
+  const persisted = false;
+  const persisting = false;
 
   const persistService = new PersistService();
 
