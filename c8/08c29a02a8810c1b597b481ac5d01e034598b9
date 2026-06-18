@@ -1,0 +1,97 @@
+scripts/quality-engine/rules.ts
+  s_cf1098e6c8bbb0::t_896e9f59581a5e 448
+  s_cf1098e6c8bbb0::t_a341daa8a89b44 400
+  s_cf1098e6c8bbb0::t_ec55e738d3bdcb 399
+scripts/verify-quality-engine.ts
+  s_e6750ccfff01b1::t_27a5300383e161 56-69
+web/lib/adapters/synthesis-stream-adapter.ts
+  s_1ad7815405f149::t_ac0427784a64e0 211-214
+worker/src/services/TranscriptExtractor.ts
+  s_600479016ab7a9::t_142c69af039caf 53
+  s_600479016ab7a9::t_0210226608a26f 62-63,66,71-72
+  s_600479016ab7a9::t_59d90dd40d3422 43
+.memory/AGENT_LEDGER.md
+  s_e6750ccfff01b1::t_2db0c85dcf0400 114-115
+worker/src/services/PromptBuilder.ts
+  s_1ad7815405f149::t_64ceed14b1866b 25-28
+web/hooks/useSSEStream.ts
+  s_012b2fbed74112::t_8650f9ba7938c3 299
+  s_012b2fbed74112::t_9194de66911076 171,190
+  s_012b2fbed74112::t_c8ec6aa67ae6a2 276
+  s_cf1098e6c8bbb0::t_69ee2ae89b8833 172-189,191-247,275,279-280,294,298,300
+AGENTS.md
+  s_61bf672b94c035::t_38357b56c87a0f 160,170,179
+  s_61bf672b94c035::t_ff82a2c6b8ca7a 147
+.memory/ADRS.md
+  s_61bf672b94c035::t_4375445425f666 4-5,8
+worker/src/worker.ts
+  s_600479016ab7a9::t_affdc8b2ff2182 446-447
+  s_600479016ab7a9::t_b0300bab989fd5 481-482
+  s_600479016ab7a9::t_20e8a596c3b255 495-496
+web/components/templates/console/VideoPlayerCard.tsx
+  s_626890c5df37ec::t_56beaf91bb1bcb 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "c808c29a02a8810c1b597b481ac5d01e034598b9",
+  "prompts": {},
+  "sessions": {
+    "s_012b2fbed74112": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1256be3daffehGB2IZsK6sLh0F",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_1ad7815405f149": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_125836051ffeim2qXNncrI1V9f",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_600479016ab7a9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_125836b16ffebUwS1tCblAveLn",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_61bf672b94c035": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_125833f6fffeI2nA0cmjmW3zNG",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_626890c5df37ec": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1256bc2f6ffeBLZ1nHUWYqa3VP",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_cf1098e6c8bbb0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_125835258ffe5n0hmuQZRkxql5",
+        "model": "accounts/fireworks/models/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
