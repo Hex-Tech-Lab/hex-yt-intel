@@ -1,0 +1,21 @@
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_e6750ccfff01b1::t_52a4198109a079 102
+  s_e6750ccfff01b1::t_b3c4d9c526479d 148
+  s_e6750ccfff01b1::t_3c1e4253764c3a 108,115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "5962653379b3c479f0d3927adea6164707e8ec4e",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
