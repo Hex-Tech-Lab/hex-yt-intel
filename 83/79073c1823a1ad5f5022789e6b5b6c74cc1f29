@@ -1,0 +1,26 @@
+worker/src/services/TranscriptExtractor.ts
+  s_e6750ccfff01b1::t_d25ebff49570f8 164,173-174,178-179,181-206
+  s_e6750ccfff01b1::t_4991311e95fdab 107,109
+  s_e6750ccfff01b1::t_281b6d42ba7ad3 80
+  s_e6750ccfff01b1::t_5a44f38d4ce06e 162,165,167-172,175,180,207-213
+  s_e6750ccfff01b1::t_4f5b418008fe8f 135,137-138,140-150,152-154
+  s_e6750ccfff01b1::t_a28c8d14604508 41
+pnpm-lock.yaml
+  s_e6750ccfff01b1::t_2d1a29d1ac93c1 250-251,361-362,367-368,373-374,379-380,385-386,4396-4397,5653-5654,5658-5659,5663,5910,5914,5916,5919,5922,5925,5928,8718,8738,8753,8760,8775,10168,10173,11668,11670-11674,11676,11679,11682,11685
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "8379073c1823a1ad5f5022789e6b5b6c74cc1f29",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
