@@ -1,0 +1,33 @@
+worker/src/services/TranscriptExtractor.ts
+  s_e6750ccfff01b1::t_2a742c3586204b 29-38,41,43,45
+.memory/ADRS.md
+  s_e6750ccfff01b1::t_add50f0069ad20 1-7
+.memory/AGENT_LEDGER.md
+  s_f5cf97ef77e0a9::t_58fe0e2dc612a3 98
+AGENTS.md
+  s_e6750ccfff01b1::t_810b3a3a204c28 119-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "238e8dc434b7ccfad76a80d051e44a334a687420",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_f5cf97ef77e0a9": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "7eded47b-7017-49d0-81b1-1c12ba54a240",
+        "model": "gemini-3.1-flash-lite"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
