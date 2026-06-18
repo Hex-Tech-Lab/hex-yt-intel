@@ -176,16 +176,22 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Grace-period fallback: if the oldest chunk is >30s old and we have at
-      // least one completed chunk, stitch what we have. This prevents data
-      // from being orphaned when the frontend aborts mid-stream.
+      // Grace-period fallback: stitch what we have when a quorum of chunks
+      // is complete AND no new chunks have arrived in 30s. This prevents data
+      // from being orphaned when the frontend aborts mid-stream while still
+      // allowing slow bundles to complete naturally.
       if (!allChunksCompleted && completedChunks.length > 0) {
-        const now = Date.now();
-        const oldestTime = Math.min(
-          ...completedChunks.map((c: any) => new Date(c.updated_at).getTime())
-        );
-        if (now - oldestTime >= 30000) {
-          allChunksCompleted = true;
+        const minQuorum = Math.ceil(resolvedTotal * 0.6);
+        if (completedChunks.length >= minQuorum) {
+          const now = Date.now();
+          const timestamps = completedChunks.map((c: any) => new Date(c.updated_at).getTime());
+          const oldestTime = Math.min(...timestamps);
+          const newestTime = Math.max(...timestamps);
+          // Only activate grace period if the LATEST chunk is also >30s old
+          // (no new chunks arriving), preventing premature stitch of a slow stream.
+          if (now - Math.min(oldestTime, newestTime) >= 30000) {
+            allChunksCompleted = true;
+          }
         }
       }
 

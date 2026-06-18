@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -12,6 +12,7 @@ export function VideoPlayerCard() {
   const playerRef = useRef<VideoPlayerPort | null>(null);
   const seekQueueRef = useRef<number | null>(null);
   const videoIdRef = useRef<string | null>(null);
+  const isPlayingRef = useRef(false);
   const { isPlaying, seekTo, clearSeek } = useVideoStore();
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
@@ -19,32 +20,11 @@ export function VideoPlayerCard() {
   const [ready, setReady] = useState(false);
 
   const videoId = videoMetadata?.videoId || nucleusVideoId;
+  isPlayingRef.current = isPlaying;
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const initPlayer = useCallback(async (id: string) => {
-    if (!containerRef.current) return;
-    const adapter = new YouTubePlayerAdapter();
-    playerRef.current = adapter;
-    videoIdRef.current = id;
-    await adapter.mount(containerRef.current, id, {
-      onReady: () => {
-        if (videoIdRef.current !== id) {
-          adapter.destroy();
-          return;
-        }
-        setReady(true);
-        if (seekQueueRef.current !== null) {
-          adapter.seekTo(seekQueueRef.current);
-          seekQueueRef.current = null;
-        }
-        if (isPlaying) adapter.play();
-      },
-      onError: (err) => console.error('[VideoPlayerCard]', err.message),
-    });
-  }, [isPlaying]);
 
   useEffect(() => {
     if (!mounted || !videoId) return;
@@ -54,25 +34,43 @@ export function VideoPlayerCard() {
     }
     setReady(false);
     videoIdRef.current = videoId;
-    initPlayer(videoId);
+
+    const adapter = new YouTubePlayerAdapter();
+    playerRef.current = adapter;
+    adapter.mount(containerRef.current!, videoId, {
+      onReady: () => {
+        if (videoIdRef.current !== videoId) {
+          adapter.destroy();
+          return;
+        }
+        setReady(true);
+        if (seekQueueRef.current !== null) {
+          adapter.seekTo(seekQueueRef.current);
+          seekQueueRef.current = null;
+        }
+        if (isPlayingRef.current) adapter.play();
+      },
+      onError: (err) => console.error('[VideoPlayerCard]', err.message),
+    });
+
     return () => {
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
       }
       videoIdRef.current = null;
+      setReady(false);
     };
-  }, [mounted, videoId, initPlayer]);
+  }, [mounted, videoId]);
 
   useEffect(() => {
     if (seekTo === null) return;
     if (ready && playerRef.current) {
       playerRef.current.seekTo(seekTo);
-      clearSeek();
-    } else if (seekTo !== null) {
+    } else {
       seekQueueRef.current = seekTo;
-      clearSeek();
     }
+    clearSeek();
   }, [seekTo, ready, clearSeek]);
 
   useEffect(() => {
