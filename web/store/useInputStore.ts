@@ -17,8 +17,7 @@ export const useInputStore = create<InputState>()(
       url: '',
       isValid: false,
       setUrl: (url: string) => {
-        const result = InputUrlSchema.safeParse(url);
-        set({ url, isValid: result.success });
+        set({ url });
       },
       validateUrl: (url: string) => {
         const result = InputUrlSchema.safeParse(url);
