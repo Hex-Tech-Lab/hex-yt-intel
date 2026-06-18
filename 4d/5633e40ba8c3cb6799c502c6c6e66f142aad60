@@ -1,0 +1,27 @@
+web/lib/intelligence/relations-engine.ts
+  s_e6750ccfff01b1::t_1c7f7c4ba7eaf6 189-192
+worker/src/services/atomic-persist.ts
+  s_e6750ccfff01b1::t_7fff310edc0c7a 12-17,28-29
+web/app/api/analyses/[id]/graph/route.ts
+  s_e6750ccfff01b1::t_777deccdbb561d 24-28
+worker/src/chat-stream.ts
+  s_e6750ccfff01b1::t_1fb13a35bb5f61 290
+web/lib/ports/PersistencePort.ts
+  s_e6750ccfff01b1::t_1b13a02ea5e4de 159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "4d5633e40ba8c3cb6799c502c6c6e66f142aad60",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
