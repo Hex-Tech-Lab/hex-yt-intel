@@ -51,10 +51,82 @@ export class TranscriptExtractor implements TranscriptProviderPort {
   }
 
   private async fetchWithYouTubeNative(videoId: string): Promise<TranscriptResult> {
-    const { langCode } = await this.fetchCaptionMetadata(videoId);
-    const transcript = await this.fetchTranscriptContent(videoId, langCode);
-    if (!transcript) throw new Error('Empty');
-    return { videoId, transcript, language: langCode };
+    // Try the standard API first
+    try {
+      const { langCode } = await this.fetchCaptionMetadata(videoId);
+      const transcript = await this.fetchTranscriptContent(videoId, langCode);
+      if (transcript) return { videoId, transcript, language: langCode };
+    } catch (e) {
+      console.warn(`[TranscriptExtractor] Standard API failed for ${videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
+    }
+
+    // Fallback: extract captions from YouTube page HTML
+    return await this.fetchFromPageHTML(videoId);
+  }
+
+  private async fetchFromPageHTML(videoId: string): Promise<TranscriptResult> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const response = await fetchWithProxy(pageUrl, {
+        headers: { 'User-Agent': getRandomUserAgent() },
+      }, this.residentialProxyUrl);
+      if (!response.ok) throw new Error(`Page fetch failed: ${response.status}`);
+      
+      const html = await response.text();
+      
+      // Extract caption tracks from ytInitialPlayerResponse
+      const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
+      if (!captionMatch) throw new Error('No caption tracks found in page');
+      
+      const tracks = JSON.parse(captionMatch[1]) as Array<{
+        baseUrl?: string;
+        langCode?: string;
+        kind?: string;
+      }>;
+      
+      if (!tracks.length) throw new Error('Empty caption tracks');
+      
+      // Prioritize: ASR English > English > ASR > first available
+      const asrEn = tracks.find(t => t.langCode === 'en' && t.kind === 'asr');
+      const en = tracks.find(t => t.langCode?.startsWith('en'));
+      const asr = tracks.find(t => t.kind === 'asr' && t.langCode);
+      const first = tracks[0];
+      
+      const chosen = asrEn || en || asr || first;
+      if (!chosen?.baseUrl) throw new Error('No suitable caption track');
+      
+      const langCode = chosen.langCode || 'en';
+      
+      // Fetch the actual transcript content
+      const transcriptUrl = chosen.baseUrl.includes('fmt=json')
+        ? chosen.baseUrl
+        : `${chosen.baseUrl}&fmt=json`;
+      
+      const transcriptResponse = await fetch(transcriptUrl, {
+        headers: { 'User-Agent': getRandomUserAgent() },
+      });
+      if (!transcriptResponse.ok) throw new Error(`Transcript content fetch failed: ${transcriptResponse.status}`);
+      
+      const captionData = await transcriptResponse.json() as {
+        events?: Array<{ segs?: Array<{ utf8?: string }> }>;
+      };
+      
+      if (!captionData.events?.length) throw new Error('Empty transcript data');
+      
+      const transcript = captionData.events
+        .map(e => e.segs?.map(s => s.utf8 || '').join('') || '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (!transcript) throw new Error('Empty transcript after processing');
+      
+      return { videoId, transcript, language: langCode };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   async fetchChannelMetadata(channelId: string): Promise<Record<string, unknown> | null> {
