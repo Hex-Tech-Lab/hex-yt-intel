@@ -116,12 +116,30 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
 
 ---
 
-## 5. SHARED COMMUNICATION PROTOCOL
+## 5. SHARED COMMUNICATION PROTOCOL (STRICT — MUST FOLLOW)
 
-**Before starting any task**:
-1. Read `.memory/AGENT_LEDGER.md` to avoid conflicting with active agents
-2. Append `[IN_PROGRESS]` line with intent, target files, and timestamp
-3. When done, update to `[DONE]`
+**MANDATORY: Strict Agent Protocol — follow at ALL times.**
+
+**Before starting any task OR subtask**:
+1. Read `.memory/AGENT_LEDGER.md` to check active status of ALL sibling agents
+2. Read `.memory/ADRS.md` for any active/in-progress ADRs that affect your work
+3. Post `[IN_PROGRESS]` with intent, target files, and timestamp
+4. Check with sibling agents for conflicting work before touching any shared file
+
+**During work**:
+- After EVERY subtask: re-read ledger for new entries from other agents
+- Before any cost, logic, or architecture decision: write an ADR entry and get user confirmation
+
+**After completing a task**:
+1. Update ledger entry to `[DONE]` with brief summary
+2. Notify sibling agents who may be affected
+3. Check ledger for any new entries that appeared during your task
+
+**ADR Requirement (MANDATORY)**:
+- ANY decision involving cost, logic changes, or architecture must be written as an ADR in `.memory/ADRS.md`
+- Format: `[YYYY-MM-DD] [OCT1|GCT1|...] [DECISION] Brief title. Rationale: ... Alternatives: ... Confirmed by user: yes/no`
+- Do NOT implement until user confirms the ADR
+- Exceptions: bug fixes, dependency bumps, test additions
 
 **Orchestrator "Sink" pattern**: For multi-stage workflows, the lead agent logs `[SINK: Workflow Name]`. Sibling agents log sub-tasks but only the Sink merges/closes.
 
