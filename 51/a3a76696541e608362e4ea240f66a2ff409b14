@@ -1,0 +1,49 @@
+.memory/AGENT_LEDGER.md
+  s_80951c19434a25::t_2c937dc0df83db 98
+  s_e6750ccfff01b1::t_6a3c938ad52d63 112
+  s_e6750ccfff01b1::t_a82767847d2509 106
+  s_11c98460731ee4::t_cfc97c1fd4568b 107-111
+scripts/quality-engine/rules.ts
+  s_e6750ccfff01b1::t_ddd026ffdee922 392,399-402,406-408
+  s_e6750ccfff01b1::t_82d5535a78bba6 362,369-391,393-398,403-405,409-476
+GEMINI.md
+  s_11c98460731ee4::t_717d84cd9e8af0 220-241
+scripts/verify-quality-engine.ts
+  s_e6750ccfff01b1::t_a00d11fed5df72 40-44
+  s_e6750ccfff01b1::t_90937d776bdd23 15-20
+AGENTS.md
+  s_e6750ccfff01b1::t_72830baef5d597 138-149
+  s_11c98460731ee4::t_a632c7e07bffc8 176-181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "51a3a76696541e608362e4ea240f66a2ff409b14",
+  "prompts": {},
+  "sessions": {
+    "s_11c98460731ee4": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "96776107-ed02-42bf-a55c-dc06027f006f",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_80951c19434a25": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e4634d0a-dc78-4a11-bb2f-c383eb5fbf9d",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
