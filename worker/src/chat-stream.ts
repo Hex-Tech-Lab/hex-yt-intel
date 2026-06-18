@@ -224,12 +224,14 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
 
   // Support both production secret and local/preview fallback secret
   const secretsToTry = [secret];
-  // ALWAYS try DEV_HMAC_SECRET if provided, even in production mode
-  if (c.env.DEV_HMAC_SECRET) {
+  // Only try DEV_HMAC_SECRET in non-production environments
+  if (c.env.NODE_ENV !== "production" && c.env.DEV_HMAC_SECRET) {
     secretsToTry.push(c.env.DEV_HMAC_SECRET);
   }
-  // Hardcoded recovery fallback for unconfigured preview branches
-  secretsToTry.push('dev-hmac-secret-123');
+  // Hardcoded recovery fallback for unconfigured preview branches (non-production only)
+  if (c.env.NODE_ENV !== "production") {
+    secretsToTry.push('dev-hmac-secret-123');
+  }
 
   for (const s of secretsToTry) {
     if (!s) continue;
@@ -300,19 +302,19 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
 
       const atomicPersist = createAtomicPersist({
         hasContent: () => full.length > 0,
-        persist: async () => {
+        persist: async (status) => {
           if (persisted || persistAttempted) return false;
           persistAttempted = true;
           const contentSig = await hmacHex(activeSecret, full);
           const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
 
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 10_000);
+          const persistController = new AbortController();
+          const timeout = setTimeout(() => persistController.abort(), 10_000);
 
-          const onAbort = () => controller.abort();
+          const onAbort = () => persistController.abort();
           const signal = c.req.raw.signal;
           if (signal.aborted) {
-            controller.abort();
+            persistController.abort();
           } else {
             signal.addEventListener("abort", onAbort, { once: true });
           }
@@ -326,8 +328,9 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
                 userId: req.userId,
                 content: full,
                 contentSig,
+                status,
               }),
-              signal: controller.signal,
+              signal: persistController.signal,
             });
             if (res.ok) persisted = true;
             return persisted;
