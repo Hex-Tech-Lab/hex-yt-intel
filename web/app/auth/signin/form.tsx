@@ -1,17 +1,20 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { useState, useTransition, lazy, Suspense } from 'react';
+
+// Lazy-load Supabase client to avoid blocking initial render
+const supabasePromise = import('@/utils/supabase/client').then(m => m.createClient());
 
 export default function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const supabase = useMemo(() => createClient(), []);
 
   const handleSupabaseAuth = () => {
     setError(null);
     startTransition(async () => {
       try {
+        const createClient = await supabasePromise;
+        const supabase = createClient();
         const searchParams = new URLSearchParams(window.location.search);
         const nextTarget = searchParams.get('next') || '/dashboard';
         const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;

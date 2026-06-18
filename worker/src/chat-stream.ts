@@ -334,7 +334,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           } catch (e) {
             const isAbort = e instanceof DOMException && e.name === "AbortError";
             const reason = isAbort && signal.aborted ? "client_disconnect" : isAbort ? "persist_timeout" : "persist_error";
-            console.error("[chat-stream]", { reason, videoId: req.conversationId });
+            console.error("[chat-stream]", { reason, conversationId: req.conversationId });
             return false;
           } finally {
             clearTimeout(timeout);
