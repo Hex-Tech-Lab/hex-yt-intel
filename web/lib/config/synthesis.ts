@@ -10,10 +10,10 @@ export const TOTAL_DIMENSIONS = 11;
 export const TOTAL_STREAMS = 4;
 
 export const STREAM_BUNDLES: number[][] = [
-  [1, 2, 3],
-  [4, 5, 6],
-  [7, 8],
-  [9, 10, 11],
+  [1],
+  [2, 4, 6, 8],
+  [5, 7, 9, 10],
+  [3, 11],
 ];
 
 /**
