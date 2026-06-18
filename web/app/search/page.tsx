@@ -8,6 +8,16 @@ import { useSearch } from '@/hooks/useSearch';
 import SearchFilters from '@/components/search/filters';
 import ResultCard from '@/components/search/result-card';
 
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  if (typeof document === 'undefined') return;
+  const el = document.createElement('div');
+  el.textContent = message;
+  el.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 18px;border-radius:10px;font:600 12px/1.4 var(--font-mono);pointer-events:none;opacity:0;transition:opacity .2s;color:var(--ink);background:${type === 'error' ? 'rgba(239,68,68,0.9)' : 'rgba(6,182,212,0.9)'};backdrop-filter:blur(8px);`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
+}
+
 /**
  * /app/search/page.tsx
  *
@@ -81,9 +91,9 @@ export default function SearchPage() {
     const url = `${window.location.origin}/analyses/${resultId}`;
     try {
       await navigator.clipboard.writeText(url);
-      alert('Link copied to clipboard!');
+      showToast('Link copied to clipboard!');
     } catch {
-      alert('Failed to copy link');
+      showToast('Failed to copy link', 'error');
     }
   };
 
