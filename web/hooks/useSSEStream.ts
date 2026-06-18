@@ -168,7 +168,7 @@ export function useSSEStream() {
             }
           };
 
-          const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string, onError: (i: number, error: string) => void) => {
+          const runSingleStream = async (i: number, dimensions: number[], adapter: SynthesisStreamAdapter, currentSignal: AbortSignal, job: any, safeTimezone: string) => {
             const streamPayload: WorkerStreamRequest = {
               videoId: job.videoId,
               analysisId: job.analysisId || job.id,
@@ -301,7 +301,7 @@ export function useSSEStream() {
 
             store.logInfo(`Connecting to Cloudflare edge worker for parallel synthesis (${TOTAL_STREAMS} streams)...`);
             const streamFetches = adapters.map((adapter, i) =>
-              runSingleStream(i, dimensionsList[i]!, adapter, currentSignal, job, safeTimezone, handleStreamError)
+              runSingleStream(i, dimensionsList[i]!, adapter, currentSignal, job, safeTimezone)
             );
             await Promise.all(
               streamFetches.map((p, idx) => p.catch((err) => {

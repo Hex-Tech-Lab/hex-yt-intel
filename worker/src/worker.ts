@@ -452,7 +452,7 @@ app.post("/analyze-llm-stream", async (c) => {
   }
 
   const transcriptText = transcript || '';
-  if (transcriptText.includes('Transcript unavailable') || transcriptText.includes('content ingestion failed')) {
+  if (!transcriptText.trim() || transcriptText.includes('Transcript unavailable') || transcriptText.includes('content ingestion failed')) {
     return c.json({
       error: 'No transcript available',
       details: 'Transcript could not be fetched from any source. LLM analysis skipped to avoid unnecessary costs.',
