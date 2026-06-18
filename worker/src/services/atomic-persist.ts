@@ -25,16 +25,17 @@ export function createAtomicPersist(options: AtomicPersistOptions): { flush: () 
   };
 
   options.signal.addEventListener('abort', () => {
-    // Check if already aborted before registering
-    if (options.signal.aborted) return;
-    if (result === 'none') {
+    // When abort fires, signal.aborted is always true - that's expected.
+    // We want to persist on abort if we haven't already started or succeeded.
+    if (result === 'none' || result === 'failed') {
       options.waitUntil(persistFn('interrupted'));
     }
   }, { once: true });
 
   return {
     flush: () => {
-      if (result === 'none') {
+      // Allow retry after failure, but prevent double-run if already running or succeeded
+      if (result === 'none' || result === 'failed') {
         options.waitUntil(persistFn('completed'));
       }
     },
