@@ -430,10 +430,18 @@ app.post("/analyze-llm-stream", async (c) => {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${req.videoId}`);
     try {
       const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY);
-      const result = await extractor.fetch(req.videoId);
+      const [result, channelMeta] = await Promise.all([
+        extractor.fetch(req.videoId),
+        req.metadata?.channelId && !req.metadata?.channelTitle
+          ? extractor.fetchChannelMetadata(req.metadata.channelId).catch(() => null)
+          : Promise.resolve(null),
+      ]);
       if (result.transcript && result.transcript.trim().length > 0 && !result.transcript.includes('Transcript unavailable')) {
         transcript = result.transcript;
         console.info(`[analyze-llm-stream] Fetch successful for ${req.videoId}`);
+      }
+      if (channelMeta) {
+        console.info(`[analyze-llm-stream] Channel metadata enriched for ${req.metadata?.channelId}`);
       }
     } catch (e) {
       console.error(`[analyze-llm-stream] Fetch failed for ${req.videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
