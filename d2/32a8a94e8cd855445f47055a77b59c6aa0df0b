@@ -1,0 +1,24 @@
+web/hooks/useSSEStream.ts
+  s_e6750ccfff01b1::t_c5623799fce994 171
+  s_e6750ccfff01b1::t_73a64f7f417c94 304
+.memory/AGENT_LEDGER.md
+  s_e6750ccfff01b1::t_e4206ca0a56920 130
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_30abd448ac6ab2 455
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "d232a8a94e8cd855445f47055a77b59c6aa0df0b",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
