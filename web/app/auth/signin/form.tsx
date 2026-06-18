@@ -1,35 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { createClient } from '@/utils/supabase/client';
 
 export default function SignInForm() {
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const supabase = useMemo(() => createClient(), []);
 
-  const handleSupabaseAuth = async (oauthProvider: 'google') => {
-    setIsLoading(true);
+  const handleSupabaseAuth = () => {
     setError(null);
-    try {
-      const supabase = createClient();
-      const searchParams = new URLSearchParams(window.location.search);
-      const nextTarget = searchParams.get('next') || '/dashboard';
-      const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: oauthProvider,
-        options: {
-          redirectTo: callbackUrl,
-        },
-      });
-      if (error) {
-        setError(error.message);
+    startTransition(async () => {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const nextTarget = searchParams.get('next') || '/dashboard';
+        const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
+        
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: callbackUrl },
+        });
+        if (error) setError(error.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Authentication failed');
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   return (
@@ -50,11 +45,11 @@ export default function SignInForm() {
           )}
 
           <button
-            onClick={() => handleSupabaseAuth('google')}
-            disabled={isLoading}
+            onClick={handleSupabaseAuth}
+            disabled={isPending}
             className="w-full rounded-lg bg-surface px-4 py-2 text-gray-900 font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
-            {isLoading ? 'Signing in...' : 'Sign in with Google'}
+            {isPending ? 'Signing in...' : 'Sign in with Google'}
           </button>
 
           <div className="mt-4 text-center text-sm text-gray-500">
