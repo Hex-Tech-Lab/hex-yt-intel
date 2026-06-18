@@ -1,8 +1,3 @@
-export interface ChapterMarker {
-  timeSeconds: number;
-  label: string;
-}
-
 export interface VideoPlayerCallbacks {
   onReady?: () => void;
   onError?: (error: Error) => void;
