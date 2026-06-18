@@ -1,0 +1,24 @@
+web/app/auth/signin/form.tsx
+  s_e6750ccfff01b1::t_52769385c965bd 3,8-9,11,13-25,27,48-49,52
+web/store/useChatStore.ts
+  s_e6750ccfff01b1::t_e66ae3f32cbfd5 297-298
+  s_e6750ccfff01b1::t_a62e66d427be52 217-218
+web/components/templates/console/ChatDock.tsx
+  s_e6750ccfff01b1::t_f039ee2ee1d44d 77-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "65c8e4d67b45f998bc7dd0fbd27899562ae5494a",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
