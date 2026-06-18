@@ -8,11 +8,14 @@ vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "producti
 name = "yt-intel"
 vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "production", APP_URL = "https://yt-intel.getmytestdrive.com" }
 # Production secrets (deploy via wrangler secret put):
-# STREAM_HMAC_SECRET - shared with Vercel; gates direct streaming + signs persisted markdown
-# YOUTUBE_API_KEY - YouTube Data API key for transcript extraction
-# CLOUDFLARE_SECRET_TOKEN - Internal auth token for worker endpoints
-# RESIDENTIAL_PROXY_URL - Bright Data proxy URL (format: user:pass@host:port)
-# OPENROUTER_API_KEY - OpenRouter API key for LLM analysis (format: sk-or-v1-...)
+#   wrangler secret put RESIDENTIAL_PROXY_URL --env production
+#   wrangler secret put STREAM_HMAC_SECRET --env production
+#   wrangler secret put YOUTUBE_API_KEY --env production
+#   wrangler secret put CLOUDFLARE_SECRET_TOKEN --env production
+#   wrangler secret put OPENROUTER_API_KEY --env production
+#
+# RESIDENTIAL_PROXY_URL set via `wrangler secret put RESIDENTIAL_PROXY_URL --env production`
+# Format: brd-customer-<CUSTOMER_ID>-zone-<ZONE>:<PASSWORD>@brd.superproxy.io:33335
 
 [build]
 command = "pnpm run build"
@@ -26,9 +29,7 @@ command = "pnpm run build"
 #   wrangler secret put OPENROUTER_API_KEY --env production
 #   wrangler secret put UPSTASH_REDIS_REST_URL --env production
 #   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env production
-#
-# Current RESIDENTIAL_PROXY_URL value (Bright Data - with authentication):
-#   brd-customer-hl_da92bd7c-zone-yt_intel_prx1:qa0ffc1kewsa@brd.superproxy.io:33335
+#   wrangler secret put DECODO_API_KEY --env production
 #
 # Upstash KV REST API endpoints (from Upstash console):
 #   UPSTASH_REDIS_REST_URL: https://your-project-region.upstash.io

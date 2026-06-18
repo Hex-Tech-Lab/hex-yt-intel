@@ -35,6 +35,7 @@ type Env = {
   ALLOWED_APP_ORIGINS?: string;
   NODE_ENV?: string;
   DEV_HMAC_SECRET?: string;
+  DECODO_API_KEY?: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -245,7 +246,7 @@ app.post("/fetch-transcript", async (c) => {
   }
 
   try {
-    const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL);
+    const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY);
     const result = await extractor.fetch(videoId);
 
     return c.json(
@@ -398,7 +399,7 @@ app.post("/analyze-llm-stream", async (c) => {
     sig: string;
     exp: number;
     appUrl?: string;
-    chunkIndex?: number;
+    dimensions?: number[];
     totalChunks?: number;
   }
 
@@ -428,11 +429,19 @@ app.post("/analyze-llm-stream", async (c) => {
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${req.videoId}`);
     try {
-      const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL);
-      const result = await extractor.fetch(req.videoId);
+      const extractor = new TranscriptExtractor(c.env.RESIDENTIAL_PROXY_URL, c.env.DECODO_API_KEY);
+      const [result, channelMeta] = await Promise.all([
+        extractor.fetch(req.videoId),
+        req.metadata?.channelId && !req.metadata?.channelTitle
+          ? extractor.fetchChannelMetadata(req.metadata.channelId).catch(() => null)
+          : Promise.resolve(null),
+      ]);
       if (result.transcript && result.transcript.trim().length > 0 && !result.transcript.includes('Transcript unavailable')) {
         transcript = result.transcript;
         console.info(`[analyze-llm-stream] Fetch successful for ${req.videoId}`);
+      }
+      if (channelMeta) {
+        console.info(`[analyze-llm-stream] Channel metadata enriched for ${req.metadata?.channelId}`);
       }
     } catch (e) {
       console.error(`[analyze-llm-stream] Fetch failed for ${req.videoId}: ${e instanceof Error ? e.message : 'Unknown'}`);
@@ -440,6 +449,14 @@ app.post("/analyze-llm-stream", async (c) => {
         transcript = '[Transcript unavailable for this video - content ingestion failed across all available sources]';
       }
     }
+  }
+
+  const transcriptText = transcript || '';
+  if (!transcriptText.trim() || transcriptText.includes('Transcript unavailable') || transcriptText.includes('content ingestion failed')) {
+    return c.json({
+      error: 'No transcript available',
+      details: 'Transcript could not be fetched from any source. LLM analysis skipped to avoid unnecessary costs.',
+    }, 400);
   }
 
   if (!secret || !apiKey) {
@@ -469,7 +486,8 @@ app.post("/analyze-llm-stream", async (c) => {
   for (const s of secretsToTry) {
     if (!s) continue;
     const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
+    const dimStr = JSON.stringify(req.dimensions ?? []);
+    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}:${dimStr}`;
     const expected = await hmacHex(s, msg);
     
     if (timingSafeEqualHex(expected, req.sig)) {
@@ -482,7 +500,8 @@ app.post("/analyze-llm-stream", async (c) => {
   if (!isTokenValid) {
     const isPreview = c.env.NODE_ENV !== 'production';
     const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}`;
+    const dimStr = JSON.stringify(req.dimensions ?? []);
+    const msg = `${req.videoId}:${req.analysisId}:${req.exp}:${modelStr}:${dimStr}`;
     
     if (isPreview) {
       console.warn('[analyze-llm-stream] HMAC Mismatch Diagnostic:', {
@@ -567,7 +586,7 @@ app.post("/analyze-llm-stream", async (c) => {
             transcript: transcript || '',
             persona: req.persona,
             timezone: req.timezone,
-            chunkIndex: req.chunkIndex,
+            dimensions: req.dimensions,
           },
           {
             onDelta: (delta) => {

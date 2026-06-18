@@ -43,8 +43,8 @@ export interface EngineContext {
   videoId?: string;
   /** Optional system prompt override (legacy /analyze-llm). Falls back to UCIS v5.1. */
   systemPrompt?: string;
-  /** Optional chunk index (1, 2, 3) for multi-stream execution. */
-  chunkIndex?: number;
+  /** Optional dimension bundle for multi-stream execution. */
+  dimensions?: number[];
 }
 
 /** Structured lifecycle event emitted during the cascade. */

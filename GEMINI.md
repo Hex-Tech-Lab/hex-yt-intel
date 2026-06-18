@@ -218,3 +218,24 @@ Instead of full-blown clean architecture, we use a streamlined version:
 
 ## 10. AUTONOMOUS WORKFLOW
 - **Standing Instruction**: No man in the middle. I am the sole agent, the user is the orchestrator. I act autonomously, manage all tasks, and execute all work without needing intermediate approval unless critically underspecified.
+- **Set Agent Protocol**: Always follow the set agent protocol without me reminding. Inform others and get updates from others before and after every task and during with every subtask.
+
+## 11. GCT2 GUARDRAILS & PARALLEL WORKFLOW (PERMANENT)
+
+### ⚓ HEXAGONAL & QUALITY ENGINE GUARDRAILS (MANDATORY)
+1. **HEXAGONAL PORT BOUNDARY**: Isolate core system business decisions entirely inside domain services; exclude third-party connectivity details from mapping adapters.
+2. **END-TO-END DATAFLOW VALIDATION**: Ensure that text processing operations execute platform-agnostic string separators (e.g., `/\r?\n/`) to support multi-environment usage.
+3. **QUALITY GATE STACK**: Confirm that the modified code layout achieves a zero exit status code during local validation scripts before pushing updates.
+
+### SCHEDULE & PARALLEL WORKFLOW
+- Orchestrate parallel agents. Estimate effort + file/LOC deltas.
+- If >10m, run ≤5 concurrent agents; as one finishes, spawn another and rebalance remaining tasks for max throughput.
+- Follow the set agent protocol. Ensure no toe stepping and no work repeated.
+
+### DOS & DON'TS
+- DO: Enforce strict Separation of Concerns (SoC).
+- DO: Implement elaborate list controls (filtering, multi-attribute sorting, paging) natively.
+- DO: Utilize staggered CSS entry and active "flare" animations for streaming data.
+- DON'T: Truncate this prompt structure or omit guardrails.
+- DON'T: Display hollow data wrappers or empty states in unexecuted dashboards.
+- DON'T: Mix static logic with dynamic LLM execution.

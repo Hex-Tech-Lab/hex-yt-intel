@@ -116,18 +116,48 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
 
 ---
 
-## 5. SHARED COMMUNICATION PROTOCOL
+## 5. SHARED COMMUNICATION PROTOCOL (STRICT — MUST FOLLOW)
 
-**Before starting any task**:
-1. Read `.memory/AGENT_LEDGER.md` to avoid conflicting with active agents
-2. Append `[IN_PROGRESS]` line with intent, target files, and timestamp
-3. When done, update to `[DONE]`
+**MANDATORY: Strict Agent Protocol — follow at ALL times.**
+
+**Before starting any task OR subtask**:
+1. Read `.memory/AGENT_LEDGER.md` to check active status of ALL sibling agents
+2. Read `.memory/ADRS.md` for any active/in-progress ADRs that affect your work
+3. Post `[IN_PROGRESS]` with intent, target files, and timestamp
+4. Check with sibling agents for conflicting work before touching any shared file
+
+**During work**:
+- After EVERY subtask: re-read ledger for new entries from other agents
+- Before any cost, logic, or architecture decision: write an ADR entry and get user confirmation
+
+**After completing a task**:
+1. Update ledger entry to `[DONE]` with brief summary
+2. Notify sibling agents who may be affected
+3. Check ledger for any new entries that appeared during your task
+
+**Cross-Agent Corrections (Two-Way Communication)**:
+- If Agent A finds an issue in Agent B's work: add `[NOTE for AgentB]` to the ledger with: file, issue, fix needed
+- Agent B MUST respond with `[ACK AgentA]` or `[DISPUTE AgentA]` once reviewed
+- The original poster clears the note with `[RESOLVED AgentA]` only after Agent B confirms or the issue is fixed
+- If unresolved after 2 rounds, escalate to `[SINK: escalation]` for the orchestrator
+- Format:
+  ```
+  [2026-06-18T12:00+03:00] [OCT2] [NOTE for GCT1] worker/foo.ts:15 – function bar() has unused param. Fix: remove or prefix with _. Confirmed by owner? no
+  [2026-06-18T12:30+03:00] [GCT1] [ACK OCT2] worker/foo.ts:15 – fixed in commit abc123.
+  [2026-06-18T12:31+03:00] [OCT2] [RESOLVED OCT2] worker/foo.ts:15 – confirmed.
+  ```
+
+**ADR Requirement (MANDATORY)**:
+- ANY decision involving cost, logic changes, or architecture must be written as an ADR in `.memory/ADRS.md`
+- Format: `[YYYY-MM-DD] [OCT1|GCT1|...] [DECISION] Brief title. Rationale: ... Alternatives: ... Confirmed by user: yes/no`
+- Do NOT implement until user confirms the ADR
+- Exceptions: bug fixes, dependency bumps, test additions
 
 **Orchestrator "Sink" pattern**: For multi-stage workflows, the lead agent logs `[SINK: Workflow Name]`. Sibling agents log sub-tasks but only the Sink merges/closes.
 
 ---
 
-## 5. ESLint & FORMATTING
+## 6. ESLint & FORMATTING
 
 - ESLint 8.x (`web/.eslintrc.json`) — extends `next/core-web-vitals` + `@typescript-eslint/recommended`
   - `@typescript-eslint/no-unused-vars`: warn
@@ -137,9 +167,15 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
 
 ---
 
-## 6. TESTING
+## 7. TESTING
 
 - **Primary**: Playwright 1.60 — `web/tests/` (E2E, Chromium only, full parallel)
 - **Secondary**: Vitest 4.x — `web/lib/__tests__/` (unit tests, no dedicated config yet)
 - Playwright config auto-boots `pnpm dev` locally, skips when `DEPLOYMENT_URL` is set
 - Test helper: `vitest run` works via tsconfig defaults
+
+---
+
+## 8. GCT2 AGENT PROTOCOL & SCHEDULE
+- **Protocol**: Always follow the set agent protocol without being reminded. Inform others and get updates from others before and after every task and during with every subtask.
+- **Parallel Workflow**: Orchestrate parallel agents. Estimate effort + file/LOC deltas. If >10m, run ≤5 concurrent agents; as one finishes, spawn another and rebalance remaining tasks for max throughput. Ensure no toe stepping and no work repeated.
