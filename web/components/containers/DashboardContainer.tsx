@@ -172,7 +172,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // Define Right Panel Accordion Items
   const handleExpandPanel = useCallback((id: string, mode: string) => {
     startTransition(() => {
-      setExpandedPanel(prev => prev?.id === id && prev?.mode === mode ? null : { id: id as any, mode: mode as any });
+      setExpandedPanel(prev => prev?.id === id && prev?.mode === mode ? null : { id: id as 'insights' | 'knowledge-graph' | 'word-cloud' | 'mind-map', mode: mode as 'vertical' | 'left' | 'diagonal' });
     });
   }, []);
 
@@ -184,7 +184,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       content: (
         <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} insights={insights} insightsLoading={insightsLoading} />
       ),
-      onAction: (action: any) => {
+      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('insights');
         else if (action === 'export') handlePanelExport('insights');
         else handleExpandPanel('insights', action);
@@ -196,7 +196,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       content: (
         <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact={true} />
       ),
-      onAction: (action: any) => {
+      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('knowledge-graph');
         else if (action === 'export') handlePanelExport('knowledge-graph');
         else handleExpandPanel('knowledge-graph', action);
@@ -208,7 +208,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       content: (
         <WordCloud graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} />
       ),
-      onAction: (action: any) => {
+      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('word-cloud');
         else if (action === 'export') handlePanelExport('word-cloud');
         else handleExpandPanel('word-cloud', action);
@@ -220,7 +220,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       content: (
         <MindMap graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} />
       ),
-      onAction: (action: any) => {
+      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('mind-map');
         else if (action === 'export') handlePanelExport('mind-map');
         else handleExpandPanel('mind-map', action);
