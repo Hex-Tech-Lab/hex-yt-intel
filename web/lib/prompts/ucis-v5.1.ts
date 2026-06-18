@@ -509,7 +509,7 @@ For Dimension 11, compute:
 {
   "schemaVersion": "2.0",
   "persona": {
-    "primary": { "id": "creator|critic|analyst|educator|philosopher", "label": "...", "weight": 0.5 },
+    "primary": { "id": "creator|indieMaker|consultant|researcher|productManager", "label": "...", "weight": 0.5 },
     "secondary": { "id": "...", "label": "...", "weight": 0.25 },
     "tertiary": { "id": "...", "label": "...", "weight": 0.15 },
     "cognitiveLenses": ["First Principles", "Systems Thinking"],
@@ -541,12 +541,12 @@ For Dimension 11, compute:
     "personaOptimised": true,
     "recommendation": "highly_recommended|recommended|conditional|skip"
   },
-  "monetizationVerdict": {
+    "monetizationVerdict": {
     "creator": "Highly Viable – ...",
-    "critic": "Viable – ...",
-    "analyst": "Conditional – ...",
-    "educator": "Conditional – ...",
-    "philosopher": "Conditional – ..."
+    "indieMaker": "Viable – ...",
+    "consultant": "Conditional – ...",
+    "researcher": "Conditional – ...",
+    "productManager": "Conditional – ..."
   }
 }
 \`\`\`

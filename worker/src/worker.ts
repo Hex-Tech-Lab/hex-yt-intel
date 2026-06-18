@@ -14,6 +14,7 @@ import { LLMCascade } from "./services/LLMCascade";
 import { ValidationService } from "./services/ValidationService";
 import { UpstashCacheAdapter } from "./services/UpstashCacheAdapter";
 import { PersistService } from "./services/PersistService";
+import { createAtomicPersist } from "./services/atomic-persist";
 import { hmacHex } from "./crypto";
 import type { ReasoningEnginePort } from "./ports/ReasoningEnginePort";
 
@@ -543,12 +544,11 @@ app.post("/analyze-llm-stream", async (c) => {
 
   const persistService = new PersistService();
 
-  const persistFn = async (status: 'completed' | 'interrupted') => {
-    if (persisted || persisting || !finalText) return;
-    persisting = true;
-    try {
+  const atomicPersist = createAtomicPersist({
+    hasContent: () => finalText.length > 0,
+    persist: async (status) => {
       const appUrl = req.appUrl || c.env.APP_URL || 'https://yt-intel.getmytestdrive.com';
-      const ok = await persistService.persist({
+      return persistService.persist({
         analysisId: req.analysisId,
         videoId: req.videoId,
         finalText,
@@ -558,17 +558,9 @@ app.post("/analyze-llm-stream", async (c) => {
         appUrl,
         validate12D: (text: string) => engine.validate12D(text),
       });
-      persisted = ok;
-    } finally {
-      persisting = false;
-    }
-  };
-
-  // Detect browser disconnect immediately and save partial progress.
-  c.req.raw.signal.addEventListener('abort', () => {
-    if (!persisted && !persisting) {
-      c.executionCtx.waitUntil(persistFn('interrupted'));
-    }
+    },
+    signal: c.req.raw.signal,
+    waitUntil: (p) => c.executionCtx.waitUntil(p),
   });
 
   const stream = new ReadableStream({
@@ -615,10 +607,7 @@ app.post("/analyze-llm-stream", async (c) => {
       } catch (error) {
         send({ type: 'error', error: error instanceof Error ? error.message : 'stream failed' });
       } finally {
-        // Last-ditch persistence on success or crash (if not already triggered by abort).
-        if (finalText && !persisted) {
-          c.executionCtx.waitUntil(persistFn('completed'));
-        }
+        atomicPersist.flush();
         controller.close();
       }
     },

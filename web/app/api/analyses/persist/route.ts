@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
         const stitchedPayload: UCISPayloadV2 = {
           schemaVersion: '2.0',
           persona: stitchedPersona || {
-            primary: { id: 'analyst', label: 'Analyst', weight: 1.0 },
+            primary: { id: 'consultant', label: 'Consultant', weight: 1.0 },
             cognitiveLenses: [],
             selectionRationale: ''
           },
