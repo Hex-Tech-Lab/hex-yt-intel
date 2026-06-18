@@ -35,7 +35,7 @@ function newPayload(payload: Partial<UCISPayload>, now: string): UCISPayload {
     title: payload.title || '',
     analysisAt: payload.analysisAt || now,
     model: payload.model || 'edge-stream',
-    detectedPersona: payload.detectedPersona || 'analyst',
+    detectedPersona: payload.detectedPersona || 'consultant',
     dimensions: payload.dimensions || {},
     validation: payload.validation || { passed: false, errors: [], warnings: [] },
     streaming: payload.streaming || { started: now, interrupted: false, dimensionsReceived: [] },

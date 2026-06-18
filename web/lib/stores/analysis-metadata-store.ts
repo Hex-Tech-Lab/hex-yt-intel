@@ -28,7 +28,7 @@ export interface AnalysisMetadataStore {
 }
 
 export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get) => ({
-  activePersona: 'analyst',
+  activePersona: 'consultant',
   personaConfig: null,
   knowledgeGraph: null,
   classification: null,
@@ -86,7 +86,7 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
 
   reset: () => {
     set({
-      activePersona: 'analyst',
+      activePersona: 'consultant',
       personaConfig: null,
       knowledgeGraph: null,
       classification: null,

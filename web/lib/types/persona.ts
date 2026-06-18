@@ -7,7 +7,7 @@
 
 import type { UCISDimension } from './dimension';
 
-export type PersonaId = 'creator' | 'critic' | 'analyst' | 'educator' | 'philosopher';
+export type PersonaId = 'creator' | 'indieMaker' | 'consultant' | 'researcher' | 'productManager';
 
 /**
  * Persona-specific dimension projection
@@ -18,10 +18,10 @@ export type PersonaId = 'creator' | 'critic' | 'analyst' | 'educator' | 'philoso
 // picture: objects, market, financials, SEO, search, everything).
 export const PERSONA_DIMENSIONS: Record<PersonaId, number[]> = {
   creator: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], // P1 Content Creator — everything
-  critic: [1, 3, 5, 6, 7, 11], // P2 Indie Maker — build, core, comparative, implement, monetize
-  analyst: [1, 2, 5, 8, 10, 11], // P3 Consultant — provenance, core, semantic, credibility, yield
-  educator: [1, 4, 5, 8, 9], // P4 Researcher — psychological, core, semantic, forward
-  philosopher: [1, 3, 5, 6, 9], // P5 Product Manager — architecture, core, comparative, forward
+  indieMaker: [1, 3, 5, 6, 7, 11], // P2 Indie Maker — build, core, comparative, implement, monetize
+  consultant: [1, 2, 5, 8, 10, 11], // P3 Consultant — provenance, core, semantic, credibility, yield
+  researcher: [1, 4, 5, 8, 9], // P4 Researcher — psychological, core, semantic, forward
+  productManager: [1, 3, 5, 6, 9], // P5 Product Manager — architecture, core, comparative, forward
 };
 
 /**
@@ -62,5 +62,5 @@ export interface PersonaConfigV2 {
  * Validate that a persona ID is valid
  */
 export function isValidPersona(persona: unknown): persona is PersonaId {
-  return ['creator', 'critic', 'analyst', 'educator', 'philosopher'].includes(String(persona));
+  return ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'].includes(String(persona));
 }

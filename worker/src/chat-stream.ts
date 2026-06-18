@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CHAT_CASCADE } from "../../web/lib/config/cascade";
 import { translateModelId } from "./services/model-id-translator";
+import { createAtomicPersist } from "./services/atomic-persist";
 
 /**
  * Direct browser->worker chat streaming. Mirrors /analyze-llm-stream: the Vercel
@@ -294,22 +295,37 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         send({ type: "delta", content: full });
       }
 
-      // Persist the assistant turn S2S so Postgres stays the source of truth. The
-      // content signature proves to Vercel that this text came from the worker.
-      const contentSig = await hmacHex(activeSecret, full);
-      const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
-      c.executionCtx.waitUntil(
-        fetch(`${appUrl}/api/chat/persist`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversationId: req.conversationId,
-            userId: req.userId,
-            content: full,
-            contentSig,
-          }),
-        }).catch((e) => console.error("[chat-stream] persist failed", e)),
-      );
+      let persisted = false;
+
+      const atomicPersist = createAtomicPersist({
+        hasContent: () => full.length > 0,
+        persist: async () => {
+          if (persisted) return false;
+          const contentSig = await hmacHex(activeSecret, full);
+          const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
+          try {
+            const res = await fetch(`${appUrl}/api/chat/persist`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                conversationId: req.conversationId,
+                userId: req.userId,
+                content: full,
+                contentSig,
+              }),
+            });
+            if (res.ok) persisted = true;
+            return persisted;
+          } catch (e) {
+            console.error("[chat-stream] persist failed", e);
+            return false;
+          }
+        },
+        signal: c.req.raw.signal,
+        waitUntil: (p) => c.executionCtx.waitUntil(p),
+      });
+
+      atomicPersist.flush();
 
       send({ type: "done" });
       controller.close();
