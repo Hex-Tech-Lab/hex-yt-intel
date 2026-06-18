@@ -1,0 +1,23 @@
+worker/src/worker.ts
+  s_e6750ccfff01b1::t_1884f316053de8 433-438,443-444
+.memory/AGENT_LEDGER.md
+  s_e6750ccfff01b1::t_6f74e32eb0cc69 115-122
+  s_e6750ccfff01b1::t_34f12c0fa2bf51 123-124
+  s_e6750ccfff01b1::t_c170a0324396e9 129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "1627a499c88607a859b5715bc994189f44756d9c",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
