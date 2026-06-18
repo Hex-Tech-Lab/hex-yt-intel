@@ -273,15 +273,13 @@ export class SynthesisStreamAdapter {
     };
 
     const reconstructed = this.reconstructMarkdown(stitchedPayload);
-    const prevMarkdown = store.analysis.analysis_markdown || '';
 
-    // Enforce monotonic updates: only advance or append, never clear out valid existing attributes
-    if (reconstructed.length >= prevMarkdown.length || prevMarkdown === '') {
-      store.setAnalysis({
-        ...store.analysis,
-        analysis_markdown: reconstructed,
-      });
-    }
+    // Allow the reconstructed markdown to replace the previous content unconditionally.
+    // During a fallback reset, a different model may produce shorter but valid output.
+    store.setAnalysis({
+      ...store.analysis,
+      analysis_markdown: reconstructed,
+    });
   }
 
   /**

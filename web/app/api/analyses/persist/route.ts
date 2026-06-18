@@ -176,6 +176,19 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Grace-period fallback: if the oldest chunk is >30s old and we have at
+      // least one completed chunk, stitch what we have. This prevents data
+      // from being orphaned when the frontend aborts mid-stream.
+      if (!allChunksCompleted && completedChunks.length > 0) {
+        const now = Date.now();
+        const oldestTime = Math.min(
+          ...completedChunks.map((c: any) => new Date(c.updated_at).getTime())
+        );
+        if (now - oldestTime >= 30000) {
+          allChunksCompleted = true;
+        }
+      }
+
       if (allChunksCompleted) {
         // Stitch the payloads together
         const chunkMap = new Map<number, any>();
