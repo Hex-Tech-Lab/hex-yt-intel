@@ -1,0 +1,25 @@
+worker/src/services/TranscriptExtractor.ts
+  s_e6750ccfff01b1::t_8d30be963d2a9d 75-89
+scripts/verify-quality-engine.ts
+  s_e6750ccfff01b1::t_0ce203dd4b37df 64
+.memory/AGENT_LEDGER.md
+  s_e6750ccfff01b1::t_c824ce8d51d022 112-114
+worker/wrangler.toml
+  s_e6750ccfff01b1::t_72353ed55518b2 17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "d0de9beb8e721de3f3641cc944b94d98a67d6205",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
