@@ -156,7 +156,7 @@ export interface PersistencePort {
 
   findAnalysisChunks(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: any; status: string }> | null>;
+  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: any; status: string; updated_at: string }> | null>;
 
   /**
    * Find analysis by share token for public view.
