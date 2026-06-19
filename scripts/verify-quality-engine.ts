@@ -28,7 +28,18 @@ import {
     PersistAbortScopeRule,
     UnsafePropertyAccessRule,
     StartTransitionWrappingRule,
-    TranscriptUnsafeAccessRule
+    TranscriptUnsafeAccessRule,
+    EnvPlaceholderNamespaceRule,
+    SyncImportBeforeRedirectRule,
+    QuorumTimeoutCompletionRule,
+    ModuleLevelDynamicImportRule,
+    ToastAccessibilityRule,
+    SwallowedErrorRule,
+    StaleStateResetRule,
+    HardcodedDomainLogicRule,
+    StateSyncRule,
+    InsecureFallbackRule,
+    CanvasStaleDataRule
 } from "./quality-engine/rules";
 import * as glob from "glob";
 
@@ -65,6 +76,18 @@ engine.addRule(PersistAbortScopeRule);
 engine.addRule(UnsafePropertyAccessRule);
 engine.addRule(StartTransitionWrappingRule);
 engine.addRule(TranscriptUnsafeAccessRule);
+// PR #91 Post-Mortem: Auth, INP, Error Handling, State, Domain rules
+engine.addRule(EnvPlaceholderNamespaceRule);
+engine.addRule(SyncImportBeforeRedirectRule);
+engine.addRule(QuorumTimeoutCompletionRule);
+engine.addRule(ModuleLevelDynamicImportRule);
+engine.addRule(ToastAccessibilityRule);
+engine.addRule(SwallowedErrorRule);
+engine.addRule(StaleStateResetRule);
+engine.addRule(HardcodedDomainLogicRule);
+engine.addRule(StateSyncRule);
+engine.addRule(InsecureFallbackRule);
+engine.addRule(CanvasStaleDataRule);
 
 // Scan files
 const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' }).map(f => f.replace(/\\/g, "/"));

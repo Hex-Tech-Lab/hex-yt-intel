@@ -83,6 +83,10 @@ export class StreamDeltaHandler {
         cleanSink = cleanSink.slice(braceIndex);
       }
     }
+    // Only strip markdown code fence closers, not stray backticks in JSON strings
+    if (cleanSink.endsWith('```')) {
+      cleanSink = cleanSink.slice(0, -3).trimEnd();
+    }
 
     // Check if the raw sink starts with '{', indicating it is a structured JSON stream
     const isJsonStream = cleanSink.startsWith('{');

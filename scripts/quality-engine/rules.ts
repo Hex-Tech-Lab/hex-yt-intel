@@ -802,3 +802,334 @@ export const TranscriptUnsafeAccessRule: IRule = {
     return findings;
   }
 };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// PR #91 POST-MORTEM — Review Tool Findings (2026-06-19)
+// ──────────────────────────────────────────────────────────────────────────────
+
+// 30. Env Placeholder Namespace Rule — detect client env using placeholder URLs while server resolves to production
+export const EnvPlaceholderNamespaceRule: IRule = {
+  name: "env-placeholder-namespace-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Detect clientEnv section that uses || fallback without isPlaceholder() guard
+    if (filePath.includes('env.ts') || filePath.includes('env.js')) {
+      const clientEnvMatch = text.match(/export\s+const\s+clientEnv\s*=\s*\{[\s\S]*?\};/);
+      if (clientEnvMatch) {
+        const clientEnvBlock = clientEnvMatch[0];
+        const nextPublicOrFallback = clientEnvBlock.match(/NEXT_PUBLIC_\w+\s*:\s*process\.env\.NEXT_PUBLIC_\w+\s*\|\|/g);
+        const usesIsPlaceholder = clientEnvBlock.includes('isPlaceholder');
+        
+        if (nextPublicOrFallback && nextPublicOrFallback.length > 0 && !usesIsPlaceholder) {
+          findings.push({
+            file: filePath,
+            severity: "critical",
+            title: "Auth: Client env uses || fallback without isPlaceholder() guard",
+            why: `Client env has ${nextPublicOrFallback.length} NEXT_PUBLIC_ fields using simple || fallback. If env var is set to a placeholder URL (e.g., placeholder-project.supabase.co), it passes through. Server uses isPlaceholder() and discards it. Result: PKCE code_verifier cookie written under different project-ref namespace — auth callback fails with 'code verifier not found'.`,
+            fix: "Route NEXT_PUBLIC_SUPABASE_URL through isPlaceholder() validation: NEXT_PUBLIC_SUPABASE_URL: isPlaceholder(process.env.NEXT_PUBLIC_SUPABASE_URL) ? MOCK_DEFAULTS.NEXT_PUBLIC_SUPABASE_URL : process.env.NEXT_PUBLIC_SUPABASE_URL"
+          });
+        }
+      }
+    }
+    return findings;
+  }
+};
+
+// 31. Sync Import Before Redirect Rule — detect synchronous import in click handlers that redirect
+export const SyncImportBeforeRedirectRule: IRule = {
+  name: "sync-import-before-redirect",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    if (!filePath.includes('.tsx') && !filePath.includes('.jsx')) return findings;
+
+    source.forEachDescendant((node) => {
+      if (Node.isArrowFunction(node) || Node.isFunctionExpression(node)) {
+        const funcText = node.getText();
+        const hasDynamicImport = funcText.includes('import(');
+        const hasRedirect = funcText.includes('signInWithOAuth') || funcText.includes('router.push') || funcText.includes('window.location');
+        const hasSetLoading = funcText.includes('setLoading') || funcText.includes('loading = true');
+
+        if (hasDynamicImport && hasRedirect && hasSetLoading) {
+          const hasYield = funcText.includes('setTimeout(resolve') || funcText.includes('await new Promise');
+          if (!hasYield) {
+            findings.push({
+              file: filePath,
+              severity: "high",
+              title: "INP: Synchronous import before redirect blocks paint",
+              why: "loading=true set, then synchronous import resolves, then redirect blocks thread. Button 'Signing in...' state never paints. INP attributed to ancestor layout div.",
+              fix: "After setting loading=true, yield the thread: await new Promise(r => setTimeout(r, 0)). This lets browser paint the disabled button before the heavy redirect sequence."
+            });
+          }
+        }
+      }
+    });
+    return findings;
+  }
+};
+
+// 32. Quorum Timeout Completion Rule — detect timeout marking incomplete chunks as complete
+export const QuorumTimeoutCompletionRule: IRule = {
+  name: "quorum-timeout-completion-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (filePath.includes('persist') || text.includes('quorum')) {
+      const hasTimeout = text.includes('setTimeout') || text.includes('timeout');
+      const hasQuorum = text.includes('quorum') || text.includes('CompletedIndexes');
+      const hasIncompleteMark = text.includes("'completed'") || text.includes('"completed"');
+
+      if (hasTimeout && hasQuorum && hasIncompleteMark) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "Persist: Quorum timeout marks incomplete chunks as completed",
+          why: "Timeout fires but doesn't verify all chunks arrived. Marks partial data as 'completed', causing AnalysisHistory to show stale/incomplete analyses as done.",
+          fix: "On timeout, verify which chunks actually persisted. If any missing, mark status as 'partial' or 'error', not 'completed'. Log missing chunk indexes."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 33. Module-Level Dynamic Import Rule — detect dynamic import() at module scope that breaks retries
+export const ModuleLevelDynamicImportRule: IRule = {
+  name: "module-level-dynamic-import",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    if (!filePath.includes('.tsx') && !filePath.includes('.jsx')) return findings;
+
+    const lines = source.getText().split('\n');
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      const importMatch = trimmed.match(/(?:const\s+\w+\s*=\s*)?import\(['"]/);
+      if (!importMatch) return;
+
+      const indent = line.search(/\S/);
+      if (indent === 0) {
+        const varMatch = trimmed.match(/const\s+(\w+)\s*=\s*import/);
+        if (varMatch) {
+          const varName = varMatch[1];
+          const text = source.getText();
+          const isUsedInHandler = text.includes(`await ${varName}`) && (
+            text.includes('handleClick') || text.includes('handleAuth') || text.includes('handleSupabase') ||
+            text.includes('onClick') || text.includes('onSubmit')
+          );
+          if (isUsedInHandler) {
+            findings.push({
+              file: filePath,
+              severity: "high",
+              title: "Auth: Module-level dynamic import breaks retry on failure",
+              why: `import() assigned to ${varName} at module scope resolves once. If it fails, the promise rejects permanently. No retry possible. Also blocks paint if used in click handler.`,
+              fix: `Move import() inside the handler function, or use a lazy getter: const getModule = () => import('@/module').then(m => m.default)`
+            });
+          }
+        }
+      }
+    });
+    return findings;
+  }
+};
+
+// 34. Toast Accessibility Rule — detect showToast without role/aria-live
+export const ToastAccessibilityRule: IRule = {
+  name: "toast-accessibility-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes('showToast') || text.includes('toast(')) {
+      const hasRole = text.includes('role="alert"') || text.includes("role='alert'") || text.includes('role={');
+      const hasAriaLive = text.includes('aria-live');
+
+      if (!hasRole && !hasAriaLive) {
+        findings.push({
+          file: filePath,
+          severity: "medium",
+          title: "Accessibility: Toast notification missing role/aria-live",
+          why: "showToast() renders a notification but the container lacks role='alert' or aria-live='polite'. Screen readers won't announce the toast.",
+          fix: "Add role='alert' aria-live='assertive' (for errors) or role='status' aria-live='polite' (for info) to the toast container element."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 35. Swallowed Error Rule — detect empty catch blocks and .catch(() => {})
+export const SwallowedErrorRule: IRule = {
+  name: "swallowed-error-detector",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+
+    source.forEachDescendant((node) => {
+      if (Node.isCatchClause(node)) {
+        const block = node.getBlock();
+        const statements = block.getStatements();
+        if (statements.length === 0) {
+          findings.push({
+            file: filePath,
+            severity: "high",
+            title: "Error: Empty catch block swallows error silently",
+            why: "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
+            fix: "At minimum, log the error: catch(e) { console.error('[context]', e) }"
+          });
+        }
+      }
+
+      if (Node.isCallExpression(node)) {
+        const expr = node.getExpression();
+        if (Node.isPropertyAccessExpression(expr) && expr.getName() === 'catch') {
+          const arg = node.getArguments()[0];
+          if (Node.isArrowFunction(arg) || Node.isFunctionExpression(arg)) {
+            const body = arg.getBody();
+            const isBlock = Node.isBlock(body);
+            if (isBlock && body.getStatements().length === 0) {
+              findings.push({
+                file: filePath,
+                severity: "medium",
+                title: "Error: .catch(() => {}) swallows promise rejection",
+                why: "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
+                fix: "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
+              });
+            }
+          }
+        }
+      }
+    });
+    return findings;
+  }
+};
+
+// 36. Stale State Reset Rule — detect clearAnalysis/resetState overwriting eagerly-fetched fresh data
+export const StaleStateResetRule: IRule = {
+  name: "stale-state-reset-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes('clearAnalysis') || text.includes('resetState')) {
+      const setsMetadataNull = text.includes('videoMetadata: null') || text.includes('videoMetadata:null') || text.includes('setVideoMetadata(null)');
+      const hasEagerFetch = text.includes('useEagerVideoMetadata') || text.includes('eager') || text.includes('fetchMetadata');
+
+      if (setsMetadataNull && hasEagerFetch) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "State: clearAnalysis resets videoMetadata to null, losing eager data",
+          why: "clearAnalysis() runs on unmount/new URL but sets videoMetadata to null. Eagerly-fetched metadata is destroyed.",
+          fix: "Guard clearAnalysis: if videoMetadata was eagerly fetched (source !== 'sse'), preserve it."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 37. Hardcoded Domain Logic Rule — detect hardcoded persona lists, dimension counts
+export const HardcodedDomainLogicRule: IRule = {
+  name: "hardcoded-domain-logic",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    const hardcodedPersonas = text.match(/['"]?(?:detailed|balanced|brief|academic|casual)['"]?\s*[,:]\s*['"]?(?:detailed|balanced|brief|academic|casual)['"]?/g);
+    if (hardcodedPersonas && filePath.includes('persona')) {
+      findings.push({
+        file: filePath,
+        severity: "medium",
+        title: "Domain: Hardcoded persona list may drift from actual personas",
+        why: "isValidPersona() uses a hardcoded array. When new personas are added to UCI PersonaConfig, this must be manually updated.",
+        fix: "Import persona list from UCI PersonaConfig or derive from a shared constant."
+      });
+    }
+    return findings;
+  }
+};
+
+// 38. State Sync Rule — detect state setters that don't synchronize related state
+export const StateSyncRule: IRule = {
+  name: "state-sync-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes('setUrl') && (filePath.includes('store') || filePath.includes('Store'))) {
+      const hasSetIsValid = text.includes('setIsValid') || text.includes('isValid:');
+      if (!hasSetIsValid) {
+        findings.push({
+          file: filePath,
+          severity: "medium",
+          title: "State: setUrl doesn't sync isValid state",
+          why: "setUrl() updates URL string but doesn't update isValid. Derived state drifts from source state.",
+          fix: "Derive isValid from url inside the store, or call setIsValid in the same setter."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 39. Insecure Fallback Rule — detect non-production fallbacks for secrets
+export const InsecureFallbackRule: IRule = {
+  name: "insecure-fallback-detector",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes('NODE_ENV') && (text.includes('production') || text.includes('preview'))) {
+      const hasConditionalSecret = text.match(/NODE_ENV.*\?.*secret|NODE_ENV.*\?.*key|NODE_ENV.*\?.*token/gi);
+      if (hasConditionalSecret) {
+        findings.push({
+          file: filePath,
+          severity: "critical",
+          title: "Security: Secret strength varies by NODE_ENV",
+          why: "HMAC secret or API key falls back to weak value when NODE_ENV is missing. Preview/staging get weaker security.",
+          fix: "Fail closed: if secret is missing or placeholder, return 500 error."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 40. Canvas Stale Data Rule — detect canvas/d3 rendering without re-render on data change
+export const CanvasStaleDataRule: IRule = {
+  name: "canvas-stale-data-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if ((text.includes('d3.') || text.includes('canvas') || text.includes('ForceGraph')) && text.includes('useEffect')) {
+      const effectBlocks = text.match(/useEffect\(\(\)\s*=>\s*\{[\s\S]*?\},\s*\[[\s\S]*?\]\)/g) || [];
+      for (const block of effectBlocks) {
+        const hasGraphData = block.includes('graphData') || block.includes('nodes') || block.includes('words') || block.includes('data');
+        if (!hasGraphData && (block.includes('d3.') || block.includes('canvas'))) {
+          findings.push({
+            file: filePath,
+            severity: "high",
+            title: "Canvas: d3/canvas render effect missing data dependency",
+            why: "useEffect renders d3 visualization but dependency array doesn't include the data variable.",
+            fix: "Add graphData/nodes/words to the useEffect dependency array."
+          });
+          break;
+        }
+      }
+    }
+    return findings;
+  }
+};

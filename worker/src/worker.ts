@@ -501,7 +501,7 @@ function buildStreamResponse(
         status,
         activeSecret,
         appUrl: url,
-        validate12D: (text: string) => engine.validate12D(text),
+        validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
       });
