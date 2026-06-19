@@ -383,16 +383,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     return dimensions.find(d => d.key === selectedDimensionKey) || null;
   }, [selectedDimensionKey, dimensions]);
 
-  // Default selection to first dimension when loaded
-  useEffect(() => {
-    if (dimensions.length > 0 && !selectedDimensionKey) {
-      const firstKey = dimensions[0]?.key;
-      if (firstKey) {
-        setSelectedDimensionKey(firstKey);
-      }
-    }
-  }, [dimensions, selectedDimensionKey]);
-
   return (
     <div className="relative w-full h-screen overflow-hidden">
       <DashboardLayout
