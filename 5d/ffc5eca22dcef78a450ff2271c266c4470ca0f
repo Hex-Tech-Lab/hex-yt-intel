@@ -1,0 +1,19 @@
+web/app/auth/signin/form.tsx
+  s_e6750ccfff01b1::t_f2fcc35602b8b0 3,5,11-20,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "5dffc5eca22dcef78a450ff2271c266c4470ca0f",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
