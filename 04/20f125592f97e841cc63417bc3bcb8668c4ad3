@@ -1,0 +1,78 @@
+worker/src/middleware/cors.ts
+  s_99f37139858ed7::t_d3fdb612425bf4 32,34-37,39-45,47-51
+web/lib/adapters/SupabaseBillingAdapter.ts
+  s_d341caf5019394::t_68f69a7029c6f0 5,33
+web/lib/types/contracts.ts
+  s_ca4104d002a5c3::t_f2591dd0c54a8e 86
+web/lib/stripe/webhook-handlers.ts
+  s_ca4104d002a5c3::t_2c906dde8bac84 44-45,47-50,52-56,58-62,64-67,69,71-79,81,83-112,122-123,125-128,130-134,136-169,171-206,211,215,222,224,226-228,232,234,245-247,249-252,254-261,263-273,275-282,284-288,315-326
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_d341caf5019394::t_73b257f7cdf82f 20-21,24-25,29,52-53,56-57,60-61,64-65,68-69,72-73,104-105,173-174,177-178,181-182,185-186,189-190,193-194,197-198,201-202,205-206,210-211,214-215,218-219,222-223,226-227,231-232,235-236,298
+web/components/templates/console/DimensionDrawer.tsx
+  s_99f37139858ed7::t_c2a843c53a4aa0 34-37,39-40,42
+web/lib/adapters/SupabaseGraphAdapter.ts
+  s_d341caf5019394::t_9fb34734a8f174 6,41,103,115-121,124-125,136,154,157-158
+.memory/AGENT_LEDGER.md
+  s_e6750ccfff01b1::t_15740fea50d100 315
+  s_e6750ccfff01b1::t_711a53d5d5cb4e 314
+  s_e6750ccfff01b1::t_27c04113ccee8f 309
+scripts/quality-engine/rules/architecture.ts
+  s_e6750ccfff01b1::t_c718669d486619 107-115
+  s_e6750ccfff01b1::t_0efb68c767c343 61
+scripts/quality-engine/rules/streaming.ts
+  s_e6750ccfff01b1::t_24a9174ecede82 74
+web/components/templates/console/DimensionAccordion.tsx
+  s_99f37139858ed7::t_8d18faefd0a51f 35-40,51
+scripts/quality-engine/rules/ui.ts
+  s_e6750ccfff01b1::t_10c44afb5df1a3 97
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_d341caf5019394::t_11462cd9aa0f3f 14,34-38,95,175,201,227-235,246,265-268,274-279,289,332,349-352,358-363,373,412
+  s_d341caf5019394::t_65dc515ad17c5e 269-273
+  s_d341caf5019394::t_6dba29540a6824 353-357
+web/components/templates/_shared/primitives.tsx
+  s_99f37139858ed7::t_04d387eaa2fc3b 37
+  s_99f37139858ed7::t_d54fb94dd19e3f 45
+  s_99f37139858ed7::t_40d98a3489ede7 52
+web/lib/adapters/SupabaseChatAdapter.ts
+  s_d341caf5019394::t_8d04b50bbc12e1 25,59,77,79-85,96,113-114,121,131,155,189,225,271,311
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "0420f125592f97e841cc63417bc3bcb8668c4ad3",
+  "prompts": {},
+  "sessions": {
+    "s_99f37139858ed7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f44b056ffe1WrqJ5xrvrpNDY",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_ca4104d002a5c3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f45017cffeNGL1Ruj3Kw95lg",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_d341caf5019394": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f453d80ffeXNBwQb34DT9EIz",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
