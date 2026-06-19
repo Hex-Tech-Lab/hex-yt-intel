@@ -1,0 +1,40 @@
+worker/src/__tests__/chat-stream-requestId.test.ts
+  s_e6750ccfff01b1::t_214aca522a7810 1-154
+web/lib/__tests__/useChatStore-race.test.ts
+  s_e6750ccfff01b1::t_89b1a477dbdbb6 1-45,48,54-55,59,65-100,103-167
+  s_e6750ccfff01b1::t_a831b0f48e9e8f 46-47,49-53,56-58,60-64
+  s_e6750ccfff01b1::t_931d5533fc7934 101-102
+web/store/useChatStore.ts
+  s_e6750ccfff01b1::t_05c0274d190749 240
+  s_e6750ccfff01b1::t_553cf9ff090f1b 372-373
+  s_e6750ccfff01b1::t_8e5240292eeebd 310-312
+  s_ed75c7d492563f::t_83a055a07cba2c 315-317,321
+  s_e6750ccfff01b1::t_9d7c529ad0a8b5 232
+  s_e6750ccfff01b1::t_13b92afefc2895 233-237
+  s_ed75c7d492563f::t_aa15d33d59bc4c 375-377
+  s_ed75c7d492563f::t_51d735d3cdef95 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "5f63bba73d112589329771154d8f93a3930aac44",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_ed75c7d492563f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1207e295fffegsVtDih2m80vIb",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
