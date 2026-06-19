@@ -39,13 +39,13 @@ export default function RootLayout({
         </Providers>
         <Script
           src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
         {/* codacy-disable <script>dangerouslySetInnerHTML</script> */}
         {/* DOMPurify / sanitize bypass: this is static javascript code, not user-generated HTML */}
         <Script
           id="iconify-preload"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `var _solarData=${JSON.stringify(SOLAR_ICON_DATA)};if(typeof Iconify!=="undefined"){Iconify.addCollection(_solarData);}else{document.addEventListener("DOMContentLoaded",function(){if(typeof Iconify!=="undefined")Iconify.addCollection(_solarData);});}`,
           }}

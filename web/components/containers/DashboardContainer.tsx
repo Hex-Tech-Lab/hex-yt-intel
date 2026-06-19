@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect, startTransition } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
@@ -68,6 +68,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const { url, setUrl } = useInputStore();
   const [mounted, setMounted] = useState(false);
+  const hasHadVideoRef = useRef(false);
+
+  const { startAnalysis, stopAnalysis } = useSSEStream();
+  useEagerVideoMetadata();
+  const nucleus = useSynthesisNucleus();
 
   useEffect(() => {
     setUserRole(profile.role);
@@ -76,6 +81,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
   const supabase = createClient();
   const router = useRouter();
   const handleSignOut = async () => {
@@ -83,9 +89,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     router.push('/');
   };
 
-  const { startAnalysis, stopAnalysis } = useSSEStream();
-  useEagerVideoMetadata();
-  const nucleus = useSynthesisNucleus();
+  // Track if we've ever had a video — prevents player from disappearing between analyses
+  if (videoMetadata?.videoId || nucleus.analysis?.videoId) {
+    hasHadVideoRef.current = true;
+  }
+
   const { graph } = useKnowledgeGraph(nucleus.analysis?.id);
   const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, status === 'complete');
   const [search, setSearch] = useState('');
@@ -482,7 +490,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             quota={quotaLabel}
           />
 
-          {(videoMetadata || nucleus.analysis?.videoId) && (
+          {(hasHadVideoRef.current || videoMetadata || nucleus.analysis?.videoId) && (
             <div className="flex flex-col gap-4">
               <VideoPlayerCard />
               {videoMetadata && (
