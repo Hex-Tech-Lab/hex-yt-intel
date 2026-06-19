@@ -172,7 +172,7 @@ function buildStreamResponse(
     hasContent: () => finalText.length > 0,
     persist: async (status) => {
       const url = appUrl || "https://yt-intel.getmytestdrive.com";
-      return persistService.persist({
+      const persistPromise = persistService.persist({
         analysisId: req.analysisId,
         videoId: req.videoId,
         finalText,
@@ -184,6 +184,15 @@ function buildStreamResponse(
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
       });
+
+      const timeoutPromise = new Promise<boolean>((_, reject) => {
+        const id = setTimeout(() => {
+          clearTimeout(id);
+          reject(new Error("Persistence timeout reached (15s)"));
+        }, 15000);
+      });
+
+      return Promise.race([persistPromise, timeoutPromise]);
     },
     signal: persistSignal,
     waitUntil,
@@ -395,11 +404,6 @@ analysis.post("/analyze-llm-stream", async (c) => {
     }, { once: true });
   }
 
-  // Abort persistence only on explicit policy timeout (90s max worker limit)
-  c.executionCtx.waitUntil((async () => {
-    await new Promise(resolve => setTimeout(resolve, 90000));
-    persistController.abort();
-  })());
   return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, (p) => c.executionCtx.waitUntil(p));
 });
 
