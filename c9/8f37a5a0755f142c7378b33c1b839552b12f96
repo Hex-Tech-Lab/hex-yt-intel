@@ -1,0 +1,21 @@
+web/app/api/chat/persist/route.ts
+  s_9f5fdbb7b596ef::t_9810637504c9bc 37-45
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_9f5fdbb7b596ef::t_bd92ff41a7f14c 155-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "c98f37a5a0755f142c7378b33c1b839552b12f96",
+  "prompts": {},
+  "sessions": {
+    "s_9f5fdbb7b596ef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f0f4559ffeUroQBfByhn7LgF",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
