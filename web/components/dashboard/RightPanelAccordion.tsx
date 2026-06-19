@@ -25,19 +25,19 @@ export function RightPanelAccordion({ items }: RightPanelAccordionProps) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {items.map((item) => (
         <div
           key={item.id}
-          className="border border-[var(--line)] rounded-xl bg-[var(--surface)] overflow-hidden shadow-sm"
+          className="border border-[var(--line)] rounded-lg bg-[var(--surface)] overflow-hidden shadow-sm"
         >
           <div
             onClick={() => toggleItem(item.id)}
             className="w-full px-4 py-3 flex items-center justify-between bg-[var(--bg)] border-0 border-b border-[var(--line-faint)] cursor-pointer select-none"
           >
-            <span className="text-[14px] font-semibold text-[var(--ink)]">{item.title}</span>
+            <span className="text-[13px] font-semibold text-[var(--ink)] pl-1">{item.title}</span>
             
-            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               {item.onAction && (
                 <div className="flex items-center gap-1 pr-2 border-r border-[var(--line)] mr-1">
                   <button
@@ -96,7 +96,7 @@ export function RightPanelAccordion({ items }: RightPanelAccordionProps) {
             </div>
           </div>
           {openStates[item.id] && (
-            <div className="p-4 text-[13px] text-[var(--ink-secondary)]">
+            <div className="p-4 pl-5 pr-3 text-[13px] text-[var(--ink-secondary)]">
               {typeof item.content === 'function' ? item.content() : item.content}
             </div>
           )}

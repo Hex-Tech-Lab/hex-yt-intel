@@ -34,7 +34,7 @@ export interface GlowBorderProps {
 }
 
 export function GlowBorder({ children, active = false, radius = "card", className = "", style = {} }: GlowBorderProps) {
-  const r = radius === "card" ? 16 : 8;
+  const r = radius === "card" ? 8 : 6;
   return (
     <div
       className={`hx-glow ${className}`}
@@ -127,10 +127,10 @@ export function StatusBadge({ status, label, style = {} }: StatusBadgeProps) {
       display: "inline-flex",
       alignItems: "center",
       gap: 7,
-      borderRadius: 9999,
+      borderRadius: 6,
       border: "1px solid var(--line)",
       background: "rgb(26 31 43 / 0.6)",
-      padding: "5px 12px",
+      padding: "4px 10px",
       fontFamily: "var(--font-mono)",
       fontSize: 11,
       fontWeight: 600,

@@ -263,7 +263,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full relative bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-xl border border-[var(--line-faint)] overflow-hidden"
+      className="w-full relative bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg border border-[var(--line-faint)] overflow-hidden"
       style={{ height: 220 }}
     >
       {graph.nodes.length > 0 ? (

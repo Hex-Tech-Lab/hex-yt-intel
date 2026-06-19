@@ -480,7 +480,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
-        <div className="flex flex-col gap-8 pb-4">
+        <div className="flex flex-col gap-4 pb-4">
           <AnalysisHero
             url={mounted ? url : ''}
             status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
@@ -509,8 +509,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           )}
 
           {status !== 'idle' && (
-            <div className="flex flex-col gap-8">
-              {/* Tab bar: Synthesis grid vs. Knowledge Graph */}
+            <div className="flex flex-col gap-4">
               <div className="flex gap-1 p-1 rounded-xl border border-[var(--line)] bg-[rgb(11_14_20_/_0.5)] self-start">
                 {([
                   { key: 'synthesis', label: 'Synthesis', icon: 'solar:widget-5-linear', disabled: false },
@@ -540,7 +539,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
                   
                   {dimensions.length > 0 ? (
-                    <div className="flex flex-col gap-8">
+                    <div className="flex flex-col gap-4">
                       <DimensionAccordion
                         dimensions={dimensions}
                         selectedDimensionKey={selectedDimensionKey}
@@ -566,7 +565,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 </>
               ) : (
                 <div className="flex flex-col gap-3">
-                  <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
+                  <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4">
                     <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} height={520} />
                   </div>
                   <p className="text-[var(--ink-muted)] font-mono text-[10px] uppercase tracking-wider pl-1">
