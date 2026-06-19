@@ -47,7 +47,7 @@ const MOCK_DEFAULTS: Partial<Record<EnvVar, string>> = {
   STRIPE_WEBHOOK_SECRET: 'whsec_mock_stripe_webhook',
   UPSTASH_VECTOR_REST_URL: 'https://rested-ferret-38816-eu1-vector.upstash.io',
   UPSTASH_VECTOR_REST_TOKEN: 'mock-vector-token',
-  STREAM_HMAC_SECRET: 'dev-hmac-secret-123',
+  // STREAM_HMAC_SECRET intentionally omitted — fail-closed if missing in production
   NEXT_PUBLIC_WORKER_URL: 'https://yt-intel.hex-tech-lab.workers.dev',
   CLOUDFLARE_WORKER_URL: 'https://yt-intel.hex-tech-lab.workers.dev',
 };
@@ -160,7 +160,7 @@ export const env = {
   get stripeSecretKey(): string { return validateEnvVar('STRIPE_SECRET_KEY', true)!; },
   get stripeWebhookSecret(): string { return validateEnvVar('STRIPE_WEBHOOK_SECRET', true)!; },
   get decodoApiKey(): string | undefined { return validateEnvVar('DECODO_API_KEY', false); },
-  get streamHmacSecret(): string { return validateEnvVar('STREAM_HMAC_SECRET', true)!; },
+  get streamHmacSecret(): string | undefined { return validateEnvVar('STREAM_HMAC_SECRET', true); },
 };
 
 export const clientEnv = {

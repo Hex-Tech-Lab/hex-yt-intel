@@ -10,7 +10,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses');
+    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses', 'id, video_id, title, channel_title, model_used, analysis_markdown, analysis_payload, validation_report, analysis_at, created_at, detected_persona, streaming_interrupted, updated_at');
 
     if (error === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
