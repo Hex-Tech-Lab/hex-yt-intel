@@ -1,0 +1,49 @@
+web/components/templates/console/WordCloud.tsx
+  s_d8e16b497e8db9::t_7533c4ee53f540 87-107,110
+.memory/AGENT_LEDGER.md
+  s_d8e16b497e8db9::t_2f391cacd1659d 143
+  s_b2e61db33bd6ec::t_900be83035d371 288
+  s_2a8b81eb120501::t_8910a87ae398ec 285
+  s_2a8b81eb120501::t_ad1381af3169d6 286
+  s_e6750ccfff01b1::t_e22575d022b9da 284,287,289
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "509d71b8b95b0d71b66a0ee1b50e2bc7043ab105",
+  "prompts": {},
+  "sessions": {
+    "s_2a8b81eb120501": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_120ed882bffeaMv6q9GYGe5aCu",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_b2e61db33bd6ec": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_120edb5d6ffe9w9joZjvPi1yyx",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_d8e16b497e8db9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_120ed9a24ffebAYtRf60NpFzmG",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
