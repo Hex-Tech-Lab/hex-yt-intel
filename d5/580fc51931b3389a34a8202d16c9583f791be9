@@ -1,0 +1,78 @@
+worker/src/chat-stream.ts
+  s_ed75c7d492563f::t_0769763ac2813e 2
+  s_ed75c7d492563f::t_7962b4ac855441 300-303
+web/vitest.config.ts
+  s_e6750ccfff01b1::t_b1729840771a66 16
+  s_e6750ccfff01b1::t_a91d6a4022f442 9-11
+worker/src/__tests__/chat-stream-requestId.test.ts
+  s_e6750ccfff01b1::t_390cd8c806ecbc 10-11,32-67,75,160-174,176,178-182,184
+scripts/quality-engine/rules.ts
+  s_cc357050a34280::t_833f5d6df5989e 916
+web/lib/__tests__/rate-limit-sliding-window.test.ts
+  s_a45275c01d76c7::t_74dd047a3241fe 7
+web/lib/adapters/stream-delta-handler.ts
+  s_3ea20ac1a24398::t_9f6a46b01068c4 86-88
+worker/src/__tests__/validation-boundary.test.ts
+  s_e6750ccfff01b1::t_95980c67e43d76 2,45,48-49,52-54,57-59,62-64,67-69,71,74-75,78-80,82-83,86-88,91,98,100-104,106-109,111-114,118-122,124-138,140-141
+  s_e6750ccfff01b1::t_c7edbfae0d3444 92-93,95
+  s_e6750ccfff01b1::t_70758a5b99068f 33
+  s_e6750ccfff01b1::t_7360f698d5f2ff 3-4,8-32,34-44,50-51,55-56,60-61,65-66,70,73,90,94,99,105,110,115,123
+worker/src/services/ValidationService.ts
+  s_2e95225f031e28::t_2b081f5701c40c 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "d5580fc51931b3389a34a8202d16c9583f791be9",
+  "prompts": {},
+  "sessions": {
+    "s_2e95225f031e28": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1207e4336ffeFk9lH1YQexDLGQ",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_3ea20ac1a24398": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1207e3d6affepsbtmr0GNS7AVR",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_a45275c01d76c7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1207e22b4ffe719a3mx5pTV9M0",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_cc357050a34280": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1207e1ac0ffeOZVYVXZ1Nn6D1b",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_ed75c7d492563f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1207e295fffegsVtDih2m80vIb",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
