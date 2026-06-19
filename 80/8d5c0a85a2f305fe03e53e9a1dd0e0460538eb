@@ -1,0 +1,38 @@
+web/lib/adapters/index.ts
+  s_e6750ccfff01b1::t_ee968b9b160757 10-13
+web/app/layout.tsx
+  s_e6750ccfff01b1::t_256e0b7ae8fa4c 42,48
+web/components/containers/DashboardContainer.tsx
+  s_e6750ccfff01b1::t_ee968b9b160757 73-75,84,92-96
+  s_e6750ccfff01b1::t_ad0177c383530e 71-72
+  s_e6750ccfff01b1::t_34acd25adccb29 493
+  s_e6750ccfff01b1::t_c16a0939c15540 3
+web/lib/adapters/SupabaseChatAdapter.ts
+  s_e6750ccfff01b1::t_ee968b9b160757 1-348
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_e6750ccfff01b1::t_ee968b9b160757 1-432
+web/lib/adapters/SupabaseBillingAdapter.ts
+  s_e6750ccfff01b1::t_ee968b9b160757 1-59
+web/lib/adapters/SupabaseGraphAdapter.ts
+  s_e6750ccfff01b1::t_ee968b9b160757 1-181
+web/app/globals.css
+  s_e6750ccfff01b1::t_062a0f71f6ecdf 342-344,365-367
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_e6750ccfff01b1::t_ee968b9b160757 12,14-17,20-27,30-31,34-35,37,45,52,58-59,62-63,66-67,70-71,74-75,78-79,83-89,179-181,184-186,188-190,192-194,196-198,200-202,204-206,208-209,212-214,216-219,221-223,225-226,229-230,234,237-240,242-243,246
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "808d5c0a85a2f305fe03e53e9a1dd0e0460538eb",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
