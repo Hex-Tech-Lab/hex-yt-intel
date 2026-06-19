@@ -9,4 +9,11 @@ export const createClient = () =>
   createBrowserClient(
     clientEnv.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co',
     clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder-anon-key',
+    {
+      cookieOptions: {
+        sameSite: 'lax' as const,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+      },
+    }
   );
