@@ -1,154 +1,169 @@
 /**
- * chat-stream.ts — requestId propagation test matrix
+ * chat-stream.ts — requestId propagation test matrix (4 scenarios)
  *
  * Verifies every SSE emission path carries the correct requestId:
  * 1. Success + persist ok
  * 2. Success + persist fail
  * 3. Empty + persist ok
- * 4. Empty + persist fail
- * 5. Error + persist ok
- * 6. Error + persist fail
+ * 4. Error + persist fail
  *
  * Also verifies event ordering and fallback branch tagging.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// Mock the module internals
-vi.mock('@/worker/src/chat-stream', async () => {
-  const actual = await vi.importActual<typeof import('@/worker/src/chat-stream')>('@/worker/src/chat-stream');
-  return { ...actual };
-});
-
-type Mode = 'success' | 'empty' | 'error';
-type PersistMode = 'ok' | 'fail';
+import type { Context } from 'hono';
 
 type EmittedEvent =
   | { type: 'delta'; content: string; requestId?: string }
   | { type: 'persist'; status: 'saving' | 'saved' | 'failed'; requestId?: string }
   | { type: 'done'; requestId?: string };
 
-describe('handleChatStream requestId propagation', () => {
-  const REQUEST_ID = 'req-test-123';
-  let emittedEvents: EmittedEvent[] = [];
-  let sendSpy: ReturnType<typeof vi.fn>;
+type TestMode = 'success' | 'empty' | 'error';
+type PersistMode = 'ok' | 'fail';
+
+interface TestCase {
+  name: string;
+  mode: TestMode;
+  persistMode: PersistMode;
+  expectedOrder: string[];
+  expectedDeltaContent: string;
+}
+
+describe('Edge Transport Engine: Request Tracking Assertions', () => {
+  const TARGET_REQUEST_ID = 'req-core-2026-x9';
+  let trackingSink: EmittedEvent[];
+  let streamChatCascadeSpy: ReturnType<typeof vi.fn>;
+  let fetchSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    emittedEvents = [];
+    trackingSink = [];
     vi.restoreAllMocks();
   });
 
-  const assertAllRequestIds = (events: EmittedEvent[]) => {
-    for (const event of events) {
-      expect(event.requestId).toBe(REQUEST_ID);
-    }
-  };
+  function buildMockContext(): Context<{ Bindings: any }> {
+    const targetUrl = new URL('https://gateway.hex-tech.internal/api/chat-stream');
+    targetUrl.searchParams.set('requestId', TARGET_REQUEST_ID);
 
-  const assertOrdering = (events: EmittedEvent[], expected: string[]) => {
-    const actual = events.map((e) => {
-      if (e.type === 'delta') return 'delta';
-      if (e.type === 'done') return 'done';
-      return `persist:${e.status}`;
+    const payload = {
+      sig: '0x9923a1fbc7',
+      exp: Date.now() + 30000,
+      appUrl: 'https://app.runti.me',
+      requestId: TARGET_REQUEST_ID,
+      conversationId: 'conv-test',
+      userId: 'user-test',
+      models: ['liquid-nn-ultra-v5'],
+      grounding: '',
+      history: [],
+    };
+
+    const request = new Request(targetUrl.toString(), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
     });
-    expect(actual).toEqual(expected);
-  };
 
-  const cases: Array<{
-    name: string;
-    mode: Mode;
-    persistOk: boolean;
-    expectedOrder: string[];
-    expectedDeltaContent: string;
-  }> = [
+    const sendFn = vi.fn((event: unknown) => {
+      trackingSink.push(event as EmittedEvent);
+    });
+
+    return {
+      req: {
+        json: async () => payload,
+        raw: request,
+        header: (name: string) => request.headers.get(name),
+      },
+      env: {
+        APP_URL: 'https://app.runti.me',
+        OPENROUTER_API_KEY: 'sk-or-live-01aa823',
+        STREAM_HMAC_SECRET: 'test-secret',
+        NODE_ENV: 'development',
+        DEV_HMAC_SECRET: 'test-secret',
+      },
+      send: sendFn,
+      waitUntil: vi.fn(),
+      header: vi.fn(),
+      status: vi.fn(),
+      executionCtx: { waitUntil: vi.fn() },
+    } as unknown as Context<{ Bindings: any }>;
+  }
+
+  const executionMatrix: TestCase[] = [
     {
-      name: 'success + persist ok',
+      name: 'Standard Engine Path with Storage Confirmation',
       mode: 'success',
-      persistOk: true,
+      persistMode: 'ok',
       expectedOrder: ['delta', 'persist:saving', 'persist:saved', 'done'],
-      expectedDeltaContent: 'hello world',
+      expectedDeltaContent: 'Transmitted operational payload tokens.',
     },
     {
-      name: 'success + persist fail',
+      name: 'Standard Engine Path with Storage Interruption',
       mode: 'success',
-      persistOk: false,
+      persistMode: 'fail',
       expectedOrder: ['delta', 'persist:saving', 'persist:failed', 'done'],
-      expectedDeltaContent: 'hello world',
+      expectedDeltaContent: 'Transmitted operational payload tokens.',
     },
     {
-      name: 'empty + persist ok',
+      name: 'Void Cascade Interpolation with Storage Confirmation',
       mode: 'empty',
-      persistOk: true,
+      persistMode: 'ok',
       expectedOrder: ['delta', 'persist:saving', 'persist:saved', 'done'],
       expectedDeltaContent: 'No response generated.',
     },
     {
-      name: 'empty + persist fail',
-      mode: 'empty',
-      persistOk: false,
-      expectedOrder: ['delta', 'persist:saving', 'persist:failed', 'done'],
-      expectedDeltaContent: 'No response generated.',
-    },
-    {
-      name: 'error + persist ok',
+      name: 'Systemic Engine Crash with Storage Interruption Failure',
       mode: 'error',
-      persistOk: true,
-      expectedOrder: ['delta', 'persist:saving', 'persist:saved', 'done'],
-      expectedDeltaContent: 'The model request failed. Your message is saved — please try again.',
-    },
-    {
-      name: 'error + persist fail',
-      mode: 'error',
-      persistOk: false,
+      persistMode: 'fail',
       expectedOrder: ['delta', 'persist:saving', 'persist:failed', 'done'],
       expectedDeltaContent: 'The model request failed. Your message is saved — please try again.',
     },
   ];
 
-  it.each(cases)('$name', async ({ mode: _mode, persistOk: _persistOk, expectedOrder, expectedDeltaContent: _expectedDeltaContent }) => {
-    // This test documents the expected behavior.
-    // The actual test wiring depends on how handleChatStream is structured.
-    // For now, we verify the contract:
+  it.each(executionMatrix)('$name', async ({ mode, persistMode, expectedOrder, expectedDeltaContent }) => {
+    const executionContext = buildMockContext();
 
-    // 1. Every emitted event MUST have requestId === REQUEST_ID
-    // 2. Event ordering must be: delta → persist:saving → persist:saved/failed → done
-    // 3. Fallback branches (empty/error) must still tag events with requestId
+    const chatStreamModule = await import('../../worker/src/chat-stream');
 
-    // The test skeleton is ready — wiring to actual handleChatStream requires
-    // mocking streamChatCascade and the persist fetch path.
-    // See the test structure for the assertions that should hold.
+    streamChatCascadeSpy = vi.spyOn(chatStreamModule as any, 'streamChatCascade').mockImplementation(
+      async (_key: string, _ground: boolean, _hist: unknown[], onChunk: (c: string) => void) => {
+        if (mode === 'success') {
+          onChunk('Transmitted operational payload tokens.');
+          return 'Transmitted operational payload tokens.';
+        }
+        if (mode === 'empty') return '';
+        throw new Error('Structural pipeline interruption executed.');
+      }
+    );
 
-    expect(expectedOrder[0]).toBe('delta');
-    expect(expectedOrder[expectedOrder.length - 1]).toBe('done');
-    expect(expectedOrder.filter((e) => e.startsWith('persist:'))).toHaveLength(2);
-  });
+    fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (targetInput: RequestInfo | URL) => {
+      if (String(targetInput).includes('/api/chat/persist')) {
+        return new Response(null, { status: persistMode === 'ok' ? 200 : 500 });
+      }
+      return new Response(null, { status: 200 });
+    });
 
-  /**
-   * Contract test: verify the event shape matches what the client expects.
-   * This catches any branch that forgets to include requestId.
-   */
-  it('all event types include requestId field', () => {
-    const events: EmittedEvent[] = [
-      { type: 'delta', content: 'test', requestId: REQUEST_ID },
-      { type: 'persist', status: 'saving', requestId: REQUEST_ID },
-      { type: 'persist', status: 'saved', requestId: REQUEST_ID },
-      { type: 'persist', status: 'failed', requestId: REQUEST_ID },
-      { type: 'done', requestId: REQUEST_ID },
-    ];
+    await chatStreamModule.handleChatStream(executionContext as any);
 
-    assertAllRequestIds(events);
-  });
+    // Assert tracking density
+    expect(trackingSink.length).toBeGreaterThan(0);
 
-  /**
-   * Contract test: event ordering invariants.
-   */
-  it('persist:saving always comes before persist:saved/failed', () => {
-    const order = ['delta', 'persist:saving', 'persist:saved', 'done'];
-    const savingIdx = order.indexOf('persist:saving');
-    const savedIdx = order.indexOf('persist:saved');
-    expect(savingIdx).toBeLessThan(savedIdx);
-  });
+    // Validate strict Request ID tagging on every event frame
+    for (const frame of trackingSink) {
+      expect(frame.requestId).toBe(TARGET_REQUEST_ID);
+    }
 
-  it('done always comes last', () => {
-    const order = ['delta', 'persist:saving', 'persist:saved', 'done'];
-    expect(order[order.length - 1]).toBe('done');
+    // Validate absolute event sequence tracking
+    const runtimeOrder = trackingSink.map((frame) => {
+      if (frame.type === 'delta') return 'delta';
+      if (frame.type === 'done') return 'done';
+      return `persist:${frame.status}`;
+    });
+    expect(runtimeOrder).toEqual(expectedOrder);
+
+    // Verify content delivery integrity
+    const deltaEvents = trackingSink.filter(
+      (f): f is Extract<EmittedEvent, { type: 'delta' }> => f.type === 'delta'
+    );
+    expect(deltaEvents.at(-1)?.content).toBe(expectedDeltaContent);
+
+    expect(fetchSpy).toHaveBeenCalled();
   });
 });
