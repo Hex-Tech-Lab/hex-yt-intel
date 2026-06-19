@@ -152,12 +152,14 @@ export const useChatStore = create<ChatState>((set, get) => {
         },
       }));
       outbox.remove(clientMsgId);
+      get().setPersistState('idle', clientMsgId);
       return;
     }
 
     if (!job.stream?.url) {
       set({ error: 'Chat streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).' });
       outbox.remove(clientMsgId);
+      get().setPersistState('idle', clientMsgId);
       return;
     }
 
