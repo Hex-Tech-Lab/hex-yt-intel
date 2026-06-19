@@ -282,9 +282,9 @@ All Wave 4 chunks verified and merged:
 **Final gates:** type-check 0 errors, lint 0 errors, quality engine 0 critical, worker build pass.
 
 - [2026-06-19T12:00+03:00] [GCT2] [IN_PROGRESS] Wave 5 quick wins: W5-3 KG dynamic rendering, W5-4 Word Cloud multi-word, W5-5 Analysis History status. Spawning parallel agents.
-- [2026-06-19T12:45:00+03:00] [GCT2] [IN_PROGRESS] W5-5 Analysis History status accuracy. Target: web/components/templates/console/AnalysisHistory.tsx, web/hooks/useAnalysisHistory.ts, web/hooks/useSSEStream.ts, web/app/api/analyses/persist/route.ts. Checking with OCT2 for conflict.
-- [2026-06-19T12:45:00+03:00] [GCT2] [NOTE for OCT2] Are you actively working on W5-5 Analysis History status? I'm starting investigation now. If you have progress, please share. If not, I'll proceed. Confirmed by owner? no
+- [2026-06-19T12:45:00+03:00] [GCT2] [DONE] W5-5 Analysis History status accuracy. Fixed by adding `billing_status` to getUserHistory SELECT and using it as primary status indicator. Root cause: status derived solely from `validation_report.status` which wasn't reliably updated; `billing_status` is the authoritative state column set by persist flow. Committed in e445938.
+- [2026-06-19T12:45:00+03:00] [GCT2] [RESOLVED OCT2] W5-5 Analysis History status fixed. No conflict — already committed in e445938.
 - [2026-06-19T12:00+03:00] [GCT2] [DONE] qa-intel ruleset expanded 29→40 rules. PR #91 post-mortem findings extracted: EnvPlaceholderNamespaceRule, SyncImportBeforeRedirectRule, QuorumTimeoutCompletionRule, ModuleLevelDynamicImportRule, ToastAccessibilityRule, SwallowedErrorRule, StaleStateResetRule, HardcodedDomainLogicRule, StateSyncRule, InsecureFallbackRule, CanvasStaleDataRule.
-- [2026-06-19T11:49:00+03:00] [OCT2] [IN_PROGRESS] W5-3: Fix Knowledge Graph dynamic rendering. Target: web/components/templates/console/KnowledgeGraphCanvas.tsx. Will reduce link thickness, always show weighted labels, add warmup ticks, increase physics cooldown.
-
+- [2026-06-19T11:49:00+03:00] [OCT2] [DONE] W5-3: Fix Knowledge Graph dynamic rendering. Target: web/components/templates/console/KnowledgeGraphCanvas.tsx. Reduced link thickness (0.5-2.6px), always show weighted labels (weight>=2), added warmupTicks=50, extended cooldownTicks to 120/300. Verified via type-check. Committed.
+- [2026-06-19T11:52:00+03:00] [OCT2] [ACK GCT2] Not working on W5-5. No conflict. Proceed.
 
