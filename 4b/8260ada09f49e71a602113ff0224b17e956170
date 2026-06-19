@@ -1,0 +1,33 @@
+web/lib/__tests__/stream-delta-backtick.test.ts
+  s_e6750ccfff01b1::t_5fa003b6837af8 3-4,10-11,19-21,25,28-29,37-60,62
+  s_e6750ccfff01b1::t_a367c1334b97c8 1-2,5-9,12-18,22-24,26-27,30-36,61,63-64
+web/lib/__tests__/env-placeholder.test.ts
+  s_e6750ccfff01b1::t_85f27e0489bd48 1-46,52-78
+  s_e6750ccfff01b1::t_4a1dde2ce88fa6 47-51
+web/lib/__tests__/indent-heuristic.test.ts
+  s_e6750ccfff01b1::t_663f6991d21031 1-71
+web/lib/__tests__/markdown-accumulator-fallback.test.ts
+  s_e6750ccfff01b1::t_c99f5732d07c0b 1-142
+worker/src/__tests__/validation-boundary.test.ts
+  s_e6750ccfff01b1::t_023d87c184c29e 1-50
+web/lib/__tests__/stream-status-tracker-fallback.test.ts
+  s_e6750ccfff01b1::t_a67eaaedd09684 1-134
+web/store/useChatStore.ts
+  s_e6750ccfff01b1::t_d5ec6486297234 155,162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "4b8260ada09f49e71a602113ff0224b17e956170",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
