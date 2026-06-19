@@ -1,0 +1,46 @@
+web/components/templates/console/AnalysisHero.tsx
+  s_e6750ccfff01b1::t_81596807604df8 66
+  s_e6750ccfff01b1::t_8e1b23d8ee9baa 51-55
+  s_e6750ccfff01b1::t_efd2ca6ee3c519 72
+  s_e6750ccfff01b1::t_bebdd82f70cd0b 249
+  s_e6750ccfff01b1::t_692c10ab11618d 77
+web/components/templates/console/DimensionDrawer.tsx
+  s_e6750ccfff01b1::t_018d828bc5278e 6,20-23,38,42-47,49,51,68-81,83-142,144
+web/components/containers/DashboardContainer.tsx
+  s_e6750ccfff01b1::t_5421fe2c1e0e3d 568
+  s_e6750ccfff01b1::t_38842edbd26f6b 542
+  s_e6750ccfff01b1::t_8920ed50d730d6 483
+  s_e6750ccfff01b1::t_d354e55706f1d4 512
+web/components/templates/console/MindMap.tsx
+  s_e6750ccfff01b1::t_1d279e1530aace 185
+web/components/templates/_shared/primitives.tsx
+  s_e6750ccfff01b1::t_04380c41d50a02 130,133
+  s_e6750ccfff01b1::t_6f3e790e6c8f8f 37
+web/components/templates/console/KnowledgeGraphCanvas.tsx
+  s_e6750ccfff01b1::t_7c65155404a5c5 152
+web/components/dashboard/RightPanelAccordion.tsx
+  s_e6750ccfff01b1::t_b216b5902ca5a5 40
+  s_e6750ccfff01b1::t_5b267353e0c9ed 99
+  s_e6750ccfff01b1::t_784a0fc0d6fefa 28,32,38
+web/components/templates/console/DimensionAccordion.tsx
+  s_e6750ccfff01b1::t_f68b654773728f 3
+  s_e6750ccfff01b1::t_7f6a604f7eb21e 22-80,87-90,103-111
+web/components/templates/console/WordCloud.tsx
+  s_e6750ccfff01b1::t_2604c32d592b2a 266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "db6c2d63d08bbb96d117c8327ecfc096bf956cc1",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
