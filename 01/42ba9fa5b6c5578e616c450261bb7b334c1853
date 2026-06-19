@@ -1,0 +1,21 @@
+scripts/quality-engine/rules.ts
+  s_e6750ccfff01b1::t_efc9a0d227bbb6 912
+web/store/useChatStore.ts
+  s_e6750ccfff01b1::t_11ad4da87c1035 179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "0142ba9fa5b6c5578e616c450261bb7b334c1853",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
