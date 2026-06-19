@@ -71,7 +71,7 @@ export const StreamSettleRule: IRule = {
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
     const text = source.getText();
-    if (text.includes('Promise.all') && text.includes('CompletedIndexes') && filePath.includes('useSSEStream')) {
+    if (text.includes('Promise.all') && text.includes('completedIndexes') && filePath.includes('useSSEStream')) {
       if (!text.includes('streamController') && !text.includes('AbortController')) {
         findings.push({
           file: filePath,

@@ -34,7 +34,7 @@ export interface GlowBorderProps {
 }
 
 export function GlowBorder({ children, active = false, radius = "card", className = "", style = {} }: GlowBorderProps) {
-  const r = radius === "card" ? 8 : 6;
+  const computedRadius = radius === "card" ? 8 : 6;
   return (
     <div
       className={`hx-glow ${className}`}
@@ -42,14 +42,14 @@ export function GlowBorder({ children, active = false, radius = "card", classNam
       style={{
         position: "relative",
         padding: 1,
-        borderRadius: r,
+        borderRadius: computedRadius,
         overflow: "hidden",
         background: active ? "transparent" : "linear-gradient(135deg, rgb(148 163 184 / 0.18) 0%, rgb(148 163 184 / 0) 60%)",
         ...style,
       }}
     >
       {active && <span className="hx-spin" aria-hidden={true} />}
-      <div style={{ position: "relative", borderRadius: r - 1, height: "100%", width: "100%", overflow: "hidden" }}>
+      <div style={{ position: "relative", borderRadius: computedRadius - 1, height: "100%", width: "100%", overflow: "hidden" }}>
         {children}
       </div>
     </div>

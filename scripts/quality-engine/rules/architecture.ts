@@ -58,7 +58,7 @@ export const ErrorTaxonomyRule: IRule = {
     source.forEachDescendant((node) => {
       if (Node.isIfStatement(node)) {
         const condition = node.getExpression().getText();
-        if (condition.includes('error') && condition.includes('!data') || condition.includes('!result')) {
+        if ((condition.includes('error') && condition.includes('!data')) || condition.includes('!result')) {
           const block = node.getThenStatement()?.getText() || '';
           if (block.includes('NotFound')) {
             findings.push({
@@ -104,9 +104,15 @@ export const SchemaContractRule: IRule = {
     const filePath = source.getFilePath().replace(/\\/g, "/");
     const text = source.getText();
 
-    if (text.includes('.refine(') && !text.includes('.optional()')) {
-      const refineMatches = text.match(/\.refine\(/g);
-      if (refineMatches && text.includes('z.object({')) {
+    if (text.includes('.refine(')) {
+      // Check if any .refine() call is on a field chain that lacks .optional()
+      const refineChains = text.match(/\.\w+\([^)]*\)\.refine\(/g) || [];
+      const hasOptionalBeforeRefine = refineChains.some(chain => {
+        const fieldStart = text.indexOf(chain);
+        const fieldSegment = text.substring(Math.max(0, fieldStart - 200), fieldStart);
+        return fieldSegment.includes('.optional()');
+      });
+      if (refineChains.length > 0 && !hasOptionalBeforeRefine && text.includes('z.object({')) {
         findings.push({
           file: filePath,
           severity: "critical",

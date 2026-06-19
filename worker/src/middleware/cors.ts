@@ -29,37 +29,29 @@ export function isValidAppUrl(
   try {
     const parsedUrl = new URL(urlStr);
     const origin = parsedUrl.origin.toLowerCase();
-
-    if (envAppUrl) {
-      const parsedEnv = new URL(envAppUrl);
-      if (origin === parsedEnv.origin.toLowerCase()) {
-        return true;
-      }
-    }
-
-    if (allowedOrigins) {
-      const list = allowedOrigins.split(",").map((o) => o.trim().toLowerCase());
-      if (list.includes(origin)) {
-        return true;
-      }
-    }
-
     const hostname = parsedUrl.hostname.toLowerCase();
-    if (!isProd || hostname.endsWith(".vercel.app") || hostname === "yt-intel.getmytestdrive.com") {
-      if (
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        hostname.endsWith(".vercel.app") ||
-        hostname === "yt-intel.getmytestdrive.com"
-      ) {
-        return true;
-      }
-    }
+
+    const parsedEnv = envAppUrl ? new URL(envAppUrl).origin.toLowerCase() : null;
+    const originList = allowedOrigins
+      ? allowedOrigins.split(",").map((o) => o.trim().toLowerCase())
+      : [];
+
+    const originMap: Record<string, boolean> = {
+      envMatch: parsedEnv ? origin === parsedEnv : false,
+      listMatch: originList.includes(origin),
+      localhost: hostname === "localhost" || hostname === "127.0.0.1",
+      vercel: hostname.endsWith(".vercel.app"),
+      production: hostname === "yt-intel.getmytestdrive.com",
+    };
+
+    if (originMap.envMatch || originMap.listMatch) return true;
+    if (!isProd && (originMap.localhost || originMap.vercel)) return true;
+    if (originMap.vercel || originMap.production) return true;
+
+    return false;
   } catch {
     return false;
   }
-
-  return false;
 }
 
 export const corsMiddleware: MiddlewareHandler = async (c, next) => {

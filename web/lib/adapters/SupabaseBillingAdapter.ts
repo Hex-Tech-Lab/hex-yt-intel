@@ -2,7 +2,7 @@ import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
 export class SupabaseBillingAdapter {
-  async updateUserTier(params: {
+  static async updateUserTier(params: {
     userId: string;
     tier: 'pro' | 'free';
   }): Promise<void> {
@@ -30,7 +30,7 @@ export class SupabaseBillingAdapter {
     }
   }
 
-  async updateBillingStatus(params: {
+  static async updateBillingStatus(params: {
     analysisId: string;
     status: 'processing' | 'completed' | 'failed';
   }): Promise<void> {

@@ -11,7 +11,7 @@ import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { isPersistedValidationReport } from '@/lib/types/validation-report';
 
 export class SupabaseAnalysisAdapter {
-  async findCachedAnalysis(params: {
+  static async findCachedAnalysis(params: {
     userId: string;
     videoId: string;
   }): Promise<CachedAnalysis | null> {
@@ -31,14 +31,11 @@ export class SupabaseAnalysisAdapter {
     if (existing.analysis_payload && typeof existing.analysis_payload === 'object' && Object.keys(existing.analysis_payload).length > 0) {
       const payload = existing.analysis_payload as Record<string, unknown>;
       
-      let dimensions: Record<string, unknown> = {};
-      if (Array.isArray(payload.dimensions)) {
-        payload.dimensions.forEach((d: any) => {
-          if (d && typeof d.number === 'number') dimensions[d.number] = d;
-        });
-      } else if (typeof payload.dimensions === 'object') {
-        dimensions = payload.dimensions as Record<string, unknown>;
-      }
+      const raw = Array.isArray(payload.dimensions) ? payload.dimensions : Object.values(payload.dimensions ?? {});
+      const dimensions = raw.reduce<Record<string, unknown>>((acc, d: any) => {
+        if (d && typeof d.number === 'number') acc[d.number] = d;
+        return acc;
+      }, {});
 
       const res = {
         id: existing.id,
@@ -95,7 +92,7 @@ export class SupabaseAnalysisAdapter {
     };
   }
 
-  async upsertProcessingStub(params: {
+  static async upsertProcessingStub(params: {
     videoId: string;
     userId: string;
     title: string;
@@ -175,7 +172,7 @@ export class SupabaseAnalysisAdapter {
     return { id: rpcData as string };
   }
 
-  async persistAnalysis(params: {
+  static async persistAnalysis(params: {
     analysisId: string;
     analysisPayload: UCISPayloadV2 | null;
     analysisMarkdown: string;
@@ -201,7 +198,7 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
-  async getUserHistory(params: { userId: string }): Promise<Array<{
+  static async getUserHistory(params: { userId: string }): Promise<Array<{
     id: string;
     videoId: string;
     title: string;
@@ -227,8 +224,15 @@ export class SupabaseAnalysisAdapter {
         videoId: analysis.video_id,
         title: analysis.title || 'Untitled Analysis',
         createdAt: analysis.created_at,
-        status: (analysis.billing_status === 'completed' || analysis.validation_passed || analysis.validation_report?.status === 'completed' || analysis.validation_report?.status === 'done') ? 'completed' :
-                (analysis.billing_status === 'processing' || analysis.validation_report?.status === 'processing' ? 'processing' : 'incomplete'),
+        status: (() => {
+          const statusMap: Record<string, 'completed' | 'processing' | 'incomplete'> = {
+            completed: 'completed',
+            done: 'completed',
+            processing: 'processing',
+          };
+          if (analysis.billing_status === 'completed' || analysis.validation_passed) return 'completed';
+          return statusMap[analysis.validation_report?.status] ?? 'incomplete';
+        })(),
       }));
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -239,7 +243,7 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
-  async findAnalysisById(params: {
+  static async findAnalysisById(params: {
     userId: string;
     analysisId: string;
   }): Promise<{
@@ -258,19 +262,21 @@ export class SupabaseAnalysisAdapter {
         .eq('user_id', params.userId)
         .maybeSingle();
 
-      if (error) {
-        console.error('[SupabaseAnalysisAdapter] findAnalysisById failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
+      const handlerMap = {
+        ERROR: () => { throw error; },
+        NO_DATA: () => null as null,
+        SUCCESS: () => ({
+          id: data!.id,
+          title: data!.title || 'Untitled',
+          videoId: data!.video_id,
+          analysisMarkdown: data!.analysis_markdown || '',
+          createdAt: data!.created_at,
+        }),
+      } as const;
 
-      return {
-        id: data.id,
-        title: data.title || 'Untitled',
-        videoId: data.video_id,
-        analysisMarkdown: data.analysis_markdown || '',
-        createdAt: data.created_at,
-      };
+      if (error) handlerMap.ERROR();
+      if (!data) return handlerMap.NO_DATA();
+      return handlerMap.SUCCESS();
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisById' },
@@ -280,7 +286,7 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
-  async findAnalysisForPersist(params: {
+  static async findAnalysisForPersist(params: {
     analysisId: string;
     videoId: string;
   }): Promise<{
@@ -323,7 +329,7 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
-  async getAnalysisGrounding(params: {
+  static async getAnalysisGrounding(params: {
     analysisId: string;
   }): Promise<{
     title: string;
@@ -340,19 +346,21 @@ export class SupabaseAnalysisAdapter {
         .eq('id', params.analysisId)
         .maybeSingle();
 
-      if (error) {
-        console.error('[SupabaseAnalysisAdapter] getAnalysisGrounding failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
+      const handlerMap = {
+        ERROR: () => { throw error; },
+        NO_DATA: () => null as null,
+        SUCCESS: () => ({
+          title: data!.title || '',
+          channelTitle: data!.channel_title || null,
+          description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null,
+          analysisMarkdown: data!.analysis_markdown || null,
+          status: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.status || 'incomplete' : 'incomplete',
+        }),
+      } as const;
 
-      return {
-        title: data.title || '',
-        channelTitle: data.channel_title || null,
-        description: isPersistedValidationReport(data.validation_report) ? data.validation_report.metadata?.description || null : null,
-        analysisMarkdown: data.analysis_markdown || null,
-        status: isPersistedValidationReport(data.validation_report) ? data.validation_report.status || 'incomplete' : 'incomplete',
-      };
+      if (error) handlerMap.ERROR();
+      if (!data) return handlerMap.NO_DATA();
+      return handlerMap.SUCCESS();
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'getAnalysisGrounding' },
@@ -362,7 +370,7 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
-  async findAnalysisByShareToken(token: string): Promise<{
+  static async findAnalysisByShareToken(token: string): Promise<{
     id: string;
     title: string;
     channelTitle: string | null;
@@ -401,7 +409,7 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
-  async updateValidationReport(params: {
+  static async updateValidationReport(params: {
     analysisId: string;
     report: any;
     passed: boolean;

@@ -22,7 +22,7 @@ interface MessageRow {
 }
 
 export class SupabaseChatAdapter {
-  async getConversations(userId: string): Promise<ChatConversation[]> {
+  static async getConversations(userId: string): Promise<ChatConversation[]> {
     if (!userId) return [];
     try {
       const service = getSupabaseServiceClient();
@@ -56,7 +56,7 @@ export class SupabaseChatAdapter {
     }
   }
 
-  async createConversation(params: {
+  static async createConversation(params: {
     userId: string;
     analysisId: string | null;
     title: string;
@@ -74,14 +74,15 @@ export class SupabaseChatAdapter {
         throw error || new Error('createConversation returned no row');
       }
 
+      const { id, user_id, title, analysis_id, created_at, updated_at, last_message_at } = data;
       return {
-        id: data.id,
-        userId: data.user_id,
-        title: data.title || 'Untitled',
-        analysisId: data.analysis_id,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-        lastMessageAt: data.last_message_at || data.created_at,
+        id,
+        userId: user_id,
+        title: title || 'Untitled',
+        analysisId: analysis_id,
+        createdAt: created_at,
+        updatedAt: updated_at,
+        lastMessageAt: last_message_at || created_at,
       };
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -92,7 +93,7 @@ export class SupabaseChatAdapter {
     }
   }
 
-  async getConversation(params: {
+  static async getConversation(params: {
     conversationId: string;
   }): Promise<ChatConversation | null> {
     try {
@@ -109,15 +110,15 @@ export class SupabaseChatAdapter {
       }
       if (!data) return null;
 
-      return {
+      const defaults = { title: 'Untitled', lastMessageAt: data.created_at };
+      const mapping = {
         id: data.id,
         userId: data.user_id,
-        title: data.title || 'Untitled',
         analysisId: data.analysis_id,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
-        lastMessageAt: data.last_message_at || data.created_at,
       };
+      return { ...mapping, title: data.title || defaults.title, lastMessageAt: data.last_message_at || defaults.lastMessageAt };
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'getConversation' },
@@ -127,7 +128,7 @@ export class SupabaseChatAdapter {
     }
   }
 
-  async updateConversationTitle(params: {
+  static async updateConversationTitle(params: {
     conversationId: string;
     title: string;
   }): Promise<void> {
@@ -151,7 +152,7 @@ export class SupabaseChatAdapter {
     }
   }
 
-  async getMessages(params: {
+  static async getMessages(params: {
     conversationId: string;
   }): Promise<ChatMessage[]> {
     if (!params.conversationId) return [];
@@ -185,7 +186,7 @@ export class SupabaseChatAdapter {
     }
   }
 
-  async findMessageByClientMsgId(params: {
+  static async findMessageByClientMsgId(params: {
     conversationId: string;
     clientMsgId: string;
   }): Promise<ChatMessage | null> {
@@ -221,7 +222,7 @@ export class SupabaseChatAdapter {
     }
   }
 
-  async createMessage(params: {
+  static async createMessage(params: {
     conversationId: string;
     userId: string;
     role: 'user' | 'assistant';
@@ -267,7 +268,7 @@ export class SupabaseChatAdapter {
     }
   }
 
-  async findAssistantMessageAfter(params: {
+  static async findAssistantMessageAfter(params: {
     conversationId: string;
     timestamp: string;
   }): Promise<ChatMessage | null> {
@@ -307,7 +308,7 @@ export class SupabaseChatAdapter {
     }
   }
 
-  async findAssistantByParentId(params: {
+  static async findAssistantByParentId(params: {
     conversationId: string;
     parentId: string;
   }): Promise<ChatMessage | null> {

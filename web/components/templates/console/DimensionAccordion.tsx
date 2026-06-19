@@ -32,6 +32,12 @@ const DimensionItem = memo(function DimensionItem({
 }) {
   const isStreaming = d.status === 'streaming';
   const indexStr = String(index + 1).padStart(2, '0');
+  const variant = isSelected ? 'selected' : 'default';
+  const classMap = {
+    selected: 'bg-[rgb(6_182_212_/_0.04)] border-[var(--accent)] text-[var(--ink)] shadow-[0_0_15px_-3px_rgba(6,182,212,0.15)]',
+    default: 'bg-[var(--surface)] border-[var(--line-faint)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)] hover:bg-[var(--surface-raised)]/50',
+  } as const;
+  const buttonClass = classMap[variant];
 
   return (
     <GlowBorder
@@ -42,11 +48,7 @@ const DimensionItem = memo(function DimensionItem({
       <CornerFrame tone={isSelected ? 'accent' : 'line'}>
         <button
           onClick={() => onSelect(d.key)}
-          className={`w-full text-left flex items-center justify-between p-4 px-5 rounded-lg border cursor-pointer transition-all duration-300 ${
-            isSelected
-              ? 'bg-[rgb(6_182_212_/_0.04)] border-[var(--accent)] text-[var(--ink)] shadow-[0_0_15px_-3px_rgba(6,182,212,0.15)]'
-              : 'bg-[var(--surface)] border-[var(--line-faint)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)] hover:bg-[var(--surface-raised)]/50'
-          }`}
+          className={`w-full text-left flex items-center justify-between p-4 px-5 rounded-lg border cursor-pointer transition-all duration-300 ${buttonClass}`}
           style={{ boxSizing: 'border-box' }}
         >
           <div className="flex items-center gap-4 min-w-0">

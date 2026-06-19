@@ -94,7 +94,7 @@ export const ValidationOnChangeRule: IRule = {
 
     if (text.includes('safeParse') || text.includes('.parse(')) {
       const isStore = filePath.includes('store/') || filePath.includes('Store');
-      if (isStore && text.includes('setUrl') || text.includes('setQuery') || text.includes('setSearch')) {
+      if (isStore && (text.includes('setUrl') || text.includes('setQuery') || text.includes('setSearch'))) {
         findings.push({
           file: filePath,
           severity: "high",

@@ -17,22 +17,16 @@ import { SupabaseGraphAdapter } from './SupabaseGraphAdapter';
 import { SupabaseBillingAdapter } from './SupabaseBillingAdapter';
 
 export class SupabasePersistenceAdapter implements PersistencePort, ChatPersistencePort {
-  private analysisAdapter = new SupabaseAnalysisAdapter();
-  private chatAdapter = new SupabaseChatAdapter();
-  private graphAdapter = new SupabaseGraphAdapter();
-  private billingAdapter = new SupabaseBillingAdapter();
-
-  // --- Analysis Adapter Delegation ---
-  async findCachedAnalysis(params: { userId: string; videoId: string }): Promise<CachedAnalysis | null> {
-    return this.analysisAdapter.findCachedAnalysis(params);
+  findCachedAnalysis(params: { userId: string; videoId: string }): Promise<CachedAnalysis | null> {
+    return SupabaseAnalysisAdapter.findCachedAnalysis(params);
   }
 
-  async upsertProcessingStub(params: { videoId: string; userId: string; title: string; validationReport: ValidationReportInput }): Promise<AnalysisStub> {
-    return this.analysisAdapter.upsertProcessingStub(params);
+  upsertProcessingStub(params: { videoId: string; userId: string; title: string; validationReport: ValidationReportInput }): Promise<AnalysisStub> {
+    return SupabaseAnalysisAdapter.upsertProcessingStub(params);
   }
 
   async persistAnalysis(params: { analysisId: string; analysisPayload: UCISPayloadV2 | null; analysisMarkdown: string; validationPassed: boolean }): Promise<void> {
-    await this.analysisAdapter.persistAnalysis(params);
+    await SupabaseAnalysisAdapter.persistAnalysis(params);
 
     // Persist Knowledge Graph data if payload exists
     if (params.analysisPayload && params.analysisPayload.knowledgeGraph) {
@@ -55,28 +49,28 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     }
   }
 
-  async getUserHistory(params: { userId: string }): Promise<Array<{ id: string; videoId: string; title: string; createdAt: string; status: 'completed' | 'processing' | 'incomplete' }>> {
-    return this.analysisAdapter.getUserHistory(params);
+  getUserHistory(params: { userId: string }): Promise<Array<{ id: string; videoId: string; title: string; createdAt: string; status: 'completed' | 'processing' | 'incomplete' }>> {
+    return SupabaseAnalysisAdapter.getUserHistory(params);
   }
 
-  async findAnalysisById(params: { userId: string; analysisId: string }): Promise<{ id: string; title: string; videoId: string; analysisMarkdown: string; createdAt: string } | null> {
-    return this.analysisAdapter.findAnalysisById(params);
+  findAnalysisById(params: { userId: string; analysisId: string }): Promise<{ id: string; title: string; videoId: string; analysisMarkdown: string; createdAt: string } | null> {
+    return SupabaseAnalysisAdapter.findAnalysisById(params);
   }
 
-  async findAnalysisForPersist(params: { analysisId: string; videoId: string }): Promise<{ id: string; userId: string; title: string; validationReport: unknown; createdAt: string; channelTitle?: string | null } | null> {
-    return this.analysisAdapter.findAnalysisForPersist(params);
+  findAnalysisForPersist(params: { analysisId: string; videoId: string }): Promise<{ id: string; userId: string; title: string; validationReport: unknown; createdAt: string; channelTitle?: string | null } | null> {
+    return SupabaseAnalysisAdapter.findAnalysisForPersist(params);
   }
 
-  async getAnalysisGrounding(params: { analysisId: string }): Promise<{ title: string; channelTitle: string | null; description: string | null; analysisMarkdown: string | null; status: string } | null> {
-    return this.analysisAdapter.getAnalysisGrounding(params);
+  getAnalysisGrounding(params: { analysisId: string }): Promise<{ title: string; channelTitle: string | null; description: string | null; analysisMarkdown: string | null; status: string } | null> {
+    return SupabaseAnalysisAdapter.getAnalysisGrounding(params);
   }
 
-  async findAnalysisByShareToken(token: string): Promise<{ id: string; title: string; channelTitle: string | null; analysisMarkdown: string | null; sharedExpiresAt: string | null; createdAt: string } | null> {
-    return this.analysisAdapter.findAnalysisByShareToken(token);
+  findAnalysisByShareToken(token: string): Promise<{ id: string; title: string; channelTitle: string | null; analysisMarkdown: string | null; sharedExpiresAt: string | null; createdAt: string } | null> {
+    return SupabaseAnalysisAdapter.findAnalysisByShareToken(token);
   }
 
-  async updateValidationReport(params: { analysisId: string; report: any; passed: boolean }): Promise<void> {
-    return this.analysisAdapter.updateValidationReport(params);
+  updateValidationReport(params: { analysisId: string; report: any; passed: boolean }): Promise<void> {
+    return SupabaseAnalysisAdapter.updateValidationReport(params);
   }
 
   async updateAnalysisResult(params: {
@@ -107,9 +101,8 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
               title: analysisMeta.title ?? '',
               user_id: analysisMeta.user_id,
             },
-            { onConflict: 'id' }
-          )
-          .single();
+            { ignoreDuplicates: true }
+          );
       } catch (e) {
         console.warn('[SupabasePersistenceAdapter] video upsert skipped:', e);
       }
@@ -177,70 +170,70 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
   }
 
   // --- Chat Adapter Delegation ---
-  async getConversations(userId: string): Promise<ChatConversation[]> {
-    return this.chatAdapter.getConversations(userId);
+  getConversations(userId: string): Promise<ChatConversation[]> {
+    return SupabaseChatAdapter.getConversations(userId);
   }
 
-  async createConversation(params: { userId: string; analysisId: string | null; title: string }): Promise<ChatConversation> {
-    return this.chatAdapter.createConversation(params);
+  createConversation(params: { userId: string; analysisId: string | null; title: string }): Promise<ChatConversation> {
+    return SupabaseChatAdapter.createConversation(params);
   }
 
-  async getConversation(params: { conversationId: string }): Promise<ChatConversation | null> {
-    return this.chatAdapter.getConversation(params);
+  getConversation(params: { conversationId: string }): Promise<ChatConversation | null> {
+    return SupabaseChatAdapter.getConversation(params);
   }
 
-  async updateConversationTitle(params: { conversationId: string; title: string }): Promise<void> {
-    return this.chatAdapter.updateConversationTitle(params);
+  updateConversationTitle(params: { conversationId: string; title: string }): Promise<void> {
+    return SupabaseChatAdapter.updateConversationTitle(params);
   }
 
-  async getMessages(params: { conversationId: string }): Promise<ChatMessage[]> {
-    return this.chatAdapter.getMessages(params);
+  getMessages(params: { conversationId: string }): Promise<ChatMessage[]> {
+    return SupabaseChatAdapter.getMessages(params);
   }
 
-  async findMessageByClientMsgId(params: { conversationId: string; clientMsgId: string }): Promise<ChatMessage | null> {
-    return this.chatAdapter.findMessageByClientMsgId(params);
+  findMessageByClientMsgId(params: { conversationId: string; clientMsgId: string }): Promise<ChatMessage | null> {
+    return SupabaseChatAdapter.findMessageByClientMsgId(params);
   }
 
-  async createMessage(params: { conversationId: string; userId: string; role: 'user' | 'assistant'; content: string; clientMsgId?: string | null; parentMessageId?: string | null }): Promise<ChatMessage> {
-    return this.chatAdapter.createMessage(params);
+  createMessage(params: { conversationId: string; userId: string; role: 'user' | 'assistant'; content: string; clientMsgId?: string | null; parentMessageId?: string | null }): Promise<ChatMessage> {
+    return SupabaseChatAdapter.createMessage(params);
   }
 
-  async findAssistantMessageAfter(params: { conversationId: string; timestamp: string }): Promise<ChatMessage | null> {
-    return this.chatAdapter.findAssistantMessageAfter(params);
+  findAssistantMessageAfter(params: { conversationId: string; timestamp: string }): Promise<ChatMessage | null> {
+    return SupabaseChatAdapter.findAssistantMessageAfter(params);
   }
 
-  async findAssistantByParentId(params: { conversationId: string; parentId: string }): Promise<ChatMessage | null> {
-    return this.chatAdapter.findAssistantByParentId(params);
+  findAssistantByParentId(params: { conversationId: string; parentId: string }): Promise<ChatMessage | null> {
+    return SupabaseChatAdapter.findAssistantByParentId(params);
   }
 
   // --- Graph Adapter Delegation ---
-  async getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
-    return this.graphAdapter.getAnalysesByTenant(tenantId);
+  getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
+    return SupabaseGraphAdapter.getAnalysesByTenant(tenantId);
   }
 
-  async persistKnowledgeGraph(params: { analysisId: string; entities: Array<{ label: string; type: string; weight: number; rawNode?: any }>; relations: Array<{ source: string; target: string; relation: string; strength: number; rawEdge?: any }> }): Promise<void> {
-    return this.graphAdapter.persistKnowledgeGraph(params);
+  persistKnowledgeGraph(params: { analysisId: string; entities: Array<{ label: string; type: string; weight: number; rawNode?: any }>; relations: Array<{ source: string; target: string; relation: string; strength: number; rawEdge?: any }> }): Promise<void> {
+    return SupabaseGraphAdapter.persistKnowledgeGraph(params);
   }
 
-  async getKnowledgeGraph(analysisId: string): Promise<{ entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>; relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }> } | null> {
-    return this.graphAdapter.getKnowledgeGraph(analysisId);
+  getKnowledgeGraph(analysisId: string): Promise<{ entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>; relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }> } | null> {
+    return SupabaseGraphAdapter.getKnowledgeGraph(analysisId);
   }
 
-  async persistGraph(params: { analysisId: string; nodes: GraphNode[]; relations: GraphEdge[] }): Promise<void> {
-    return this.graphAdapter.persistGraph(params);
+  persistGraph(params: { analysisId: string; nodes: GraphNode[]; relations: GraphEdge[] }): Promise<void> {
+    return SupabaseGraphAdapter.persistGraph(params);
   }
 
-  async getGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
-    return this.graphAdapter.getGraph(analysisId);
+  getGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
+    return SupabaseGraphAdapter.getGraph(analysisId);
   }
 
   // --- Billing Adapter Delegation ---
-  async updateUserTier(params: { userId: string; tier: 'pro' | 'free' }): Promise<void> {
-    return this.billingAdapter.updateUserTier(params);
+  updateUserTier(params: { userId: string; tier: 'pro' | 'free' }): Promise<void> {
+    return SupabaseBillingAdapter.updateUserTier(params);
   }
 
-  async updateBillingStatus(params: { analysisId: string; status: 'processing' | 'completed' | 'failed' }): Promise<void> {
-    return this.billingAdapter.updateBillingStatus(params);
+  updateBillingStatus(params: { analysisId: string; status: 'processing' | 'completed' | 'failed' }): Promise<void> {
+    return SupabaseBillingAdapter.updateBillingStatus(params);
   }
 
   // --- Chunks ---

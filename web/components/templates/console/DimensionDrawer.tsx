@@ -31,10 +31,15 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
 
     requestAnimationFrame(() => closeBtnRef.current?.focus());
 
+    const keyHandlers: Record<string, () => void> = {
+      Escape: () => onClose(),
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      const handler = keyHandlers[e.key];
+      if (handler) {
         e.stopPropagation();
-        onClose();
+        handler();
         return;
       }
       if (e.key === 'Tab' && drawerRef.current) {

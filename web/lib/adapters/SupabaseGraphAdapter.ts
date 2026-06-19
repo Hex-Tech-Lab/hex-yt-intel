@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 import type { GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
 
 export class SupabaseGraphAdapter {
-  async getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
+  static async getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
@@ -38,7 +38,7 @@ export class SupabaseGraphAdapter {
     }
   }
 
-  async persistKnowledgeGraph(params: {
+  static async persistKnowledgeGraph(params: {
     analysisId: string;
     entities: Array<{
       label: string;
@@ -100,7 +100,7 @@ export class SupabaseGraphAdapter {
     }
   }
 
-  async getKnowledgeGraph(analysisId: string): Promise<{
+  static async getKnowledgeGraph(analysisId: string): Promise<{
     entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>;
     relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }>;
   } | null> {
@@ -112,12 +112,17 @@ export class SupabaseGraphAdapter {
         service.from('kg_relations').select('source_entity_id, target_entity_id, relation_label, strength, raw_edge').eq('analysis_id', analysisId)
       ]);
 
-      if (entities.error) throw entities.error;
-      if (relations.error) throw relations.error;
+      const resultsMap = {
+        ERROR: (err: any) => { throw err; },
+        SUCCESS: (data: any) => data || [],
+      };
+
+      const firstError = entities.error || relations.error;
+      if (firstError) resultsMap.ERROR(firstError);
 
       return {
-        entities: entities.data || [],
-        relations: relations.data || []
+        entities: resultsMap.SUCCESS(entities.data),
+        relations: resultsMap.SUCCESS(relations.data),
       };
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -128,7 +133,7 @@ export class SupabaseGraphAdapter {
     }
   }
 
-  async persistGraph(params: {
+  static async persistGraph(params: {
     analysisId: string;
     nodes: GraphNode[];
     relations: GraphEdge[];
@@ -146,11 +151,11 @@ export class SupabaseGraphAdapter {
       strength: e.strength,
       rawEdge: e
     }));
-    return this.persistKnowledgeGraph({ analysisId: params.analysisId, entities, relations });
+    return SupabaseGraphAdapter.persistKnowledgeGraph({ analysisId: params.analysisId, entities, relations });
   }
 
-  async getGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
-    const data = await this.getKnowledgeGraph(analysisId);
+  static async getGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
+    const data = await SupabaseGraphAdapter.getKnowledgeGraph(analysisId);
     if (!data) return null;
     return {
       nodes: data.entities.map(e => {

@@ -83,9 +83,7 @@ export const CheckoutSchema = z.object({
 }).refine(
   (data) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
-    if (!appUrl) {
-      throw new Error('NEXT_PUBLIC_APP_URL is missing');
-    }
+    if (!appUrl) return false;
     try {
       const appOrigin = new URL(appUrl).origin;
       const successOrigin = new URL(data.successUrl).origin;
