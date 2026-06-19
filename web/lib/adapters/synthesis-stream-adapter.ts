@@ -85,14 +85,14 @@ export class SynthesisStreamAdapter {
           fragment,
           this.options,
           () => this.deltaHandler.clear(),
-          () => this.markdownAccumulator.rebuildDisplayMarkdown()
+          (force) => this.markdownAccumulator.rebuildDisplayMarkdown(force)
         );
         break;
       case 'delta':
         this.deltaHandler.handleDelta(
           fragment.content,
           this.options,
-          () => this.markdownAccumulator.rebuildDisplayMarkdown()
+          () => this.markdownAccumulator.rebuildDisplayMarkdown(false)
         );
         break;
       case 'dimension':

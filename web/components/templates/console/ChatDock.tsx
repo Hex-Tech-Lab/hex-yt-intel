@@ -133,13 +133,10 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     else if (e.key === 'Escape') { startTransition(() => { setOpen(false); }); }
   };
 
-  // Shared shell: absolute, anchored to the bottom of <main>, full width of the column.
+  // Shared shell: static position in flex column layout, full width of the column.
   const shell: React.CSSProperties = {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 'var(--z-dock)' as any,
+    flexShrink: 0,
+    width: '100%',
     borderTop: '1px solid var(--line)',
     background: 'rgb(11 14 20 / 0.97)',
     backdropFilter: 'blur(12px)',

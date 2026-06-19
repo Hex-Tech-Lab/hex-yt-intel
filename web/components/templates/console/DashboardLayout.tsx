@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { useChatStore } from '@/store/useChatStore';
 import { useUIStore } from '@/store/useUIStore';
 
 // See /docs/ui/dashboard-layout.md
@@ -15,7 +14,6 @@ export interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }: DashboardLayoutProps) {
-  const isChatOpen = useChatStore((s) => s.isChatOpen);
   const isAnyOverlayOpen = useUIStore((s) => s.isAnyOverlayOpen);
 
   return (
@@ -37,7 +35,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           {topbar}
         </header>
 
-        <div className={`flex-1 overflow-y-auto p-8 px-10 scroll-smooth ${isChatOpen ? 'pb-[42vh]' : 'pb-16'}`}>
+        <div className="flex-1 overflow-y-auto p-8 pb-8 px-10 scroll-smooth">
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1">
               {children}

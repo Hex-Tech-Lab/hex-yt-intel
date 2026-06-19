@@ -51,8 +51,8 @@ export class ReasoningEngine implements ReasoningEnginePort {
    * Passthrough so the orchestrator (worker.ts) can validate partial markdown on
    * browser-abort without reaching into the ValidationService directly.
    */
-  validate12D(analysis: unknown): boolean {
-    return this.validator.validate12D(analysis);
+  validate12D(analysis: unknown, expectedCount?: number): boolean {
+    return this.validator.validate12D(analysis, expectedCount);
   }
 
   /**
@@ -94,7 +94,7 @@ export class ReasoningEngine implements ReasoningEnginePort {
     return {
       finalText,
       modelUsed,
-      valid: this.validator.validate12D(finalText),
+      valid: this.validator.validate12D(finalText, context.dimensions?.length),
       produced: started,
     };
   }

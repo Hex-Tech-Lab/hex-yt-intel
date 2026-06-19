@@ -176,6 +176,7 @@ Cross-Domain Bridge: From marketing to psychology`;
   describe('Full Validation Report', () => {
     it('should generate passing report for complete output', () => {
       const completeOutput = `=== PERSONA CONFIGURATION ===
+Analysis Timestamp: \`2026-05-18 14:30:45 (Agent)\`
 Primary Persona:    P1 Content Creator (Weight: 50%)
 Secondary Persona:  P2 Indie Maker (Weight: 25%)
 Tertiary Persona:   P3 Consultant (Weight: 15%)
@@ -195,12 +196,22 @@ Selection Rationale: Content is creator-focused.
    - **Persona Fit**: [Primary]
    - **Source Anchor**: \`00:23:45\`
 
+2. **Deliverable 2** – Second value
+   - **Action**: Step-by-step action
+   - **Persona Fit**: [Secondary]
+   - **Source Anchor**: \`02:10:05\`
+
+3. **Deliverable 3** – Third value
+   - **Action**: Step-by-step action
+   - **Persona Fit**: [Tertiary]
+   - **Source Anchor**: \`03:15:20\`
+
 **Read-Depth Guidance**:
 - *60 seconds*: stop here.
 - *5 minutes*: read more.
 
 ### DIMENSION 2 – PROVENANCE
-| Field | Value |
+| **Field** | **Value** |
 |---|---|
 | Title | Test |
 
@@ -218,14 +229,26 @@ Tone assessment.
    - Detailed explanation.
    - Lens applied: [First Principles]
 
+2. **Insight 2** \`01:05:00\`
+   - Detailed explanation.
+   - Lens applied: [Game Theory]
+
+3. **Insight 3** \`01:45:00\`
+   - Detailed explanation.
+   - Lens applied: [Systems Thinking]
+
 **Power Quotes**
-1. **"Sample quote"** \`01:20:15\`
+1. **"This is a sample quote that is longer than twenty characters"** \`01:20:15\`
+   - Context: Here.
+
+2. **"This is another sample quote that is longer than twenty characters"** \`02:30:00\`
    - Context: Here.
 
 ### DIMENSION 6 – COMPARATIVE
 | Dimension | Option A |
 |---|---|
 | Metric | Data |
+Scenario Analysis: Stress Test
 
 ### DIMENSION 7 – IMPLEMENTATION
 **System: Example**
@@ -236,12 +259,13 @@ Steps here.
 - Node 1
 
 **Cross-Domain Bridges**
-- From A to B
-- From C to D
+- Cross-Domain Bridge: From A to B
+- Cross-Domain Bridge: From C to D
 
 ### DIMENSION 9 – FORWARD INTELLIGENCE
 **Contrarian Perspectives**
 Alternative views here.
+Unfair Advantages: competitive advantage mapping
 
 ### DIMENSION 10 – CREDIBILITY
 ⚠️ **Critical Notice**: Educational only.

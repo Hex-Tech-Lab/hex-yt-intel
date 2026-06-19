@@ -113,11 +113,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
     if (storeKnowledgeGraph && Array.isArray(storeKnowledgeGraph.nodes) && storeKnowledgeGraph.nodes.length > 0) {
       // Validate nodes: check required fields and skip/filter out malformed ones
       const validNodes = storeKnowledgeGraph.nodes.filter((n: any) => {
-        const isValid = n && (typeof n.id === 'string' || typeof n.id === 'number') && typeof n.label === 'string';
-        if (!isValid) {
-          console.warn('[useKnowledgeGraph] Filtering out malformed node:', n);
-        }
-        return isValid;
+        return n && (typeof n.id === 'string' || typeof n.id === 'number') && typeof n.label === 'string';
       });
 
       if (validNodes.length > 0) {
@@ -135,11 +131,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
         // Validate edges: check required fields and filter out malformed ones
         const rawEdges = Array.isArray(storeKnowledgeGraph.edges) ? storeKnowledgeGraph.edges : [];
         const validEdges = rawEdges.filter((e: any) => {
-          const isValid = e && (typeof e.source === 'string' || typeof e.source === 'number') && (typeof e.target === 'string' || typeof e.target === 'number');
-          if (!isValid) {
-            console.warn('[useKnowledgeGraph] Filtering out malformed edge:', e);
-          }
-          return isValid;
+          return e && (typeof e.source === 'string' || typeof e.source === 'number') && (typeof e.target === 'string' || typeof e.target === 'number');
         });
 
         const mappedEdges: GraphEdge[] = validEdges.map((e: any) => ({

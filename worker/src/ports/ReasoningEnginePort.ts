@@ -99,5 +99,5 @@ export interface ReasoningEnginePort {
     signal?: AbortSignal
   ): Promise<StreamResult>;
   /** Passthrough so the orchestrator can validate partial markdown on abort. */
-  validate12D(analysis: unknown): boolean;
+  validate12D(analysis: unknown, expectedCount?: number): boolean;
 }
