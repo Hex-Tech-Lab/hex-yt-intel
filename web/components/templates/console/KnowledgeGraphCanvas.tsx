@@ -149,7 +149,7 @@ export function KnowledgeGraphCanvas({
         position: 'relative',
         width: '100%',
         height: height ?? (compact ? 280 : 520),
-        borderRadius: 14,
+        borderRadius: 8,
         overflow: 'hidden',
         border: '1px solid var(--line)',
         background: 'radial-gradient(circle at 50% 40%, rgb(15 23 42 / 0.6), rgb(8 11 17 / 0.95))',

@@ -1,5 +1,6 @@
 /**
  * MetadataScraper - Pure Service
+ * qa-intel: no stream state here to call settleAnalysis or setError
  *
  * HEXAGONAL ARCHITECTURE:
  * - PORT: IMetadataProvider (fetch(videoId: string): Promise<VideoMetadata>)

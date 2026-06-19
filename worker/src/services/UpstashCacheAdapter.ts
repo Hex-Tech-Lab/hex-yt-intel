@@ -8,6 +8,8 @@
 
 import type { PersistenceRepositoryPort } from '../ports/PersistenceRepositoryPort';
 
+const rawFetch = fetch;
+
 const DEFAULT_TTL_SECONDS = 604800; // 7 days
 
 export class UpstashCacheAdapter implements PersistenceRepositoryPort {
@@ -35,7 +37,7 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
 
   async get(key: string): Promise<string | null> {
     try {
-      const response = await fetch(`${this.url}/get/${key}`, {
+      const response = await rawFetch(`${this.url}/get/${key}`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${this.token}` },
       });
@@ -50,7 +52,7 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
 
   async set(key: string, value: string, ttlSeconds: number = DEFAULT_TTL_SECONDS): Promise<void> {
     try {
-      await fetch(`${this.url}/set/${key}`, {
+      await rawFetch(`${this.url}/set/${key}`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.token}`,

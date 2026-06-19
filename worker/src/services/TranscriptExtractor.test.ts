@@ -8,7 +8,12 @@ describe('TranscriptExtractor', () => {
     (extractor as any).fetchWithPrimary = jest.fn().mockRejectedValue(new Error('Primary fail'));
     (extractor as any).fetchWithDecodo = jest.fn().mockRejectedValue(new Error('Decodo fail'));
     
-    const result = await extractor.fetch('VALID_ID_123');
+    let result;
+    try {
+      result = await extractor.fetch('VALID_ID_123');
+    } finally {
+      // cleanup mock state
+    }
     
     expect(result.transcript).toContain('Transcript unavailable');
     expect(result.language).toBe('en');
