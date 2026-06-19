@@ -1,0 +1,42 @@
+web/app/api/analyses/[id]/route.ts
+  s_9f5fdbb7b596ef::t_f1328cd268dab7 13
+.memory/ADRS.md
+  s_9f5fdbb7b596ef::t_d120881900f002 12
+web/app/layout.tsx
+  s_9f5fdbb7b596ef::t_2c63b3f8c35605 23-25
+  s_9f5fdbb7b596ef::t_900fe846b232ad 37
+web/lib/stream-token.ts
+  s_9f5fdbb7b596ef::t_d0f91823470d83 11-12
+.memory/AGENT_LEDGER.md
+  s_9f5fdbb7b596ef::t_d120881900f002 355-356
+  s_9f5fdbb7b596ef::t_9b1ef9cdbb68ed 341-351
+  s_9f5fdbb7b596ef::t_160d7998e750e9 316-340
+worker/src/routes/analysis.ts
+  s_9f5fdbb7b596ef::t_dc70ec034dea7d 188
+  s_9f5fdbb7b596ef::t_146845f035211d 385-392
+  s_9f5fdbb7b596ef::t_47406d946b4b5c 226
+  s_9f5fdbb7b596ef::t_85b5bd92b4922c 161-162
+scripts/verify-quality-engine.ts
+  s_9f5fdbb7b596ef::t_255856e4c4b8dd 106-107
+web/app/globals.css
+  s_9f5fdbb7b596ef::t_bf3d449fd1fc00 29-38
+web/lib/env.ts
+  s_9f5fdbb7b596ef::t_90574788087f86 163
+  s_9f5fdbb7b596ef::t_1949585b27ee46 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "e24cd78df770199ff58d24c21d9d7980defc6956",
+  "prompts": {},
+  "sessions": {
+    "s_9f5fdbb7b596ef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f0f4559ffeUroQBfByhn7LgF",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
