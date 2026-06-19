@@ -1,0 +1,27 @@
+web/store/useChatStore.ts
+  s_e6750ccfff01b1::t_071288bfc5cfa7 193-194
+web/lib/adapters/stream-status-tracker.ts
+  s_e6750ccfff01b1::t_858c7e3065b712 66-68
+web/lib/adapters/markdown-accumulator.ts
+  s_e6750ccfff01b1::t_c8640d900bf3df 8,27-34
+worker/src/chat-stream.ts
+  s_e6750ccfff01b1::t_e8fd7111bdb67b 212-214
+worker/src/services/ValidationService.ts
+  s_e6750ccfff01b1::t_dee9ead2515161 16-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "9a755f9b818321c44ab048451f3c235203389fc6",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
