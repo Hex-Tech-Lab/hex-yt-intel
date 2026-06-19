@@ -1,0 +1,40 @@
+web/components/templates/console/ChatDock.tsx
+  s_9f5fdbb7b596ef::t_8394765cd35707 274
+web/lib/adapters/SettingsModelAdapter.ts
+  s_9f5fdbb7b596ef::t_6a5a8f889f2319 48-49
+  s_9f5fdbb7b596ef::t_3892e5a1fabb68 1
+PRODUCT.md
+  s_9f5fdbb7b596ef::t_4a86c5d5fda659 1-26
+docs/sprints/SPRINT-1.md
+  s_9f5fdbb7b596ef::t_8eb92a8abcaeb3 17-19,22-24
+web/lib/adapters/DecodoAdapter.ts
+  s_9f5fdbb7b596ef::t_0b4983ba6e1af3 1
+  s_9f5fdbb7b596ef::t_3dcedc3f2a0912 160
+web/lib/adapters/RedisTrafficAdapter.ts
+  s_9f5fdbb7b596ef::t_63a4f5da3a287b 6
+web/app/api/chat/persist/route.ts
+  s_9f5fdbb7b596ef::t_99e92ad5d89103 41-43
+web/lib/services/traffic.ts
+  s_9f5fdbb7b596ef::t_2ae369909ffede 11
+web/app/api/analyses/persist/route.ts
+  s_9f5fdbb7b596ef::t_9c97f36d624c48 102-104
+web/lib/services/ownership.ts
+  s_9f5fdbb7b596ef::t_358dd4b134fa55 1
+  s_9f5fdbb7b596ef::t_df1e5b70a24d6f 50-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "eaf57a3096cc0186217d5aedb0d8ac9a0e72afa8",
+  "prompts": {},
+  "sessions": {
+    "s_9f5fdbb7b596ef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f0f4559ffeUroQBfByhn7LgF",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
