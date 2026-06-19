@@ -1,0 +1,27 @@
+web/app/api/rate-limit-status/route.ts
+  s_9f5fdbb7b596ef::t_7ce9e07b1e81b8 33-34
+web/lib/__tests__/rate-limit-sliding-window.test.ts
+  s_9f5fdbb7b596ef::t_35df90d68f4af3 2-3
+web/lib/adapters/RedisTrafficAdapter.ts
+  s_9f5fdbb7b596ef::t_635ba1d6d61d20 6
+web/lib/constants/rate-limits.ts
+  s_9f5fdbb7b596ef::t_d61513b507a85c 1-20
+web/lib/services/traffic.ts
+  s_9f5fdbb7b596ef::t_180ec215bb3887 10-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "763fa3eecc12fc1850bb7aac92639e6558b34f1c",
+  "prompts": {},
+  "sessions": {
+    "s_9f5fdbb7b596ef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f0f4559ffeUroQBfByhn7LgF",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
