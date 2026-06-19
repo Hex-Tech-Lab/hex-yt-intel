@@ -35,7 +35,7 @@ export class ValidationService {
         'DIMENSION 5', 'DIMENSION 6', 'DIMENSION 7', 'DIMENSION 8',
         'DIMENSION 9', 'DIMENSION 10', 'DIMENSION 11',
       ];
-      return requiredDimensions.filter((dim) => analysis.includes(dim)).length >= targetCount;
+      return requiredDimensions.filter((dim) => new RegExp('\\b' + dim.replace(/ /g, '\\s+') + '\\b').test(analysis)).length >= targetCount;
     }
 
     return false;

@@ -137,7 +137,6 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   const shell: React.CSSProperties = {
     flexShrink: 0,
     width: '100%',
-    zIndex: 'var(--z-dock)' as any,
     borderTop: '1px solid var(--line)',
     background: 'rgb(11 14 20 / 0.97)',
     backdropFilter: 'blur(12px)',

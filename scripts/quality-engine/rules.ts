@@ -846,8 +846,6 @@ export const SyncImportBeforeRedirectRule: IRule = {
     const filePath = source.getFilePath().replace(/\\/g, "/");
     if (!filePath.includes('.tsx') && !filePath.includes('.jsx')) return findings;
 
-    const text = source.getText();
-
     source.forEachDescendant((node) => {
       if (Node.isArrowFunction(node) || Node.isFunctionExpression(node)) {
         const funcText = node.getText();
@@ -915,7 +913,7 @@ export const ModuleLevelDynamicImportRule: IRule = {
       if (!importMatch) return;
 
       const indent = line.search(/\S/);
-      if (indent <= 2) {
+      if (indent === 0) {
         const varMatch = trimmed.match(/const\s+(\w+)\s*=\s*import/);
         if (varMatch) {
           const varName = varMatch[1];

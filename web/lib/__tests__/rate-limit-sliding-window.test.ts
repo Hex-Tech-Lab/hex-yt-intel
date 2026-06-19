@@ -4,7 +4,7 @@ import { checkRateLimitSlidingWindow, RATE_LIMITS } from '@/lib/services/traffic
 const mockRedisData = new Map<string, number[]>();
 
 vi.mock('@/lib/redis', () => ({
-  executeRedisScript: vi.fn(async (script: string, keys: string[], args: unknown[]) => {
+  executeRedisScript: vi.fn(async (script: string, keys: string[], args: (string | number)[]) => {
     const key = keys[0]!;
     const now = Number(args[0]);
     const window = Number(args[1]);

@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import * as Sentry from "@sentry/cloudflare";
 // Chat config is bundled from web/lib by esbuild (same pattern as ReasoningEngine's
 // getUCISPrompt import) — the protocol/model list stays a single source of truth.
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
@@ -296,7 +297,10 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           full = "No response generated.";
           send({ type: "delta", content: full, requestId: req.requestId });
         }
-      } catch {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        Sentry.captureException(err, { contexts: { chat: { conversationId: req.conversationId, requestId: req.requestId, action: 'streamChatCascade' } } });
+        console.error("[chat-stream] streamChatCascade failed:", msg);
         full = "The model request failed. Your message is saved — please try again.";
         send({ type: "delta", content: full, requestId: req.requestId });
       }
