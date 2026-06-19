@@ -55,4 +55,13 @@ export interface ChatPersistencePort {
     analysisMarkdown: string | null;
     status: string;
   } | null>;
+
+  /**
+   * Verify if the user owns the chat conversation and select optional fields.
+   */
+  verifyChatOwnership(params: {
+    conversationId: string;
+    userId: string;
+    select?: string;
+  }): Promise<any | null>;
 }

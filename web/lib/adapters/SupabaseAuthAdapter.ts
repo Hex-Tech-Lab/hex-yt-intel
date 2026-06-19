@@ -1,5 +1,4 @@
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { getUserTier } from '@/lib/services/traffic';
 import type { AuthPort, AuthIdentity } from '@/lib/ports';
 
 export class SupabaseAuthAdapter implements AuthPort {
@@ -8,7 +7,13 @@ export class SupabaseAuthAdapter implements AuthPort {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const tier = (await getUserTier(user.id)) ?? 'free';
+    const { data, error } = await supabase
+      .from('users')
+      .select('tier')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const tier = error || !data ? 'free' : (data.tier as any) || 'free';
     return { userId: user.id, email: user.email, tier };
   }
 }

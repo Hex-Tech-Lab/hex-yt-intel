@@ -5,6 +5,8 @@ import type { PersonaId } from '@/lib/prompts';
 export interface MetadataIngestionPort {
   fetch(videoId: string): Promise<IngestionResult>;
 
+  fetchOnlyMetadata(videoId: string): Promise<VideoMetadata>;
+
   detectPersona(params: {
     title: string;
     channelTitle: string;

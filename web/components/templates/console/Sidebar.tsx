@@ -26,37 +26,24 @@ export interface SidebarProps {
 
 export function Sidebar({ items, activeKey, onNavigate, repoScope, children, footer }: SidebarProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "24px 14px" }}>
+    <div className="flex flex-col h-full py-6 px-3.5">
       {/* brand */}
-      <Link href="/?v=landing" style={{ textDecoration: 'none', display: 'block' }} className="group">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 10px 32px" }}>
-          <span style={{ 
-            display: "grid", 
-            placeItems: "center", 
-            width: 30, 
-            height: 30, 
-            borderRadius: 8, 
-            background: "var(--accent-strong)", 
-            color: "var(--void)",
-            boxShadow: "0 4px 12px var(--accent-glow)"
-          }}>
+      <Link href="/?v=landing" className="group block no-underline">
+        <div className="flex items-center gap-2.5 pt-0 px-2.5 pb-8">
+          <span className="grid place-items-center w-[30px] h-[30px] rounded-lg bg-[var(--accent-strong)] text-[var(--void)] shadow-[0_4px_12px_var(--accent-glow)]">
             <Icon icon="solar:graph-up-linear" size={18} />
           </span>
-          <span style={{ 
-            fontFamily: "var(--font-mono)", 
-            fontSize: 15, 
-            fontWeight: 700, 
-            letterSpacing: "0.02em", 
-            color: "var(--ink)",
-            textShadow: "0 0 20px var(--accent-glow)"
-          }}>
+          <span 
+            className="font-mono text-[15px] font-bold tracking-wide text-[var(--ink)]"
+            style={{ textShadow: "0 0 20px var(--accent-glow)" }}
+          >
             HEX{"\u00b7"}YT
           </span>
         </div>
       </Link>
 
       {/* nav */}
-      <nav style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+      <nav className="flex flex-col gap-1 flex-1">
         {items.map((it) => {
           const active = it.key === activeKey;
           return (
@@ -65,35 +52,12 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope, children, foo
               type="button"
               onClick={() => onNavigate(it.key)}
               aria-current={active ? "page" : undefined}
-              className="hx-navitem group"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                borderRadius: 10,
-                padding: "10px 12px",
-                fontSize: 14,
-                fontFamily: "var(--font-sans)",
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all var(--dur-fast)",
-                background: active ? "rgb(6 182 212 / 0.10)" : "transparent",
-                color: active ? "var(--ink)" : "var(--ink-secondary)",
-                boxShadow: active ? "inset 0 0 0 1px rgb(6 182 212 / 0.15)" : "none"
-              }}
+              className={`hx-navitem group flex items-center gap-3 rounded-[10px] py-2.5 px-3 text-sm font-sans border-none cursor-pointer text-left transition-all duration-[var(--dur-fast)] ${active ? 'bg-[rgb(6_182_212_/_0.10)] text-[var(--ink)] shadow-[inset_0_0_0_1px_rgb(6_182_212_/_0.15)]' : 'bg-transparent text-[var(--ink-secondary)] shadow-none'}`}
             >
-              <Icon icon={it.icon} size={18} style={{ color: active ? "var(--accent)" : "inherit", transition: "color var(--dur-fast)" }} />
-              <span style={{ flex: 1, fontWeight: active ? 600 : 400 }}>{it.label}</span>
+              <Icon icon={it.icon} size={18} className={`transition-colors duration-[var(--dur-fast)] ${active ? 'text-[var(--accent)]' : 'text-inherit'}`} />
+              <span className={`flex-1 ${active ? 'font-semibold' : 'font-normal'}`}>{it.label}</span>
               {it.badge && (
-                <span style={{ 
-                  fontFamily: "var(--font-mono)", 
-                  fontSize: 10, 
-                  color: active ? "var(--accent-ink)" : "var(--ink-muted)",
-                  background: active ? "rgb(6 182 212 / 0.1)" : "rgb(51 65 85 / 0.2)",
-                  padding: "1px 6px",
-                  borderRadius: 4
-                }}>
+                <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${active ? 'text-[var(--accent-ink)] bg-[rgb(6_182_212_/_0.1)]' : 'text-[var(--ink-muted)] bg-[rgb(51_65_85_/_0.2)]'}`}>
                   {it.badge}
                 </span>
               )}
@@ -103,39 +67,24 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope, children, foo
       </nav>
 
       {/* children (e.g. ProcessingLog) */}
-      {children && <div style={{ marginTop: "auto", marginBottom: "12px" }}>{children}</div>}
+      {children && <div className="mt-auto mb-3">{children}</div>}
 
       {/* footer / profile */}
       {footer ? (
-        <div style={{ marginTop: children ? "12px" : "auto", borderTop: "1px solid var(--line)", paddingTop: "16px" }}>
+        <div className={`border-t border-[var(--line)] pt-4 ${children ? 'mt-3' : 'mt-auto'}`}>
           {footer}
         </div>
       ) : repoScope ? (
         <button
           type="button"
           onClick={repoScope.onClick}
-          className="hx-navitem"
-          style={{
-            marginTop: children ? "0" : "auto",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderRadius: 10,
-            border: "1px solid var(--line)",
-            background: "rgb(26 31 43 / 0.6)",
-            padding: "12px 14px",
-            fontSize: 13,
-            color: "var(--ink-secondary)",
-            cursor: "pointer",
-            fontFamily: "var(--font-sans)",
-            transition: "all var(--dur-fast)"
-          }}
+          className={`hx-navitem flex items-center justify-between rounded-[10px] border border-[var(--line)] bg-[rgb(26_31_43_/_0.6)] py-3 px-3.5 text-xs text-[var(--ink-secondary)] cursor-pointer font-sans transition-all duration-[var(--dur-fast)] ${children ? 'mt-0' : 'mt-auto'}`}
         >
-          <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Icon icon="solar:folder-with-files-linear" size={16} style={{ color: "var(--accent)", opacity: 0.8 }} />
-            <span style={{ fontWeight: 500 }}>{repoScope.label}</span>
+          <span className="flex items-center gap-2.5">
+            <Icon icon="solar:folder-with-files-linear" size={16} className="text-[var(--accent)] opacity-80" />
+            <span className="font-medium">{repoScope.label}</span>
           </span>
-          <Icon icon="solar:alt-arrow-down-linear" size={14} style={{ opacity: 0.5 }} />
+          <Icon icon="solar:alt-arrow-down-linear" size={14} className="opacity-50" />
         </button>
       ) : null}
     </div>

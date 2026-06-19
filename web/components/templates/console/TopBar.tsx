@@ -16,105 +16,55 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
   const [exportOpen, setExportOpen] = useState(false);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 24px" }}>
+    <div className="flex items-center gap-3 py-3 px-6">
       <label
-        style={{
-          display: "flex",
-          minWidth: 0,
-          flex: 1,
-          alignItems: "center",
-          gap: 8,
-          maxWidth: 460,
-          borderRadius: 8,
-          border: "1px solid var(--line)",
-          background: "rgb(26 31 43 / 0.6)",
-          padding: "8px 12px",
-        }}
+        className="flex min-w-0 flex-1 items-center gap-2 max-w-[460px] rounded-lg border border-[var(--line)] bg-[rgb(26_31_43_/_0.6)] py-2 px-3"
       >
-        <Icon icon="solar:magnifer-linear" size={16} style={{ color: "var(--ink-muted)" }} />
+        <Icon icon="solar:magnifer-linear" size={16} className="text-[var(--ink-muted)]" />
         <input
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") onSearchSubmit?.(); }}
           placeholder="Search your knowledge graph"
           aria-label="Search syntheses"
-          className="hx-field"
-          style={{
-            minWidth: 0,
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: "var(--ink)",
-            fontFamily: "var(--font-sans)",
-            fontSize: 13.5
-          }}
+          className="hx-field min-w-0 flex-1 bg-transparent border-none outline-none text-[var(--ink)] font-sans text-[13.5px]"
         />
-        <kbd style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-muted)", border: "1px solid var(--line)", borderRadius: 4, padding: "1px 6px" }}>
+        <kbd className="font-mono text-[10px] text-[var(--ink-muted)] border border-[var(--line)] rounded px-1.5 py-0.5">
           ⌘K
         </kbd>
       </label>
 
-      <span style={{ flex: 1 }} />
+      <span className="flex-1" />
 
-      <div style={{ position: 'relative' }}>
+      <div className="relative">
         <button
           onClick={() => setExportOpen(!exportOpen)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '6px 12px',
-            borderRadius: 8,
-            border: '1px solid var(--line)',
-            background: 'var(--surface)',
-            color: 'var(--ink-secondary)',
-            cursor: 'pointer',
-            fontSize: 12,
-            fontFamily: 'var(--font-mono)',
-            transition: 'all 0.2s'
-          }}
-          className="hx-navitem"
+          className="hx-navitem flex items-center gap-1.5 py-1.5 px-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer text-xs font-mono transition-all duration-200"
         >
           <Icon icon="solar:download-minimalistic-linear" size={14} />
           Export
-          <Icon icon="solar:alt-arrow-down-linear" size={12} style={{ transform: exportOpen ? 'rotate(180deg)' : 'none' }} />
+          <Icon icon="solar:alt-arrow-down-linear" size={12} className={`transition-transform duration-200 ${exportOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {exportOpen && (
           <>
             <div 
-              style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+              className="fixed inset-0 z-40"
               onClick={() => setExportOpen(false)}
             />
             <div 
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 8px)',
-                right: 0,
-                width: 160,
-                background: 'var(--surface-raised)',
-                border: '1px solid var(--line-strong)',
-                borderRadius: 10,
-                padding: 4,
-                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
-                zIndex: 50,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2
-              }}
-              className="hx-rise"
+              className="hx-rise absolute top-[calc(100%_+_8px)] right-0 w-40 bg-[var(--surface-raised)] border border-[var(--line-strong)] rounded-[10px] p-1 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5"
             >
               <button
                 onClick={() => { onExport?.('pdf'); setExportOpen(false); }}
-                style={dropdownItem}
+                className="flex items-center gap-2 w-full py-2 px-2.5 rounded-md border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer text-xs font-mono text-left transition-all duration-200 hover:bg-[var(--line-faint)]"
               >
                 <Icon icon="solar:file-text-linear" size={14} />
                 Export as PDF
               </button>
               <button
                 onClick={() => { onExport?.('markdown'); setExportOpen(false); }}
-                style={dropdownItem}
+                className="flex items-center gap-2 w-full py-2 px-2.5 rounded-md border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer text-xs font-mono text-left transition-all duration-200 hover:bg-[var(--line-faint)]"
               >
                 <Icon icon="solar:document-text-linear" size={14} />
                 Export as Markdown
@@ -126,20 +76,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
 
       {tier && (
         <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            borderRadius: 9999,
-            border: "1px solid rgb(6 182 212 / 0.3)",
-            background: "rgb(6 182 212 / 0.10)",
-            padding: "4px 11px",
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: "0.08em",
-            color: "var(--accent-ink)",
-          }}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[rgb(6_182_212_/_0.3)] bg-[rgb(6_182_212_/_0.10)] py-1 px-[11px] font-mono text-[11px] font-semibold tracking-wider text-[var(--accent-ink)]"
         >
           <Icon icon="solar:crown-minimalistic-linear" size={12} />
           {tier.toUpperCase()}
@@ -148,17 +85,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
 
       {account || (
         <span
-          style={{
-            display: "grid",
-            placeItems: "center",
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            border: "1px solid var(--line)",
-            background: "var(--surface)",
-            color: "var(--ink-secondary)",
-            cursor: "pointer"
-          }}
+          className="grid place-items-center w-8 h-8 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
         >
           <Icon icon="solar:user-linear" size={16} />
         </span>
@@ -166,20 +93,3 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
     </div>
   );
 }
-
-const dropdownItem: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: 6,
-  border: 'none',
-  background: 'transparent',
-  color: 'var(--ink-secondary)',
-  cursor: 'pointer',
-  fontSize: 12,
-  fontFamily: 'var(--font-mono)',
-  textAlign: 'left',
-  transition: 'all 0.2s',
-};

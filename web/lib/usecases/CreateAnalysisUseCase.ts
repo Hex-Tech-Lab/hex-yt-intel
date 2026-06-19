@@ -1,7 +1,7 @@
 import type {
   MetadataIngestionPort,
   DecodoPort,
-  PersistencePort,
+  AnalysisPersistencePort,
   BillingQuotaPort,
   ModelResolutionPort,
   CryptographicTokenPort,
@@ -50,7 +50,7 @@ export class CreateAnalysisUseCase {
   constructor(
     private metadataIngestion: MetadataIngestionPort,
     private decodo: DecodoPort,
-    private persistence: PersistencePort,
+    private persistence: AnalysisPersistencePort,
     private billingQuota: BillingQuotaPort,
     private modelResolution: ModelResolutionPort,
     private tokenCrypto: CryptographicTokenPort
