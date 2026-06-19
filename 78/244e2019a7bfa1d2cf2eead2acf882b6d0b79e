@@ -1,0 +1,90 @@
+worker/src/routes/metadata.ts
+  s_91e298f300d692::t_ab293b1c3d6f9d 4-9
+  s_91e298f300d692::t_150a0f5439003b 1-3,10-60
+web/app/api/stripe/webhook/handlers/index.ts
+  s_712cd7ece05fb0::t_2a69b4fa20a4c7 1-85
+web/components/containers/dashboard/SidebarFooter.tsx
+  s_296f79c90a2856::t_be25209efbc326 1-62
+worker/src/middleware/error-handler.ts
+  s_91e298f300d692::t_8efe4b8681aa12 1-22
+worker/src/middleware/auth.ts
+  s_91e298f300d692::t_c7359dc53fba14 1-16
+.memory/AGENT_LEDGER.md
+  s_61c2ee87176f3c::t_4d8cde607a508d 294
+  s_296f79c90a2856::t_589383aed2d74e 297
+  s_91e298f300d692::t_e9bfe18c3c5126 295
+  s_91e298f300d692::t_a2c3e12295edb0 296
+  s_712cd7ece05fb0::t_a17f36411d065a 298
+web/components/containers/dashboard/ExpandedPanelOverlay.tsx
+  s_296f79c90a2856::t_ec8985bbdd7a18 6
+  s_296f79c90a2856::t_2c9bed490b082f 1-5,7-119
+web/app/api/stripe/webhook/handlers/payment-intent.ts
+  s_712cd7ece05fb0::t_6f1f019d3e71dd 1-12
+web/app/api/stripe/webhook/route.ts
+  s_712cd7ece05fb0::t_3712f5a0f18461 4,9,43-44
+worker/src/routes/chat.ts
+  s_91e298f300d692::t_837a8eb404d870 1-8
+worker/src/routes/health.ts
+  s_91e298f300d692::t_3b7ab8662ae064 1-13
+web/app/api/stripe/webhook/handlers/invoice.ts
+  s_712cd7ece05fb0::t_78edcd6abde2ce 1-124
+worker/src/worker.ts
+  s_91e298f300d692::t_42ca4ae65fd66d 4-11,37-39,44,46-50
+web/components/containers/DashboardContainer.tsx
+  s_296f79c90a2856::t_6a9fa77d86b970 535-548
+  s_296f79c90a2856::t_3124fb76cf6f1a 32-34
+  s_296f79c90a2856::t_b92332846611ac 465
+  s_296f79c90a2856::t_3ae06ceceaba7e 411
+worker/src/middleware/cors.ts
+  s_91e298f300d692::t_9f190ee4b2d805 1-67
+web/app/api/stripe/webhook/handlers/subscription.ts
+  s_712cd7ece05fb0::t_00f5b44f5d1439 1-167
+worker/src/routes/analysis.ts
+  s_91e298f300d692::t_fc17f255250b9e 216
+  s_91e298f300d692::t_36195c8f38117b 1-215,217-385
+worker/src/routes/transcript.ts
+  s_91e298f300d692::t_6c4c57d0dede66 4-9
+  s_91e298f300d692::t_14e45e430ced99 1-3,10-58
+web/components/containers/dashboard/ConsoleTabSwitcher.tsx
+  s_296f79c90a2856::t_284d72f9749232 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "78244e2019a7bfa1d2cf2eead2acf882b6d0b79e",
+  "prompts": {},
+  "sessions": {
+    "s_296f79c90a2856": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11fa4533bffe25EoXeZAguNx2J",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_61c2ee87176f3c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11fac55cfffegYcgGYVB2ZQARv",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_712cd7ece05fb0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11fa461d4ffeNgwKkbFZIzKrlu",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_91e298f300d692": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11fa46d01ffeF6W3DGP2ter9jv",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
