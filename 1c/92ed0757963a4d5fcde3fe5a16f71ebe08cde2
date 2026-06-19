@@ -1,0 +1,19 @@
+worker/src/__tests__/chat-stream-requestId.test.ts
+  s_e6750ccfff01b1::t_c1993c50bbc8c9 106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "1c92ed0757963a4d5fcde3fe5a16f71ebe08cde2",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
