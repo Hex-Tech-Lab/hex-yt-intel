@@ -91,7 +91,7 @@ export class CreateAnalysisUseCase {
       return { 
         type: 'error', 
         code: 'ERR_QUOTA_EXCEEDED', 
-        status: 403, 
+        status: 402, 
         message: 'Monthly analysis quota exceeded. Please upgrade your plan.' 
       };
     }
