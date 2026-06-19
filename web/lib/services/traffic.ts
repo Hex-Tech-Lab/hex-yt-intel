@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import type { TrafficGuardPort, RateLimitStatus } from '@/lib/ports';
 import { RedisTrafficAdapter } from '../adapters/RedisTrafficAdapter';
+import { SupabasePersistenceAdapter } from '../adapters/SupabasePersistenceAdapter';
 
 /** Admin account exempt from traffic limits and billing charges. */
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
@@ -35,8 +36,6 @@ export const RATE_LIMITS = {
 
 export type Tier = keyof typeof RATE_LIMITS;
 export type Endpoint = 'analyses' | 'search' | 'checkout';
-
-import { SupabasePersistenceAdapter } from '../adapters/SupabasePersistenceAdapter';
 
 export async function getUserTier(userId: string): Promise<Tier> {
   try {

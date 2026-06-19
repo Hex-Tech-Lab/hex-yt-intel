@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
     try {
       isSigValid = await verifyContentSig(content, contentSig);
     } catch (error) {
-      console.error('[chat/persist] Signature verification failed due to configuration error:', error);
+      const msg = error instanceof Error ? error.message : String(error);
+      Sentry.captureException(error, { contexts: { persist: { phase: 'chat-verifyContentSig', conversationId } } });
+      console.error('[chat/persist]', { message: msg, conversationId });
       return NextResponse.json({ error: 'Security configuration error' }, { status: 500 });
     }
 

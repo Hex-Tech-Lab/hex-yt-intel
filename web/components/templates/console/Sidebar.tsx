@@ -35,7 +35,6 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope, children, foo
           </span>
           <span 
             className="font-mono text-[15px] font-bold tracking-wide text-[var(--ink)]"
-            style={{ textShadow: "0 0 20px var(--accent-glow)" }}
           >
             HEX{"\u00b7"}YT
           </span>

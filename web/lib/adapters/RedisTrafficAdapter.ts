@@ -3,25 +3,8 @@ import * as Sentry from '@sentry/nextjs';
 import { executeRedisScript } from '@/lib/redis';
 import type { QuotaGateResult, TrafficGuardPort, RateLimitStatus } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
+import { RATE_LIMITS } from '@/lib/services/traffic';
 import { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
-
-/**
- * Rate limit configuration per tier. Expressed as requests per minute.
- */
-const RATE_LIMITS = {
-  free: {
-    requestsPerMinute: 3,
-    description: 'Free tier: 3 requests/minute, 50/hour',
-  },
-  pro: {
-    requestsPerMinute: 30,
-    description: 'Pro tier: 30 requests/minute, 500/hour',
-  },
-  enterprise: {
-    requestsPerMinute: 300,
-    description: 'Enterprise tier: unlimited (300 req/min soft limit)',
-  },
-} as const;
 
 /**
  * Sliding-window counter via Redis Sorted Set (atomic Lua).

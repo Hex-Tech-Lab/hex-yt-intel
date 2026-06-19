@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { env } from '@/lib/env';
 import type { DecodoPort, DecodoTranscriptResult } from '@/lib/ports';
 
@@ -156,6 +157,7 @@ export class DecodoAdapter implements DecodoPort {
       return { success: false, reason: 'empty_transcript' };
     } catch (error) {
       const message = safeStringify(error);
+      Sentry.captureException(error, { contexts: { decodo: { method: 'fetchTranscript' } } });
       if (message.includes('aborted') || (error instanceof Error && error.name === 'AbortError')) {
         return { success: false, reason: 'timeout' };
       }

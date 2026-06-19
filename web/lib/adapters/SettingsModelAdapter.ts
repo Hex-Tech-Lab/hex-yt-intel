@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import type { UserTier } from '@/lib/types/billing';
 import type { ModelResolutionPort } from '@/lib/ports';
 import { CHAT_CASCADE, ANALYSIS_CASCADE, REASONING_CASCADE } from '../config/cascade';
@@ -44,7 +45,8 @@ async function readModelConfig(persistence: SupabasePersistenceAdapter): Promise
 
     configCache = { value, at: Date.now() };
     return value;
-  } catch {
+  } catch (error) {
+    Sentry.captureException(error, { contexts: { settings: { method: 'getAppSettingCache' } } });
     configCache = { value: null, at: Date.now() };
     return null;
   }
