@@ -190,13 +190,14 @@ export const useChatStore = create<ChatState>((set, get) => {
         }));
       } else if (e.type === 'done') {
         // Promote the optimistic bubble to a stable id (worker already persisted it).
+        // Do NOT set persistState here — the persist: saved/failed event is the
+        // authoritative delivery confirmation.
         set((s) => ({
           messagesByConv: {
             ...s.messagesByConv,
             [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? { ...m, id: `assistant-${clientMsgId}` } : m)),
           },
         }));
-        get().setPersistState('saved', clientMsgId);
       } else if (e.type === 'persist') {
         if (e.status === 'saving' || e.status === 'saved' || e.status === 'failed') {
           get().setPersistState(e.status, clientMsgId);

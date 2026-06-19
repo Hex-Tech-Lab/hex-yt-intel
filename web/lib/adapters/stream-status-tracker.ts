@@ -63,6 +63,9 @@ export class StreamStatusTracker {
               dimensionsReceived: updatedReceived,
             },
           },
+          // In full fallback (targetDims undefined): clear ALL global state.
+          // In bundle fallback (targetDims defined): preserve global state for
+          // dimensions NOT in the bundle — only clear what the bundle owns.
           personaConfig: targetDims === undefined || targetDims.includes(1) ? null : synthState.personaConfig,
           knowledgeGraph: targetDims === undefined || targetDims.includes(8) ? null : synthState.knowledgeGraph,
           classification: targetDims === undefined || targetDims.includes(11) ? null : synthState.classification,

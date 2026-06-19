@@ -13,7 +13,10 @@ export class ValidationService {
     if (typeof analysis !== 'string') return false;
 
     const trimmed = analysis.trim();
-    const targetCount = expectedCount !== undefined ? expectedCount : 8;
+    // Clamp expectedCount to a sane range: positive integer, max 11 dimensions
+    const targetCount = Number.isFinite(expectedCount) && expectedCount! > 0
+      ? Math.min(Math.floor(expectedCount!), 11)
+      : 8;
 
     if (trimmed.startsWith('{')) {
       try {

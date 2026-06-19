@@ -5,6 +5,7 @@ import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 export class MarkdownAccumulator {
   private synthStore = useSynthesisNucleus;
   private analysisStore = useAnalysisStore;
+  private markdownVersion = 0;
 
   constructor() {}
 
@@ -22,9 +23,15 @@ export class MarkdownAccumulator {
     };
 
     const reconstructed = reconstructMarkdown(stitchedPayload);
-    const current = store.analysis.analysis_markdown || '';
 
-    if (force || reconstructed.length >= current.length) {
+    if (force) {
+      this.markdownVersion++;
+      store.setAnalysis({
+        ...store.analysis,
+        analysis_markdown: reconstructed,
+      });
+    } else if (reconstructed.length >= (store.analysis.analysis_markdown || '').length) {
+      this.markdownVersion++;
       store.setAnalysis({
         ...store.analysis,
         analysis_markdown: reconstructed,

@@ -209,6 +209,9 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   if (!req.conversationId || !req.userId || !req.sig || !req.exp) {
     return c.json({ error: "Missing required fields" }, 400);
   }
+  if (!req.requestId) {
+    return c.json({ error: "Missing requestId — client cannot correlate SSE events" }, 400);
+  }
   if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, c.env.NODE_ENV === "production")) {
     console.warn("[chat-stream] Blocked untrusted appUrl callback redirect:", req.appUrl);
     return c.json({ error: "Invalid appUrl callback destination" }, 400);
