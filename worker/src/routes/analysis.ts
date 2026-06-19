@@ -385,8 +385,19 @@ analysis.post("/analyze-llm-stream", async (c) => {
   const clientSignal = c.req.raw.signal;
   const persistController = new AbortController();
   const persistSignal = persistController.signal;
+
+  // Abort persistence on client disconnect
+  if (clientSignal.aborted) {
+    persistController.abort();
+  } else {
+    clientSignal.addEventListener("abort", () => {
+      persistController.abort();
+    }, { once: true });
+  }
+
+  // Abort persistence only on explicit policy timeout (90s max worker limit)
   c.executionCtx.waitUntil((async () => {
-    await new Promise(resolve => setTimeout(resolve, 15000));
+    await new Promise(resolve => setTimeout(resolve, 90000));
     persistController.abort();
   })());
   return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, (p) => c.executionCtx.waitUntil(p));

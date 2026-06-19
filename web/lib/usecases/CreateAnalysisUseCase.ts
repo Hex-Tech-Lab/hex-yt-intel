@@ -152,11 +152,23 @@ export class CreateAnalysisUseCase {
     });
 
     // Mint HMAC token for streaming worker access
-    const token = await this.tokenCrypto.signAnalysisToken({
-      videoId,
-      analysisId: stub.id,
-      models,
-    });
+    let token;
+    try {
+      token = await this.tokenCrypto.signAnalysisToken({
+        videoId,
+        analysisId: stub.id,
+        models,
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('[CreateAnalysisUseCase] Token signing failed:', msg);
+      return {
+        type: 'error',
+        code: 'ERR_TOKEN_SIGNING_FAILED',
+        status: 500,
+        message: 'Security configuration error: unable to sign streaming token.',
+      };
+    }
 
     return {
       type: 'processing',

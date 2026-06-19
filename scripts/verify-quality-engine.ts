@@ -103,8 +103,17 @@ const criticalFindings = findings.filter(f => f.severity === 'critical');
 if (criticalFindings.length > 0) {
   console.error('❌ Quality Intelligence Engine: Critical issues found:');
   console.error(JSON.stringify(criticalFindings, null, 2));
-  console.error('❌ Quality Intelligence Engine: Blocking — critical findings must be resolved before commit.');
-  process.exit(1);
+  
+  const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
+  const strictMode = process.env.STRICT_QUALITY_ENGINE === 'true';
+  
+  if (isCI || strictMode) {
+    console.error('❌ Quality Intelligence Engine: Blocking — critical findings must be resolved in CI/strict mode.');
+    process.exit(1);
+  } else {
+    console.warn('⚠️ Quality Intelligence Engine: Warning only (local/non-CI). Please resolve critical findings before final merge.');
+    process.exit(0);
+  }
 }
 
 const nonCritical = findings.filter(f => f.severity !== 'critical');

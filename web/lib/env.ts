@@ -160,7 +160,16 @@ export const env = {
   get stripeSecretKey(): string { return validateEnvVar('STRIPE_SECRET_KEY', true)!; },
   get stripeWebhookSecret(): string { return validateEnvVar('STRIPE_WEBHOOK_SECRET', true)!; },
   get decodoApiKey(): string | undefined { return validateEnvVar('DECODO_API_KEY', false); },
-  get streamHmacSecret(): string | undefined { return validateEnvVar('STREAM_HMAC_SECRET', true); },
+  get streamHmacSecret(): string {
+    const val = validateEnvVar('STREAM_HMAC_SECRET', true);
+    if (!val) {
+      if (this.isProduction) {
+        throw new Error('STREAM_HMAC_SECRET is required in production but was not configured. Failing closed.');
+      }
+      return 'dev-hmac-secret-123';
+    }
+    return val;
+  },
 };
 
 export const clientEnv = {
