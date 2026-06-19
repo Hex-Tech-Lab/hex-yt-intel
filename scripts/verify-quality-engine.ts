@@ -103,8 +103,8 @@ const criticalFindings = findings.filter(f => f.severity === 'critical');
 if (criticalFindings.length > 0) {
   console.error('❌ Quality Intelligence Engine: Critical issues found:');
   console.error(JSON.stringify(criticalFindings, null, 2));
-  console.warn('⚠️ Bypassing hard exit for legacy debt during PR #82 freeze. This tool is an internal helper.');
-  process.exit(0);
+  console.error('❌ Quality Intelligence Engine: Blocking — critical findings must be resolved before commit.');
+  process.exit(1);
 }
 
 const nonCritical = findings.filter(f => f.severity !== 'critical');

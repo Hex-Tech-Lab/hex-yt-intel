@@ -158,7 +158,8 @@ function buildStreamResponse(
   req: StreamRequest,
   signingKey: string,
   appUrl: string | undefined,
-  signal: AbortSignal,
+  engineSignal: AbortSignal,
+  persistSignal: AbortSignal,
   waitUntil: (p: Promise<unknown>) => void,
 ): Response {
   const encoder = new TextEncoder();
@@ -184,7 +185,7 @@ function buildStreamResponse(
         totalChunks: req.totalChunks,
       });
     },
-    signal,
+    signal: persistSignal,
     waitUntil,
   });
 
@@ -222,7 +223,7 @@ function buildStreamResponse(
               send({ type: "status", ...statusEvent });
             },
           },
-          signal,
+          engineSignal,
         );
 
         if (!result.produced && !result.finalText) {
@@ -381,9 +382,14 @@ analysis.post("/analyze-llm-stream", async (c) => {
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
 
-  const rawReq = c.req.raw;
-  const clientSignal = rawReq.signal;
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, (p) => c.executionCtx.waitUntil(p));
+  const clientSignal = c.req.raw.signal;
+  const persistController = new AbortController();
+  const persistSignal = persistController.signal;
+  c.executionCtx.waitUntil((async () => {
+    await new Promise(resolve => setTimeout(resolve, 15000));
+    persistController.abort();
+  })());
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, (p) => c.executionCtx.waitUntil(p));
 });
 
 export default analysis;
