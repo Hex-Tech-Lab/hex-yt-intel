@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "build": "esbuild src/worker.ts --bundle --format=esm --outfile=dist/worker.js --external:node:*",
+    "build": "esbuild src/worker.ts --bundle --format=esm --outfile=dist/worker.js --external:node:* --external:next",
     "test": "echo \"No tests yet\""
   },
   "keywords": [
