@@ -1,4 +1,6 @@
-import { getSupabaseClientWithAuth } from '@/lib/supabase';
+import type { AuthPort, AnalysisPersistencePort, ChatPersistencePort } from '@/lib/ports';
+import { SupabaseAuthAdapter } from '@/lib/adapters/SupabaseAuthAdapter';
+import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 
 export interface OwnershipResult<T> {
   data: T | null;
@@ -12,29 +14,39 @@ export interface OwnershipResult<T> {
 export async function verifyResourceOwnership<T>(
   resourceId: string,
   table: 'analyses' | 'chat_conversations',
-  select: string = '*'
+  select: string = '*',
+  auth: AuthPort = new SupabaseAuthAdapter(),
+  persistence: AnalysisPersistencePort & ChatPersistencePort = new SupabasePersistenceAdapter()
 ): Promise<OwnershipResult<T>> {
-  const supabase = await getSupabaseClientWithAuth();
-  const { data: { user } } = await supabase.auth.getUser();
+  const identity = await auth.authenticate();
 
-  if (!user) {
+  if (!identity) {
     return { data: null, error: 'Unauthorized' };
   }
 
-  const { data, error } = await supabase
-    .from(table)
-    .select(select)
-    .eq('id', resourceId)
-    .eq('user_id', user.id)
-    .maybeSingle();
+  try {
+    let data: any = null;
+    if (table === 'analyses') {
+      data = await persistence.verifyOwnership({
+        analysisId: resourceId,
+        userId: identity.userId,
+        select,
+      });
+    } else {
+      data = await persistence.verifyChatOwnership({
+        conversationId: resourceId,
+        userId: identity.userId,
+        select,
+      });
+    }
 
-  if (error) {
+    if (!data) {
+      return { data: null, error: 'NotFound' };
+    }
+
+    return { data: data as T, error: null };
+  } catch (error) {
     console.error('[ownership] DB query failed:', error);
     return { data: null, error: 'InternalError' };
   }
-  if (!data) {
-    return { data: null, error: 'NotFound' };
-  }
-
-  return { data: data as T, error: null };
 }

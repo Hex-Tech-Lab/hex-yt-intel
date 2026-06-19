@@ -1,33 +1,98 @@
 import type { UserTier } from '@/lib/types/billing';
 import type { ModelResolutionPort } from '@/lib/ports';
-import { resolveModelCascade, resolveReasoningCascade } from '@/lib/services/settings';
-import { CHAT_CASCADE, ANALYSIS_CASCADE } from '../config/cascade';
+import { CHAT_CASCADE, ANALYSIS_CASCADE, REASONING_CASCADE } from '../config/cascade';
+import { getRedisValue, setRedisValue } from '../redis';
+import { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
+
+type ModelKind = 'chat' | 'analysis';
+
+interface ModelConfig {
+  version?: number;
+  plans?: Partial<Record<UserTier, Partial<Record<ModelKind, string[]>>>>;
+  testOverride?: { enabled?: boolean } & Partial<Record<ModelKind, string[]>>;
+}
+
+const FALLBACK: Record<ModelKind, readonly string[]> = {
+  chat: CHAT_CASCADE.map((c) => c.model),
+  analysis: ANALYSIS_CASCADE.map((c) => c.model),
+};
+
+const TTL_MS = 60_000;
+let configCache: { value: ModelConfig | null; at: number } | null = null;
+
+function isNonEmptyStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string' && x.trim().length > 0);
+}
+
+async function readModelConfig(persistence: SupabasePersistenceAdapter): Promise<ModelConfig | null> {
+  if (configCache && Date.now() - configCache.at < TTL_MS) return configCache.value;
+  try {
+    const redisKey = 'config:model_config';
+    const redisVal = await getRedisValue(redisKey);
+    if (redisVal) {
+      const parsed = typeof redisVal === 'string' ? JSON.parse(redisVal) : redisVal;
+      configCache = { value: parsed, at: Date.now() };
+      return parsed;
+    }
+
+    const dbVal = await persistence.getAppSetting('model_config');
+    const value = dbVal as ModelConfig | null;
+
+    if (value) {
+      await setRedisValue(redisKey, value, 86400);
+    }
+
+    configCache = { value, at: Date.now() };
+    return value;
+  } catch {
+    configCache = { value: null, at: Date.now() };
+    return null;
+  }
+}
 
 export class SettingsModelAdapter implements ModelResolutionPort {
   private readonly commercialTrialMode: boolean;
+  private persistence = new SupabasePersistenceAdapter();
 
   constructor(config?: { commercialTrialMode?: boolean }) {
-    // See docs: SettingsModelAdapter architecture for trial mode configuration.
     const envFlag = process.env.COMMERCIAL_TRIAL_MODE;
     this.commercialTrialMode = config?.commercialTrialMode ?? (envFlag !== undefined ? envFlag === 'true' : true);
   }
 
-  /**
-   * Resolves the model list for ingestion requests.
-   * @param tier - User tier.
-   * @param kind - Request kind: 'analysis', 'chat', or 'reasoning'.
-   * @returns Promise resolving to model array.
-   */
   async resolveModels(tier: UserTier, kind: 'analysis' | 'chat' | 'reasoning'): Promise<string[]> {
     if (kind === 'reasoning') {
-      return resolveReasoningCascade(tier);
+      const cascade = REASONING_CASCADE[tier] || REASONING_CASCADE.free || [];
+      return cascade.map((item) => item.model);
     }
+
     if (this.commercialTrialMode) {
       if (kind === 'chat') {
         return CHAT_CASCADE.map((c) => c.model);
       }
       return ANALYSIS_CASCADE.map((c) => c.model);
     }
-    return resolveModelCascade(tier, kind);
+
+    const cfg = await readModelConfig(this.persistence);
+
+    let resolved: string[] = [];
+    const override = cfg?.testOverride;
+    if (override?.enabled && isNonEmptyStringArray(override[kind])) {
+      resolved = override[kind] as string[];
+    } else {
+      const planList = cfg?.plans?.[tier]?.[kind];
+      if (isNonEmptyStringArray(planList)) {
+        resolved = planList;
+      } else {
+        resolved = [...FALLBACK[kind]];
+      }
+    }
+
+    // Defensive mapping
+    return resolved.map((m) =>
+      m === 'anthropic/claude-4.5-haiku' ? 'anthropic/claude-haiku-4.5' : m
+    );
   }
+}
+export function invalidateSettingsModelCache(): void {
+  configCache = null;
 }

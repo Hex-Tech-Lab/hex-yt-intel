@@ -48,55 +48,36 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
 
   return (
     <section className="hx-rise">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
           <MonoLabel index="//">synthesis console</MonoLabel>
-          {quota && <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-secondary)" }}>{quota}</span>}
+          {quota && <span className="font-mono text-[11px] text-[var(--ink-secondary)]">{quota}</span>}
         </div>
         <StatusBadge status={status} />
       </div>
 
       <div 
         ref={heroRef}
+        className="overflow-hidden transition-[max-height,opacity] duration-300 ease-out"
         style={{ 
           maxHeight: status !== 'idle' ? '0px' : `${measuredHeight}px`, 
           opacity: status !== 'idle' ? 0 : 1, 
-          overflow: 'hidden', 
-          transition: 'max-height 0.3s ease-out, opacity 0.3s ease-out',
           marginBottom: status !== 'idle' ? 0 : 16
         }}
       >
-        <h1 className="hx-h1" style={{ maxWidth: "20ch" }}>
+        <h1 className="hx-h1 max-w-[20ch]">
           Drop a YouTube URL. Get a structured synthesis across 11 dimensions.
         </h1>
-        <p className="hx-body-lg" style={{ marginTop: 8, maxWidth: "54ch" }}>
+        <p className="hx-body-lg mt-2 max-w-[54ch]">
           Transcript, claims, frameworks, and contrarian takes, mapped into your knowledge graph and searchable in seconds.
         </p>
       </div>
 
-      <div style={{ marginTop: 16, maxWidth: 640 }}>
+      <div className="mt-4 max-w-[640px]">
         <CornerFrame tone={streaming ? "accent" : "line"}>
           <GlowBorder active={streaming} radius="control">
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: 12, 
-              background: "var(--surface)", 
-              padding: 10, 
-              borderRadius: 7,
-              boxShadow: "0 10px 30px -10px rgba(0,0,0,0.5)"
-            }}>
-              <span aria-hidden={true} style={{ 
-                display: "grid", 
-                placeItems: "center", 
-                width: 40, 
-                height: 40, 
-                borderRadius: 10, 
-                background: "var(--bg)", 
-                color: streaming ? "var(--accent)" : "var(--ink-muted)", 
-                flex: "none",
-                border: "1px solid var(--line)"
-              }}>
+            <div className="flex items-center gap-3 bg-[var(--surface)] p-2.5 rounded-[7px] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
+              <span aria-hidden={true} className={`grid place-items-center w-10 h-10 rounded-lg bg-[var(--bg)] ${streaming ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} flex-none border border-[var(--line)]`}>
                 <Icon icon="solar:link-round-angle-linear" size={20} />
               </span>
               <input
@@ -108,37 +89,15 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                 aria-label="YouTube video URL"
                 aria-invalid={status === "error"}
                 aria-describedby={status === "error" ? "hero-error" : undefined}
-                className="hx-field"
-                style={{
-                  minWidth: 0, 
-                  flex: 1, 
-                  background: "transparent", 
-                  border: "none", 
-                  outline: "none", 
-                  padding: "0 4px", 
-                  fontFamily: "var(--font-mono)", 
-                  fontSize: 14, 
-                  color: "var(--ink)" 
-                }}
+                className="hx-field min-w-0 flex-1 bg-transparent border-none outline-none px-1 font-mono text-sm text-[var(--ink)]"
               />
               {url && (
-                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <button
                     type="button"
                     title="Copy URL"
                     onClick={handleCopy}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: copied ? "var(--accent)" : "var(--ink-muted)",
-                      cursor: "pointer",
-                      padding: 6,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: 6,
-                      transition: "color var(--dur-fast)",
-                    }}
+                    className={`bg-transparent border-none ${copied ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} cursor-pointer p-1.5 flex items-center justify-center rounded-md transition-colors duration-[var(--dur-fast)]`}
                   >
                     <Icon icon={copied ? "solar:check-read-linear" : "solar:copy-linear"} size={16} />
                   </button>
@@ -146,43 +105,18 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                     type="button"
                     title="Clear input"
                     onClick={() => onUrlChange('')}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "var(--ink-muted)",
-                      cursor: "pointer",
-                      padding: 6,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: 6,
-                      transition: "color var(--dur-fast)",
-                    }}
+                    className="bg-transparent border-none text-[var(--ink-muted)] cursor-pointer p-1.5 flex items-center justify-center rounded-md transition-colors duration-[var(--dur-fast)]"
                   >
                     <Icon icon="solar:close-circle-linear" size={16} />
                   </button>
                 </div>
               )}
-              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <div className="flex gap-2 flex-shrink-0">
                 {status === "done" && (
                   <button
                     type="button"
                     onClick={onReanalyze}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      borderRadius: 10,
-                      border: "1px solid var(--line)",
-                      background: "transparent",
-                      color: "var(--ink-secondary)",
-                      padding: "12px 16px",
-                      fontFamily: "var(--font-sans)",
-                      fontSize: 14,
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      transition: "all var(--dur-fast)",
-                    }}
+                    className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--line)] bg-transparent text-[var(--ink-secondary)] py-3 px-4 font-sans text-sm font-medium cursor-pointer transition-all duration-[var(--dur-fast)]"
                   >
                     <Icon icon="solar:refresh-linear" size={16} />
                   </button>
@@ -192,21 +126,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                     type="button"
                     title="Cancel analysis"
                     onClick={onCancel}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: 10,
-                      border: "1px solid var(--err)",
-                      background: "rgba(239, 68, 68, 0.15)",
-                      color: "var(--err)",
-                      padding: "12px 16px",
-                      fontFamily: "var(--font-sans)",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      transition: "all var(--dur-fast)",
-                    }}
+                    className="inline-flex items-center justify-center rounded-[10px] border border-[var(--err)] bg-[rgba(239,68,68,0.15)] text-[var(--err)] py-3 px-4 font-sans text-sm font-semibold cursor-pointer transition-all duration-[var(--dur-fast)]"
                   >
                     <Icon icon="solar:stop-circle-linear" size={16} style={{ color: "var(--err)" }} />
                   </button>
@@ -215,23 +135,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                   type="button"
                   onClick={onAnalyze}
                   disabled={disabled}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 10,
-                    borderRadius: 10,
-                    border: "none",
-                    background: streaming ? "var(--bg)" : "var(--accent-strong)",
-                    color: streaming ? "var(--accent)" : "var(--void)",
-                    padding: "12px 20px",
-                    fontFamily: "var(--font-sans)",
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: disabled ? "not-allowed" : "pointer",
-                    opacity: disabled && !streaming ? 0.4 : 1,
-                    transition: "all var(--dur-fast)",
-                    boxShadow: streaming ? "none" : "0 4px 14px var(--accent-glow)"
-                  }}
+                  className={`inline-flex items-center gap-2.5 rounded-[10px] border-none py-3 px-5 font-sans text-sm font-bold transition-all duration-[var(--dur-fast)] ${streaming ? 'bg-[var(--bg)] text-[var(--accent)] shadow-none' : 'bg-[var(--accent-strong)] text-[var(--void)] shadow-[0_4px_14px_var(--accent-glow)]'} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${disabled && !streaming ? 'opacity-40' : 'opacity-100'}`}
                 >
                   <Icon 
                     icon={streaming ? "solar:refresh-linear" : "solar:bolt-linear"} 
@@ -246,8 +150,8 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
         </CornerFrame>
       </div>
 
-      <div style={{ marginTop: 8, display: "flex", minHeight: 20, maxWidth: 640, alignItems: "center", fontSize: 12 }}>
-        <span id="hero-error" role="alert" aria-live="assertive" style={{ fontFamily: "var(--font-mono)", color: "var(--err)", fontWeight: 500 }}>{status === "error" ? error : ""}</span>
+      <div className="mt-2 flex min-h-5 max-w-[640px] items-center text-xs">
+        <span id="hero-error" role="alert" aria-live="assertive" className="font-mono text-[var(--err)] font-medium">{status === "error" ? error : ""}</span>
       </div>
     </section>
   );

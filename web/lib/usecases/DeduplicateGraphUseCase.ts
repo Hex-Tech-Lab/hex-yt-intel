@@ -1,9 +1,9 @@
-import { GraphRAGPort } from '@/lib/ports/GraphRAGPort';
+import { GraphPersistencePort } from '@/lib/ports';
 import { VectorDedupPort } from '@/lib/ports/VectorDedupPort';
 
 export class DeduplicateGraphUseCase {
   constructor(
-    private graphPort: GraphRAGPort,
+    private graphPort: GraphPersistencePort,
     private vectorDedupPort: VectorDedupPort
   ) {}
 

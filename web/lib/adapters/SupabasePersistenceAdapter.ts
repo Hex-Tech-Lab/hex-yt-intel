@@ -1,11 +1,14 @@
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 import type {
-  PersistencePort,
+  AnalysisPersistencePort,
+  GraphPersistencePort,
+  BillingPersistencePort,
   CachedAnalysis,
   AnalysisStub,
   ValidationReportInput,
   ChatPersistencePort,
+  SettingsPersistencePort,
 } from '@/lib/ports';
 import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
 import type { GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
@@ -16,7 +19,7 @@ import { SupabaseChatAdapter } from './SupabaseChatAdapter';
 import { SupabaseGraphAdapter } from './SupabaseGraphAdapter';
 import { SupabaseBillingAdapter } from './SupabaseBillingAdapter';
 
-export class SupabasePersistenceAdapter implements PersistencePort, ChatPersistencePort {
+export class SupabasePersistenceAdapter implements AnalysisPersistencePort, GraphPersistencePort, BillingPersistencePort, ChatPersistencePort, SettingsPersistencePort {
   findCachedAnalysis(params: { userId: string; videoId: string }): Promise<CachedAnalysis | null> {
     return SupabaseAnalysisAdapter.findCachedAnalysis(params);
   }
@@ -71,6 +74,10 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
 
   updateValidationReport(params: { analysisId: string; report: any; passed: boolean }): Promise<void> {
     return SupabaseAnalysisAdapter.updateValidationReport(params);
+  }
+
+  verifyOwnership(params: { analysisId: string; userId: string; select?: string }): Promise<any | null> {
+    return SupabaseAnalysisAdapter.verifyOwnership(params);
   }
 
   async updateAnalysisResult(params: {
@@ -206,6 +213,10 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     return SupabaseChatAdapter.findAssistantByParentId(params);
   }
 
+  verifyChatOwnership(params: { conversationId: string; userId: string; select?: string }): Promise<any | null> {
+    return SupabaseChatAdapter.verifyOwnership(params);
+  }
+
   // --- Graph Adapter Delegation ---
   getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
     return SupabaseGraphAdapter.getAnalysesByTenant(tenantId);
@@ -234,6 +245,26 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
 
   updateBillingStatus(params: { analysisId: string; status: 'processing' | 'completed' | 'failed' }): Promise<void> {
     return SupabaseBillingAdapter.updateBillingStatus(params);
+  }
+
+  getUserProfile(userId: string): Promise<any | null> {
+    return SupabaseBillingAdapter.getUserProfile(userId);
+  }
+
+  getUserBillingConfig(userId: string): Promise<{ stripeCustomerId: string | null; tier: string; analysesUsed: number } | null> {
+    return SupabaseBillingAdapter.getUserBillingConfig(userId);
+  }
+
+  getUsageLogsCountSince(params: { userId: string; since: string }): Promise<Array<{ action: string }>> {
+    return SupabaseBillingAdapter.getUsageLogsCountSince(params);
+  }
+
+  getMonthlyAnalyses(params: { userId: string; since: string }): Promise<Array<{ id: string; billingStatus: string; createdAt: string }>> {
+    return SupabaseBillingAdapter.getMonthlyAnalyses(params);
+  }
+
+  logUsageEvent(params: { userId: string; action: string; metadata: any }): Promise<void> {
+    return SupabaseBillingAdapter.logUsageEvent(params);
   }
 
   // --- Chunks ---
@@ -293,6 +324,25 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         extra: { analysisId: params.analysisId },
       });
       throw error;
+    }
+  }
+
+  async getAppSetting(key: string): Promise<any | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('app_settings')
+        .select('value')
+        .eq('key', key)
+        .single();
+      if (error || !data) return null;
+      return data.value;
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'getAppSetting' },
+        extra: { key },
+      });
+      return null;
     }
   }
 }
