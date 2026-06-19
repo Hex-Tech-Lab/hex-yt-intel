@@ -1,25 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
-
-// Lazy-load Supabase client module to avoid blocking initial render
-const supabaseModulePromise = import('@/utils/supabase/client');
+import { createClient } from '@/utils/supabase/client';
 
 export default function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSupabaseAuth = async () => {
+  const supabase = useMemo(() => createClient(), []);
+
+  const callbackUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '/auth/callback';
+    const searchParams = new URLSearchParams(window.location.search);
+    const nextTarget = searchParams.get('next') || '/dashboard';
+    return `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
+  }, []);
+
+  const handleSupabaseAuth = useCallback(async () => {
     setError(null);
     setLoading(true);
     try {
-      const { createClient } = await supabaseModulePromise;
-      const supabase = createClient();
-      const searchParams = new URLSearchParams(window.location.search);
-      const nextTarget = searchParams.get('next') || '/dashboard';
-      const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
-      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: callbackUrl },
@@ -30,7 +31,7 @@ export default function SignInForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase, callbackUrl]);
 
   return (
     <div style={{
@@ -117,16 +118,6 @@ export default function SignInForm() {
             <Icon icon="solar:sun-bold-duotone" size={16} />
             {loading ? 'Signing in...' : 'Sign in with Google'}
           </button>
-
-          <p style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: "var(--ink-muted)",
-            textAlign: "center",
-            marginTop: 24,
-          }}>Powered by Supabase</p>
         </div>
       </div>
     </div>
