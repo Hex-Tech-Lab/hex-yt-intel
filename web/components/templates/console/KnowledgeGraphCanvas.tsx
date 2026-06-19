@@ -161,7 +161,8 @@ export function KnowledgeGraphCanvas({
         height={size.h}
         graphData={data}
         backgroundColor="rgba(0,0,0,0)"
-        cooldownTicks={compact ? 80 : 160}
+        warmupTicks={50}
+        cooldownTicks={compact ? 120 : 300}
         onEngineStop={fit}
         nodeRelSize={compact ? 3 : 5}
         nodeVal={(n: any) => 1 + (n as FGNode).weight * 3}
@@ -193,7 +194,7 @@ export function KnowledgeGraphCanvas({
         linkWidth={(l: any) => {
           const idx = data.links.indexOf(l);
           const active = neighborhood ? neighborhood.links.has(`${idx}`) : false;
-          return (active ? 2.0 : 0.8) + l.strength * 1.5;
+          return (active ? 1.8 : 0.5) + l.strength * 0.8;
         }}
         linkLineDash={(l: any) => (l.kind === 'contrarian' ? [4, 3] : null)}
         nodeCanvasObject={(n: any, ctx: CanvasRenderingContext2D, scale: number) => {
@@ -236,7 +237,7 @@ export function KnowledgeGraphCanvas({
             ctx.stroke();
           }
 
-          const showLabel = isActive || node.id === selectedId || scale > (compact ? 1.5 : 1.0);
+          const showLabel = isActive || node.id === selectedId || node.weight >= 2 || scale > (compact ? 1.2 : 0.8);
           if (showLabel && !dim) {
             const baseFontSize = compact ? 9 : 10;
             const clampedFontSize = Math.max(7.5, baseFontSize / scale);

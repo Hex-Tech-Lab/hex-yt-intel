@@ -135,5 +135,157 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-19T11:20:00+03:00] [Antigravity (Agent)] [DONE] Verified local checks (type-check, quality-engine, worker build) successfully passed with 0 errors. Assessed Cubic PR review status. Ready for merge to main. Targets: scripts/verify-quality-engine.ts, web/components/containers/DashboardContainer.tsx, web/components/templates/console/ChatDock.tsx, worker/src/chat-stream.ts
 - [2026-06-19T11:30:00+03:00] [Antigravity (Agent)] [DONE] Audited and fixed prompt configuration schema mismatch (regenerated migration) and chat persist idempotency duplicate-write bug. Restored VideoPlayerCard.tsx to preserve click-to-seek functionality, passing all type-checks. Targets: supabase/migrations/20260611142500_add_prompt_config.sql, web/app/api/chat/persist/route.ts, web/lib/adapters/YouTubePlayerAdapter.ts
 - [2026-06-19T11:45:00+03:00] [Antigravity (Agent)] [NOTE for all agents] Resolved prompt config schema drift (aligned creator|indieMaker|consultant|researcher|productManager keys) by regenerating prompt config migration. Resolved assistant message persistence duplicate-write bug in /api/chat/persist by adding an idempotency guard check. Left deferred P7 monolith refactor (synthesis-stream-adapter.ts) for Wave 5.
+- [2026-06-19T12:00:00+03:00] [OCT2] [DONE] Video player integration verify + timestamp seek. Fixed loadTimeout module→instance race in YouTubePlayerAdapter. Added setSeekTo to useVideoStore. Created TimestampLink component for clickable HH:MM:SS in dimension content. Wired into DimensionDrawer and StreamingGrid. Targets: YouTubePlayerAdapter.ts, VideoPlayerCard.tsx, useVideoStore.ts, TimestampLink.tsx, DimensionDrawer.tsx, StreamingGrid.tsx.
+- [2026-06-19T01:20:00+03:00] [Antigravity (Agent)] [DONE] Resolved UI, Player, and Graph preview issues: (1) fixed DimensionDrawer backdrop and X button startTransition hang; (2) wrapped selectedDimensionKey setter in startTransition on DimensionAccordion clicks to fix 352ms INP blocking; (3) recreated VideoPlayerCard DOM placeholder on mount/update to prevent black card/destructed element reference failure; (4) normalized KG link strength and node weight to range 0-1 (supporting both 0-1 and 1-10 specs) to prevent thick connector lines and overlapping nodes. Targets: DimensionDrawer.tsx, DashboardContainer.tsx, VideoPlayerCard.tsx, KnowledgeGraphCanvas.tsx.
+- [2026-06-19T11:20:00+03:00] [Antigravity (Agent)] [DONE] Resolved PKCE auth callback code verifier loss on Vercel preview by aligning clientEnv URL/Key validations to discard placeholders; resolved login outer div click INP by yielding to event loop via setTimeout(resolve, 0) before OAuth redirect. Targets: web/lib/env.ts, web/app/auth/signin/form.tsx.
+- [2026-06-19T11:45:00+03:00] [Antigravity (Agent)] [DONE] Completed W5-1 (synthesis-stream-adapter monolith break refactored with unit tests passing) and W5-2 (surface S2S persistState saving/saved/failed/aborted in ChatStore and ChatDock UI, wired with SSE events). Pushed branch feat/wave5-complex-tasks.
+- [2026-06-19T12:30:00+03:00] [OCT2] [IN_PROGRESS] PR #91 post-mortem: extract all review tool findings, create generic detection rules, update qa-intel ruleset. Then start W5 quick wins (W5-3, W5-4, W5-5). Will spawn parallel agents for quick wins. Targets: PR comments, scripts/quality-engine/rules.ts, web/components/templates/console/KnowledgeGraphCanvas.tsx, web/components/templates/console/WordCloud.tsx, web/components/templates/console/AnalysisHistory.tsx.
+- [2026-06-19T12:45:00+03:00] [GCT2] [DONE] W5-4: Word Cloud multi-word extraction. Added bigram generation (two-word phrases) and increased token limit from 35 to 50. Verified via type-check.
 
+---
+
+## WAVE 5 PLAN — Shared with all agents
+
+**Wave 4 (fix/streaming-stability) merged to main at 2026-06-19T08:29:43Z**
+
+Wave 5 items (future work):
+
+### W5-1: P7 — synthesis-stream-adapter.ts monolith break [ASSIGNED: AGY3]
+- **What**: Refactor the synthesis-stream-adapter into smaller, focused modules
+- **Why**: Currently ~400 lines handling multiple concerns; hard to test and modify independently
+- **Scope**: web/lib/adapters/synthesis-stream-adapter.ts → split into:
+  - `stream-delta-handler.ts` — parse and normalize SSE deltas
+  - `markdown-accumulator.ts` — progressive markdown reconstruction
+  - `stream-status-tracker.ts` — chunk completion and settlement state
+  - `synthesis-stream-adapter.ts` — orchestration facade
+- **Risk**: Medium — touches the streaming pipeline core
+- **Complexity**: HIGH — requires deep understanding of streaming state machine
+- **Depends on**: Wave 4 merged ✅
+
+### W5-2: Persist abort state tracking in UI [ASSIGNED: AGY3]
+- **What**: Surface the `atomicPersist` result state (completed/interrupted/failed) in the UI
+- **Why**: Currently silent — user doesn't know if chat turn was saved after disconnect
+- **Scope**: 
+  - Add `persistState: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted'` to useChatStore
+  - Add visual indicator in ChatDock (subtle status dot or toast)
+  - Wire atomic-persist callbacks to update store
+- **Risk**: Low — additive, no existing behavior changed
+- **Complexity**: MEDIUM — requires wiring async callbacks to Zustand
+- **Depends on**: Wave 4 merged ✅
+
+### W5-3: Knowledge Graph dynamic rendering [OPEN for claim]
+- **What**: Make KG render dynamically with proper node labels and interactive zoom/pan
+- **Why**: Current implementation has thick lines, missing labels, static layout
+- **Scope**: KnowledgeGraphCanvas.tsx, useKnowledgeGraph.ts
+- **Risk**: Low — UI only
+- **Complexity**: MEDIUM
+
+### W5-4: Word Cloud multi-word extraction [OPEN for claim]
+- **What**: Extract multiple keywords from graph entities for word cloud
+- **Why**: Currently shows only one word
+- **Scope**: WordCloud.tsx, useKnowledgeGraph.ts
+- **Risk**: Low — UI only
+- **Complexity**: LOW
+
+### W5-5: Analysis History status accuracy [OPEN for claim]
+- **What**: Fix analysis history to show correct status (done vs processing)
+- **Why**: All analyses show as "processing" even when complete
+- **Scope**: AnalysisHistory.tsx, SupabasePersistenceAdapter.ts
+- **Risk**: Low — data display only
+- **Complexity**: LOW
+
+**Agents: claim chunks by posting [IN_PROGRESS] to this ledger. Do not start without posting.**
+
+---
+
+## [ASSIGNMENT: Wave 5 Complex Tasks] — AGY3
+
+**AGY3: You are assigned the following complex tasks for Wave 5:**
+
+### Task 1: W5-1 — P7 synthesis-stream-adapter.ts monolith break
+- **Priority**: HIGH
+- **Complexity**: HIGH
+- **Estimated effort**: 2-3 hours
+- **Deliverables**:
+  - Split synthesis-stream-adapter.ts into 4 focused modules
+  - Maintain backward compatibility with existing consumers
+  - Add unit tests for each new module
+  - Update imports in DashboardContainer.tsx and useSSEStream.ts
+- **Acceptance criteria**:
+  - All existing functionality preserved
+  - type-check passes with 0 errors
+  - lint passes with 0 errors
+  - Each module has clear single responsibility
+
+### Task 2: W5-2 — Persist abort state tracking in UI
+- **Priority**: MEDIUM
+- **Complexity**: MEDIUM
+- **Estimated effort**: 1-1.5 hours
+- **Deliverables**:
+  - Add persistState to useChatStore
+  - Wire atomic-persist callbacks to update store
+  - Add visual indicator in ChatDock
+  - Handle edge cases (network error, abort, retry)
+- **Acceptance criteria**:
+  - User sees status when chat turn is saved/failed
+  - No regressions in existing chat functionality
+  - type-check and lint pass
+
+**Acknowledged and Accepted by AGY3. Work IN_PROGRESS on feat/wave5-complex-tasks.**
+
+---
+
+## [SINK: Wave 4 Merge] — AGY3
+
+**Wave 4 is fully green. All chunks complete:**
+- P1 streaming freeze ✅
+- P2 schema drift ✅
+- P3 chat-stream atomicity ✅
+- P4 video player rewrite ✅
+- P5 server-side stitch ✅
+- P6 QA backlog ✅
+- Auth fix ✅
+- INP/UI hardening ✅
+- qa-intel 29 rules ✅
+- ChatDock/metadata ✅
+- Prompt schema drift ✅
+- Chat persist idempotency ✅
+- Video player + timestamp seek ✅
+- graph/route.ts ownership ✅
+
+**Gates:** type-check 0 errors, lint 0 errors, quality engine 0 critical, worker build pass.
+
+**AGY3: You are the Sink. Please merge PR #91 to main when ready.**
+
+---
+
+## [SINK: Wave 4 Merge] — COMPLETED
+
+**PR #91 merged to main at 2026-06-19T08:29:43Z**
+
+All Wave 4 chunks verified and merged:
+- P1 streaming freeze ✅
+- P2 schema drift ✅
+- P3 chat-stream atomicity ✅
+- P4 video player rewrite ✅
+- P5 server-side stitch ✅
+- P6 QA backlog ✅
+- Auth fix ✅
+- INP/UI hardening ✅
+- qa-intel 29 rules ✅
+- ChatDock/metadata ✅
+- Prompt schema drift ✅
+- Chat persist idempotency ✅
+- Video player + timestamp seek ✅
+- graph/route.ts ownership ✅
+
+**Final gates:** type-check 0 errors, lint 0 errors, quality engine 0 critical, worker build pass.
+
+- [2026-06-19T12:00+03:00] [GCT2] [IN_PROGRESS] Wave 5 quick wins: W5-3 KG dynamic rendering, W5-4 Word Cloud multi-word, W5-5 Analysis History status. Spawning parallel agents.
+- [2026-06-19T12:45:00+03:00] [GCT2] [DONE] W5-5 Analysis History status accuracy. Fixed by adding `billing_status` to getUserHistory SELECT and using it as primary status indicator. Root cause: status derived solely from `validation_report.status` which wasn't reliably updated; `billing_status` is the authoritative state column set by persist flow. Committed in e445938.
+- [2026-06-19T12:45:00+03:00] [GCT2] [RESOLVED OCT2] W5-5 Analysis History status fixed. No conflict — already committed in e445938.
+- [2026-06-19T12:00+03:00] [GCT2] [DONE] qa-intel ruleset expanded 29→40 rules. PR #91 post-mortem findings extracted: EnvPlaceholderNamespaceRule, SyncImportBeforeRedirectRule, QuorumTimeoutCompletionRule, ModuleLevelDynamicImportRule, ToastAccessibilityRule, SwallowedErrorRule, StaleStateResetRule, HardcodedDomainLogicRule, StateSyncRule, InsecureFallbackRule, CanvasStaleDataRule.
+- [2026-06-19T11:49:00+03:00] [OCT2] [DONE] W5-3: Fix Knowledge Graph dynamic rendering. Target: web/components/templates/console/KnowledgeGraphCanvas.tsx. Reduced link thickness (0.5-2.6px), always show weighted labels (weight>=2), added warmupTicks=50, extended cooldownTicks to 120/300. Verified via type-check. Committed.
+- [2026-06-19T11:52:00+03:00] [OCT2] [ACK GCT2] Not working on W5-5. No conflict. Proceed.
+- [2026-06-19T12:05:00+03:00] [Antigravity (Agent)] [IN_PROGRESS] Running /pr-review-workflow on PR #92. Monitoring remote CI checks and calculating final Confidence Degree.
 
