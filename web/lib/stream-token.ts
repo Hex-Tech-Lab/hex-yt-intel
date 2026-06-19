@@ -8,7 +8,7 @@ import { env } from '@/lib/env';
  */
 const TOKEN_TTL_MS = 120_000;
 
-async function hmacHex(secret: string | undefined, message: string): Promise<string> {
+async function hmacHex(secret: string, message: string): Promise<string> {
   if (!secret) throw new Error('STREAM_HMAC_SECRET is not configured');
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
