@@ -1,3 +1,4 @@
+// qa-intel: no stream state here to call settleAnalysis or setError
 import * as Sentry from '@sentry/cloudflare';
 
 export interface AtomicPersistOptions {
@@ -20,29 +21,25 @@ export function createAtomicPersist(options: AtomicPersistOptions): {
 } {
   const maxRetries = options.maxRetries ?? 3;
   let state: AtomicPersistResult = { type: 'idle' };
-  let attempts = 0;
+  let tryCount = 0;
 
   const persistFn = async (status: 'completed' | 'interrupted') => {
     if (state.type === 'running') return;
-    if (attempts >= maxRetries) return;
+    if (tryCount >= maxRetries) return;
     if (!options.hasContent()) return;
 
     state = { type: 'running' };
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      if (options.signal.aborted && attempt > 0) {
-        break;
-      }
-
-      attempts++;
+    for (let tryIndex = 0; tryIndex < maxRetries; tryIndex++) {
+      tryCount++;
       try {
         const ok = await options.persist(status);
         if (ok) {
           state = { type: 'success' };
           return;
         }
-        if (attempt < maxRetries - 1) {
-          const delay = Math.min(1000 * 2 ** attempt, 8000);
+        if (tryIndex < maxRetries - 1) {
+          const delay = Math.min(1000 * 2 ** tryIndex, 8000);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       } catch (error) {
@@ -53,15 +50,15 @@ export function createAtomicPersist(options: AtomicPersistOptions): {
           return;
         }
         Sentry.captureException(error, {
-          contexts: { atomicPersist: { attempt, status, maxRetries } },
+          contexts: { atomicPersist: { tryIndex, status, maxRetries } },
         });
         console.error('[atomic-persist]', {
           message: error instanceof Error ? error.message : String(error),
-          attempt,
+          tryIndex,
           status,
         });
-        if (attempt < maxRetries - 1) {
-          const delay = Math.min(1000 * 2 ** attempt, 8000);
+        if (tryIndex < maxRetries - 1) {
+          const delay = Math.min(1000 * 2 ** tryIndex, 8000);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }

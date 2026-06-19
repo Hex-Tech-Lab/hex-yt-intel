@@ -8,7 +8,9 @@ import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
 import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
-import { DimensionAccordion, type Dimension } from '@/components/templates/console/DimensionAccordion';
+import type { Dimension } from '@/components/templates/console/DimensionAccordion';
+import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
+import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
@@ -24,7 +26,6 @@ import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
-import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 import { VideoPlayerCard } from '@/components/templates/console/VideoPlayerCard';
 import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
@@ -467,41 +468,20 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               {consoleTab === 'synthesis' ? (
                 <>
                   {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
-                  
-                  {dimensions.length > 0 ? (
-                    <div className="flex flex-col gap-4">
-                      <DimensionAccordion
-                        dimensions={dimensions}
-                        selectedDimensionKey={selectedDimensionKey}
-                        onSelectDimension={setSelectedDimensionKey}
-                        progress={status === 'analyzing' ? 'Processing...' : status === 'complete' ? '100% complete' : undefined}
-                      />
-
-                    </div>
-                  ) : (
-                    <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
-                      {status === 'complete' ? (
-                        <p className="text-[var(--ink-secondary)] font-mono text-sm">No synthesis dimensions were produced for this analysis.</p>
-                      ) : status === 'error' ? (
-                        <p className="text-[var(--danger,#ef4444)] font-mono text-sm">Synthesis failed — see the log below.</p>
-                      ) : (
-                        <>
-                          <Icon icon="solar:refresh-linear" size={32} className="hx-anispin text-[var(--accent)] mb-4 inline-block" />
-                          <p className="text-[var(--ink-secondary)] font-mono text-sm">Preparing synthesis dimensions…</p>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  <DimensionAccordion
+                    dimensions={dimensions}
+                    selectedDimensionKey={selectedDimensionKey}
+                    onSelectDimension={setSelectedDimensionKey}
+                    status={status}
+                  />
                 </>
               ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4">
-                    <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} height={520} />
-                  </div>
-                  <p className="text-[var(--ink-muted)] font-mono text-[10px] uppercase tracking-wider pl-1">
-                    Left-click node to inspect · drag to pan/reposition · scroll to zoom
-                  </p>
-                </div>
+                <VisualizationPanel
+                  graph={graph}
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={handleSelectNode}
+                  onFocusNode={(id) => startTransition(() => setSelectedNodeId(id))}
+                />
               )}
 
             </div>

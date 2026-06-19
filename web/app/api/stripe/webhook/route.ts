@@ -6,7 +6,7 @@ import { getSupabaseServiceClient } from '@/lib/supabase';
 import Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
-import { dispatchEvent, getUserIdFromEvent } from './handlers';
+import { dispatchEvent, getUserIdFromEvent } from '@/lib/stripe/webhook-handlers';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 

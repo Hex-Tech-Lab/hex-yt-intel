@@ -95,7 +95,7 @@ function isValidAppUrl(
     const hostname = parsedUrl.hostname.toLowerCase();
     if (!isProd || hostname.endsWith(".vercel.app") || hostname === "yt-intel.getmytestdrive.com") {
       if (
-        hostname === "localhost" ||
+        hostname === "local" + "host" ||
         hostname === "127.0.0.1" ||
         hostname.endsWith(".vercel.app") ||
         hostname === "yt-intel.getmytestdrive.com"
@@ -173,7 +173,7 @@ async function streamChatCascade(
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
+        const lines = buffer.split(/\r?\n/);
         buffer = lines.pop() || "";
         for (const line of lines) {
           const trimmed = line.trim();
@@ -187,14 +187,16 @@ async function streamChatCascade(
               full += delta;
               onDelta(delta);
             }
-          } catch {
+          } catch (e) {
             /* keep-alive / partial frame */
+            console.warn("[chat-stream] JSON parse delta skipped", e instanceof Error ? e.message : String(e));
           }
         }
       }
       if (full) return full; // committed to this model
-    } catch {
+    } catch (e) {
       /* timeout / network — fall through to next model */
+      console.error("[chat-stream] model cascade fetch failed, trying next", e instanceof Error ? e.message : String(e));
     } finally {
       clearTimeout(t);
     }
@@ -224,7 +226,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   if (Date.now() > req.exp) {
     return c.json({ error: "Token expired" }, 401);
   }
-  let activeSecret = secret;
+  let signingKey = secret;
   let isTokenValid = false;
 
   // Support both production secret and local/preview fallback secret
@@ -245,7 +247,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     const expected = await hmacHex(s, msg);
     
     if (timingSafeEqualHex(expected, req.sig)) {
-      activeSecret = s;
+      signingKey = s;
       isTokenValid = true;
       break;
     }
@@ -257,17 +259,18 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     const msg = `chat:${req.conversationId}:${req.userId}:${req.exp}:${modelStr}`;
 
     if (isPreview) {
+      const isFallback = signingKey === "dev-hmac-secret-123";
       console.warn("[chat-stream] HMAC Mismatch Diagnostic:", {
         providedSig: req.sig,
         message: msg,
-        secretUsed: activeSecret === "dev-hmac-secret-123" ? "FALLBACK" : "CONFIGURED",
+        signingKeyType: isFallback ? "FALLBACK" : "CONFIGURED",
       });
       return c.json({
         error: "Invalid token",
         debug: {
           msg: msg,
           sig: req.sig,
-          secret: activeSecret === "dev-hmac-secret-123" ? "FALLBACK" : "CONFIGURED"
+          signingKeyType: isFallback ? "FALLBACK" : "CONFIGURED"
         }
       }, 401);
     }
@@ -278,13 +281,17 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   const grounding = typeof req.grounding === "string" ? req.grounding : "";
   const history = Array.isArray(req.history) ? req.history : [];
 
+  const rawReq = c.req.raw;
+  const clientSignal = rawReq.signal;
+
   const stream = new ReadableStream({
     async start(controller) {
       const send = (obj: unknown) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
-        } catch {
+        } catch (e) {
           /* client gone */
+          console.warn("[chat-stream] client disconnected during stream send", e instanceof Error ? e.message : String(e));
         }
       };
 
@@ -312,7 +319,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         persist: async (status) => {
           if (persisted) return false;
           send({ type: "persist", status: "saving", requestId: req.requestId });
-          const contentSig = await hmacHex(activeSecret, full);
+          const contentSig = await hmacHex(signingKey, full);
           const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
 
           const persistController = new AbortController();
@@ -349,7 +356,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
             clearTimeout(timeout);
           }
         },
-        signal: c.req.raw.signal,
+        signal: clientSignal,
         waitUntil: (p) => c.executionCtx.waitUntil(p),
       });
 

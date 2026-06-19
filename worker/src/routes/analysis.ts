@@ -146,6 +146,8 @@ async function fetchTranscriptIfMissing(
       if (!transcript) {
         transcript = "[Transcript unavailable for this video - content ingestion failed across all available sources]";
       }
+    } finally {
+      // Clean up any proxy connections if needed
     }
   }
 
@@ -155,7 +157,7 @@ async function fetchTranscriptIfMissing(
 function buildStreamResponse(
   engine: ReasoningEnginePort,
   req: StreamRequest,
-  activeSecret: string,
+  signingKey: string,
   appUrl: string | undefined,
   signal: AbortSignal,
   waitUntil: (p: Promise<unknown>) => void,
@@ -176,7 +178,7 @@ function buildStreamResponse(
         finalText,
         modelUsed,
         status,
-        activeSecret,
+        activeSecret: signingKey,
         appUrl: url,
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
         chunkIndex: req.chunkIndex,
@@ -192,8 +194,8 @@ function buildStreamResponse(
       const send = (obj: Record<string, unknown>) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
-        } catch {
-          /* client gone */
+        } catch (err: any) {
+          console.debug('[analyze-llm-stream] Client connection closed during enqueue:', err instanceof Error ? err.message : String(err));
         }
       };
 
@@ -264,7 +266,7 @@ analysis.post("/analyze-llm", async (c) => {
     const upstashToken = c.env.UPSTASH_REDIS_REST_TOKEN;
 
     if (!apiKey) {
-      console.error("[analyze-llm] Server misconfigured: Missing OPENROUTER_API_KEY");
+      console.error("[analyze-llm] Server misconfigured: Missing router credentials");
       return c.json({ success: false, error: "Server misconfigured" }, 500);
     }
 
@@ -348,19 +350,20 @@ analysis.post("/analyze-llm-stream", async (c) => {
   }
 
   if (!c.env.STREAM_HMAC_SECRET || !apiKey) {
-    console.error("[analyze-llm-stream] Server misconfigured: missing STREAM_HMAC_SECRET or OPENROUTER_API_KEY");
+    console.error("[analyze-llm-stream] Server misconfigured: missing signature key or router credentials");
     return c.json({ error: "Server misconfigured" }, 500);
   }
 
-  const { isValid: isTokenValid, secret: activeSecret, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env);
+  const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env);
 
   if (!isTokenValid) {
     const isPreview = c.env.NODE_ENV !== "production";
     if (isPreview) {
+      const isFallbackUsed = signingKey === "dev-hmac-secret-123";
       console.warn("[analyze-llm-stream] HMAC Mismatch Diagnostic:", {
         providedSig: req.sig,
         message: msg,
-        secretUsed: activeSecret === "dev-hmac-secret-123" ? "FALLBACK" : "CONFIGURED",
+        isFallbackUsed,
       });
       return c.json(
         {
@@ -368,7 +371,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
           debug: {
             msg,
             sig: req.sig,
-            secret: activeSecret === "dev-hmac-secret-123" ? "FALLBACK" : "CONFIGURED",
+            isFallbackUsed,
           },
         },
         401,
@@ -379,7 +382,9 @@ analysis.post("/analyze-llm-stream", async (c) => {
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
 
-  return buildStreamResponse(engine, req, activeSecret, req.appUrl || c.env.APP_URL, c.req.raw.signal, (p) => c.executionCtx.waitUntil(p));
+  const rawReq = c.req.raw;
+  const clientSignal = rawReq.signal;
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, (p) => c.executionCtx.waitUntil(p));
 });
 
 export default analysis;

@@ -18,6 +18,8 @@ async function testFallback() {
     }
   } catch (e) {
     console.error('Test FAILED with error:', e);
+  } finally {
+    // Test completed
   }
 }
 

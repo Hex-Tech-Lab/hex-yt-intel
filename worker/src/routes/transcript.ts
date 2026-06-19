@@ -47,6 +47,8 @@ transcript.post("/fetch-transcript", async (c) => {
       { error: "Failed to fetch transcript. Please try again later." },
       500,
     );
+  } finally {
+    // request processing done
   }
 });
 

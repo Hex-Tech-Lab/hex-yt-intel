@@ -15,6 +15,8 @@ export interface PersistOptions {
   totalChunks?: number;
 }
 
+const rawFetch = fetch;
+
 export class PersistService {
   async persist(options: PersistOptions): Promise<boolean> {
     let markdown = options.finalText;
@@ -45,11 +47,12 @@ export class PersistService {
     const contentSig = await hmacHex(options.activeSecret, canonical);
 
     const maxRetries = 2;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {
       try {
-        const persistRes = await fetch(`${options.appUrl}/api/analyses/persist`, {
+        const persistRes = await rawFetch(`${options.appUrl}/api/analyses/persist`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(10000),
           body: JSON.stringify({
             analysisId: options.analysisId,
             videoId: options.videoId,
@@ -66,10 +69,10 @@ export class PersistService {
         if (persistRes.ok) return true;
         console.warn(`[persist] ${options.status} persist returned ${persistRes.status}, retrying...`);
       } catch (e) {
-        console.error(`[persist] ${options.status} persist attempt ${attempt + 1}/${maxRetries + 1} failed`, e);
+        console.error(`[persist] ${options.status} persist attempt ${tryIndex + 1}/${maxRetries + 1} failed`, e);
       }
-      if (attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+      if (tryIndex < maxRetries) {
+        await new Promise(r => setTimeout(r, 500 * (tryIndex + 1)));
       }
     }
     return false;

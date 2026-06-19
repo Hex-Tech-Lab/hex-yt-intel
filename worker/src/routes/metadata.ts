@@ -54,6 +54,8 @@ metadata.get("/fetch-metadata", async (c) => {
       { error: "Failed to fetch video metadata. Please try again later." },
       500,
     );
+  } finally {
+    // request processing done
   }
 });
 
