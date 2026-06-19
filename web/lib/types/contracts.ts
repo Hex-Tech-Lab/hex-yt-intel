@@ -82,7 +82,8 @@ export const CheckoutSchema = z.object({
   cancelUrl: z.string().url('Invalid cancel URL'),
 }).refine(
   (data) => {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    if (!appUrl) return false;
     try {
       const appOrigin = new URL(appUrl).origin;
       const successOrigin = new URL(data.successUrl).origin;

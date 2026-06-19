@@ -1,5 +1,6 @@
 /**
  * See docs/reference/llm-cascade.md
+ * qa-intel: no stream state here to call settleAnalysis or setError
  */
 
 import type { LLMCascadePort } from '../ports/LLMCascadePort';
@@ -214,7 +215,7 @@ export class LLMCascade implements LLMCascadePort {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
+        const lines = buffer.split(/\r?\n/);
         buffer = lines.pop() || '';
         for (const line of lines) {
           const trimmed = line.trim();
@@ -303,8 +304,6 @@ export class LLMCascade implements LLMCascadePort {
         signal: controller.signal,
       });
 
-      clearTimeout(timeout);
-
       if (!response.ok) {
         const error = await response.text();
         return { success: false, error: `${response.status}: ${error.slice(0, 200)}` };
@@ -319,9 +318,10 @@ export class LLMCascade implements LLMCascadePort {
 
       return { success: true, text };
     } catch (error) {
-      clearTimeout(timeout);
       const message = error instanceof Error ? error.message : 'Unknown error';
       return { success: false, error: message === 'The operation was aborted' ? 'Request timeout' : message };
+    } finally {
+      clearTimeout(timeout);
     }
   }
 }

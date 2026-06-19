@@ -48,8 +48,11 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
 
   return (
     <section className="hx-rise">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <MonoLabel index="//">synthesis console</MonoLabel>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <MonoLabel index="//">synthesis console</MonoLabel>
+          {quota && <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-secondary)" }}>{quota}</span>}
+        </div>
         <StatusBadge status={status} />
       </div>
 
@@ -60,18 +63,18 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
           opacity: status !== 'idle' ? 0 : 1, 
           overflow: 'hidden', 
           transition: 'max-height 0.3s ease-out, opacity 0.3s ease-out',
-          marginBottom: status !== 'idle' ? 0 : 24
+          marginBottom: status !== 'idle' ? 0 : 16
         }}
       >
         <h1 className="hx-h1" style={{ maxWidth: "20ch" }}>
           Drop a YouTube URL. Get a structured synthesis across 11 dimensions.
         </h1>
-        <p className="hx-body-lg" style={{ marginTop: 12, maxWidth: "54ch" }}>
+        <p className="hx-body-lg" style={{ marginTop: 8, maxWidth: "54ch" }}>
           Transcript, claims, frameworks, and contrarian takes, mapped into your knowledge graph and searchable in seconds.
         </p>
       </div>
 
-      <div style={{ marginTop: 32, maxWidth: 640 }}>
+      <div style={{ marginTop: 16, maxWidth: 640 }}>
         <CornerFrame tone={streaming ? "accent" : "line"}>
           <GlowBorder active={streaming} radius="control">
             <div style={{ 
@@ -243,9 +246,8 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
         </CornerFrame>
       </div>
 
-      <div style={{ marginTop: 12, display: "flex", minHeight: 20, maxWidth: 640, alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
+      <div style={{ marginTop: 8, display: "flex", minHeight: 20, maxWidth: 640, alignItems: "center", fontSize: 12 }}>
         <span id="hero-error" role="alert" aria-live="assertive" style={{ fontFamily: "var(--font-mono)", color: "var(--err)", fontWeight: 500 }}>{status === "error" ? error : ""}</span>
-        {quota && <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-secondary)" }}>{quota}</span>}
       </div>
     </section>
   );

@@ -145,8 +145,8 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
       }
       return parsed as Partial<UCISPayloadV2>;
     }
-  } catch {
-    // Not JSON or invalid
+  } catch (error: any) {
+    console.debug('[extractJsonPayload] Failed to parse JSON:', error instanceof Error ? error.message : String(error));
   }
   return null;
 }

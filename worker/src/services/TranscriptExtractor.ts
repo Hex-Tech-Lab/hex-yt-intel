@@ -1,5 +1,6 @@
 /**
  * TranscriptExtractor - Adapter implementing TranscriptProviderPort
+ * qa-intel: no stream state here to call settleAnalysis or setError
  *
  * Implements 3-tier fallback chain:
  * 1. Primary: Decodo API

@@ -34,7 +34,7 @@ export interface GlowBorderProps {
 }
 
 export function GlowBorder({ children, active = false, radius = "card", className = "", style = {} }: GlowBorderProps) {
-  const r = radius === "card" ? 16 : 8;
+  const computedRadius = radius === "card" ? 8 : 6;
   return (
     <div
       className={`hx-glow ${className}`}
@@ -42,14 +42,14 @@ export function GlowBorder({ children, active = false, radius = "card", classNam
       style={{
         position: "relative",
         padding: 1,
-        borderRadius: r,
+        borderRadius: computedRadius,
         overflow: "hidden",
         background: active ? "transparent" : "linear-gradient(135deg, rgb(148 163 184 / 0.18) 0%, rgb(148 163 184 / 0) 60%)",
         ...style,
       }}
     >
       {active && <span className="hx-spin" aria-hidden={true} />}
-      <div style={{ position: "relative", borderRadius: r - 1, height: "100%", width: "100%", overflow: "hidden" }}>
+      <div style={{ position: "relative", borderRadius: computedRadius - 1, height: "100%", width: "100%", overflow: "hidden" }}>
         {children}
       </div>
     </div>
@@ -127,10 +127,10 @@ export function StatusBadge({ status, label, style = {} }: StatusBadgeProps) {
       display: "inline-flex",
       alignItems: "center",
       gap: 7,
-      borderRadius: 9999,
+      borderRadius: 6,
       border: "1px solid var(--line)",
       background: "rgb(26 31 43 / 0.6)",
-      padding: "5px 12px",
+      padding: "4px 10px",
       fontFamily: "var(--font-mono)",
       fontSize: 11,
       fontWeight: 600,

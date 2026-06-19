@@ -17,7 +17,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   const isAnyOverlayOpen = useUIStore((s) => s.isAnyOverlayOpen);
 
   return (
-    <div className={`grid h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-hidden gap-[4px] p-[4px] ${
+    <div className={`grid h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-hidden gap-2 p-2 ${
       rightPanel ? "grid-cols-[260px_1fr_390px]" : "grid-cols-[260px_1fr]"
     }`}>
       <aside 
@@ -35,7 +35,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           {topbar}
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 pb-8 px-10 scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-6 px-8 scroll-smooth">
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1">
               {children}
@@ -49,7 +49,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
       {rightPanel && (
         <aside 
           inert={isAnyOverlayOpen ? true : undefined}
-          className="border border-[var(--line)] bg-[var(--surface)] h-full w-[390px] flex-shrink-0 overflow-y-auto flex flex-col p-4 px-5 rounded-xl"
+          className="border border-[var(--line)] bg-[var(--surface)] h-full w-[390px] flex-shrink-0 overflow-y-auto flex flex-col p-3 px-4 rounded-xl"
         >
           {rightPanel}
         </aside>

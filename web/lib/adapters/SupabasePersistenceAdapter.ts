@@ -1,5 +1,4 @@
 import { getSupabaseServiceClient } from '@/lib/supabase';
-import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
 import * as Sentry from '@sentry/nextjs';
 import type {
   PersistencePort,
@@ -8,234 +7,28 @@ import type {
   ValidationReportInput,
   ChatPersistencePort,
 } from '@/lib/ports';
-import type { AnalysisJobMetadata } from '@/lib/types/contracts';
-import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
 import type { GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
+import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 
-interface AnalysisRow {
-  id: string;
-  video_id: string;
-  title: string | null;
-  analysis_markdown?: string | null;
-  created_at: string;
-  validation_passed: boolean;
-  validation_report?: any;
-  billing_status?: string;
-}
-
-interface ConversationRow {
-  id: string;
-  user_id: string;
-  title: string | null;
-  analysis_id: string | null;
-  created_at: string;
-  updated_at: string;
-  last_message_at: string | null;
-}
-
-interface MessageRow {
-  id: string;
-  conversation_id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  created_at: string;
-  client_msg_id: string | null;
-}
-
-import { isPersistedValidationReport } from '@/lib/types/validation-report';
+import { SupabaseAnalysisAdapter } from './SupabaseAnalysisAdapter';
+import { SupabaseChatAdapter } from './SupabaseChatAdapter';
+import { SupabaseGraphAdapter } from './SupabaseGraphAdapter';
+import { SupabaseBillingAdapter } from './SupabaseBillingAdapter';
 
 export class SupabasePersistenceAdapter implements PersistencePort, ChatPersistencePort {
-  async findCachedAnalysis(params: {
-    userId: string;
-    videoId: string;
-  }): Promise<CachedAnalysis | null> {
-    const service = getSupabaseServiceClient();
-    const { data: existing } = await service
-      .from('analyses')
-      .select('id, video_id, title, analysis_markdown, analysis_payload, created_at, validation_report, billing_status')
-      .eq('video_id', params.videoId)
-      .eq('user_id', params.userId)
-      .neq('billing_status', 'processing') // Skip active jobs
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!existing) return null;
-
-    if (existing.analysis_payload && typeof existing.analysis_payload === 'object' && Object.keys(existing.analysis_payload).length > 0) {
-      const payload = existing.analysis_payload as Record<string, unknown>;
-      
-      let dimensions: Record<string, unknown> = {};
-      if (Array.isArray(payload.dimensions)) {
-        payload.dimensions.forEach((d: any) => {
-          if (d && typeof d.number === 'number') dimensions[d.number] = d;
-        });
-      } else if (typeof payload.dimensions === 'object') {
-        dimensions = payload.dimensions as Record<string, unknown>;
-      }
-
-      const res = {
-        id: existing.id,
-        videoId: existing.video_id,
-        title: existing.title,
-        analysisMarkdown: existing.analysis_markdown ?? JSON.stringify(existing.analysis_payload),
-        createdAt: existing.created_at,
-        dimensions,
-        cachedReport: (existing.validation_report ?? {}) as {
-          metadata?: AnalysisJobMetadata;
-          persona?: string;
-          timezone?: string;
-        },
-        analysisPayload: existing.analysis_payload as any,
-      };
-
-      if (res.cachedReport.metadata && !res.cachedReport.metadata.videoId) {
-        res.cachedReport.metadata.videoId = existing.video_id;
-      }
-      
-      return res;
-    }
-
-    if (!existing.analysis_markdown) return null;
-
-    const dimensions = parseUcisDimensions(existing.analysis_markdown);
-    const dimensionCount = Object.keys(dimensions).length;
-
-    if (dimensionCount < 8) {
-      console.warn(
-        `[PersistenceAdapter] Cache for ${existing.id} has ${dimensionCount} dimensions (<8) — treating as miss.`
-      );
-      return null;
-    }
-
-    const cachedReport = (existing.validation_report ?? {}) as {
-      metadata?: AnalysisJobMetadata;
-      persona?: string;
-      timezone?: string;
-    };
-
-    if (cachedReport.metadata && !cachedReport.metadata.videoId) {
-      cachedReport.metadata.videoId = existing.video_id;
-    }
-
-    return {
-      id: existing.id,
-      videoId: existing.video_id,
-      title: existing.title,
-      analysisMarkdown: existing.analysis_markdown,
-      createdAt: existing.created_at,
-      dimensions,
-      cachedReport,
-    };
+  findCachedAnalysis(params: { userId: string; videoId: string }): Promise<CachedAnalysis | null> {
+    return SupabaseAnalysisAdapter.findCachedAnalysis(params);
   }
 
-  async upsertProcessingStub(params: {
-    videoId: string;
-    userId: string;
-    title: string;
-    validationReport: ValidationReportInput;
-  }): Promise<AnalysisStub> {
-    const service = getSupabaseServiceClient();
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-
-    // 1. Look for an active processing stub created within the last 15 minutes
-    const { data: activeStub } = await service
-      .from('analyses')
-      .select('id')
-      .eq('video_id', params.videoId)
-      .eq('user_id', params.userId)
-      .eq('billing_status', 'processing')
-      .gte('created_at', fifteenMinutesAgo)
-      .maybeSingle();
-
-    if (activeStub) {
-      // Update the existing active processing stub in-place (second call metadata update)
-      const { data: updated, error: updateError } = await service
-        .from('analyses')
-        .update({
-          title: params.title,
-          channel_title: params.validationReport.metadata?.channelTitle || '',
-          validation_report: {
-            status: params.validationReport.status,
-            transcript_available: params.validationReport.transcriptAvailable,
-            analysis_type: params.validationReport.analysisType,
-            stale_after: params.validationReport.staleAfter,
-            metadata: params.validationReport.metadata,
-            persona: params.validationReport.persona,
-            timezone: params.validationReport.timezone,
-          },
-        })
-        .eq('id', activeStub.id)
-        .select('id')
-        .single();
-
-      if (updateError || !updated?.id) {
-        Sentry.captureException(updateError ?? new Error('update processing stub returned no row'), {
-          tags: { operation: 'analysis-update-processing-stub' },
-          extra: { videoId: params.videoId, userId: params.userId, stubId: activeStub.id },
-        });
-        throw updateError ?? new Error('update processing stub returned no row');
-      }
-
-      return { id: updated.id as string };
-    }
-
-    // 2. Otherwise, this is a fresh run (first call). Count quota and insert stub atomically.
-    const { data: rpcData, error: rpcError } = await service
-      .rpc('reserve_analysis_quota', {
-        p_user_id: params.userId,
-        p_video_id: params.videoId,
-        p_title: params.title,
-        p_validation_report: {
-          status: params.validationReport.status,
-          transcript_available: params.validationReport.transcriptAvailable,
-          analysis_type: params.validationReport.analysisType,
-          stale_after: params.validationReport.staleAfter,
-          metadata: params.validationReport.metadata,
-          persona: params.validationReport.persona,
-          timezone: params.validationReport.timezone,
-        },
-      });
-
-    if (rpcError || !rpcData) {
-      const errMsg = rpcError?.message || 'Failed to reserve analysis quota';
-      Sentry.captureException(rpcError ?? new Error(errMsg), {
-        tags: { operation: 'analysis-prepare-rpc' },
-        extra: { videoId: params.videoId, userId: params.userId },
-      });
-      throw new Error(errMsg);
-    }
-
-    return { id: rpcData as string };
+  upsertProcessingStub(params: { videoId: string; userId: string; title: string; validationReport: ValidationReportInput }): Promise<AnalysisStub> {
+    return SupabaseAnalysisAdapter.upsertProcessingStub(params);
   }
 
-  async persistAnalysis(params: {
-    analysisId: string;
-    analysisPayload: UCISPayloadV2 | null;
-    analysisMarkdown: string;
-    validationPassed: boolean;
-  }): Promise<void> {
-    const service = getSupabaseServiceClient();
-    const { error } = await service
-      .from('analyses')
-      .update({
-        analysis_payload: params.analysisPayload as Record<string, unknown> | null,
-        analysis_markdown: params.analysisMarkdown,
-        validation_passed: params.validationPassed,
-        billing_status: 'completed',
-      })
-      .eq('id', params.analysisId);
+  async persistAnalysis(params: { analysisId: string; analysisPayload: UCISPayloadV2 | null; analysisMarkdown: string; validationPassed: boolean }): Promise<void> {
+    await SupabaseAnalysisAdapter.persistAnalysis(params);
 
-    if (error) {
-      Sentry.captureException(error, {
-        tags: { operation: 'analysis-persist' },
-        extra: { analysisId: params.analysisId },
-      });
-      throw error;
-    }
-
-    // NEW: Persist Knowledge Graph data if payload exists
+    // Persist Knowledge Graph data if payload exists
     if (params.analysisPayload && params.analysisPayload.knowledgeGraph) {
       await this.persistKnowledgeGraph({
         analysisId: params.analysisId,
@@ -243,541 +36,51 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
           label: (n as any).label,
           type: (n as any).entityType || 'concept',
           weight: (n as any).weight || 1,
-          rawNode: n // LOSSLESS
+          rawNode: n
         })),
         relations: params.analysisPayload.knowledgeGraph.edges.map(e => ({
           source: (e as any).source,
           target: (e as any).target,
           relation: (e as any).kind || 'related',
           strength: (e as any).strength || 1,
-          rawEdge: e // LOSSLESS
+          rawEdge: e
         }))
       });
     }
   }
-  
-  async getUserHistory(params: { userId: string }): Promise<Array<{
-    id: string;
-    videoId: string;
-    title: string;
-    createdAt: string;
-    status: 'completed' | 'processing' | 'incomplete';
-  }>> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data: analyses, error } = await service
-        .from('analyses')
-        .select('id, video_id, title, created_at, validation_passed, validation_report, billing_status')
-        .eq('user_id', params.userId)
-        .order('created_at', { ascending: false })
-        .limit(50);
 
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] getUserHistory failed:', error);
-        throw error;
-      }
-
-      return (analyses || []).map((analysis: AnalysisRow) => ({
-        id: analysis.id,
-        videoId: analysis.video_id,
-        title: analysis.title || 'Untitled Analysis',
-        createdAt: analysis.created_at,
-        status: (analysis.billing_status === 'completed' || analysis.validation_passed || analysis.validation_report?.status === 'completed' || analysis.validation_report?.status === 'done') ? 'completed' :
-                (analysis.billing_status === 'processing' || analysis.validation_report?.status === 'processing' ? 'processing' : 'incomplete'),
-      }));
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'getUserHistory' },
-        extra: { userId: params.userId },
-      });
-      throw error;
-    }
+  getUserHistory(params: { userId: string }): Promise<Array<{ id: string; videoId: string; title: string; createdAt: string; status: 'completed' | 'processing' | 'incomplete' }>> {
+    return SupabaseAnalysisAdapter.getUserHistory(params);
   }
 
-  async findAnalysisById(params: {
-    userId: string;
-    analysisId: string;
-  }): Promise<{
-    id: string;
-    title: string;
-    videoId: string;
-    analysisMarkdown: string;
-    createdAt: string;
-  } | null> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('analyses')
-        .select('id, title, video_id, analysis_markdown, created_at')
-        .eq('id', params.analysisId)
-        .eq('user_id', params.userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] findAnalysisById failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
-
-      return {
-        id: data.id,
-        title: data.title || 'Untitled',
-        videoId: data.video_id,
-        analysisMarkdown: data.analysis_markdown || '',
-        createdAt: data.created_at,
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'findAnalysisById' },
-        extra: { userId: params.userId, analysisId: params.analysisId },
-      });
-      throw error;
-    }
+  findAnalysisById(params: { userId: string; analysisId: string }): Promise<{ id: string; title: string; videoId: string; analysisMarkdown: string; createdAt: string } | null> {
+    return SupabaseAnalysisAdapter.findAnalysisById(params);
   }
 
-  async updateUserTier(params: {
-    userId: string;
-    tier: 'pro' | 'free';
-  }): Promise<void> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { error, count } = await service
-        .from('users')
-        .update({ tier: params.tier, updated_at: new Date().toISOString() }, { count: 'exact' })
-        .eq('id', params.userId);
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] updateUserTier failed:', error.message);
-        throw error;
-      }
-
-      if (count === 0 || count === null) {
-        throw new Error(`No user row matched for userId: ${params.userId} when updating to tier: ${params.tier}`);
-      }
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'updateUserTier' },
-        extra: { userId: params.userId, tier: params.tier },
-      });
-      throw error;
-    }
+  findAnalysisForPersist(params: { analysisId: string; videoId: string }): Promise<{ id: string; userId: string; title: string; validationReport: unknown; createdAt: string; channelTitle?: string | null } | null> {
+    return SupabaseAnalysisAdapter.findAnalysisForPersist(params);
   }
 
-  async getConversations(userId: string): Promise<ChatConversation[]> {
-    if (!userId) return [];
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('chat_conversations')
-        .select('id, user_id, title, analysis_id, created_at, updated_at, last_message_at')
-        .eq('user_id', userId)
-        .order('last_message_at', { ascending: false })
-        .limit(100);
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] getConversations failed:', error.message);
-        throw error;
-      }
-
-      return (data || []).map((r: ConversationRow) => ({
-        id: r.id,
-        userId: r.user_id,
-        title: r.title || 'Untitled',
-        analysisId: r.analysis_id,
-        createdAt: r.created_at,
-        updatedAt: r.updated_at,
-        lastMessageAt: r.last_message_at || r.created_at,
-      }));
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'getConversations' },
-        extra: { userId },
-      });
-      throw error;
-    }
+  getAnalysisGrounding(params: { analysisId: string }): Promise<{ title: string; channelTitle: string | null; description: string | null; analysisMarkdown: string | null; status: string } | null> {
+    return SupabaseAnalysisAdapter.getAnalysisGrounding(params);
   }
 
-  async createConversation(params: {
-    userId: string;
-    analysisId: string | null;
-    title: string;
-  }): Promise<ChatConversation> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('chat_conversations')
-        .insert({ user_id: params.userId, analysis_id: params.analysisId, title: params.title })
-        .select('id, user_id, title, analysis_id, created_at, updated_at, last_message_at')
-        .single();
-
-      if (error || !data) {
-        console.error('[SupabasePersistenceAdapter] createConversation failed:', error?.message);
-        throw error || new Error('createConversation returned no row');
-      }
-
-      return {
-        id: data.id,
-        userId: data.user_id,
-        title: data.title || 'Untitled',
-        analysisId: data.analysis_id,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-        lastMessageAt: data.last_message_at || data.created_at,
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'createConversation' },
-        extra: { userId: params.userId, analysisId: params.analysisId },
-      });
-      throw error;
-    }
+  findAnalysisByShareToken(token: string): Promise<{ id: string; title: string; channelTitle: string | null; analysisMarkdown: string | null; sharedExpiresAt: string | null; createdAt: string } | null> {
+    return SupabaseAnalysisAdapter.findAnalysisByShareToken(token);
   }
 
-  async getConversation(params: {
-    conversationId: string;
-  }): Promise<ChatConversation | null> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('chat_conversations')
-        .select('id, user_id, title, analysis_id, created_at, updated_at, last_message_at')
-        .eq('id', params.conversationId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] getConversation failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
-
-      return {
-        id: data.id,
-        userId: data.user_id,
-        title: data.title || 'Untitled',
-        analysisId: data.analysis_id,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-        lastMessageAt: data.last_message_at || data.created_at,
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'getConversation' },
-        extra: { conversationId: params.conversationId },
-      });
-      throw error;
-    }
-  }
-
-  async updateConversationTitle(params: {
-    conversationId: string;
-    title: string;
-  }): Promise<void> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { error } = await service
-        .from('chat_conversations')
-        .update({ title: params.title })
-        .eq('id', params.conversationId);
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] updateConversationTitle failed:', error.message);
-        throw error;
-      }
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'updateConversationTitle' },
-        extra: { conversationId: params.conversationId },
-      });
-      throw error;
-    }
-  }
-
-  async getMessages(params: {
-    conversationId: string;
-  }): Promise<ChatMessage[]> {
-    if (!params.conversationId) return [];
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('chat_messages')
-        .select('id, conversation_id, role, content, created_at, client_msg_id')
-        .eq('conversation_id', params.conversationId)
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] getMessages failed:', error.message);
-        throw error;
-      }
-
-      return (data || []).map((r: MessageRow) => ({
-        id: r.id,
-        conversationId: r.conversation_id,
-        role: r.role,
-        content: r.content,
-        createdAt: r.created_at,
-        clientMsgId: r.client_msg_id ?? null,
-      }));
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'getMessages' },
-        extra: { conversationId: params.conversationId },
-      });
-      throw error;
-    }
-  }
-
-  async findMessageByClientMsgId(params: {
-    conversationId: string;
-    clientMsgId: string;
-  }): Promise<ChatMessage | null> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('chat_messages')
-        .select('id, conversation_id, role, content, created_at, client_msg_id')
-        .eq('conversation_id', params.conversationId)
-        .eq('client_msg_id', params.clientMsgId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] findMessageByClientMsgId failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
-
-      return {
-        id: data.id,
-        conversationId: data.conversation_id,
-        role: data.role,
-        content: data.content,
-        createdAt: data.created_at,
-        clientMsgId: data.client_msg_id ?? null,
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'findMessageByClientMsgId' },
-        extra: { conversationId: params.conversationId, clientMsgId: params.clientMsgId },
-      });
-      throw error;
-    }
-  }
-
-  async createMessage(params: {
-    conversationId: string;
-    userId: string;
-    role: 'user' | 'assistant';
-    content: string;
-    clientMsgId?: string | null;
-    parentMessageId?: string | null;
-  }): Promise<ChatMessage> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('chat_messages')
-        .insert({
-          conversation_id: params.conversationId,
-          user_id: params.userId,
-          role: params.role,
-          content: params.content,
-          client_msg_id: params.clientMsgId,
-          parent_message_id: params.parentMessageId,
-        })
-        .select('id, conversation_id, role, content, created_at, client_msg_id, parent_message_id')
-        .single();
-
-      if (error || !data) {
-        console.error('[SupabasePersistenceAdapter] createMessage failed:', error?.message);
-        throw error || new Error('createMessage returned no row');
-      }
-
-      return {
-        id: data.id,
-        conversationId: data.conversation_id,
-        role: data.role,
-        content: data.content,
-        createdAt: data.created_at,
-        clientMsgId: data.client_msg_id ?? null,
-        parentMessageId: data.parent_message_id ?? null,
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'createMessage' },
-        extra: { conversationId: params.conversationId, userId: params.userId },
-      });
-      throw error;
-    }
-  }
-
-  async findAssistantMessageAfter(params: {
-    conversationId: string;
-    timestamp: string;
-  }): Promise<ChatMessage | null> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('chat_messages')
-        .select('id, conversation_id, role, content, created_at, client_msg_id, parent_message_id')
-        .eq('conversation_id', params.conversationId)
-        .eq('role', 'assistant')
-        .gt('created_at', params.timestamp)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] findAssistantMessageAfter failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
-
-      return {
-        id: data.id,
-        conversationId: data.conversation_id,
-        role: data.role,
-        content: data.content,
-        createdAt: data.created_at,
-        clientMsgId: data.client_msg_id ?? null,
-        parentMessageId: data.parent_message_id ?? null,
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'findAssistantMessageAfter' },
-        extra: { conversationId: params.conversationId, timestamp: params.timestamp },
-      });
-      throw error;
-    }
-  }
-
-  async findAssistantByParentId(params: {
-    conversationId: string;
-    parentId: string;
-  }): Promise<ChatMessage | null> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('chat_messages')
-        .select('id, conversation_id, role, content, created_at, client_msg_id, parent_message_id')
-        .eq('conversation_id', params.conversationId)
-        .eq('role', 'assistant')
-        .eq('parent_message_id', params.parentId)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] findAssistantByParentId failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
-
-      return {
-        id: data.id,
-        conversationId: data.conversation_id,
-        role: data.role,
-        content: data.content,
-        createdAt: data.created_at,
-        clientMsgId: data.client_msg_id ?? null,
-        parentMessageId: data.parent_message_id ?? null,
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'findAssistantByParentId' },
-        extra: { conversationId: params.conversationId, parentId: params.parentId },
-      });
-      throw error;
-    }
-  }
-
-  async getAnalysisGrounding(params: {
-    analysisId: string;
-  }): Promise<{
-    title: string;
-    channelTitle: string | null;
-    description: string | null;
-    analysisMarkdown: string | null;
-    status: string;
-  } | null> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('analyses')
-        .select('title, channel_title, analysis_markdown, validation_report')
-        .eq('id', params.analysisId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] getAnalysisGrounding failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
-
-      return {
-        title: data.title || '',
-        channelTitle: data.channel_title || null,
-        description: isPersistedValidationReport(data.validation_report) ? data.validation_report.metadata?.description || null : null,
-        analysisMarkdown: data.analysis_markdown || null,
-        status: isPersistedValidationReport(data.validation_report) ? data.validation_report.status || 'incomplete' : 'incomplete',
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'getAnalysisGrounding' },
-        extra: { analysisId: params.analysisId },
-      });
-      throw error;
-    }
-  }
-
-  async findAnalysisForPersist(params: {
-    analysisId: string;
-    videoId: string;
-  }): Promise<{
-    id: string;
-    userId: string;
-    title: string;
-    validationReport: ValidationReportInput | unknown;
-    createdAt: string;
-    channelTitle?: string | null;
-  } | null> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('analyses')
-        .select('id, user_id, title, validation_report, created_at, channel_title')
-        .eq('id', params.analysisId)
-        .eq('video_id', params.videoId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] findAnalysisForPersist failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
-
-      return {
-        id: data.id,
-        userId: data.user_id,
-        title: data.title,
-        validationReport: data.validation_report,
-        createdAt: data.created_at,
-        channelTitle: data.channel_title,
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'findAnalysisForPersist' },
-        extra: { analysisId: params.analysisId, videoId: params.videoId },
-      });
-      throw error;
-    }
+  updateValidationReport(params: { analysisId: string; report: any; passed: boolean }): Promise<void> {
+    return SupabaseAnalysisAdapter.updateValidationReport(params);
   }
 
   async updateAnalysisResult(params: {
-  analysisId: string;
-  markdown: string;
-  payload: UCISPayloadV2 | null;
-  model: string | null;
-  validationPassed: boolean;
-  validationReport: ValidationReportInput | unknown;
-}): Promise<void> {
-  try {
+    analysisId: string;
+    markdown: string;
+    payload: UCISPayloadV2 | null;
+    model: string | null;
+    validationPassed: boolean;
+    validationReport: unknown;
+  }): Promise<void> {
     const service = getSupabaseServiceClient();
 
     // 1️⃣ Fetch analysis meta to obtain video_id, title and user_id
@@ -798,9 +101,8 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
               title: analysisMeta.title ?? '',
               user_id: analysisMeta.user_id,
             },
-            { onConflict: 'id' }
-          )
-          .single();
+            { ignoreDuplicates: true }
+          );
       } catch (e) {
         console.warn('[SupabasePersistenceAdapter] video upsert skipped:', e);
       }
@@ -865,218 +167,76 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         console.error('[SupabasePersistenceAdapter] chunk upsert failed:', err);
       }
     }
-  } catch (error: any) {
-    Sentry.captureException(error, {
-      tags: { method: 'updateAnalysisResult' },
-      extra: { analysisId: params.analysisId },
-    });
-    throw error;
-  }
-}
-
-  async getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('analyses')
-        .select(`
-          id, 
-          title, 
-          nodes:analysis_payload->knowledgeGraph->nodes, 
-          edges:analysis_payload->knowledgeGraph->edges
-        `)
-        .eq('user_id', tenantId);
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] getAnalysesByTenant failed:', error.message);
-        throw error;
-      }
-      
-      return (data || []).map(row => {
-        return {
-          id: row.id,
-          title: row.title || 'Untitled Analysis',
-          nodes: (row.nodes as unknown as GraphNode[]) || [],
-          edges: (row.edges as unknown as GraphEdge[]) || []
-        };
-      });
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'getAnalysesByTenant' },
-        extra: { tenantId },
-      });
-      throw error;
-    }
   }
 
-  async persistKnowledgeGraph(params: {
-    analysisId: string;
-    entities: Array<{
-      label: string;
-      type: string;
-      weight: number;
-      rawNode?: any;
-    }>;
-    relations: Array<{
-      source: string;
-      target: string;
-      relation: string;
-      strength: number;
-      rawEdge?: any;
-    }>;
-  }): Promise<void> {
-    const service = getSupabaseServiceClient();
-
-    // Delete existing for clean slate
-    const { error: deleteError } = await service
-      .from('kg_entities')
-      .delete()
-      .eq('analysis_id', params.analysisId);
-
-    if (deleteError) throw deleteError;
-
-    // Insert entities
-    const { data: entityRows, error: entityError } = await service
-      .from('kg_entities')
-      .insert(params.entities.map(e => ({
-        analysis_id: params.analysisId,
-        label: e.label,
-        type: e.type,
-        weight: e.weight,
-        raw_node: e.rawNode ?? null
-      })))
-      .select('id, label');
-
-    if (entityError) throw entityError;
-
-    // Map label to ID
-    const labelToId = new Map(entityRows.map(r => [r.label, r.id]));
-
-    // Insert relations
-    const relationRows = params.relations.map(r => ({
-      analysis_id: params.analysisId,
-      source_entity_id: labelToId.get(r.source),
-      target_entity_id: labelToId.get(r.target),
-      relation_label: r.relation,
-      strength: r.strength,
-      raw_edge: r.rawEdge ?? null
-    })).filter(r => r.source_entity_id && r.target_entity_id);
-
-    if (relationRows.length > 0) {
-      const { error: relationError } = await service
-        .from('kg_relations')
-        .insert(relationRows);
-      
-      if (relationError) throw relationError;
-    }
+  // --- Chat Adapter Delegation ---
+  getConversations(userId: string): Promise<ChatConversation[]> {
+    return SupabaseChatAdapter.getConversations(userId);
   }
 
-  async getKnowledgeGraph(analysisId: string): Promise<{
-    entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>;
-    relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }>;
-  } | null> {
-    try {
-      const service = getSupabaseServiceClient();
-
-      const [entities, relations] = await Promise.all([
-        service.from('kg_entities').select('id, label, type, weight, raw_node').eq('analysis_id', analysisId),
-        service.from('kg_relations').select('source_entity_id, target_entity_id, relation_label, strength, raw_edge').eq('analysis_id', analysisId)
-      ]);
-
-      if (entities.error) throw entities.error;
-      if (relations.error) throw relations.error;
-
-      return {
-        entities: entities.data || [],
-        relations: relations.data || []
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'getKnowledgeGraph' },
-        extra: { analysisId },
-      });
-      throw error;
-    }
+  createConversation(params: { userId: string; analysisId: string | null; title: string }): Promise<ChatConversation> {
+    return SupabaseChatAdapter.createConversation(params);
   }
 
-  async persistGraph(params: {
-    analysisId: string;
-    nodes: GraphNode[];
-    relations: GraphEdge[];
-  }): Promise<void> {
-    const entities = params.nodes.map(n => ({
-      label: n.label,
-      type: n.entityType || 'concept',
-      weight: n.weight,
-      rawNode: n
-    }));
-    const relations = params.relations.map(e => ({
-      source: e.source,
-      target: e.target,
-      relation: e.kind,
-      strength: e.strength,
-      rawEdge: e
-    }));
-    return this.persistKnowledgeGraph({ analysisId: params.analysisId, entities, relations });
+  getConversation(params: { conversationId: string }): Promise<ChatConversation | null> {
+    return SupabaseChatAdapter.getConversation(params);
   }
 
-  async getGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
-    const data = await this.getKnowledgeGraph(analysisId);
-    if (!data) return null;
-    return {
-      nodes: data.entities.map(e => {
-        if (e.raw_node) return e.raw_node as GraphNode;
-        return { 
-          id: e.id, 
-          label: e.label, 
-          dimension: 0, 
-          content: '', 
-          polarity: 0, 
-          keyTerms: [], 
-          inPersona: false,
-          entityType: e.type,
-          weight: e.weight
-        };
-      }),
-      relations: data.relations.map(r => {
-        if (r.raw_edge) return r.raw_edge as GraphEdge;
-        return { 
-          source: r.source_entity_id, 
-          target: r.target_entity_id, 
-          kind: r.relation_label as any, 
-          strength: r.strength 
-        };
-      })
-    };
+  updateConversationTitle(params: { conversationId: string; title: string }): Promise<void> {
+    return SupabaseChatAdapter.updateConversationTitle(params);
   }
 
-  async updateBillingStatus(params: {
-    analysisId: string;
-    status: 'processing' | 'completed' | 'failed';
-  }): Promise<void> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { error } = await service
-        .from('analyses')
-        .update({
-          billing_status: params.status,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', params.analysisId);
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] updateBillingStatus failed:', error.message);
-        throw error;
-      }
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'updateBillingStatus' },
-        extra: { analysisId: params.analysisId, status: params.status },
-      });
-      throw error;
-    }
+  getMessages(params: { conversationId: string }): Promise<ChatMessage[]> {
+    return SupabaseChatAdapter.getMessages(params);
   }
 
+  findMessageByClientMsgId(params: { conversationId: string; clientMsgId: string }): Promise<ChatMessage | null> {
+    return SupabaseChatAdapter.findMessageByClientMsgId(params);
+  }
+
+  createMessage(params: { conversationId: string; userId: string; role: 'user' | 'assistant'; content: string; clientMsgId?: string | null; parentMessageId?: string | null }): Promise<ChatMessage> {
+    return SupabaseChatAdapter.createMessage(params);
+  }
+
+  findAssistantMessageAfter(params: { conversationId: string; timestamp: string }): Promise<ChatMessage | null> {
+    return SupabaseChatAdapter.findAssistantMessageAfter(params);
+  }
+
+  findAssistantByParentId(params: { conversationId: string; parentId: string }): Promise<ChatMessage | null> {
+    return SupabaseChatAdapter.findAssistantByParentId(params);
+  }
+
+  // --- Graph Adapter Delegation ---
+  getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
+    return SupabaseGraphAdapter.getAnalysesByTenant(tenantId);
+  }
+
+  persistKnowledgeGraph(params: { analysisId: string; entities: Array<{ label: string; type: string; weight: number; rawNode?: any }>; relations: Array<{ source: string; target: string; relation: string; strength: number; rawEdge?: any }> }): Promise<void> {
+    return SupabaseGraphAdapter.persistKnowledgeGraph(params);
+  }
+
+  getKnowledgeGraph(analysisId: string): Promise<{ entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>; relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }> } | null> {
+    return SupabaseGraphAdapter.getKnowledgeGraph(analysisId);
+  }
+
+  persistGraph(params: { analysisId: string; nodes: GraphNode[]; relations: GraphEdge[] }): Promise<void> {
+    return SupabaseGraphAdapter.persistGraph(params);
+  }
+
+  getGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
+    return SupabaseGraphAdapter.getGraph(analysisId);
+  }
+
+  // --- Billing Adapter Delegation ---
+  updateUserTier(params: { userId: string; tier: 'pro' | 'free' }): Promise<void> {
+    return SupabaseBillingAdapter.updateUserTier(params);
+  }
+
+  updateBillingStatus(params: { analysisId: string; status: 'processing' | 'completed' | 'failed' }): Promise<void> {
+    return SupabaseBillingAdapter.updateBillingStatus(params);
+  }
+
+  // --- Chunks ---
   async persistAnalysisChunk(params: {
     analysisId: string;
     chunkIndex: number;
@@ -1130,74 +290,6 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisChunks' },
-        extra: { analysisId: params.analysisId },
-      });
-      throw error;
-    }
-  }
-
-  async findAnalysisByShareToken(token: string): Promise<{
-    id: string;
-    title: string;
-    channelTitle: string | null;
-    analysisMarkdown: string | null;
-    sharedExpiresAt: string | null;
-    createdAt: string;
-  } | null> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('analyses')
-        .select('id, title, channel_title, analysis_markdown, shared_expires_at, created_at')
-        .eq('shared_token', token)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] findAnalysisByShareToken failed:', error.message);
-        throw error;
-      }
-      if (!data) return null;
-
-      return {
-        id: data.id,
-        title: data.title || 'Untitled',
-        channelTitle: data.channel_title,
-        analysisMarkdown: data.analysis_markdown || null,
-        sharedExpiresAt: data.shared_expires_at,
-        createdAt: data.created_at,
-      };
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'findAnalysisByShareToken' },
-        extra: { token: '[REDACTED]' },
-      });
-      throw error;
-    }
-  }
-
-  async updateValidationReport(params: {
-    analysisId: string;
-    report: any;
-    passed: boolean;
-  }): Promise<void> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { error } = await service
-        .from('analyses')
-        .update({
-          validation_report: params.report,
-          validation_passed: params.passed,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', params.analysisId);
-
-      if (error) {
-        console.error('[SupabasePersistenceAdapter] updateValidationReport failed:', error.message);
-        throw error;
-      }
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'updateValidationReport' },
         extra: { analysisId: params.analysisId },
       });
       throw error;
