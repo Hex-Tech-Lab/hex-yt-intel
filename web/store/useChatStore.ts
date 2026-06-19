@@ -21,9 +21,11 @@ interface ChatState {
   sending: boolean;
   error: string | null;
   networkBound: boolean;
+  persistState: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted';
 
   isChatOpen: boolean;
   setChatOpen: (open: boolean) => void;
+  setPersistState: (persistState: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted') => void;
 
   loadConversations: () => Promise<void>;
   selectConversation: (id: string) => Promise<void>;
@@ -89,6 +91,7 @@ export const useChatStore = create<ChatState>((set, get) => {
   /** Send one queued/optimistic message and stream the reply. Shared by send + flush. */
   async function deliver(convId: string, clientMsgId: string, content: string): Promise<void> {
     const pendingAssistantId = `pending-${clientMsgId}`;
+    get().setPersistState('saving');
 
     // Ensure optimistic rows exist (idempotent for replay).
     set((s) => {
@@ -186,8 +189,14 @@ export const useChatStore = create<ChatState>((set, get) => {
             [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? { ...m, id: `assistant-${clientMsgId}` } : m)),
           },
         }));
+        get().setPersistState('saved');
+      } else if (e.type === 'persist') {
+        if (e.status === 'saving' || e.status === 'saved' || e.status === 'failed') {
+          get().setPersistState(e.status);
+        }
       } else if (e.type === 'error') {
         set({ error: String(e.error || 'reply failed') });
+        get().setPersistState('failed');
       }
     });
 
@@ -205,7 +214,18 @@ export const useChatStore = create<ChatState>((set, get) => {
     error: null,
     networkBound: false,
     isChatOpen: false,
+    persistState: 'idle',
     setChatOpen: (open: boolean) => set({ isChatOpen: open }),
+    setPersistState: (persistState) => {
+      set({ persistState });
+      if (persistState !== 'idle' && persistState !== 'saving') {
+        setTimeout(() => {
+          if (get().persistState === persistState) {
+            set({ persistState: 'idle' });
+          }
+        }, 5000);
+      }
+    },
 
     loadConversations: async () => {
       set({ loadingList: true, error: null });
@@ -266,8 +286,13 @@ export const useChatStore = create<ChatState>((set, get) => {
 
       try {
         await deliver(convId, clientMsgId, trimmed);
+        if (get().persistState === 'saving') {
+          get().setPersistState('saved');
+        }
       } catch (e) {
         // Stays in outbox; the pending assistant bubble is dropped, user bubble kept.
+        const isAbort = e instanceof DOMException && (e.name === 'AbortError' || e.message.includes('abort'));
+        get().setPersistState(isAbort ? 'aborted' : 'failed');
         set((s) => ({
           error: e instanceof Error ? e.message : 'Send failed (queued for retry)',
           messagesByConv: {
@@ -320,7 +345,12 @@ export const useChatStore = create<ChatState>((set, get) => {
         for (const e of entries) {
           try {
             await deliver(e.conversationId, e.clientMsgId, e.content);
-          } catch {
+            if (get().persistState === 'saving') {
+              get().setPersistState('saved');
+            }
+          } catch (err) {
+            const isAbort = err instanceof DOMException && (err.name === 'AbortError' || err.message.includes('abort'));
+            get().setPersistState(isAbort ? 'aborted' : 'failed');
             break; // still offline / failing — stop; retry on next online event
           }
         }
@@ -337,6 +367,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         error: null,
         sending: false,
         isChatOpen: false,
+        persistState: 'idle',
       });
     },
   };
