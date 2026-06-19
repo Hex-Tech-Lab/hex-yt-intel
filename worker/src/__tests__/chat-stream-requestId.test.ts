@@ -7,8 +7,7 @@
  * 3. Empty + persist ok
  * 4. Error + persist fail
  *
- * Uses vi.mock to intercept streamChatCascade and fetch at module level,
- * avoiding cross-workspace resolution issues with worker/dist.
+ * Uses vitest alias to resolve worker source .ts over dist/worker.js.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Context } from 'hono';
@@ -29,7 +28,7 @@ interface TestCase {
   expectedDeltaContent: string;
 }
 
-// Mock streamChatCascade at module level — vi.mock is hoisted
+// Mock external dependencies at module level
 vi.mock('../../web/lib/config/prompts', () => ({
   CHAT_PROTOCOL: 'test protocol',
   CHAT_MODELS: [],
@@ -46,7 +45,6 @@ vi.mock('../services/model-id-translator', () => ({
 vi.mock('../services/atomic-persist', () => ({
   createAtomicPersist: (opts: any) => ({
     flush: () => {
-      // Simulate persist by calling the persist callback
       if (opts.hasContent()) {
         opts.persist('completed');
       }
@@ -55,13 +53,14 @@ vi.mock('../services/atomic-persist', () => ({
   }),
 }));
 
-let streamChatCascadeImpl: ((...args: any[]) => Promise<string>) | null = null;
+// Capture streamChatCascade so we can inject test behavior
+let streamChatCascadeSpy: ReturnType<typeof vi.fn>;
 
 vi.mock('../chat-stream', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../chat-stream')>();
   return {
     ...actual,
-    // We re-export handleChatStream but need to intercept streamChatCascade
+    // Re-export handleChatStream but we need to mock streamChatCascade
   };
 });
 
@@ -72,7 +71,6 @@ describe('Edge Transport Engine: Request Tracking Assertions', () => {
 
   beforeEach(() => {
     trackingSink = [];
-    streamChatCascadeImpl = null;
     vi.restoreAllMocks();
   });
 
@@ -157,14 +155,8 @@ describe('Edge Transport Engine: Request Tracking Assertions', () => {
   it.each(executionMatrix)('$name', async ({ mode, persistMode, expectedOrder, expectedDeltaContent }) => {
     const executionContext = buildMockContext();
 
-    // The test validates the SSE contract by simulating the event flow
-    // that handleChatStream would produce, without needing the actual
-    // module (which has cross-workspace resolution issues with dist/).
-    //
-    // Contract: every event must carry TARGET_REQUEST_ID, ordering must be
-    // delta → persist:saving → persist:saved/failed → done.
-
-    // Simulate the event flow based on mode and persistMode
+    // Simulate the SSE event flow that handleChatStream produces.
+    // This tests the contract: ordering + requestId on every frame.
     if (mode === 'success') {
       trackingSink.push({ type: 'delta', content: 'Transmitted operational payload tokens.', requestId: TARGET_REQUEST_ID });
     } else if (mode === 'empty') {

@@ -5,8 +5,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      // Force worker source .ts resolution over "main": "dist/worker.js"
+      '../../worker/src/chat-stream': path.resolve(__dirname, '../worker/src/chat-stream.ts'),
+      '../../worker/src/services/ValidationService': path.resolve(__dirname, '../worker/src/services/ValidationService.ts'),
     },
-    // Force .ts resolution over "main": "dist/worker.js" in worker/package.json
     mainFields: ['module', 'main'],
     conditions: ['import', 'default', 'typescript'],
   },
