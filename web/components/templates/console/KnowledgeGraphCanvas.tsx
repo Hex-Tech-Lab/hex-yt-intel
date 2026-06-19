@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { forceCollide, forceCenter, forceManyBody } from 'd3-force';
 import type { KnowledgeGraph, RelationKind } from '@/lib/types/knowledge-graph';
@@ -64,7 +64,7 @@ export function KnowledgeGraphCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<any>(null);
   const [size, setSize] = useState({ w: 600, h: height ?? (compact ? 280 : 520) });
-  const [hoverId, setHoverId] = useState<string | null>(null);
+  const hoverIdRef = useRef<string | null>(null);
 
   // Measure container to size the canvas responsively.
   useEffect(() => {
@@ -106,21 +106,21 @@ export function KnowledgeGraphCanvas({
     }
   }, [size, compact, data]);
 
-  // Neighborhood of the active (selected or hovered) node — drives highlight/dim.
-  const activeId = hoverId || selectedId;
+  // Neighborhood of the selected node — drives highlight/dim on selection.
+  // Hover dimming is handled imperatively via the force-graph's own repaint cycle.
   const neighborhood = useMemo(() => {
-    if (!activeId) return null;
-    const nodes = new Set<string>([activeId]);
+    if (!selectedId) return null;
+    const nodes = new Set<string>([selectedId]);
     const links = new Set<string>();
     graph.edges.forEach((e, i) => {
-      if (e.source === activeId || e.target === activeId) {
+      if (e.source === selectedId || e.target === selectedId) {
         nodes.add(e.source);
         nodes.add(e.target);
         links.add(`${i}`);
       }
     });
     return { nodes, links };
-  }, [activeId, graph.edges]);
+  }, [selectedId, graph.edges]);
 
   const fit = useCallback(() => {
     try {
@@ -133,13 +133,14 @@ export function KnowledgeGraphCanvas({
   const handleHover = useCallback(
     (node: FGNode | null) => {
       const id = node?.id ?? null;
-      setHoverId(id);
+      hoverIdRef.current = id;
       onHover?.(id);
       if (containerRef.current) containerRef.current.style.cursor = id ? 'pointer' : 'grab';
     },
     [onHover]
   );
 
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   return (
     <div
       ref={containerRef}
@@ -166,14 +167,14 @@ export function KnowledgeGraphCanvas({
         nodeVal={(n: any) => 1 + (n as FGNode).weight * 3}
         nodeLabel={() => ''}
         enableNodeDrag={true}
-        onNodeClick={(n: any) => onSelect((n as FGNode).id === selectedId ? null : (n as FGNode).id)}
+        onNodeClick={(n: any) => startTransition(() => onSelect((n as FGNode).id === selectedId ? null : (n as FGNode).id))}
         onNodeRightClick={(n: any, e: MouseEvent) => {
           e.preventDefault();
           const node = n as FGNode;
           node.fx = node.x;
           node.fy = node.y;
           onFocus?.(node.id);
-          onSelect(node.id);
+          startTransition(() => onSelect(node.id));
           try {
             fgRef.current?.centerAt(node.x, node.y, 600);
             fgRef.current?.zoom(compact ? 2.2 : 2.6, 600);
@@ -182,7 +183,7 @@ export function KnowledgeGraphCanvas({
           }
         }}
         onNodeHover={handleHover as any}
-        onBackgroundClick={() => onSelect(null)}
+        onBackgroundClick={() => startTransition(() => onSelect(null))}
         linkColor={(l: any) => {
           const idx = data.links.indexOf(l);
           const dim = neighborhood ? !neighborhood.links.has(`${idx}`) : false;
@@ -197,9 +198,10 @@ export function KnowledgeGraphCanvas({
         linkLineDash={(l: any) => (l.kind === 'contrarian' ? [4, 3] : null)}
         nodeCanvasObject={(n: any, ctx: CanvasRenderingContext2D, scale: number) => {
           const node = n as FGNode;
-          const dim = neighborhood ? !neighborhood.nodes.has(node.id) : false;
+          const hoverActive = hoverIdRef.current;
+          const dim = neighborhood ? !neighborhood.nodes.has(node.id) : (hoverActive ? node.id !== hoverActive && node.id !== selectedId : false);
           const isRoot = graph.rootId === node.id;
-          const isActive = node.id === activeId;
+          const isActive = node.id === selectedId || node.id === hoverActive;
           const r = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4);
 
           // Draw base backing container (slate/dark theme)
@@ -336,4 +338,5 @@ export function KnowledgeGraphCanvas({
       </button>
     </div>
   );
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }

@@ -42,7 +42,7 @@ export const UCISPayloadSchema = z.object({
   analysisAt: z.string().datetime(),
   completedAt: z.string().datetime().optional(),
   model: z.string(),
-  detectedPersona: z.enum(['creator', 'critic', 'analyst', 'educator', 'philosopher']),
+  detectedPersona: z.enum(['creator', 'indieMaker', 'consultant', 'researcher', 'productManager']),
   dimensions: z.record(z.coerce.number(), UCISDimensionSchema),
   validation: z.object({
     passed: z.boolean(),
@@ -97,17 +97,17 @@ export const KGEdgeSchema = z.object({
  */
 export const PersonaConfigSchema = z.object({
   primary: z.object({
-    id: z.enum(['creator', 'critic', 'analyst', 'educator', 'philosopher']),
+    id: z.enum(['creator', 'indieMaker', 'consultant', 'researcher', 'productManager']),
     label: z.string(),
     weight: z.number().min(0).max(1),
   }),
   secondary: z.object({
-    id: z.enum(['creator', 'critic', 'analyst', 'educator', 'philosopher']),
+    id: z.enum(['creator', 'indieMaker', 'consultant', 'researcher', 'productManager']),
     label: z.string(),
     weight: z.number().min(0).max(1),
   }).optional(),
   tertiary: z.object({
-    id: z.enum(['creator', 'critic', 'analyst', 'educator', 'philosopher']),
+    id: z.enum(['creator', 'indieMaker', 'consultant', 'researcher', 'productManager']),
     label: z.string(),
     weight: z.number().min(0).max(1),
   }).optional(),
@@ -148,10 +148,10 @@ export const ClassificationDataSchema = z.object({
  */
 export const MonetizationVerdictSchema = z.object({
   creator: z.string().min(5).max(500),
-  critic: z.string().min(5).max(500),
-  analyst: z.string().min(5).max(500),
-  educator: z.string().min(5).max(500),
-  philosopher: z.string().min(5).max(500),
+  indieMaker: z.string().min(5).max(500),
+  consultant: z.string().min(5).max(500),
+  researcher: z.string().min(5).max(500),
+  productManager: z.string().min(5).max(500),
 }).strict();
 
 /**
@@ -212,7 +212,7 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('metadata'),
     model: z.string().optional(),
-    persona: z.enum(['creator', 'critic', 'analyst', 'educator', 'philosopher']).optional(),
+    persona: z.enum(['creator', 'indieMaker', 'consultant', 'researcher', 'productManager']).optional(),
   }).strict(),
 
   // 'complete' and 'done' are the same terminal fragment under different names —

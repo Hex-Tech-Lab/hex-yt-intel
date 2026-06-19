@@ -478,3 +478,327 @@ export const ProxyPromotionRule: IRule = {
     return findings;
   }
 };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// PR #91 LESSONS — INP, Security, Retry, Type Safety (2026-06-19)
+// ──────────────────────────────────────────────────────────────────────────────
+
+// 19. INP Alert Blocker Rule — detect alert() in React event handlers
+export const InpAlertBlockerRule: IRule = {
+  name: "inp-alert-blocker",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    if (!filePath.includes('.tsx') && !filePath.includes('.jsx')) return findings;
+
+    source.forEachDescendant((node) => {
+      if (Node.isCallExpression(node)) {
+        const expr = node.getExpression().getText();
+        if (expr === 'alert') {
+          // Find the enclosing function — check if it's an event handler
+          const func = node.getFirstAncestorByKind(SyntaxKind.ArrowFunction)
+            || node.getFirstAncestorByKind(SyntaxKind.FunctionDeclaration)
+            || node.getFirstAncestorByKind(SyntaxKind.FunctionExpression);
+          if (func) {
+            const parent = func.getParent();
+            const isEventHandler = parent && (
+              Node.isJsxAttribute(parent) ||
+              (Node.isVariableDeclaration(parent) && parent.getName().startsWith('handle'))
+            );
+            if (isEventHandler) {
+              findings.push({
+                file: filePath,
+                severity: "high",
+                title: "INP: alert() blocks main thread in event handler",
+                why: "alert() is synchronous and blocks the main thread for 100-500ms. Causes INP regression on every affected click.",
+                fix: "Replace alert() with a non-blocking toast: showToast(message) using a CSS-animated DOM element."
+              });
+            }
+          }
+        }
+      }
+    });
+    return findings;
+  }
+};
+
+// 20. Canvas Hover Re-render Rule — detect useState hover on canvas elements
+export const CanvasHoverReRenderRule: IRule = {
+  name: "canvas-hover-rerender",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Detect canvas components with useState for hover
+    if ((text.includes('<canvas') || text.includes('ForceGraph2D') || text.includes('react-force-graph'))
+        && text.includes('setHover') && text.includes('useState')) {
+      findings.push({
+        file: filePath,
+        severity: "high",
+        title: "INP: Canvas hover triggers React re-render",
+        why: "useState for hover state causes full component re-render on every mousemove. Canvas should redraw imperatively.",
+        fix: "Use useRef for hoverId + imperative canvas redraw. Call drawCanvas() directly instead of setState."
+      });
+    }
+    return findings;
+  }
+};
+
+// 21. Overlay Close Cascade Rule — detect overlay/modal close without startTransition
+export const OverlayCloseCascadeRule: IRule = {
+  name: "overlay-close-cascade",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes('inert=') && text.includes('setOverlayOpen')) {
+      // Check if overlay close handlers use startTransition
+      const closeHandlers = text.match(/onClick=\{[^}]*set\w+\(null\)/g) || [];
+      const transitionWrapped = text.includes('startTransition');
+
+      if (closeHandlers.length > 0 && !transitionWrapped) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "INP: Overlay close cascades full component re-render",
+          why: "Overlay close triggers state update that re-renders the entire parent (potentially 500+ lines). Blocks UI for 200-500ms.",
+          fix: "Wrap close handler in startTransition: onClick={() => startTransition(() => setX(null))}"
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 22. Validation In onChange Rule — detect Zod/regex validation in onChange handlers
+export const ValidationOnChangeRule: IRule = {
+  name: "validation-onchange-detector",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Detect Zod safeParse in store setters that are called from onChange
+    if (text.includes('safeParse') || text.includes('.parse(')) {
+      const isStore = filePath.includes('store/') || filePath.includes('Store');
+      if (isStore && text.includes('setUrl') || text.includes('setQuery') || text.includes('setSearch')) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "INP: Synchronous validation in onChange/state setter",
+          why: "Zod safeParse (regex) runs on every keystroke. Blocks UI for 200-500ms per keystroke.",
+          fix: "Remove validation from the state setter. Defer to submit/analyze time: validate only when user triggers action."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 23. HMAC Message Format Rule — detect Vercel↔Worker HMAC field mismatches
+export const HmacMessageFormatRule: IRule = {
+  name: "hmac-message-format-audit",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Both sides must sign identical messages — check for asymmetric fields
+    if (filePath.includes('stream-token') || filePath.includes('worker.ts')) {
+      const fieldPattern = /\$\{.*?\}:\$\{.*?\}/g;
+      const fields = text.match(fieldPattern) || [];
+      if (fields.length > 0) {
+        const fieldNames = fields.flatMap(f => f.match(/\$\{(\w+)/g) || []);
+        const hasDimensions = fieldNames.some(f => f.includes('dimensions') || f.includes('chunkIndex') || f.includes('totalChunks'));
+        const hasBasic = fieldNames.some(f => f.includes('videoId') || f.includes('analysisId'));
+
+        if (hasDimensions && hasBasic) {
+          findings.push({
+            file: filePath,
+            severity: "critical",
+            title: "HMAC: Vercel↔Worker message format may mismatch",
+            why: "Vercel signs videoId:analysisId:exp:models but worker may verify additional fields (dimensions, chunks). Mismatch = 401 Invalid token.",
+            fix: "Ensure both sides sign the exact same fields. Vercel stream-token.ts is the source of truth — worker must match."
+          });
+        }
+      }
+    }
+    return findings;
+  }
+};
+
+// 24. Unhandled Clipboard Promise Rule — detect navigator.clipboard without catch
+export const UnhandledClipboardPromiseRule: IRule = {
+  name: "unhandled-clipboard-promise",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes('navigator.clipboard')) {
+      // Find clipboard calls without try/catch or .catch()
+      source.forEachDescendant((node) => {
+        if (Node.isCallExpression(node)) {
+          const expr = node.getExpression().getText();
+          if (expr.includes('clipboard.writeText') || expr.includes('clipboard.readText')) {
+            const tryStatement = node.getFirstAncestorByKind(SyntaxKind.TryStatement);
+            const hasCatch = node.getFirstAncestorByKind(SyntaxKind.CatchClause);
+            const parentText = node.getParent()?.getText() || '';
+            const hasDotCatch = parentText.includes('.catch(');
+
+            if (!tryStatement && !hasCatch && !hasDotCatch) {
+              findings.push({
+                file: filePath,
+                severity: "medium",
+                title: "Promise: Unhandled clipboard promise rejection",
+                why: "navigator.clipboard returns a Promise. Without catch, permission denial causes unhandled rejection in console.",
+                fix: "Wrap in try/catch or add .catch(() => {}): await navigator.clipboard.writeText(text).catch(() => {})"
+              });
+            }
+          }
+        }
+      });
+    }
+    return findings;
+  }
+};
+
+// 25. Retry Flag Interference Rule — detect flags that block retry loops
+export const RetryFlagInterferenceRule: IRule = {
+  name: "retry-flag-interference",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes('maxRetries') || text.includes('atomic-persist')) {
+      // Detect attempt-tracking flags that may interfere with retry loops
+      const flagPatterns = text.match(/let\s+\w*(attempt|persisted|done)\w*\s*=/g) || [];
+      if (flagPatterns.length > 0) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "Retry: Flag may interfere with atomic-persist retry loop",
+          why: "Attempt-tracking flag (persistAttempted, hasAttempted) may block retries after first failure. Atomic-persist manages its own retry state.",
+          fix: "Let atomic-persist manage retry logic. Remove attempt-tracking flags that return early from retry callbacks."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 26. Persist Abort Scope Rule — detect client signal chained to persist fetch
+export const PersistAbortScopeRule: IRule = {
+  name: "persist-abort-scope",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes('persist') && text.includes('fetch') && text.includes('signal')) {
+      const hasClientSignal = text.includes('req.raw.signal') || text.includes('c.req.raw.signal');
+      if (hasClientSignal) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "Persist: Client signal aborts server-side persist",
+          why: "Client disconnect signal chained to persist fetch. When user navigates away, persist is killed. Data lost.",
+          fix: "Use only a server-side AbortController for persist (10s timeout). Remove client signal from persist fetch."
+        });
+      }
+    }
+    return findings;
+  }
+};
+
+// 27. Unsafe Property Access Rule — detect array/object access without null guard
+export const UnsafePropertyAccessRule: IRule = {
+  name: "unsafe-property-access",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+
+    source.forEachDescendant((node) => {
+      if (Node.isElementAccessExpression(node)) {
+        try {
+          const index = node.getArgumentExpression()?.getText();
+          if (index === '0' || index === '1') {
+            const hasOptional = node.getQuestionTokenNode() !== undefined;
+            if (!hasOptional) {
+              const tryStatement = node.getFirstAncestorByKind(SyntaxKind.TryStatement);
+              if (!tryStatement) {
+                const func = node.getFirstAncestorByKind(SyntaxKind.ArrowFunction)
+                  || node.getFirstAncestorByKind(SyntaxKind.FunctionDeclaration);
+                if (func && (func.getText().includes('fetch') || func.getText().includes('extract') || func.getText().includes('parse'))) {
+                  findings.push({
+                    file: filePath,
+                    severity: "medium",
+                    title: "Access: Array index without null guard in I/O path",
+                    why: "Array[0] access without optional chaining or try/catch. API response may be empty, causing TypeError.",
+                    fix: "Add null guard: const first = arr?.[0]; if (!first) return fallback;"
+                  });
+                }
+              }
+            }
+          }
+        } catch {
+          // skip nodes where API not available
+        }
+      }
+    });
+    return findings;
+  }
+};
+
+// 28. startTransition Wrapping Rule — detect high-frequency state setters without transition
+export const StartTransitionWrappingRule: IRule = {
+  name: "start-transition-wrapping",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Only check DashboardContainer and similar top-level orchestrators
+    if (!filePath.includes('Dashboard') && !filePath.includes('Container')) return findings;
+
+    // Detect set*Node, set*Tab, set*Panel passed directly to child components
+    const directPasses = text.match(/onSelect=\{set\w+\}/g) || [];
+    if (directPasses.length > 0 && !text.includes('startTransition')) {
+      findings.push({
+        file: filePath,
+        severity: "medium",
+        title: "INP: High-frequency state setter passed directly to child",
+        why: "setSelectedNodeId/setConsoleTab passed directly to child. Each click/hover triggers full re-render of 500+ line parent.",
+        fix: "Create handleSelectNode = (id) => startTransition(() => setSelectedNodeId(id)) and pass that instead."
+      });
+    }
+    return findings;
+  }
+};
+
+// 29. Transcript Unsafe Access Rule — detect unsafe property chains in transcript parsing
+export const TranscriptUnsafeAccessRule: IRule = {
+  name: "transcript-unsafe-access",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    if (!filePath.includes('Transcript') && !filePath.includes('transcript')) return findings;
+
+    const text = source.getText();
+    // Detect deep property chains without optional chaining
+    const deepChains = text.match(/results\[0\]\.\w+\.\w+\.\w+/g) || [];
+    if (deepChains.length > 0) {
+      findings.push({
+        file: filePath,
+        severity: "high",
+        title: "Transcript: Unsafe deep property chain access",
+        why: "results[0].content.auto_generated.en.events — any intermediate can be undefined. Causes TypeError on unexpected API shapes.",
+        fix: "Use optional chaining: results?.[0]?.content?.auto_generated?.[lang]?.events ?? fallback"
+      });
+    }
+    return findings;
+  }
+};

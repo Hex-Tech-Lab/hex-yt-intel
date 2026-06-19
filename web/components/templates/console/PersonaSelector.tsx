@@ -14,25 +14,25 @@ export const PERSONAS: { id: PersonaId; label: string; icon: string; description
     description: 'P1 · the full picture — all 11 dimensions'
   },
   {
-    id: 'critic',
+    id: 'indieMaker',
     label: 'Indie Maker',
     icon: 'solar:rocket-2-linear',
     description: 'P2 · build, ship & monetize'
   },
   {
-    id: 'analyst',
+    id: 'consultant',
     label: 'Consultant',
     icon: 'solar:case-round-linear',
     description: 'P3 · positioning & credibility'
   },
   {
-    id: 'educator',
+    id: 'researcher',
     label: 'Researcher',
     icon: 'solar:graduation-cap-linear',
     description: 'P4 · evidence & forward signals'
   },
   {
-    id: 'philosopher',
+    id: 'productManager',
     label: 'Product Manager',
     icon: 'solar:widget-add-linear',
     description: 'P5 · architecture & roadmap'

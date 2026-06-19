@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useChatStore } from '@/store/useChatStore';
 import ReactMarkdown from 'react-markdown';
@@ -67,22 +67,17 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       if (analysisId) {
         const existing = state.conversations.find((c) => c.analysisId === analysisId);
         if (existing) {
-          if (state.activeId !== existing.id) {
-            await selectConversation(existing.id);
-          }
+          // Always call selectConversation — it has its own messagesByConv guard
+          // to skip fetching if messages are already loaded
+          await selectConversation(existing.id);
         } else {
           await newConversation({ analysisId });
         }
       } else {
-        // If no analysis context, ensure we don't have a stale grounded conversation
-        const activeConv = state.conversations.find((c) => c.id === state.activeId);
-        if (activeConv && activeConv.analysisId) {
-          const generalConv = state.conversations.find((c) => !c.analysisId);
-          if (generalConv) {
-            await selectConversation(generalConv.id);
-          } else {
-            useChatStore.setState({ activeId: null });
-          }
+        // No analysis context — clear activeId so chat starts empty until user picks a thread
+        const state2 = useChatStore.getState();
+        if (state2.activeId) {
+          useChatStore.setState({ activeId: null });
         }
       }
       
@@ -135,7 +130,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); }
-    else if (e.key === 'Escape') { setOpen(false); }
+    else if (e.key === 'Escape') { startTransition(() => { setOpen(false); }); }
   };
 
   // Shared shell: absolute, anchored to the bottom of <main>, full width of the column.

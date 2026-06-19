@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, startTransition } from 'react';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
 interface WordCloudProps {
@@ -38,7 +38,8 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 320, h: 220 });
-  const [hoveredWordId, setHoveredWordId] = useState<string | null>(null);
+  const hoveredWordIdRef = useRef<string | null>(null);
+  const wordsLayoutRef = useRef<PlacedWord[]>([]);
 
   // Resize handling
   useEffect(() => {
@@ -163,8 +164,13 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     return placed;
   }, [graph.nodes, size.w, size.h]);
 
-  // Handle canvas rendering
+  // Store layout in ref for imperative access
   useEffect(() => {
+    wordsLayoutRef.current = wordsLayout;
+  }, [wordsLayout]);
+
+  // Imperative canvas draw — no React re-render needed for hover
+  const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -172,36 +178,29 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     ctx.clearRect(0, 0, size.w, size.h);
 
-    wordsLayout.forEach((word) => {
+    wordsLayoutRef.current.forEach((word) => {
       const isSelected = selectedId === word.id;
-      const isHovered = hoveredWordId === word.id;
+      const isHovered = hoveredWordIdRef.current === word.id;
       const active = isSelected || isHovered;
 
-      // Draw Pill Background
       ctx.beginPath();
-      ctx.roundRect(
-        word.x - word.w / 2,
-        word.y - word.h / 2,
-        word.w,
-        word.h,
-        word.h / 2
-      );
-      
+      ctx.roundRect(word.x - word.w / 2, word.y - word.h / 2, word.w, word.h, word.h / 2);
       ctx.fillStyle = `rgba(${word.bgRgb}, ${active ? 0.25 : 0.12})`;
       ctx.fill();
-      
       ctx.strokeStyle = active ? word.color : `rgba(${word.bgRgb}, 0.3)`;
       ctx.lineWidth = active ? 1.5 : 0.8;
       ctx.stroke();
 
-      // Draw Text
       ctx.fillStyle = active ? '#ffffff' : word.color;
       ctx.font = `${active ? '700' : '600'} ${word.fontSize}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(word.label, word.x, word.y);
     });
-  }, [wordsLayout, selectedId, hoveredWordId, size]);
+  }, [selectedId, size]);
+
+  // Redraw when layout or selection changes
+  useEffect(() => { drawCanvas(); }, [drawCanvas]);
 
   // Click & hover mouse coordinate tracking
   const getWordAtCoords = useCallback((clientX: number, clientY: number): PlacedWord | null => {
@@ -225,22 +224,19 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const word = getWordAtCoords(e.clientX, e.clientY);
-    if (word) {
-      setHoveredWordId(word.id);
-      e.currentTarget.style.cursor = 'pointer';
-    } else {
-      setHoveredWordId(null);
-      e.currentTarget.style.cursor = 'default';
+    const newId = word?.id ?? null;
+    if (hoveredWordIdRef.current !== newId) {
+      hoveredWordIdRef.current = newId;
+      e.currentTarget.style.cursor = word ? 'pointer' : 'default';
+      drawCanvas();
     }
   };
 
   const handleMouseClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const word = getWordAtCoords(e.clientX, e.clientY);
-    if (word) {
-      onSelect(word.id === selectedId ? null : word.id);
-    } else {
-      onSelect(null);
-    }
+    startTransition(() => {
+      onSelect(word ? (word.id === selectedId ? null : word.id) : null);
+    });
   };
 
   return (
@@ -255,7 +251,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           width={size.w}
           height={size.h}
           onMouseMove={handleMouseMove}
-          onMouseOut={() => setHoveredWordId(null)}
+          onMouseOut={() => { hoveredWordIdRef.current = null; drawCanvas(); }}
           onClick={handleMouseClick}
           className="block w-full h-full js-word-cloud-canvas"
         />

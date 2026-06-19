@@ -100,6 +100,10 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
+      if (error instanceof Error && error.name === 'AbortError') {
+        lastError = new Error('Embedding request timed out (5s exceeded)');
+      }
+
       // Exponential backoff for retries
       if (attempt < RETRY_MAX_ATTEMPTS - 1) {
         const delay = RETRY_DELAY_MS * Math.pow(2, attempt);

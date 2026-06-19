@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
@@ -20,6 +20,7 @@ import { MindMap } from '@/components/templates/console/MindMap';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
+import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
@@ -30,6 +31,16 @@ import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
 import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
 
 // See /docs/ui/dashboard-container.md
+
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  if (typeof document === 'undefined') return;
+  const el = document.createElement('div');
+  el.textContent = message;
+  el.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 18px;border-radius:10px;font:600 12px/1.4 var(--font-mono);pointer-events:none;opacity:0;transition:opacity .2s;color:var(--ink);background:${type === 'error' ? 'rgba(239,68,68,0.9)' : 'rgba(6,182,212,0.9)'};backdrop-filter:blur(8px);`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
+}
 
 export interface DashboardContainerProps {
   profile: ConsoleProfile;
@@ -73,6 +84,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   };
 
   const { startAnalysis, stopAnalysis } = useSSEStream();
+  useEagerVideoMetadata();
   const nucleus = useSynthesisNucleus();
   const { graph } = useKnowledgeGraph(nucleus.analysis?.id);
   const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, status === 'complete');
@@ -88,22 +100,26 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   } | null>(null);
 
   const handleCopy = useCallback((id: string) => {
-    if (id === 'insights') {
-      const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
-      navigator.clipboard.writeText(text);
-      alert('Insights copied to clipboard!');
-    } else if (id === 'knowledge-graph') {
-      const text = graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
-      navigator.clipboard.writeText(text);
-      alert('Knowledge Graph nodes list copied!');
-    } else if (id === 'word-cloud') {
-      const text = graph.nodes.map((n) => n.label).join(', ');
-      navigator.clipboard.writeText(text);
-      alert('Word Cloud text copied!');
-    } else if (id === 'mind-map') {
-      const text = graph.nodes.map((n) => `- ${n.label}`).join('\n');
-      navigator.clipboard.writeText(text);
-      alert('Mind Map nodes list copied!');
+    try {
+      if (id === 'insights') {
+        const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
+        navigator.clipboard.writeText(text).catch(() => {});
+        showToast('Insights copied to clipboard!');
+      } else if (id === 'knowledge-graph') {
+        const text = graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
+        navigator.clipboard.writeText(text).catch(() => {});
+        showToast('Knowledge Graph nodes list copied!');
+      } else if (id === 'word-cloud') {
+        const text = graph.nodes.map((n) => n.label).join(', ');
+        navigator.clipboard.writeText(text).catch(() => {});
+        showToast('Word Cloud text copied!');
+      } else if (id === 'mind-map') {
+        const text = graph.nodes.map((n) => `- ${n.label}`).join('\n');
+        navigator.clipboard.writeText(text).catch(() => {});
+        showToast('Mind Map nodes list copied!');
+      }
+    } catch {
+      showToast('Copy failed', 'error');
     }
   }, [graph, insights]);
 
@@ -125,7 +141,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         a.download = `${nucleus.analysis?.title || 'analysis'}-knowledge-graph.png`;
         a.click();
       } else {
-        alert('Could not locate canvas element to export.');
+        showToast('Could not locate canvas element to export.', 'error');
       }
     } else if (id === 'word-cloud') {
       const canvas = document.querySelector('.js-word-cloud-canvas') as HTMLCanvasElement;
@@ -136,7 +152,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         a.download = `${nucleus.analysis?.title || 'analysis'}-word-cloud.png`;
         a.click();
       } else {
-        alert('Could not locate canvas element to export.');
+        showToast('Could not locate canvas element to export.', 'error');
       }
     } else if (id === 'mind-map') {
       const svg = document.querySelector('.js-mind-map-container svg') as SVGElement;
@@ -150,63 +166,73 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         a.download = `${nucleus.analysis?.title || 'analysis'}-mind-map.svg`;
         a.click();
       } else {
-        alert('Could not locate SVG element to export.');
+        showToast('Could not locate SVG element to export.', 'error');
       }
     }
-  }, [nucleus.analysis?.title, graph, insights]);
+  }, [nucleus.analysis?.title, insights]);
+
+  const handleSelectNode = useCallback((id: string | null) => {
+    startTransition(() => setSelectedNodeId(id));
+  }, []);
 
   // Define Right Panel Accordion Items
+  const handleExpandPanel = useCallback((id: string, mode: string) => {
+    startTransition(() => {
+      setExpandedPanel(prev => prev?.id === id && prev?.mode === mode ? null : { id: id as 'insights' | 'knowledge-graph' | 'word-cloud' | 'mind-map', mode: mode as 'vertical' | 'left' | 'diagonal' });
+    });
+  }, []);
+
   const rightPanelItems = useMemo(() => [
     {
       id: 'insights',
       title: 'Insights',
       defaultOpen: true,
-      content: (
-        <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} insights={insights} insightsLoading={insightsLoading} />
+      content: () => (
+        <IntelligencePanel graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} insights={insights} insightsLoading={insightsLoading} />
       ),
-      onAction: (action: any) => {
+      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('insights');
         else if (action === 'export') handlePanelExport('insights');
-        else setExpandedPanel(prev => prev?.id === 'insights' && prev?.mode === action ? null : { id: 'insights', mode: action });
+        else handleExpandPanel('insights', action);
       }
     },
     {
       id: 'knowledge-graph',
       title: 'Knowledge Graph',
-      content: (
-        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} compact={true} />
+      content: () => (
+        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact={true} />
       ),
-      onAction: (action: any) => {
+      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('knowledge-graph');
         else if (action === 'export') handlePanelExport('knowledge-graph');
-        else setExpandedPanel(prev => prev?.id === 'knowledge-graph' && prev?.mode === action ? null : { id: 'knowledge-graph', mode: action });
+        else handleExpandPanel('knowledge-graph', action);
       }
     },
     {
       id: 'word-cloud',
       title: 'Word Cloud',
-      content: (
-        <WordCloud graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
+      content: () => (
+        <WordCloud graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} />
       ),
-      onAction: (action: any) => {
+      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('word-cloud');
         else if (action === 'export') handlePanelExport('word-cloud');
-        else setExpandedPanel(prev => prev?.id === 'word-cloud' && prev?.mode === action ? null : { id: 'word-cloud', mode: action });
+        else handleExpandPanel('word-cloud', action);
       }
     },
     {
       id: 'mind-map',
       title: 'Mind Map',
-      content: (
-        <MindMap graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} />
+      content: () => (
+        <MindMap graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} />
       ),
-      onAction: (action: any) => {
+      onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('mind-map');
         else if (action === 'export') handlePanelExport('mind-map');
-        else setExpandedPanel(prev => prev?.id === 'mind-map' && prev?.mode === action ? null : { id: 'mind-map', mode: action });
+        else handleExpandPanel('mind-map', action);
       }
     }
-  ], [graph, selectedNodeId, insights, insightsLoading, handleCopy, handlePanelExport]);
+  ], [graph, selectedNodeId, insights, insightsLoading, handleCopy, handlePanelExport, handleExpandPanel, handleSelectNode]);
 
 
 
@@ -440,7 +466,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       topbar={
         <TopBar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={(v) => startTransition(() => setSearch(v))}
           onExport={handleExport}
           tier={tierLabel}
           account={<div title={profile.email} className="w-8 h-8 rounded-lg bg-[var(--accent)] grid place-items-center text-[var(--void)] font-bold text-xs">{profile.initials}</div>}
@@ -496,7 +522,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     <button
                       key={t.key}
                       disabled={disabled}
-                      onClick={() => setConsoleTab(t.key)}
+                      onClick={() => startTransition(() => setConsoleTab(t.key))}
                       title={disabled ? 'Available once dimensions are synthesized' : undefined}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-none cursor-pointer font-mono text-[10px] font-bold uppercase tracking-wider transition-all ${
                         active ? 'bg-[var(--accent)] text-[var(--void)] shadow-lg' : 'bg-transparent text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
@@ -541,7 +567,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               ) : (
                 <div className="flex flex-col gap-3">
                   <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6">
-                    <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} height={520} />
+                    <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} height={520} />
                   </div>
                   <p className="text-[var(--ink-muted)] font-mono text-[10px] uppercase tracking-wider pl-1">
                     Left-click node to inspect · drag to pan/reposition · scroll to zoom
@@ -643,7 +669,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
               <button
                 type="button"
-                onClick={() => setExpandedPanel({ id: expandedPanel.id, mode: 'vertical' })}
+                onClick={() => startTransition(() => setExpandedPanel({ id: expandedPanel.id, mode: 'vertical' }))}
                 title="Vertical Mode"
                 className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
                   expandedPanel.mode === 'vertical' ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
@@ -653,7 +679,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               </button>
               <button
                 type="button"
-                onClick={() => setExpandedPanel({ id: expandedPanel.id, mode: 'left' })}
+                onClick={() => startTransition(() => setExpandedPanel({ id: expandedPanel.id, mode: 'left' }))}
                 title="Left Mode"
                 className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
                   expandedPanel.mode === 'left' ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
@@ -663,7 +689,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               </button>
               <button
                 type="button"
-                onClick={() => setExpandedPanel({ id: expandedPanel.id, mode: 'diagonal' })}
+                onClick={() => startTransition(() => setExpandedPanel({ id: expandedPanel.id, mode: 'diagonal' }))}
                 title="Diagonal Mode"
                 className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
                   expandedPanel.mode === 'diagonal' ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
@@ -676,7 +702,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
               <button
                 type="button"
-                onClick={() => setExpandedPanel(null)}
+                onClick={() => startTransition(() => setExpandedPanel(null))}
                 title="Close overlay"
                 className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--err)] cursor-pointer flex items-center justify-center transition-colors"
               >
@@ -688,9 +714,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           {/* Content */}
           <div className="flex-1 min-h-0 overflow-y-auto p-5 hx-custom-scrollbar">
             {expandedPanel.id === 'knowledge-graph' ? (
-              <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={setSelectedNodeId} onFocus={setSelectedNodeId} compact={false} />
+              <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact={false} />
             ) : (
-              activeItem.content
+              activeItem.content()
             )}
           </div>
         </div>

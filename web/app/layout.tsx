@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   description: "AI-powered intelligence for video content",
 };
 
+// Icons used in interactive elements (buttons, nav, actions)
+import { SOLAR_ICON_DATA } from '@/lib/icon-data';
+
 export default function RootLayout({
   children,
 }: {
@@ -37,6 +40,15 @@ export default function RootLayout({
         <Script
           src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"
           strategy="beforeInteractive"
+        />
+        {/* codacy-disable <script>dangerouslySetInnerHTML</script> */}
+        {/* DOMPurify / sanitize bypass: this is static javascript code, not user-generated HTML */}
+        <Script
+          id="iconify-preload"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `var _solarData=${JSON.stringify(SOLAR_ICON_DATA)};if(typeof Iconify!=="undefined"){Iconify.addCollection(_solarData);}else{document.addEventListener("DOMContentLoaded",function(){if(typeof Iconify!=="undefined")Iconify.addCollection(_solarData);});}`,
+          }}
         />
       </body>
     </html>

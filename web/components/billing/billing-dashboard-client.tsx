@@ -192,7 +192,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
              <p style={{ margin: 0, fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-muted)", textTransform: "uppercase" }}>Your Referral Link</p>
              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
                 <code style={{ fontSize: 12, color: "var(--accent)" }}>v-intel.app/r/user_{initialData.user.id.slice(0,5)}</code>
-                <button onClick={() => navigator.clipboard.writeText(`https://v-intel.app/r/user_${initialData.user.id.slice(0,5)}`)} style={{ background: "transparent", border: "none", color: "var(--ink-secondary)", cursor: "pointer" }}>
+                <button onClick={() => { navigator.clipboard.writeText(`https://v-intel.app/r/user_${initialData.user.id.slice(0,5)}`).catch(() => {}); }} style={{ background: "transparent", border: "none", color: "var(--ink-secondary)", cursor: "pointer" }}>
                   <Icon icon="solar:copy-linear" size={14} />
                 </button>
              </div>

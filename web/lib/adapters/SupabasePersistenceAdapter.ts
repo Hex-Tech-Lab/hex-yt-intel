@@ -1113,12 +1113,12 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
 
   async findAnalysisChunks(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: any; status: string }> | null> {
+  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null }> | null> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analysis_chunks')
-        .select('chunk_index, dimensions_covered, payload, status')
+        .select('chunk_index, dimensions_covered, payload, status, updated_at')
         .eq('analysis_id', params.analysisId);
 
       if (error) {

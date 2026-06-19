@@ -11,6 +11,8 @@ export interface PersistOptions {
   activeSecret: string;
   appUrl: string;
   validate12D: (text: string) => boolean;
+  chunkIndex?: number;
+  totalChunks?: number;
 }
 
 export class PersistService {
@@ -57,6 +59,8 @@ export class PersistService {
             valid,
             contentSig,
             status: options.status,
+            chunkIndex: options.chunkIndex,
+            totalChunks: options.totalChunks,
           }),
         });
         if (persistRes.ok) return true;
