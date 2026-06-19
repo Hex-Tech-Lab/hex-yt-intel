@@ -1,0 +1,21 @@
+worker/src/__tests__/chat-stream-requestId.test.ts
+  s_e6750ccfff01b1::t_8f15583df9f97c 10,31,56-57,63,158-159
+web/vitest.config.ts
+  s_e6750ccfff01b1::t_d05b38ab1798c9 8-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "31d7f5564cc581d66140c0a726b7afd42d6c7a9a",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
