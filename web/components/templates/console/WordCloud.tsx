@@ -84,9 +84,30 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       });
     });
 
+    // Also extract bigrams (two-word phrases) for richer cloud
+    graph.nodes.forEach(node => {
+      const wordList = node.label.split(/\s+/).filter(w => w.length > 2);
+      for (let i = 0; i < wordList.length - 1; i++) {
+        const bigram = `${wordList[i]} ${wordList[i + 1]}`;
+        const key = bigram.toLowerCase().replace(/[^\w\s]/g, '');
+        if (key.length < 5) continue;
+        if (!tokenMap[key]) {
+          tokenMap[key] = {
+            label: bigram,
+            weight: (node.weight || 1) * 0.8,
+            type: node.entityType || 'concept',
+            id: node.id,
+            maxWeight: node.weight || 1,
+          };
+        } else {
+          tokenMap[key].weight += (node.weight || 1) * 0.4;
+        }
+      }
+    });
+
     const sortedTokens = Object.values(tokenMap)
       .sort((a, b) => b.weight - a.weight)
-      .slice(0, 35);
+      .slice(0, 50);
 
     const center = { x: size.w / 2, y: size.h / 2 };
     const placed: PlacedWord[] = [];
