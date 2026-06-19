@@ -7,35 +7,13 @@
 
 import { NextResponse } from 'next/server';
 import type { TrafficGuardPort, RateLimitStatus } from '@/lib/ports';
+import { RATE_LIMITS } from '@/lib/constants/rate-limits';
+import type { Tier, Endpoint } from '@/lib/constants/rate-limits';
 import { RedisTrafficAdapter } from '../adapters/RedisTrafficAdapter';
 import { SupabasePersistenceAdapter } from '../adapters/SupabasePersistenceAdapter';
 
 /** Admin account exempt from traffic limits and billing charges. */
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-
-/**
- * Rate limit configuration per tier. Expressed as requests per minute.
- */
-export const RATE_LIMITS = {
-  free: {
-    requestsPerMinute: 3,
-    requestsPerHour: 50,
-    description: 'Free tier: 3 requests/minute, 50/hour',
-  },
-  pro: {
-    requestsPerMinute: 30,
-    requestsPerHour: 500,
-    description: 'Pro tier: 30 requests/minute, 500/hour',
-  },
-  enterprise: {
-    requestsPerMinute: 300,
-    requestsPerHour: 10000,
-    description: 'Enterprise tier: unlimited (300 req/min soft limit)',
-  },
-} as const;
-
-export type Tier = keyof typeof RATE_LIMITS;
-export type Endpoint = 'analyses' | 'search' | 'checkout';
 
 export async function getUserTier(userId: string): Promise<Tier> {
   try {
