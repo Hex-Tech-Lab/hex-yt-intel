@@ -22,7 +22,7 @@ export class StreamStatusTracker {
     },
     options: StreamAdapterOptions,
     resetRawSink: () => void,
-    rebuildMarkdown: () => void
+    rebuildMarkdown: (force?: boolean) => void
   ) {
     const store = this.analysisStore.getState();
     if (fragment.stage === 'starting') {
@@ -63,10 +63,10 @@ export class StreamStatusTracker {
               dimensionsReceived: updatedReceived,
             },
           },
-          personaConfig: targetDims !== undefined && targetDims.includes(1) ? synthState.personaConfig : null,
-          knowledgeGraph: targetDims !== undefined && targetDims.includes(8) ? synthState.knowledgeGraph : null,
-          classification: targetDims !== undefined && targetDims.includes(11) ? synthState.classification : null,
-          monetizationVerdict: targetDims !== undefined && targetDims.includes(11) ? synthState.monetizationVerdict : null,
+          personaConfig: targetDims === undefined || targetDims.includes(1) ? null : synthState.personaConfig,
+          knowledgeGraph: targetDims === undefined || targetDims.includes(8) ? null : synthState.knowledgeGraph,
+          classification: targetDims === undefined || targetDims.includes(11) ? null : synthState.classification,
+          monetizationVerdict: targetDims === undefined || targetDims.includes(11) ? null : synthState.monetizationVerdict,
           projection: computePersonaProjection({
             ...synthState.analysis,
             dimensions: updatedDimensions,
@@ -79,7 +79,7 @@ export class StreamStatusTracker {
         });
 
         // Trigger rebuilding of display markdown from the remaining dimensions
-        rebuildMarkdown();
+        rebuildMarkdown(true);
       }
 
       const code = fragment.error || '';

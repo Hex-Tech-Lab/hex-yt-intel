@@ -8,7 +8,7 @@ export class MarkdownAccumulator {
 
   constructor() {}
 
-  public rebuildDisplayMarkdown() {
+  public rebuildDisplayMarkdown(force: boolean = false) {
     const store = this.analysisStore.getState();
     if (!store.analysis) return;
     const latestState = this.synthStore.getState();
@@ -22,12 +22,13 @@ export class MarkdownAccumulator {
     };
 
     const reconstructed = reconstructMarkdown(stitchedPayload);
+    const current = store.analysis.analysis_markdown || '';
 
-    // Allow the reconstructed markdown to replace the previous content unconditionally.
-    // During a fallback reset, a different model may produce shorter but valid output.
-    store.setAnalysis({
-      ...store.analysis,
-      analysis_markdown: reconstructed,
-    });
+    if (force || reconstructed.length >= current.length) {
+      store.setAnalysis({
+        ...store.analysis,
+        analysis_markdown: reconstructed,
+      });
+    }
   }
 }

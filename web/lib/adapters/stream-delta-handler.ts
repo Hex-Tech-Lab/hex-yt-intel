@@ -83,6 +83,9 @@ export class StreamDeltaHandler {
         cleanSink = cleanSink.slice(braceIndex);
       }
     }
+    while (cleanSink.endsWith('`')) {
+      cleanSink = cleanSink.slice(0, -1).trim();
+    }
 
     // Check if the raw sink starts with '{', indicating it is a structured JSON stream
     const isJsonStream = cleanSink.startsWith('{');

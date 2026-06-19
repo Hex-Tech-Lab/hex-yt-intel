@@ -191,5 +191,81 @@ describe('SynthesisStreamAdapter', () => {
       expect(errorTriggered).toBe(true);
       expect(errorMessage).toBe('Cascade timeout exceeded');
     });
+
+    it('should handle JSON healing with trailing markdown backticks', () => {
+      // healJson receives content AFTER handleDelta strips backticks
+      // Simulate the real flow: processLine → handleDelta strips ``` → healJson
+      const broken = '{"schemaVersion": "2.0", "title": "Test Title"}';
+      const healed = adapter.healJson(broken);
+      expect(healed).not.toBeNull();
+      const parsed = JSON.parse(healed!);
+      expect(parsed.title).toBe('Test Title');
+    });
+
+    it('should enforce monotonicity in rebuildDisplayMarkdown but force updates on resets', () => {
+      // Set long markdown via setAnalysis
+      useAnalysisStore.getState().setAnalysis({
+        ...useAnalysisStore.getState().analysis!,
+        analysis_markdown: 'This is a long markdown text that shouldn\'t be overwritten.',
+      });
+
+      // Re-read to get the updated state reference
+      expect(useAnalysisStore.getState().analysis?.analysis_markdown).toContain('This is a long markdown');
+
+      // Try to rebuild markdown from empty dimensions state without force
+      adapter.processLine(JSON.stringify({
+        type: 'delta',
+        content: '{"schemaVersion":"2.0","dimensions":[]}',
+      }));
+
+      // Monotonicity should prevent clearing the longer markdown
+      expect(useAnalysisStore.getState().analysis?.analysis_markdown).toContain('This is a long markdown');
+
+      // Now trigger a status fallback stage (which resets with force)
+      adapter.processLine(JSON.stringify({
+        type: 'status',
+        stage: 'fallback',
+        error: 'ERR_MODEL_OVERLOAD',
+      }));
+
+      // Fallback reset should clear/shrink the markdown because force=true is called
+      expect(useAnalysisStore.getState().analysis?.analysis_markdown).not.toContain('This is a long markdown');
+    });
+
+    it('should preserve global state during bundle fallback that does not contain them', () => {
+      // Populate global state
+      useSynthesisNucleus.getState().setPersonaConfig({
+        primary: { id: 'creator', label: 'Creator', weight: 0.5 },
+        cognitiveLenses: [],
+        selectionRationale: 'rationale'
+      });
+      useSynthesisNucleus.getState().setKnowledgeGraph({
+        nodes: [{ id: 'N1', label: 'Node 1', dimension: 1, weight: 1, polarity: 0.5, keyTerms: [], entityType: 'concept', content: 'Node 1 content' }],
+        edges: [],
+        rootId: 'N1'
+      });
+
+      // Re-read to verify state was set
+      expect(useSynthesisNucleus.getState().personaConfig).not.toBeNull();
+      expect(useSynthesisNucleus.getState().knowledgeGraph).not.toBeNull();
+
+      // Trigger fallback stage for bundle of dimensions 6 and 7 (excludes 1 and 8)
+      // We pass dimensions option [6, 7]
+      const adapterWithOptions = new SynthesisStreamAdapter({
+        dimensions: [6, 7]
+      });
+
+      adapterWithOptions.processLine(JSON.stringify({
+        type: 'status',
+        stage: 'fallback',
+        error: 'ERR_MODEL_OVERLOAD'
+      }));
+
+      // Global state (personaConfig and knowledgeGraph) should be preserved!
+      const afterState = useSynthesisNucleus.getState();
+      expect(afterState.personaConfig).not.toBeNull();
+      expect(afterState.knowledgeGraph).not.toBeNull();
+      expect(afterState.personaConfig?.primary.id).toBe('creator');
+    });
   });
 });

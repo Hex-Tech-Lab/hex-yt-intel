@@ -35,6 +35,7 @@ interface ChatStreamRequest {
   sig: string;
   exp: number;
   appUrl?: string;
+  requestId?: string;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -286,15 +287,15 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       let full = "";
       try {
         full = await streamChatCascade(apiKey, grounding, history, (chunk) => {
-          send({ type: "delta", content: chunk });
+          send({ type: "delta", content: chunk, requestId: req.requestId });
         }, req.models);
         if (!full) {
           full = "No response generated.";
-          send({ type: "delta", content: full });
+          send({ type: "delta", content: full, requestId: req.requestId });
         }
       } catch {
         full = "The model request failed. Your message is saved — please try again.";
-        send({ type: "delta", content: full });
+        send({ type: "delta", content: full, requestId: req.requestId });
       }
 
       let persisted = false;
@@ -303,7 +304,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         hasContent: () => full.length > 0,
         persist: async (status) => {
           if (persisted) return false;
-          send({ type: "persist", status: "saving" });
+          send({ type: "persist", status: "saving", requestId: req.requestId });
           const contentSig = await hmacHex(activeSecret, full);
           const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
 
@@ -325,13 +326,13 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
             });
             if (res.ok) {
               persisted = true;
-              send({ type: "persist", status: "saved" });
+              send({ type: "persist", status: "saved", requestId: req.requestId });
             } else {
-              send({ type: "persist", status: "failed" });
+              send({ type: "persist", status: "failed", requestId: req.requestId });
             }
             return persisted;
           } catch (e) {
-            send({ type: "persist", status: "failed" });
+            send({ type: "persist", status: "failed", requestId: req.requestId });
             const isAbort = e instanceof DOMException && e.name === "AbortError";
             const reason = isAbort ? "persist_timeout" : "persist_error";
             const message = e instanceof Error ? e.message : String(e);
@@ -347,7 +348,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
 
       atomicPersist.flush();
 
-      send({ type: "done" });
+      send({ type: "done", requestId: req.requestId });
       controller.close();
     },
   });
