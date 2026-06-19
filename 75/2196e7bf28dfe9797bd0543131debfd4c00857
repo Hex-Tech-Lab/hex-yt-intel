@@ -1,0 +1,26 @@
+worker/src/middleware/error-handler.ts
+  s_e6750ccfff01b1::t_cce773b6e2990c 14-15,19
+web/app/api/stripe/webhook/route.ts
+  s_e6750ccfff01b1::t_e23e08914e22a1 28-29,31,34
+  s_e6750ccfff01b1::t_a3202e53d56da5 46-47,59-62
+  s_e6750ccfff01b1::t_8b28fc0e8e9432 48-56,58
+  s_e6750ccfff01b1::t_e6b6629bd623ae 57
+scripts/quality-engine/rules/architecture.ts
+  s_e6750ccfff01b1::t_0da4c1b9467726 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "752196e7bf28dfe9797bd0543131debfd4c00857",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
