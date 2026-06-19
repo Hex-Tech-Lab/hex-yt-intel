@@ -1,0 +1,30 @@
+.memory/AGENT_LEDGER.md
+  s_2a8b81eb120501::t_e5837af0043427 285
+  s_b2e61db33bd6ec::t_5529c35dd6dd1e 289
+  s_2a8b81eb120501::t_448c4c4ecf20b2 286
+  s_b2e61db33bd6ec::t_253c3febc8be79 288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "7f2ce7806c7d9bd801d648bed1fd574510361bfc",
+  "prompts": {},
+  "sessions": {
+    "s_2a8b81eb120501": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_120ed882bffeaMv6q9GYGe5aCu",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_b2e61db33bd6ec": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_120edb5d6ffe9w9joZjvPi1yyx",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
