@@ -100,7 +100,6 @@ async function verifyStreamToken(
   if (env.DEV_HMAC_SECRET) {
     secretsToTry.push(env.DEV_HMAC_SECRET);
   }
-  secretsToTry.push("dev-hmac-secret-123");
 
   for (const s of secretsToTry) {
     if (!s) continue;

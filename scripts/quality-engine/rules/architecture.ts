@@ -58,7 +58,7 @@ export const ErrorTaxonomyRule: IRule = {
     source.forEachDescendant((node) => {
       if (Node.isIfStatement(node)) {
         const condition = node.getExpression().getText();
-        if ((condition.includes('error') && condition.includes('!data')) || condition.includes('!result')) {
+        if (condition.includes('error') && (condition.includes('!data') || condition.includes('!result'))) {
           const block = node.getThenStatement()?.getText() || '';
           if (block.includes('NotFound')) {
             findings.push({

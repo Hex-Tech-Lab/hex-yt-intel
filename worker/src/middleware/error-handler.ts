@@ -11,11 +11,12 @@ export const errorHandler: ErrorHandler = (err, c) => {
     method: c.req.method,
   });
 
+  const isDev = typeof process !== "undefined" && process.env.NODE_ENV !== "production";
+
   return c.json(
     {
       error: "Internal server error",
-      message: errorMessage,
-      ...(typeof process !== "undefined" && process.env.NODE_ENV !== "production" && { stack: errorStack }),
+      ...(isDev && { message: errorMessage, stack: errorStack }),
     },
     500,
   );

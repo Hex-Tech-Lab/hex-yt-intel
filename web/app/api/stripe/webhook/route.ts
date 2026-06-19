@@ -25,11 +25,13 @@ export async function POST(request: NextRequest) {
       event = verifyWebhookSignature(body, request.headers.get('stripe-signature') || '', webhookSecret);
       addBreadcrumb('Stripe webhook signature verified', { eventType: event.type, eventId: event.id });
     } catch (error) {
-      console.error('[/api/stripe/webhook] Signature verification failed:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[/api/stripe/webhook]', { message, url: request.url });
       addBreadcrumb('Stripe webhook signature verification failed', {
-        error: String(error),
+        error: message,
       }, 'security');
       Sentry.captureException(error, {
+        contexts: { webhook: { endpoint: '/api/stripe/webhook', phase: 'signature_verification' } },
         tags: { webhook: 'stripe', severity: 'critical' },
       });
       return NextResponse.json(
@@ -41,6 +43,23 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseServiceClient();
 
     addBreadcrumb(`Handling ${event.type}`, { eventId: event.id });
+
+    // Idempotency check: skip if already processed
+    let existingEvent: { id: string } | null = null;
+    try {
+      const result = await supabase
+        .from('stripe_events')
+        .select('id')
+        .eq('id', event.id)
+        .single();
+      existingEvent = result.data;
+    } catch {
+      console.warn('[/api/stripe/webhook] Idempotency check failed, proceeding anyway');
+    }
+    if (existingEvent) {
+      return NextResponse.json({ received: true, idempotent: true }, { status: 200 });
+    }
+
     await dispatchEvent(event, supabase as any);
 
     const userId = await getUserIdFromEvent(event);
