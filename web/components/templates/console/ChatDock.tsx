@@ -25,7 +25,7 @@ const BAR_H = 46;
  */
 export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   const {
-    conversations, activeId, messagesByConv, sending,
+    conversations, activeId, messagesByConv, sending, persistState,
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
     isChatOpen: open, setChatOpen: setOpen,
   } = useChatStore();
@@ -159,6 +159,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
           <span style={{ color: 'var(--ink-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {activeConv ? `· ${activeConv.title}` : analysisTitle ? `· ask about “${analysisTitle.slice(0, 40)}”` : '· ask anything'}
           </span>
+          <PersistStatusIndicator state={persistState} />
         </button>
         <button onClick={() => setOpen(true)} aria-label="Expand chat" title="Expand" style={iconBtn}>
           <Icon icon="solar:alt-arrow-up-linear" size={16} />
@@ -176,15 +177,18 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', borderBottom: '1px solid var(--line)', background: 'rgb(26 31 43 / 0.6)' }}>
-        <button
-          onClick={() => setShowThreads((v) => !v)}
-          title="Switch thread"
-          style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, background: 'transparent', border: 'none', color: 'var(--ink)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 600 }}
-        >
-          <Icon icon="solar:chat-round-dots-linear" size={16} style={{ color: 'var(--accent-ink)', flexShrink: 0 }} />
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 360 }}>{activeConv?.title || 'New chat'}</span>
-          <Icon icon="solar:alt-arrow-down-linear" size={13} style={{ color: 'var(--ink-muted)', flexShrink: 0 }} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+          <button
+            onClick={() => setShowThreads((v) => !v)}
+            title="Switch thread"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, background: 'transparent', border: 'none', color: 'var(--ink)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 600 }}
+          >
+            <Icon icon="solar:chat-round-dots-linear" size={16} style={{ color: 'var(--accent-ink)', flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{activeConv?.title || 'New chat'}</span>
+            <Icon icon="solar:alt-arrow-down-linear" size={13} style={{ color: 'var(--ink-muted)', flexShrink: 0 }} />
+          </button>
+          <PersistStatusIndicator state={persistState} />
+        </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={handleNew} title="New chat" style={iconBtn}><Icon icon="solar:pen-new-square-linear" size={14} /></button>
           <button onClick={() => setOpen(false)} aria-label="Collapse chat" title="Collapse" style={iconBtn}><Icon icon="solar:alt-arrow-down-linear" size={16} /></button>
@@ -392,4 +396,48 @@ const renderChildren = (children: React.ReactNode) => {
   }
   return children;
 };
+
+function PersistStatusIndicator({ state }: { state: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted' }) {
+  if (state === 'idle') return null;
+
+  let color = 'var(--ink-muted)';
+  let label = '';
+  let pulse = false;
+
+  switch (state) {
+    case 'saving':
+      color = '#f59e0b'; // amber
+      label = 'saving';
+      pulse = true;
+      break;
+    case 'saved':
+      color = '#10b981'; // emerald
+      label = 'saved';
+      break;
+    case 'failed':
+      color = '#f43f5e'; // rose
+      label = 'save failed';
+      break;
+    case 'aborted':
+      color = '#94a3b8'; // slate
+      label = 'aborted';
+      break;
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--ink-muted)', marginLeft: 8 }}>
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          backgroundColor: color,
+          display: 'inline-block',
+          animation: pulse ? 'hx-pulse 1.2s ease-in-out infinite' : 'none',
+        }}
+      />
+      <span>{label}</span>
+    </div>
+  );
+}
 

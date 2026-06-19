@@ -303,6 +303,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         hasContent: () => full.length > 0,
         persist: async (status) => {
           if (persisted) return false;
+          send({ type: "persist", status: "saving" });
           const contentSig = await hmacHex(activeSecret, full);
           const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
 
@@ -322,9 +323,15 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
               }),
               signal: persistController.signal,
             });
-            if (res.ok) persisted = true;
+            if (res.ok) {
+              persisted = true;
+              send({ type: "persist", status: "saved" });
+            } else {
+              send({ type: "persist", status: "failed" });
+            }
             return persisted;
           } catch (e) {
+            send({ type: "persist", status: "failed" });
             const isAbort = e instanceof DOMException && e.name === "AbortError";
             const reason = isAbort ? "persist_timeout" : "persist_error";
             const message = e instanceof Error ? e.message : String(e);
