@@ -176,7 +176,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     });
     if (!streamRes.ok) throw new Error(`worker ${streamRes.status}`);
 
-    await readSSE(streamRes, (e: any) => {
+    await readSSE(streamRes, (e: Record<string, unknown>) => {
       if (e.requestId && e.requestId !== clientMsgId) {
         return; // ignore stale/old request events
       }
