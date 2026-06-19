@@ -130,6 +130,7 @@ export interface WorkerStreamRequest {
   exp: number;
   appUrl?: string;
   dimensions?: number[];
+  chunkIndex?: number;
   totalChunks?: number;
 }
 

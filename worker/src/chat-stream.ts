@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CHAT_CASCADE } from "../../web/lib/config/cascade";
 import { translateModelId } from "./services/model-id-translator";
+import { createAtomicPersist } from "./services/atomic-persist";
 
 /**
  * Direct browser->worker chat streaming. Mirrors /analyze-llm-stream: the Vercel
@@ -223,12 +224,14 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
 
   // Support both production secret and local/preview fallback secret
   const secretsToTry = [secret];
-  // ALWAYS try DEV_HMAC_SECRET if provided, even in production mode
-  if (c.env.DEV_HMAC_SECRET) {
+  // Only try DEV_HMAC_SECRET in non-production environments
+  if (c.env.NODE_ENV !== "production" && c.env.DEV_HMAC_SECRET) {
     secretsToTry.push(c.env.DEV_HMAC_SECRET);
   }
-  // Hardcoded recovery fallback for unconfigured preview branches
-  secretsToTry.push('dev-hmac-secret-123');
+  // Hardcoded recovery fallback for unconfigured preview branches (non-production only)
+  if (c.env.NODE_ENV !== "production") {
+    secretsToTry.push('dev-hmac-secret-123');
+  }
 
   for (const s of secretsToTry) {
     if (!s) continue;
@@ -294,22 +297,48 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         send({ type: "delta", content: full });
       }
 
-      // Persist the assistant turn S2S so Postgres stays the source of truth. The
-      // content signature proves to Vercel that this text came from the worker.
-      const contentSig = await hmacHex(activeSecret, full);
-      const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
-      c.executionCtx.waitUntil(
-        fetch(`${appUrl}/api/chat/persist`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversationId: req.conversationId,
-            userId: req.userId,
-            content: full,
-            contentSig,
-          }),
-        }).catch((e) => console.error("[chat-stream] persist failed", e)),
-      );
+      let persisted = false;
+
+      const atomicPersist = createAtomicPersist({
+        hasContent: () => full.length > 0,
+        persist: async (status) => {
+          if (persisted) return false;
+          const contentSig = await hmacHex(activeSecret, full);
+          const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
+
+          const persistController = new AbortController();
+          const timeout = setTimeout(() => persistController.abort(), 10_000);
+
+          try {
+            const res = await fetch(`${appUrl}/api/chat/persist`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                conversationId: req.conversationId,
+                userId: req.userId,
+                content: full,
+                contentSig,
+                status,
+              }),
+              signal: persistController.signal,
+            });
+            if (res.ok) persisted = true;
+            return persisted;
+          } catch (e) {
+            const isAbort = e instanceof DOMException && e.name === "AbortError";
+            const reason = isAbort ? "persist_timeout" : "persist_error";
+            const message = e instanceof Error ? e.message : String(e);
+            console.error("[chat-stream]", { reason, message, conversationId: req.conversationId });
+            return false;
+          } finally {
+            clearTimeout(timeout);
+          }
+        },
+        signal: c.req.raw.signal,
+        waitUntil: (p) => c.executionCtx.waitUntil(p),
+      });
+
+      atomicPersist.flush();
 
       send({ type: "done" });
       controller.close();

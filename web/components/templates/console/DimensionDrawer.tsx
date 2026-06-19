@@ -3,7 +3,7 @@
 import { Icon } from '@/components/templates/_shared/primitives';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, startTransition } from 'react';
 import { useUIStore } from '@/store/useUIStore';
 
 export interface DimensionDrawerProps {
@@ -35,7 +35,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        startTransition(() => {
+          onClose();
+        });
         return;
       }
       if (e.key === 'Tab' && drawerRef.current) {
@@ -77,7 +79,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   return (
     <>
       <div
-        onClick={onClose}
+        onClick={() => startTransition(() => onClose())}
         className="fixed inset-0 bg-black/40 backdrop-blur-[4px] z-[100] animate-in fade-in duration-200"
       />
       <div
@@ -96,7 +98,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
           </div>
           <button
             ref={closeBtnRef}
-            onClick={onClose}
+            onClick={() => startTransition(() => onClose())}
             title="Close"
             className="grid place-items-center w-8 h-8 rounded-lg border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >

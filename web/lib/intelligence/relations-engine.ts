@@ -112,6 +112,9 @@ async function* callStanceModelStream(
     }
   } catch (err) {
     console.error(`[relations/engine] Model ${model} failed:`, err);
+    if ((err as Error)?.name === 'AbortError') {
+      throw err;
+    }
   } finally {
     if (externalSignal) {
       externalSignal.removeEventListener('abort', abortListener);
@@ -138,15 +141,20 @@ export async function* computeStanceRelationsStream(
     yield { type: 'model', model: item.model };
     let fullText = '';
 
-    for await (const delta of callStanceModelStream(
-      item.model,
-      prompt,
-      apiKey,
-      3000,
-      handshakeSignal,
-      item.providerOrder as string[] | undefined
-    )) {
-      fullText += delta;
+    try {
+      for await (const delta of callStanceModelStream(
+        item.model,
+        prompt,
+        apiKey,
+        3000,
+        handshakeSignal,
+        item.providerOrder as string[] | undefined
+      )) {
+        fullText += delta;
+      }
+    } catch (err) {
+      console.warn(`[relations/engine] Model ${item.model} aborted, trying next:`, err instanceof Error ? err.message : String(err));
+      continue;
     }
 
     const json = extractJson(fullText);
@@ -177,6 +185,12 @@ export async function* computeStanceRelationsStream(
       }
     } catch { continue; }
   }
+
+  if (handshakeSignal?.aborted) {
+    return;
+  }
+
+  throw new Error('All models in relations cascade failed or timed out');
 }
 
 

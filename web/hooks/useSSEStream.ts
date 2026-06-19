@@ -54,7 +54,20 @@ export function useSSEStream() {
     }
     
     const videoId = extractTelemetryId(url);
-    setVideoMetadata({ videoId, title: '', channelTitle: '', channelId: '', publishedAt: '', duration: null, viewCount: '', likeCount: '', commentCount: '', thumbnailUrl: null });
+    // Merge with existing metadata (preserves eagerly-fetched data from useEagerVideoMetadata)
+    const prev = useAnalysisStore.getState().videoMetadata;
+    setVideoMetadata({
+      videoId,
+      title: prev?.videoId === videoId ? (prev.title || '') : '',
+      channelTitle: prev?.videoId === videoId ? (prev.channelTitle || '') : '',
+      channelId: prev?.videoId === videoId ? (prev.channelId || '') : '',
+      publishedAt: prev?.videoId === videoId ? (prev.publishedAt || '') : '',
+      duration: prev?.videoId === videoId ? prev.duration : null,
+      viewCount: prev?.videoId === videoId ? (prev.viewCount || '') : '',
+      likeCount: prev?.videoId === videoId ? (prev.likeCount || '') : '',
+      commentCount: prev?.videoId === videoId ? (prev.commentCount || '') : '',
+      thumbnailUrl: prev?.videoId === videoId ? prev.thumbnailUrl : null,
+    });
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
 
     const myController = new AbortController();
@@ -181,6 +194,7 @@ export function useSSEStream() {
               exp: job.stream.exp,
               appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
               dimensions,
+              chunkIndex: i + 1,
               totalChunks: TOTAL_STREAMS,
             };
 
