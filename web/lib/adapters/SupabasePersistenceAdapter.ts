@@ -21,6 +21,7 @@ interface AnalysisRow {
   created_at: string;
   validation_passed: boolean;
   validation_report?: any;
+  billing_status?: string;
 }
 
 interface ConversationRow {
@@ -266,7 +267,7 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
       const service = getSupabaseServiceClient();
       const { data: analyses, error } = await service
         .from('analyses')
-        .select('id, video_id, title, created_at, validation_passed, validation_report')
+        .select('id, video_id, title, created_at, validation_passed, validation_report, billing_status')
         .eq('user_id', params.userId)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -281,8 +282,8 @@ export class SupabasePersistenceAdapter implements PersistencePort, ChatPersiste
         videoId: analysis.video_id,
         title: analysis.title || 'Untitled Analysis',
         createdAt: analysis.created_at,
-        status: (analysis.validation_passed || analysis.validation_report?.status === 'completed' || analysis.validation_report?.status === 'done') ? 'completed' :
-                (analysis.validation_report?.status === 'processing' ? 'processing' : 'incomplete'),
+        status: (analysis.billing_status === 'completed' || analysis.validation_passed || analysis.validation_report?.status === 'completed' || analysis.validation_report?.status === 'done') ? 'completed' :
+                (analysis.billing_status === 'processing' || analysis.validation_report?.status === 'processing' ? 'processing' : 'incomplete'),
       }));
     } catch (error: any) {
       Sentry.captureException(error, {
