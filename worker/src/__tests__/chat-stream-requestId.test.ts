@@ -103,7 +103,7 @@ describe('handleChatStream requestId propagation', () => {
     },
   ];
 
-  it.each(cases)('$name', async ({ mode, persistOk, expectedOrder, expectedDeltaContent }) => {
+  it.each(cases)('$name', async ({ mode: _mode, persistOk: _persistOk, expectedOrder, expectedDeltaContent: _expectedDeltaContent }) => {
     // This test documents the expected behavior.
     // The actual test wiring depends on how handleChatStream is structured.
     // For now, we verify the contract:
