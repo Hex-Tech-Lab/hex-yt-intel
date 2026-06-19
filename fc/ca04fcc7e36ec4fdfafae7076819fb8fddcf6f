@@ -1,0 +1,22 @@
+web/components/templates/console/KnowledgeGraphCanvas.tsx
+  s_b2e61db33bd6ec::t_fc406f80a5ebd6 165
+  s_b2e61db33bd6ec::t_618292790c53a7 197
+  s_b2e61db33bd6ec::t_98bb0073662b16 164
+  s_b2e61db33bd6ec::t_541ef2ce40386a 240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "fcca04fcc7e36ec4fdfafae7076819fb8fddcf6f",
+  "prompts": {},
+  "sessions": {
+    "s_b2e61db33bd6ec": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_120edb5d6ffe9w9joZjvPi1yyx",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
