@@ -29,6 +29,9 @@ import type { ConsoleProfile } from '@/lib/services/console-profile';
 import { VideoPlayerCard } from '@/components/templates/console/VideoPlayerCard';
 import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
 import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
+import { ConsoleTabSwitcher } from './dashboard/ConsoleTabSwitcher';
+import { SidebarFooter } from './dashboard/SidebarFooter';
+import { ExpandedPanelOverlay } from './dashboard/ExpandedPanelOverlay';
 
 // See /docs/ui/dashboard-container.md
 
@@ -405,56 +408,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                 setActiveNav(key as 'console' | 'history' | 'settings');
               }
             }}
-            footer={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
-                <div 
-                  title={profile.email} 
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    background: 'var(--accent-strong)',
-                    color: 'var(--void)',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontWeight: 'bold',
-                    fontSize: 12,
-                    flexShrink: 0
-                  }}
-                >
-                  {profile.initials}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {profile.email.split('@')[0]}
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--ink-secondary)', textTransform: 'capitalize' }}>
-                    {profile.tier} Tier
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  title="Sign Out"
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--ink-muted)',
-                    cursor: 'pointer',
-                    padding: 6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 6,
-                    transition: 'color var(--dur-fast), background var(--dur-fast)',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--err)'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ink-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <Icon icon="solar:logout-3-linear" size={16} />
-                </button>
-              </div>
-            }
+            footer={<SidebarFooter profile={profile} onSignOut={handleSignOut} />}
           >
             {showLog && (
               <ProcessingLog status={status === 'analyzing' || status === 'downloading' || status === 'parsing' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'} />
@@ -508,29 +462,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
           {status !== 'idle' && (
             <div className="flex flex-col gap-4">
-              <div className="flex gap-1 p-1 rounded-xl border border-[var(--line)] bg-[rgb(11_14_20_/_0.5)] self-start">
-                {([
-                  { key: 'synthesis', label: 'Synthesis', icon: 'solar:widget-5-linear', disabled: false },
-                  { key: 'graph', label: 'Knowledge Graph', icon: 'solar:share-circle-linear', disabled: graph.nodes.length === 0 },
-                ] as const).map((t) => {
-                  const active = consoleTab === t.key;
-                  const disabled = t.disabled;
-                  return (
-                    <button
-                      key={t.key}
-                      disabled={disabled}
-                      onClick={() => startTransition(() => setConsoleTab(t.key))}
-                      title={disabled ? 'Available once dimensions are synthesized' : undefined}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-none cursor-pointer font-mono text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        active ? 'bg-[var(--accent)] text-[var(--void)] shadow-lg' : 'bg-transparent text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
-                      } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                    >
-                      <Icon icon={t.icon} size={14} />
-                      {t.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <ConsoleTabSwitcher activeTab={consoleTab} hasGraph={graph.nodes.length > 0} onTabChange={setConsoleTab} />
 
               {consoleTab === 'synthesis' ? (
                 <>
@@ -599,124 +531,21 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       const activeItem = rightPanelItems.find(item => item.id === expandedPanel.id);
       if (!activeItem) return null;
 
-      let positioningStyles: React.CSSProperties = {};
-      if (expandedPanel.mode === 'vertical') {
-        positioningStyles = {
-          position: 'absolute',
-          right: '8px',
-          top: '8px',
-          bottom: '8px',
-          width: '390px',
-          zIndex: 60,
-        };
-      } else if (expandedPanel.mode === 'left') {
-        positioningStyles = {
-          position: 'absolute',
-          left: '280px',
-          width: 'calc(100% - 280px - 414px)',
-          top: '400px',
-          bottom: '100px',
-          zIndex: 60,
-        };
-      } else if (expandedPanel.mode === 'diagonal') {
-        positioningStyles = {
-          position: 'absolute',
-          left: '280px',
-          right: '20px',
-          top: '400px',
-          bottom: '100px',
-          zIndex: 60,
-        };
-      }
-
       return (
-        <div 
-          style={positioningStyles}
-          className="border border-[var(--line-strong)] bg-[rgba(15,20,30,0.95)] backdrop-blur-xl rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_1px_rgba(0,242,254,0.15)] flex flex-col min-h-0 overflow-hidden"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--line)] bg-[rgba(20,25,35,0.4)]">
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-              <h3 className="font-mono text-[11px] uppercase tracking-wider font-bold text-[var(--ink)]">
-                Expanded View: {activeItem.title}
-              </h3>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleCopy(expandedPanel.id)}
-                title="Copy"
-                className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
-              >
-                <Icon icon="solar:copy-linear" size={14} />
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => handlePanelExport(expandedPanel.id)}
-                title="Export"
-                className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
-              >
-                <Icon icon="solar:download-linear" size={14} />
-              </button>
-
-              <div className="w-[1px] h-3 bg-[var(--line)] mx-1" />
-
-              <button
-                type="button"
-                onClick={() => startTransition(() => setExpandedPanel({ id: expandedPanel.id, mode: 'vertical' }))}
-                title="Vertical Mode"
-                className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
-                  expandedPanel.mode === 'vertical' ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
-                }`}
-              >
-                <Icon icon="solar:maximize-square-minimalistic-linear" size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => startTransition(() => setExpandedPanel({ id: expandedPanel.id, mode: 'left' }))}
-                title="Left Mode"
-                className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
-                  expandedPanel.mode === 'left' ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
-                }`}
-              >
-                <Icon icon="solar:double-alt-arrow-left-linear" size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => startTransition(() => setExpandedPanel({ id: expandedPanel.id, mode: 'diagonal' }))}
-                title="Diagonal Mode"
-                className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
-                  expandedPanel.mode === 'diagonal' ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
-                }`}
-              >
-                <Icon icon="solar:scale-linear" size={14} />
-              </button>
-
-              <div className="w-[1px] h-3 bg-[var(--line)] mx-1" />
-
-              <button
-                type="button"
-                onClick={() => startTransition(() => setExpandedPanel(null))}
-                title="Close overlay"
-                className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--err)] cursor-pointer flex items-center justify-center transition-colors"
-              >
-                <Icon icon="solar:close-circle-linear" size={16} />
-              </button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-5 hx-custom-scrollbar">
-            {expandedPanel.id === 'knowledge-graph' ? (
-              <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact={false} />
-            ) : (
-              activeItem.content()
-            )}
-          </div>
-        </div>
+        <ExpandedPanelOverlay
+          panelId={expandedPanel.id}
+          mode={expandedPanel.mode}
+          title={activeItem.title}
+          graph={graph}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={handleSelectNode}
+          onFocusNode={(id) => startTransition(() => setSelectedNodeId(id))}
+          onCopy={handleCopy}
+          onExport={handlePanelExport}
+          onModeChange={(id, mode) => startTransition(() => setExpandedPanel({ id: id as 'insights' | 'knowledge-graph' | 'word-cloud' | 'mind-map', mode }))}
+          onClose={() => setExpandedPanel(null)}
+          content={activeItem.content}
+        />
       );
     })()}
     </div>

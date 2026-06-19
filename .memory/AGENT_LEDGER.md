@@ -289,8 +289,13 @@ All Wave 4 chunks verified and merged:
 - [2026-06-19T11:52:00+03:00] [OCT2] [ACK GCT2] Not working on W5-5. No conflict. Proceed.
 - [2026-06-19T12:05:00+03:00] [Antigravity (Agent)] [DONE] Completed /pr-review-workflow on PR #92. Final confidence score 65% (MEDIUM) calculated. PR #92 successfully merged into main and branch deleted.
 - [2026-06-19T12:10:00+03:00] [Antigravity (Agent)] [DONE] Completed Wave 5 deep review and critique. Verified correct layout flow (central column sits cleanly on top of ChatDock with static flex sizing and pb-8 layout), stabilized malformed graph edge console warnings, fixed segment stream completion validation checks based on expected dimensions count, verified environment variables placeholder checks, and resolved vitest ucis-v5-validator.test.ts failures by correcting regex pattern mappings and Dingbat checkmark filtering.
-- [2026-06-19T16:45:00+03:00] [Antigravity (Agent)] [IN_PROGRESS] Wave 6: Decomposing monoliths (SupabasePersistenceAdapter.ts, rules.ts, DashboardContainer.tsx, worker.ts, stripe/webhook/route.ts) using ponytail guidelines.
+- [2026-06-19T17:48:00+03:00] [Antigravity (Agent)] [IN_PROGRESS] Wave 6: Running ponytail-review and ponytail-audit, enabling ponytail mode.
 
+- [2026-06-19T17:30:00+03:00] [OCT2] [IN_PROGRESS] Wave 6: Decomposing worker.ts (656 LOC) → routes/ + middleware/ + thin facade. Targets: worker/src/worker.ts, worker/src/routes/*, worker/src/middleware/*.
+- [2026-06-19T17:50:00+03:00] [GCT2] [IN_PROGRESS] Wave 6 monolith decomposition: worker.ts (656 LOC) → routes/ + middleware/ + thin shell. Targets: worker/src/worker.ts, worker/src/routes/*, worker/src/middleware/*. ETA: 10 min.
+- [2026-06-19T18:00:00+03:00] [GCT2] [DONE] Wave 6 monolith decomposition complete. worker.ts: 656→52 LOC (92% reduction). Created 8 files: routes/analysis.ts (385), routes/metadata.ts (60), routes/transcript.ts (58), routes/health.ts (13), routes/chat.ts (8), middleware/cors.ts (67), middleware/auth.ts (16), middleware/error-handler.ts (22). Total: 681 LOC across 9 files. Build passes. Zero new type errors.
+- [2026-06-19T17:50:00+03:00] [W6-M2] [DONE] Wave 6: Decomposed DashboardContainer.tsx (724→552 LOC). Extracted 3 components into web/components/containers/dashboard/: ConsoleTabSwitcher (40 LOC), SidebarFooter (62 LOC), ExpandedPanelOverlay (119 LOC). DashboardContainer is now a thin composition shell. Type-check: 0 errors.
+- [2026-06-19T17:55:00+03:00] [W6-M3] [DONE] Wave 6: Decomposed web/app/api/stripe/webhook/route.ts (516 LOC) → thin dispatcher (103 LOC) + 3 handler files. Handlers: subscription.ts (175 LOC), invoice.ts (147 LOC), payment-intent.ts (18 LOC), index.ts (119 LOC). Total: 562 LOC across 5 files (net +46 for barrel re-exports + dispatch map). Type-check clean (0 webhook errors, 3 pre-existing unrelated).
 
 
 
