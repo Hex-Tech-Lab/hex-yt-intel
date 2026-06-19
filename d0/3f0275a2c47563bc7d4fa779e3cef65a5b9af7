@@ -1,0 +1,23 @@
+web/components/templates/console/DashboardLayout.tsx
+  s_e6750ccfff01b1::t_46c93afc4d4bca 20,38,52
+web/components/templates/console/DimensionDrawer.tsx
+  s_e6750ccfff01b1::t_fa2d3248adc67c 68-97
+  s_e6750ccfff01b1::t_6ddd94f3e76691 100-150
+  s_e6750ccfff01b1::t_6586c5c71ed92a 152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "d03f0275a2c47563bc7d4fa779e3cef65a5b9af7",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
