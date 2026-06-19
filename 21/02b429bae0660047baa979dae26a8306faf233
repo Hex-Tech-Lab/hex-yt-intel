@@ -1,0 +1,19 @@
+docs/sprints/SPRINT-1.md
+  s_9f5fdbb7b596ef::t_50046347ede296 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "2102b429bae0660047baa979dae26a8306faf233",
+  "prompts": {},
+  "sessions": {
+    "s_9f5fdbb7b596ef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f0f4559ffeUroQBfByhn7LgF",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
