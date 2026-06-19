@@ -1,0 +1,23 @@
+web/lib/adapters/stream-status-tracker.ts
+  s_e6750ccfff01b1::t_504d377e0ae990 82
+web/lib/__tests__/synthesis-stream-adapter.test.ts
+  s_e6750ccfff01b1::t_e9e851af5fdd8d 206-232
+  s_e6750ccfff01b1::t_a43724049ded5a 196-198
+  s_e6750ccfff01b1::t_88f97d2637a427 237-250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "6972d25e4b4f7c13df1e712690c4acd73f10aa36",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
