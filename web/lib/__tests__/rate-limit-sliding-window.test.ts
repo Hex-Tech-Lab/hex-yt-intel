@@ -1,14 +1,45 @@
-/**
- * Test suite for sliding window rate limiting
- * Validates atomicity, boundary conditions, and edge cases
- */
-
+import { vi, beforeEach } from 'vitest';
 import { checkRateLimitSlidingWindow, RATE_LIMITS } from '@/lib/services/traffic';
+
+const mockRedisData = new Map<string, number[]>();
+
+vi.mock('@/lib/redis', () => ({
+  executeRedisScript: vi.fn(async (script: string, keys: string[], args: any[]) => {
+    const key = keys[0]!;
+    const now = Number(args[0]);
+    const window = Number(args[1]);
+    
+    // Simulate Lua script execution
+    if (script.includes('ZADD')) {
+      const limit = Number(args[2]);
+      let timestamps = mockRedisData.get(key) || [];
+      const cutoff = now - window;
+      timestamps = timestamps.filter(t => t > cutoff);
+      
+      const count = timestamps.length;
+      if (count < limit) {
+        timestamps.push(now);
+        mockRedisData.set(key, timestamps);
+        return [1, count + 1];
+      }
+      return [0, count];
+    } else {
+      let timestamps = mockRedisData.get(key) || [];
+      const cutoff = now - window;
+      timestamps = timestamps.filter(t => t > cutoff);
+      return timestamps.length;
+    }
+  }),
+}));
 
 describe('Sliding Window Rate Limiting', () => {
   const tier = 'free';
   const endpoint = 'analyses' as const;
   const createTestUserId = (testName: string): string => `test-user-${Math.random()}-${testName}`;
+
+  beforeEach(() => {
+    mockRedisData.clear();
+  });
 
   describe('Per-minute enforcement', () => {
     it('should allow requests up to tier limit', async () => {

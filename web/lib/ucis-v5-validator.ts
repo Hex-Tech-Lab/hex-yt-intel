@@ -28,16 +28,16 @@ const PATTERNS = {
   dimension10Header: /^###\s+DIMENSION\s+10\s+[–—-]/m,
   apexDeliverables: /Top\s+[35]\s*[–—-]\s*5?\s*Ranked\s+Deliverables/i,
   timestampAnalysis: /Analysis\s+Timestamp[:\s]*`[^`]+`/i,
-  personaFitTag: /Persona\s+Fit[:\s]*\[/i,
-  lensApplied: /Lens\s+applied:\s*\[/i,
+  personaFitTag: /Persona\s+Fit(?:\*\*)?[:\s]*\[/gi,
+  lensApplied: /Lens\s+applied(?:\*\*)?[:\s]*\[/gi,
   allDimensions: /###\s+DIMENSION\s+([1-9]|10)\s+[–—-]/gm,
-  tableStructure: /\|\s*\*\*[^|]+\*\*\s*\|\s*[^|]+\s*\|/,
+  tableStructure: /\|\s*(?:\*\*)?[^|]+(?:\*\*)?\s*\|\s*[^|]+\s*\|/,
   riskDisclosure: /⚠️\s+\*\*Critical\s+Notice\*\*:/i,
   dimensionNotAvailable: /Not\s+available\s+in\s+source\s+content/i,
   classificationTable: /\|\s*Tag\s+\|\s*Status\s+\|/i,
   readDepthGuidance: /Read-Depth\s+Guidance/i,
   filename: /^[a-zA-Z0-9\-\._]+\-[a-zA-Z0-9\-\._]+\-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md$/,
-  inlineTimestamp: /`\d{2}:\d{2}:\d{2}`/,
+  inlineTimestamp: /`\d{2}:\d{2}:\d{2}`/g,
   timestampFormat: /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+[^\s`]+(?:\s+\(Agent\))?)?/,
   emoji: /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}]/gu,
 };
@@ -157,7 +157,9 @@ export class UCISValidator {
       checks.push({ ok: true, section: 'Table Format' });
     }
 
-    const illegalEmoji = output.match(PATTERNS.emoji) || [];
+    const illegalEmoji = (output.match(PATTERNS.emoji) || []).filter(
+      (emoji) => !emoji.includes('\u26a0') && !emoji.includes('\u2713')
+    );
     if (illegalEmoji.length > 0) {
       checks.push({
         ok: false,
@@ -284,7 +286,7 @@ export class UCISValidator {
       checks.push({ ok: true, section: 'Unfair Advantages' });
     }
 
-    const powerQuoteMatches = output.match(/"[^"]{20,200}"\s+`\d{2}:\d{2}:\d{2}`/g) || [];
+    const powerQuoteMatches = output.match(/(?:\*\*)?"[^"]{20,200}"(?:\*\*)?\s+`\d{2}:\d{2}:\d{2}`/g) || [];
     if (powerQuoteMatches.length < 2) {
       checks.push({
         ok: false,
