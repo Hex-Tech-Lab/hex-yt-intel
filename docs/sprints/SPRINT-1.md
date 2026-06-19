@@ -14,11 +14,11 @@
 4. Restore quality engine as CI gate
 
 ### Frontend (P0-P1)
-5. Add `@theme { --radius-*: 0px }` to globals.css
-6. Add `color-scheme: dark` and `theme-color` meta to layout.tsx
-7. Migrate inline styles (ChatDock, TopBar, Sidebar, AnalysisHero) → Tailwind
+1. Add `@theme { --radius-*: 0px }` to globals.css
+2. Add `color-scheme: dark` and `theme-color` meta to layout.tsx
+3. Migrate inline styles (ChatDock, TopBar, Sidebar, AnalysisHero) → Tailwind
 
 ### Architecture (P2)
-8. Split PersistencePort into focused interfaces
-9. Fix Hexagonal boundary violations (6 services, 6 adapters)
-10. Delete dead GraphRAGPort
+1. Split PersistencePort into focused interfaces
+2. Fix Hexagonal boundary violations (6 services, 6 adapters)
+3. Delete dead GraphRAGPort

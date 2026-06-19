@@ -271,7 +271,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                 </div>
                 {!isUser && body && (
                   <div className="flex gap-1.5 ml-0.5">
-                    <button onClick={() => navigator.clipboard?.writeText(body).catch(() => {})} title="Copy" className="grid place-items-center w-6 h-6 rounded-md border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer">
+                    <button onClick={() => navigator.clipboard?.writeText(body).catch((e) => { const msg = e instanceof Error ? e.message : String(e); console.error('[clipboard-copy]', { message: msg }); })} title="Copy" className="grid place-items-center w-6 h-6 rounded-md border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer">
                       <Icon icon="solar:copy-linear" size={13} />
                     </button>
                   </div>

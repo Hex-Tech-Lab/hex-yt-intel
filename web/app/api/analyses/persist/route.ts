@@ -99,7 +99,9 @@ export async function POST(request: NextRequest) {
     try {
       isSigValid = await verifyContentSig(canonical, contentSig);
     } catch (error) {
-      console.error('[analyses/persist] Signature verification failed due to configuration error:', error);
+      const msg = error instanceof Error ? error.message : String(error);
+      Sentry.captureException(error, { contexts: { persist: { phase: 'verifyContentSig', analysisId, videoId } } });
+      console.error('[analyses/persist]', { message: msg, analysisId, videoId });
       return NextResponse.json({ error: 'Security configuration error' }, { status: 500 });
     }
 

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import type { AuthPort, AnalysisPersistencePort, ChatPersistencePort } from '@/lib/ports';
 import { SupabaseAuthAdapter } from '@/lib/adapters/SupabaseAuthAdapter';
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
@@ -46,7 +47,9 @@ export async function verifyResourceOwnership<T>(
 
     return { data: data as T, error: null };
   } catch (error) {
-    console.error('[ownership] DB query failed:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, { contexts: { ownership: { phase: 'verifyResourceOwnership', resourceId, table } } });
+    console.error('[ownership]', { message: msg, resourceId, table });
     return { data: null, error: 'InternalError' };
   }
 }
