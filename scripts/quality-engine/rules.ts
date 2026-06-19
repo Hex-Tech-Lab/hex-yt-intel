@@ -909,7 +909,7 @@ export const ModuleLevelDynamicImportRule: IRule = {
     if (!filePath.includes('.tsx') && !filePath.includes('.jsx')) return findings;
 
     const lines = source.getText().split('\n');
-    lines.forEach((line, _idx) => {
+    lines.forEach((line) => {
       const trimmed = line.trim();
       const importMatch = trimmed.match(/(?:const\s+\w+\s*=\s*)?import\(['"]/);
       if (!importMatch) return;
