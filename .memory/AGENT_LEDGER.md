@@ -140,6 +140,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-19T11:20:00+03:00] [Antigravity (Agent)] [DONE] Resolved PKCE auth callback code verifier loss on Vercel preview by aligning clientEnv URL/Key validations to discard placeholders; resolved login outer div click INP by yielding to event loop via setTimeout(resolve, 0) before OAuth redirect. Targets: web/lib/env.ts, web/app/auth/signin/form.tsx.
 - [2026-06-19T11:45:00+03:00] [Antigravity (Agent)] [IN_PROGRESS] Acknowledging Wave 5 assignment. Starting W5-1 (P7 synthesis-stream-adapter.ts monolith break) and W5-2 (Persist abort state tracking in UI). Target: web/lib/adapters/synthesis-stream-adapter.ts, web/components/templates/console/ChatDock.tsx, etc. Creating branch feat/wave5-complex-tasks.
 - [2026-06-19T12:30:00+03:00] [OCT2] [IN_PROGRESS] PR #91 post-mortem: extract all review tool findings, create generic detection rules, update qa-intel ruleset. Then start W5 quick wins (W5-3, W5-4, W5-5). Will spawn parallel agents for quick wins. Targets: PR comments, scripts/quality-engine/rules.ts, web/components/templates/console/KnowledgeGraphCanvas.tsx, web/components/templates/console/WordCloud.tsx, web/components/templates/console/AnalysisHistory.tsx.
+- [2026-06-19T12:45:00+03:00] [GCT2] [DONE] W5-4: Word Cloud multi-word extraction. Added bigram generation (two-word phrases) and increased token limit from 35 to 50. Verified via type-check.
 
 ---
 
@@ -279,5 +280,11 @@ All Wave 4 chunks verified and merged:
 - graph/route.ts ownership ✅
 
 **Final gates:** type-check 0 errors, lint 0 errors, quality engine 0 critical, worker build pass.
+
+- [2026-06-19T12:00+03:00] [GCT2] [IN_PROGRESS] Wave 5 quick wins: W5-3 KG dynamic rendering, W5-4 Word Cloud multi-word, W5-5 Analysis History status. Spawning parallel agents.
+- [2026-06-19T12:45:00+03:00] [GCT2] [IN_PROGRESS] W5-5 Analysis History status accuracy. Target: web/components/templates/console/AnalysisHistory.tsx, web/hooks/useAnalysisHistory.ts, web/hooks/useSSEStream.ts, web/app/api/analyses/persist/route.ts. Checking with OCT2 for conflict.
+- [2026-06-19T12:45:00+03:00] [GCT2] [NOTE for OCT2] Are you actively working on W5-5 Analysis History status? I'm starting investigation now. If you have progress, please share. If not, I'll proceed. Confirmed by owner? no
+- [2026-06-19T12:00+03:00] [GCT2] [DONE] qa-intel ruleset expanded 29→40 rules. PR #91 post-mortem findings extracted: EnvPlaceholderNamespaceRule, SyncImportBeforeRedirectRule, QuorumTimeoutCompletionRule, ModuleLevelDynamicImportRule, ToastAccessibilityRule, SwallowedErrorRule, StaleStateResetRule, HardcodedDomainLogicRule, StateSyncRule, InsecureFallbackRule, CanvasStaleDataRule.
+- [2026-06-19T11:49:00+03:00] [OCT2] [IN_PROGRESS] W5-3: Fix Knowledge Graph dynamic rendering. Target: web/components/templates/console/KnowledgeGraphCanvas.tsx. Will reduce link thickness, always show weighted labels, add warmup ticks, increase physics cooldown.
 
 
