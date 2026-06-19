@@ -1,0 +1,22 @@
+worker/src/__tests__/chat-stream-requestId.test.ts
+  s_e6750ccfff01b1::t_cc5d110b24a42b 2,8,13,20-35,38,42-62,64-65,67-89,91,93,95,98,100,102,105,107,112,114,120-141,143,145-146,148-151,153-159,161-165,167
+web/lib/adapters/markdown-accumulator.ts
+  s_e6750ccfff01b1::t_ae9a55a005abc6 5-9,38,44-45,48-53
+  s_e6750ccfff01b1::t_c4dab5bdb98a5d 39-43,46-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "a36c9afc241d7e0d9c68f5fdf9ceff6f0c344b4c",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
