@@ -234,13 +234,14 @@ export const InsecureFallbackRule: IRule = {
   }
 };
 
-export function registerSecurityRules(engine: any) {
-  engine.addRule(CredentialLeakRule);
-  engine.addRule(SanitizationRule);
-  engine.addRule(SecretsExposureRule);
-  engine.addRule(AuthSecurityRule);
-  engine.addRule(HmacMessageFormatRule);
-  engine.addRule(UnsafePropertyAccessRule);
-  engine.addRule(EnvPlaceholderNamespaceRule);
-  engine.addRule(InsecureFallbackRule);
+export function registerSecurityRules(engine: unknown) {
+  const e = engine as any;
+  e.addRule(CredentialLeakRule);
+  e.addRule(SanitizationRule);
+  e.addRule(SecretsExposureRule);
+  e.addRule(AuthSecurityRule);
+  e.addRule(HmacMessageFormatRule);
+  e.addRule(UnsafePropertyAccessRule);
+  e.addRule(EnvPlaceholderNamespaceRule);
+  e.addRule(InsecureFallbackRule);
 }

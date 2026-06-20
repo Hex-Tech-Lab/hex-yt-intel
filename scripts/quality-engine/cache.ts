@@ -7,7 +7,7 @@ interface CacheItem<T> {
 }
 
 class InMemoryCache {
-  private store = new Map<string, CacheItem<any>>();
+  private store = new Map<string, CacheItem<unknown>>();
   get<T>(key: string): T | undefined {
     const item = this.store.get(key);
     if (!item) return undefined;

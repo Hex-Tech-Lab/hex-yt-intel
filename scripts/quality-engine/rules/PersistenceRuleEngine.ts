@@ -123,10 +123,11 @@ export const StaleStateResetRule: IRule = {
   }
 };
 
-export function registerPersistenceRules(engine: any) {
-  engine.addRule(PersistResilienceRule);
-  engine.addRule(PersistAbortScopeRule);
-  engine.addRule(RetryFlagInterferenceRule);
-  engine.addRule(QuorumTimeoutCompletionRule);
-  engine.addRule(StaleStateResetRule);
+export function registerPersistenceRules(engine: unknown) {
+  const e = engine as any;
+  e.addRule(PersistResilienceRule);
+  e.addRule(PersistAbortScopeRule);
+  e.addRule(RetryFlagInterferenceRule);
+  e.addRule(QuorumTimeoutCompletionRule);
+  e.addRule(StaleStateResetRule);
 }

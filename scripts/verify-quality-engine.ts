@@ -18,8 +18,8 @@ const project = new Project({
 });
 
 // Load and wrap all legacy rules
-const rules = Object.values(legacyRules).map((legacyRule: any) => {
-  return wrapLegacyRule(legacyRule);
+const rules = Object.values(legacyRules).map((legacyRule: unknown) => {
+  return wrapLegacyRule(legacyRule as any);
 });
 
 // CLI flags
@@ -65,7 +65,7 @@ if (mode === "full" || mode === "watch") {
       console.log("No changed TS/TSX files; falling back to full scan");
       fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     console.error('[qa-intel]', { message, operation: 'git-diff' });
     try {
@@ -120,7 +120,7 @@ async function run() {
       console.error("❌ No baseline found. Run with --baseline first.");
       process.exit(1);
     }
-    const baselineFindings: any[] = JSON.parse(fs.readFileSync(baselinePath, "utf8"));
+    const baselineFindings: {file:string;title:string}[] = JSON.parse(fs.readFileSync(baselinePath, "utf8"));
     const baselineSet = new Set(baselineFindings.map(f => `${f.file}:${f.title}`));
     const newFindings = findings.filter(f => !baselineSet.has(`${f.file}:${f.title}`));
     if (newFindings.length > 0) {

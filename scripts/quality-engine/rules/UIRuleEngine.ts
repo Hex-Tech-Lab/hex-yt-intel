@@ -11,15 +11,16 @@ import {
   CanvasStaleDataRule
 } from "./ui";
 
-export function registerUIRules(engine: any) {
-  engine.addRule(InpAlertBlockerRule);
-  engine.addRule(CanvasHoverReRenderRule);
-  engine.addRule(OverlayCloseCascadeRule);
-  engine.addRule(ValidationOnChangeRule);
-  engine.addRule(UnhandledClipboardPromiseRule);
-  engine.addRule(StartTransitionWrappingRule);
-  engine.addRule(ToastAccessibilityRule);
-  engine.addRule(SwallowedErrorRule);
-  engine.addRule(SyncImportBeforeRedirectRule);
-  engine.addRule(CanvasStaleDataRule);
+export function registerUIRules(engine: unknown) {
+  const e = engine as any;
+  e.addRule(InpAlertBlockerRule);
+  e.addRule(CanvasHoverReRenderRule);
+  e.addRule(OverlayCloseCascadeRule);
+  e.addRule(ValidationOnChangeRule);
+  e.addRule(UnhandledClipboardPromiseRule);
+  e.addRule(StartTransitionWrappingRule);
+  e.addRule(ToastAccessibilityRule);
+  e.addRule(SwallowedErrorRule);
+  e.addRule(SyncImportBeforeRedirectRule);
+  e.addRule(CanvasStaleDataRule);
 }
