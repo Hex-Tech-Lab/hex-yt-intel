@@ -1,0 +1,24 @@
+worker/src/services/PersistService.ts
+  s_9f5fdbb7b596ef::t_dd5c516f4ee17d 49-72,76-141,156,158
+worker/src/routes/analysis.ts
+  s_9f5fdbb7b596ef::t_5848e3a9488021 415,425,427-428,430-443
+  s_9f5fdbb7b596ef::t_cf34f190dd1e13 413,416-424,426
+  s_9f5fdbb7b596ef::t_b9f69c969222e0 261-263
+  s_9f5fdbb7b596ef::t_0d2adbbd4bf2fa 168,189-206,208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "2b31e8c463bd8eba6d1d7a90eb6606a371d7a2b7",
+  "prompts": {},
+  "sessions": {
+    "s_9f5fdbb7b596ef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f0f4559ffeUroQBfByhn7LgF",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
