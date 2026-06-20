@@ -34,7 +34,17 @@ export async function POST(request: NextRequest) {
     const { conversationId, userId, content, contentSig } = parsed.data;
 
     // Tamper check: the worker signed the exact reply text with the shared secret.
-    if (!verifyContentSig(content, contentSig)) {
+    let isSigValid = false;
+    try {
+      isSigValid = await verifyContentSig(content, contentSig);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      Sentry.captureException(error, { contexts: { persist: { phase: 'chat-verifyContentSig', conversationId } } });
+      console.error('[chat/persist]', { message: msg, conversationId });
+      return NextResponse.json({ error: 'Security configuration error' }, { status: 500 });
+    }
+
+    if (!isSigValid) {
       console.warn('[chat/persist] Invalid content signature', { conversationId });
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }

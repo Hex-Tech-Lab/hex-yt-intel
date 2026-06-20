@@ -221,11 +221,26 @@ export class ProcessChatMessageUseCase {
       : await this.modelResolution.resolveModels(tier, 'chat');
 
     // 10. Generate cryptographic stream token
-    const { sig, exp } = await this.tokenCrypto.signChatToken({
-      conversationId,
-      userId,
-      models: chatModels,
-    });
+    let sig: string;
+    let exp: number;
+    try {
+      const token = await this.tokenCrypto.signChatToken({
+        conversationId,
+        userId,
+        models: chatModels,
+      });
+      sig = token.sig;
+      exp = token.exp;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('[ProcessChatMessageUseCase] Token signing failed:', msg);
+      return {
+        type: 'error',
+        code: 'ERR_TOKEN_SIGNING_FAILED',
+        status: 500,
+        message: 'Security configuration error: unable to sign stream token.',
+      };
+    }
 
     return {
       type: 'success',

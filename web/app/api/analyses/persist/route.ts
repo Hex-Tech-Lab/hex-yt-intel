@@ -95,7 +95,17 @@ export async function POST(request: NextRequest) {
     // Tamper check: proves this markdown+payload came from the worker, not a forged caller.
     // Canonical signable matches the worker's canonical = JSON.stringify({ markdown, payload }).
     const canonical = JSON.stringify({ markdown, payload: payload ?? null });
-    if (!verifyContentSig(canonical, contentSig)) {
+    let isSigValid = false;
+    try {
+      isSigValid = await verifyContentSig(canonical, contentSig);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      Sentry.captureException(error, { contexts: { persist: { phase: 'verifyContentSig', analysisId, videoId } } });
+      console.error('[analyses/persist]', { message: msg, analysisId, videoId });
+      return NextResponse.json({ error: 'Security configuration error' }, { status: 500 });
+    }
+
+    if (!isSigValid) {
       console.warn('[analyses/persist] Invalid content signature', { analysisId, videoId });
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }

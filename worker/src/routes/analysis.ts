@@ -158,12 +158,14 @@ function buildStreamResponse(
   req: StreamRequest,
   signingKey: string,
   appUrl: string | undefined,
-  signal: AbortSignal,
+  engineSignal: AbortSignal,
+  persistSignal: AbortSignal,
   waitUntil: (p: Promise<unknown>) => void,
 ): Response {
   const encoder = new TextEncoder();
   let finalText = "";
   let modelUsed = "";
+  let settled = false;
 
   const persistService = new PersistService();
 
@@ -171,7 +173,7 @@ function buildStreamResponse(
     hasContent: () => finalText.length > 0,
     persist: async (status) => {
       const url = appUrl || "https://yt-intel.getmytestdrive.com";
-      return persistService.persist({
+      const persistPromise = persistService.persist({
         analysisId: req.analysisId,
         videoId: req.videoId,
         finalText,
@@ -183,8 +185,29 @@ function buildStreamResponse(
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
       });
+
+      const timeoutPromise = new Promise<boolean>((_, reject) => {
+        const id = setTimeout(() => {
+          clearTimeout(id);
+          settled = true;
+          persistService.persist({
+            analysisId: req.analysisId,
+            videoId: req.videoId,
+            finalText,
+            modelUsed,
+            status: 'failed',
+            activeSecret: signingKey,
+            appUrl: url,
+            validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
+          }).catch(() => {});
+          persistSignal.abort();
+          reject(new Error("Persistence timeout reached (15s)"));
+        }, 15000);
+      });
+
+      return Promise.race([persistPromise, timeoutPromise]);
     },
-    signal,
+    signal: persistSignal,
     waitUntil,
   });
 
@@ -222,7 +245,7 @@ function buildStreamResponse(
               send({ type: "status", ...statusEvent });
             },
           },
-          signal,
+          engineSignal,
         );
 
         if (!result.produced && !result.finalText) {
@@ -235,7 +258,9 @@ function buildStreamResponse(
       } catch (error) {
         send({ type: "error", error: error instanceof Error ? error.message : "stream failed" });
       } finally {
-        atomicPersist.flush();
+        if (!settled) {
+          atomicPersist.flush();
+        }
         controller.close();
       }
     },
@@ -381,9 +406,46 @@ analysis.post("/analyze-llm-stream", async (c) => {
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
 
-  const rawReq = c.req.raw;
-  const clientSignal = rawReq.signal;
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, (p) => c.executionCtx.waitUntil(p));
+  const clientSignal = c.req.raw.signal;
+  const persistController = new AbortController();
+  const persistSignal = persistController.signal;
+
+  // Abort persistence on client disconnect and settle as interrupted
+  if (clientSignal.aborted) {
+    if (!settled) {
+      settled = true;
+      persistService.persist({
+        analysisId: req.analysisId,
+        videoId: req.videoId,
+        finalText: '',
+        modelUsed: '',
+        status: 'interrupted',
+        activeSecret: signingKey,
+        appUrl: req.appUrl || c.env.APP_URL,
+        validate12D: () => true
+      }).catch(() => {});
+      persistController.abort();
+    }
+  } else {
+    clientSignal.addEventListener('abort', () => {
+      if (!settled) {
+        settled = true;
+        persistService.persist({
+          analysisId: req.analysisId,
+          videoId: req.videoId,
+          finalText: '',
+          modelUsed: '',
+          status: 'interrupted',
+          activeSecret: signingKey,
+          appUrl: req.appUrl || c.env.APP_URL,
+          validate12D: () => true
+        }).catch(() => {});
+      }
+      persistController.abort();
+    }, { once: true });
+  }
+
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, (p) => c.executionCtx.waitUntil(p));
 });
 
 export default analysis;

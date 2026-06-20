@@ -46,10 +46,99 @@ export class PersistService {
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
     const contentSig = await hmacHex(options.activeSecret, canonical);
 
+    return this._attemptPersist({
+      ...options,
+      markdown,
+      jsonPayload,
+      valid,
+      contentSig,
+    });
+  }
+
+  async _attemptPersist(params: {
+    analysisId: string;
+    videoId: string;
+    finalText: string;
+    markdown: string;
+    jsonPayload: Record<string, unknown> | null;
+    modelUsed: string;
+    status: 'completed' | 'interrupted';
+    activeSecret: string;
+    appUrl: string;
+    valid: boolean;
+    contentSig: string;
+    chunkIndex?: number;
+    totalChunks?: number;
+  }): Promise<boolean> {
     const maxRetries = 2;
     for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {
       try {
-        const persistRes = await rawFetch(`${options.appUrl}/api/analyses/persist`, {
+        const persistRes = await rawFetch(`${params.appUrl}/api/analyses/persist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(10000),
+          body: JSON.stringify({
+            analysisId: params.analysisId,
+            videoId: params.videoId,
+            markdown: params.markdown,
+            payload: params.jsonPayload,
+            model: params.modelUsed,
+            valid: params.valid,
+            contentSig: params.contentSig,
+            status: params.status,
+            chunkIndex: params.chunkIndex,
+            totalChunks: params.totalChunks,
+          }),
+        });
+        if (persistRes.ok) return true;
+        console.warn(`[persist] ${params.status} persist returned ${persistRes.status}, retrying...`);
+      } catch (e) {
+        console.error(`[persist] ${params.status} persist attempt ${tryIndex + 1}/${maxRetries + 1} failed`, e);
+      }
+      if (tryIndex < maxRetries) {
+        await new Promise(r => setTimeout(r, 500 * (tryIndex + 1)));
+      }
+    }
+    return false;
+  }
+
+  async settleAnalysis(options: {
+    analysisId: string;
+    videoId: string;
+    finalText: string;
+    modelUsed: string;
+    activeSecret: string;
+    appUrl: string;
+    validate12D: (text: string) => boolean;
+    status: 'failed' | 'interrupted';
+  }): Promise<void> {
+    let markdown = options.finalText;
+    let jsonPayload: Record<string, unknown> | null = null;
+
+    const extracted = extractJsonPayload(options.finalText);
+    if (extracted) {
+      const result = UCISPayloadSchema.safeParse(extracted);
+      if (result.success) {
+        jsonPayload = result.data as unknown as Record<string, unknown>;
+      }
+    }
+
+    if (jsonPayload) {
+      try {
+        markdown = reconstructMarkdown(jsonPayload);
+      } catch {
+        markdown = options.finalText;
+      }
+    }
+
+    const valid = options.validate12D(markdown);
+    const canonical = JSON.stringify({ markdown, payload: jsonPayload });
+    const contentSig = await hmacHex(options.activeSecret, canonical);
+
+    const maxRetries = 2;
+    for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {
+      try {
+        await rawFetch(`${options.appUrl}/api/analyses/persist`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: AbortSignal.timeout(10000),
@@ -62,19 +151,15 @@ export class PersistService {
             valid,
             contentSig,
             status: options.status,
-            chunkIndex: options.chunkIndex,
-            totalChunks: options.totalChunks,
           }),
         });
-        if (persistRes.ok) return true;
-        console.warn(`[persist] ${options.status} persist returned ${persistRes.status}, retrying...`);
+        return;
       } catch (e) {
-        console.error(`[persist] ${options.status} persist attempt ${tryIndex + 1}/${maxRetries + 1} failed`, e);
+        console.error(`[settle] ${options.status} settlement attempt ${tryIndex + 1}/${maxRetries + 1} failed`, e);
       }
       if (tryIndex < maxRetries) {
         await new Promise(r => setTimeout(r, 500 * (tryIndex + 1)));
       }
     }
-    return false;
   }
 }

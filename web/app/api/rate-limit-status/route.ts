@@ -30,7 +30,8 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
-import { getRateLimitStatus, getUserTier, RATE_LIMITS } from '@/lib/services/traffic';
+import { getRateLimitStatus, getUserTier } from '@/lib/services/traffic';
+import { RATE_LIMITS } from '@/lib/constants/rate-limits';
 import * as Sentry from '@sentry/nextjs';
 
 interface RateLimitStatusResponse {

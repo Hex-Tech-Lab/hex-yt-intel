@@ -346,4 +346,32 @@ export class SupabaseChatAdapter {
       throw error;
     }
   }
+
+  static async verifyOwnership(params: {
+    conversationId: string;
+    userId: string;
+    select?: string;
+  }): Promise<any | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('chat_conversations')
+        .select(params.select || '*')
+        .eq('id', params.conversationId)
+        .eq('user_id', params.userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabaseChatAdapter] verifyOwnership failed:', error.message);
+        throw error;
+      }
+      return data;
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'verifyOwnership' },
+        extra: { conversationId: params.conversationId, userId: params.userId },
+      });
+      throw error;
+    }
+  }
 }

@@ -13,6 +13,8 @@ export interface VideoMetadata {
   likeCount: number;
   commentCount: number;
   description?: string;
+  channelId?: string;
+  thumbnailUrl?: string | null;
 }
 
 /** Result of the parallel ingestion phase. */

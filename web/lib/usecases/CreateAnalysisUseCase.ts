@@ -1,7 +1,7 @@
 import type {
   MetadataIngestionPort,
   DecodoPort,
-  PersistencePort,
+  AnalysisPersistencePort,
   BillingQuotaPort,
   ModelResolutionPort,
   CryptographicTokenPort,
@@ -50,7 +50,7 @@ export class CreateAnalysisUseCase {
   constructor(
     private metadataIngestion: MetadataIngestionPort,
     private decodo: DecodoPort,
-    private persistence: PersistencePort,
+    private persistence: AnalysisPersistencePort,
     private billingQuota: BillingQuotaPort,
     private modelResolution: ModelResolutionPort,
     private tokenCrypto: CryptographicTokenPort
@@ -91,7 +91,7 @@ export class CreateAnalysisUseCase {
       return { 
         type: 'error', 
         code: 'ERR_QUOTA_EXCEEDED', 
-        status: 403, 
+        status: 402, 
         message: 'Monthly analysis quota exceeded. Please upgrade your plan.' 
       };
     }
@@ -152,11 +152,23 @@ export class CreateAnalysisUseCase {
     });
 
     // Mint HMAC token for streaming worker access
-    const token = await this.tokenCrypto.signAnalysisToken({
-      videoId,
-      analysisId: stub.id,
-      models,
-    });
+    let token;
+    try {
+      token = await this.tokenCrypto.signAnalysisToken({
+        videoId,
+        analysisId: stub.id,
+        models,
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('[CreateAnalysisUseCase] Token signing failed:', msg);
+      return {
+        type: 'error',
+        code: 'ERR_TOKEN_SIGNING_FAILED',
+        status: 500,
+        message: 'Security configuration error: unable to sign streaming token.',
+      };
+    }
 
     return {
       type: 'processing',
