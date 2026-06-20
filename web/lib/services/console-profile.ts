@@ -1,5 +1,6 @@
 import 'server-only';
-import { getSupabaseClientWithAuth } from '@/lib/supabase';
+import { SupabaseAuthAdapter } from '../adapters/SupabaseAuthAdapter';
+import { SupabasePersistenceAdapter } from '../adapters/SupabasePersistenceAdapter';
 
 /**
  * Free-tier monthly analysis allowance. Source of truth is MONTHLY_QUOTAS in
@@ -36,29 +37,25 @@ function computeInitials(name: string | null, email: string): string {
  * authenticated session, letting each route decide where to send the visitor.
  */
 export async function loadConsoleProfile(): Promise<ConsoleProfile | null> {
-  const supabase = await getSupabaseClientWithAuth();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const auth = new SupabaseAuthAdapter();
+  const identity = await auth.authenticate();
+  if (!identity) return null;
 
-  // RLS is disabled on public.users (OAuth signup path); the authed client can
-  // read the caller's own row directly.
-  const { data: row } = await supabase
-    .from('users')
-    .select('email, name, tier, role, analyses_used')
-    .eq('id', user.id)
-    .maybeSingle();
+  const persistence = new SupabasePersistenceAdapter();
+  const row = await persistence.getUserProfile(identity.userId);
+  if (!row) return null;
 
-  const email = (row?.email as string) || user.email || '';
-  const name = (row?.name as string) ?? null;
-  const tier = (row?.tier as string) || 'free';
+  const email = row.email || identity.email || '';
+  const name = row.name;
+  const tier = row.tier || 'free';
 
   return {
-    userId: user.id,
+    userId: identity.userId,
     email,
     name,
     tier,
-    role: (row?.role as string) ?? null,
-    analysesUsed: (row?.analyses_used as number) ?? 0,
+    role: row.role,
+    analysesUsed: row.analysesUsed,
     monthlyLimit: MONTHLY_LIMIT_BY_TIER[tier] ?? null,
     initials: computeInitials(name, email),
   };

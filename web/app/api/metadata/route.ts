@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId } from '@/lib/youtube';
-import { fetchWorkerMetadata } from '@/lib/services/metadata';
+import { WorkerIngestionAdapter } from '@/lib/adapters/WorkerIngestionAdapter';
 import { AnalysisCreateSchema } from '@/lib/types/contracts';
 
 interface MetadataResponse {
@@ -19,20 +19,22 @@ interface MetadataResponse {
   description?: string;
 }
 
+const ingestionAdapter = new WorkerIngestionAdapter();
+
 /** Fetch + shape video metadata for a resolved videoId. Throws on fetch failure. */
 async function resolveMetadata(videoId: string): Promise<MetadataResponse> {
-  const metadata = await fetchWorkerMetadata(videoId);
+  const metadata = await ingestionAdapter.fetchOnlyMetadata(videoId);
   return {
     videoId,
     title: metadata.title,
     channelTitle: metadata.channelTitle,
-    channelId: metadata.channelId,
+    channelId: metadata.channelId || '',
     publishedAt: metadata.publishedAt,
     duration: metadata.duration,
-    viewCount: metadata.viewCount,
-    likeCount: metadata.likeCount,
-    commentCount: metadata.commentCount,
-    thumbnailUrl: metadata.thumbnailUrl,
+    viewCount: String(metadata.viewCount),
+    likeCount: String(metadata.likeCount),
+    commentCount: String(metadata.commentCount),
+    thumbnailUrl: metadata.thumbnailUrl || null,
     description: metadata.description,
   };
 }

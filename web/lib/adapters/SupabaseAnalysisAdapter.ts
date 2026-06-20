@@ -437,4 +437,32 @@ export class SupabaseAnalysisAdapter {
       throw error;
     }
   }
+
+  static async verifyOwnership(params: {
+    analysisId: string;
+    userId: string;
+    select?: string;
+  }): Promise<any | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analyses')
+        .select(params.select || '*')
+        .eq('id', params.analysisId)
+        .eq('user_id', params.userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabaseAnalysisAdapter] verifyOwnership failed:', error.message);
+        throw error;
+      }
+      return data;
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'verifyOwnership' },
+        extra: { analysisId: params.analysisId, userId: params.userId },
+      });
+      throw error;
+    }
+  }
 }

@@ -14,7 +14,6 @@ export interface ChatDockProps {
 }
 
 const OPEN_KEY = 'hx-chatdock-open';
-const BAR_H = 46;
 
 /**
  * Bottom-docked, vertically-collapsible chat sheet. Rendered into DashboardLayout's
@@ -133,32 +132,23 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     else if (e.key === 'Escape') { startTransition(() => { setOpen(false); }); }
   };
 
-  // Shared shell: static position in flex column layout, full width of the column.
-  const shell: React.CSSProperties = {
-    flexShrink: 0,
-    width: '100%',
-    borderTop: '1px solid var(--line)',
-    background: 'rgb(11 14 20 / 0.97)',
-    backdropFilter: 'blur(12px)',
-  };
-
   // --- Collapsed: slim bar -------------------------------------------------
   if (!open) {
     return (
-      <div style={{ ...shell, height: BAR_H, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10 }}>
+      <div className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px]">
         <button
           onClick={() => setOpen(true)}
           aria-label="Open chat"
-          style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: 'transparent', border: 'none', color: 'var(--ink-secondary)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12.5, height: '100%' }}
+          className="flex-1 flex items-center gap-[10px] bg-transparent border-none text-[var(--ink-secondary)] cursor-pointer font-mono text-[12.5px] h-full"
         >
-          <Icon icon="solar:chat-round-dots-bold" size={17} style={{ color: 'var(--accent-ink)' }} />
-          <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Synthesis Chat</span>
-          <span style={{ color: 'var(--ink-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Icon icon="solar:chat-round-dots-bold" size={17} className="text-[var(--accent-ink)]" />
+          <span className="font-semibold text-[var(--ink)]">Synthesis Chat</span>
+          <span className="text-[var(--ink-muted)] overflow-hidden text-ellipsis whitespace-nowrap">
             {activeConv ? `· ${activeConv.title}` : analysisTitle ? `· ask about “${analysisTitle.slice(0, 40)}”` : '· ask anything'}
           </span>
           <PersistStatusIndicator state={persistState} />
         </button>
-        <button onClick={() => setOpen(true)} aria-label="Expand chat" title="Expand" style={iconBtn}>
+        <button onClick={() => setOpen(true)} aria-label="Expand chat" title="Expand" className="grid place-items-center w-7 h-7 rounded-[7px] border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer">
           <Icon icon="solar:alt-arrow-up-linear" size={16} />
         </button>
       </div>
@@ -170,59 +160,53 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     <div
       role="dialog"
       aria-label="Synthesis chat"
-      style={{ ...shell, height: 'min(40vh, 420px)', display: 'flex', flexDirection: 'column' }}
+      className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[min(40vh,_420px)] flex flex-col"
     >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', borderBottom: '1px solid var(--line)', background: 'rgb(26 31 43 / 0.6)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+      <div className="flex items-center justify-between py-[9px] px-3.5 border-b border-[var(--line)] bg-[rgb(26_31_43_/_0.6)]">
+        <div className="flex items-center min-w-0">
           <button
             onClick={() => setShowThreads((v) => !v)}
             title="Switch thread"
-            style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, background: 'transparent', border: 'none', color: 'var(--ink)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 600 }}
+            className="flex items-center gap-2 min-w-0 bg-transparent border-none text-[var(--ink)] cursor-pointer font-mono text-[12.5px] font-semibold"
           >
-            <Icon icon="solar:chat-round-dots-linear" size={16} style={{ color: 'var(--accent-ink)', flexShrink: 0 }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{activeConv?.title || 'New chat'}</span>
-            <Icon icon="solar:alt-arrow-down-linear" size={13} style={{ color: 'var(--ink-muted)', flexShrink: 0 }} />
+            <Icon icon="solar:chat-round-dots-linear" size={16} className="text-[var(--accent-ink)] flex-shrink-0" />
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[220px]">{activeConv?.title || 'New chat'}</span>
+            <Icon icon="solar:alt-arrow-down-linear" size={13} className="text-[var(--ink-muted)] flex-shrink-0" />
           </button>
           <PersistStatusIndicator state={persistState} />
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={handleNew} title="New chat" style={iconBtn}><Icon icon="solar:pen-new-square-linear" size={14} /></button>
-          <button onClick={() => setOpen(false)} aria-label="Collapse chat" title="Collapse" style={iconBtn}><Icon icon="solar:alt-arrow-down-linear" size={16} /></button>
+        <div className="flex gap-1.5">
+          <button onClick={handleNew} title="New chat" className="grid place-items-center w-7 h-7 rounded-[7px] border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:pen-new-square-linear" size={14} /></button>
+          <button onClick={() => setOpen(false)} aria-label="Collapse chat" title="Collapse" className="grid place-items-center w-7 h-7 rounded-[7px] border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:alt-arrow-down-linear" size={16} /></button>
         </div>
       </div>
 
       {/* Thread switcher */}
       {showThreads && (
-        <div style={{ maxHeight: 200, overflowY: 'auto', borderBottom: '1px solid var(--line)', background: 'rgb(8 11 17 / 0.8)' }}>
-          {conversations.length === 0 && <div style={{ padding: 12, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>No conversations yet</div>}
+        <div className="max-h-[200px] overflow-y-auto border-b border-[var(--line)] bg-[rgb(8_11_17_/_0.8)]">
+          {conversations.length === 0 && <div className="p-3 text-[var(--ink-muted)] font-mono text-[11px]">No conversations yet</div>}
           {conversations.map((c) => (
-            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px' }}>
+            <div key={c.id} className="flex items-center gap-1.5 py-0.5 px-2">
               <button
                 onClick={() => { void selectConversation(c.id); setShowThreads(false); }}
-                style={{
-                  flex: 1, minWidth: 0, textAlign: 'left', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  background: c.id === activeId ? 'rgb(6 182 212 / 0.12)' : 'transparent',
-                  color: c.id === activeId ? 'var(--accent-ink)' : 'var(--ink-secondary)',
-                  fontFamily: 'var(--font-mono)', fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  display: 'flex', alignItems: 'center', gap: 7,
-                }}
+                className={`flex-1 min-w-0 text-left p-2 rounded-lg border-none cursor-pointer font-mono text-[11.5px] overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-[7px] ${c.id === activeId ? 'bg-[rgb(6_182_212_/_0.12)] text-[var(--accent-ink)]' : 'bg-transparent text-[var(--ink-secondary)]'}`}
               >
-                {c.analysisId && <Icon icon="solar:link-round-angle-linear" size={12} style={{ flexShrink: 0, opacity: 0.7 }} />}
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.title}</span>
+                {c.analysisId && <Icon icon="solar:link-round-angle-linear" size={12} className="flex-shrink-0 opacity-70" />}
+                <span className="overflow-hidden text-ellipsis">{c.title}</span>
               </button>
-              <button onClick={() => void deleteConversation(c.id)} title="Delete" style={{ ...iconBtn, width: 22, height: 22 }}><Icon icon="solar:trash-bin-minimalistic-linear" size={12} /></button>
+              <button onClick={() => void deleteConversation(c.id)} title="Delete" className="grid place-items-center w-[22px] h-[22px] rounded-[7px] border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:trash-bin-minimalistic-linear" size={12} /></button>
             </div>
           ))}
         </div>
       )}
 
       {/* Messages — centered column for readable line length */}
-      <div ref={listRef} aria-live="polite" style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
-        <div style={{ maxWidth: 820, margin: '0 auto', padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div ref={listRef} aria-live="polite" className="flex-1 overflow-y-auto py-4 px-0">
+        <div className="max-w-[820px] mx-auto px-5 flex flex-col gap-3">
           {messages.length === 0 && !sending && (
-            <div style={{ margin: '24px auto', textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1.6 }}>
-              <Icon icon="solar:chat-square-like-linear" size={28} style={{ color: 'var(--ink-muted)', marginBottom: 8 }} />
+            <div className="my-6 mx-auto text-center text-[var(--ink-muted)] font-mono text-xs leading-[1.6]">
+              <Icon icon="solar:chat-square-like-linear" size={28} className="text-[var(--ink-muted)] mb-2 mx-auto" />
               <div>{analysisTitle ? `Ask about “${analysisTitle.slice(0, 48)}”` : 'Ask anything —'}</div>
               <div>this thread is saved to your history.</div>
             </div>
@@ -231,17 +215,9 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
             const { body, options } = m.role === 'assistant' ? parseAssistant(m.content) : { body: m.content, options: [] as string[] };
             const isUser = m.role === 'user';
             return (
-              <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', gap: 6 }}>
+              <div key={m.id} className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
                 <div 
-                  className={isUser ? "" : "prose prose-invert max-w-none prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1"}
-                  style={{
-                    maxWidth: '80%', padding: '9px 13px', borderRadius: 12, fontSize: 13.5, lineHeight: 1.55,
-                    background: isUser ? 'var(--accent)' : 'rgb(26 31 43 / 0.85)',
-                    color: isUser ? 'var(--void)' : 'var(--ink-secondary)',
-                    border: isUser ? 'none' : '1px solid var(--line)',
-                    borderBottomRightRadius: isUser ? 4 : 12, borderBottomLeftRadius: isUser ? 12 : 4,
-                    whiteSpace: isUser ? 'pre-wrap' : 'normal', wordBreak: 'break-word',
-                  }}
+                  className={isUser ? "max-w-[80%] py-[9px] px-[13px] rounded-xl text-[13.5px] leading-[1.55] bg-[var(--accent)] text-[var(--void)] border-none rounded-br-[4px] whitespace-pre-wrap break-words" : "prose prose-invert max-w-[80%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 py-[9px] px-[13px] rounded-xl text-[13.5px] leading-[1.55] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] rounded-bl-[4px] break-words"}
                 >
                   {isUser ? (
                     body
@@ -294,21 +270,17 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                   )}
                 </div>
                 {!isUser && body && (
-                  <div style={{ display: 'flex', gap: 6, marginLeft: 2 }}>
-                    <button onClick={() => navigator.clipboard?.writeText(body).catch(() => {})} title="Copy" style={turnIconBtn}>
+                  <div className="flex gap-1.5 ml-0.5">
+                    <button onClick={() => navigator.clipboard?.writeText(body).catch((e) => { const msg = e instanceof Error ? e.message : String(e); console.error('[clipboard-copy]', { message: msg }); })} title="Copy" className="grid place-items-center w-6 h-6 rounded-md border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer">
                       <Icon icon="solar:copy-linear" size={13} />
                     </button>
                   </div>
                 )}
                 {!isUser && options.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxWidth: '92%' }}>
+                  <div className="flex flex-wrap gap-1.5 max-w-[92%]">
                     {options.map((opt, i) => (
                       <button key={i} onClick={() => void submit(opt)} disabled={sending}
-                        style={{
-                          padding: '6px 11px', borderRadius: 9999, border: '1px solid var(--accent)',
-                          background: 'rgb(6 182 212 / 0.10)', color: 'var(--accent-ink)', cursor: sending ? 'not-allowed' : 'pointer',
-                          fontFamily: 'var(--font-mono)', fontSize: 11.5, textAlign: 'left',
-                        }}>
+                        className={`py-1.5 px-[11px] rounded-full border border-[var(--accent)] bg-[rgb(6_182_212_/_0.10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         {opt}
                       </button>
                     ))}
@@ -318,9 +290,9 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
             );
           })}
           {sending && (
-            <div style={{ display: 'flex', gap: 5, padding: '9px 13px', alignSelf: 'flex-start' }}>
+            <div className="flex gap-[5px] py-[9px] px-[13px] self-start">
               {[0, 1, 2].map((i) => (
-                <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ink-muted)', animation: `hx-pulse 1.2s ease-in-out ${i * 0.18}s infinite` }} />
+                <span key={i} className="w-1.5 h-1.5 rounded-full bg-[var(--ink-muted)]" style={{ animation: `hx-pulse 1.2s ease-in-out ${i * 0.18}s infinite` }} />
               ))}
             </div>
           )}
@@ -329,8 +301,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       </div>
 
       {/* Composer */}
-      <div style={{ borderTop: '1px solid var(--line)', padding: 12 }}>
-        <div style={{ maxWidth: 820, margin: '0 auto', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+      <div className="border-t border-[var(--line)] p-3">
+        <div className="max-w-[820px] mx-auto flex gap-2 items-end">
           <textarea
             ref={inputRef}
             value={input}
@@ -338,21 +310,13 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
             onKeyDown={onKeyDown}
             rows={1}
             placeholder="Message… (Enter to send, Shift+Enter for newline)"
-            style={{
-              flex: 1, resize: 'none', maxHeight: 140, padding: '10px 12px', borderRadius: 10,
-              border: '1px solid var(--line)', background: 'rgb(8 11 17 / 0.8)', color: 'var(--ink)',
-              fontFamily: 'inherit', fontSize: 13.5, lineHeight: 1.5, outline: 'none',
-            }}
+            className="flex-1 resize-none max-h-[140px] py-2.5 px-3 rounded-lg border border-[var(--line)] bg-[rgb(8_11_17_/_0.8)] text-[var(--ink)] text-[13.5px] leading-normal outline-none hx-field"
           />
           <button
             onClick={() => void handleSend()}
             disabled={!input.trim() || sending}
             aria-label="Send message"
-            style={{
-              flexShrink: 0, width: 40, height: 40, borderRadius: 10, border: 'none', display: 'grid', placeItems: 'center',
-              cursor: !input.trim() || sending ? 'not-allowed' : 'pointer',
-              background: !input.trim() || sending ? 'rgb(51 65 85 / 0.5)' : 'var(--accent)', color: 'var(--void)',
-            }}
+            className={`flex-shrink-0 w-10 h-10 rounded-lg border-none grid place-items-center ${!input.trim() || sending ? 'cursor-not-allowed bg-[rgb(51_65_85_/_0.5)]' : 'cursor-pointer bg-[var(--accent)]'} text-[var(--void)]`}
           >
             <Icon icon="solar:arrow-up-linear" size={18} />
           </button>
@@ -361,16 +325,6 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     </div>
   );
 }
-
-const iconBtn: React.CSSProperties = {
-  display: 'grid', placeItems: 'center', width: 28, height: 28, borderRadius: 7,
-  border: '1px solid var(--line)', background: 'transparent', color: 'var(--ink-muted)', cursor: 'pointer',
-};
-
-const turnIconBtn: React.CSSProperties = {
-  display: 'grid', placeItems: 'center', width: 24, height: 24, borderRadius: 6,
-  border: '1px solid var(--line)', background: 'transparent', color: 'var(--ink-muted)', cursor: 'pointer',
-};
 
 /** Split an assistant reply into its body and the trailing OPTIONS chips. */
 function parseAssistant(content: string): { body: string; options: string[] } {
@@ -422,14 +376,11 @@ function PersistStatusIndicator({ state }: { state: 'idle' | 'saving' | 'saved' 
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--ink-muted)', marginLeft: 8 }}>
+    <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--ink-muted)] ml-2">
       <span
+        className="w-1.5 h-1.5 rounded-full inline-block"
         style={{
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
           backgroundColor: color,
-          display: 'inline-block',
           animation: pulse ? 'hx-pulse 1.2s ease-in-out infinite' : 'none',
         }}
       />

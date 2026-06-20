@@ -20,6 +20,9 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Hex YT Intel | YouTube Synthesis Engine",
   description: "AI-powered intelligence for video content",
+  other: {
+    "theme-color": "#0B0E14",
+  },
 };
 
 // Icons used in interactive elements (buttons, nav, actions)
@@ -31,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} style={{ colorScheme: 'dark' }}>
       <body className="bg-bg text-primary antialiased font-sans min-w-[320px]">
         <Providers>
           {children}

@@ -1,5 +1,6 @@
 import { vi, beforeEach } from 'vitest';
-import { checkRateLimitSlidingWindow, RATE_LIMITS } from '@/lib/services/traffic';
+import { checkRateLimitSlidingWindow } from '@/lib/services/traffic';
+import { RATE_LIMITS } from '@/lib/constants/rate-limits';
 
 const mockRedisData = new Map<string, number[]>();
 

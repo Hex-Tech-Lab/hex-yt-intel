@@ -36,7 +36,7 @@ export interface ValidationReportInput {
   timezone: string;
 }
 
-export interface PersistencePort {
+export interface AnalysisPersistencePort {
   findCachedAnalysis(params: {
     userId: string;
     videoId: string;
@@ -82,14 +82,6 @@ export interface PersistencePort {
   } | null>;
 
   /**
-   * Update the user subscription tier.
-   */
-  updateUserTier(params: {
-    userId: string;
-    tier: 'pro' | 'free';
-  }): Promise<void>;
-
-  /**
    * Find analysis row for server-to-server persistence lookup.
    */
   findAnalysisForPersist(params: {
@@ -114,36 +106,6 @@ export interface PersistencePort {
     model: string | null;
     validationPassed: boolean;
     validationReport: unknown;
-  }): Promise<void>;
-
-  persistKnowledgeGraph(params: {
-    analysisId: string;
-    entities: Array<{
-      label: string;
-      type: string;
-      weight: number;
-      rawNode?: any;
-    }>;
-    relations: Array<{
-      source: string;
-      target: string;
-      relation: string;
-      strength: number;
-      rawEdge?: any;
-    }>;
-  }): Promise<void>;
-
-  getKnowledgeGraph(analysisId: string): Promise<{
-    entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>;
-    relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }>;
-  } | null>;
-
-  /**
-   * Update the billing/quota status of an analysis.
-   */
-  updateBillingStatus(params: {
-    analysisId: string;
-    status: 'processing' | 'completed' | 'failed';
   }): Promise<void>;
 
   persistAnalysisChunk(params: {
@@ -178,4 +140,14 @@ export interface PersistencePort {
     report: any;
     passed: boolean;
   }): Promise<void>;
+
+  /**
+   * Verify if the user owns the analysis and select optional fields.
+   */
+   verifyOwnership(params: {
+    analysisId: string;
+    userId: string;
+    select: string;  // made required
+  }): Promise<any | null>;
 }
+
