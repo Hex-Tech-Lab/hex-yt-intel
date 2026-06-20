@@ -9,7 +9,7 @@ interface CacheItem<T> {
 class InMemoryCache {
   private store = new Map<string, CacheItem<unknown>>();
   get<T>(key: string): T | undefined {
-    const item = this.store.get(key);
+    const item = this.store.get(key) as CacheItem<T> | undefined;
     if (!item) return undefined;
     if (item.expiresAt < Date.now()) {
       this.store.delete(key);
@@ -17,7 +17,7 @@ class InMemoryCache {
     }
     return item.value;
   }
-  set<T>(key: string, value: T, ttlSeconds = 3600) {
+  set<T>(key: string, value: T, ttlSeconds = 3600): void {
     this.store.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
   }
   del(key: string) {
