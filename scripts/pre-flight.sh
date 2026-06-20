@@ -16,9 +16,9 @@ ROOT_DIR=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 
 echo "🛡️  Running pre-flight environment validation..."
 
-# 1. Verify Quality Intelligence Engine (Non-blocking internal helper)
-echo "🔍 Running Quality Intelligence Engine..."
-pnpm exec tsx "$ROOT_DIR/scripts/verify-quality-engine.ts" || echo "⚠️ Quality Engine check skipped or failed."
+# 1. Verify qa-intel (Non-blocking internal helper)
+echo "🔍 Running qa-intel..."
+pnpm exec tsx "$ROOT_DIR/scripts/verify-quality-engine.ts" || echo "⚠️ qa-intel check skipped or failed."
 
 # 2. Run Production Environment Validator (Context-aware)
 echo "🔍 Validating environment schema..."

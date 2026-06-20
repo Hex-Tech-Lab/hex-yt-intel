@@ -266,3 +266,38 @@ export const StateSyncRule: IRule = {
     return findings;
   }
 };
+
+export const GraphAwareBoundaryRule: IRule = {
+  name: "graph-aware-boundary",
+  scope: "graph" as any, // Tell legacy adapter this runs with graph scope
+  check: (source: SourceFile, ctx?: any) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    
+    // Graph boundary checks: only run on domain/usecases files to ensure they don't depend on raw infrastructure
+    if (!filePath.includes('/domain/') && !filePath.includes('/usecases/')) {
+      return findings;
+    }
+
+    const graph = ctx?.graph;
+    if (!graph) return findings;
+
+    const node = graph.get(filePath);
+    if (!node) return findings;
+
+    for (const imp of node.imports) {
+      if (imp.includes("/adapters/") && (imp.includes("supabase") || imp.includes("db") || imp.includes("postgres"))) {
+        findings.push({
+          file: filePath,
+          severity: "critical",
+          title: "Boundary Violation: Domain relies on DB infrastructure in dependency graph",
+          why: `Domain layer file ${filePath} has a direct dependency on adapter file ${imp}.`,
+          fix: "Decouple domain from concrete adapters. Put adapter behind a port interface."
+        });
+      }
+    }
+
+    return findings;
+  }
+};
+
