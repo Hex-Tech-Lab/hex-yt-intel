@@ -1,3 +1,8 @@
+/**
+ * SourceRegistry
+ * Simple, in-memory source map registry with safe, minimal touchpoints.
+ * Excludes parsing and graph mutation concerns to maintain strict SoC.
+ */
 export class SourceRegistry {
   private map = new Map<string, unknown>();
 

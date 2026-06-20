@@ -27,6 +27,7 @@ class InMemoryCache {
 
 class RedisCache extends InMemoryCache {
   private ready = false;
+  private activeWrites = new Map<string, Promise<void>>();
   constructor() {
     super();
     this.init();
@@ -52,24 +53,33 @@ class RedisCache extends InMemoryCache {
       return undefined;
     }
   }
-  async set<T>(key: string, value: T, ttlSeconds = 3600) {
-    try {
-      // Type validation to ensure AST objects (e.g. objects containing complex project/node helpers or ts-morph methods) are not stored.
-      if (value && (typeof value === "object") && ("getFilePath" in value || "getProject" in value || "forEachDescendant" in value)) {
-        throw new Error("Cannot serialize AST/SourceFile objects to RedisCache backend.");
-      }
-      const raw = JSON.stringify(value);
-      await setRedisValue(key, raw, ttlSeconds);
-    } catch (e: any) {
-      const message = e instanceof Error ? e.message : String(e);
-      console.error('[redis-cache]', { message, operation: 'set' });
-      try {
-        const Sentry = await import("@sentry/nextjs");
-        Sentry.captureException(e, { contexts: { operation: 'redis-cache', method: 'set' } });
-      } catch (sentryErr) {
-        console.error('[redis-cache-sentry]', sentryErr);
-      }
+  async set<T>(key: string, value: T, ttlSeconds = 3600): Promise<void> {
+    if (this.activeWrites.has(key)) {
+      return this.activeWrites.get(key);
     }
+    const writePromise = (async () => {
+      try {
+        // Type validation to ensure AST objects (e.g. objects containing complex project/node helpers or ts-morph methods) are not stored.
+        if (value && (typeof value === "object") && ("getFilePath" in value || "getProject" in value || "forEachDescendant" in value)) {
+          throw new Error("Cannot serialize AST/SourceFile objects to RedisCache backend.");
+        }
+        const raw = JSON.stringify(value);
+        await setRedisValue(key, raw, ttlSeconds);
+      } catch (e: any) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error('[redis-cache]', { message, operation: 'set' });
+        try {
+          const Sentry = await import("@sentry/nextjs");
+          Sentry.captureException(e, { contexts: { operation: 'redis-cache', method: 'set' } });
+        } catch (sentryErr) {
+          console.error('[redis-cache-sentry]', sentryErr);
+        }
+      } finally {
+        this.activeWrites.delete(key);
+      }
+    })();
+    this.activeWrites.set(key, writePromise);
+    return writePromise;
   }
   async del(key: string) {
     try {
