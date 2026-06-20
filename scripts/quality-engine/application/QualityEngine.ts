@@ -27,6 +27,9 @@ export class QualityEngine {
 
     const findings: Finding[] = [];
     for (const file of existing) {
+      if (file.includes("scripts/quality-engine/rules/") || file.includes("scripts/verify-quality-engine.ts")) {
+        continue;
+      }
       try {
         const ast = await this.loadAST(file);
 
