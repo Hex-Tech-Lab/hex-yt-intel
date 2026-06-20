@@ -182,12 +182,13 @@ export const ModuleLevelDynamicImportRule: IRule = {
   }
 };
 
-export function registerStreamingRules(engine: any) {
-  engine.addRule(StreamResilienceRule);
-  engine.addRule(BundleContradictionRule);
-  engine.addRule(TranscriptGuardRule);
-  engine.addRule(StreamSettleRule);
-  engine.addRule(CascadeOrderRule);
-  engine.addRule(ProxyPromotionRule);
-  engine.addRule(ModuleLevelDynamicImportRule);
+export function registerStreamingRules(engine: unknown) {
+  const e = engine as any;
+  e.addRule(StreamResilienceRule);
+  e.addRule(BundleContradictionRule);
+  e.addRule(TranscriptGuardRule);
+  e.addRule(StreamSettleRule);
+  e.addRule(CascadeOrderRule);
+  e.addRule(ProxyPromotionRule);
+  e.addRule(ModuleLevelDynamicImportRule);
 }

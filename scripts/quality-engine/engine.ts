@@ -46,7 +46,8 @@ export class QualityIntelligenceEngine {
       const cached = await this.cache.getAST(filePath);
       if (cached) return cached;
     }
-    const source = this.project.addSourceFileAtPath(path.resolve(this.rootDir, filePath));
+    const sanitized = filePath.replace(/\.\.(?:\/|\\|$)/g, "");
+    const source = this.project.addSourceFileAtPath(path.resolve(this.rootDir, sanitized));
     if (this.cache) {
       await this.cache.setAST(filePath, source);
     }

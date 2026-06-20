@@ -1,15 +1,15 @@
 export class SourceRegistry {
-  private map = new Map<string, any>();
+  private map = new Map<string, unknown>();
 
   has(path: string) {
     return this.map.has(path);
   }
 
-  get(path: string) {
+  get(path: string): unknown {
     return this.map.get(path);
   }
 
-  add(path: string, ast: any) {
+  add(path: string, ast: unknown) {
     this.map.set(path, ast);
   }
 }

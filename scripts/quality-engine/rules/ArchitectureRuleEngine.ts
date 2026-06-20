@@ -327,17 +327,18 @@ export const GraphAwareBoundaryRule: IRule = {
   }
 };
 
-export function registerArchitectureRules(engine: any) {
-  engine.addRule(HexagonalBoundaryRule);
-  engine.addRule(ComplexityRule);
-  engine.addRule(ErrorTaxonomyRule);
-  engine.addRule(CrossPlatformRule);
-  engine.addRule(SchemaContractRule);
-  engine.addRule(RedundantValidationRule);
-  engine.addRule(WorkflowRule);
-  engine.addRule(TranscriptUnsafeAccessRule);
-  engine.addRule(HardcodedDomainLogicRule);
-  engine.addRule(StateSyncRule);
-  engine.addRule(CanvasStaleDataRule);
-  engine.addRule(GraphAwareBoundaryRule);
+export function registerArchitectureRules(engine: unknown) {
+  const e = engine as any;
+  e.addRule(HexagonalBoundaryRule);
+  e.addRule(ComplexityRule);
+  e.addRule(ErrorTaxonomyRule);
+  e.addRule(CrossPlatformRule);
+  e.addRule(SchemaContractRule);
+  e.addRule(RedundantValidationRule);
+  e.addRule(WorkflowRule);
+  e.addRule(TranscriptUnsafeAccessRule);
+  e.addRule(HardcodedDomainLogicRule);
+  e.addRule(StateSyncRule);
+  e.addRule(CanvasStaleDataRule);
+  e.addRule(GraphAwareBoundaryRule);
 }

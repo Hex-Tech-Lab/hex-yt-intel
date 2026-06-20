@@ -54,7 +54,7 @@ export class QualityEngine {
     return findings;
   }
 
-  private async loadAST(path: string): Promise<any> {
+  private async loadAST(path: string): Promise<unknown> {
     if (this.registry.has(path)) {
       return this.registry.get(path)!;
     }
@@ -69,8 +69,9 @@ export class QualityEngine {
 
     const ast = await this.loader.load(path);
     try {
-      if (ast && typeof ast.getText === "function") {
-        await this.cache?.setAST(path, ast.getText());
+      const astAny = ast as any;
+      if (astAny && typeof astAny.getText === "function") {
+        await this.cache?.setAST(path, astAny.getText());
       } else {
         await this.cache?.setAST(path, String(ast));
       }

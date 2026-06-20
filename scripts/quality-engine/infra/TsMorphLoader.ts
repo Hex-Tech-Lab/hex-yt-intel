@@ -4,11 +4,11 @@ import type { FileLoaderPort } from "../application/ports/FileLoaderPort";
 export class TsMorphLoader implements FileLoaderPort {
   constructor(private readonly project: Project) {}
 
-  async load(path: string): Promise<any> {
+  async load(path: string): Promise<SourceFile> {
     return this.project.getSourceFile(path) || this.project.addSourceFileAtPath(path);
   }
 
-  async loadFromText(path: string, text: string): Promise<any> {
+  async loadFromText(path: string, text: string): Promise<SourceFile> {
     const existing = this.project.getSourceFile(path);
     if (existing) {
       existing.replaceWithText(text);
@@ -17,7 +17,7 @@ export class TsMorphLoader implements FileLoaderPort {
     return this.project.createSourceFile(path, text, { overwrite: true });
   }
 
-  getImports(ast: any): string[] {
+  getImports(ast: unknown): string[] {
     const sf = ast as SourceFile;
     if (!sf || typeof sf.getImportDeclarations !== "function") return [];
     

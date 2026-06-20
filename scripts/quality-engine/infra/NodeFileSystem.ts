@@ -8,6 +8,8 @@ export class NodeFileSystem implements FileSystemPort {
   }
 
   resolve(p: string): string {
-    return path.resolve(p);
+    // Sanitize path parameter to prevent path traversal (e.g. resolve user input ../)
+    const sanitized = p.replace(/\.\.(?:\/|\\|$)/g, "");
+    return path.resolve(process.cwd(), sanitized);
   }
 }
