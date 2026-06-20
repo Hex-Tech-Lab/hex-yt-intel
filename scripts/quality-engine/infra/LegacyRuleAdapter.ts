@@ -1,18 +1,18 @@
 import type { Rule, RuleContext } from "../domain/Rule";
 import type { Finding } from "../domain/Finding";
 
-// Define a structural interface for the legacy IRule to avoid circular dependency
 export interface LegacyIRule {
   name: string;
-  check: (source: any) => Finding[];
+  scope?: "file" | "neighbors" | "graph";
+  check: (source: any, ctx?: any) => Finding[];
 }
 
 export function wrapLegacyRule(legacyRule: LegacyIRule): Rule {
   return {
     name: legacyRule.name,
-    scope: "file",
+    scope: legacyRule.scope ?? "file",
     check(ctx: RuleContext): Finding[] {
-      return legacyRule.check(ctx.ast);
+      return legacyRule.check(ctx.ast, ctx);
     }
   };
 }
