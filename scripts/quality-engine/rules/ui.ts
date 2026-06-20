@@ -56,6 +56,23 @@ export const CanvasHoverReRenderRule: IRule = {
         fix: "Use useRef for hoverId + imperative canvas redraw. Call drawCanvas() directly instead of setState."
       });
     }
+
+    // Hover triggers synchronous state re-render check (CRBench)
+    if (text.includes('onMouseEnter') || text.includes('onMouseLeave')) {
+      const stateSetters = text.match(/onMouseEnter\s*=\s*\{\s*\(\s*\)\s*=>\s*set(Hovered|Hover|Active|Selected)\([^}]*\)\s*\}/gi);
+      if (stateSetters && stateSetters.length > 0) {
+        if (!text.includes('useTransition') && !text.includes('startTransition')) {
+          findings.push({
+            file: filePath,
+            severity: "medium",
+            title: "Performance: Hover triggers synchronous state re-render",
+            why: "Direct state setting on hover events forces synchronous React rendering on mouse interactions.",
+            fix: "Wrap hover state updates inside React startTransition or use transition deferral hook."
+          });
+        }
+      }
+    }
+
     return findings;
   }
 };

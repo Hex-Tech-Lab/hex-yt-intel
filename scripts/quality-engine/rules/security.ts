@@ -44,6 +44,35 @@ export const SanitizationRule: IRule = {
         });
       }
     }
+
+    // Path Traversal Risk (Juliet/SARD CWE-22)
+    source.forEachDescendant((node) => {
+      if (Node.isCallExpression(node)) {
+        const expr = node.getExpression().getText();
+        if (expr === "path.join" || expr === "path.resolve" || expr === "join" || expr === "resolve") {
+          const args = node.getArguments();
+          for (const arg of args) {
+            const argText = arg.getText();
+            if (
+              (argText.includes("input") || argText.includes("user") || argText.includes("param") || argText.includes("path") || argText.includes("p")) &&
+              !argText.includes("replace") &&
+              !argText.includes("sanitize") &&
+              !argText.includes("sanitized")
+            ) {
+              findings.push({
+                file: filePath,
+                severity: "high",
+                title: "Path Traversal Risk: Unsanitized path construction",
+                why: `Potential user input '${argText}' passed to ${expr} without validation.`,
+                fix: "Sanitize parameter before path resolution: use .replace(/\\.\\.(?:\\/|\\\\|$)/g, '') or validate against a safe whitelist."
+              });
+              break;
+            }
+          }
+        }
+      }
+    });
+
     return findings;
   }
 };
@@ -71,6 +100,28 @@ export const SecretsExposureRule: IRule = {
               why: `Potential secret/key field '${sensitivePatterns.find(p => args.toLowerCase().includes(p))}' passed to ${expr}.`,
               fix: "Redact sensitive values before passing to Sentry/logs: replace with '[REDACTED]' or hash."
             });
+          }
+        }
+      }
+
+      // Hardcoded Secret Assignment (Juliet/SARD CWE-259)
+      if (Node.isVariableDeclaration(node) || Node.isPropertyDeclaration(node)) {
+        const nameNode = node.getNameNode();
+        const name = nameNode ? nameNode.getText() : "";
+        const sensitivePatterns = ['dbpass', 'password', 'passwd', 'secretkey', 'privatekey'];
+        if (sensitivePatterns.some(p => name.toLowerCase().includes(p))) {
+          const initializer = node.getInitializer();
+          if (initializer && Node.isStringLiteral(initializer)) {
+            const literalText = initializer.getLiteralText();
+            if (literalText.length > 0 && !literalText.startsWith("process.env.")) {
+              findings.push({
+                file: filePath,
+                severity: "critical",
+                title: "Security: Hardcoded password/secret assignment",
+                why: `Sensitive variable '${name}' initialized with a plaintext string literal.`,
+                fix: "Load sensitive secrets exclusively from environment variables (e.g. process.env.DATABASE_PASSWORD)."
+              });
+            }
           }
         }
       }
@@ -234,6 +285,49 @@ export const InsecureFallbackRule: IRule = {
   }
 };
 
+export const SqlInjectionRule: IRule = {
+  name: "sql-injection-detector",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    if (text.includes("SELECT") || text.includes("INSERT") || text.includes("UPDATE") || text.includes("DELETE")) {
+      source.forEachDescendant((node) => {
+        if (Node.isTemplateExpression(node)) {
+          const literalText = node.getText();
+          if (literalText.includes("SELECT") || literalText.includes("INSERT") || literalText.includes("UPDATE")) {
+            findings.push({
+              file: filePath,
+              severity: "critical",
+              title: "SQL Injection Risk: Direct string interpolation in SQL query",
+              why: "Query constructed using string interpolation or variables directly.",
+              fix: "Replace template variables with parameterized query placeholders (e.g. $1, ?) and pass values via arguments."
+            });
+          }
+        }
+        if (Node.isBinaryExpression(node)) {
+          const operator = node.getOperatorToken().getKind();
+          if (operator === SyntaxKind.PlusToken) {
+            const nodeText = node.getText();
+            if (nodeText.includes("SELECT") || nodeText.includes("INSERT") || nodeText.includes("UPDATE")) {
+              findings.push({
+                file: filePath,
+                severity: "critical",
+                title: "SQL Injection Risk: Direct string concatenation in SQL query",
+                why: "Query constructed using string concatenation directly.",
+                fix: "Replace concatenation with parameterized query placeholders (e.g. $1, ?) and pass values via arguments."
+              });
+            }
+          }
+        }
+      });
+    }
+
+    return findings;
+  }
+};
+
 export function registerSecurityRules(engine: unknown) {
   const e = engine as any;
   e.addRule(CredentialLeakRule);
@@ -244,4 +338,5 @@ export function registerSecurityRules(engine: unknown) {
   e.addRule(UnsafePropertyAccessRule);
   e.addRule(EnvPlaceholderNamespaceRule);
   e.addRule(InsecureFallbackRule);
+  e.addRule(SqlInjectionRule);
 }
