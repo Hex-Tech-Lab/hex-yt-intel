@@ -1,95 +1,28 @@
 import { QualityIntelligenceEngine } from "./quality-engine/engine";
-import { 
-    HexagonalBoundaryRule, 
-    CredentialLeakRule, 
-    WorkflowRule, 
-    ComplexityRule,
-    SanitizationRule,
-    SecretsExposureRule,
-    AuthSecurityRule,
-    ErrorTaxonomyRule,
-    CrossPlatformRule,
-    StreamResilienceRule,
-    SchemaContractRule,
-    RedundantValidationRule,
-    PersistResilienceRule,
-    BundleContradictionRule,
-    TranscriptGuardRule,
-    StreamSettleRule,
-    CascadeOrderRule,
-    ProxyPromotionRule,
-    InpAlertBlockerRule,
-    CanvasHoverReRenderRule,
-    OverlayCloseCascadeRule,
-    ValidationOnChangeRule,
-    HmacMessageFormatRule,
-    UnhandledClipboardPromiseRule,
-    RetryFlagInterferenceRule,
-    PersistAbortScopeRule,
-    UnsafePropertyAccessRule,
-    StartTransitionWrappingRule,
-    TranscriptUnsafeAccessRule,
-    EnvPlaceholderNamespaceRule,
-    SyncImportBeforeRedirectRule,
-    QuorumTimeoutCompletionRule,
-    ModuleLevelDynamicImportRule,
-    ToastAccessibilityRule,
-    SwallowedErrorRule,
-    StaleStateResetRule,
-    HardcodedDomainLogicRule,
-    StateSyncRule,
-    InsecureFallbackRule,
-    CanvasStaleDataRule
-} from "./quality-engine/rules";
+import { SecurityRuleEngine } from "./quality-engine/rules/SecurityRuleEngine";
+import { StreamingRuleEngine } from "./quality-engine/rules/StreamingRuleEngine";
+import { UIRuleEngine } from "./quality-engine/rules/UIRuleEngine";
+import { ArchitectureRuleEngine } from "./quality-engine/rules/ArchitectureRuleEngine";
+import { PersistenceRuleEngine } from "./quality-engine/rules/PersistenceRuleEngine";
 import * as glob from "glob";
 
 const engine = new QualityIntelligenceEngine(process.cwd());
 
-// Register Rules
-engine.addRule(HexagonalBoundaryRule);
-engine.addRule(CredentialLeakRule);
-engine.addRule(WorkflowRule);
-engine.addRule(ComplexityRule);
-engine.addRule(SanitizationRule);
-engine.addRule(SecretsExposureRule);
-engine.addRule(AuthSecurityRule);
-engine.addRule(ErrorTaxonomyRule);
-engine.addRule(CrossPlatformRule);
-engine.addRule(StreamResilienceRule);
-engine.addRule(SchemaContractRule);
-engine.addRule(RedundantValidationRule);
-engine.addRule(PersistResilienceRule);
-engine.addRule(BundleContradictionRule);
-engine.addRule(TranscriptGuardRule);
-engine.addRule(StreamSettleRule);
-engine.addRule(CascadeOrderRule);
-engine.addRule(ProxyPromotionRule);
-// PR #91: INP, Security, Retry, Type Safety rules
-engine.addRule(InpAlertBlockerRule);
-engine.addRule(CanvasHoverReRenderRule);
-engine.addRule(OverlayCloseCascadeRule);
-engine.addRule(ValidationOnChangeRule);
-engine.addRule(HmacMessageFormatRule);
-engine.addRule(UnhandledClipboardPromiseRule);
-engine.addRule(RetryFlagInterferenceRule);
-engine.addRule(PersistAbortScopeRule);
-engine.addRule(UnsafePropertyAccessRule);
-engine.addRule(StartTransitionWrappingRule);
-engine.addRule(TranscriptUnsafeAccessRule);
-// PR #91 Post-Mortem: Auth, INP, Error Handling, State, Domain rules
-engine.addRule(EnvPlaceholderNamespaceRule);
-engine.addRule(SyncImportBeforeRedirectRule);
-engine.addRule(QuorumTimeoutCompletionRule);
-engine.addRule(ModuleLevelDynamicImportRule);
-engine.addRule(ToastAccessibilityRule);
-engine.addRule(SwallowedErrorRule);
-engine.addRule(StaleStateResetRule);
-engine.addRule(HardcodedDomainLogicRule);
-engine.addRule(StateSyncRule);
-engine.addRule(InsecureFallbackRule);
-engine.addRule(CanvasStaleDataRule);
+const securityAgent = new SecurityRuleEngine();
+securityAgent.registerRules(engine);
 
-// Scan files
+const streamingAgent = new StreamingRuleEngine();
+streamingAgent.registerRules(engine);
+
+const uiAgent = new UIRuleEngine();
+uiAgent.registerRules(engine);
+
+const architectureAgent = new ArchitectureRuleEngine();
+architectureAgent.registerRules(engine);
+
+const persistenceAgent = new PersistenceRuleEngine();
+persistenceAgent.registerRules(engine);
+
 const files = glob.sync('{web,worker}/**/*.{ts,tsx}', { ignore: '**/node_modules/**' }).map(f => f.replace(/\\/g, "/"));
 
 if (files.length === 0) {

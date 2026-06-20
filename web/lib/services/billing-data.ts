@@ -26,13 +26,9 @@ export async function fetchUnifiedBillingData(userId: string): Promise<UnifiedBi
 
   if (!userData) throw new Error('User not found');
 
-  // 2. Usage Stats (Last 30 days)
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-const usageLogCount = await persistence.getUsageLogsCountSince({ userId, since });
-
-   const usageStats = {
-     all: usageLogCount
-   };
+   // 2. Usage Stats (Last 30 days)
+   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+   const usageStats = await persistence.getUsageLogsCountSince({ userId, since });
 
   // 3. Provider-specific Invoice logic
   let invoices: any[] = [];

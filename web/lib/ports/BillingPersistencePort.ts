@@ -28,7 +28,7 @@ export interface BillingPersistencePort {
   getUsageLogsCountSince(params: {
     userId: string;
     since: string;
-  }): Promise<number>;
+  }): Promise<Record<string, number>>;
 
   getMonthlyAnalyses(params: {
     userId: string;

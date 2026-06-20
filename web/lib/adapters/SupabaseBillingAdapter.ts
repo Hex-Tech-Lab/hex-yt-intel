@@ -127,15 +127,15 @@ export class SupabaseBillingAdapter {
     }
   }
 
-   static async getUsageLogsCountSince(params: {
+static async getUsageLogsCountSince(params: {
      userId: string;
      since: string;
-   }): Promise<number> {
+   }): Promise<Record<string, number>> {
      try {
        const service = getSupabaseServiceClient();
-       const { error, count } = await service
+       const { data, error } = await service
          .from('usage_logs')
-         .select('*', { count: 'exact', head: true })
+         .select('action')
          .eq('user_id', params.userId)
          .gte('created_at', params.since);
 
@@ -143,7 +143,11 @@ export class SupabaseBillingAdapter {
          console.error('[SupabaseBillingAdapter] getUsageLogsCountSince failed:', error.message);
          throw error;
        }
-       return count ?? 0;
+       const counts: Record<string, number> = {};
+       for (const row of data || []) {
+         counts[row.action] = (counts[row.action] || 0) + 1;
+       }
+       return counts;
      } catch (error: any) {
        Sentry.captureException(error, {
          tags: { method: 'getUsageLogsCountSince' },

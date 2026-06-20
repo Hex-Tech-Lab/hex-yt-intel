@@ -255,7 +255,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseBillingAdapter.getUserBillingConfig(userId);
   }
 
-  getUsageLogsCountSince(params: { userId: string; since: string }): Promise<number> {
+  getUsageLogsCountSince(params: { userId: string; since: string }): Promise<Record<string, number>> {
     return SupabaseBillingAdapter.getUsageLogsCountSince(params);
   }
 
