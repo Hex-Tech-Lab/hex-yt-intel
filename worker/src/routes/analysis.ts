@@ -165,6 +165,7 @@ function buildStreamResponse(
   const encoder = new TextEncoder();
   let finalText = "";
   let modelUsed = "";
+  let settled = false;
 
   const persistService = new PersistService();
 
@@ -185,16 +186,26 @@ function buildStreamResponse(
         totalChunks: req.totalChunks,
       });
 
-        const timeoutPromise = new Promise<boolean>((_, reject) => {
-          const id = setTimeout(() => {
-            clearTimeout(id);
-            // Abort the persistence operation to prevent duplicate concurrent persists
-            persistSignal.abort();
-            reject(new Error("Persistence timeout reached (15s)"));
-          }, 15000);
-        });
+      const timeoutPromise = new Promise<boolean>((_, reject) => {
+        const id = setTimeout(() => {
+          clearTimeout(id);
+          settled = true;
+          persistService.persist({
+            analysisId: req.analysisId,
+            videoId: req.videoId,
+            finalText,
+            modelUsed,
+            status: 'failed',
+            activeSecret: signingKey,
+            appUrl: url,
+            validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
+          }).catch(() => {});
+          persistSignal.abort();
+          reject(new Error("Persistence timeout reached (15s)"));
+        }, 15000);
+      });
 
-        return Promise.race([persistPromise, timeoutPromise]);
+      return Promise.race([persistPromise, timeoutPromise]);
     },
     signal: persistSignal,
     waitUntil,
@@ -247,7 +258,9 @@ function buildStreamResponse(
       } catch (error) {
         send({ type: "error", error: error instanceof Error ? error.message : "stream failed" });
       } finally {
-        atomicPersist.flush();
+        if (!settled) {
+          atomicPersist.flush();
+        }
         controller.close();
       }
     },
@@ -397,11 +410,37 @@ analysis.post("/analyze-llm-stream", async (c) => {
   const persistController = new AbortController();
   const persistSignal = persistController.signal;
 
-  // Abort persistence on client disconnect
+  // Abort persistence on client disconnect and settle as interrupted
   if (clientSignal.aborted) {
-    persistController.abort();
+    if (!settled) {
+      settled = true;
+      persistService.persist({
+        analysisId: req.analysisId,
+        videoId: req.videoId,
+        finalText: '',
+        modelUsed: '',
+        status: 'interrupted',
+        activeSecret: signingKey,
+        appUrl: req.appUrl || c.env.APP_URL,
+        validate12D: () => true
+      }).catch(() => {});
+      persistController.abort();
+    }
   } else {
-    clientSignal.addEventListener("abort", () => {
+    clientSignal.addEventListener('abort', () => {
+      if (!settled) {
+        settled = true;
+        persistService.persist({
+          analysisId: req.analysisId,
+          videoId: req.videoId,
+          finalText: '',
+          modelUsed: '',
+          status: 'interrupted',
+          activeSecret: signingKey,
+          appUrl: req.appUrl || c.env.APP_URL,
+          validate12D: () => true
+        }).catch(() => {});
+      }
       persistController.abort();
     }, { once: true });
   }
