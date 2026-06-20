@@ -15,13 +15,22 @@ export interface IRule {
   check: (source: SourceFile) => Finding[];
 }
 
+export interface EngineConfig {
+  cache?: {
+    getAST(filePath: string): Promise<SourceFile | undefined>;
+    setAST(filePath: string, src: SourceFile): Promise<void>;
+  };
+}
+
 export class QualityIntelligenceEngine {
   private project: Project;
   private rules: IRule[] = [];
   private rootDir: string;
+  private cache: EngineConfig["cache"] | undefined;
 
-  constructor(rootDir: string) {
+  constructor(rootDir: string, config?: EngineConfig) {
     this.rootDir = rootDir;
+    this.cache = config?.cache;
     this.project = new Project({
       tsConfigFilePath: path.join(rootDir, "tsconfig.json"),
       skipAddingFilesFromTsConfig: true,
@@ -32,21 +41,37 @@ export class QualityIntelligenceEngine {
     this.rules.push(rule);
   }
 
-  analyze(changedFiles: string[]): Finding[] {
+  private async getOrParseSourceFile(filePath: string): Promise<SourceFile> {
+    if (this.cache) {
+      const cached = await this.cache.getAST(filePath);
+      if (cached) return cached;
+    }
+    const source = this.project.addSourceFileAtPath(path.resolve(this.rootDir, filePath));
+    if (this.cache) {
+      await this.cache.setAST(filePath, source);
+    }
+    return source;
+  }
+
+  async analyze(changedFiles: string[]): Promise<Finding[]> {
     const findings: Finding[] = [];
     // Only analyze files that exist in the project
     const files = changedFiles
-        .map(f => path.resolve(this.rootDir, f))
-        .filter(f => fs.existsSync(f))
-        .map(f => this.project.addSourceFileAtPath(f));
+      .map(f => path.resolve(this.rootDir, f))
+      .filter(f => fs.existsSync(f));
 
-    for (const source of files) {
-      for (const rule of this.rules) {
-        try {
-          findings.push(...rule.check(source));
-        } catch (error) {
-          console.error(`Rule "${rule.name}" failed on file ${source.getFilePath()}:`, error);
+    for (const filePath of files) {
+      try {
+        const source = await this.getOrParseSourceFile(filePath);
+        for (const rule of this.rules) {
+          try {
+            findings.push(...rule.check(source));
+          } catch (error) {
+            console.error(`Rule "${rule.name}" failed on file ${source.getFilePath()}:`, error);
+          }
         }
+      } catch (error) {
+        console.error(`Failed to process file ${filePath}:`, error);
       }
     }
     return findings;
