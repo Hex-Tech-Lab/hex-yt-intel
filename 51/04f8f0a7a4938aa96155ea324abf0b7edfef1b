@@ -1,0 +1,80 @@
+web/lib/services/traffic.ts
+  s_9f5fdbb7b596ef::t_79b3d43af3957d 119-142
+  s_9f5fdbb7b596ef::t_863becd6ef0202 143
+  s_9f5fdbb7b596ef::t_384c1d5a186680 118
+web/lib/services/ownership.ts
+  s_cdf509defbbcf8::t_e0256e1bc02902 22-30
+web/lib/adapters/RedisTrafficAdapter.ts
+  s_9f5fdbb7b596ef::t_fccbaa49c8582c 6
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_4d63beea53b56b::t_9972d5ee3a00d6 338-345
+  s_9f5fdbb7b596ef::t_adab245da1cbea 258
+web/lib/ports/BillingPersistencePort.ts
+  s_9f5fdbb7b596ef::t_d0b881805a70dc 31
+.memory/AGENT_LEDGER.md
+  s_9f5fdbb7b596ef::t_0dba4fa904d45a 368
+pnpm-workspace.yaml
+  s_9f5fdbb7b596ef::t_53b0ea09e1d475 30-31
+worker/src/routes/analysis.ts
+  s_3ba94a6dfa1ad8::t_34121db7b275b6 188-197
+web/lib/ports/AnalysisPersistencePort.ts
+  s_9f5fdbb7b596ef::t_8d3c3a60c31dd9 147,150
+web/lib/adapters/SettingsModelAdapter.ts
+  s_66220db3328bce::t_351a06246282cf 109
+  s_66220db3328bce::t_9714e712105caa 30-61
+web/lib/adapters/PostgresBillingAdapter.ts
+  s_66220db3328bce::t_96d75c1bb91571 39-41,43-51,53-54,56-70,73-78
+web/lib/services/billing-data.ts
+  s_9f5fdbb7b596ef::t_bb7ec1afdc6f01 31,33-35
+web/lib/adapters/SupabaseBillingAdapter.ts
+  s_9f5fdbb7b596ef::t_6175f1dcf7edf6 130-135,137-140,142-154
+  s_9f5fdbb7b596ef::t_db962b671f1c64 136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "5104f8f0a7a4938aa96155ea324abf0b7edfef1b",
+  "prompts": {},
+  "sessions": {
+    "s_3ba94a6dfa1ad8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11df92713ffeK5oaTfN3EFEqZs",
+        "model": "openrouter/free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_4d63beea53b56b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11df93988ffezXGz5nqd7WAnFk",
+        "model": "openrouter/free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_66220db3328bce": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11df92e0dffe5vZPG7w4nyV8rn",
+        "model": "openrouter/free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_9f5fdbb7b596ef": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11f0f4559ffeUroQBfByhn7LgF",
+        "model": "mimo-v2.5-free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_cdf509defbbcf8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_11e0076d3ffeeRJ0yfB7ILA7Qr",
+        "model": "openrouter/free"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
