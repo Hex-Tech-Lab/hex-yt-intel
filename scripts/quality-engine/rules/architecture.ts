@@ -35,7 +35,7 @@ export const ComplexityRule: IRule = {
     check: (source: SourceFile) => {
       const findings: Finding[] = [];
       const filePath = source.getFilePath().replace(/\\/g, "/");
-      const lines = source.getText().split('\n').length;
+      const lines = source.getText().split(/\r?\n/).length;
       if (lines > 500) {
         findings.push({
             file: filePath,

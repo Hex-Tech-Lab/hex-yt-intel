@@ -66,7 +66,14 @@ if (mode === "full" || mode === "watch") {
       fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
     }
   } catch (e: any) {
-    console.warn("Git diff failed, falling back to full scan:", e.message);
+    const message = e instanceof Error ? e.message : String(e);
+    console.error('[quality-engine]', { message, operation: 'git-diff' });
+    try {
+      const Sentry = await import("@sentry/nextjs");
+      Sentry.captureException(e, { contexts: { operation: 'quality-engine', method: 'git-diff' } });
+    } catch (sentryErr) {
+      console.error('[quality-engine-sentry]', sentryErr);
+    }
     fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
   }
 }

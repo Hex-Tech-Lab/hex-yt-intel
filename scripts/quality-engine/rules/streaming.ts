@@ -31,7 +31,7 @@ export const BundleContradictionRule: IRule = {
         text.includes('ONLY generate') &&
         !text.includes('skipAllDimensionsInstruction')) {
       findings.push({
-        file: source.getFilePath(),
+        file: source.getFilePath().replace(/\\/g, "/"),
         severity: "critical",
         title: "Prompt: Contradictory instructions — 'all dims' + 'only these dims'",
         why: "LLM sees both 'All 11 dims' AND 'ONLY these dims'. LLM follows the first. The focus section is ignored.",
@@ -113,16 +113,31 @@ export const ProxyPromotionRule: IRule = {
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
-    if (!filePath.includes('wrangler.toml')) return findings;
+    
+    // Check wrangler.toml directly if scanned, or look for proxy URL patterns in TS code
     const text = source.getText();
-    if (text.includes('RESIDENTIAL_PROXY_URL') && !text.includes('wrangler secret put')) {
-      findings.push({
-        file: filePath,
-        severity: "high",
-        title: "Config: Proxy credential documented but not deployed as secret",
-        why: "RESIDENTIAL_PROXY_URL in wrangler.toml as comment. YouTube path silently fails without it.",
-        fix: "Add 'wrangler secret put RESIDENTIAL_PROXY_URL' instruction. Required for YouTube timedtext API."
-      });
+    if (filePath.includes('wrangler.toml')) {
+      if (text.includes('RESIDENTIAL_PROXY_URL') && !text.includes('wrangler secret put')) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "Config: Proxy credential documented but not deployed as secret",
+          why: "RESIDENTIAL_PROXY_URL in wrangler.toml as comment. YouTube path silently fails without it.",
+          fix: "Add 'wrangler secret put RESIDENTIAL_PROXY_URL' instruction. Required for YouTube timedtext API."
+        });
+      }
+    } else if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+      // If we see proxy configuration reference in TypeScript, ensure wrangler.toml exists and configures it,
+      // or check that it's properly handled as a secret.
+      if (text.includes('RESIDENTIAL_PROXY_URL') && !text.includes('process.env.RESIDENTIAL_PROXY_URL')) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "Config: Proxy URL accessed directly without env secret",
+          why: "Hardcoded proxy URL patterns or raw references in TypeScript code violate secret hygiene.",
+          fix: "Access RESIDENTIAL_PROXY_URL exclusively via process.env.RESIDENTIAL_PROXY_URL."
+        });
+      }
     }
     return findings;
   }
@@ -135,7 +150,7 @@ export const ModuleLevelDynamicImportRule: IRule = {
     const filePath = source.getFilePath().replace(/\\/g, "/");
     if (!filePath.includes('.tsx') && !filePath.includes('.jsx')) return findings;
 
-    const lines = source.getText().split('\n');
+    const lines = source.getText().split(/\r?\n/);
     lines.forEach((line) => {
       const trimmed = line.trim();
       const importMatch = trimmed.match(/(?:const\s+\w+\s*=\s*)?import\(['"]/);

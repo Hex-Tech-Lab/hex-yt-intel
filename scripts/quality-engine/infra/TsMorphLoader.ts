@@ -8,6 +8,15 @@ export class TsMorphLoader implements FileLoaderPort {
     return this.project.getSourceFile(path) || this.project.addSourceFileAtPath(path);
   }
 
+  async loadFromText(path: string, text: string): Promise<any> {
+    const existing = this.project.getSourceFile(path);
+    if (existing) {
+      existing.replaceWithText(text);
+      return existing;
+    }
+    return this.project.createSourceFile(path, text, { overwrite: true });
+  }
+
   getImports(ast: any): string[] {
     const sf = ast as SourceFile;
     if (!sf || typeof sf.getImportDeclarations !== "function") return [];
