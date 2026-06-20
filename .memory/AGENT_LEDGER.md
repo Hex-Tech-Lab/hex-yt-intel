@@ -9,6 +9,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Active Ledger
+- [2026-06-20T15:05:00+03:00] [Antigravity (Agent)] [DONE] Refactored Quality Intelligence Engine (qa-intel) to a modular DDD-Lite + Hex-Lite + SoC clean architecture. Extracted domain contracts, registry service, and loaders/cache/fs adapters. Wrapped all legacy rule files dynamically. Fixed ES Module dynamic require failures and cross-platform line split warnings. Run verification ✅, type-check ✅, committed and pushed (b41b628).
 - [2026-06-10T19:10:00+03:00] [GC (Agent)] [DONE] PR #62 review attempted; CI integration authentication failure; Snyk high-severity issues identified. Matrix: /docs/testing/chunk-62-review-matrix.md.
 - [2026-06-10T19:20:00+03:00] [GC (Agent)] [DONE] Upgraded workspace dependencies and fixed PostgresBillingAdapter type error. Verified via production build.
 - [2026-06-10T19:25:00+03:00] [GC (Agent)] [DONE] Hardened worker streaming pipeline and relations engine against LLM loops/timeouts using AbortSignals. Verified via build.
