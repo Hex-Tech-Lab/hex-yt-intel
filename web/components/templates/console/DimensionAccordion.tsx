@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useTransition } from 'react';
 import { MonoLabel, GlowBorder, Icon, CornerFrame, StatusBadge, type SynthesisStatus } from '@/components/templates/_shared/primitives';
 
 export interface Dimension {
@@ -86,8 +86,11 @@ export function DimensionAccordion({
   onSelectDimension,
   progress
 }: DimensionAccordionProps) {
+const [_, startTransition] = useTransition();
   const handleSelect = useCallback((key: string) => {
-    onSelectDimension(key);
+    startTransition(() => {
+      onSelectDimension(key);
+    });
   }, [onSelectDimension]);
 
   return (
