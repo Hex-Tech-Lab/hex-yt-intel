@@ -269,8 +269,8 @@ export const StateSyncRule: IRule = {
 
 export const GraphAwareBoundaryRule: IRule = {
   name: "graph-aware-boundary",
-  scope: "graph" as any, // Tell legacy adapter this runs with graph scope
-  check: (source: SourceFile, ctx?: any) => {
+  scope: "file",
+  check: (source: SourceFile) => {
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
     
@@ -279,13 +279,11 @@ export const GraphAwareBoundaryRule: IRule = {
       return findings;
     }
 
-    const graph = ctx?.graph;
-    if (!graph) return findings;
+    const imports = source.getImportDeclarations()
+      .map((d) => d.getModuleSpecifierSourceFile()?.getFilePath() || d.getModuleSpecifierValue())
+      .filter((p): p is string => Boolean(p));
 
-    const node = graph.get(filePath);
-    if (!node) return findings;
-
-    for (const imp of node.imports) {
+    for (const imp of imports) {
       if (imp.includes("/adapters/") && (imp.includes("supabase") || imp.includes("db") || imp.includes("postgres"))) {
         findings.push({
           file: filePath,

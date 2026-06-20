@@ -40,6 +40,7 @@ export class QualityEngine {
         if (!file) break;
 
         try {
+          console.log(`[QualityEngine] Processing: ${file} (Queue: ${queue.length})`);
           const ast = await this.loadAST(file);
 
           for (const rule of this.rules) {
