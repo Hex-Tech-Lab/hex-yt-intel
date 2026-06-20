@@ -122,6 +122,36 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
   return lines.join('\n');
 }
 
+function repairUnclosedJson(text: string): string | null {
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  const closers: string[] = [];
+
+  for (const char of text) {
+    if (esc) { esc = false; continue; }
+    if (char === '\\' && inStr) { esc = true; continue; }
+    if (char === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (char === '{') { depth++; closers.push('}'); }
+    else if (char === '[') { closers.push(']'); }
+    else if (char === '}') { depth--; closers.pop(); }
+    else if (char === ']') { closers.pop(); }
+  }
+
+  if (inStr) text += '"';
+  text = text.replace(/,\s*$/, '');
+  text += closers.reverse().join('');
+
+  try {
+    JSON.parse(text);
+    return text;
+  } catch (error) {
+    console.debug('[repairUnclosedJson] Parse failed:', error);
+    return null;
+  }
+}
+
 /**
  * Attempt to extract JSON payload from finalText.
  * Returns null if finalText is not valid v2.0 JSON.
@@ -129,18 +159,39 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
 export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | null {
   try {
     let cleanText = finalText.trim();
-    if (cleanText.startsWith('```')) {
-      const start = cleanText.indexOf('{');
+    
+    // Find boundaries of JSON envelope
+    const start = cleanText.indexOf('{');
+    if (start !== -1) {
       const end = cleanText.lastIndexOf('}');
-      if (start !== -1 && end !== -1 && end > start) {
+      if (end !== -1 && end > start) {
         cleanText = cleanText.slice(start, end + 1);
+      } else {
+        cleanText = cleanText.slice(start);
       }
     }
-    const parsed = JSON.parse(cleanText);
+
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(cleanText);
+    } catch (error) {
+      console.debug('[extractJsonPayload] Initial parse failed:', error);
+      // Try to repair unclosed JSON brackets/quotes
+      const repaired = repairUnclosedJson(cleanText);
+      if (repaired) {
+        try {
+          parsed = JSON.parse(repaired);
+        } catch (repairError) {
+          console.debug('[extractJsonPayload] Repaired parse failed:', repairError);
+        }
+      }
+    }
+
     if (parsed && parsed.schemaVersion === '2.0' && Array.isArray(parsed.dimensions)) {
       if (parsed.persona) {
         if (!parsed.persona.primary || typeof parsed.persona.primary !== 'object' || !('id' in parsed.persona.primary)) {
-          return null;
+          // Keep dimensions and strip invalid/incomplete persona configs to prevent chunk failures
+          delete parsed.persona;
         }
       }
       return parsed as Partial<UCISPayloadV2>;

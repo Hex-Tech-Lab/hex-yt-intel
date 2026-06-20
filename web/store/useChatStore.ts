@@ -63,7 +63,12 @@ async function readSSE(res: Response, onEvent: (e: any) => void): Promise<void> 
   try {
     for (;;) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        if (timedOut) {
+          throw new DOMException('Stream timed out after 25s', 'AbortError');
+        }
+        break;
+      }
       buffer += decoder.decode(value, { stream: true });
       const frames = buffer.split(/\r?\n\r?\n/);
       buffer = frames.pop() || '';
