@@ -1,5 +1,5 @@
 export { HexagonalBoundaryRule, ComplexityRule, ErrorTaxonomyRule, CrossPlatformRule, SchemaContractRule, RedundantValidationRule, WorkflowRule, TranscriptUnsafeAccessRule, HardcodedDomainLogicRule, StateSyncRule, GraphAwareBoundaryRule } from "./architecture";
-export { CredentialLeakRule, SanitizationRule, SecretsExposureRule, AuthSecurityRule, HmacMessageFormatRule, UnsafePropertyAccessRule, EnvPlaceholderNamespaceRule, InsecureFallbackRule } from "./security";
+export { CredentialLeakRule, SanitizationRule, SecretsExposureRule, AuthSecurityRule, HmacMessageFormatRule, UnsafePropertyAccessRule, EnvPlaceholderNamespaceRule, InsecureFallbackRule, SqlInjectionRule } from "./security";
 export { StreamResilienceRule, BundleContradictionRule, TranscriptGuardRule, StreamSettleRule, CascadeOrderRule, ProxyPromotionRule, ModuleLevelDynamicImportRule } from "./streaming";
 export { PersistResilienceRule, PersistAbortScopeRule, RetryFlagInterferenceRule, QuorumTimeoutCompletionRule, StaleStateResetRule } from "./persistence";
 export { InpAlertBlockerRule, CanvasHoverReRenderRule, OverlayCloseCascadeRule, ValidationOnChangeRule, UnhandledClipboardPromiseRule, StartTransitionWrappingRule, ToastAccessibilityRule, SwallowedErrorRule, SyncImportBeforeRedirectRule, CanvasStaleDataRule } from "./ui";

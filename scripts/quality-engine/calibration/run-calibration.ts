@@ -29,10 +29,13 @@ async function main() {
   });
   
   const cache = new CacheAdapter(createCache(false));
-  const fileSystem = new NodeFileSystem();
+  const fileSystem = {
+    exists: (p: string) => true,
+    resolve: (p: string) => p,
+  };
   
   // Instantiate QualityEngine
-  const engine = new QualityEngine(rules, loader, cache, fileSystem, {
+  const engine = new QualityEngine(rules, loader, cache, fileSystem as any, {
     mode: "full",
     defaultScope: "file"
   });
