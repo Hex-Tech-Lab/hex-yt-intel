@@ -20,7 +20,10 @@ export class QualityEngine {
 
   async analyze(files: string[]): Promise<Finding[]> {
     const existing = files.filter((f) => this.fs.exists(f));
-    const graph = await this.buildGraph(existing);
+    
+    // Check if any rules require graph/neighbors scope
+    const needsGraph = this.rules.some(r => r.scope === "graph" || r.scope === "neighbors" || this.config.defaultScope === "graph" || this.config.defaultScope === "neighbors");
+    const graph = needsGraph ? await this.buildGraph(existing) : new SourceGraph();
 
     const findings: Finding[] = [];
     for (const file of existing) {
@@ -58,8 +61,8 @@ export class QualityEngine {
 
     const cached = await this.cache?.getAST(path);
     if (cached) {
-      // Load source file structure
-      const ast = await this.loader.load(path);
+      // Use cached AST text to construct AST structure without hitting disk
+      const ast = await this.loader.loadFromText(path, cached);
       this.registry.add(path, ast);
       return ast;
     }

@@ -81,7 +81,7 @@ export const QuorumTimeoutCompletionRule: IRule = {
 
     if (filePath.includes('persist') || text.includes('quorum')) {
       const hasTimeout = text.includes('setTimeout') || text.includes('timeout');
-      const hasQuorum = text.includes('quorum') || text.includes('CompletedIndexes');
+      const hasQuorum = text.includes('quorum') || text.includes('completedIndexes');
       const hasIncompleteMark = text.includes("'completed'") || text.includes('"completed"');
 
       if (hasTimeout && hasQuorum && hasIncompleteMark) {

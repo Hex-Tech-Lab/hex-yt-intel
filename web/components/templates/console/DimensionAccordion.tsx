@@ -86,7 +86,7 @@ export function DimensionAccordion({
   onSelectDimension,
   progress
 }: DimensionAccordionProps) {
-const [_, startTransition] = useTransition();
+  const [_, startTransition] = useTransition();
   const handleSelect = useCallback((key: string) => {
     startTransition(() => {
       onSelectDimension(key);

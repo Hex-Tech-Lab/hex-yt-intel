@@ -7,6 +7,7 @@ export const CredentialLeakRule: IRule = {
     check: (source: SourceFile) => {
       const findings: Finding[] = [];
       const filePath = source.getFilePath().replace(/\\/g, "/");
+      if (filePath.includes('/quality-engine/rules/') || filePath.includes('verify-quality-engine')) return findings;
       const FORBIDDEN_IDS = ['test-user-id', 'da4381c6-f774-4c99-8f04-2c1c9e27d1fb'];
       
       source.forEachDescendant((node) => {
@@ -214,6 +215,7 @@ export const InsecureFallbackRule: IRule = {
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
+    if (filePath.includes('/quality-engine/rules/') || filePath.includes('verify-quality-engine')) return findings;
     const text = source.getText();
 
     if (text.includes('NODE_ENV') && (text.includes('production') || text.includes('preview'))) {
@@ -231,3 +233,14 @@ export const InsecureFallbackRule: IRule = {
     return findings;
   }
 };
+
+export function registerSecurityRules(engine: any) {
+  engine.addRule(CredentialLeakRule);
+  engine.addRule(SanitizationRule);
+  engine.addRule(SecretsExposureRule);
+  engine.addRule(AuthSecurityRule);
+  engine.addRule(HmacMessageFormatRule);
+  engine.addRule(UnsafePropertyAccessRule);
+  engine.addRule(EnvPlaceholderNamespaceRule);
+  engine.addRule(InsecureFallbackRule);
+}

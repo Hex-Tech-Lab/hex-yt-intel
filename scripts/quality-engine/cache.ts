@@ -38,26 +38,51 @@ class RedisCache extends InMemoryCache {
   async get<T>(key: string): Promise<T | undefined> {
     try {
       const raw = await getRedisValue(key);
-      if (raw === undefined) return undefined;
-      return JSON.parse(raw);
-    } catch (e) {
-      console.debug("[RedisCache] get error", e);
+      if (raw === undefined || raw === null) return undefined;
+      return JSON.parse(raw) as T;
+    } catch (e: any) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error('[redis-cache]', { message, operation: 'get' });
+      try {
+        const Sentry = await import("@sentry/nextjs");
+        Sentry.captureException(e, { contexts: { operation: 'redis-cache', method: 'get' } });
+      } catch (sentryErr) {
+        console.error('[redis-cache-sentry]', sentryErr);
+      }
       return undefined;
     }
   }
   async set<T>(key: string, value: T, ttlSeconds = 3600) {
     try {
+      // Type validation to ensure AST objects (e.g. objects containing complex project/node helpers or ts-morph methods) are not stored.
+      if (value && (typeof value === "object") && ("getFilePath" in value || "getProject" in value || "forEachDescendant" in value)) {
+        throw new Error("Cannot serialize AST/SourceFile objects to RedisCache backend.");
+      }
       const raw = JSON.stringify(value);
       await setRedisValue(key, raw, ttlSeconds);
-    } catch (e) {
-      console.debug("[RedisCache] set error", e);
+    } catch (e: any) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error('[redis-cache]', { message, operation: 'set' });
+      try {
+        const Sentry = await import("@sentry/nextjs");
+        Sentry.captureException(e, { contexts: { operation: 'redis-cache', method: 'set' } });
+      } catch (sentryErr) {
+        console.error('[redis-cache-sentry]', sentryErr);
+      }
     }
   }
   async del(key: string) {
     try {
       await deleteRedisKey(key);
-    } catch (e) {
-      console.debug("[RedisCache] del error", e);
+    } catch (e: any) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error('[redis-cache]', { message, operation: 'del' });
+      try {
+        const Sentry = await import("@sentry/nextjs");
+        Sentry.captureException(e, { contexts: { operation: 'redis-cache', method: 'del' } });
+      } catch (sentryErr) {
+        console.error('[redis-cache-sentry]', sentryErr);
+      }
     }
   }
 }
