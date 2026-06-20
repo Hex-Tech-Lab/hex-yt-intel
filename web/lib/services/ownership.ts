@@ -19,7 +19,15 @@ export async function verifyResourceOwnership<T>(
   auth: AuthPort = new SupabaseAuthAdapter(),
   persistence: AnalysisPersistencePort & ChatPersistencePort = new SupabasePersistenceAdapter()
 ): Promise<OwnershipResult<T>> {
-  const identity = await auth.authenticate();
+  let identity;
+  try {
+    identity = await auth.authenticate();
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, { contexts: { ownership: { phase: 'authenticate', resourceId, table } } });
+    console.error('[ownership]', { message: msg, resourceId, table, phase: 'authenticate' });
+    return { data: null, error: 'InternalError' };
+  }
 
   if (!identity) {
     return { data: null, error: 'Unauthorized' };

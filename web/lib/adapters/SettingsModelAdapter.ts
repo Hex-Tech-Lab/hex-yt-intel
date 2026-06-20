@@ -27,29 +27,38 @@ function isNonEmptyStringArray(v: unknown): v is string[] {
 
 async function readModelConfig(persistence: SupabasePersistenceAdapter): Promise<ModelConfig | null> {
   if (configCache && Date.now() - configCache.at < TTL_MS) return configCache.value;
-  try {
-    const redisKey = 'config:model_config';
-    const redisVal = await getRedisValue(redisKey);
-    if (redisVal) {
-      const parsed = typeof redisVal === 'string' ? JSON.parse(redisVal) : redisVal;
-      configCache = { value: parsed, at: Date.now() };
-      return parsed;
-    }
+   try {
+     const redisKey = 'config:model_config';
+     const redisVal = await getRedisValue(redisKey);
+     if (redisVal) {
+       // Try to parse Redis value
+       let parsed: ModelConfig | null = null;
+       try {
+         parsed = typeof redisVal === 'string' ? JSON.parse(redisVal) : redisVal;
+       } catch (parseError) {
+         // JSON parse failure - capture and continue to DB fallback
+         Sentry.captureException(parseError, { contexts: { settings: { method: 'parseRedisConfig' } } });
+       }
+       if (parsed) {
+         configCache = { value: parsed, at: Date.now() };
+         return parsed;
+       }
+     }
 
-    const dbVal = await persistence.getAppSetting('model_config');
-    const value = dbVal as ModelConfig | null;
+     const dbVal = await persistence.getAppSetting('model_config');
+     const value = dbVal as ModelConfig | null;
 
-    if (value) {
-      await setRedisValue(redisKey, value, 86400);
-    }
+     if (value) {
+       await setRedisValue(redisKey, value, 86400);
+     }
 
-    configCache = { value, at: Date.now() };
-    return value;
-  } catch (error) {
-    Sentry.captureException(error, { contexts: { settings: { method: 'getAppSettingCache' } } });
-    configCache = { value: null, at: Date.now() };
-    return null;
-  }
+     configCache = { value, at: Date.now() };
+     return value;
+   } catch (error) {
+     Sentry.captureException(error, { contexts: { settings: { method: 'getAppSettingCache' } } });
+     configCache = { value: null, at: Date.now() };
+     return null;
+   }
 }
 
 export class SettingsModelAdapter implements ModelResolutionPort {
@@ -97,4 +106,5 @@ export class SettingsModelAdapter implements ModelResolutionPort {
 }
 export function invalidateSettingsModelCache(): void {
   configCache = null;
+  void setRedisValue('config:model_config', null as unknown as string, 0);
 }

@@ -36,40 +36,46 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
     const now = new Date();
     const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 
-    const data = await this.persistence.getMonthlyAnalyses({ userId, since: startOfMonth });
-    if (!data) return { allowed: true }; // Fail open
+    try {
+      const data = await this.persistence.getMonthlyAnalyses({ userId, since: startOfMonth });
+      if (!data) return { allowed: true }; // Fail open
 
-    const activeCount = data.filter((a) => {
-      if (a.billingStatus === 'completed') return true;
-      if (a.billingStatus === 'processing') {
-        const createdTime = new Date(a.createdAt).getTime();
-        const fifteenMinutes = 15 * 60 * 1000;
-        return Date.now() - createdTime < fifteenMinutes;
+      const activeCount = data.filter((a) => {
+        if (a.billingStatus === 'completed') return true;
+        if (a.billingStatus === 'processing') {
+          const createdTime = new Date(a.createdAt).getTime();
+          const fifteenMinutes = 15 * 60 * 1000;
+          return Date.now() - createdTime < fifteenMinutes;
+        }
+        return false;
+      }).length;
+
+      const limit = MONTHLY_QUOTAS[tier as 'free'] || 3;
+      const allowed = activeCount < limit;
+
+      if (!allowed) {
+        // Log quota hit for abuse detection (non-blocking)
+        try {
+          await this.persistence.logUsageEvent({
+            userId,
+            action: 'monthly_quota_exceeded',
+            metadata: {
+              tier,
+              quotaLimit: limit,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        } catch (logErr) {
+          console.warn('[PostgresBillingAdapter] Failed to log quota hit:', logErr);
+        }
       }
-      return false;
-    }).length;
 
-    const limit = MONTHLY_QUOTAS[tier as 'free'] || 3;
-    const allowed = activeCount < limit;
-
-    if (!allowed) {
-      // Log quota hit for abuse detection (non-blocking)
-      try {
-        await this.persistence.logUsageEvent({
-          userId,
-          action: 'monthly_quota_exceeded',
-          metadata: {
-            tier,
-            quotaLimit: limit,
-            timestamp: new Date().toISOString(),
-          },
-        });
-      } catch (logErr) {
-        console.warn('[PostgresBillingAdapter] Failed to log quota hit:', logErr);
-      }
+      return { allowed };
+    } catch (infraErr) {
+      // Infrastructure failure during quota check - fail-open (allowed: true)
+      console.warn('[PostgresBillingAdapter] Quota check infrastructure failure, failing open:', infraErr);
+      return { allowed: true };
     }
-
-    return { allowed };
   }
 
   async consumeQuota(_params: {

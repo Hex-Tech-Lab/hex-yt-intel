@@ -185,14 +185,16 @@ function buildStreamResponse(
         totalChunks: req.totalChunks,
       });
 
-      const timeoutPromise = new Promise<boolean>((_, reject) => {
-        const id = setTimeout(() => {
-          clearTimeout(id);
-          reject(new Error("Persistence timeout reached (15s)"));
-        }, 15000);
-      });
+        const timeoutPromise = new Promise<boolean>((_, reject) => {
+          const id = setTimeout(() => {
+            clearTimeout(id);
+            // Abort the persistence operation to prevent duplicate concurrent persists
+            persistSignal.abort();
+            reject(new Error("Persistence timeout reached (15s)"));
+          }, 15000);
+        });
 
-      return Promise.race([persistPromise, timeoutPromise]);
+        return Promise.race([persistPromise, timeoutPromise]);
     },
     signal: persistSignal,
     waitUntil,
