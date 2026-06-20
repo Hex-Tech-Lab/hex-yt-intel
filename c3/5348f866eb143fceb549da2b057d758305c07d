@@ -1,0 +1,33 @@
+scripts/quality-engine/cache.ts
+  s_e6750ccfff01b1::t_ccaa8803d6b589 1-62
+scripts/quality-engine/rules/PersistenceRuleEngine.ts
+  s_e6750ccfff01b1::t_9dbb01f6c67e4e 1-132
+scripts/quality-engine/rules/SecurityRuleEngine.ts
+  s_e6750ccfff01b1::t_30ec839b4a998a 1-9
+scripts/quality-engine/rules/ArchitectureRuleEngine.ts
+  s_e6750ccfff01b1::t_7e038dd07d9d40 1-308
+scripts/verify-quality-engine.ts
+  s_e6750ccfff01b1::t_b7c68f57750395 2-6,8,12-22,24-49,51-86,90-118,120-121,123,125-126,129,133,135,138-139
+scripts/quality-engine/engine.ts
+  s_e6750ccfff01b1::t_05c1d77fad380e 18-24,29,31,33,44-56,60-71,73-74
+scripts/quality-engine/rules/StreamingRuleEngine.ts
+  s_e6750ccfff01b1::t_ec38687f7ed932 1-178
+scripts/quality-engine/rules/UIRuleEngine.ts
+  s_e6750ccfff01b1::t_30ec839b4a998a 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "c35348f866eb143fceb549da2b057d758305c07d",
+  "prompts": {},
+  "sessions": {
+    "s_e6750ccfff01b1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_129b0b51dffe5Ta4rnByVgQrnK",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
