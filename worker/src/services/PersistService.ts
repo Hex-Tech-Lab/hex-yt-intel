@@ -1,6 +1,7 @@
 import { reconstructMarkdown, extractJsonPayload } from './MarkdownReconstructor';
 import { UCISPayloadSchema } from './ZodSchemas';
 import { hmacHex } from '../crypto';
+import { z } from 'zod';
 
 export interface PersistOptions {
   analysisId: string;
@@ -25,7 +26,15 @@ export class PersistService {
     const extracted = extractJsonPayload(options.finalText);
 
     if (extracted) {
-      const result = UCISPayloadSchema.safeParse(extracted);
+      const isChunk = options.chunkIndex !== undefined;
+      const schema = isChunk
+        ? z.object({
+            schemaVersion: z.literal('2.0'),
+            dimensions: z.array(z.any())
+          }).passthrough()
+        : UCISPayloadSchema;
+
+      const result = schema.safeParse(extracted);
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       } else {
@@ -117,7 +126,11 @@ export class PersistService {
 
     const extracted = extractJsonPayload(options.finalText);
     if (extracted) {
-      const result = UCISPayloadSchema.safeParse(extracted);
+      const schema = z.object({
+        schemaVersion: z.literal('2.0'),
+        dimensions: z.array(z.any())
+      }).passthrough();
+      const result = schema.safeParse(extracted);
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       }

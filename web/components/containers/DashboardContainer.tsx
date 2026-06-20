@@ -51,12 +51,16 @@ export interface DashboardContainerProps {
 }
 
 function cleanDimensionContent(raw: string): string {
-  return (raw || '')
-    .replace(/^\s*#{1,6}\s+.*$/gm, '')
-    .replace(/^\s*DIMENSION\s+\d+\b.*$/gim, '')
-    .replace(/^\s*\d+(?:\.\d+)*[.)]?\s+(?=\S)/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  if (!raw) return '';
+  let content = raw.trim();
+  // Strip markdown code fences if the model wrapped the content in backticks
+  if (content.startsWith('```')) {
+    content = content.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
+  }
+  // Strip leading dimension header patterns like "### DIMENSION 1 – APEX INTELLIGENCE" or similar
+  content = content.replace(/^#+\s+DIMENSION\s+\d+[-–:\s\w]*$/gim, '');
+  content = content.replace(/^#+\s+DIMENSION\s+\d+.*(?:\r?\n)*/i, '');
+  return content.trim();
 }
 
 export function DashboardContainer({ profile }: DashboardContainerProps) {
@@ -269,14 +273,22 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     }
   };
 
-  const handleAnalyze = useCallback(async () => {
+  const handleAnalyze = useCallback(() => {
     if (!url) return;
-    await startAnalysis(url, getUserTimezone());
+    setTimeout(() => {
+      startTransition(() => {
+        startAnalysis(url, getUserTimezone());
+      });
+    }, 0);
   }, [url, startAnalysis]);
 
-  const handleReanalyze = useCallback(async () => {
+  const handleReanalyze = useCallback(() => {
     if (!url) return;
-    await startAnalysis(url, getUserTimezone(), true);
+    setTimeout(() => {
+      startTransition(() => {
+        startAnalysis(url, getUserTimezone(), true);
+      });
+    }, 0);
   }, [url, startAnalysis]);
 
   const handleExport = useCallback((format: 'pdf' | 'markdown') => {
