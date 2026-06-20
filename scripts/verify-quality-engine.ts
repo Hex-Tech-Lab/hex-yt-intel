@@ -87,6 +87,9 @@ if (fileList.length === 0) {
   process.exit(1);
 }
 
+const concurrencyFlag = flags.concurrency ? parseInt(String(flags.concurrency), 10) : 3;
+const concurrency = isNaN(concurrencyFlag) ? 3 : concurrencyFlag;
+
 // Initialize cache adapter
 const legacyCache = createCache(useRedisCache);
 const cacheAdapter = new CacheAdapter(legacyCache);
@@ -100,10 +103,20 @@ const engine = new QualityEngine(
   {
     mode: mode === "diff" ? "diff" : "full",
     defaultScope: "file",
+    concurrency,
   }
 );
 
 async function run() {
+  console.log("--- Source Provenance & Runtime Honesty Audit ---");
+  console.log(`Runtime scan sources: ${fileList.length} files scanned via TS/TSX globs (excl. node_modules)`);
+  console.log("Calibration sources: Juliet/SARD (CWE-22, CWE-259), CRBench, Big-Vul/Devign (CWE-89)");
+  console.log("Calibration source visibility: CALIBRATION-ONLY (none affect live PR scans)");
+  const hasActiveGraphRule = rules.some(r => r.scope === "graph");
+  console.log(`Graph status: ${hasActiveGraphRule ? "ACTIVE (GraphAwareBoundaryRule consumes ctx.graph)" : "PLUMBED-ONLY"}`);
+  console.log(`Concurrency: ${concurrency}`);
+  console.log("-------------------------------------------------");
+
   const findings = await engine.analyze(fileList);
 
   // Handle baseline

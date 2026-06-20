@@ -21,38 +21,55 @@ export class QualityEngine {
   async analyze(files: string[]): Promise<Finding[]> {
     const existing = files.filter((f) => this.fs.exists(f));
     
-    // Check if any rules require graph/neighbors scope
+    // GRAPH CONSTRUCTION: buildGraph() parses imports and constructs the overall dependency graph
     const needsGraph = this.rules.some(r => r.scope === "graph" || r.scope === "neighbors" || this.config.defaultScope === "graph" || this.config.defaultScope === "neighbors");
     const graph = needsGraph ? await this.buildGraph(existing) : new SourceGraph();
 
     const findings: Finding[] = [];
-    for (const file of existing) {
-      if (file.includes("scripts/quality-engine/rules/") || file.includes("scripts/verify-quality-engine.ts")) {
-        continue;
-      }
-      try {
-        const ast = await this.loadAST(file);
+    const concurrency = this.config.concurrency ?? 3;
 
-        for (const rule of this.rules) {
-          try {
-            const scope = rule.scope ?? this.config.defaultScope ?? "file";
+    // Filter file queue to suppress self-analysis false positives
+    const fileQueue = existing.filter(file => {
+      return !(file.includes("scripts/quality-engine/rules/") || file.includes("scripts/verify-quality-engine.ts"));
+    });
 
-            // file-local stays default; graph is available only if rule wants it
-            findings.push(
-              ...rule.check({
+    // Bounded Async Concurrency: Worker pool runner to parse files safely and execute rule checks in parallel
+    const worker = async (queue: string[]) => {
+      while (queue.length > 0) {
+        const file = queue.shift();
+        if (!file) break;
+
+        try {
+          const ast = await this.loadAST(file);
+
+          for (const rule of this.rules) {
+            try {
+              const scope = rule.scope ?? this.config.defaultScope ?? "file";
+
+              // GRAPH PASSING: Inject the graph into the context parameter
+              // GRAPH CONSUMPTION: Only rules with scope: "graph" (like GraphAwareBoundaryRule) consume ctx.graph
+              const ruleFindings = rule.check({
                 filePath: file,
                 ast,
                 graph: scope === "file" ? undefined : graph,
-              })
-            );
-          } catch (ruleErr) {
-            console.error(`Rule "${rule.name}" failed on file ${file}:`, ruleErr);
+              });
+
+              findings.push(...ruleFindings);
+            } catch (ruleErr) {
+              console.error(`Rule "${rule.name}" failed on file ${file}:`, ruleErr);
+            }
           }
+        } catch (fileErr) {
+          console.error(`Failed to process file ${file}:`, fileErr);
         }
-      } catch (fileErr) {
-        console.error(`Failed to process file ${file}:`, fileErr);
       }
+    };
+
+    const workers: Promise<void>[] = [];
+    for (let i = 0; i < Math.min(concurrency, fileQueue.length); i++) {
+      workers.push(worker(fileQueue));
     }
+    await Promise.all(workers);
 
     return findings;
   }
