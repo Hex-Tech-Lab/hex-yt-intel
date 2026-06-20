@@ -67,12 +67,12 @@ if (mode === "full" || mode === "watch") {
     }
   } catch (e: any) {
     const message = e instanceof Error ? e.message : String(e);
-    console.error('[quality-engine]', { message, operation: 'git-diff' });
+    console.error('[qa-intel]', { message, operation: 'git-diff' });
     try {
       const Sentry = await import("@sentry/nextjs");
-      Sentry.captureException(e, { contexts: { operation: 'quality-engine', method: 'git-diff' } });
+      Sentry.captureException(e, { contexts: { operation: 'qa-intel', method: 'git-diff' } });
     } catch (sentryErr) {
-      console.error('[quality-engine-sentry]', sentryErr);
+      console.error('[qa-intel-sentry]', sentryErr);
     }
     fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
   }
@@ -83,7 +83,7 @@ const fsAdapter = new NodeFileSystem();
 fileList = fileList.filter(f => fsAdapter.exists(f));
 
 if (fileList.length === 0) {
-  console.error("❌ Quality Intelligence Engine: No files found to scan.");
+  console.error("❌ qa-intel: No files found to scan.");
   process.exit(1);
 }
 
@@ -124,11 +124,11 @@ async function run() {
     const baselineSet = new Set(baselineFindings.map(f => `${f.file}:${f.title}`));
     const newFindings = findings.filter(f => !baselineSet.has(`${f.file}:${f.title}`));
     if (newFindings.length > 0) {
-      console.error("⚠️ Quality Intelligence Engine: New/changed issues found:");
+      console.error("⚠️ qa-intel: New/changed issues found:");
       console.error(JSON.stringify(newFindings, null, 2));
       process.exit(1);
     } else {
-      console.log("✅ Quality Intelligence Engine: No new issues since baseline.");
+      console.log("✅ qa-intel: No new issues since baseline.");
       process.exit(0);
     }
   }
@@ -136,23 +136,23 @@ async function run() {
   // Default reporting
   const criticalFindings = findings.filter(f => f.severity === "critical");
   if (criticalFindings.length > 0) {
-    console.error("❌ Quality Intelligence Engine: Critical issues found:");
+    console.error("❌ qa-intel: Critical issues found:");
     console.error(JSON.stringify(criticalFindings, null, 2));
     if (ci) {
-      console.error("❌ Quality Intelligence Engine: Blocking — critical findings must be resolved in CI.");
+      console.error("❌ qa-intel: Blocking — critical findings must be resolved in CI.");
       process.exit(1);
     } else {
-      console.warn("⚠️ Quality Intelligence Engine: Warning only (local/non-CI). Please resolve critical findings before final merge.");
+      console.warn("⚠️ qa-intel: Warning only (local/non-CI). Please resolve critical findings before final merge.");
       process.exit(0);
     }
   }
 
   const nonCritical = findings.filter(f => f.severity !== "critical");
   if (nonCritical.length > 0) {
-    console.warn("⚠️ Quality Intelligence Engine: Medium/Low issues found:");
+    console.warn("⚠️ qa-intel: Medium/Low issues found:");
     console.warn(JSON.stringify(nonCritical, null, 2));
   }
-  console.log("✅ Quality Intelligence Engine: Analysis complete.");
+  console.log("✅ qa-intel: Analysis complete.");
   process.exit(0);
 }
 
