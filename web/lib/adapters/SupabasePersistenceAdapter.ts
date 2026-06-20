@@ -255,7 +255,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseBillingAdapter.getUserBillingConfig(userId);
   }
 
-  getUsageLogsCountSince(params: { userId: string; since: string }): Promise<Array<{ action: string }>> {
+  getUsageLogsCountSince(params: { userId: string; since: string }): Promise<number> {
     return SupabaseBillingAdapter.getUsageLogsCountSince(params);
   }
 
@@ -335,7 +335,14 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         .select('value')
         .eq('key', key)
         .single();
-      if (error || !data) return null;
+      if (error) {
+  console.error('[SupabasePersistenceAdapter] getAppSetting failed:', error.message);
+  Sentry.captureException(error, {
+    tags: { method: 'getAppSetting' },
+    extra: { key }
+  });
+  return null;
+}
       return data.value;
     } catch (error: any) {
       Sentry.captureException(error, {

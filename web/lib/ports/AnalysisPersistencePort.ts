@@ -144,10 +144,10 @@ export interface AnalysisPersistencePort {
   /**
    * Verify if the user owns the analysis and select optional fields.
    */
-  verifyOwnership(params: {
+   verifyOwnership(params: {
     analysisId: string;
     userId: string;
-    select?: string;
+    select: string;  // made required
   }): Promise<any | null>;
 }
 

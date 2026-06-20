@@ -115,3 +115,29 @@ export async function getRateLimitStatus(
 ): Promise<RateLimitStatus> {
   return trafficGuard.getRateLimitStatus({ userId, tier, endpoint });
 }
+
+export async function checkRateLimitSlidingWindow(
+  userId: string,
+  tier: Tier,
+  endpoint: Endpoint,
+  trafficGuard: TrafficGuardPort = new RedisTrafficAdapter()
+): Promise<{ allowed: boolean; status: RateLimitStatus }> {
+  const { allowed, status } = await trafficGuard.checkGate({
+    userId,
+    tier,
+    endpoint,
+  });
+  return {
+    allowed: allowed ?? true,
+    status: status ?? {
+      remaining: -1,
+      limit: RATE_LIMITS[tier].requestsPerMinute,
+      resetAt: Date.now() + 60000,
+      retryAfter: 60,
+      tier,
+      requestTime: 0,
+    },
+  };
+}
+
+export { RATE_LIMITS, type Tier, type Endpoint };

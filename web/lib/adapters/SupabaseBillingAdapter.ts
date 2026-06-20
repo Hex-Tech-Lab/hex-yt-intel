@@ -127,31 +127,31 @@ export class SupabaseBillingAdapter {
     }
   }
 
-  static async getUsageLogsCountSince(params: {
-    userId: string;
-    since: string;
-  }): Promise<Array<{ action: string }>> {
-    try {
-      const service = getSupabaseServiceClient();
-      const { data, error } = await service
-        .from('usage_logs')
-        .select('action')
-        .eq('user_id', params.userId)
-        .gte('created_at', params.since);
+   static async getUsageLogsCountSince(params: {
+     userId: string;
+     since: string;
+   }): Promise<number> {
+     try {
+       const service = getSupabaseServiceClient();
+       const { error, count } = await service
+         .from('usage_logs')
+         .select('*', { count: 'exact', head: true })
+         .eq('user_id', params.userId)
+         .gte('created_at', params.since);
 
-      if (error) {
-        console.error('[SupabaseBillingAdapter] getUsageLogsCountSince failed:', error.message);
-        throw error;
-      }
-      return data || [];
-    } catch (error: any) {
-      Sentry.captureException(error, {
-        tags: { method: 'getUsageLogsCountSince' },
-        extra: { userId: params.userId, since: params.since },
-      });
-      throw error;
-    }
-  }
+       if (error) {
+         console.error('[SupabaseBillingAdapter] getUsageLogsCountSince failed:', error.message);
+         throw error;
+       }
+       return count ?? 0;
+     } catch (error: any) {
+       Sentry.captureException(error, {
+         tags: { method: 'getUsageLogsCountSince' },
+         extra: { userId: params.userId, since: params.since },
+       });
+       throw error;
+     }
+   }
 
   static async getMonthlyAnalyses(params: {
     userId: string;
