@@ -1,4 +1,4 @@
-import { getRedisValue, setRedisValue, incrementRedisValue, deleteRedisKey, setRedisExpiration } from "../lib/redis";
+import { getRedisValue, setRedisValue, incrementRedisValue, deleteRedisKey, setRedisExpiration } from "../../web/lib/redis";
 import type { SourceFile } from "ts-morph";
 
 interface CacheItem<T> {
@@ -40,7 +40,8 @@ class RedisCache extends InMemoryCache {
       const raw = await getRedisValue(key);
       if (raw === undefined) return undefined;
       return JSON.parse(raw);
-    } catch {
+    } catch (e) {
+      console.debug("[RedisCache] get error", e);
       return undefined;
     }
   }
@@ -48,10 +49,16 @@ class RedisCache extends InMemoryCache {
     try {
       const raw = JSON.stringify(value);
       await setRedisValue(key, raw, ttlSeconds);
-    } catch {}
+    } catch (e) {
+      console.debug("[RedisCache] set error", e);
+    }
   }
   async del(key: string) {
-    try { await deleteRedisKey(key); } catch {}
+    try {
+      await deleteRedisKey(key);
+    } catch (e) {
+      console.debug("[RedisCache] del error", e);
+    }
   }
 }
 
