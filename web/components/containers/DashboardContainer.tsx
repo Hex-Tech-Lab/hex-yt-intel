@@ -40,6 +40,8 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   if (typeof document === 'undefined') return;
   const el = document.createElement('div');
   el.textContent = message;
+  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
   el.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 18px;border-radius:10px;font:600 12px/1.4 var(--font-mono);pointer-events:none;opacity:0;transition:opacity .2s;color:var(--ink);background:${type === 'error' ? 'rgba(239,68,68,0.9)' : 'rgba(6,182,212,0.9)'};backdrop-filter:blur(8px);`;
   document.body.appendChild(el);
   requestAnimationFrame(() => { el.style.opacity = '1'; });
@@ -119,19 +121,19 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     try {
       if (id === 'insights') {
         const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
-        navigator.clipboard.writeText(text).catch(() => {});
+        navigator.clipboard.writeText(text).catch((err) => console.error('[clipboard] Insights copy failed:', err));
         showToast('Insights copied to clipboard!');
       } else if (id === 'knowledge-graph') {
         const text = graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
-        navigator.clipboard.writeText(text).catch(() => {});
+        navigator.clipboard.writeText(text).catch((err) => console.error('[clipboard] Knowledge Graph copy failed:', err));
         showToast('Knowledge Graph nodes list copied!');
       } else if (id === 'word-cloud') {
         const text = graph.nodes.map((n) => n.label).join(', ');
-        navigator.clipboard.writeText(text).catch(() => {});
+        navigator.clipboard.writeText(text).catch((err) => console.error('[clipboard] Word Cloud copy failed:', err));
         showToast('Word Cloud text copied!');
       } else if (id === 'mind-map') {
         const text = graph.nodes.map((n) => `- ${n.label}`).join('\n');
-        navigator.clipboard.writeText(text).catch(() => {});
+        navigator.clipboard.writeText(text).catch((err) => console.error('[clipboard] Mind Map copy failed:', err));
         showToast('Mind Map nodes list copied!');
       }
     } catch {
