@@ -27,8 +27,7 @@ export class PersistService {
     const extracted = extractJsonPayload(options.finalText);
 
     if (extracted) {
-      const isChunk = options.chunkIndex !== undefined;
-      const schema = isChunk ? ChunkPayloadSchema : UCISPayloadSchema;
+      const schema = (options.chunkIndex !== undefined) ? ChunkPayloadSchema : UCISPayloadSchema;
 
       const result = schema.safeParse(extracted);
       if (result.success) {
