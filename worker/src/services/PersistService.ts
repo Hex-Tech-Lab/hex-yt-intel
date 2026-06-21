@@ -1,5 +1,5 @@
 import { reconstructMarkdown, extractJsonPayload } from './MarkdownReconstructor';
-import { UCISPayloadSchema } from './ZodSchemas';
+import { UCISPayloadSchema, ChunkPayloadSchema } from './ZodSchemas';
 import { hmacHex } from '../crypto';
 import { z } from 'zod';
 
@@ -18,10 +18,6 @@ export interface PersistOptions {
 
 const rawFetch = fetch;
 
-const ChunkPayloadSchema = z.object({
-  schemaVersion: z.literal('2.0'),
-  dimensions: z.array(z.any())
-}).passthrough();
 
 export class PersistService {
   async persist(options: PersistOptions): Promise<boolean> {

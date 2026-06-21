@@ -55,7 +55,7 @@ if (mode === "full" || mode === "watch") {
 } else if (mode === "diff") {
   // Get changed files via git diff
   try {
-    const diffOutput = execSync("git diff --name-only --diff-filter=ACM HEAD", { encoding: "utf8" });
+    const diffOutput = execSync("git diff --name-only --diff-filter=ACM origin/main", { encoding: "utf8" });
     fileList = diffOutput
       .split(/\r?\n/)
       .filter(line => line.trim().endsWith(".ts") || line.trim().endsWith(".tsx"))

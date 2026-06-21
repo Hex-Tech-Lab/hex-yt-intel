@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/cloudflare';
+
 /**
  * MarkdownReconstructor — Dual-Write Persistence Adapter
  *
@@ -132,12 +134,17 @@ function repairUnclosedJson(text: string): string | null {
     if (char === '\\' && inStr) { esc = true; continue; }
     if (char === '"') { inStr = !inStr; continue; }
     if (inStr) continue;
-    if (char === '{') { closers.push('}'); }
-    else if (char === '[') { closers.push(']'); }
-    else if (char === '}' || char === ']') {
-      if (closers.length > 0 && closers[closers.length - 1] === char) {
-        closers.pop();
+    if (char === '{') {
+      if (closers.length > 500) return null;
+      closers.push('}');
+    } else if (char === '[') {
+      if (closers.length > 500) return null;
+      closers.push(']');
+    } else if (char === '}' || char === ']') {
+      if (closers.length === 0 || closers[closers.length - 1] !== char) {
+        return null;
       }
+      closers.pop();
     }
   }
 
@@ -159,14 +166,19 @@ function repairUnclosedJson(text: string): string | null {
  * Returns null if finalText is not valid v2.0 JSON.
  */
 export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | null {
+  if (!finalText) return null;
+
   try {
-    let cleanText = finalText.trim();
-    
-    // Find boundaries of JSON envelope
-    const start = cleanText.indexOf('{');
-    if (start !== -1) {
-      const end = cleanText.lastIndexOf('}');
-      if (end !== -1 && end > start) {
+    // Locate the first '{' and the last '}'
+    const start = finalText.indexOf('{');
+    if (start === -1) return null;
+
+    let cleanText = finalText;
+    const end = finalText.lastIndexOf('}');
+    if (end !== -1 && end > start) {
+      // If there are trailing markdown blocks, slice to end of JSON object
+      const nextChar = finalText.charAt(end + 1);
+      if (nextChar === '\n' || nextChar === '\r' || nextChar === '' || nextChar === '`') {
         cleanText = cleanText.slice(start, end + 1);
       } else {
         cleanText = cleanText.slice(start);
@@ -199,6 +211,7 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
       return parsed as Partial<UCISPayloadV2>;
     }
   } catch (error: any) {
+    Sentry.captureException(error, { contexts: { extractJsonPayload: { finalTextLength: finalText.length } } });
     console.debug('[extractJsonPayload] Failed to parse JSON:', error instanceof Error ? error.message : String(error));
   }
   return null;
