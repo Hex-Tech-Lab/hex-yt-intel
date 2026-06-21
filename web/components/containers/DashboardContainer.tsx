@@ -55,13 +55,27 @@ export interface DashboardContainerProps {
 function cleanDimensionContent(raw: string): string {
   if (!raw) return '';
   let content = raw.trim();
-  // Strip markdown code fences if the model wrapped the content in backticks
+  
+  // Strip markdown code fences without regex
   if (content.startsWith('```')) {
-    content = content.replace(/^```[a-zA-Z]*(?:\r?\n)/, '').replace(/(?:\r?\n)```$/, '');
+    const lines = content.split(/\r?\n/);
+    lines.shift();
+    if (lines.length > 0 && lines[lines.length - 1]?.trim() === '```') {
+      lines.pop();
+    }
+    content = lines.join('\n').trim();
   }
-  // Strip leading dimension header patterns like "### DIMENSION 1 – APEX INTELLIGENCE" or similar
-  // Consolidate into a single, clearly scoped pattern handling platform-agnostic line endings
-  content = content.replace(/^#+\s+DIMENSION\s+\d+[-–:\s\w]*(?:\r?\n)*/gim, '');
+  
+  // Strip leading dimension headers (e.g., "### DIMENSION 1") without regex
+  const lines = content.split(/\r?\n/);
+  if (lines[0]) {
+    const firstLine = lines[0].trim().toUpperCase();
+    if (firstLine.startsWith('#') && firstLine.includes('DIMENSION')) {
+      lines.shift();
+      content = lines.join('\n');
+    }
+  }
+  
   return content.trim();
 }
 
