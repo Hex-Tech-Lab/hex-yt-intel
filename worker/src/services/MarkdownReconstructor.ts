@@ -128,18 +128,17 @@ function repairUnclosedJson(text: string): string | null {
   let inStr = false;
   let esc = false;
   const closers: string[] = [];
+  const openerToCloser: Record<string, string> = { '{': '}', '[': ']' };
 
   for (const char of text) {
     if (esc) { esc = false; continue; }
     if (char === '\\' && inStr) { esc = true; continue; }
     if (char === '"') { inStr = !inStr; continue; }
     if (inStr) continue;
-    if (char === '{') {
+    const closer = openerToCloser[char];
+    if (closer) {
       if (closers.length > 500) return null;
-      closers.push('}');
-    } else if (char === '[') {
-      if (closers.length > 500) return null;
-      closers.push(']');
+      closers.push(closer);
     } else if (char === '}' || char === ']') {
       if (closers.length === 0 || closers[closers.length - 1] !== char) {
         return null;
@@ -185,16 +184,16 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
       }
     }
 
-    let parsed: any = null;
+    let parsed: Partial<UCISPayloadV2> | null = null;
     try {
-      parsed = JSON.parse(cleanText);
+      parsed = JSON.parse(cleanText) as Partial<UCISPayloadV2>;
     } catch (error) {
       console.debug('[extractJsonPayload] Initial parse failed:', error);
       // Try to repair unclosed JSON brackets/quotes
       const repaired = repairUnclosedJson(cleanText);
       if (repaired) {
         try {
-          parsed = JSON.parse(repaired);
+          parsed = JSON.parse(repaired) as Partial<UCISPayloadV2>;
         } catch (repairError) {
           console.debug('[extractJsonPayload] Repaired parse failed:', repairError);
         }
@@ -208,9 +207,9 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
           delete parsed.persona;
         }
       }
-      return parsed as Partial<UCISPayloadV2>;
+      return parsed;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     Sentry.captureException(error, { contexts: { extractJsonPayload: { finalTextLength: finalText.length } } });
     console.debug('[extractJsonPayload] Failed to parse JSON:', error instanceof Error ? error.message : String(error));
   }
