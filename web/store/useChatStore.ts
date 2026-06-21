@@ -101,9 +101,6 @@ async function readSSE(res: Response, onEvent: (e: any) => void): Promise<void> 
     clearTimeout(timeout);
     reader.releaseLock();
   }
-  if (timedOut) {
-    throw new Error('Chat stream timed out after 25s');
-  }
 }
 
 export const useChatStore = create<ChatState>((set, get) => {
@@ -335,10 +332,12 @@ export const useChatStore = create<ChatState>((set, get) => {
         // deliver() returns when the stream ends, not when persistence completes.
       } catch (e) {
         // Stays in outbox; the pending assistant bubble is dropped, user bubble kept.
-        const msg = e instanceof Error ? e.message : String(e);
-        Sentry.captureException(e, { contexts: { chat: { convId, clientMsgId, action: 'sendMessage' } } });
-        console.error('[ChatStore] sendMessage failed:', msg);
         const isAbort = e instanceof DOMException && (e.name === 'AbortError' || e.message.includes('abort'));
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!isAbort) {
+          Sentry.captureException(e, { contexts: { chat: { convId, clientMsgId, action: 'sendMessage' } } });
+          console.error('[ChatStore] sendMessage failed:', msg);
+        }
         get().setPersistState(isAbort ? 'aborted' : 'failed', clientMsgId);
         set((s) => ({
           error: msg || 'Send failed (queued for retry)',
@@ -395,10 +394,12 @@ export const useChatStore = create<ChatState>((set, get) => {
             // Do NOT auto-promote persistState here — same as sendMessage.
             // The persist: saved/failed SSE event is the authoritative signal.
           } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            Sentry.captureException(err, { contexts: { chat: { convId: e.conversationId, clientMsgId: e.clientMsgId, action: 'flushOutbox' } } });
-            console.error('[ChatStore] flushOutbox entry failed:', msg);
             const isAbort = err instanceof DOMException && (err.name === 'AbortError' || err.message.includes('abort'));
+            const msg = err instanceof Error ? err.message : String(err);
+            if (!isAbort) {
+              Sentry.captureException(err, { contexts: { chat: { convId: e.conversationId, clientMsgId: e.clientMsgId, action: 'flushOutbox' } } });
+              console.error('[ChatStore] flushOutbox entry failed:', msg);
+            }
             get().setPersistState(isAbort ? 'aborted' : 'failed', e.clientMsgId);
             break; // still offline / failing — stop; retry on next online event
           }

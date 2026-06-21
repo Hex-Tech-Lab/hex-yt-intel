@@ -57,11 +57,11 @@ function cleanDimensionContent(raw: string): string {
   let content = raw.trim();
   // Strip markdown code fences if the model wrapped the content in backticks
   if (content.startsWith('```')) {
-    content = content.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
+    content = content.replace(/^```[a-zA-Z]*(?:\r?\n)/, '').replace(/(?:\r?\n)```$/, '');
   }
   // Strip leading dimension header patterns like "### DIMENSION 1 – APEX INTELLIGENCE" or similar
-  content = content.replace(/^#+\s+DIMENSION\s+\d+[-–:\s\w]*$/gim, '');
-  content = content.replace(/^#+\s+DIMENSION\s+\d+.*(?:\r?\n)*/i, '');
+  // Consolidate into a single, clearly scoped pattern handling platform-agnostic line endings
+  content = content.replace(/^#+\s+DIMENSION\s+\d+[-–:\s\w]*(?:\r?\n)*/gim, '');
   return content.trim();
 }
 
@@ -277,20 +277,16 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const handleAnalyze = useCallback(() => {
     if (!url) return;
-    setTimeout(() => {
-      startTransition(() => {
-        startAnalysis(url, getUserTimezone());
-      });
-    }, 0);
+    startTransition(() => {
+      startAnalysis(url, getUserTimezone());
+    });
   }, [url, startAnalysis]);
 
   const handleReanalyze = useCallback(() => {
     if (!url) return;
-    setTimeout(() => {
-      startTransition(() => {
-        startAnalysis(url, getUserTimezone(), true);
-      });
-    }, 0);
+    startTransition(() => {
+      startAnalysis(url, getUserTimezone(), true);
+    });
   }, [url, startAnalysis]);
 
   const handleExport = useCallback((format: 'pdf' | 'markdown') => {
