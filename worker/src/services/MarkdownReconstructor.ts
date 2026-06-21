@@ -148,7 +148,10 @@ function repairUnclosedJson(text: string): string | null {
   }
 
   if (inStr) text += '"';
-  text = text.replace(/,\s*$/, '');
+  text = text.trim();
+  if (text.endsWith(',')) {
+    text = text.slice(0, -1);
+  }
   text += closers.reverse().join('');
 
   try {

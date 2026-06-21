@@ -107,7 +107,7 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
         break;
       }
       buffer += decoder.decode(value, { stream: true });
-      const frames = buffer.split(/\r?\n\r?\n/);
+      const frames = buffer.replace(/\r/g, '').split('\n\n');
       buffer = frames.pop() || '';
       for (const frame of frames) {
         const line = frame.split(/\r?\n/).find((l) => l.startsWith('data:'));
