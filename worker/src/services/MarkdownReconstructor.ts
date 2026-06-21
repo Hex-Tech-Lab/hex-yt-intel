@@ -123,7 +123,6 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
 }
 
 function repairUnclosedJson(text: string): string | null {
-  let depth = 0;
   let inStr = false;
   let esc = false;
   const closers: string[] = [];
@@ -133,10 +132,13 @@ function repairUnclosedJson(text: string): string | null {
     if (char === '\\' && inStr) { esc = true; continue; }
     if (char === '"') { inStr = !inStr; continue; }
     if (inStr) continue;
-    if (char === '{') { depth++; closers.push('}'); }
+    if (char === '{') { closers.push('}'); }
     else if (char === '[') { closers.push(']'); }
-    else if (char === '}') { depth--; closers.pop(); }
-    else if (char === ']') { closers.pop(); }
+    else if (char === '}' || char === ']') {
+      if (closers.length > 0 && closers[closers.length - 1] === char) {
+        closers.pop();
+      }
+    }
   }
 
   if (inStr) text += '"';
