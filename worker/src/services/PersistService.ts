@@ -18,6 +18,11 @@ export interface PersistOptions {
 
 const rawFetch = fetch;
 
+const ChunkPayloadSchema = z.object({
+  schemaVersion: z.literal('2.0'),
+  dimensions: z.array(z.any())
+}).passthrough();
+
 export class PersistService {
   async persist(options: PersistOptions): Promise<boolean> {
     let markdown = options.finalText;
@@ -27,12 +32,7 @@ export class PersistService {
 
     if (extracted) {
       const isChunk = options.chunkIndex !== undefined;
-      const schema = isChunk
-        ? z.object({
-            schemaVersion: z.literal('2.0'),
-            dimensions: z.array(z.any())
-          }).passthrough()
-        : UCISPayloadSchema;
+      const schema = isChunk ? ChunkPayloadSchema : UCISPayloadSchema;
 
       const result = schema.safeParse(extracted);
       if (result.success) {
@@ -126,11 +126,7 @@ export class PersistService {
 
     const extracted = extractJsonPayload(options.finalText);
     if (extracted) {
-      const schema = z.object({
-        schemaVersion: z.literal('2.0'),
-        dimensions: z.array(z.any())
-      }).passthrough();
-      const result = schema.safeParse(extracted);
+      const result = ChunkPayloadSchema.safeParse(extracted);
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       }
