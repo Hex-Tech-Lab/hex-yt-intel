@@ -8,7 +8,18 @@ interface SelectedDimensionReadoutProps {
 }
 
 export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadoutProps) {
-  if (!dimension) return null;
+  if (!dimension) {
+    return (
+      <div className="flex-1 overflow-y-auto px-5 py-8 flex flex-col items-center justify-center text-center gap-2 h-full">
+        <div className="text-[var(--ink-secondary)] font-mono text-[13px] font-semibold">
+          Select a dimension to view details.
+        </div>
+        <div className="text-[var(--ink-muted)] text-[12px] leading-relaxed max-w-[280px]">
+          Choose an item from the list to see its structured analysis details here.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3 hx-custom-scrollbar">
