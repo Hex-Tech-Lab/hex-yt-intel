@@ -93,6 +93,12 @@ export const UCISPayloadSchema = z.object({
 
 export const ChunkPayloadSchema = z.object({
   schemaVersion: z.literal('2.0'),
-  dimensions: z.array(z.any()),
+  dimensions: z.array(
+    z.object({
+      number: z.number().int().min(1),
+      name: z.string(),
+      content: z.string()
+    }).passthrough()
+  ),
 }).passthrough();
 

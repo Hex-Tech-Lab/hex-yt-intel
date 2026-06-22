@@ -34,6 +34,8 @@ import { ConsoleTabSwitcher } from './dashboard/ConsoleTabSwitcher';
 import { SidebarFooter } from './dashboard/SidebarFooter';
 import { ExpandedPanelOverlay } from './dashboard/ExpandedPanelOverlay';
 
+import * as Sentry from '@sentry/nextjs';
+
 // See /docs/ui/dashboard-container.md
 
 function showToast(message: string, type: 'success' | 'error' = 'success') {
@@ -46,6 +48,12 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   document.body.appendChild(el);
   requestAnimationFrame(() => { el.style.opacity = '1'; });
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
+}
+
+function reportClipboardError(error: unknown, context: string) {
+  const message = error instanceof Error ? error.message : String(error);
+  Sentry.captureException(error, { tags: { feature: 'clipboard', context } });
+  console.error('[DashboardContainer] Clipboard copy failed:', { message, context });
 }
 
 export interface DashboardContainerProps {
@@ -66,11 +74,11 @@ function cleanDimensionContent(raw: string): string {
     content = lines.join('\n').trim();
   }
   
-  // Strip leading dimension headers (e.g., "### DIMENSION 1") without regex
+  // Strip leading dimension headers (e.g., "### DIMENSION 1") with explicit pattern
   const lines = content.split(/\r?\n/);
   if (lines[0]) {
     const firstLine = lines[0].trim().toUpperCase();
-    if (firstLine.startsWith('#') && firstLine.includes('DIMENSION')) {
+    if (firstLine.startsWith('#') && /\bDIMENSION\s+\d+/.test(firstLine)) {
       lines.shift();
       content = lines.join('\n');
     }
@@ -135,22 +143,23 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     try {
       if (id === 'insights') {
         const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
-        navigator.clipboard.writeText(text).catch((err) => console.error('[clipboard] Insights copy failed:', err));
+        navigator.clipboard.writeText(text).catch((err) => reportClipboardError(err, 'insights'));
         showToast('Insights copied to clipboard!');
       } else if (id === 'knowledge-graph') {
         const text = graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
-        navigator.clipboard.writeText(text).catch((err) => console.error('[clipboard] Knowledge Graph copy failed:', err));
+        navigator.clipboard.writeText(text).catch((err) => reportClipboardError(err, 'knowledge-graph'));
         showToast('Knowledge Graph nodes list copied!');
       } else if (id === 'word-cloud') {
         const text = graph.nodes.map((n) => n.label).join(', ');
-        navigator.clipboard.writeText(text).catch((err) => console.error('[clipboard] Word Cloud copy failed:', err));
+        navigator.clipboard.writeText(text).catch((err) => reportClipboardError(err, 'word-cloud'));
         showToast('Word Cloud text copied!');
       } else if (id === 'mind-map') {
         const text = graph.nodes.map((n) => `- ${n.label}`).join('\n');
-        navigator.clipboard.writeText(text).catch((err) => console.error('[clipboard] Mind Map copy failed:', err));
+        navigator.clipboard.writeText(text).catch((err) => reportClipboardError(err, 'mind-map'));
         showToast('Mind Map nodes list copied!');
       }
-    } catch {
+    } catch (err) {
+      reportClipboardError(err, 'outer');
       showToast('Copy failed', 'error');
     }
   }, [graph, insights]);

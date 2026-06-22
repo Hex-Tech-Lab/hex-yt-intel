@@ -180,7 +180,7 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
     if (end !== -1 && end > start) {
       // If there are trailing markdown blocks, slice to end of JSON object
       const nextChar = finalText.charAt(end + 1);
-      if (nextChar === '\n' || nextChar === '\r' || nextChar === '' || nextChar === '`') {
+      if (nextChar === '\n' || nextChar === '\r' || nextChar === '' || nextChar === '`' || nextChar === ' ' || nextChar === '\t') {
         cleanText = cleanText.slice(start, end + 1);
       } else {
         cleanText = cleanText.slice(start);
@@ -191,14 +191,18 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
     try {
       parsed = JSON.parse(cleanText) as Partial<UCISPayloadV2>;
     } catch (error) {
-      console.debug('[extractJsonPayload] Initial parse failed:', error);
+      Sentry.captureException(error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[extractJsonPayload]', { message, phase: 'initial_parse' });
       // Try to repair unclosed JSON brackets/quotes
       const repaired = repairUnclosedJson(cleanText);
       if (repaired) {
         try {
           parsed = JSON.parse(repaired) as Partial<UCISPayloadV2>;
         } catch (repairError) {
-          console.debug('[extractJsonPayload] Repaired parse failed:', repairError);
+          Sentry.captureException(repairError);
+          const repairMessage = repairError instanceof Error ? repairError.message : String(repairError);
+          console.error('[extractJsonPayload]', { message: repairMessage, phase: 'repaired_parse' });
         }
       }
     }
@@ -214,7 +218,8 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
     }
   } catch (error: unknown) {
     Sentry.captureException(error, { contexts: { extractJsonPayload: { finalTextLength: finalText.length } } });
-    console.debug('[extractJsonPayload] Failed to parse JSON:', error instanceof Error ? error.message : String(error));
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[extractJsonPayload]', { message, finalTextLength: finalText.length });
   }
   return null;
 }

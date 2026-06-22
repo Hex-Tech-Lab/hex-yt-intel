@@ -10,7 +10,7 @@
 
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
-import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
+import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
 import { outbox, newClientMsgId } from '@/lib/chat/outbox';
 
 interface ChatState {
@@ -74,7 +74,7 @@ const handleChatStreamError = (
   const { isAbort, msg } = getErrorConfig(err);
   if (!isAbort) {
     Sentry.captureException(err, { contexts: { chat: context } });
-    console.error(`[ChatStore] ${context.action} failed:`, msg);
+    console.error('[ChatStore]', { message: `${context.action} failed`, error: msg, context });
   }
   setPersistState(isAbort ? 'aborted' : 'failed', context.clientMsgId);
   return { isAbort, msg };
@@ -224,7 +224,9 @@ export const useChatStore = create<ChatState>((set, get) => {
           return; // ignore stale/old request events
         }
 
-        const handlers: Record<string, (event: Record<string, any>) => void> = {
+        const handlers: {
+          [K in ChatSSEEvent['type']]: (evt: Extract<ChatSSEEvent, { type: K }>) => void;
+        } = {
           delta: (evt) => {
             set((s) => ({
               messagesByConv: {
@@ -242,7 +244,7 @@ export const useChatStore = create<ChatState>((set, get) => {
             }));
           },
           persist: (evt) => {
-            if (evt.status === 'saving' || evt.status === 'saved' || evt.status === 'failed') {
+            if (evt.status === 'saving' || evt.status === 'saved' || evt.status === 'failed' || evt.status === 'aborted') {
               get().setPersistState(evt.status, clientMsgId);
             }
           },
@@ -252,9 +254,9 @@ export const useChatStore = create<ChatState>((set, get) => {
           }
         };
 
-        const type = e.type;
-        if (typeof type === 'string') {
-          handlers[type]?.(e);
+        const type = e.type as ChatSSEEvent['type'];
+        if (type && type in handlers) {
+          (handlers[type] as any)(e);
         }
       });
 
@@ -382,7 +384,8 @@ export const useChatStore = create<ChatState>((set, get) => {
       try {
         await api(`/api/chat/conversations/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) });
       } catch (err) {
-        console.error('[ChatStore] optimistic rename failed:', err);
+        Sentry.captureException(err, { tags: { action: 'renameConversation', conversationId: id } });
+        console.error('[ChatStore]', { message: 'optimistic rename failed', error: err, conversationId: id });
       }
     },
 
@@ -397,6 +400,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       try {
         await api(`/api/chat/conversations/${id}`, { method: 'DELETE' });
       } catch (err) {
+        Sentry.captureException(err, { tags: { action: 'deleteConversation', conversationId: id } });
         console.warn('[ChatStore] conversation delete failed or already removed locally:', err);
       }
     },

@@ -7,9 +7,11 @@ This document maps all static analysis and code review findings from Cubic, Sour
 ## 🔍 QA-Intel & PR Review Workflow Protocol
 
 ### What is QA-Intel?
+
 `qa-intel` is the repository's native Quality Intelligence Engine (run via `scripts/verify-quality-engine.ts`). It performs AST-level analysis, architecture boundary checking (Hex-Lite + DDD), and security/performance scans on the files in the PR diff against a defined set of rules.
 
 ### How to use it in this Repo/Workflow:
+
 1. **Diff Mode Scan**: Runs on the changes introduced by the PR branch compared to the target branch (`origin/main`).
 2. **Execution**: `pnpm tsx scripts/verify-quality-engine.ts --mode diff --concurrency 22`.
 3. **Exit Status**: Any *critical* severity findings will exit with code `1` in CI to block invalid merges. Medium/Low findings are reported as non-blocking warnings locally.
