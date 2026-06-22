@@ -28,3 +28,24 @@ export interface ChatMessage {
   /** Stable parent identifier mapping assistant replies to user messages. */
   parentMessageId?: string | null;
 }
+
+export interface DeltaEvent {
+  type: 'delta';
+  content: string;
+}
+
+export interface DoneEvent {
+  type: 'done';
+}
+
+export interface PersistEvent {
+  type: 'persist';
+  status: 'saving' | 'saved' | 'failed' | 'aborted';
+}
+
+export interface ErrorEvent {
+  type: 'error';
+  error: string;
+}
+
+export type ChatSSEEvent = DeltaEvent | DoneEvent | PersistEvent | ErrorEvent;
