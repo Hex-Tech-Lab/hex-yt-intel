@@ -95,9 +95,11 @@ try {
 }
 
 // Load and wrap all legacy rules
-const rules = Object.values(legacyRules).map((legacyRule) => {
-  return wrapLegacyRule(legacyRule);
-});
+const rules = Object.values(legacyRules)
+  .filter((r): r is any => r && typeof r === "object" && "check" in r && "name" in r)
+  .map((legacyRule: unknown) => {
+    return wrapLegacyRule(legacyRule as any);
+  });
 
 // Get file list based on mode
 let fileList: string[] = [];

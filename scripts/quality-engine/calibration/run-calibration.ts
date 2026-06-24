@@ -25,9 +25,11 @@ async function main() {
   const loader = new TsMorphLoader(project);
   
   // 3. Load active rules
-  const rules = Object.values(legacyRules).map((legacyRule) => {
-    return wrapLegacyRule(legacyRule as unknown as LegacyIRule);
-  });
+  const rules = Object.values(legacyRules)
+    .filter((r): r is any => r && typeof r === "object" && "check" in r && "name" in r)
+    .map((legacyRule) => {
+      return wrapLegacyRule(legacyRule as unknown as LegacyIRule);
+    });
   
   const cache = new CacheAdapter(createCache(false));
   const fileSystem: FileSystemPort = {
