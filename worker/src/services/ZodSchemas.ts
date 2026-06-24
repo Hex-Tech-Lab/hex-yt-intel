@@ -90,3 +90,8 @@ export const UCISPayloadSchema = z.object({
     productManager: z.string().optional(),
   }).passthrough().optional().nullable(),
 }).passthrough();
+
+export const ChunkPayloadSchema = z.object({
+  schemaVersion: z.literal('2.0'),
+  dimensions: z.array(UCISDimensionSchema),
+}).passthrough();

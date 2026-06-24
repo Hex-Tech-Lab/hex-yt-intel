@@ -5,76 +5,155 @@ import { CacheAdapter } from "./quality-engine/infra/CacheAdapter";
 import { wrapLegacyRule } from "./quality-engine/infra/LegacyRuleAdapter";
 import { createCache } from "./quality-engine/cache";
 import * as legacyRules from "./quality-engine/rules";
-import { Project } from "ts-morph";
 import * as glob from "glob";
 import * as path from "path";
 import * as fs from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
-// Initialize ts-morph Project
-const project = new Project({
-  tsConfigFilePath: path.join(process.cwd(), "tsconfig.json"),
-  skipAddingFilesFromTsConfig: true,
-});
+// ─── CLI flag parsing (hoisted before any module init) ──────────────────────
+const { flags, mode, baseline, compare, ci, useRedisCache } = parseCliFlags();
 
-// Load and wrap all legacy rules
-const rules = Object.values(legacyRules).map((legacyRule: unknown) => {
-  return wrapLegacyRule(legacyRule as any);
-});
-
-// CLI flags
-const args = process.argv.slice(2);
-const flags: Record<string, boolean | string> = {};
-let currentFlag: string | null = null;
-for (const arg of args) {
-  if (arg.startsWith("--")) {
-    const flag = arg.slice(2);
-    if (flag.includes("=")) {
-      const [key, value] = flag.split("=");
-      flags[key] = value;
-    } else {
-      flags[flag] = true;
-      currentFlag = flag;
-    }
-  } else if (currentFlag) {
-    flags[currentFlag] = arg;
-    currentFlag = null;
-  }
+if (flags.help || flags.h) {
+  showHelp();
+  process.exit(0);
 }
 
-const mode: "diff" | "full" | "watch" = (flags.mode as "diff" | "full" | "watch") ?? "diff";
-const baseline = flags.baseline === true || flags.baseline === "true";
-const compare = flags.compare === true || flags.compare === "true";
-const ci = flags.ci === true || flags.ci === "true" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
-const useRedisCache = (flags["use-redis-cache"] === true || flags["use-redis-cache"] === "true") && !ci;
+function parseCliFlags() {
+  const args = process.argv.slice(2);
+  const f: Record<string, boolean | string> = {};
+  let currentFlag: string | null = null;
+  for (const arg of args) {
+    if (arg === "-h") {
+      f.help = true;
+    } else if (arg.startsWith("--")) {
+      const flag = arg.slice(2);
+      if (flag.includes("=")) {
+        const [key, value] = flag.split("=");
+        f[key] = value;
+      } else {
+        f[flag] = true;
+        currentFlag = flag;
+      }
+    } else if (currentFlag) {
+      f[currentFlag] = arg;
+      currentFlag = null;
+    }
+  }
+
+  const rawMode = (f.mode as string) ?? "diff";
+  const VALID_MODES = ["diff", "full", "watch", "working-tree", "HEAD"] as const;
+  if (!VALID_MODES.includes(rawMode as typeof VALID_MODES[number])) {
+    console.error(`❌ qa-intel: Invalid mode "${rawMode}". Supported modes: ${VALID_MODES.join(", ")}`);
+    process.exit(1);
+  }
+  const mode = rawMode;
+
+  return {
+    flags: f,
+    mode,
+    baseline: f.baseline === true || f.baseline === "true",
+    compare: f.compare === true || f.compare === "true",
+    ci: f.ci === true || f.ci === "true" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true",
+    useRedisCache: (f["use-redis-cache"] === true || f["use-redis-cache"] === "true") && !(f.ci === true || f.ci === "true" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true"),
+  };
+}
+
+function showHelp() {
+  console.log(`
+Usage: qa-intel [options]
+
+Options:
+  --mode <mode>        Scan mode: "diff" (default), "full", "watch", "working-tree", "HEAD"
+  --base <ref>         Base ref for "diff" mode. Defaults to "origin/main".
+  --concurrency <num>  Set concurrency limit (default: 3).
+  --baseline           Write current findings to baseline.json.
+  --compare            Compare findings against baseline.json.
+  --use-redis-cache    Enable Redis caching for rule checks.
+  --help, -h           Show this help text.
+
+Modes:
+  diff                 Scan files changed between the current branch and a base ref (defaults to origin/main).
+  full                 Scan all TypeScript/TSX files in the repository.
+  watch                Watch files and scan on change.
+  working-tree         Scan unstaged/staged files in the current working directory compared to HEAD.
+  HEAD                 Scan files changed in the last commit (HEAD vs HEAD~1).
+`);
+}
+
+// Initialize ts-morph Project — guarded for unhoisted packages in pnpm strict mode
+let project: import("ts-morph").Project;
+try {
+  const { Project: TsMorphProject } = await import("ts-morph");
+  project = new TsMorphProject({
+    tsConfigFilePath: path.join(process.cwd(), "tsconfig.json"),
+    skipAddingFilesFromTsConfig: true,
+  });
+} catch (depErr) {
+  console.error("[qa-intel] ts-morph module resolution failed — unhoisted or missing.", depErr instanceof Error ? depErr.message : String(depErr));
+  console.error("[qa-intel] Package resolution failures must not mask structural code health. Exiting with failure.");
+  process.exit(1);
+}
+
+// Load and wrap all legacy rules
+const rules = Object.values(legacyRules)
+  .filter((r): r is any => r && typeof r === "object" && "check" in r && "name" in r)
+  .map((legacyRule: unknown) => {
+    return wrapLegacyRule(legacyRule as any);
+  });
 
 // Get file list based on mode
 let fileList: string[] = [];
 if (mode === "full" || mode === "watch") {
   fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
-} else if (mode === "diff") {
-  // Get changed files via git diff
+} else {
+  let diffArgs: readonly string[] = [];
+  if (mode === "diff") {
+    const baseRef = typeof flags.base === "string" ? flags.base : "origin/main";
+    diffArgs = ["diff", "--name-only", "--diff-filter=ACM", baseRef];
+  } else if (mode === "working-tree") {
+    diffArgs = ["diff", "--name-only", "--diff-filter=ACM", "HEAD"];
+  } else if (mode === "HEAD") {
+    diffArgs = ["diff", "--name-only", "--diff-filter=ACM", "HEAD~1", "HEAD"];
+  } else {
+    console.error(`❌ qa-intel: Invalid mode "${mode}". Supported: diff, full, watch, working-tree, HEAD`);
+    process.exit(1);
+  }
+
   try {
-    const diffOutput = execSync("git diff --name-only --diff-filter=ACM HEAD", { encoding: "utf8" });
+    // Validate target git refs exist first
+    if (mode === "diff") {
+      const baseRef = typeof flags.base === "string" ? flags.base : "origin/main";
+      try {
+        execFileSync("git", ["rev-parse", "--verify", baseRef], { stdio: "ignore" });
+      } catch {
+        console.error(`❌ qa-intel: Invalid git ref "${baseRef}". Cannot perform diff scan.`);
+        process.exit(1);
+      }
+    } else if (mode === "HEAD") {
+      try {
+        execFileSync("git", ["rev-parse", "--verify", "HEAD~1"], { stdio: "ignore" });
+      } catch {
+        console.error("❌ qa-intel: No previous commit found (HEAD~1 does not exist). Cannot perform HEAD diff scan.");
+        process.exit(1);
+      }
+    }
+
+    const diffOutput = execFileSync("git", diffArgs, { encoding: "utf8" });
     fileList = diffOutput
       .split(/\r?\n/)
       .filter(line => line.trim().endsWith(".ts") || line.trim().endsWith(".tsx"))
       .map(f => f.trim())
       .filter(f => f.length > 0);
-    if (fileList.length === 0) {
-      console.log("No changed TS/TSX files; falling back to full scan");
-      fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
-    }
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
-    console.error('[qa-intel]', { message, operation: 'git-diff' });
+    console.error('[qa-intel]', { message, operation: 'git-diff', command: diffArgs });
     try {
       const Sentry = await import("@sentry/nextjs");
-      Sentry.captureException(e, { contexts: { operation: 'qa-intel', method: 'git-diff' } });
+      Sentry.captureException(e, { contexts: { operation: 'qa-intel', method: 'git-diff', command: diffArgs } });
     } catch (sentryErr) {
       console.error('[qa-intel-sentry]', sentryErr);
     }
-    fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
+    process.exit(1);
   }
 }
 
@@ -83,6 +162,10 @@ const fsAdapter = new NodeFileSystem();
 fileList = fileList.filter(f => fsAdapter.exists(f));
 
 if (fileList.length === 0) {
+  if (mode === "diff" || mode === "working-tree" || mode === "HEAD") {
+    console.log(`✅ qa-intel: No changed TS/TSX files detected to scan (mode: ${mode}).`);
+    process.exit(0);
+  }
   console.error("❌ qa-intel: No files found to scan.");
   process.exit(1);
 }
@@ -170,6 +253,6 @@ async function run() {
 }
 
 run().catch(err => {
-  console.error("Fatal engine error:", err);
+  console.error('[qa-intel]', { error: err instanceof Error ? err.message : String(err), phase: 'engine-execution' });
   process.exit(1);
 });
