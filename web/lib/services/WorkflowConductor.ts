@@ -32,9 +32,9 @@ function validationFailure(parsed: { error: { issues: Array<{ message: string }>
 }
 
 export class WorkflowConductor {
-  private useCase: CreateAnalysisUseCase;
+  private useCase: CreateAnalysisUseCase | undefined;
 
-  constructor(useCase: CreateAnalysisUseCase) {
+  constructor(useCase?: CreateAnalysisUseCase) {
     this.useCase = useCase;
   }
 
@@ -80,7 +80,7 @@ export class WorkflowConductor {
     if (!parsed.success) return validationFailure(parsed, context);
 
     try {
-      const result = await this.useCase.execute(parsed.data as CreateAnalysisUseCaseParams);
+      const result = await this.useCase!.execute(parsed.data as CreateAnalysisUseCaseParams);
       return { success: true, data: result, context };
     } catch (error) {
       await Sentry.flush(2000).catch(() => {});
