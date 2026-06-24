@@ -68,12 +68,14 @@ async function main() {
   // 4. Run quality engine over the sample
   const project = new Project({ useInMemoryFileSystem: true });
   const loader = new TsMorphLoader(project);
-  const rules = Object.values(legacyRules).map((legacyRule: any) => wrapLegacyRule(legacyRule));
+  const rules = Object.values(legacyRules).map((legacyRule) => {
+  return wrapLegacyRule(legacyRule);
+});
   const cache = new CacheAdapter(createCache(false));
-  const fileSystem = {
+  const fileSystem: import("../infra/NodeFileSystem").NodeFileSystem = {
     exists: () => true,
     resolve: (p: string) => p,
-  };
+  } as unknown as import("../infra/NodeFileSystem").NodeFileSystem;
 
   const engine = new QualityEngine(rules, loader, cache, fileSystem as any, {
     mode: "full",

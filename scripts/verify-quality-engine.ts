@@ -8,7 +8,66 @@ import * as legacyRules from "./quality-engine/rules";
 import * as glob from "glob";
 import * as path from "path";
 import * as fs from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
+
+// ─── CLI flag parsing (hoisted before any module init) ──────────────────────
+const { flags, mode, baseline, compare, ci, useRedisCache } = parseCliFlags();
+
+if (flags.help || flags.h) {
+  showHelp();
+  process.exit(0);
+}
+
+function parseCliFlags() {
+  const args = process.argv.slice(2);
+  const f: Record<string, boolean | string> = {};
+  let currentFlag: string | null = null;
+  for (const arg of args) {
+    if (arg.startsWith("--")) {
+      const flag = arg.slice(2);
+      if (flag.includes("=")) {
+        const [key, value] = flag.split("=");
+        f[key] = value;
+      } else {
+        f[flag] = true;
+        currentFlag = flag;
+      }
+    } else if (currentFlag) {
+      f[currentFlag] = arg;
+      currentFlag = null;
+    }
+  }
+  return {
+    flags: f,
+    mode: (f.mode as string) ?? "diff",
+    baseline: f.baseline === true || f.baseline === "true",
+    compare: f.compare === true || f.compare === "true",
+    ci: f.ci === true || f.ci === "true" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true",
+    useRedisCache: (f["use-redis-cache"] === true || f["use-redis-cache"] === "true") && !(f.ci === true || f.ci === "true" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true"),
+  };
+}
+
+function showHelp() {
+  console.log(`
+Usage: qa-intel [options]
+
+Options:
+  --mode <mode>        Scan mode: "diff" (default), "full", "watch", "working-tree", "HEAD"
+  --base <ref>         Base ref for "diff" mode. Defaults to "origin/main".
+  --concurrency <num>  Set concurrency limit (default: 3).
+  --baseline           Write current findings to baseline.json.
+  --compare            Compare findings against baseline.json.
+  --use-redis-cache    Enable Redis caching for rule checks.
+  --help, -h           Show this help text.
+
+Modes:
+  diff                 Scan files changed between the current branch and a base ref (defaults to origin/main).
+  full                 Scan all TypeScript/TSX files in the repository.
+  watch                Watch files and scan on change.
+  working-tree         Scan unstaged/staged files in the current working directory compared to HEAD.
+  HEAD                 Scan files changed in the last commit (HEAD vs HEAD~1).
+`);
+}
 
 // Initialize ts-morph Project — guarded for unhoisted packages in pnpm strict mode
 let project: import("ts-morph").Project;
@@ -29,66 +88,19 @@ const rules = Object.values(legacyRules).map((legacyRule: unknown) => {
   return wrapLegacyRule(legacyRule as any);
 });
 
-// CLI flags
-const args = process.argv.slice(2);
-const flags: Record<string, boolean | string> = {};
-let currentFlag: string | null = null;
-for (const arg of args) {
-  if (arg.startsWith("--")) {
-    const flag = arg.slice(2);
-    if (flag.includes("=")) {
-      const [key, value] = flag.split("=");
-      flags[key] = value;
-    } else {
-      flags[flag] = true;
-      currentFlag = flag;
-    }
-  } else if (currentFlag) {
-    flags[currentFlag] = arg;
-    currentFlag = null;
-  }
-}if (flags.help || flags.h) {
-  console.log(`
-Usage: qa-intel [options]
-
-Options:
-  --mode <mode>        Scan mode: "diff" (default), "full", "watch", "working-tree", "HEAD"
-  --base <ref>         Base ref for "diff" mode. Defaults to "origin/main".
-  --concurrency <num>  Set concurrency limit (default: 3).
-  --baseline           Write current findings to baseline.json.
-  --compare            Compare findings against baseline.json.
-  --use-redis-cache    Enable Redis caching for rule checks.
-  --help, -h           Show this help text.
-
-Modes:
-  diff                 Scan files changed between the current branch and a base ref (defaults to origin/main).
-  full                 Scan all TypeScript/TSX files in the repository.
-  watch                Watch files and scan on change.
-  working-tree         Scan unstaged/staged files in the current working directory compared to HEAD.
-  HEAD                 Scan files changed in the last commit (HEAD vs HEAD~1).
-`);
-  process.exit(0);
-}
-
-const mode = (flags.mode as string) ?? "diff";
-const baseline = flags.baseline === true || flags.baseline === "true";
-const compare = flags.compare === true || flags.compare === "true";
-const ci = flags.ci === true || flags.ci === "true" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
-const useRedisCache = (flags["use-redis-cache"] === true || flags["use-redis-cache"] === "true") && !ci;
-
 // Get file list based on mode
 let fileList: string[] = [];
 if (mode === "full" || mode === "watch") {
   fileList = glob.sync("{web,worker}/**/*.{ts,tsx}", { ignore: "**/node_modules/**" }).map(f => f.replace(/\\/g, "/"));
 } else {
-  let diffCmd = "";
+  let diffArgs: readonly string[] = [];
   if (mode === "diff") {
     const baseRef = typeof flags.base === "string" ? flags.base : "origin/main";
-    diffCmd = `git diff --name-only --diff-filter=ACM ${baseRef}`;
+    diffArgs = ["diff", "--name-only", "--diff-filter=ACM", baseRef];
   } else if (mode === "working-tree") {
-    diffCmd = "git diff --name-only --diff-filter=ACM HEAD";
+    diffArgs = ["diff", "--name-only", "--diff-filter=ACM", "HEAD"];
   } else if (mode === "HEAD") {
-    diffCmd = "git diff --name-only --diff-filter=ACM HEAD~1 HEAD";
+    diffArgs = ["diff", "--name-only", "--diff-filter=ACM", "HEAD~1", "HEAD"];
   } else {
     console.error(`❌ qa-intel: Invalid mode "${mode}". Supported: diff, full, watch, working-tree, HEAD`);
     process.exit(1);
@@ -99,21 +111,21 @@ if (mode === "full" || mode === "watch") {
     if (mode === "diff") {
       const baseRef = typeof flags.base === "string" ? flags.base : "origin/main";
       try {
-        execSync(`git rev-parse --verify ${baseRef}`, { stdio: "ignore" });
+        execFileSync("git", ["rev-parse", "--verify", baseRef], { stdio: "ignore" });
       } catch {
         console.error(`❌ qa-intel: Invalid git ref "${baseRef}". Cannot perform diff scan.`);
         process.exit(1);
       }
     } else if (mode === "HEAD") {
       try {
-        execSync("git rev-parse --verify HEAD~1", { stdio: "ignore" });
+        execFileSync("git", ["rev-parse", "--verify", "HEAD~1"], { stdio: "ignore" });
       } catch {
         console.error("❌ qa-intel: No previous commit found (HEAD~1 does not exist). Cannot perform HEAD diff scan.");
         process.exit(1);
       }
     }
 
-    const diffOutput = execSync(diffCmd, { encoding: "utf8" });
+    const diffOutput = execFileSync("git", diffArgs, { encoding: "utf8" });
     fileList = diffOutput
       .split(/\r?\n/)
       .filter(line => line.trim().endsWith(".ts") || line.trim().endsWith(".tsx"))
@@ -121,10 +133,10 @@ if (mode === "full" || mode === "watch") {
       .filter(f => f.length > 0);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
-    console.error('[qa-intel]', { message, operation: 'git-diff', command: diffCmd });
+    console.error('[qa-intel]', { message, operation: 'git-diff', command: diffArgs });
     try {
       const Sentry = await import("@sentry/nextjs");
-      Sentry.captureException(e, { contexts: { operation: 'qa-intel', method: 'git-diff', command: diffCmd } });
+      Sentry.captureException(e, { contexts: { operation: 'qa-intel', method: 'git-diff', command: diffArgs } });
     } catch (sentryErr) {
       console.error('[qa-intel-sentry]', sentryErr);
     }
