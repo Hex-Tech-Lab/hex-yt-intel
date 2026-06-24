@@ -167,7 +167,7 @@ export class SynthesisStreamAdapter {
     }
   }
 
-  private handleMetadata(_fragment: {
+  private handleMetadata(_: {
     type: 'metadata';
     model?: string;
     persona?: string;

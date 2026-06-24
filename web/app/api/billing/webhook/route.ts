@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
         if (cancelUserId) {
           await persistenceAdapter.updateUserTier({ userId: cancelUserId, tier: 'free' });
         }
-break;
-        }
+        break;
+      }
 
       default:
         break;

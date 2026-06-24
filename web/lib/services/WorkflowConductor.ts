@@ -38,6 +38,11 @@ export class WorkflowConductor {
     this.useCase = useCase;
   }
 
+  /**
+   * Execute a handler within a named room. Creates a WorkflowContext with
+   * trace ID and timing, wraps the handler in try/catch with Sentry flush
+   * on error, and returns a typed WorkflowResult.
+   */
   async routeToRoom<T>(
     room: WorkflowScope,
     handler: (context: WorkflowContext) => Promise<T>
@@ -57,6 +62,10 @@ export class WorkflowConductor {
     }
   }
 
+  /**
+   * Single-Video Universe (Path A). Validates input via PathAInputSchema,
+   * delegates to CreateAnalysisUseCase, and returns typed WorkflowResult.
+   */
   async executeSingleVideo(params: CreateAnalysisUseCaseParams): Promise<WorkflowResult<UseCaseResult>> {
     const context: WorkflowContext = {
       scope: 'single_video',
@@ -79,6 +88,10 @@ export class WorkflowConductor {
     }
   }
 
+  /**
+   * Cross-Analysis Atlas Track (Path B). Validates input via PathBInputSchema,
+   * queries all analyses for the tenant, and returns the knowledge base result.
+   */
   async executeCrossAnalysis(params: z.infer<typeof PathBInputSchema>): Promise<WorkflowResult<unknown>> {
     const context: WorkflowContext = {
       scope: 'cross_analysis',

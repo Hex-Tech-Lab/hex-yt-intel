@@ -4,15 +4,15 @@ export const WorkflowScopeSchema = z.enum(['single_video', 'cross_analysis', 'pe
 export type WorkflowScope = z.infer<typeof WorkflowScopeSchema>;
 
 export const PathAInputSchema = z.object({
-  url: z.string().url().refine((v) => {
-    if (!v) { return false; }
+  url: z.string().url().optional().refine((v) => {
+    if (!v) return true;
     try {
       const hostname = new URL(v).hostname;
       return ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(hostname);
     } catch { return false; }
   }, {
     message: 'Must be a valid YouTube URL',
-  }).optional(),
+  }),
   userId: z.string().min(1),
   tier: z.enum(['free', 'pro', 'enterprise']),
   email: z.string().email().optional(),
