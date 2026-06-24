@@ -43,6 +43,10 @@ export async function GET(
 
     const report = analysis.validation_report || {};
 
+    if (!analysis.analysis_payload && !analysis.analysis_markdown) {
+      return NextResponse.json({ error: 'Analysis payload stub is missing', status: 'incomplete' }, { status: 404 });
+    }
+
     return NextResponse.json({
       id: analysis.id,
       videoId: analysis.video_id,
