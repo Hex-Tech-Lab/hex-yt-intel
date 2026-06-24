@@ -113,17 +113,20 @@ export const SchemaContractRule: IRule = {
     // and inner calls like .string() that precede .refine() in the chain.
     function collectMethodChain(callExpr: import("ts-morph").CallExpression): string[] {
       const methods: string[] = [];
+      const MAX_DEPTH = 15;
 
       // Walk UP through ancestor PropertyAccessExpression → CallExpression chains
       // to capture wrapping calls like .optional() that surround .refine()
       let current: import("ts-morph").Node = callExpr;
-      while (current.getParent()) {
+      let depth = 0;
+      while (current.getParent() && depth < MAX_DEPTH) {
         const parent = current.getParent();
         if (Node.isPropertyAccessExpression(parent)) {
           methods.push(parent.getName());
           const grandParent = parent.getParent();
           if (Node.isCallExpression(grandParent)) {
             current = grandParent;
+            depth++;
             continue;
           }
         }
@@ -133,11 +136,13 @@ export const SchemaContractRule: IRule = {
       // Walk DOWN the expression chain to capture inner calls before .refine()
       // e.g. .string(), .min(1), .email() in z.string().min(1).refine(...).optional()
       let expr = callExpr.getExpression();
-      while (Node.isPropertyAccessExpression(expr)) {
+      depth = 0;
+      while (Node.isPropertyAccessExpression(expr) && depth < MAX_DEPTH) {
         methods.push(expr.getName());
         const obj = expr.getExpression();
         if (Node.isCallExpression(obj)) {
           expr = obj.getExpression();
+          depth++;
         } else {
           break;
         }
@@ -150,14 +155,24 @@ export const SchemaContractRule: IRule = {
       if (Node.isCallExpression(node)) {
         const expr = node.getExpression();
         if (Node.isPropertyAccessExpression(expr) && expr.getName() === 'refine') {
+          // Only flag field-level refinements inside z.object({}) properties,
+          // not schema-level .refine() on the entire z.object({}) return value
+          const inObjectProperty = node.getFirstAncestorByKind(
+            SyntaxKind.PropertyAssignment as unknown as import("ts-morph").SyntaxKind
+          );
+          if (!inObjectProperty) return;
+
           const chainMethods = collectMethodChain(node);
-          if (!chainMethods.includes('optional')) {
+          // .default() provides the same protection as .optional() — if a field
+          // has a default, missing input is handled without rejecting the request.
+          const hasGuarantee = chainMethods.includes('optional') || chainMethods.includes('default');
+          if (!hasGuarantee) {
             findings.push({
               file: filePath,
               severity: "critical",
               title: "Schema: Refinement on required field may reject valid requests",
-              why: "z.refine() used without .optional() on the chained field. If a caller doesn't send this field, the entire request is rejected with 400.",
-              fix: "Add .optional() before .refine() if the field isn't guaranteed from all call paths: .refine(...).optional()"
+              why: "z.refine() used without .optional() or .default() on the chained field. If a caller doesn't send this field, the entire request is rejected with 400.",
+              fix: "Add .optional() or .default() before .refine() if the field isn't guaranteed from all call paths: .refine(...).optional()"
             });
           }
         }
