@@ -124,6 +124,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error("SmellyCode++ Calibration Runner failed:", err instanceof Error ? err.message : String(err));
+  console.error('[smellycode-calibration]', { error: err instanceof Error ? err.message : String(err), phase: 'smellycode-calibration' });
   process.exit(1);
 });

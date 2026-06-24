@@ -17,9 +17,8 @@ import { describe, it, expect } from 'vitest';
 import { UCISPayloadSchema, ChunkPayloadSchema } from '../services/ZodSchemas';
 
 const LocalChunkPayloadSchema = ChunkPayloadSchema;
-if (!LocalChunkPayloadSchema || typeof LocalChunkPayloadSchema.safeParse !== 'function') {
-  throw new Error('Assertion guard failed: ChunkPayloadSchema must be a valid Zod schema with safeParse.');
-}
+expect(LocalChunkPayloadSchema).toBeDefined();
+expect(typeof LocalChunkPayloadSchema.safeParse).toBe('function');
 
 function makeChunkPayload(dimCount = 11): Record<string, unknown> {
   return {

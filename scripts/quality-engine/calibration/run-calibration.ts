@@ -111,6 +111,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error("Calibration Runner failed:", err);
+  console.error('[calibration]', { error: err instanceof Error ? err.message : String(err), phase: 'sard-calibration' });
   process.exit(1);
 });

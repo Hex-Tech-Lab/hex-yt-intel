@@ -95,8 +95,8 @@ try {
 }
 
 // Load and wrap all legacy rules
-const rules = Object.values(legacyRules).map((legacyRule: unknown) => {
-  return wrapLegacyRule(legacyRule as any);
+const rules = Object.values(legacyRules).map((legacyRule) => {
+  return wrapLegacyRule(legacyRule);
 });
 
 // Get file list based on mode
@@ -251,6 +251,6 @@ async function run() {
 }
 
 run().catch(err => {
-  console.error("Fatal engine error:", err);
+  console.error('[qa-intel]', { error: err instanceof Error ? err.message : String(err), phase: 'engine-execution' });
   process.exit(1);
 });

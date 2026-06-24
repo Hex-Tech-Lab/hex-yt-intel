@@ -20,12 +20,14 @@ export class TsMorphLoader implements FileLoaderPort {
   getImports(ast: unknown): string[] {
     const sf = ast as SourceFile;
     if (!sf || typeof sf.getImportDeclarations !== "function") return [];
-    
+
+    const internalPrefixes = [".", "@/", "@lib/", "@components/", "@hooks/", "@api/"];
+
     return sf
       .getImportDeclarations()
       .filter((d) => {
         const val = d.getModuleSpecifierValue();
-        return val.startsWith(".") || val.startsWith("@/") || val.startsWith("@lib/") || val.startsWith("@components/") || val.startsWith("@hooks/") || val.startsWith("@api/");
+        return internalPrefixes.some((prefix) => val.startsWith(prefix));
       })
       .map((d) => d.getModuleSpecifierSourceFile()?.getFilePath())
       .filter((p): p is string => Boolean(p));
