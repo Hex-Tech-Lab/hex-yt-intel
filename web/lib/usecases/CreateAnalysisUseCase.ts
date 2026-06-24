@@ -1,6 +1,5 @@
 import type {
   MetadataIngestionPort,
-  DecodoPort,
   AnalysisPersistencePort,
   BillingQuotaPort,
   ModelResolutionPort,
@@ -49,7 +48,6 @@ export type UseCaseResult =
 export class CreateAnalysisUseCase {
   constructor(
     private metadataIngestion: MetadataIngestionPort,
-    private decodo: DecodoPort,
     private persistence: AnalysisPersistencePort,
     private billingQuota: BillingQuotaPort,
     private modelResolution: ModelResolutionPort,
@@ -96,28 +94,11 @@ export class CreateAnalysisUseCase {
       };
     }
 
-    // 3. Metadata + Transcript Ingestion
+    // 3. Metadata Ingestion (transcript fetched by Edge Worker via SSE)
     let ingestionResult;
     try {
       ingestionResult = await this.metadataIngestion.fetch(videoId);
-      
-      const isTranscriptEmpty = !ingestionResult.transcript || ingestionResult.transcript.trim().length === 0;
-      
-      if (isTranscriptEmpty) {
-        console.log(`[CreateAnalysisUseCase] Native transcript empty for ${videoId}, attempting Decodo fallback...`);
-        const decodoResult = await this.decodo.fetchTranscript(videoId);
-        if (decodoResult.success && decodoResult.transcript && decodoResult.transcript.trim().length > 0) {
-          ingestionResult.transcript = decodoResult.transcript.trim();
-          ingestionResult.transcriptAvailable = true;
-          console.log(`[CreateAnalysisUseCase] Decodo fallback successful for ${videoId}`);
-        } else {
-          ingestionResult.transcript = '';
-          ingestionResult.transcriptAvailable = false;
-        }
-      } else {
-        ingestionResult.transcript = ingestionResult.transcript.trim();
-        ingestionResult.transcriptAvailable = true;
-      }
+      ingestionResult.transcript = '';
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       return { type: 'error', code: 'ERR_INGESTION_FAILED', status: 500, message: `Video ingestion failed: ${msg}` };
