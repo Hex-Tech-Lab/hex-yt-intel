@@ -104,24 +104,66 @@ export const SchemaContractRule: IRule = {
     const filePath = source.getFilePath().replace(/\\/g, "/");
     const text = source.getText();
 
-    if (text.includes('.refine(')) {
-      // Check if any .refine() call is on a field chain that lacks .optional()
-      const refineChains = text.match(/\.\w+\([^)]*\)\.refine\(/g) || [];
-      const hasOptionalBeforeRefine = refineChains.some(chain => {
-        const fieldStart = text.indexOf(chain);
-        const fieldSegment = text.substring(Math.max(0, fieldStart - 200), fieldStart);
-        return fieldSegment.includes('.optional()');
-      });
-      if (refineChains.length > 0 && !hasOptionalBeforeRefine && text.includes('z.object({')) {
-        findings.push({
-          file: filePath,
-          severity: "critical",
-          title: "Schema: Refinement on required field may reject valid requests",
-          why: "z.refine() used without .optional() on the chained field. If a caller doesn't send this field, the entire request is rejected with 400.",
-          fix: "Add .optional() before .refine() if the field isn't guaranteed from all call paths: .refine(...).optional()"
-        });
-      }
+    if (!text.includes('.refine(') || !text.includes('z.object({')) {
+      return findings;
     }
+
+    // Walk the full method chain from a .refine() call to collect all method names
+    // in both directions: wrapping calls like .optional() that surround .refine(),
+    // and inner calls like .string() that precede .refine() in the chain.
+    function collectMethodChain(callExpr: import("ts-morph").CallExpression): string[] {
+      const methods: string[] = [];
+
+      // Walk UP through ancestor PropertyAccessExpression → CallExpression chains
+      // to capture wrapping calls like .optional() that surround .refine()
+      let current: import("ts-morph").Node = callExpr;
+      while (current.getParent()) {
+        const parent = current.getParent();
+        if (Node.isPropertyAccessExpression(parent)) {
+          methods.push(parent.getName());
+          const grandParent = parent.getParent();
+          if (Node.isCallExpression(grandParent)) {
+            current = grandParent;
+            continue;
+          }
+        }
+        break;
+      }
+
+      // Walk DOWN the expression chain to capture inner calls before .refine()
+      // e.g. .string(), .min(1), .email() in z.string().min(1).refine(...).optional()
+      let expr = callExpr.getExpression();
+      while (Node.isPropertyAccessExpression(expr)) {
+        methods.push(expr.getName());
+        const obj = expr.getExpression();
+        if (Node.isCallExpression(obj)) {
+          expr = obj.getExpression();
+        } else {
+          break;
+        }
+      }
+
+      return methods;
+    }
+
+    source.forEachDescendant((node) => {
+      if (Node.isCallExpression(node)) {
+        const expr = node.getExpression();
+        if (Node.isPropertyAccessExpression(expr) && expr.getName() === 'refine') {
+          const chainMethods = collectMethodChain(node);
+          if (!chainMethods.includes('optional')) {
+            findings.push({
+              file: filePath,
+              severity: "critical",
+              title: "Schema: Refinement on required field may reject valid requests",
+              why: "z.refine() used without .optional() on the chained field. If a caller doesn't send this field, the entire request is rejected with 400.",
+              fix: "Add .optional() before .refine() if the field isn't guaranteed from all call paths: .refine(...).optional()"
+            });
+          }
+        }
+      }
+    });
+
     return findings;
   }
 };

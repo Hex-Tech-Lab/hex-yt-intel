@@ -133,7 +133,8 @@ export class CreateAnalysisUseCase {
     const jobMetadata = this.metadataIngestion.buildJobMetadata(ingestionResult.metadata);
     
     // Resolve model cascade for the user's tier
-    const models = await this.modelResolution.resolveModels(params.tier, 'analysis');
+    const rawModels = await this.modelResolution.resolveModels(params.tier, 'analysis');
+    const models = [...rawModels].sort();
 
     // Insert processing stub
     const stub = await this.persistence.upsertProcessingStub({

@@ -5,17 +5,24 @@ import { CacheAdapter } from "./quality-engine/infra/CacheAdapter";
 import { wrapLegacyRule } from "./quality-engine/infra/LegacyRuleAdapter";
 import { createCache } from "./quality-engine/cache";
 import * as legacyRules from "./quality-engine/rules";
-import { Project } from "ts-morph";
 import * as glob from "glob";
 import * as path from "path";
 import * as fs from "fs";
 import { execSync } from "child_process";
 
-// Initialize ts-morph Project
-const project = new Project({
-  tsConfigFilePath: path.join(process.cwd(), "tsconfig.json"),
-  skipAddingFilesFromTsConfig: true,
-});
+// Initialize ts-morph Project — guarded for unhoisted packages in pnpm strict mode
+let project: import("ts-morph").Project;
+try {
+  const { Project: TsMorphProject } = await import("ts-morph");
+  project = new TsMorphProject({
+    tsConfigFilePath: path.join(process.cwd(), "tsconfig.json"),
+    skipAddingFilesFromTsConfig: true,
+  });
+} catch (depErr) {
+  console.error("[qa-intel] ts-morph module resolution failed — unhoisted or missing.", depErr instanceof Error ? depErr.message : String(depErr));
+  console.error("[qa-intel] Package resolution failures must not mask structural code health. Exiting with failure.");
+  process.exit(1);
+}
 
 // Load and wrap all legacy rules
 const rules = Object.values(legacyRules).map((legacyRule: unknown) => {
