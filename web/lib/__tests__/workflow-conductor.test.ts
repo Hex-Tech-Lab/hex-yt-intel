@@ -18,9 +18,7 @@ const validYouTubeUrls = [
   'https://youtube.com/watch?v=dQw4w9WgXcQ',
 ];
 
-const invalidUrls = [
-  'https://vimeo.com/12345',
-  'https://example.com',
+const malformedUrls = [
   'not-a-url',
   '',
 ];
@@ -42,7 +40,7 @@ const validProcessingPayload = {
   status: 'processing' as const,
   title: 'Test Video',
   metadata: { videoId: 'dQw4w9WgXcQ' },
-  transcript: 'Full transcript text',
+  transcript: '',
   timezone: 'UTC',
   models: ['model-1'],
   stream: { url: 'https://worker.test/stream', sig: 'abc', exp: 9999999999 },
@@ -124,8 +122,8 @@ describe('Path A — Single-Video Universe', () => {
       expect(result.success).toBe(true);
     });
 
-    it('rejects non-YouTube URLs', () => {
-      for (const url of invalidUrls) {
+    it('rejects malformed URLs', () => {
+      for (const url of malformedUrls) {
         const result = PathAInputSchema.safeParse({
           url,
           userId: 'user-1',

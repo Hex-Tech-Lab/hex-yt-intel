@@ -169,6 +169,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       anchor.href = url;
       anchor.download = `${nucleus.analysis?.title || 'analysis'}-insights.txt`;
       anchor.click();
+      URL.revokeObjectURL(url);
     } else if (id === 'knowledge-graph') {
       const canvas = document.querySelector('.js-knowledge-graph-container canvas') as HTMLCanvasElement;
       if (canvas) {
@@ -202,6 +203,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         anchor.href = url;
         anchor.download = `${nucleus.analysis?.title || 'analysis'}-mind-map.svg`;
         anchor.click();
+        URL.revokeObjectURL(url);
       } else {
         showToast('Could not locate SVG element to export.', 'error');
       }
