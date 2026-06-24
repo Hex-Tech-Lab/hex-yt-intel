@@ -8,6 +8,8 @@ export const runtime = 'edge';
 
 const MAX_EDGE_PAYLOAD_BYTES = 100_000;
 
+function safeReconstructMarkdown(analysis: { analysis_markdown?: string | null; analysis_payload?: Partial<UCISPayloadV2> | null }): string { try { return getAnalysisMarkdown(analysis); } catch { console.warn('[analyses] markdown reconstruction failed, returning empty'); return ''; } }
+
 function getAnalysisMarkdown(analysis: { analysis_markdown?: string | null; analysis_payload?: Partial<UCISPayloadV2> | null }): string {
   if (analysis.analysis_markdown) return analysis.analysis_markdown;
   if (!analysis.analysis_payload) return '';
@@ -47,7 +49,7 @@ export async function GET(
       title: analysis.title || 'Untitled',
       channelTitle: analysis.channel_title,
       model: analysis.model_used || 'unknown',
-      analysis_markdown: getAnalysisMarkdown(analysis),
+      analysis_markdown: safeReconstructMarkdown(analysis),
       analysis_payload: analysis.analysis_payload || null,
       validation_report: report,
       analysisAt: analysis.analysis_at || analysis.created_at,
