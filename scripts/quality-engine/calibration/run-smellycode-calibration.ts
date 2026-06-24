@@ -77,7 +77,7 @@ async function main() {
     resolve: (p: string) => p,
   } as unknown as import("../infra/NodeFileSystem").NodeFileSystem;
 
-  const engine = new QualityEngine(rules, loader, cache, fileSystem as any, {
+  const engine = new QualityEngine(rules, loader, cache, fileSystem, {
     mode: "full",
     defaultScope: "file",
   });

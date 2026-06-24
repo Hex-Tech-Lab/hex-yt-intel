@@ -23,7 +23,9 @@ function parseCliFlags() {
   const f: Record<string, boolean | string> = {};
   let currentFlag: string | null = null;
   for (const arg of args) {
-    if (arg.startsWith("--")) {
+    if (arg === "-h") {
+      f.help = true;
+    } else if (arg.startsWith("--")) {
       const flag = arg.slice(2);
       if (flag.includes("=")) {
         const [key, value] = flag.split("=");
@@ -37,9 +39,14 @@ function parseCliFlags() {
       currentFlag = null;
     }
   }
+
+  const rawMode = (f.mode as string) ?? "diff";
+  const VALID_MODES = ["diff", "full", "watch", "working-tree", "HEAD"] as const;
+  const mode = VALID_MODES.includes(rawMode as typeof VALID_MODES[number]) ? rawMode : "diff";
+
   return {
     flags: f,
-    mode: (f.mode as string) ?? "diff",
+    mode,
     baseline: f.baseline === true || f.baseline === "true",
     compare: f.compare === true || f.compare === "true",
     ci: f.ci === true || f.ci === "true" || process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true",

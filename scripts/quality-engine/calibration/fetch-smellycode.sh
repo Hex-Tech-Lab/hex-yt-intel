@@ -21,7 +21,14 @@ EXPECTED_MD5="902d4af8d1a52ef94666ecf620d7479d"
 mkdir -p "${DATA_DIR}"
 
 if [ -f "${TARGET}" ]; then
-  COMPUTED=$(md5sum "${TARGET}" | cut -d' ' -f1)
+  if command -v md5sum &>/dev/null; then
+    COMPUTED=$(md5sum "${TARGET}" | cut -d' ' -f1)
+  elif command -v md5 &>/dev/null; then
+    COMPUTED=$(md5 -q "${TARGET}")
+  else
+    echo "[smellycode] ERROR: No md5/md5sum tool found. Cannot verify download."
+    exit 1
+  fi
   if [ "${COMPUTED}" = "${EXPECTED_MD5}" ]; then
     echo "[smellycode] Dataset already present and verified (${TARGET})"
     exit 0
@@ -32,7 +39,15 @@ fi
 echo "[smellycode] Downloading SmellyCode++ dataset (~590 MB) from Figshare..."
 curl -L --progress-bar -o "${TARGET}" "${DOWNLOAD_URL}"
 
-COMPUTED=$(md5sum "${TARGET}" | cut -d' ' -f1)
+if command -v md5sum &>/dev/null; then
+  COMPUTED=$(md5sum "${TARGET}" | cut -d' ' -f1)
+elif command -v md5 &>/dev/null; then
+  COMPUTED=$(md5 -q "${TARGET}")
+else
+  echo "[smellycode] WARNING: Cannot verify checksum — no md5/md5sum tool."
+  echo "[smellycode] Download saved to ${TARGET}"
+  exit 0
+fi
 if [ "${COMPUTED}" != "${EXPECTED_MD5}" ]; then
   echo "[smellycode] ERROR: MD5 mismatch — expected ${EXPECTED_MD5}, got ${COMPUTED}"
   echo "[smellycode] The download may be corrupted. Delete ${TARGET} and retry."

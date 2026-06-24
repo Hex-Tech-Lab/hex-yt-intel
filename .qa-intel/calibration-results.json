@@ -1,0 +1,149 @@
+{
+  "timestamp": "2026-06-20T16:03:29.102Z",
+  "metrics": {
+    "tp": 4,
+    "fp": 0,
+    "tn": 4,
+    "fn": 0,
+    "precision": 100,
+    "recall": 100
+  },
+  "results": [
+    {
+      "example": {
+        "sourceName": "SARD / Juliet Test Suite",
+        "externalId": "SARD-CWE22-01-BAD",
+        "filePath": "sard_cwe22_bad.ts",
+        "codeSnippet": "\n          import * as path from 'path';\n          import * as fs from 'fs';\n          export function loadUserData(userInput: string) {\n            const resolved = path.join('/var/data', userInput);\n            return fs.readFileSync(resolved, 'utf8');\n          }\n        ",
+        "expectedOutcome": "finding",
+        "issueCategory": "path-traversal",
+        "expectedSeverity": "high",
+        "metadata": {
+          "cwe": "CWE-22",
+          "context": "path.join / path.resolve user input vulnerability"
+        }
+      },
+      "passed": true,
+      "actualFindings": 1
+    },
+    {
+      "example": {
+        "sourceName": "SARD / Juliet Test Suite",
+        "externalId": "SARD-CWE22-01-GOOD",
+        "filePath": "sard_cwe22_good.ts",
+        "codeSnippet": "\n          import * as path from 'path';\n          import * as fs from 'fs';\n          export function loadUserDataClean(userInput: string) {\n            const sanitized = userInput.replace(/\\.\\.(?:\\/|\\\\|$)/g, \"\");\n            const resolved = path.join('/var/data', sanitized);\n            return fs.readFileSync(resolved, 'utf8');\n          }\n        ",
+        "expectedOutcome": "clean",
+        "issueCategory": "path-traversal",
+        "expectedSeverity": "high",
+        "metadata": {
+          "cwe": "CWE-22",
+          "context": "sanitized path resolution"
+        }
+      },
+      "passed": true,
+      "actualFindings": 0
+    },
+    {
+      "example": {
+        "sourceName": "SARD / Juliet Test Suite",
+        "externalId": "SARD-CWE259-01-BAD",
+        "filePath": "sard_cwe259_bad.ts",
+        "codeSnippet": "\n          export class DatabaseConnector {\n            private dbPass = \"SuperSecretAdminPassword123!\";\n            public connect() {\n              return \"connected with \" + this.dbPass;\n            }\n          }\n        ",
+        "expectedOutcome": "finding",
+        "issueCategory": "hardcoded-secret",
+        "expectedSeverity": "critical",
+        "metadata": {
+          "cwe": "CWE-259",
+          "context": "hardcoded password assignments"
+        }
+      },
+      "passed": true,
+      "actualFindings": 1
+    },
+    {
+      "example": {
+        "sourceName": "SARD / Juliet Test Suite",
+        "externalId": "SARD-CWE259-01-GOOD",
+        "filePath": "sard_cwe259_good.ts",
+        "codeSnippet": "\n          export class DatabaseConnectorClean {\n            private dbPass = process.env.DATABASE_PASSWORD;\n            public connect() {\n              if (!this.dbPass) throw new Error(\"Missing password\");\n              return \"connected with env password\";\n            }\n          }\n        ",
+        "expectedOutcome": "clean",
+        "issueCategory": "hardcoded-secret",
+        "expectedSeverity": "critical",
+        "metadata": {
+          "cwe": "CWE-259",
+          "context": "environment variables configuration"
+        }
+      },
+      "passed": true,
+      "actualFindings": 0
+    },
+    {
+      "example": {
+        "sourceName": "CRBench",
+        "externalId": "CRB-RERENDER-01-BAD",
+        "filePath": "crb_rerender_bad.tsx",
+        "codeSnippet": "\n          import React, { useState } from 'react';\n          export function HoverDashboardComponent() {\n            const [hovered, setHovered] = useState(false);\n            return (\n              <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>\n                {hovered && <span>Complex Visualization Rendered Directly inside hover</span>}\n              </div>\n            );\n          }\n        ",
+        "expectedOutcome": "finding",
+        "issueCategory": "hover-re-render",
+        "expectedSeverity": "medium",
+        "metadata": {
+          "cwe": "N/A",
+          "context": "performance/rendering trigger on hover"
+        }
+      },
+      "passed": true,
+      "actualFindings": 1
+    },
+    {
+      "example": {
+        "sourceName": "CRBench",
+        "externalId": "CRB-RERENDER-01-GOOD",
+        "filePath": "crb_rerender_good.tsx",
+        "codeSnippet": "\n          import React, { useState, useTransition } from 'react';\n          export function HoverDashboardComponentClean() {\n            const [hovered, setHovered] = useState(false);\n            const [isPending, startTransition] = useTransition();\n            \n            const handleHover = (state: boolean) => {\n              startTransition(() => {\n                setHovered(state);\n              });\n            };\n            return (\n              <div onMouseEnter={() => handleHover(true)} onMouseLeave={() => handleHover(false)}>\n                {hovered && <span>Optimized Transition Rendering</span>}\n              </div>\n            );\n          }\n        ",
+        "expectedOutcome": "clean",
+        "issueCategory": "hover-re-render",
+        "expectedSeverity": "medium",
+        "metadata": {
+          "cwe": "N/A",
+          "context": "remediation using React Transitions"
+        }
+      },
+      "passed": true,
+      "actualFindings": 0
+    },
+    {
+      "example": {
+        "sourceName": "Big-Vul / Devign",
+        "externalId": "BIGVUL-SQLI-01-BAD",
+        "filePath": "bigvul_sqli_bad.ts",
+        "codeSnippet": "\n          export async function getUserProfile(userId: string, dbClient: any) {\n            const query = \"SELECT * FROM users WHERE id = '\" + userId + \"'\";\n            return dbClient.execute(query);\n          }\n        ",
+        "expectedOutcome": "finding",
+        "issueCategory": "sql-injection",
+        "expectedSeverity": "critical",
+        "metadata": {
+          "cwe": "CWE-89",
+          "context": "string concatenation SQL injection"
+        }
+      },
+      "passed": true,
+      "actualFindings": 2
+    },
+    {
+      "example": {
+        "sourceName": "Big-Vul / Devign",
+        "externalId": "BIGVUL-SQLI-01-GOOD",
+        "filePath": "bigvul_sqli_good.ts",
+        "codeSnippet": "\n          export async function getUserProfileClean(userId: string, dbClient: any) {\n            const query = \"SELECT * FROM users WHERE id = $1\";\n            return dbClient.execute(query, [userId]);\n          }\n        ",
+        "expectedOutcome": "clean",
+        "issueCategory": "sql-injection",
+        "expectedSeverity": "critical",
+        "metadata": {
+          "cwe": "CWE-89",
+          "context": "parameterized query remediation"
+        }
+      },
+      "passed": true,
+      "actualFindings": 0
+    }
+  ]
+}

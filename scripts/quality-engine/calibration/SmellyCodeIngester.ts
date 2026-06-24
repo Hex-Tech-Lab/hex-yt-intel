@@ -113,7 +113,12 @@ export class SmellyCodeIngester {
     for (let i = 0; i < line.length; i++) {
       const ch = line[i]!;
       if (ch === '"') {
-        inQuotes = !inQuotes;
+        if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
       } else if (ch === "," && !inQuotes) {
         result.push(current.trim());
         current = "";
@@ -159,8 +164,11 @@ export class SmellyCodeIngester {
   }
 
   private extractLabels(row: string[], col: Record<string, number>): SmellyCodeLabels {
-    const bool = (idx: number | undefined): boolean =>
-      idx !== undefined ? (row[idx]?.trim().toLowerCase() === "true" || row[idx] === "1") : false;
+    const bool = (idx: number | undefined): boolean => {
+      if (idx === undefined) return false;
+      const val = row[idx]?.trim().toLowerCase() ?? "";
+      return val === "true" || val === "1";
+    };
 
     return {
       blob: bool(col.blob),
