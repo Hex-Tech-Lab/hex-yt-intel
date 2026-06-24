@@ -18,7 +18,7 @@ import { QualityEngine } from "../application/QualityEngine";
 import { TsMorphLoader } from "../infra/TsMorphLoader";
 import { CacheAdapter } from "../infra/CacheAdapter";
 import { createCache } from "../cache";
-import { wrapLegacyRule } from "../infra/LegacyRuleAdapter";
+import { wrapLegacyRule, type LegacyIRule } from "../infra/LegacyRuleAdapter";
 import * as legacyRules from "../rules";
 import { SmellyCodeIngester } from "./SmellyCodeIngester";
 import * as fs from "fs";
@@ -69,8 +69,8 @@ async function main() {
   const project = new Project({ useInMemoryFileSystem: true });
   const loader = new TsMorphLoader(project);
   const rules = Object.values(legacyRules).map((legacyRule) => {
-  return wrapLegacyRule(legacyRule);
-});
+    return wrapLegacyRule(legacyRule as unknown as LegacyIRule);
+  });
   const cache = new CacheAdapter(createCache(false));
   const fileSystem: import("../infra/NodeFileSystem").NodeFileSystem = {
     exists: () => true,

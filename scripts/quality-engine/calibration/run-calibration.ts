@@ -4,7 +4,8 @@ import { TsMorphLoader } from "../infra/TsMorphLoader";
 import { NodeFileSystem } from "../infra/NodeFileSystem";
 import { CacheAdapter } from "../infra/CacheAdapter";
 import { createCache } from "../cache";
-import { wrapLegacyRule } from "../infra/LegacyRuleAdapter";
+import { wrapLegacyRule, type LegacyIRule } from "../infra/LegacyRuleAdapter";
+import type { FileSystemPort } from "../application/ports/FileSystemPort";
 import * as legacyRules from "../rules";
 import { SardCalibrationIngester } from "./SardCalibrationIngester";
 import type { CalibrationExample, CalibrationResult } from "./types";
@@ -24,18 +25,18 @@ async function main() {
   const loader = new TsMorphLoader(project);
   
   // 3. Load active rules
-  const rules = Object.values(legacyRules).map((legacyRule: any) => {
-    return wrapLegacyRule(legacyRule);
+  const rules = Object.values(legacyRules).map((legacyRule) => {
+    return wrapLegacyRule(legacyRule as unknown as LegacyIRule);
   });
   
   const cache = new CacheAdapter(createCache(false));
-  const fileSystem = {
+  const fileSystem: FileSystemPort = {
     exists: (p: string) => true,
     resolve: (p: string) => p,
   };
   
   // Instantiate QualityEngine
-  const engine = new QualityEngine(rules, loader, cache, fileSystem as any, {
+  const engine = new QualityEngine(rules, loader, cache, fileSystem, {
     mode: "full",
     defaultScope: "file"
   });

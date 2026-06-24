@@ -134,7 +134,7 @@ export class CreateAnalysisUseCase {
     
     // Resolve model cascade for the user's tier
     const rawModels = await this.modelResolution.resolveModels(params.tier, 'analysis');
-    const models = [...rawModels].sort();
+    const models = [...rawModels];
 
     // Insert processing stub
     const stub = await this.persistence.upsertProcessingStub({
@@ -155,10 +155,11 @@ export class CreateAnalysisUseCase {
     // Mint HMAC token for streaming worker access
     let token;
     try {
+      const sortedModelsForSigning = [...models].sort();
       token = await this.tokenCrypto.signAnalysisToken({
         videoId,
         analysisId: stub.id,
-        models,
+        models: sortedModelsForSigning,
       });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

@@ -42,7 +42,11 @@ function parseCliFlags() {
 
   const rawMode = (f.mode as string) ?? "diff";
   const VALID_MODES = ["diff", "full", "watch", "working-tree", "HEAD"] as const;
-  const mode = VALID_MODES.includes(rawMode as typeof VALID_MODES[number]) ? rawMode : "diff";
+  if (!VALID_MODES.includes(rawMode as typeof VALID_MODES[number])) {
+    console.error(`❌ qa-intel: Invalid mode "${rawMode}". Supported modes: ${VALID_MODES.join(", ")}`);
+    process.exit(1);
+  }
+  const mode = rawMode;
 
   return {
     flags: f,

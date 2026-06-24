@@ -16,6 +16,11 @@
 import { describe, it, expect } from 'vitest';
 import { UCISPayloadSchema, ChunkPayloadSchema } from '../services/ZodSchemas';
 
+const LocalChunkPayloadSchema = ChunkPayloadSchema;
+if (!LocalChunkPayloadSchema || typeof LocalChunkPayloadSchema.safeParse !== 'function') {
+  throw new Error('Assertion guard failed: ChunkPayloadSchema must be a valid Zod schema with safeParse.');
+}
+
 function makeChunkPayload(dimCount = 11): Record<string, unknown> {
   return {
     schemaVersion: '2.0',
@@ -56,18 +61,18 @@ function makeFullPayload(): Record<string, unknown> {
 describe('Persist chain — schema selection at the route boundary', () => {
   describe('ChunkPayloadSchema (worker side)', () => {
     it('accepts a chunk-shaped payload with only dimensions', () => {
-      const result = ChunkPayloadSchema.safeParse(makeChunkPayload());
+      const result = LocalChunkPayloadSchema.safeParse(makeChunkPayload());
       expect(result.success).toBe(true);
     });
 
     it('accepts a chunk with no persona field', () => {
       const chunk = { schemaVersion: '2.0', dimensions: [] };
-      const result = ChunkPayloadSchema.safeParse(chunk);
+      const result = LocalChunkPayloadSchema.safeParse(chunk);
       expect(result.success).toBe(true);
     });
 
     it('rejects wrong schemaVersion', () => {
-      const result = ChunkPayloadSchema.safeParse({ schemaVersion: '1.0', dimensions: [] });
+      const result = LocalChunkPayloadSchema.safeParse({ schemaVersion: '1.0', dimensions: [] });
       expect(result.success).toBe(false);
     });
   });
@@ -103,7 +108,7 @@ describe('Persist chain — schema selection at the route boundary', () => {
       // Therefore settleAnalysis always routes to UCISPayloadV2Schema baseline.
       const chunk = makeChunkPayload();
       const isChunk = undefined !== undefined; // chunkIndex undefined
-      const schema = isChunk ? ChunkPayloadSchema : UCISPayloadSchema;
+      const schema = isChunk ? LocalChunkPayloadSchema : UCISPayloadSchema;
       const result = schema.safeParse(chunk);
       expect(result.success).toBe(false);
     });
@@ -125,7 +130,7 @@ describe('Persist chain — schema selection at the route boundary', () => {
       //   4. Route parses payload with UCISPayloadV2Schema → fails
       //   5. Route returns 400
       const chunk = makeChunkPayload();
-      const workerResult = ChunkPayloadSchema.safeParse(chunk);
+      const workerResult = LocalChunkPayloadSchema.safeParse(chunk);
       expect(workerResult.success).toBe(true);
       const routeResult = UCISPayloadSchema.safeParse(chunk);
       expect(routeResult.success).toBe(false);

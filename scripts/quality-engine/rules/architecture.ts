@@ -2,11 +2,15 @@ import { Node, SyntaxKind } from "ts-morph";
 import type { SourceFile } from "ts-morph";
 import type { Finding, IRule } from "../engine";
 
+function normalizePosixPath(p: string): string {
+  return p.replace(/\\/g, "/").replace(/\/+/g, "/");
+}
+
 export const HexagonalBoundaryRule: IRule = {
   name: "hexagonal-boundary-enforcer",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const isAdapter = filePath.includes("/adapters/");
 
     if (!isAdapter) {
@@ -34,7 +38,7 @@ export const ComplexityRule: IRule = {
     name: "complexity-monitor",
     check: (source: SourceFile) => {
       const findings: Finding[] = [];
-      const filePath = source.getFilePath().replace(/\\/g, "/");
+      const filePath = normalizePosixPath(source.getFilePath());
       const lines = source.getText().split(/\r?\n/).length;
       if (lines > 500) {
         findings.push({
@@ -53,7 +57,7 @@ export const ErrorTaxonomyRule: IRule = {
   name: "error-taxonomy-audit",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
 
     source.forEachDescendant((node) => {
       if (Node.isIfStatement(node)) {
@@ -80,7 +84,7 @@ export const CrossPlatformRule: IRule = {
   name: "cross-platform-compatibility",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
     const lfSplitMatches = text.match(/\.split\(['"]\\n['"]\)/g);
@@ -101,7 +105,7 @@ export const SchemaContractRule: IRule = {
   name: "schema-contract-audit",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
     if (!text.includes('.refine(') || !text.includes('z.object({')) {
@@ -187,7 +191,7 @@ export const RedundantValidationRule: IRule = {
   name: "redundant-validation-detector",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
     if (text.includes('.min(') && text.includes('.max(') && text.includes('z.object({')) {
@@ -211,7 +215,7 @@ export const WorkflowRule: IRule = {
   name: "workflow-safety-check",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
 
     source.forEachDescendant((node) => {
       if (Node.isCallExpression(node)) {
@@ -262,7 +266,7 @@ export const TranscriptUnsafeAccessRule: IRule = {
   name: "transcript-unsafe-access",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     if (!filePath.includes('Transcript') && !filePath.includes('transcript')) return findings;
 
     const text = source.getText();
@@ -284,7 +288,7 @@ export const HardcodedDomainLogicRule: IRule = {
   name: "hardcoded-domain-logic",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
     const hardcodedPersonas = text.match(/['"]?(?:detailed|balanced|brief|academic|casual)['"]?\s*[,:]\s*['"]?(?:detailed|balanced|brief|academic|casual)['"]?/g);
@@ -305,7 +309,7 @@ export const StateSyncRule: IRule = {
   name: "state-sync-audit",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
     if (text.includes('setUrl') && (filePath.includes('store') || filePath.includes('Store'))) {
@@ -329,7 +333,7 @@ export const GraphAwareBoundaryRule: IRule = {
   scope: "file",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     
     // Graph boundary checks: only run on domain/usecases files to ensure they don't depend on raw infrastructure
     if (!filePath.includes('/domain/') && !filePath.includes('/usecases/')) {
@@ -338,7 +342,8 @@ export const GraphAwareBoundaryRule: IRule = {
 
     const imports = source.getImportDeclarations()
       .map((d) => d.getModuleSpecifierSourceFile()?.getFilePath() || d.getModuleSpecifierValue())
-      .filter((p): p is string => Boolean(p));
+      .filter((p): p is string => Boolean(p))
+      .map(normalizePosixPath);
 
     for (const imp of imports) {
       if (imp.includes("/adapters/") && (imp.includes("supabase") || imp.includes("db") || imp.includes("postgres"))) {

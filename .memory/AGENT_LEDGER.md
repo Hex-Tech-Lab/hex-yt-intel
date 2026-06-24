@@ -370,3 +370,5 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 
 - [2026-06-20T11:30:00+03:00] [Antigravity (Agent)] [DONE] Copied and saved the comprehensive UI/UX report to docs/specs/ and stored the critique snapshot for /impeccable polish.
 - [2026-06-21T12:47:00+03:00] [Antigravity (Agent)] [DONE] Updated scripts/verify-quality-engine.ts to support configurable base refs (--base <ref>), custom modes (diff, full, watch, working-tree, HEAD), help screens (--help, -h), and graceful invalid ref verification. Committed and pushed on feat/qa-intel-engine-refactor branch.
+- [2026-06-25T01:25:00+03:00] [Antigravity (Agent)] [DONE] Resolved remaining Cubic, CodeFactor, and CodeRabbit review findings: strict CLI mode validation, extracted/refactored calibration weight maps, applied ajv overrides to package.json and pnpm-workspace.yaml resolving the linter crash, POSIX normalized path checks in rules, isolated CreateAnalysisUseCase model sorting, refactored CSV quote escape parsing in SmellyCodeIngester, and restored missing ChunkPayloadSchema. Verified clean build, type-check, lint, and all vitest/quality-engine scans.
+
