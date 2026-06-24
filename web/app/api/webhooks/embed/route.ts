@@ -66,8 +66,10 @@ export async function POST(request: NextRequest) {
     const isPlaceholder = 
       !vectorUrl || 
       vectorUrl.includes('placeholder') || 
+      vectorUrl.includes('mock') ||
       !vectorToken || 
-      vectorToken.includes('placeholder');
+      vectorToken.includes('placeholder') ||
+      vectorToken.includes('mock');
 
     if (isPlaceholder) {
       const isProduction =

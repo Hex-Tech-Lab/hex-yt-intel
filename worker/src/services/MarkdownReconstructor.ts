@@ -191,7 +191,7 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
     try {
       parsed = JSON.parse(cleanText) as Partial<UCISPayloadV2>;
     } catch (error) {
-      Sentry.captureException(error);
+      Sentry.captureException(error, { contexts: { extractJsonPayload: { phase: 'initial_parse', cleanTextLength: cleanText.length } } });
       const message = error instanceof Error ? error.message : String(error);
       console.error('[extractJsonPayload]', { message, phase: 'initial_parse' });
       // Try to repair unclosed JSON brackets/quotes
@@ -200,7 +200,7 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
         try {
           parsed = JSON.parse(repaired) as Partial<UCISPayloadV2>;
         } catch (repairError) {
-          Sentry.captureException(repairError);
+          Sentry.captureException(repairError, { contexts: { extractJsonPayload: { phase: 'repaired_parse', repairedTextLength: repaired.length } } });
           const repairMessage = repairError instanceof Error ? repairError.message : String(repairError);
           console.error('[extractJsonPayload]', { message: repairMessage, phase: 'repaired_parse' });
         }

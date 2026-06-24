@@ -52,7 +52,7 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
 
 function reportClipboardError(error: unknown, context: string) {
   const message = error instanceof Error ? error.message : String(error);
-  Sentry.captureException(error, { tags: { feature: 'clipboard', context } });
+  Sentry.captureException(error, { contexts: { clipboard: { context } } });
   console.error('[DashboardContainer] Clipboard copy failed:', { message, context });
 }
 
@@ -143,20 +143,16 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     try {
       if (id === 'insights') {
         const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
-        navigator.clipboard.writeText(text).catch((err) => reportClipboardError(err, 'insights'));
-        showToast('Insights copied to clipboard!');
+        navigator.clipboard.writeText(text).then(() => showToast('Insights copied to clipboard!')).catch((err) => reportClipboardError(err, 'insights'));
       } else if (id === 'knowledge-graph') {
         const text = graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
-        navigator.clipboard.writeText(text).catch((err) => reportClipboardError(err, 'knowledge-graph'));
-        showToast('Knowledge Graph nodes list copied!');
+        navigator.clipboard.writeText(text).then(() => showToast('Knowledge Graph nodes list copied!')).catch((err) => reportClipboardError(err, 'knowledge-graph'));
       } else if (id === 'word-cloud') {
         const text = graph.nodes.map((n) => n.label).join(', ');
-        navigator.clipboard.writeText(text).catch((err) => reportClipboardError(err, 'word-cloud'));
-        showToast('Word Cloud text copied!');
+        navigator.clipboard.writeText(text).then(() => showToast('Word Cloud text copied!')).catch((err) => reportClipboardError(err, 'word-cloud'));
       } else if (id === 'mind-map') {
         const text = graph.nodes.map((n) => `- ${n.label}`).join('\n');
-        navigator.clipboard.writeText(text).catch((err) => reportClipboardError(err, 'mind-map'));
-        showToast('Mind Map nodes list copied!');
+        navigator.clipboard.writeText(text).then(() => showToast('Mind Map nodes list copied!')).catch((err) => reportClipboardError(err, 'mind-map'));
       }
     } catch (err) {
       reportClipboardError(err, 'outer');
