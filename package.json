@@ -6,11 +6,9 @@
   "type": "module",
   "overrides": {
     "undici": "6.21.2",
-    "ajv": "8.6.3",
     "@eslint/eslintrc": "2.1.4"
   },
   "devDependencies": {
-    "ajv": "8.6.3",
     "glob": "^13.0.6",
     "tailwindcss": "4.3.0",
     "ts-morph": "^28.0.0",
