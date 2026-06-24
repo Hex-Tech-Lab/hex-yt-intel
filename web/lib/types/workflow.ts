@@ -5,6 +5,7 @@ export type WorkflowScope = z.infer<typeof WorkflowScopeSchema>;
 
 export const PathAInputSchema = z.object({
   url: z.string().url().refine((v) => {
+    if (!v) { return false; }
     try {
       const hostname = new URL(v).hostname;
       return ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(hostname);
