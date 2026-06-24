@@ -16,13 +16,11 @@
 import { Project } from "ts-morph";
 import { QualityEngine } from "../application/QualityEngine";
 import { TsMorphLoader } from "../infra/TsMorphLoader";
-import { NodeFileSystem } from "../infra/NodeFileSystem";
 import { CacheAdapter } from "../infra/CacheAdapter";
 import { createCache } from "../cache";
 import { wrapLegacyRule } from "../infra/LegacyRuleAdapter";
 import * as legacyRules from "../rules";
 import { SmellyCodeIngester } from "./SmellyCodeIngester";
-import type { SmellyCodeMetrics } from "./SmellyCodeTypes";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -45,9 +43,11 @@ async function main() {
     process.exit(0);
   }
 
-  // 1. Parse CSV
+  // 1. Parse CSV via streaming (avoids Node 512MB string limit on 590MB file)
   const ingester = new SmellyCodeIngester();
-  const examples = ingester.loadFromCsv(DATA_FILE);
+  // Parse only enough for the sample to keep memory lean; full corpus count separately
+  const parseTarget = SAMPLE_SIZE > 0 ? SAMPLE_SIZE + 50 : 0;
+  const examples = await ingester.loadFromCsv(DATA_FILE, parseTarget);
   if (examples.length === 0) {
     console.warn("[SmellyCode++] No examples parsed from dataset.");
     process.exit(0);

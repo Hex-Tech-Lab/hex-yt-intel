@@ -12,32 +12,44 @@ import type { CalibrationExample } from "./types";
 import type { SmellyCodeExample, SmellyCodeMetrics, SmellyCodeLabels } from "./SmellyCodeTypes";
 import * as fs from "fs";
 import * as path from "path";
+import * as readline from "readline";
 
 export class SmellyCodeIngester {
   private examples: SmellyCodeExample[] = [];
 
   /**
-   * Load and parse the CSV dataset. Returns parsed SmellyCodeExample[].
+   * Load and parse the CSV dataset via streaming to handle ~590 MB file.
+   * Returns parsed SmellyCodeExample[].
    * Silently returns empty array if file is missing (optional/local-only).
    */
-  public loadFromCsv(csvPath: string): SmellyCodeExample[] {
+  public async loadFromCsv(csvPath: string, maxRows = 0): Promise<SmellyCodeExample[]> {
     if (!fs.existsSync(csvPath)) {
       console.warn(`[SmellyCodeIngester] Dataset not found at ${csvPath}. Download with fetch-smellycode.sh`);
       return [];
     }
 
-    const raw = fs.readFileSync(csvPath, "utf-8");
-    const lines = raw.split(/\r?\n/).filter(Boolean);
-    if (lines.length < 2) return [];
-
-    // First line is the header — use it to find column indices
-    const header = this.parseCsvLine(lines[0]!);
-    const col = this.buildColumnMap(header);
+    const rl = readline.createInterface({
+      input: fs.createReadStream(csvPath, { encoding: "utf-8" }),
+      crlfDelay: Infinity,
+    });
 
     const examples: SmellyCodeExample[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const row = this.parseCsvLine(lines[i]!);
-      if (row.length < col.code) continue;
+    let headerLine: string | undefined;
+    let col: Record<string, number> = {};
+
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+
+      if (!headerLine) {
+        headerLine = line;
+        col = this.buildColumnMap(this.parseCsvLine(line));
+        continue;
+      }
+
+      if (maxRows > 0 && examples.length >= maxRows) break;
+
+      const row = this.parseCsvLine(line);
+      if (row.length < Object.keys(col).length / 2) continue;
 
       try {
         const code = row[col.code] ?? "";
@@ -45,12 +57,12 @@ export class SmellyCodeIngester {
         const labels = this.extractLabels(row, col);
         examples.push({ code, metrics, labels });
       } catch {
-        // Skip malformed rows silently — ~1% of rows may have encoding artifacts
+        // Skip malformed rows silently
       }
     }
 
     this.examples = examples;
-    console.log(`[SmellyCodeIngester] Parsed ${examples.length} examples from ${path.basename(csvPath)}`);
+    console.log(`[SmellyCodeIngester] Parsed ${examples.length.toLocaleString()} examples from ${path.basename(csvPath)}`);
     return examples;
   }
 
