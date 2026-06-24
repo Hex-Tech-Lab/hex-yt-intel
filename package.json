@@ -6,7 +6,15 @@
   "type": "module",
   "overrides": {
     "undici": "6.21.2",
-    "ajv": "^8.17.1"
+    "ajv": "^8.17.1",
+    "@eslint/eslintrc>ajv": "6.12.6",
+    "eslint>ajv": "6.12.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "@eslint/eslintrc>ajv": "6.12.6",
+      "eslint>ajv": "6.12.6"
+    }
   },
   "devDependencies": {
     "glob": "^13.0.6",
