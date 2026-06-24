@@ -77,7 +77,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
         <CornerFrame tone={streaming ? "accent" : "line"}>
           <GlowBorder active={streaming} radius="control">
             <div className="flex items-center gap-3 bg-[var(--surface)] p-2.5 rounded-[7px] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
-              <span aria-hidden={true} className={`grid place-items-center w-10 h-10 rounded-lg bg-[var(--bg)] ${streaming ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} flex-none border border-[var(--line)]`}>
+              <span aria-hidden className={`grid place-items-center w-10 h-10 rounded-lg bg-[var(--bg)] ${streaming ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} flex-none border border-[var(--line)]`}>
                 <Icon icon="solar:link-round-angle-linear" size={20} />
               </span>
               <input

@@ -9,7 +9,7 @@
  */
 export function createClaudeStreamNormalizer(): TransformStream<Uint8Array, Uint8Array> {
   return new TransformStream({
-    async transform(chunk: Uint8Array, controller: TransformStreamDefaultController<Uint8Array>) {
+    transform(chunk: Uint8Array, controller: TransformStreamDefaultController<Uint8Array>) {
       const chunkText = new TextDecoder().decode(chunk);
       const lines = chunkText.split(/\r?\n/);
 

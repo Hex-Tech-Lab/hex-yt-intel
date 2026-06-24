@@ -1,7 +1,7 @@
 import { GraphNode, GraphEdge, KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
 export class AggregateGlobalGraphUseCase {
-  async execute(analyses: Array<{ id: string; nodes: GraphNode[]; edges: GraphEdge[] }>): Promise<KnowledgeGraph> {
+  execute(analyses: Array<{ id: string; nodes: GraphNode[]; edges: GraphEdge[] }>): KnowledgeGraph {
     const nodeMap = new Map<string, GraphNode>();
     const edgeMap = new Map<string, GraphEdge>();
 

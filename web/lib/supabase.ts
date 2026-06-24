@@ -32,7 +32,7 @@ export async function getSupabaseClientWithAuth() {
     throw new Error('Missing Supabase configuration');
   }
 
-  let cookieStore: any;
+  let cookieStore: { getAll: () => { name: string; value: string }[]; set: (name: string, value: string, options?: Record<string, unknown>) => void };
   let hasCookies = false;
   try {
     cookieStore = await cookies();
@@ -48,7 +48,7 @@ export async function getSupabaseClientWithAuth() {
       cookies: {
         getAll() {
           if (!hasCookies || !cookieStore) return [];
-          return cookieStore.getAll().map((c: any) => ({ name: c.name, value: c.value }));
+          return cookieStore.getAll().map((c: { name: string; value: string }) => ({ name: c.name, value: c.value }));
         },
         setAll(cookiesToSet) {
           if (!hasCookies || !cookieStore) return;

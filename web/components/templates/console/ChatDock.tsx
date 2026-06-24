@@ -278,8 +278,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                 )}
                 {!isUser && options.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 max-w-[92%]">
-                    {options.map((opt, i) => (
-                      <button key={i} onClick={() => void submit(opt)} disabled={sending}
+                    {options.map((opt) => (
+                      <button key={opt} onClick={() => void submit(opt)} disabled={sending}
                         className={`py-1.5 px-[11px] rounded-full border border-[var(--accent)] bg-[rgb(6_182_212_/_0.10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         {opt}
                       </button>

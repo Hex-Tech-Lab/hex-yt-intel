@@ -382,7 +382,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true, analysisId: data.analysisId, status: 'interrupted' });
       case 'ok':
         return NextResponse.json({ ok: true, analysisId: data.analysisId });
+      default:
+        break;
     }
+    return NextResponse.json({ error: 'Unknown result type' }, { status: 500 });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, { 
