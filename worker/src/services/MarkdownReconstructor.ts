@@ -178,9 +178,9 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
     let cleanText = finalText;
     const end = finalText.lastIndexOf('}');
     if (end !== -1 && end > start) {
-      // If there are trailing markdown blocks, slice to end of JSON object
+      const trailingChars = new Set(['\n', '\r', '', '`', ' ', '\t']);
       const nextChar = finalText.charAt(end + 1);
-      if (nextChar === '\n' || nextChar === '\r' || nextChar === '' || nextChar === '`' || nextChar === ' ' || nextChar === '\t') {
+      if (trailingChars.has(nextChar)) {
         cleanText = cleanText.slice(start, end + 1);
       } else {
         cleanText = cleanText.slice(start);

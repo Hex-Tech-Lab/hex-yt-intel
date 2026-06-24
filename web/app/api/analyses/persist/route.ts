@@ -14,6 +14,7 @@ import { PersistedValidationReport, isPersistedValidationReport } from '@/lib/ty
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
+import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
 function buildValidationFilename(title: string, channelTitle?: string | null): string {
   const cleanSlug = (text: string): string => {
@@ -77,313 +78,311 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const {
-      analysisId,
-      videoId,
-      markdown,
-      payload,
-      model,
-      valid,
-      contentSig,
-      status,
-      chunkIndex,
-      totalChunks
-    } = parsedBody.data;
-
-    const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
-
-    // Tamper check: proves this markdown+payload came from the worker, not a forged caller.
-    // Canonical signable matches the worker's canonical = JSON.stringify({ markdown, payload }).
-    const canonical = JSON.stringify({ markdown, payload: payload ?? null });
-    let isSigValid = false;
-    try {
-      isSigValid = await verifyContentSig(canonical, contentSig);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      Sentry.captureException(error, { contexts: { persist: { phase: 'verifyContentSig', analysisId, videoId } } });
-      console.error('[analyses/persist]', { message: msg, analysisId, videoId });
-      return NextResponse.json({ error: 'Security configuration error' }, { status: 500 });
-    }
-
-    if (!isSigValid) {
-      console.warn('[analyses/persist] Invalid content signature', { analysisId, videoId });
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
-
-    // Validate payload schema before persisting.
-    let validPayload: UCISPayloadV2 | undefined;
-
-    if (payload !== undefined && payload !== null) {
-      const isChunk = chunkIndex !== undefined;
-      const parseResult = isChunk
-        ? z.object({
-            schemaVersion: z.literal('2.0'),
-            dimensions: z.array(z.object({
-              number: z.number().int().min(1).max(TOTAL_DIMENSIONS),
-              name: z.string(),
-              content: z.string()
-            }))
-          }).passthrough().safeParse(payload)
-        : UCISPayloadV2Schema.safeParse(payload);
-
-      if (!parseResult.success) {
-        console.warn('[analyses/persist] Invalid payload schema', { 
-          analysisId, 
-          videoId, 
-          chunkIndex,
-          errors: parseResult.error.flatten() 
-        });
-        return NextResponse.json({ error: 'Invalid payload schema' }, { status: 400 });
-      }
-      validPayload = parseResult.data as any;
-    }
-
-    const persistenceAdapter = new SupabasePersistenceAdapter();
-
-    // Fetch the processing row to recover its context (user, transcript availability).
-    const row = await persistenceAdapter.findAnalysisForPersist({ analysisId, videoId });
-
-    if (!row) {
-      Sentry.captureMessage('analysis-persist: row not found', {
-        level: 'warning',
-        tags: { operation: 'analysis-persist', reason: 'row-not-found' },
-        extra: { analysisId, videoId, status },
-      });
-      console.warn('[analyses/persist] Row not found (env mismatch?)', { analysisId, videoId });
-      return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
-    }
-
-    const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport) 
-      ? row.validationReport 
-      : { status: 'processing' };
-    const isInterrupted = status === 'interrupted';
-
-    // === CHUNKED PERSISTENCE PATH ===
-    if (chunkIndex !== undefined && validPayload && 'dimensions' in validPayload) {
-      const dimensionsCovered = Array.isArray(validPayload.dimensions)
-        ? (validPayload.dimensions as any[]).map((d: any) => d.number)
-        : [];
-
-      // Save the segment chunk to the database
-      await persistenceAdapter.persistAnalysisChunk({
+    const conductor = new WorkflowConductor({} as any);
+    const roomResult = await conductor.routeToRoom('persist', async (_ctx) => {
+      const {
         analysisId,
-        chunkIndex,
-        dimensionsCovered,
-        payload,
-        status: status as any,
-      });
-
-      // Query all chunks to see if we can perform a stitch
-      const chunks = await persistenceAdapter.findAnalysisChunks({ analysisId });
-      const completedChunks = chunks ? chunks.filter(c => c.status === 'completed') : [];
-
-      const completedIndexes = new Set(completedChunks.map(c => c.chunk_index));
-      let allChunksCompleted = true;
-      for (let i = 1; i <= resolvedTotal; i++) {
-        if (!completedIndexes.has(i)) {
-          allChunksCompleted = false;
-          break;
-        }
-      }
-
-      // Grace-period fallback: stitch what we have when a quorum of chunks
-      // is complete AND no new chunks have arrived in 30s. This prevents data
-      // from being orphaned when the frontend aborts mid-stream while still
-      // allowing slow bundles to complete naturally.
-      if (!allChunksCompleted && completedChunks.length > 0) {
-        const minQuorum = Math.ceil(resolvedTotal * 0.6);
-        if (completedChunks.length >= minQuorum) {
-          const now = Date.now();
-          const timestamps = completedChunks.map((c: any) => new Date(c.updated_at).getTime());
-          const newestTime = Math.max(...timestamps);
-          // Only activate grace period if the LATEST chunk is also >30s old
-          // (no new chunks arriving), preventing premature stitch of a slow stream.
-          if (now - newestTime >= 30000) {
-            allChunksCompleted = true;
-          }
-        }
-      }
-
-      if (allChunksCompleted) {
-        // Stitch the payloads together
-        const chunkMap = new Map<number, any>();
-        completedChunks.forEach(c => {
-          chunkMap.set(c.chunk_index, c.payload);
-        });
-
-        const stitchedDimensions: any[] = [];
-        let stitchedPersona: any = null;
-        let stitchedClassification: any = null;
-        let stitchedMonetization: any = null;
-        const stitchedNodes: any[] = [];
-        const stitchedEdges: any[] = [];
-
-        for (let i = 1; i <= resolvedTotal; i++) {
-          const p = chunkMap.get(i) || {};
-          if (p.dimensions && Array.isArray(p.dimensions)) {
-            stitchedDimensions.push(...p.dimensions);
-          }
-          if (p.persona && !stitchedPersona) {
-            stitchedPersona = p.persona;
-          }
-          if (p.classification && !stitchedClassification) {
-            stitchedClassification = p.classification;
-          }
-          if (p.monetizationVerdict && !stitchedMonetization) {
-            stitchedMonetization = p.monetizationVerdict;
-          }
-          if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.nodes)) {
-            stitchedNodes.push(...p.knowledgeGraph.nodes);
-          }
-          if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.edges)) {
-            stitchedEdges.push(...p.knowledgeGraph.edges);
-          }
-        }
-
-        // Sort dimensions safely by dimension number, filtering out malformed entries
-        const cleanDimensions = stitchedDimensions
-          .filter(d => d && typeof d.number === 'number' && !isNaN(d.number))
-          .sort((a, b) => a.number - b.number);
-
-        const stitchedPayload: UCISPayloadV2 = {
-          schemaVersion: '2.0',
-          persona: stitchedPersona || {
-            primary: { id: 'consultant', label: 'Consultant', weight: 1.0 },
-            cognitiveLenses: [],
-            selectionRationale: ''
-          },
-          dimensions: cleanDimensions,
-          knowledgeGraph: {
-            nodes: stitchedNodes,
-            edges: stitchedEdges,
-            rootId: stitchedNodes[0]?.id || null
-          },
-          classification: stitchedClassification || {
-            authoritative: false,
-            practicallyActionable: false,
-            knowledgeGraphReady: false,
-            safe: true,
-            personaOptimised: false,
-            recommendation: 'conditional'
-          },
-          monetizationVerdict: stitchedMonetization
-        };
-
-        const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
-        const fullParseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
-        const isStitchedValid = fullParseResult.success;
-
-        if (!isStitchedValid) {
-          console.warn('[analyses/persist] Stitched payload failed schema validation', {
-            analysisId,
-            videoId,
-            errors: fullParseResult.error.flatten()
-          });
-        }
-
-        const newReport: PersistedValidationReport = {
-          ...priorReport,
-          status: isStitchedValid ? 'completed' : 'failed',
-          model_used: model || null,
-          valid: isStitchedValid,
-        };
-
-        // Write complete stitched result to main tables
-        // updateAnalysisResult now automatically handles Knowledge Graph persistence (ADR 006)
-        await persistenceAdapter.updateAnalysisResult({
-          analysisId,
-          markdown: stitchedMarkdown,
-          payload: stitchedPayload,
-          model: model || null,
-          validationPassed: isStitchedValid,
-          validationReport: newReport,
-        });
-
-        // Cache-aside updates
-        const cachedPayload: CachedAnalysisResult = {
-          id: analysisId,
-          video_id: videoId,
-          title: row.title,
-          analysis_markdown: stitchedMarkdown,
-          analysis_payload: stitchedPayload as any,
-          validation_report: {
-            transcript_available: !!priorReport.transcript_available,
-            analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
-          },
-          model_used: model || 'edge-stream',
-          created_at: row.createdAt,
-          cached_at: new Date().toISOString(),
-        };
-        const cacheKey = generateCacheKey('edge-stream', stitchedMarkdown, '5.1');
-        await setAnalysisCache(cacheKey, cachedPayload).catch(() => {});
-
-        // QStash verification queue
-        if (!!priorReport.transcript_available) {
-          await publishValidationTask({
-            videoId,
-            markdown: stitchedMarkdown,
-            filename: buildValidationFilename(row.title, row.channelTitle),
-            userId: row.userId,
-            analysisId,
-            metadata: { title: row.title, channelTitle: row.channelTitle || '' },
-          }).catch(() => {});
-        }
-      }
-
-      return NextResponse.json({ ok: true, analysisId, chunkIndex, status: 'chunk_saved' });
-    }
-
-    // === BASELINE FULL PERSISTENCE PATH (Legacy/Single Stream fallback) ===
-    const newReport: PersistedValidationReport = {
-      ...priorReport,
-      status: isInterrupted ? 'interrupted' : 'done',
-      model_used: model || null,
-      valid: isInterrupted ? false : !!valid,
-    };
-
-    await persistenceAdapter.updateAnalysisResult({
-      analysisId,
-      markdown,
-      payload: validPayload ?? null,
-      model: model || null,
-      validationPassed: isInterrupted ? false : !!valid,
-      validationReport: newReport,
-    });
-
-    if (isInterrupted) {
-      return NextResponse.json({ ok: true, analysisId, status: 'interrupted' });
-    }
-
-    const transcriptAvailable = !!priorReport.transcript_available;
-    const cachedPayload: CachedAnalysisResult = {
-      id: analysisId,
-      video_id: videoId,
-      title: row.title,
-      analysis_markdown: markdown,
-      analysis_payload: (payload ?? null) as Record<string, unknown> | null,
-      validation_report: {
-        transcript_available: !!priorReport.transcript_available,
-        analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
-      },
-      model_used: model || 'edge-stream',
-      created_at: row.createdAt,
-      cached_at: new Date().toISOString(),
-    };
-    const cacheKey = generateCacheKey('edge-stream', markdown, '5.1');
-    await setAnalysisCache(cacheKey, cachedPayload).catch(() => {});
-
-    if (transcriptAvailable) {
-      await publishValidationTask({
         videoId,
         markdown,
-        filename: buildValidationFilename(row.title, row.channelTitle),
-        userId: row.userId,
+        payload,
+        model,
+        valid,
+        contentSig,
+        status,
+        chunkIndex,
+        totalChunks
+      } = parsedBody.data;
+
+      const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
+
+      const canonical = JSON.stringify({ markdown, payload: payload ?? null });
+      let isSigValid = false;
+      try {
+        isSigValid = await verifyContentSig(canonical, contentSig);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        Sentry.captureException(error, { contexts: { persist: { phase: 'verifyContentSig', analysisId, videoId } } });
+        console.error('[analyses/persist]', { message: msg, analysisId, videoId });
+        return { type: 'error' as const, error: 'Security configuration error', status: 500 };
+      }
+
+      if (!isSigValid) {
+        console.warn('[analyses/persist] Invalid content signature', { analysisId, videoId });
+        return { type: 'error' as const, error: 'Invalid signature', status: 401 };
+      }
+
+      let validPayload: UCISPayloadV2 | undefined;
+
+      if (payload !== undefined && payload !== null) {
+        const isChunk = chunkIndex !== undefined;
+        const parseResult = isChunk
+          ? z.object({
+              schemaVersion: z.literal('2.0'),
+              dimensions: z.array(z.object({
+                number: z.number().int().min(1).max(TOTAL_DIMENSIONS),
+                name: z.string(),
+                content: z.string()
+              }))
+            }).passthrough().safeParse(payload)
+          : UCISPayloadV2Schema.safeParse(payload);
+
+        if (!parseResult.success) {
+          console.warn('[analyses/persist] Invalid payload schema', { 
+            analysisId, 
+            videoId, 
+            chunkIndex,
+            errors: parseResult.error.flatten() 
+          });
+          return { type: 'error' as const, error: 'Invalid payload schema', status: 400 };
+        }
+        validPayload = parseResult.data as any;
+      }
+
+      const persistenceAdapter = new SupabasePersistenceAdapter();
+      const row = await persistenceAdapter.findAnalysisForPersist({ analysisId, videoId });
+
+      if (!row) {
+        Sentry.captureMessage('analysis-persist: row not found', {
+          level: 'warning',
+          tags: { operation: 'analysis-persist', reason: 'row-not-found' },
+          extra: { analysisId, videoId, status },
+        });
+        console.warn('[analyses/persist] Row not found (env mismatch?)', { analysisId, videoId });
+        return { type: 'error' as const, error: 'Analysis not found', status: 404 };
+      }
+
+      const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport) 
+        ? row.validationReport 
+        : { status: 'processing' };
+      const isInterrupted = status === 'interrupted';
+
+      if (chunkIndex !== undefined && validPayload && 'dimensions' in validPayload) {
+        const dimensionsCovered = Array.isArray(validPayload.dimensions)
+          ? (validPayload.dimensions as any[]).map((d: any) => d.number)
+          : [];
+
+        await persistenceAdapter.persistAnalysisChunk({
+          analysisId,
+          chunkIndex,
+          dimensionsCovered,
+          payload,
+          status: status as any,
+        });
+
+        const chunks = await persistenceAdapter.findAnalysisChunks({ analysisId });
+        const completedChunks = chunks ? chunks.filter(c => c.status === 'completed') : [];
+
+        const completedIndexes = new Set(completedChunks.map(c => c.chunk_index));
+        let allChunksCompleted = true;
+        for (let i = 1; i <= resolvedTotal; i++) {
+          if (!completedIndexes.has(i)) {
+            allChunksCompleted = false;
+            break;
+          }
+        }
+
+        if (!allChunksCompleted && completedChunks.length > 0) {
+          const minQuorum = Math.ceil(resolvedTotal * 0.6);
+          if (completedChunks.length >= minQuorum) {
+            const now = Date.now();
+            const timestamps = completedChunks.map((c: any) => new Date(c.updated_at).getTime());
+            const newestTime = Math.max(...timestamps);
+            if (now - newestTime >= 30000) {
+              allChunksCompleted = true;
+            }
+          }
+        }
+
+        if (allChunksCompleted) {
+          const chunkMap = new Map<number, any>();
+          completedChunks.forEach(c => {
+            chunkMap.set(c.chunk_index, c.payload);
+          });
+
+          const stitchedDimensions: any[] = [];
+          let stitchedPersona: any = null;
+          let stitchedClassification: any = null;
+          let stitchedMonetization: any = null;
+          const stitchedNodes: any[] = [];
+          const stitchedEdges: any[] = [];
+
+          for (let i = 1; i <= resolvedTotal; i++) {
+            const p = chunkMap.get(i) || {};
+            if (p.dimensions && Array.isArray(p.dimensions)) {
+              stitchedDimensions.push(...p.dimensions);
+            }
+            if (p.persona && !stitchedPersona) {
+              stitchedPersona = p.persona;
+            }
+            if (p.classification && !stitchedClassification) {
+              stitchedClassification = p.classification;
+            }
+            if (p.monetizationVerdict && !stitchedMonetization) {
+              stitchedMonetization = p.monetizationVerdict;
+            }
+            if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.nodes)) {
+              stitchedNodes.push(...p.knowledgeGraph.nodes);
+            }
+            if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.edges)) {
+              stitchedEdges.push(...p.knowledgeGraph.edges);
+            }
+          }
+
+          const cleanDimensions = stitchedDimensions
+            .filter(d => d && typeof d.number === 'number' && !isNaN(d.number))
+            .sort((a, b) => a.number - b.number);
+
+          const stitchedPayload: UCISPayloadV2 = {
+            schemaVersion: '2.0',
+            persona: stitchedPersona || {
+              primary: { id: 'consultant', label: 'Consultant', weight: 1.0 },
+              cognitiveLenses: [],
+              selectionRationale: ''
+            },
+            dimensions: cleanDimensions,
+            knowledgeGraph: {
+              nodes: stitchedNodes,
+              edges: stitchedEdges,
+              rootId: stitchedNodes[0]?.id || null
+            },
+            classification: stitchedClassification || {
+              authoritative: false,
+              practicallyActionable: false,
+              knowledgeGraphReady: false,
+              safe: true,
+              personaOptimised: false,
+              recommendation: 'conditional'
+            },
+            monetizationVerdict: stitchedMonetization
+          };
+
+          const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+          const fullParseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
+          const isStitchedValid = fullParseResult.success;
+
+          if (!isStitchedValid) {
+            console.warn('[analyses/persist] Stitched payload failed schema validation', {
+              analysisId,
+              videoId,
+              errors: fullParseResult.error.flatten()
+            });
+          }
+
+          const newReport: PersistedValidationReport = {
+            ...priorReport,
+            status: isStitchedValid ? 'completed' : 'failed',
+            model_used: model || null,
+            valid: isStitchedValid,
+          };
+
+          await persistenceAdapter.updateAnalysisResult({
+            analysisId,
+            markdown: stitchedMarkdown,
+            payload: stitchedPayload,
+            model: model || null,
+            validationPassed: isStitchedValid,
+            validationReport: newReport,
+          });
+
+          const cachedPayload: CachedAnalysisResult = {
+            id: analysisId,
+            video_id: videoId,
+            title: row.title,
+            analysis_markdown: stitchedMarkdown,
+            analysis_payload: stitchedPayload as any,
+            validation_report: {
+              transcript_available: !!priorReport.transcript_available,
+              analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
+            },
+            model_used: model || 'edge-stream',
+            created_at: row.createdAt,
+            cached_at: new Date().toISOString(),
+          };
+          const cacheKey = generateCacheKey('edge-stream', stitchedMarkdown, '5.1');
+          await setAnalysisCache(cacheKey, cachedPayload).catch(() => {});
+
+          if (!!priorReport.transcript_available) {
+            await publishValidationTask({
+              videoId,
+              markdown: stitchedMarkdown,
+              filename: buildValidationFilename(row.title, row.channelTitle),
+              userId: row.userId,
+              analysisId,
+              metadata: { title: row.title, channelTitle: row.channelTitle || '' },
+            }).catch(() => {});
+          }
+        }
+
+        return { type: 'chunk_saved' as const, analysisId, chunkIndex };
+      }
+
+      const newReport: PersistedValidationReport = {
+        ...priorReport,
+        status: isInterrupted ? 'interrupted' : 'done',
+        model_used: model || null,
+        valid: isInterrupted ? false : !!valid,
+      };
+
+      await persistenceAdapter.updateAnalysisResult({
         analysisId,
-        metadata: { title: row.title, channelTitle: row.channelTitle || '' },
-      }).catch(() => {});
+        markdown,
+        payload: validPayload ?? null,
+        model: model || null,
+        validationPassed: isInterrupted ? false : !!valid,
+        validationReport: newReport,
+      });
+
+      if (isInterrupted) {
+        return { type: 'interrupted' as const, analysisId };
+      }
+
+      const transcriptAvailable = !!priorReport.transcript_available;
+      const cachedPayload: CachedAnalysisResult = {
+        id: analysisId,
+        video_id: videoId,
+        title: row.title,
+        analysis_markdown: markdown,
+        analysis_payload: (payload ?? null) as Record<string, unknown> | null,
+        validation_report: {
+          transcript_available: !!priorReport.transcript_available,
+          analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
+        },
+        model_used: model || 'edge-stream',
+        created_at: row.createdAt,
+        cached_at: new Date().toISOString(),
+      };
+      const cacheKey = generateCacheKey('edge-stream', markdown, '5.1');
+      await setAnalysisCache(cacheKey, cachedPayload).catch(() => {});
+
+      if (transcriptAvailable) {
+        await publishValidationTask({
+          videoId,
+          markdown,
+          filename: buildValidationFilename(row.title, row.channelTitle),
+          userId: row.userId,
+          analysisId,
+          metadata: { title: row.title, channelTitle: row.channelTitle || '' },
+        }).catch(() => {});
+      }
+
+      return { type: 'ok' as const, analysisId };
+    });
+
+    if (!roomResult.success) {
+      return NextResponse.json({ error: roomResult.error }, { status: roomResult.status });
     }
 
-    return NextResponse.json({ ok: true, analysisId });
+    const data = roomResult.data;
+    switch (data.type) {
+      case 'error':
+        return NextResponse.json({ error: data.error }, { status: data.status });
+      case 'chunk_saved':
+        return NextResponse.json({ ok: true, analysisId: data.analysisId, chunkIndex: data.chunkIndex, status: 'chunk_saved' });
+      case 'interrupted':
+        return NextResponse.json({ ok: true, analysisId: data.analysisId, status: 'interrupted' });
+      case 'ok':
+        return NextResponse.json({ ok: true, analysisId: data.analysisId });
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, { 

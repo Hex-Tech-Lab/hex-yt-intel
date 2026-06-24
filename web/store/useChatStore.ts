@@ -13,6 +13,8 @@ import * as Sentry from '@sentry/nextjs';
 import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
 import { outbox, newClientMsgId } from '@/lib/chat/outbox';
 
+const VALID_PERSIST_STATUSES = new Set(['saving', 'saved', 'failed', 'aborted'] as const);
+
 interface ChatState {
   conversations: ChatConversation[];
   activeId: string | null;
@@ -244,7 +246,7 @@ export const useChatStore = create<ChatState>((set, get) => {
             }));
           },
           persist: (evt) => {
-            if (evt.status === 'saving' || evt.status === 'saved' || evt.status === 'failed' || evt.status === 'aborted') {
+            if (VALID_PERSIST_STATUSES.has(evt.status)) {
               get().setPersistState(evt.status, clientMsgId);
             }
           },
@@ -268,7 +270,7 @@ export const useChatStore = create<ChatState>((set, get) => {
             }
             case 'persist': {
               const evt = e as unknown as Extract<ChatSSEEvent, { type: 'persist' }>;
-              if (evt.status === 'saving' || evt.status === 'saved' || evt.status === 'failed' || evt.status === 'aborted') handlers.persist(evt);
+              if (VALID_PERSIST_STATUSES.has(evt.status)) handlers.persist(evt);
               break;
             }
             case 'error': {
@@ -385,15 +387,9 @@ export const useChatStore = create<ChatState>((set, get) => {
         // event from the worker is the authoritative delivery confirmation.
         // deliver() returns when the stream ends, not when persistence completes.
       } catch (e) {
-        // Stays in outbox; the pending assistant bubble is dropped, user bubble kept.
+        // Stays in outbox; user bubble kept, pending assistant bubble NOT stripped — retry loop needs full context.
         const { msg } = handleChatStreamError(e, { convId: convId!, clientMsgId, action: 'sendMessage' }, get().setPersistState);
-        set((s) => ({
-          error: msg || 'Send failed (queued for retry)',
-          messagesByConv: {
-            ...s.messagesByConv,
-            [convId!]: (s.messagesByConv[convId!] || []).filter((m) => m.id !== `pending-${clientMsgId}`),
-          },
-        }));
+        set({ error: msg || 'Send failed (queued for retry)' });
       } finally {
         set({ sending: false });
       }
