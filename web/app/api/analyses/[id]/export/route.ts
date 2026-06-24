@@ -159,7 +159,7 @@ function drawHeader(doc: PDFKit.PDFDocument, analysis: ExportableAnalysis, subti
   doc.moveDown();
 }
 
-async function exportSummaryPDF(analysis: ExportableAnalysis) {
+function exportSummaryPDF(analysis: ExportableAnalysis) {
   try {
     const doc = new PDFDocument({ margin: 50, bufferPages: true });
     drawHeader(doc, analysis, 'Executive Summary');
@@ -201,7 +201,7 @@ async function exportSummaryPDF(analysis: ExportableAnalysis) {
   }
 }
 
-async function exportFullPDF(analysis: ExportableAnalysis) {
+function exportFullPDF(analysis: ExportableAnalysis) {
   try {
     const doc = new PDFDocument({ margin: 50, bufferPages: true });
     drawHeader(doc, analysis, 'Full Synthesis Report');

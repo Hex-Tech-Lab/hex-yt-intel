@@ -105,13 +105,6 @@ export class StreamStatusTracker {
       }
       store.logInfo(`Attempting automated fallback routing...`);
     }
-
-    console.debug('[Adapter] Status update:', {
-      stage: fragment.stage,
-      model: fragment.model || fragment.from,
-      error: fragment.error,
-      rawError: fragment.rawError,
-    });
   }
 
   public handleComplete(

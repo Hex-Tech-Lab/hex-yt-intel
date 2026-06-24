@@ -94,7 +94,7 @@ function validateEnvVar(
 
 export function validateEnvironment(): void {
   const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
-  const isVercel = !!process.env.VERCEL;
+  const isVercel = Boolean(process.env.VERCEL);
   const isPreview = process.env.VERCEL_ENV === 'preview' || process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview';
   const isProd = !isCI && !isPreview && isVercel && 
     (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production');
@@ -150,7 +150,7 @@ export const env = {
   get isDevelopment(): boolean { return process.env.NODE_ENV === 'development'; },
   get isProduction(): boolean { 
     const isCI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true';
-    const isVercel = !!process.env.VERCEL;
+const isVercel = Boolean(process.env.VERCEL);
     const isPreview = process.env.VERCEL_ENV === 'preview' || process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview';
     return !isCI && !isPreview && isVercel && (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production');
   },

@@ -190,12 +190,12 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
         height={layout.h} 
         className="absolute inset-0 pointer-events-none"
       >
-        {layout.links.map((link, idx) => {
+        {layout.links.map((link) => {
           const midX = (link.sourceX + link.targetX) / 2;
           const path = `M ${link.sourceX} ${link.sourceY} C ${midX} ${link.sourceY}, ${midX} ${link.targetY}, ${link.targetX} ${link.targetY}`;
           return (
             <path
-              key={idx}
+              key={`${link.sourceX}-${link.sourceY}-${link.targetX}-${link.targetY}`}
               d={path}
               fill="none"
               stroke="var(--accent)"

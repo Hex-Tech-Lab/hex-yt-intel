@@ -50,8 +50,8 @@ export const useAnalysisStateStore = create<AnalysisStateStore>((set, get) => ({
     set((state) => {
       const now = new Date().toISOString();
       const existing = state.analysis;
-      const hasFreshId = !!(payload.id && payload.id.length > 0);
-      const hasDimensions = !!(payload.dimensions && Object.keys(payload.dimensions).length > 0);
+      const hasFreshId = Boolean(payload.id && payload.id.length > 0);
+      const hasDimensions = Boolean(payload.dimensions && Object.keys(payload.dimensions).length > 0);
 
       if (!existing) return { analysis: newPayload(payload, now), isStreaming: !hasDimensions };
       if (hasFreshId && hasDimensions) {

@@ -165,18 +165,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
       const blob = new Blob([text], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${nucleus.analysis?.title || 'analysis'}-insights.txt`;
-      a.click();
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${nucleus.analysis?.title || 'analysis'}-insights.txt`;
+      anchor.click();
     } else if (id === 'knowledge-graph') {
       const canvas = document.querySelector('.js-knowledge-graph-container canvas') as HTMLCanvasElement;
       if (canvas) {
         const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${nucleus.analysis?.title || 'analysis'}-knowledge-graph.png`;
-        a.click();
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${nucleus.analysis?.title || 'analysis'}-knowledge-graph.png`;
+        anchor.click();
       } else {
         showToast('Could not locate canvas element to export.', 'error');
       }
@@ -184,10 +184,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       const canvas = document.querySelector('.js-word-cloud-canvas') as HTMLCanvasElement;
       if (canvas) {
         const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${nucleus.analysis?.title || 'analysis'}-word-cloud.png`;
-        a.click();
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${nucleus.analysis?.title || 'analysis'}-word-cloud.png`;
+        anchor.click();
       } else {
         showToast('Could not locate canvas element to export.', 'error');
       }
@@ -198,10 +198,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         const svgString = serializer.serializeToString(svg);
         const blob = new Blob([svgString], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${nucleus.analysis?.title || 'analysis'}-mind-map.svg`;
-        a.click();
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${nucleus.analysis?.title || 'analysis'}-mind-map.svg`;
+        anchor.click();
       } else {
         showToast('Could not locate SVG element to export.', 'error');
       }
@@ -237,7 +237,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       id: 'knowledge-graph',
       title: 'Knowledge Graph',
       content: () => (
-        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact={true} />
+        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact />
       ),
       onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('knowledge-graph');
@@ -316,12 +316,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       const content = analysis?.analysis_markdown || '';
       const blob = new Blob([content], { type: 'text/markdown' });
       const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `${nucleus.analysis.title || 'synthesis'}.md`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = `${nucleus.analysis.title || 'synthesis'}.md`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
       URL.revokeObjectURL(downloadUrl);
     }
   }, [nucleus.analysis?.id, nucleus.analysis?.title, analysis?.analysis_markdown]);

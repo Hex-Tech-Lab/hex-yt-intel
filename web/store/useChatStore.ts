@@ -46,10 +46,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   try {
     const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } });
     if (!res.ok) {
-      throw new Error(`${res.status}: ${await res.text().catch((err) => {
-        console.debug('[api] text retrieval failed:', err);
-        return '';
-      })}`);
+      throw new Error(`${res.status}: ${await res.text().catch(() => '')}`);
     }
     return res.json() as Promise<T>;
   } finally {
@@ -94,9 +91,7 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
   let timedOut = false;
   const timeout = setTimeout(() => {
     timedOut = true;
-    reader.cancel().catch((err) => {
-      console.debug('[readSSE] reader cancel failed:', err);
-    });
+    reader.cancel().catch(() => {});
   }, 25000);
 
   try {
@@ -117,7 +112,7 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
         try {
           onEvent(JSON.parse(line.slice(5).trim()));
         } catch (e) {
-          console.debug('[readSSE] partial/invalid JSON frame skipped:', e);
+          // partial/invalid JSON frame skipped
         }
       }
     }
@@ -278,6 +273,8 @@ export const useChatStore = create<ChatState>((set, get) => {
               handlers.error(evt);
               break;
             }
+            default:
+              break;
           }
         }
       });

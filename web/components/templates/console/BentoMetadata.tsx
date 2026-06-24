@@ -41,18 +41,18 @@ export function BentoMetadata({
   };
 
   const formatViews = (count: string | number) => {
-    const n = typeof count === 'string' ? parseInt(count, 10) : count;
-    if (isNaN(n)) return '0';
-    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-    return n.toString();
+    const countNum = typeof count === 'string' ? parseInt(count, 10) : count;
+    if (isNaN(countNum)) return '0';
+    if (countNum >= 1000000) return `${(countNum / 1000000).toFixed(1)}M`;
+    if (countNum >= 1000) return `${(countNum / 1000).toFixed(1)}K`;
+    return countNum.toString();
   };
 
   const formatDuration = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}` : `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (

@@ -39,12 +39,12 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
     
     const blob = new Blob([content], { type: format === 'md' ? 'text/markdown' : 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `synthesis-log.${format}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `synthesis-log.${format}`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
@@ -94,7 +94,7 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
             </div>
           ) : (
             terminalLines.map((line, i) => (
-              <div key={i} className="flex gap-3 mb-0.5">
+              <div key={`${line.timestamp}-${i}`} className="flex gap-3 mb-0.5">
                 <span className="text-[var(--ink-muted)] flex-shrink-0">[{line.timestamp}]</span>
                 <span className={`break-all ${line.type === 'ok' ? "text-[var(--ok)]" : line.type === 'error' ? "text-[var(--err)]" : "text-[var(--ink-secondary)]"}`}>
                   {line.message}
