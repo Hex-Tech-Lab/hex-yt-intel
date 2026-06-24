@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
 
     const { error: insertError } = await (supabase as any).from('stripe_events').insert(eventData);
     if (insertError) {
-      throw new Error(`Failed to insert stripe event: ${insertError.message}`);
+      console.error('[/api/stripe/webhook] Failed to insert stripe event:', insertError);
+      throw new Error('Database insert failed for stripe event');
     }
 
     const duration = Math.round(performance.now() - startTime);
