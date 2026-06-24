@@ -96,11 +96,12 @@ export class CreateAnalysisUseCase {
 
     // 3. Metadata Ingestion (transcript fetched by Edge Worker via SSE)
     let ingestionResult;
-    try {
-      ingestionResult = await this.metadataIngestion.fetch(videoId);
+    const [settled] = await Promise.allSettled([this.metadataIngestion.fetch(videoId)]);
+    if (settled.status === 'fulfilled') {
+      ingestionResult = settled.value;
       ingestionResult.transcript = '';
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+    } else {
+      const msg = settled.reason instanceof Error ? settled.reason.message : String(settled.reason);
       return { type: 'error', code: 'ERR_INGESTION_FAILED', status: 500, message: `Video ingestion failed: ${msg}` };
     }
 
