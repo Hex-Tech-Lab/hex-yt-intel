@@ -199,6 +199,8 @@ function buildStreamResponse(
             activeSecret: signingKey,
             appUrl: url,
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
+            chunkIndex: req.chunkIndex,
+            totalChunks: req.totalChunks,
           }).catch(() => {});
           persistSignal.abort();
           reject(new Error("Persistence timeout reached (15s)"));

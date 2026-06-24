@@ -1,7 +1,21 @@
 import { verifyResourceOwnership } from '@/lib/services/ownership';
+import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
+
+const MAX_EDGE_PAYLOAD_BYTES = 100_000;
+
+function getAnalysisMarkdown(analysis: { analysis_markdown?: string | null; analysis_payload?: Record<string, unknown> | null }): string {
+  if (analysis.analysis_markdown) return analysis.analysis_markdown;
+  if (!analysis.analysis_payload) return '';
+  const payloadSize = new TextEncoder().encode(JSON.stringify(analysis.analysis_payload)).length;
+  if (payloadSize > MAX_EDGE_PAYLOAD_BYTES) {
+    console.warn('[analyses] Payload too large for edge reconstruction, skipping:', payloadSize);
+    return '';
+  }
+  return reconstructMarkdown(analysis.analysis_payload);
+}
 
 export async function GET(
   _req: NextRequest,
@@ -32,7 +46,7 @@ export async function GET(
       title: analysis.title || 'Untitled',
       channelTitle: analysis.channel_title,
       model: analysis.model_used || 'unknown',
-      analysis_markdown: analysis.analysis_markdown || '',
+      analysis_markdown: getAnalysisMarkdown(analysis),
       analysis_payload: analysis.analysis_payload || null,
       validation_report: report,
       analysisAt: analysis.analysis_at || analysis.created_at,

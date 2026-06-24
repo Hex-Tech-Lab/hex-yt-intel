@@ -75,8 +75,9 @@ export async function POST(request: NextRequest) {
     await trackDatabaseQuery(
       'insert',
       'stripe_events',
-      () =>
-        (supabase as any).from('stripe_events').insert(eventData).then(() => null),
+      async () => {
+        await (supabase as any).from('stripe_events').insert(eventData);
+      },
       { eventId: event.id, userId }
     ).catch((error) => {
       console.warn('[/api/stripe/webhook] Failed to store event:', error);

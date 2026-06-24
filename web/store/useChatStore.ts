@@ -256,7 +256,27 @@ export const useChatStore = create<ChatState>((set, get) => {
 
         const type = e.type as ChatSSEEvent['type'];
         if (type && type in handlers) {
-          (handlers[type] as any)(e);
+          switch (type) {
+            case 'delta': {
+              const evt = e as unknown as Extract<ChatSSEEvent, { type: 'delta' }>;
+              if (typeof evt.content === 'string') handlers.delta(evt);
+              break;
+            }
+            case 'done': {
+              handlers.done(e as unknown as Extract<ChatSSEEvent, { type: 'done' }>);
+              break;
+            }
+            case 'persist': {
+              const evt = e as unknown as Extract<ChatSSEEvent, { type: 'persist' }>;
+              if (evt.status === 'saving' || evt.status === 'saved' || evt.status === 'failed' || evt.status === 'aborted') handlers.persist(evt);
+              break;
+            }
+            case 'error': {
+              const evt = e as unknown as Extract<ChatSSEEvent, { type: 'error' }>;
+              handlers.error(evt);
+              break;
+            }
+          }
         }
       });
 
@@ -384,8 +404,9 @@ export const useChatStore = create<ChatState>((set, get) => {
       try {
         await api(`/api/chat/conversations/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) });
       } catch (err) {
-        Sentry.captureException(err, { tags: { action: 'renameConversation', conversationId: id } });
-        console.error('[ChatStore]', { message: 'optimistic rename failed', error: err, conversationId: id });
+        const msg = err instanceof Error ? err.message : String(err);
+        Sentry.captureException(err, { contexts: { renameConversation: { conversationId: id } } });
+        console.error('[ChatStore]', { message: 'optimistic rename failed', error: msg, conversationId: id });
       }
     },
 
@@ -400,8 +421,9 @@ export const useChatStore = create<ChatState>((set, get) => {
       try {
         await api(`/api/chat/conversations/${id}`, { method: 'DELETE' });
       } catch (err) {
-        Sentry.captureException(err, { tags: { action: 'deleteConversation', conversationId: id } });
-        console.warn('[ChatStore] conversation delete failed or already removed locally:', err);
+        const msg = err instanceof Error ? err.message : String(err);
+        Sentry.captureException(err, { contexts: { deleteConversation: { conversationId: id } } });
+        console.warn('[ChatStore]', { message: 'conversation delete failed', error: msg, conversationId: id });
       }
     },
 

@@ -1,6 +1,6 @@
 import { BillingProvider, BillingProviderType, CheckoutOptions } from './types/billing';
 import { paddle } from './paddle';
-import * as stripeLib from './stripe'; // Existing stripe lib
+import { getOrCreateStripeCustomer, createCheckoutSession } from './stripe';
 
 /**
  * Paddle implementation of the BillingProvider interface
@@ -31,8 +31,8 @@ const StripeProvider: BillingProvider = {
   async createCheckout(options: CheckoutOptions) {
     try {
       // Reusing existing Stripe logic
-      const customerId = await stripeLib.getOrCreateStripeCustomer(options.userId, options.userEmail);
-      const url = await stripeLib.createCheckoutSession(customerId, options.successUrl, options.cancelUrl, options.userId);
+      const customerId = await getOrCreateStripeCustomer(options.userId, options.userEmail);
+      const url = await createCheckoutSession(customerId, options.successUrl, options.cancelUrl, options.userId);
       return { url, id: null };
     } catch (error) {
       console.error('[BillingFactory] Stripe checkout failed:', error);
