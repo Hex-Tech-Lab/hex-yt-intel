@@ -2,11 +2,15 @@ import { Node, SyntaxKind } from "ts-morph";
 import type { SourceFile } from "ts-morph";
 import type { Finding, IRule } from "../engine";
 
+function normalizePosixPath(p: string): string {
+  return p.replace(/\\/g, "/").replace(/\/+/g, "/");
+}
+
 export const HexagonalBoundaryRule: IRule = {
   name: "hexagonal-boundary-enforcer",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const isAdapter = filePath.includes("/adapters/");
 
     if (!isAdapter) {
@@ -34,7 +38,7 @@ export const ComplexityRule: IRule = {
     name: "complexity-monitor",
     check: (source: SourceFile) => {
       const findings: Finding[] = [];
-      const filePath = source.getFilePath().replace(/\\/g, "/");
+      const filePath = normalizePosixPath(source.getFilePath());
       const lines = source.getText().split(/\r?\n/).length;
       if (lines > 500) {
         findings.push({
@@ -53,7 +57,7 @@ export const ErrorTaxonomyRule: IRule = {
   name: "error-taxonomy-audit",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
 
     source.forEachDescendant((node) => {
       if (Node.isIfStatement(node)) {
@@ -80,7 +84,7 @@ export const CrossPlatformRule: IRule = {
   name: "cross-platform-compatibility",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
     const lfSplitMatches = text.match(/\.split\(['"]\\n['"]\)/g);
@@ -101,27 +105,84 @@ export const SchemaContractRule: IRule = {
   name: "schema-contract-audit",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
-    if (text.includes('.refine(')) {
-      // Check if any .refine() call is on a field chain that lacks .optional()
-      const refineChains = text.match(/\.\w+\([^)]*\)\.refine\(/g) || [];
-      const hasOptionalBeforeRefine = refineChains.some(chain => {
-        const fieldStart = text.indexOf(chain);
-        const fieldSegment = text.substring(Math.max(0, fieldStart - 200), fieldStart);
-        return fieldSegment.includes('.optional()');
-      });
-      if (refineChains.length > 0 && !hasOptionalBeforeRefine && text.includes('z.object({')) {
-        findings.push({
-          file: filePath,
-          severity: "critical",
-          title: "Schema: Refinement on required field may reject valid requests",
-          why: "z.refine() used without .optional() on the chained field. If a caller doesn't send this field, the entire request is rejected with 400.",
-          fix: "Add .optional() before .refine() if the field isn't guaranteed from all call paths: .refine(...).optional()"
-        });
-      }
+    if (!text.includes('.refine(') || !text.includes('z.object({')) {
+      return findings;
     }
+
+    // Walk the full method chain from a .refine() call to collect all method names
+    // in both directions: wrapping calls like .optional() that surround .refine(),
+    // and inner calls like .string() that precede .refine() in the chain.
+    function collectMethodChain(callExpr: import("ts-morph").CallExpression): string[] {
+      const methods: string[] = [];
+      const MAX_DEPTH = 15;
+
+      // Walk UP through ancestor PropertyAccessExpression → CallExpression chains
+      // to capture wrapping calls like .optional() that surround .refine()
+      let current: import("ts-morph").Node = callExpr;
+      let depth = 0;
+      while (current.getParent() && depth < MAX_DEPTH) {
+        const parent = current.getParent();
+        if (Node.isPropertyAccessExpression(parent)) {
+          methods.push(parent.getName());
+          const grandParent = parent.getParent();
+          if (Node.isCallExpression(grandParent)) {
+            current = grandParent;
+            depth++;
+            continue;
+          }
+        }
+        break;
+      }
+
+      // Walk DOWN the expression chain to capture inner calls before .refine()
+      // e.g. .string(), .min(1), .email() in z.string().min(1).refine(...).optional()
+      let expr = callExpr.getExpression();
+      depth = 0;
+      while (Node.isPropertyAccessExpression(expr) && depth < MAX_DEPTH) {
+        methods.push(expr.getName());
+        const obj = expr.getExpression();
+        if (Node.isCallExpression(obj)) {
+          expr = obj.getExpression();
+          depth++;
+        } else {
+          break;
+        }
+      }
+
+      return methods;
+    }
+
+    source.forEachDescendant((node) => {
+      if (Node.isCallExpression(node)) {
+        const expr = node.getExpression();
+        if (Node.isPropertyAccessExpression(expr) && expr.getName() === 'refine') {
+          // Only flag field-level refinements inside z.object({}) properties,
+          // not schema-level .refine() on the entire z.object({}) return value
+          const inObjectProperty = node.getFirstAncestorByKind(
+            SyntaxKind.PropertyAssignment as unknown as import("ts-morph").SyntaxKind
+          );
+          if (!inObjectProperty) return;
+
+          const chainMethods = collectMethodChain(node);
+          // .default() provides the same protection as .optional() — if a field
+          // has a default, missing input is handled without rejecting the request.
+          const hasGuarantee = chainMethods.includes('optional') || chainMethods.includes('default');
+          if (!hasGuarantee) {
+            findings.push({
+              file: filePath,
+              severity: "critical",
+              title: "Schema: Refinement on required field may reject valid requests",
+              why: "z.refine() used without .optional() or .default() on the chained field. If a caller doesn't send this field, the entire request is rejected with 400.",
+              fix: "Add .optional() or .default() before .refine() if the field isn't guaranteed from all call paths: .refine(...).optional()"
+            });
+          }
+        }
+      }
+    });
+
     return findings;
   }
 };
@@ -130,7 +191,7 @@ export const RedundantValidationRule: IRule = {
   name: "redundant-validation-detector",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
     if (text.includes('.min(') && text.includes('.max(') && text.includes('z.object({')) {
@@ -154,7 +215,7 @@ export const WorkflowRule: IRule = {
   name: "workflow-safety-check",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
 
     source.forEachDescendant((node) => {
       if (Node.isCallExpression(node)) {
@@ -205,7 +266,7 @@ export const TranscriptUnsafeAccessRule: IRule = {
   name: "transcript-unsafe-access",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     if (!filePath.includes('Transcript') && !filePath.includes('transcript')) return findings;
 
     const text = source.getText();
@@ -227,7 +288,7 @@ export const HardcodedDomainLogicRule: IRule = {
   name: "hardcoded-domain-logic",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
     const hardcodedPersonas = text.match(/['"]?(?:detailed|balanced|brief|academic|casual)['"]?\s*[,:]\s*['"]?(?:detailed|balanced|brief|academic|casual)['"]?/g);
@@ -248,7 +309,7 @@ export const StateSyncRule: IRule = {
   name: "state-sync-audit",
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
 
     if (text.includes('setUrl') && (filePath.includes('store') || filePath.includes('Store'))) {
@@ -269,23 +330,22 @@ export const StateSyncRule: IRule = {
 
 export const GraphAwareBoundaryRule: IRule = {
   name: "graph-aware-boundary",
-  scope: "graph" as any, // Tell legacy adapter this runs with graph scope
-  check: (source: SourceFile, ctx?: any) => {
+  scope: "file",
+  check: (source: SourceFile) => {
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = normalizePosixPath(source.getFilePath());
     
     // Graph boundary checks: only run on domain/usecases files to ensure they don't depend on raw infrastructure
     if (!filePath.includes('/domain/') && !filePath.includes('/usecases/')) {
       return findings;
     }
 
-    const graph = ctx?.graph;
-    if (!graph) return findings;
+    const imports = source.getImportDeclarations()
+      .map((d) => d.getModuleSpecifierSourceFile()?.getFilePath() || d.getModuleSpecifierValue())
+      .filter((p): p is string => Boolean(p))
+      .map(normalizePosixPath);
 
-    const node = graph.get(filePath);
-    if (!node) return findings;
-
-    for (const imp of node.imports) {
+    for (const imp of imports) {
       if (imp.includes("/adapters/") && (imp.includes("supabase") || imp.includes("db") || imp.includes("postgres"))) {
         findings.push({
           file: filePath,

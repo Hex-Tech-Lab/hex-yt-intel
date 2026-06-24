@@ -6,56 +6,58 @@ export const VideoIdSchema = z.string().regex(
   'Invalid video ID format'
 );
 
+export const VideoUrlSchema = z.string()
+  .transform((val) => {
+    // Normalize URLs: add https:// if missing, handle all YouTube formats
+    let normalized = val.trim();
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      normalized = `https://${normalized}`;
+    }
+    return normalized;
+  })
+  .refine(
+    (url) => {
+      try {
+        const parsed = new URL(url);
+        return ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(parsed.hostname);
+      } catch {
+        return false;
+      }
+    },
+    'Invalid YouTube URL'
+  )
+  .transform((val) => {
+    // Auto-transform YouTube shorts/live/embed to standard watch format at perimeter
+    try {
+      const parsed = new URL(val);
+      let videoId = '';
+
+      if (parsed.pathname.startsWith('/shorts/')) {
+        videoId = parsed.pathname.split('/')[2] ?? '';
+      } else if (parsed.pathname.startsWith('/live/')) {
+        videoId = parsed.pathname.split('/')[2] ?? '';
+      } else if (parsed.pathname.startsWith('/embed/')) {
+        videoId = parsed.pathname.split('/')[2] ?? '';
+      } else if (parsed.pathname.startsWith('/v/')) {
+        videoId = parsed.pathname.split('/')[2] ?? '';
+      } else if (parsed.hostname === 'youtu.be') {
+        videoId = parsed.pathname.slice(1);
+      } else {
+        videoId = parsed.searchParams.get('v') ?? '';
+      }
+
+      if (videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+        return `https://www.youtube.com/watch?v=${videoId}`;
+      }
+      return val;
+    } catch {
+      return val;
+    }
+  });
+
 // ─── Analysis ────────────────────────────────────────────────────────────────
 export const AnalysisCreateSchema = z.object({
-  url: z.string()
-    .transform((val) => {
-      // Normalize URLs: add https:// if missing, handle all YouTube formats
-      let normalized = val.trim();
-      if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-        normalized = `https://${normalized}`;
-      }
-      return normalized;
-    })
-    .refine(
-      (url) => {
-        try {
-          const parsed = new URL(url);
-          return ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(parsed.hostname);
-        } catch {
-          return false;
-        }
-      },
-      'Invalid YouTube URL'
-    )
-    .transform((val) => {
-      // Auto-transform YouTube shorts/live/embed to standard watch format at perimeter
-      try {
-        const parsed = new URL(val);
-        let videoId = '';
-
-        if (parsed.pathname.startsWith('/shorts/')) {
-          videoId = parsed.pathname.split('/')[2] ?? '';
-        } else if (parsed.pathname.startsWith('/live/')) {
-          videoId = parsed.pathname.split('/')[2] ?? '';
-        } else if (parsed.pathname.startsWith('/embed/')) {
-          videoId = parsed.pathname.split('/')[2] ?? '';
-        } else if (parsed.pathname.startsWith('/v/')) {
-          videoId = parsed.pathname.split('/')[2] ?? '';
-        } else if (parsed.hostname === 'youtu.be') {
-          videoId = parsed.pathname.slice(1);
-        } else {
-          videoId = parsed.searchParams.get('v') ?? '';
-        }
-
-        if (videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-          return `https://www.youtube.com/watch?v=${videoId}`;
-        }
-        return val;
-      } catch {
-        return val;
-      }
-    }),
+  url: VideoUrlSchema,
   timezone: z
     .string()
     .trim()
