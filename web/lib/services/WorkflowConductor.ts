@@ -3,21 +3,58 @@ import { PathAInputSchema, PathBInputSchema, type WorkflowScope } from '@/lib/ty
 import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 
-export type WorkflowContext = {
+export interface WorkflowContext {
   scope: WorkflowScope;
   traceId: string;
   startTime: number;
-};
+}
 
 export type WorkflowResult<T> =
   | { success: true; data: T; context: WorkflowContext }
   | { success: false; error: string; code: string; status: number; context: WorkflowContext };
+
+function handleWorkflowError(error: unknown, context: WorkflowContext): { success: false; error: string; code: string; status: number; context: WorkflowContext } {
+  const message = error instanceof Error ? error.message : String(error);
+  Sentry.captureException(error, {
+    tags: { workflow: context.scope, traceId: context.traceId },
+  });
+  return { success: false, error: message, code: 'ERR_INTERNAL', status: 500, context };
+}
+
+function validationFailure(parsed: { error: { issues: Array<{ message: string }> } }, context: WorkflowContext): { success: false; error: string; code: string; status: number; context: WorkflowContext } {
+  return {
+    success: false,
+    error: parsed.error.issues.map((e: { message: string }) => e.message).join('; '),
+    code: 'ERR_VALIDATION_FAILED',
+    status: 400,
+    context,
+  };
+}
 
 export class WorkflowConductor {
   private useCase: CreateAnalysisUseCase;
 
   constructor(useCase: CreateAnalysisUseCase) {
     this.useCase = useCase;
+  }
+
+  async routeToRoom<T>(
+    room: WorkflowScope,
+    handler: (context: WorkflowContext) => Promise<T>
+  ): Promise<WorkflowResult<T>> {
+    const context: WorkflowContext = {
+      scope: room,
+      traceId: crypto.randomUUID(),
+      startTime: Date.now(),
+    };
+
+    try {
+      const data = await handler(context);
+      return { success: true, data, context };
+    } catch (error) {
+      await Sentry.flush(2000).catch(() => {});
+      return handleWorkflowError(error, context);
+    }
   }
 
   async executeSingleVideo(params: CreateAnalysisUseCaseParams): Promise<WorkflowResult<UseCaseResult>> {
@@ -31,27 +68,14 @@ export class WorkflowConductor {
       ...params,
       url: params.url,
     });
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: parsed.error.issues.map((e: { message: string }) => e.message).join('; '),
-        code: 'ERR_VALIDATION_FAILED',
-        status: 400,
-        context,
-      };
-    }
+    if (!parsed.success) return validationFailure(parsed, context);
 
     try {
       const result = await this.useCase.execute(parsed.data as CreateAnalysisUseCaseParams);
       return { success: true, data: result, context };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      Sentry.captureException(error, {
-        tags: { workflow: 'single_video', traceId: context.traceId },
-      });
-      return { success: false, error: message, code: 'ERR_INTERNAL', status: 500, context };
-    } finally {
       await Sentry.flush(2000).catch(() => {});
+      return handleWorkflowError(error, context);
     }
   }
 
@@ -63,15 +87,7 @@ export class WorkflowConductor {
     };
 
     const parsed = PathBInputSchema.safeParse(params);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: parsed.error.issues.map((e: { message: string }) => e.message).join('; '),
-        code: 'ERR_VALIDATION_FAILED',
-        status: 400,
-        context,
-      };
-    }
+    if (!parsed.success) return validationFailure(parsed, context);
 
     try {
       const { SupabasePersistenceAdapter } = await import('@/lib/adapters');
@@ -87,13 +103,8 @@ export class WorkflowConductor {
 
       return { success: true, data: { scope: 'global', knowledgeBase }, context };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      Sentry.captureException(error, {
-        tags: { workflow: 'cross_analysis', traceId: context.traceId },
-      });
-      return { success: false, error: message, code: 'ERR_INTERNAL', status: 500, context };
-    } finally {
       await Sentry.flush(2000).catch(() => {});
+      return handleWorkflowError(error, context);
     }
   }
 }

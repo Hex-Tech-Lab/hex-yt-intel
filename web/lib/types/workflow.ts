@@ -1,12 +1,17 @@
 import { z } from 'zod';
 
-export const WorkflowScopeSchema = z.enum(['single_video', 'cross_analysis']);
+export const WorkflowScopeSchema = z.enum(['single_video', 'cross_analysis', 'persist']);
 export type WorkflowScope = z.infer<typeof WorkflowScopeSchema>;
 
 export const PathAInputSchema = z.object({
-  url: z.string().url().refine((v) => v.includes('youtube.com') || v.includes('youtu.be'), {
+  url: z.string().url().refine((v) => {
+    try {
+      const hostname = new URL(v).hostname;
+      return ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(hostname);
+    } catch { return false; }
+  }, {
     message: 'Must be a valid YouTube URL',
-  }),
+  }).optional(),
   userId: z.string().min(1),
   tier: z.enum(['free', 'pro', 'enterprise']),
   email: z.string().email().optional(),

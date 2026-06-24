@@ -171,8 +171,9 @@ function buildStreamResponse(
 
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
-    persist: async (status) => {
+    persist: (status) => {
       const url = appUrl || "https://yt-intel.getmytestdrive.com";
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const persistPromise = persistService.persist({
         analysisId: req.analysisId,
         videoId: req.videoId,
@@ -184,11 +185,13 @@ function buildStreamResponse(
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
+      }).then((result) => {
+        clearTimeout(timeoutId);
+        return result;
       });
 
       const timeoutPromise = new Promise<boolean>((_, reject) => {
-        const id = setTimeout(() => {
-          clearTimeout(id);
+        timeoutId = setTimeout(() => {
           settled = true;
           persistService.persist({
             analysisId: req.analysisId,
