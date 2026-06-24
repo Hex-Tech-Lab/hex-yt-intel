@@ -161,6 +161,7 @@ function buildStreamResponse(
   engineSignal: AbortSignal,
   persistSignal: AbortSignal,
   waitUntil: (p: Promise<unknown>) => void,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
 ): Response {
   const encoder = new TextEncoder();
   let finalText = "";
@@ -226,13 +227,31 @@ function buildStreamResponse(
         }
       };
 
+      // Send immediate status frame, then fetch transcript asynchronously
+      send({ type: "status", stage: "extracting", videoId: req.videoId });
+
+      const [fetchResult] = await Promise.allSettled([fetchTranscriptIfMissing(
+        req.transcript,
+        req.videoId,
+        { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY },
+        (req.metadata as { channelId?: string }).channelId,
+      )]);
+
+      const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value : undefined;
+
+      if (!resolvedTranscript || !resolvedTranscript.trim() || resolvedTranscript.includes("Transcript unavailable") || resolvedTranscript.includes("content ingestion failed")) {
+        send({ type: "error", error: "No transcript available" });
+        controller.close();
+        return;
+      }
+
       try {
         send({ type: "status", stage: "starting", videoId: req.videoId });
 
         const result = await engine.executeAndStream(
           {
             metadata: req.metadata,
-            transcript: req.transcript || "",
+            transcript: resolvedTranscript,
             persona: req.persona,
             timezone: req.timezone,
             dimensions: req.dimensions,
@@ -361,23 +380,6 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: "Invalid appUrl callback destination" }, 400);
   }
 
-  const transcript = await fetchTranscriptIfMissing(
-    req.transcript,
-    req.videoId,
-    { RESIDENTIAL_PROXY_URL: c.env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: c.env.DECODO_API_KEY },
-    (req.metadata as { channelId?: string }).channelId,
-  );
-
-  if (!transcript || !transcript.trim() || transcript.includes("Transcript unavailable") || transcript.includes("content ingestion failed")) {
-    return c.json(
-      {
-        error: "No transcript available",
-        details: "Transcript could not be fetched from any source. LLM analysis skipped to avoid unnecessary costs.",
-      },
-      400,
-    );
-  }
-
   if (!c.env.STREAM_HMAC_SECRET || !apiKey) {
     console.error("[analyze-llm-stream] Server misconfigured: missing signature key or router credentials");
     return c.json({ error: "Server misconfigured" }, 500);
@@ -450,7 +452,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
     }, { once: true });
   }
 
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, (p) => c.executionCtx.waitUntil(p));
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, (p) => c.executionCtx.waitUntil(p), c.env);
 });
 
 export default analysis;
