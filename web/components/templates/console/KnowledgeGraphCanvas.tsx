@@ -167,7 +167,7 @@ export function KnowledgeGraphCanvas({
         nodeRelSize={compact ? 3 : 5}
         nodeVal={(n: any) => 1 + (n as FGNode).weight * 3}
         nodeLabel={() => ''}
-        enableNodeDrag={true}
+        enableNodeDrag
         onNodeClick={(n: any) => startTransition(() => onSelect((n as FGNode).id === selectedId ? null : (n as FGNode).id))}
         onNodeRightClick={(n: any, e: MouseEvent) => {
           e.preventDefault();

@@ -34,16 +34,26 @@ import { ConsoleTabSwitcher } from './dashboard/ConsoleTabSwitcher';
 import { SidebarFooter } from './dashboard/SidebarFooter';
 import { ExpandedPanelOverlay } from './dashboard/ExpandedPanelOverlay';
 
+import * as Sentry from '@sentry/nextjs';
+
 // See /docs/ui/dashboard-container.md
 
 function showToast(message: string, type: 'success' | 'error' = 'success') {
   if (typeof document === 'undefined') return;
   const el = document.createElement('div');
   el.textContent = message;
+  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
   el.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 18px;border-radius:10px;font:600 12px/1.4 var(--font-mono);pointer-events:none;opacity:0;transition:opacity .2s;color:var(--ink);background:${type === 'error' ? 'rgba(239,68,68,0.9)' : 'rgba(6,182,212,0.9)'};backdrop-filter:blur(8px);`;
   document.body.appendChild(el);
   requestAnimationFrame(() => { el.style.opacity = '1'; });
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
+}
+
+function reportClipboardError(error: unknown, context: string) {
+  const message = error instanceof Error ? error.message : String(error);
+  Sentry.captureException(error, { contexts: { clipboard: { context } } });
+  console.error('[DashboardContainer] Clipboard copy failed:', { message, context });
 }
 
 export interface DashboardContainerProps {
@@ -51,12 +61,30 @@ export interface DashboardContainerProps {
 }
 
 function cleanDimensionContent(raw: string): string {
-  return (raw || '')
-    .replace(/^\s*#{1,6}\s+.*$/gm, '')
-    .replace(/^\s*DIMENSION\s+\d+\b.*$/gim, '')
-    .replace(/^\s*\d+(?:\.\d+)*[.)]?\s+(?=\S)/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  if (!raw) return '';
+  let content = raw.trim();
+  
+  // Strip markdown code fences without regex
+  if (content.startsWith('```')) {
+    const lines = content.split(/\r?\n/);
+    lines.shift();
+    if (lines.length > 0 && lines[lines.length - 1]?.trim() === '```') {
+      lines.pop();
+    }
+    content = lines.join('\n').trim();
+  }
+  
+  // Strip leading dimension headers (e.g., "### DIMENSION 1") with explicit pattern
+  const lines = content.split(/\r?\n/);
+  if (lines[0]) {
+    const firstLine = lines[0].trim().toUpperCase();
+    if (firstLine.startsWith('#') && /\bDIMENSION\s+\d+/.test(firstLine)) {
+      lines.shift();
+      content = lines.join('\n');
+    }
+  }
+  
+  return content.trim();
 }
 
 export function DashboardContainer({ profile }: DashboardContainerProps) {
@@ -115,22 +143,19 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     try {
       if (id === 'insights') {
         const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
-        navigator.clipboard.writeText(text).catch(() => {});
-        showToast('Insights copied to clipboard!');
+        navigator.clipboard.writeText(text).then(() => showToast('Insights copied to clipboard!')).catch((err) => reportClipboardError(err, 'insights'));
       } else if (id === 'knowledge-graph') {
         const text = graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
-        navigator.clipboard.writeText(text).catch(() => {});
-        showToast('Knowledge Graph nodes list copied!');
+        navigator.clipboard.writeText(text).then(() => showToast('Knowledge Graph nodes list copied!')).catch((err) => reportClipboardError(err, 'knowledge-graph'));
       } else if (id === 'word-cloud') {
         const text = graph.nodes.map((n) => n.label).join(', ');
-        navigator.clipboard.writeText(text).catch(() => {});
-        showToast('Word Cloud text copied!');
+        navigator.clipboard.writeText(text).then(() => showToast('Word Cloud text copied!')).catch((err) => reportClipboardError(err, 'word-cloud'));
       } else if (id === 'mind-map') {
         const text = graph.nodes.map((n) => `- ${n.label}`).join('\n');
-        navigator.clipboard.writeText(text).catch(() => {});
-        showToast('Mind Map nodes list copied!');
+        navigator.clipboard.writeText(text).then(() => showToast('Mind Map nodes list copied!')).catch((err) => reportClipboardError(err, 'mind-map'));
       }
-    } catch {
+    } catch (err) {
+      reportClipboardError(err, 'outer');
       showToast('Copy failed', 'error');
     }
   }, [graph, insights]);
@@ -140,18 +165,19 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
       const blob = new Blob([text], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${nucleus.analysis?.title || 'analysis'}-insights.txt`;
-      a.click();
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${nucleus.analysis?.title || 'analysis'}-insights.txt`;
+      anchor.click();
+      URL.revokeObjectURL(url);
     } else if (id === 'knowledge-graph') {
       const canvas = document.querySelector('.js-knowledge-graph-container canvas') as HTMLCanvasElement;
       if (canvas) {
         const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${nucleus.analysis?.title || 'analysis'}-knowledge-graph.png`;
-        a.click();
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${nucleus.analysis?.title || 'analysis'}-knowledge-graph.png`;
+        anchor.click();
       } else {
         showToast('Could not locate canvas element to export.', 'error');
       }
@@ -159,10 +185,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       const canvas = document.querySelector('.js-word-cloud-canvas') as HTMLCanvasElement;
       if (canvas) {
         const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${nucleus.analysis?.title || 'analysis'}-word-cloud.png`;
-        a.click();
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${nucleus.analysis?.title || 'analysis'}-word-cloud.png`;
+        anchor.click();
       } else {
         showToast('Could not locate canvas element to export.', 'error');
       }
@@ -173,10 +199,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         const svgString = serializer.serializeToString(svg);
         const blob = new Blob([svgString], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${nucleus.analysis?.title || 'analysis'}-mind-map.svg`;
-        a.click();
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${nucleus.analysis?.title || 'analysis'}-mind-map.svg`;
+        anchor.click();
+        URL.revokeObjectURL(url);
       } else {
         showToast('Could not locate SVG element to export.', 'error');
       }
@@ -212,7 +239,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       id: 'knowledge-graph',
       title: 'Knowledge Graph',
       content: () => (
-        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact={true} />
+        <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} onFocus={(id) => startTransition(() => setSelectedNodeId(id))} compact />
       ),
       onAction: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => {
         if (action === 'copy') handleCopy('knowledge-graph');
@@ -269,14 +296,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     }
   };
 
-  const handleAnalyze = useCallback(async () => {
+  const handleAnalyze = useCallback(() => {
     if (!url) return;
-    await startAnalysis(url, getUserTimezone());
+    startTransition(() => {
+      startAnalysis(url, getUserTimezone());
+    });
   }, [url, startAnalysis]);
 
-  const handleReanalyze = useCallback(async () => {
+  const handleReanalyze = useCallback(() => {
     if (!url) return;
-    await startAnalysis(url, getUserTimezone(), true);
+    startTransition(() => {
+      startAnalysis(url, getUserTimezone(), true);
+    });
   }, [url, startAnalysis]);
 
   const handleExport = useCallback((format: 'pdf' | 'markdown') => {
@@ -287,12 +318,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       const content = analysis?.analysis_markdown || '';
       const blob = new Blob([content], { type: 'text/markdown' });
       const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `${nucleus.analysis.title || 'synthesis'}.md`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = `${nucleus.analysis.title || 'synthesis'}.md`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
       URL.revokeObjectURL(downloadUrl);
     }
   }, [nucleus.analysis?.id, nucleus.analysis?.title, analysis?.analysis_markdown]);

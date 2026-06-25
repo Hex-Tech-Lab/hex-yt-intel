@@ -294,7 +294,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         console.error('[SupabasePersistenceAdapter] persistAnalysisChunk failed:', error.message);
         throw error;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'persistAnalysisChunk' },
         extra: { analysisId: params.analysisId, chunkIndex: params.chunkIndex },
@@ -318,7 +318,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         throw error;
       }
       return data || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisChunks' },
         extra: { analysisId: params.analysisId },
@@ -344,7 +344,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   return null;
 }
       return data.value;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getAppSetting' },
         extra: { key },

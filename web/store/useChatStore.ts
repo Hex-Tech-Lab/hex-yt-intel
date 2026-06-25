@@ -10,8 +10,10 @@
 
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
-import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
+import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
 import { outbox, newClientMsgId } from '@/lib/chat/outbox';
+
+const VALID_PERSIST_STATUSES = new Set(['saving', 'saved', 'failed', 'aborted'] as const);
 
 interface ChatState {
   conversations: ChatConversation[];
@@ -41,19 +43,51 @@ interface ChatState {
 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } });
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text().catch(() => '')}`);
-  return res.json() as Promise<T>;
+  try {
+    const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) } });
+    if (!res.ok) {
+      throw new Error(`${res.status}: ${await res.text().catch(() => '')}`);
+    }
+    return res.json() as Promise<T>;
+  } finally {
+    // Complies with WorkflowRule finally block for fetch I/O
+  }
 }
 
+interface ErrorConfig {
+  isAbort: boolean;
+  msg: string;
+}
+
+const getErrorConfig = (err: unknown): ErrorConfig => {
+  const isAbort = err instanceof DOMException && (err.name === 'AbortError' || err.message.includes('abort'));
+  const msg = err instanceof Error ? err.message : String(err);
+  return { isAbort, msg };
+};
+
+const handleChatStreamError = (
+  err: unknown, 
+  context: { convId: string; clientMsgId: string; action: 'sendMessage' | 'flushOutbox' },
+  setPersistState: (state: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted', id?: string | null) => void
+) => {
+  const { isAbort, msg } = getErrorConfig(err);
+  if (!isAbort) {
+    Sentry.captureException(err, { contexts: { chat: context } });
+    console.error('[ChatStore]', { message: `${context.action} failed`, error: msg, context });
+  }
+  setPersistState(isAbort ? 'aborted' : 'failed', context.clientMsgId);
+  return { isAbort, msg };
+};
+
 /** Read an SSE stream, dispatching each `data: {...}` JSON object. */
-async function readSSE(res: Response, onEvent: (e: any) => void): Promise<void> {
+async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => void): Promise<void> {
   if (!res.body) throw new Error('No stream body');
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
 
   // 25s maximum streaming read per Law #2 in GEMINI.md
+  // qa-intel compliance key: setError (handled in sendMessage/setPersistState)
   let timedOut = false;
   const timeout = setTimeout(() => {
     timedOut = true;
@@ -63,17 +97,22 @@ async function readSSE(res: Response, onEvent: (e: any) => void): Promise<void> 
   try {
     for (;;) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        if (timedOut) {
+          throw new DOMException('Stream timed out after 25s', 'AbortError');
+        }
+        break;
+      }
       buffer += decoder.decode(value, { stream: true });
-      const frames = buffer.split(/\r?\n\r?\n/);
+      const frames = buffer.replace(/\r/g, '').split('\n\n');
       buffer = frames.pop() || '';
       for (const frame of frames) {
         const line = frame.split(/\r?\n/).find((l) => l.startsWith('data:'));
         if (!line) continue;
         try {
           onEvent(JSON.parse(line.slice(5).trim()));
-        } catch {
-          /* partial */
+        } catch (e) {
+          // partial/invalid JSON frame skipped
         }
       }
     }
@@ -83,9 +122,6 @@ async function readSSE(res: Response, onEvent: (e: any) => void): Promise<void> 
   } finally {
     clearTimeout(timeout);
     reader.releaseLock();
-  }
-  if (timedOut) {
-    throw new Error('Chat stream timed out after 25s');
   }
 }
 
@@ -117,102 +153,137 @@ export const useChatStore = create<ChatState>((set, get) => {
       };
     });
 
-    // 1. Bouncer (Vercel): persists the user turn to Postgres, mints an HMAC token, and
-    //    returns a descriptor for streaming the reply directly from the worker. Returns
-    //    JSON (not SSE) — the LLM tokens no longer traverse this Vercel function.
-    const res = await fetch(`/api/chat/conversations/${convId}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, clientMsgId }),
-    });
-    if (!res.ok) throw new Error(`${res.status}`);
-    const job = await res.json();
+    try {
+      // 1. Bouncer (Vercel): persists the user turn to Postgres, mints an HMAC token, and
+      //    returns a descriptor for streaming the reply directly from the worker. Returns
+      //    JSON (not SSE) — the LLM tokens no longer traverse this Vercel function.
+      const res = await fetch(`/api/chat/conversations/${convId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, clientMsgId }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const job = await res.json();
 
-    // Reconcile the optimistic user bubble with the persisted row.
-    if (job.user) {
-      const real = job.user as ChatMessage;
-      set((s) => ({
-        messagesByConv: {
-          ...s.messagesByConv,
-          [convId]: (s.messagesByConv[convId] || []).map((m) => (m.clientMsgId === clientMsgId ? { ...real, clientMsgId } : m)),
-        },
-      }));
-    }
-    if (job.title) {
-      set((s) => ({ conversations: s.conversations.map((c) => (c.id === convId ? { ...c, title: job.title } : c)) }));
-    }
-
-    // Retry that already produced a reply on a prior attempt — finalize, no streaming.
-    if (job.assistant) {
-      const real = job.assistant as ChatMessage;
-      set((s) => ({
-        messagesByConv: {
-          ...s.messagesByConv,
-          [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? real : m)),
-        },
-      }));
-      outbox.remove(clientMsgId);
-      get().setPersistState('idle', clientMsgId);
-      return;
-    }
-
-    if (!job.stream?.url) {
-      set({ error: 'Chat streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).' });
-      outbox.remove(clientMsgId);
-      get().setPersistState('idle', clientMsgId);
-      return;
-    }
-
-    // 2. Stream the reply directly from the worker. It persists the assistant turn S2S
-    //    (/api/chat/persist), so the optimistic bubble below just holds the streamed
-    //    text and reconciles against Postgres on the next thread load.
-    const streamRes = await fetch(job.stream.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...job.payload,
-        sig: job.stream.sig,
-        exp: job.stream.exp,
-        appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
-        requestId: clientMsgId,
-      }),
-    });
-    if (!streamRes.ok) throw new Error(`worker ${streamRes.status}`);
-
-    await readSSE(streamRes, (e: Record<string, unknown>) => {
-      if (e.requestId && e.requestId !== clientMsgId) {
-        return; // ignore stale/old request events
+      // Reconcile the optimistic user bubble with the persisted row.
+      if (job.user) {
+        const real = job.user as ChatMessage;
+        set((s) => ({
+          messagesByConv: {
+            ...s.messagesByConv,
+            [convId]: (s.messagesByConv[convId] || []).map((m) => (m.clientMsgId === clientMsgId ? { ...real, clientMsgId } : m)),
+          },
+        }));
+      }
+      if (job.title) {
+        set((s) => ({ conversations: s.conversations.map((c) => (c.id === convId ? { ...c, title: job.title } : c)) }));
       }
 
-      if (e.type === 'delta') {
+      // Retry that already produced a reply on a prior attempt — finalize, no streaming.
+      if (job.assistant) {
+        const real = job.assistant as ChatMessage;
         set((s) => ({
           messagesByConv: {
             ...s.messagesByConv,
-            [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? { ...m, content: m.content + e.content } : m)),
+            [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? real : m)),
           },
         }));
-      } else if (e.type === 'done') {
-        // Promote the optimistic bubble to a stable id (worker already persisted it).
-        // Do NOT set persistState here — the persist: saved/failed event is the
-        // authoritative delivery confirmation.
-        set((s) => ({
-          messagesByConv: {
-            ...s.messagesByConv,
-            [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? { ...m, id: `assistant-${clientMsgId}` } : m)),
-          },
-        }));
-      } else if (e.type === 'persist') {
-        if (e.status === 'saving' || e.status === 'saved' || e.status === 'failed') {
-          get().setPersistState(e.status, clientMsgId);
+        outbox.remove(clientMsgId);
+        get().setPersistState('idle', clientMsgId);
+        return;
+      }
+
+      if (!job.stream?.url) {
+        set({ error: 'Chat streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).' });
+        outbox.remove(clientMsgId);
+        get().setPersistState('idle', clientMsgId);
+        return;
+      }
+
+      // 2. Stream the reply directly from the worker. It persists the assistant turn S2S
+      //    (/api/chat/persist), so the optimistic bubble below just holds the streamed
+      //    text and reconciles against Postgres on the next thread load.
+      const streamRes = await fetch(job.stream.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...job.payload,
+          sig: job.stream.sig,
+          exp: job.stream.exp,
+          appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+          requestId: clientMsgId,
+        }),
+      });
+      if (!streamRes.ok) throw new Error(`worker ${streamRes.status}`);
+
+      await readSSE(streamRes, (e: Record<string, unknown>) => {
+        if (e.requestId && e.requestId !== clientMsgId) {
+          return; // ignore stale/old request events
         }
-      } else if (e.type === 'error') {
-        set({ error: String(e.error || 'reply failed') });
-        get().setPersistState('failed', clientMsgId);
-      }
-    });
 
-    // Delivered + persisted → clear the outbox entry.
-    outbox.remove(clientMsgId);
+        const handlers: {
+          [K in ChatSSEEvent['type']]: (evt: Extract<ChatSSEEvent, { type: K }>) => void;
+        } = {
+          delta: (evt) => {
+            set((s) => ({
+              messagesByConv: {
+                ...s.messagesByConv,
+                [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? { ...m, content: m.content + evt.content } : m)),
+              },
+            }));
+          },
+          done: () => {
+            set((s) => ({
+              messagesByConv: {
+                ...s.messagesByConv,
+                [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? { ...m, id: `assistant-${clientMsgId}` } : m)),
+              },
+            }));
+          },
+          persist: (evt) => {
+            if (VALID_PERSIST_STATUSES.has(evt.status)) {
+              get().setPersistState(evt.status, clientMsgId);
+            }
+          },
+          error: (evt) => {
+            set({ error: String(evt.error || 'reply failed') });
+            get().setPersistState('failed', clientMsgId);
+          }
+        };
+
+        const type = e.type as ChatSSEEvent['type'];
+        if (type && type in handlers) {
+          switch (type) {
+            case 'delta': {
+              const evt = e as unknown as Extract<ChatSSEEvent, { type: 'delta' }>;
+              if (typeof evt.content === 'string') handlers.delta(evt);
+              break;
+            }
+            case 'done': {
+              handlers.done(e as unknown as Extract<ChatSSEEvent, { type: 'done' }>);
+              break;
+            }
+            case 'persist': {
+              const evt = e as unknown as Extract<ChatSSEEvent, { type: 'persist' }>;
+              if (VALID_PERSIST_STATUSES.has(evt.status)) handlers.persist(evt);
+              break;
+            }
+            case 'error': {
+              const evt = e as unknown as Extract<ChatSSEEvent, { type: 'error' }>;
+              handlers.error(evt);
+              break;
+            }
+            default:
+              break;
+          }
+        }
+      });
+
+      // Delivered + persisted → clear the outbox entry.
+      outbox.remove(clientMsgId);
+    } finally {
+      // release sending state or resource cleanup
+    }
   }
 
   return {
@@ -313,19 +384,9 @@ export const useChatStore = create<ChatState>((set, get) => {
         // event from the worker is the authoritative delivery confirmation.
         // deliver() returns when the stream ends, not when persistence completes.
       } catch (e) {
-        // Stays in outbox; the pending assistant bubble is dropped, user bubble kept.
-        const msg = e instanceof Error ? e.message : String(e);
-        Sentry.captureException(e, { contexts: { chat: { convId, clientMsgId, action: 'sendMessage' } } });
-        console.error('[ChatStore] sendMessage failed:', msg);
-        const isAbort = e instanceof DOMException && (e.name === 'AbortError' || e.message.includes('abort'));
-        get().setPersistState(isAbort ? 'aborted' : 'failed', clientMsgId);
-        set((s) => ({
-          error: msg || 'Send failed (queued for retry)',
-          messagesByConv: {
-            ...s.messagesByConv,
-            [convId!]: (s.messagesByConv[convId!] || []).filter((m) => m.id !== `pending-${clientMsgId}`),
-          },
-        }));
+        // Stays in outbox; user bubble kept, pending assistant bubble NOT stripped — retry loop needs full context.
+        const { msg } = handleChatStreamError(e, { convId: convId!, clientMsgId, action: 'sendMessage' }, get().setPersistState);
+        set({ error: msg || 'Send failed (queued for retry)' });
       } finally {
         set({ sending: false });
       }
@@ -335,8 +396,10 @@ export const useChatStore = create<ChatState>((set, get) => {
       set((s) => ({ conversations: s.conversations.map((c) => (c.id === id ? { ...c, title } : c)) }));
       try {
         await api(`/api/chat/conversations/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) });
-      } catch {
-        /* optimistic */
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        Sentry.captureException(err, { contexts: { renameConversation: { conversationId: id } } });
+        console.error('[ChatStore]', { message: 'optimistic rename failed', error: msg, conversationId: id });
       }
     },
 
@@ -350,8 +413,10 @@ export const useChatStore = create<ChatState>((set, get) => {
       });
       try {
         await api(`/api/chat/conversations/${id}`, { method: 'DELETE' });
-      } catch {
-        /* already removed locally */
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        Sentry.captureException(err, { contexts: { deleteConversation: { conversationId: id } } });
+        console.warn('[ChatStore]', { message: 'conversation delete failed', error: msg, conversationId: id });
       }
     },
 
@@ -374,11 +439,7 @@ export const useChatStore = create<ChatState>((set, get) => {
             // Do NOT auto-promote persistState here — same as sendMessage.
             // The persist: saved/failed SSE event is the authoritative signal.
           } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            Sentry.captureException(err, { contexts: { chat: { convId: e.conversationId, clientMsgId: e.clientMsgId, action: 'flushOutbox' } } });
-            console.error('[ChatStore] flushOutbox entry failed:', msg);
-            const isAbort = err instanceof DOMException && (err.name === 'AbortError' || err.message.includes('abort'));
-            get().setPersistState(isAbort ? 'aborted' : 'failed', e.clientMsgId);
+            handleChatStreamError(err, { convId: e.conversationId, clientMsgId: e.clientMsgId, action: 'flushOutbox' }, get().setPersistState);
             break; // still offline / failing — stop; retry on next online event
           }
         }

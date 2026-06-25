@@ -140,6 +140,14 @@ export class SupabaseAnalysisAdapter {
         throw updateError ?? new Error('update processing stub returned no row');
       }
 
+      console.log('[SupabaseAnalysisAdapter] row_persisted', {
+        event: 'upsert_stub_update_complete',
+        stubId: updated.id,
+        videoId: params.videoId,
+        userId: params.userId,
+        timestamp: new Date().toISOString(),
+      });
+
       return { id: updated.id as string };
     }
 
@@ -169,6 +177,14 @@ export class SupabaseAnalysisAdapter {
       throw new Error(errMsg);
     }
 
+    console.log('[SupabaseAnalysisAdapter] row_persisted', {
+      event: 'upsert_stub_create_complete',
+      stubId: rpcData as string,
+      videoId: params.videoId,
+      userId: params.userId,
+      timestamp: new Date().toISOString(),
+    });
+
     return { id: rpcData as string };
   }
 
@@ -196,6 +212,13 @@ export class SupabaseAnalysisAdapter {
       });
       throw error;
     }
+
+    console.log('[SupabaseAnalysisAdapter] row_persisted', {
+      event: 'persist_analysis_complete',
+      analysisId: params.analysisId,
+      validationPassed: params.validationPassed,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   static async getUserHistory(params: { userId: string }): Promise<Array<{

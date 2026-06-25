@@ -1,5 +1,5 @@
 import { reconstructMarkdown, extractJsonPayload } from './MarkdownReconstructor';
-import { UCISPayloadSchema } from './ZodSchemas';
+import { UCISPayloadSchema, ChunkPayloadSchema } from './ZodSchemas';
 import { hmacHex } from '../crypto';
 
 export interface PersistOptions {
@@ -17,7 +17,20 @@ export interface PersistOptions {
 
 const rawFetch = fetch;
 
+/** Schema selector: picks chunk or full schema based on chunk presence. Returns null if no schema matches. */
+function selectPersistSchema(isChunk: boolean): typeof ChunkPayloadSchema | typeof UCISPayloadSchema | null {
+  return isChunk ? ChunkPayloadSchema : UCISPayloadSchema;
+}
+
+/**
+ * PersistService — Dual-write persistence via S2S HTTP postback.
+ *
+ * Extracts JSON payload from final text, validates against UCIS/Chunk schema,
+ * reconstructs markdown, computes HMAC content signature, and delivers to
+ * the Vercel `/api/analyses/persist` endpoint with retry logic.
+ */
 export class PersistService {
+  /** Execute full persist cycle: extract → validate → sign → deliver. */
   async persist(options: PersistOptions): Promise<boolean> {
     let markdown = options.finalText;
     let jsonPayload: Record<string, unknown> | null = null;
@@ -25,7 +38,11 @@ export class PersistService {
     const extracted = extractJsonPayload(options.finalText);
 
     if (extracted) {
-      const result = UCISPayloadSchema.safeParse(extracted);
+      const isChunk = options.chunkIndex !== undefined;
+      const schema = selectPersistSchema(isChunk);
+      if (!schema) return false;
+
+      const result = schema.safeParse(extracted);
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       } else {
@@ -55,6 +72,7 @@ export class PersistService {
     });
   }
 
+  /** Deliver payload to persist endpoint with retry. Returns true if at least one attempt succeeded. */
   async _attemptPersist(params: {
     analysisId: string;
     videoId: string;
@@ -102,6 +120,7 @@ export class PersistService {
     return false;
   }
 
+  /** Settlement path for failed/interrupted analyses. Skips schema map lookup — always uses ChunkPayloadSchema. */
   async settleAnalysis(options: {
     analysisId: string;
     videoId: string;
@@ -117,7 +136,7 @@ export class PersistService {
 
     const extracted = extractJsonPayload(options.finalText);
     if (extracted) {
-      const result = UCISPayloadSchema.safeParse(extracted);
+      const result = ChunkPayloadSchema.safeParse(extracted);
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       }

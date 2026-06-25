@@ -88,7 +88,7 @@ export function parseAnsiToReact(text: string): React.ReactNode[] | string {
   if (typeof text !== 'string') return text;
   
   // Matches actual ESC sequence or literal escapes like \x1b, \u001b, \033
-  const ansiRegex = /(?:\\x1b|\\u001b|\\033|[\u001b])\[([0-9;]*)m/g;
+  const ansiRegex = /(?:\\x1b|\\u001b|\\033|\x1b)\[([0-9;]*)m/g;
 
   if (!ansiRegex.test(text)) {
     return text;
@@ -167,6 +167,8 @@ export function parseAnsiToReact(text: string): React.ReactNode[] | string {
             if (!currentClasses.includes('underline')) {
               currentClasses.push('underline');
             }
+            break;
+          default:
             break;
         }
       }

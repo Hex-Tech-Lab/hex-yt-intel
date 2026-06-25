@@ -60,7 +60,7 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
         >
           <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <MonoLabel index={String(index).padStart(2, "0")}>{label}</MonoLabel>
-            <span aria-hidden={true} style={{
+            <span aria-hidden style={{
               display: "grid",
               placeItems: "center",
               width: 34,
@@ -87,7 +87,7 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
                 Synthesis failed for this dimension. Retry available.
               </p>
             ) : (
-              <div aria-hidden={true} style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+              <div aria-hidden style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
                 <div style={{ height: 6, width: "90%", borderRadius: 9999, background: "var(--line-strong)", opacity: 0.3 }} />
                 <div style={{ height: 6, width: "70%", borderRadius: 9999, background: "var(--line-strong)", opacity: 0.2 }} />
                 <div style={{ height: 6, width: "80%", borderRadius: 9999, background: "var(--line-strong)", opacity: 0.15 }} />

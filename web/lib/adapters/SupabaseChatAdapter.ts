@@ -47,7 +47,7 @@ export class SupabaseChatAdapter {
         updatedAt: r.updated_at,
         lastMessageAt: r.last_message_at || r.created_at,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getConversations' },
         extra: { userId },
@@ -84,7 +84,7 @@ export class SupabaseChatAdapter {
         updatedAt: updated_at,
         lastMessageAt: last_message_at || created_at,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'createConversation' },
         extra: { userId: params.userId, analysisId: params.analysisId },
@@ -119,7 +119,7 @@ export class SupabaseChatAdapter {
         updatedAt: data.updated_at,
       };
       return { ...mapping, title: data.title || defaults.title, lastMessageAt: data.last_message_at || defaults.lastMessageAt };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getConversation' },
         extra: { conversationId: params.conversationId },
@@ -143,7 +143,7 @@ export class SupabaseChatAdapter {
         console.error('[SupabaseChatAdapter] updateConversationTitle failed:', error.message);
         throw error;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'updateConversationTitle' },
         extra: { conversationId: params.conversationId },
@@ -177,7 +177,7 @@ export class SupabaseChatAdapter {
         createdAt: r.created_at,
         clientMsgId: r.client_msg_id ?? null,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getMessages' },
         extra: { conversationId: params.conversationId },
@@ -213,7 +213,7 @@ export class SupabaseChatAdapter {
         createdAt: data.created_at,
         clientMsgId: data.client_msg_id ?? null,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findMessageByClientMsgId' },
         extra: { conversationId: params.conversationId, clientMsgId: params.clientMsgId },
@@ -259,7 +259,7 @@ export class SupabaseChatAdapter {
         clientMsgId: data.client_msg_id ?? null,
         parentMessageId: data.parent_message_id ?? null,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'createMessage' },
         extra: { conversationId: params.conversationId, userId: params.userId },
@@ -299,7 +299,7 @@ export class SupabaseChatAdapter {
         clientMsgId: data.client_msg_id ?? null,
         parentMessageId: data.parent_message_id ?? null,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAssistantMessageAfter' },
         extra: { conversationId: params.conversationId, timestamp: params.timestamp },
@@ -338,7 +338,7 @@ export class SupabaseChatAdapter {
         clientMsgId: data.client_msg_id ?? null,
         parentMessageId: data.parent_message_id ?? null,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'findAssistantByParentId' },
         extra: { conversationId: params.conversationId, parentId: params.parentId },
@@ -366,7 +366,7 @@ export class SupabaseChatAdapter {
         throw error;
       }
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'verifyOwnership' },
         extra: { conversationId: params.conversationId, userId: params.userId },

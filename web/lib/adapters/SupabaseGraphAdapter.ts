@@ -29,7 +29,7 @@ export class SupabaseGraphAdapter {
           edges: (row.edges as unknown as GraphEdge[]) || []
         };
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getAnalysesByTenant' },
         extra: { tenantId },
@@ -124,7 +124,7 @@ export class SupabaseGraphAdapter {
         entities: resultsMap.SUCCESS(entities.data),
         relations: resultsMap.SUCCESS(relations.data),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getKnowledgeGraph' },
         extra: { analysisId },

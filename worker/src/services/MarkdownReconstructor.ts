@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/cloudflare';
+
 /**
  * MarkdownReconstructor — Dual-Write Persistence Adapter
  *
@@ -61,7 +63,6 @@ interface UCISPayloadV2 {
 export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
   const lines: string[] = [];
 
-  // Persona header (text format for backward compat)
   if (payload.persona) {
     lines.push('=== PERSONA CONFIGURATION ===');
     if (payload.persona.primary) {
@@ -83,7 +84,6 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
     lines.push('');
   }
 
-  // Dimensions
   if (Array.isArray(payload.dimensions)) {
     for (const dim of payload.dimensions) {
       if (dim && typeof dim.number === 'number' && typeof dim.content === 'string') {
@@ -96,7 +96,6 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
     }
   }
 
-  // Classification (if present)
   if (payload.classification) {
     lines.push('=== CLASSIFICATION ===');
     lines.push(`Authoritative:           ${payload.classification.authoritative}`);
@@ -108,7 +107,6 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
     lines.push('');
   }
 
-  // Monetization verdicts (if present)
   if (payload.monetizationVerdict) {
     lines.push('=== MONETIZATION VERDICTS ===');
     lines.push(`Creator:         ${payload.monetizationVerdict.creator || 'N/A'}`);
@@ -122,31 +120,119 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
   return lines.join('\n');
 }
 
+function trackStringState(char: string, inStr: boolean, esc: boolean): { inStr: boolean; esc: boolean } {
+  if (esc) return { inStr, esc: false };
+  if (char === '\\' && inStr) return { inStr, esc: true };
+  if (char === '"') return { inStr: !inStr, esc: false };
+  return { inStr, esc: false };
+}
+
+function trackBracketState(char: string, closers: string[]): string[] | null {
+  const openerToCloser: Record<string, string> = { '{': '}', '[': ']' };
+  const closer = openerToCloser[char];
+  if (closer) {
+    if (closers.length > 500) return null;
+    closers.push(closer);
+  } else if (char === '}' || char === ']') {
+    if (closers.length === 0 || closers[closers.length - 1] !== char) return null;
+    closers.pop();
+  }
+  return closers;
+}
+
+function repairUnclosedJson(text: string): string | null {
+  let inStr = false;
+  let esc = false;
+  const closers: string[] = [];
+
+  for (const char of text) {
+    const prevEsc = esc;
+    const strState = trackStringState(char, inStr, esc);
+    inStr = strState.inStr;
+    esc = strState.esc;
+    if (prevEsc || esc || inStr) continue;
+    const result = trackBracketState(char, closers);
+    if (!result) return null;
+  }
+
+  if (inStr) text += '"';
+  text = text.trim();
+  if (text.endsWith(',')) text = text.slice(0, -1);
+  text += closers.reverse().join('');
+
+  try {
+    JSON.parse(text);
+    return text;
+  } catch (error) {
+    console.debug('[repairUnclosedJson] Parse failed:', error);
+    return null;
+  }
+}
+
+function locateJsonBounds(text: string): { start: number; end: number } | null {
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+  const end = text.lastIndexOf('}');
+  return { start, end };
+}
+
+function safeParse(text: string, phase: string): { parsed: Partial<UCISPayloadV2> | null; repaired: string | null } {
+  try {
+    return { parsed: JSON.parse(text) as Partial<UCISPayloadV2>, repaired: null };
+  } catch (error) {
+    Sentry.captureException(error, { contexts: { extractJsonPayload: { phase, textLength: text.length } } });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[extractJsonPayload]', { message, phase });
+    const repaired = repairUnclosedJson(text);
+    if (!repaired) return { parsed: null, repaired: null };
+    try {
+      return { parsed: JSON.parse(repaired) as Partial<UCISPayloadV2>, repaired };
+    } catch (repairError) {
+      Sentry.captureException(repairError, { contexts: { extractJsonPayload: { phase: 'repaired_parse', repairedTextLength: repaired.length } } });
+      const repairMessage = repairError instanceof Error ? repairError.message : String(repairError);
+      console.error('[extractJsonPayload]', { message: repairMessage, phase: 'repaired_parse' });
+      return { parsed: null, repaired: null };
+    }
+  }
+}
+
+function sanitizePersona(parsed: Partial<UCISPayloadV2>): void {
+  if (!parsed.persona) return;
+  if (!parsed.persona.primary || typeof parsed.persona.primary !== 'object' || !('id' in parsed.persona.primary)) {
+    delete parsed.persona;
+  }
+}
+
 /**
  * Attempt to extract JSON payload from finalText.
  * Returns null if finalText is not valid v2.0 JSON.
  */
 export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | null {
+  if (!finalText) return null;
+
   try {
-    let cleanText = finalText.trim();
-    if (cleanText.startsWith('```')) {
-      const start = cleanText.indexOf('{');
-      const end = cleanText.lastIndexOf('}');
-      if (start !== -1 && end !== -1 && end > start) {
-        cleanText = cleanText.slice(start, end + 1);
-      }
+    const bounds = locateJsonBounds(finalText);
+    if (!bounds) return null;
+
+    const { start, end } = bounds;
+    let cleanText = finalText;
+    if (end > start) {
+      const trailingChars = new Set(['\n', '\r', '', '`', ' ', '\t']);
+      const nextChar = finalText.charAt(end + 1);
+      cleanText = trailingChars.has(nextChar) ? cleanText.slice(start, end + 1) : cleanText.slice(start);
     }
-    const parsed = JSON.parse(cleanText);
-    if (parsed && parsed.schemaVersion === '2.0' && Array.isArray(parsed.dimensions)) {
-      if (parsed.persona) {
-        if (!parsed.persona.primary || typeof parsed.persona.primary !== 'object' || !('id' in parsed.persona.primary)) {
-          return null;
-        }
-      }
-      return parsed as Partial<UCISPayloadV2>;
+
+    const { parsed } = safeParse(cleanText, 'initial_parse');
+    if (!parsed) return null;
+
+    if (parsed.schemaVersion === '2.0' && Array.isArray(parsed.dimensions)) {
+      sanitizePersona(parsed);
+      return parsed;
     }
-  } catch (error: any) {
-    console.debug('[extractJsonPayload] Failed to parse JSON:', error instanceof Error ? error.message : String(error));
+  } catch (error: unknown) {
+    Sentry.captureException(error, { contexts: { extractJsonPayload: { finalTextLength: finalText.length } } });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[extractJsonPayload]', { message, finalTextLength: finalText.length });
   }
   return null;
 }

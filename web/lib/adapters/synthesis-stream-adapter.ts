@@ -126,6 +126,8 @@ export class SynthesisStreamAdapter {
       case 'classification':
         this.handleClassification(fragment);
         break;
+      default:
+        break;
     }
   }
 
@@ -165,12 +167,12 @@ export class SynthesisStreamAdapter {
     }
   }
 
-  private handleMetadata(fragment: {
+  private handleMetadata(_: {
     type: 'metadata';
     model?: string;
     persona?: string;
   }) {
-    console.debug('[Adapter] Metadata:', fragment);
+    // metadata received
   }
 
   private handlePersona(fragment: { type: 'persona'; config: PersonaConfigV2 }) {

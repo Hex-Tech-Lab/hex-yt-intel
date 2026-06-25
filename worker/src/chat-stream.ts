@@ -95,7 +95,7 @@ function isValidAppUrl(
     const hostname = parsedUrl.hostname.toLowerCase();
     if (!isProd || hostname.endsWith(".vercel.app") || hostname === "yt-intel.getmytestdrive.com") {
       if (
-        hostname === "local" + "host" ||
+        hostname === "localhost" ||
         hostname === "127.0.0.1" ||
         hostname.endsWith(".vercel.app") ||
         hostname === "yt-intel.getmytestdrive.com"

@@ -181,3 +181,63 @@ export function extractSnippet(text: string, maxLength: number = 150): string {
 
   return snippet.trim() + (snippet.length < text.length ? '...' : '');
 }
+
+export interface SparseVector {
+  indices: number[];
+  values: number[];
+}
+
+/**
+ * Generate a sparse vector representation for BM25-like search in hybrid indexes
+ * Tokenizes text, removes common stopwords, and hashes tokens to integer indices.
+ */
+export function generateSparseVector(text: string): SparseVector {
+  if (!text) {
+    return { indices: [], values: [] };
+  }
+
+  // Split into words, lowercase, and keep only alphanumeric tokens of length >= 2
+  const words = text.toLowerCase().match(/[a-z0-9]{2,}/g) || [];
+  
+  // Count frequency of each word
+  const tfMap = new Map<string, number>();
+  for (const word of words) {
+    tfMap.set(word, (tfMap.get(word) || 0) + 1);
+  }
+
+  // Simple English stopwords
+  const stopwords = new Set([
+    'the', 'and', 'a', 'of', 'to', 'is', 'in', 'that', 'it', 'for', 'on', 'with', 
+    'as', 'this', 'was', 'at', 'by', 'an', 'be', 'are', 'from', 'or', 'you', 'your'
+  ]);
+
+  const rawIndices: { index: number; value: number }[] = [];
+
+  for (const [word, count] of tfMap.entries()) {
+    if (stopwords.has(word)) {
+      continue;
+    }
+    const index = hashWordToLong(word);
+    // Log frequency weighting
+    const value = Math.log(1 + count);
+    rawIndices.push({ index, value });
+  }
+
+  // Sort by index ascending to meet canonical sparse vector conventions
+  rawIndices.sort((a, b) => a.index - b.index);
+
+  return {
+    indices: rawIndices.map(item => item.index),
+    values: rawIndices.map(item => item.value),
+  };
+}
+
+function hashWordToLong(word: string): number {
+  let hash = 5381;
+  for (let i = 0; i < word.length; i++) {
+    hash = (hash * 33) ^ word.charCodeAt(i);
+  }
+  // Ensure we return a positive integer range fitting in Java's signed long
+  return Math.abs(hash >>> 0);
+}
+

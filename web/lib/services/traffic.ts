@@ -13,6 +13,15 @@ import { RedisTrafficAdapter } from '../adapters/RedisTrafficAdapter';
 import { SupabasePersistenceAdapter } from '../adapters/SupabasePersistenceAdapter';
 
 /** Admin account exempt from traffic limits and billing charges. */
+export function isValidAdminEmail(email: string | undefined): boolean {
+  if (!email) return false;
+  const trimmed = email.trim();
+  if (trimmed.length === 0) return false;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return false;
+  const normalized = trimmed.toLowerCase();
+  return !(normalized.includes('placeholder') || normalized.includes('dummy') || normalized.includes('stub') || normalized.includes('ci-build'));
+}
+
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 export async function getUserTier(userId: string): Promise<Tier> {
@@ -63,7 +72,7 @@ export async function guardTraffic(
   trafficGuard: TrafficGuardPort = new RedisTrafficAdapter()
 ): Promise<{ allowed: boolean; response?: NextResponse; headers?: Record<string, string> }> {
   // Admin bypass: grant immediate access, skip the limiter entirely.
-  if ((ADMIN_EMAIL && userEmail && userEmail === ADMIN_EMAIL) || (process.env.TEST_USER_BYPASS_ID && userId && userId === process.env.TEST_USER_BYPASS_ID)) {
+  if ((isValidAdminEmail(ADMIN_EMAIL) && userEmail && userEmail.toLowerCase() === ADMIN_EMAIL!.toLowerCase()) || (process.env.TEST_USER_BYPASS_ID && userId && userId === process.env.TEST_USER_BYPASS_ID)) {
     return { allowed: true, headers: { 'X-RateLimit-Admin': 'bypassed' } };
   }
 

@@ -21,7 +21,7 @@ export class SupabaseBillingAdapter {
       if (count === 0 || count === null) {
         throw new Error(`No user row matched for userId: ${params.userId} when updating to tier: ${params.tier}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'updateUserTier' },
         extra: { userId: params.userId, tier: params.tier },
@@ -48,7 +48,7 @@ export class SupabaseBillingAdapter {
         console.error('[SupabaseBillingAdapter] updateBillingStatus failed:', error.message);
         throw error;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'updateBillingStatus' },
         extra: { analysisId: params.analysisId, status: params.status },
@@ -85,7 +85,7 @@ export class SupabaseBillingAdapter {
         role: data.role ?? null,
         analysesUsed: data.analyses_used ?? 0,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getUserProfile' },
         extra: { userId },
@@ -118,7 +118,7 @@ export class SupabaseBillingAdapter {
         tier: data.tier || 'free',
         analysesUsed: data.analyses_used ?? 0,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getUserBillingConfig' },
         extra: { userId },
@@ -144,7 +144,7 @@ export class SupabaseBillingAdapter {
          throw error;
        }
        return count ?? 0;
-     } catch (error: any) {
+     } catch (error: unknown) {
        Sentry.captureException(error, {
          tags: { method: 'getUsageLogsCountSince' },
          extra: { userId: params.userId, since: params.since },
@@ -175,7 +175,7 @@ export class SupabaseBillingAdapter {
         billingStatus: a.billing_status,
         createdAt: a.created_at
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'getMonthlyAnalyses' },
         extra: { userId: params.userId, since: params.since },
@@ -204,7 +204,7 @@ export class SupabaseBillingAdapter {
         console.error('[SupabaseBillingAdapter] logUsageEvent failed:', error.message);
         throw error;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       Sentry.captureException(error, {
         tags: { method: 'logUsageEvent' },
         extra: { userId: params.userId, action: params.action },

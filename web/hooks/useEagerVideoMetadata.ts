@@ -15,13 +15,6 @@ export function useEagerVideoMetadata() {
   useEffect(() => {
     if (!url) return;
 
-    const videoId = extractVideoId(url);
-    if (!videoId || videoId === 'unknown') return;
-
-    // If metadata is already loaded for this video, skip
-    const existing = useAnalysisStore.getState().videoMetadata;
-    if (existing?.videoId === videoId && existing?.title) return;
-
     // Abort any in-flight request
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -29,6 +22,13 @@ export function useEagerVideoMetadata() {
 
     const timer = setTimeout(async () => {
       try {
+        const videoId = extractVideoId(url);
+        if (!videoId || videoId === 'unknown') return;
+
+        // If metadata is already loaded for this video, skip
+        const existing = useAnalysisStore.getState().videoMetadata;
+        if (existing?.videoId === videoId && existing?.title) return;
+
         const res = await fetch(`/api/metadata?videoId=${videoId}`, {
           signal: controller.signal,
         });

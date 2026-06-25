@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
         }
         break;
       }
+
+      default:
+        break;
     }
 
     return NextResponse.json({ processed: true });
