@@ -50,7 +50,7 @@ export default function RootLayout({
           id="iconify-preload"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
-            __html: `var _solarData=${JSON.stringify(SOLAR_ICON_DATA)};if(typeof Iconify!=="undefined"){Iconify.addCollection(_solarData);}else{document.addEventListener("DOMContentLoaded",function(){if(typeof Iconify!=="undefined")Iconify.addCollection(_solarData);});}`,
+            __html: `const _solarData=${JSON.stringify(SOLAR_ICON_DATA)};if(typeof Iconify!=="undefined"){Iconify.addCollection(_solarData);}else{document.addEventListener("DOMContentLoaded",function(){if(typeof Iconify!=="undefined")Iconify.addCollection(_solarData);});}`,
           }}
         />
       </body>

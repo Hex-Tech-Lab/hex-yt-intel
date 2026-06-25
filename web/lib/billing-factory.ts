@@ -1,6 +1,6 @@
 import { BillingProvider, BillingProviderType, CheckoutOptions } from './types/billing';
 import { paddle } from './paddle';
-import * as stripeLib from './stripe'; // Existing stripe lib
+import * as stripeLib from './stripe';
 
 /**
  * Paddle implementation of the BillingProvider interface

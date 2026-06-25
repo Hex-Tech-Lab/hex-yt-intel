@@ -83,11 +83,10 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
     tier: UserTier;
     email?: string;
   }): Promise<void> {
-    // quota charging is handled by inserting stubs and marking billing_status
-    // in CreateAnalysisUseCase flow or S2S flows.
+    return Promise.resolve();
   }
 
   async refund(_params: { userId: string; email?: string }): Promise<void> {
-    // NO-OP: Handled inside the bouncer UseCase flow using updateBillingStatus.
+    return Promise.resolve();
   }
 }

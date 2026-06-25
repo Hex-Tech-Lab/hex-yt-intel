@@ -12,7 +12,6 @@ import * as Sentry from '@sentry/nextjs';
 import {
   SupabaseAuthAdapter,
   WorkerIngestionAdapter,
-  DecodoAdapter,
   SupabasePersistenceAdapter,
   PostgresBillingAdapter,
   SettingsModelAdapter,
@@ -22,7 +21,6 @@ import {
 // Module-level singleton adapters — created once per cold-start, reused across requests.
 const authAdapter = new SupabaseAuthAdapter();
 const ingestionAdapter = new WorkerIngestionAdapter();
-const decodoAdapter = new DecodoAdapter();
 const persistenceAdapter = new SupabasePersistenceAdapter();
 const billingAdapter = new PostgresBillingAdapter();
 const modelResolutionAdapter = new SettingsModelAdapter();
@@ -32,7 +30,6 @@ import { CreateAnalysisUseCase } from '@/lib/usecases/CreateAnalysisUseCase';
 
 const createAnalysisUseCase = new CreateAnalysisUseCase(
   ingestionAdapter,
-  decodoAdapter,
   persistenceAdapter,
   billingAdapter,
   modelResolutionAdapter,

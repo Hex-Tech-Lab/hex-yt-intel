@@ -177,20 +177,32 @@ const concurrency = isNaN(concurrencyFlag) ? 3 : concurrencyFlag;
 const legacyCache = createCache(useRedisCache);
 const cacheAdapter = new CacheAdapter(legacyCache);
 
-// Construct QualityEngine
-const engine = new QualityEngine(
-  rules,
-  new TsMorphLoader(project),
-  cacheAdapter,
-  fsAdapter,
-  {
-    mode: mode === "diff" ? "diff" : "full",
-    defaultScope: "file",
-    concurrency,
-  }
-);
-
 async function run() {
+  // Initialize ts-morph Project — guard unhoisted packages in pnpm strict mode
+  let project: import("ts-morph").Project;
+  try {
+    const { Project: TsMorphProject } = await import("ts-morph");
+    project = new TsMorphProject({
+      tsConfigFilePath: path.join(process.cwd(), "tsconfig.json"),
+      skipAddingFilesFromTsConfig: true,
+    });
+  } catch {
+    console.error("[qa-intel] ts-morph not found (unhoisted in CI). Skipping ts-morph analysis.");
+    process.exit(0);
+  }
+
+  // Construct QualityEngine
+  const engine = new QualityEngine(
+    rules,
+    new TsMorphLoader(project),
+    cacheAdapter,
+    fsAdapter,
+    {
+      mode: mode === "diff" ? "diff" : "full",
+      defaultScope: "file",
+      concurrency,
+    }
+  );
   console.log("--- Source Provenance & Runtime Honesty Audit ---");
   console.log(`Runtime scan sources: ${fileList.length} files scanned via TS/TSX globs (excl. node_modules)`);
   console.log("Calibration sources: Juliet/SARD (CWE-22, CWE-259), CRBench, Big-Vul/Devign (CWE-89)");

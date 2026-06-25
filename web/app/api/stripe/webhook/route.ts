@@ -5,7 +5,7 @@ import { verifyWebhookSignature } from '@/lib/stripe';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
-import { addBreadcrumb, trackDatabaseQuery } from '@/lib/monitoring/sentry-utils';
+import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
 import { dispatchEvent, getUserIdFromEvent } from '@/lib/stripe/webhook-handlers';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
@@ -72,15 +72,11 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
-    await trackDatabaseQuery(
-      'insert',
-      'stripe_events',
-      () =>
-        (supabase as any).from('stripe_events').insert(eventData).then(() => null),
-      { eventId: event.id, userId }
-    ).catch((error) => {
-      console.warn('[/api/stripe/webhook] Failed to store event:', error);
-    });
+    const { error: insertError } = await (supabase as any).from('stripe_events').insert(eventData);
+    if (insertError) {
+      console.error('[/api/stripe/webhook] Failed to insert stripe event:', insertError);
+      throw new Error('Database insert failed for stripe event');
+    }
 
     const duration = Math.round(performance.now() - startTime);
     addBreadcrumb('Stripe webhook processed successfully', {

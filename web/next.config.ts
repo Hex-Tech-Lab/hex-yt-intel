@@ -78,11 +78,11 @@ const nextConfig: NextConfig = {
   // ============================================================================
   // REDIRECTS & REWRITES
   // ============================================================================
-  async redirects() {
+  redirects() {
     return [];
   },
 
-  async rewrites() {
+  rewrites() {
     return [];
   },
 

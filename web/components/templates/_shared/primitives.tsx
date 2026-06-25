@@ -48,7 +48,7 @@ export function GlowBorder({ children, active = false, radius = "card", classNam
         ...style,
       }}
     >
-      {active && <span className="hx-spin" aria-hidden={true} />}
+      {active && <span className="hx-spin" aria-hidden />}
       <div style={{ position: "relative", borderRadius: computedRadius - 1, height: "100%", width: "100%", overflow: "hidden" }}>
         {children}
       </div>
@@ -75,7 +75,7 @@ export function CornerFrame({ children, tone = "line", size = 14, className = ""
       bl: { bottom: -1, left: -1, borderBottom: `1.5px solid`, borderLeft: `1.5px solid` },
       br: { bottom: -1, right: -1, borderBottom: `1.5px solid`, borderRight: `1.5px solid` },
     };
-    return <span aria-hidden={true} style={{ ...base, ...map[pos] }} />;
+    return <span aria-hidden style={{ ...base, ...map[pos] }} />;
   };
 
   return (
@@ -121,7 +121,7 @@ export interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, label, style = {} }: StatusBadgeProps) {
-  const s = STATUS_MAP[status] || STATUS_MAP.idle;
+  const statusConfig = STATUS_MAP[status] || STATUS_MAP.idle;
   return (
     <span style={{
       display: "inline-flex",
@@ -135,17 +135,17 @@ export function StatusBadge({ status, label, style = {} }: StatusBadgeProps) {
       fontSize: 11,
       fontWeight: 600,
       letterSpacing: "0.08em",
-      color: s.text,
+      color: statusConfig.text,
       ...style,
     }}>
       <span style={{
         width: 6,
         height: 6,
         borderRadius: "50%",
-        background: s.dot,
-        animation: s.pulse ? "hx-pulse 1.4s ease-in-out infinite" : "none"
+        background: statusConfig.dot,
+        animation: statusConfig.pulse ? "hx-pulse 1.4s ease-in-out infinite" : "none"
       }} />
-      {label || s.label}
+      {label || statusConfig.label}
     </span>
   );
 }

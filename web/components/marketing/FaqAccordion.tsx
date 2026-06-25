@@ -22,7 +22,7 @@ export function FaqAccordion({ items }: FaqAccordionProps) {
         
         return (
           <div 
-            key={i} 
+            key={item.q} 
             style={{ 
               background: "var(--surface)", 
               border: "1px solid var(--line)", 

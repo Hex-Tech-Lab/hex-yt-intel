@@ -95,7 +95,6 @@ export class StreamDeltaHandler {
     if (!isJsonStream) {
       store.appendMarkdown(content);
     }
-    console.debug('[Adapter] Delta received:', content.slice(0, 100));
 
     const healed = this.healJson(cleanSink);
     if (healed) {

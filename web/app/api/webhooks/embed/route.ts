@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { Index } from '@upstash/vector';
 import { getSupabaseServiceClient } from '@/lib/supabase';
-import { generateEmbedding } from '@/lib/embeddings';
+import { generateEmbedding, generateSparseVector } from '@/lib/embeddings';
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { logUsage } from '@/lib/usage';
 import * as Sentry from '@sentry/nextjs';
@@ -66,8 +66,10 @@ export async function POST(request: NextRequest) {
     const isPlaceholder = 
       !vectorUrl || 
       vectorUrl.includes('placeholder') || 
+      vectorUrl.includes('mock') ||
       !vectorToken || 
-      vectorToken.includes('placeholder');
+      vectorToken.includes('placeholder') ||
+      vectorToken.includes('mock');
 
     if (isPlaceholder) {
       const isProduction =
@@ -146,10 +148,12 @@ export async function POST(request: NextRequest) {
       analysis = { title: 'Analysis', video_id: 'unknown' };
     }
 
-    // 7. Upsert embedding to Upstash Vector Index
+    // 7. Upsert embedding to Upstash Vector Index (with sparse vector for hybrid query capabilities)
+    const sparse = generateSparseVector(markdown);
     await vectorIndex.upsert({
       id: analysisId,
       vector: embeddingResult.embedding as unknown as number[],
+      sparseVector: sparse,
       metadata: {
         title: analysis.title,
         videoId: analysis.video_id,
@@ -157,6 +161,7 @@ export async function POST(request: NextRequest) {
         analysisId,
       },
     });
+
 
     // 8. Log usage cost
     await logUsage({
