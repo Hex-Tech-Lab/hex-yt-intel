@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, startTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, startTransition, useTransition } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useChatStore } from '@/store/useChatStore';
 import ReactMarkdown from 'react-markdown';
@@ -29,7 +29,16 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     isChatOpen: open, setChatOpen: setOpen,
   } = useChatStore();
   const [showThreads, setShowThreads] = useState(false);
+  const [localInput, setLocalInput] = useState('');
   const [input, setInput] = useState('');
+  const [, startInputTransition] = useTransition();
+
+  const handleInputChange = (val: string) => {
+    setLocalInput(val);
+    startInputTransition(() => {
+      setInput(val);
+    });
+  };
 
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -115,6 +124,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     const t = text.trim();
     if (!t || sending) return;
     setInput('');
+    setLocalInput('');
     scrollToBottom(); // user just sent — always follow to the bottom
     await sendMessage(t, { analysisId: analysisId ?? null });
   };
@@ -305,8 +315,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
         <div className="max-w-[820px] mx-auto flex gap-2 items-end">
           <textarea
             ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={localInput}
+            onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={onKeyDown}
             rows={1}
             placeholder="Message… (Enter to send, Shift+Enter for newline)"
