@@ -59,6 +59,11 @@ CREATE POLICY "Users can select their own analysis chunks" ON public.analysis_ch
 -- 3) PERFORMANCE (D7): covering index for the unindexed FK kg_relations.target_entity_id
 --    (the existing composite idx_kg_relations_source_target is source-leading and
 --    cannot serve target-only lookups / cascade deletes).
+--
+--    NOTE: Supabase migrations run in a transaction block, which prevents the use of
+--    CREATE INDEX CONCURRENTLY. For this pilot table (small dataset, dev/staging focus),
+--    the brief table lock is acceptable. For large production tables in future migrations,
+--    isolate CONCURRENTLY index creation in its own standalone migration file.
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_kg_relations_target_entity
   ON public.kg_relations(target_entity_id);
