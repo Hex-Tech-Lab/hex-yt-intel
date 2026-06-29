@@ -214,6 +214,29 @@ async function run() {
 
   const findings = await engine.analyze(fileList);
 
+  // Surface per-rule errors if any occurred
+  if (engine.ruleErrors && engine.ruleErrors.length > 0) {
+    console.error("\n❌ [qa-intel] Per-rule execution errors detected during analysis:");
+    const errorsByRule: Record<string, Array<{ file: string; message: string }>> = {};
+    for (const err of engine.ruleErrors) {
+      if (!errorsByRule[err.ruleName]) {
+        errorsByRule[err.ruleName] = [];
+      }
+      errorsByRule[err.ruleName].push({
+        file: err.filePath,
+        message: err.message
+      });
+    }
+    Object.entries(errorsByRule).forEach(([ruleName, errors]) => {
+      console.error(`\n  Rule: "${ruleName}" (${errors.length} error${errors.length !== 1 ? 's' : ''})`);
+      errors.forEach(err => {
+        console.error(`    File: ${err.file}`);
+        console.error(`    Error: ${err.message}`);
+      });
+    });
+    console.error("\n  Investigate rule implementations for: " + Object.keys(errorsByRule).join(", "));
+  }
+
   // Handle baseline
   const baselinePath = path.resolve(process.cwd(), ".qa-intel/baseline.json");
   if (baseline) {
