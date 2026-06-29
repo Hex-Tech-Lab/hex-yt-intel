@@ -8,6 +8,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "build": "esbuild src/worker.ts --bundle --format=esm --outfile=dist/worker.js --external:node:* --external:next",
+    "typecheck": "tsc --noEmit --project tsconfig.typecheck.json",
     "test": "echo \"No tests yet\""
   },
   "keywords": [
