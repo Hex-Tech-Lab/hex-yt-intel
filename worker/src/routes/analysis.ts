@@ -159,7 +159,7 @@ function buildStreamResponse(
   signingKey: string,
   appUrl: string | undefined,
   engineSignal: AbortSignal,
-  persistSignal: AbortSignal,
+  persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
 ): Response {
@@ -169,6 +169,7 @@ function buildStreamResponse(
   let settled = false;
 
   const persistService = new PersistService();
+  const persistSignal = persistController.signal;
 
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
@@ -199,14 +200,14 @@ function buildStreamResponse(
             videoId: req.videoId,
             finalText,
             modelUsed,
-            status: 'failed',
+            status: 'completed',
             activeSecret: signingKey,
             appUrl: url,
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
             chunkIndex: req.chunkIndex,
             totalChunks: req.totalChunks,
           }).catch(() => {});
-          persistSignal.abort();
+          persistController.abort();
           reject(new Error("Persistence timeout reached (15s)"));
         }, 15000);
       });
