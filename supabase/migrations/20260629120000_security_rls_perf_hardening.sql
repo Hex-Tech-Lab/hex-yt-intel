@@ -12,6 +12,8 @@
 --    by anon + authenticated + PUBLIC via PostgREST /rpc. Lock it to service_role.
 -- ─────────────────────────────────────────────────────────────────────────────
 REVOKE EXECUTE ON FUNCTION public.reserve_analysis_quota(uuid, text, text, jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.reserve_analysis_quota(uuid, text, text, jsonb) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.reserve_analysis_quota(uuid, text, text, jsonb) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.reserve_analysis_quota(uuid, text, text, jsonb) TO service_role;
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -57,12 +59,6 @@ CREATE POLICY "Users can select their own analysis chunks" ON public.analysis_ch
 -- 3) PERFORMANCE (D7): covering index for the unindexed FK kg_relations.target_entity_id
 --    (the existing composite idx_kg_relations_source_target is source-leading and
 --    cannot serve target-only lookups / cascade deletes).
---
---    DEPLOYMENT NOTE: This uses plain CREATE INDEX (not CONCURRENTLY) because
---    Supabase migrations wrap statements in transactions, which forbids CONCURRENTLY.
---    For kg_relations (pilot/dev table, ~100-1000 rows expected), the table lock
---    duration is <1s and acceptable. For large production tables in future migrations,
---    create a standalone .sql file with CREATE INDEX CONCURRENTLY outside any transaction.
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_kg_relations_target_entity
   ON public.kg_relations(target_entity_id);
