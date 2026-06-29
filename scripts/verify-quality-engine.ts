@@ -188,7 +188,7 @@ async function run() {
     });
   } catch {
     console.error("[qa-intel] ts-morph not found (unhoisted in CI). Skipping ts-morph analysis.");
-    process.exit(0);
+    process.exit(1);
   }
 
   // Construct QualityEngine
@@ -255,7 +255,21 @@ async function run() {
     }
   }
 
-  const nonCritical = findings.filter(f => f.severity !== "critical");
+  // Treat HIGH severity as blocking (same as critical)
+  const highFindings = findings.filter(f => f.severity === "high");
+  if (highFindings.length > 0) {
+    console.error("❌ qa-intel: High-severity issues found:");
+    console.error(JSON.stringify(highFindings, null, 2));
+    if (ci) {
+      console.error("❌ qa-intel: Blocking — high-severity findings must be resolved in CI.");
+      process.exit(1);
+    } else {
+      console.warn("⚠️ qa-intel: Warning only (local/non-CI). Please resolve high-severity findings before final merge.");
+      process.exit(0);
+    }
+  }
+
+  const nonCritical = findings.filter(f => f.severity !== "critical" && f.severity !== "high");
   if (nonCritical.length > 0) {
     console.warn("⚠️ qa-intel: Medium/Low issues found:");
     console.warn(JSON.stringify(nonCritical, null, 2));
