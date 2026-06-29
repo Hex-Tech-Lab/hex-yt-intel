@@ -2,6 +2,9 @@ import { Node, SyntaxKind } from "ts-morph";
 import type { SourceFile } from "ts-morph";
 import type { Finding, IRule } from "../engine";
 
+// Import TOTAL_DIMENSIONS to check for the correct interpolated string
+const TOTAL_DIMENSIONS = 11;
+
 export const StreamResilienceRule: IRule = {
   name: "stream-resilience-audit",
   check: (source: SourceFile) => {
@@ -27,7 +30,8 @@ export const BundleContradictionRule: IRule = {
   check: (source: SourceFile) => {
     const findings: Finding[] = [];
     const text = source.getText();
-    if (text.includes('All ${TOTAL_DIMENSIONS} dimensions must be present') &&
+    const expectedDimensionsMsg = `All ${TOTAL_DIMENSIONS} dimensions must be present`;
+    if (text.includes(expectedDimensionsMsg) &&
         text.includes('ONLY generate') &&
         !text.includes('skipAllDimensionsInstruction')) {
       findings.push({
