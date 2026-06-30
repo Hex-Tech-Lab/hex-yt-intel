@@ -103,6 +103,7 @@ export class MetadataScraper {
         throw new Error('Video not found');
       }
 
+      // skipcq: TS-D0030 - Safe: length check above guarantees data.items[0] exists
       return this.parseMetadata(videoId, data.items[0]!);
     } finally {
       clearTimeout(timeout);
