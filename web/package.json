@@ -7,7 +7,7 @@
     "preflight": "bash ../scripts/pre-flight.sh",
     "build": "next build && node scripts/enforce-bundle.mjs",
     "start": "next start",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint . --ext .ts,.tsx --no-cache",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "playwright test"
@@ -23,6 +23,7 @@
     "@upstash/redis": "1.38.0",
     "@upstash/vector": "1.2.3",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "d3": "^7.9.0",
     "d3-force": "^3.0.0",
     "framer-motion": "^12.40.0",

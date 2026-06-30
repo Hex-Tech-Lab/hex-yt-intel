@@ -83,7 +83,8 @@ describe('MarkdownAccumulator — Fallback semantics', () => {
 
     // Rebuild — 1 dimension in both current and new, length check applies
     accumulator.rebuildDisplayMarkdown(false);
-    const after1 = useAnalysisStore.getState().analysis?.analysis_markdown;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _after1 = useAnalysisStore.getState().analysis?.analysis_markdown;
 
     // Add a second dimension
     useSynthesisNucleus.setState({

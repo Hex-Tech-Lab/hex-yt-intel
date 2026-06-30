@@ -167,6 +167,7 @@ export class SynthesisStreamAdapter {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private handleMetadata(_: {
     type: 'metadata';
     model?: string;

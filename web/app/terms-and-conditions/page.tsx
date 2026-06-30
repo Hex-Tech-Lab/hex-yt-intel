@@ -8,12 +8,28 @@ export const metadata: Metadata = {
   description: 'Terms of Service for Hex YT Intel',
 };
 
+/**
+ * TermsAndConditionsPage component loads and displays the Terms of Service document.
+ *
+ * @returns {JSX.Element} The rendered LegalPage with the terms content.
+ */
 export default async function TermsAndConditionsPage() {
-  const filePath = path.join(process.cwd(), '..', 'docs', 'legal', 'terms-of-service.md');
+  const docName = 'terms-of-service.md';
+  const cwdParts = process.cwd().split(path.sep);
+  const baseDir = cwdParts.slice(0, -1).join(path.sep);
+  const docsDir = path.join(baseDir, 'docs', 'legal');
+  const filePath = path.join(docsDir, docName);
+  const realDocsDir = path.resolve(docsDir);
+  const realPath = path.resolve(filePath);
+
   let content = '';
   try {
-    content = fs.readFileSync(filePath, 'utf8');
+    if (!realPath.startsWith(realDocsDir + path.sep) && realPath !== realDocsDir) {
+      throw new Error('Path traversal blocked');
+    }
+    content = fs.readFileSync(realPath, 'utf8');
   } catch (e) {
+    console.debug('[terms-and-conditions] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
     content = '# Terms of Service\n\nThis document is currently being compiled by our legal team. Please check back later.';
   }
 

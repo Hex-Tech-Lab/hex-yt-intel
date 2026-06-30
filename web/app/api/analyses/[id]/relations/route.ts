@@ -12,6 +12,11 @@ import * as Sentry from '@sentry/nextjs';
 const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const serverInFlight = new Map<string, Promise<RelationsResult>>();
 
+/**
+ * Parses the given markdown string to extract stance dimensions.
+ * @param markdown - The markdown text containing dimensions.
+ * @returns An array of StanceDimension objects extracted from the markdown.
+ */
 function parseDimensions(markdown: string): StanceDimension[] {
   const out: StanceDimension[] = [];
   const re = /#{1,4}\s*DIMENSION\s+(\d+)\s*[–\-:]?\s*([^\n]*)\n([\s\S]*?)(?=#{1,4}\s*DIMENSION\s+\d+|$)/gi;
@@ -26,6 +31,11 @@ function parseDimensions(markdown: string): StanceDimension[] {
   return out;
 }
 
+/**
+ * Computes a SHA-256 hash of the given text and returns the first 16 hex characters.
+ * @param text - The text to hash.
+ * @returns The first 16 characters of the SHA-256 hash in hex format.
+ */
 async function hashContent(text: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(text);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -33,6 +43,12 @@ async function hashContent(text: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
 
+/**
+ * Retrieves a streaming response of event data for the specified analysis.
+ * @param _request - The incoming NextRequest object.
+ * @param context - The context object containing route parameters.
+ * @returns A streaming response sending event data to the client.
+ */
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -97,7 +113,8 @@ export async function GET(
           try {
             const result = await existingPromise;
             send({ ...result, type: 'complete' });
-          } catch (err) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch (_err) {
             send({ type: 'error', error: 'Failed to compute relations' });
           }
           controller.close();
