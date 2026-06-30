@@ -9,10 +9,15 @@ export const metadata: Metadata = {
 };
 
 export default async function TermsAndConditionsPage() {
-  const baseDir = process.cwd();
-  const filePath = path.join(baseDir, '..', 'docs', 'legal', 'terms-of-service.md');
+  const docName = 'terms-of-service.md';
+  const docsDir = path.resolve(process.cwd(), '..', 'docs', 'legal');
+  const filePath = path.resolve(docsDir, docName);
+
   let content = '';
   try {
+    if (!filePath.startsWith(docsDir)) {
+      throw new Error('Path traversal attempted');
+    }
     content = fs.readFileSync(filePath, 'utf8');
   } catch (e) {
     console.debug('[terms-and-conditions] Failed to read legal doc:', e instanceof Error ? e.message : String(e));

@@ -10,11 +10,14 @@ export const metadata: Metadata = {
 
 export default async function RefundPolicyPage() {
   const docName = 'refund-policy.md';
-  const docDir = 'docs/legal';
-  const sanitizedBase = process.cwd().replace(/\.\.[/\\]/g, '');
-  const legalDocsPath = path.join(sanitizedBase, '..', docDir, docName);
+  const docsDir = path.resolve(process.cwd(), '..', 'docs', 'legal');
+  const legalDocsPath = path.resolve(docsDir, docName);
+
   let content = '';
   try {
+    if (!legalDocsPath.startsWith(docsDir)) {
+      throw new Error('Path traversal attempted');
+    }
     content = fs.readFileSync(legalDocsPath, 'utf8');
   } catch (e) {
     console.debug('[refund-policy] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
