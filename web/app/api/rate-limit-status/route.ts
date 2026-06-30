@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic';
  * }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { getRateLimitStatus, getUserTier } from '@/lib/services/traffic';
 import { RATE_LIMITS } from '@/lib/constants/rate-limits';
@@ -53,7 +53,7 @@ interface RateLimitStatusResponse {
   description: string;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // 1. Auth check
     const supabase = await getSupabaseClientWithAuth();

@@ -18,6 +18,7 @@ const REQUIRED_ENV_VARS = [
   'STREAM_HMAC_SECRET',
 ] as const;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const OPTIONAL_ENV_VARS = [
   'NEXT_PUBLIC_SENTRY_DSN',
   'NEXT_PUBLIC_APP_VERSION',

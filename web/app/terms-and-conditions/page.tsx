@@ -13,7 +13,8 @@ export default async function TermsAndConditionsPage() {
   let content = '';
   try {
     content = fs.readFileSync(filePath, 'utf8');
-  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (_e) {
     content = '# Terms of Service\n\nThis document is currently being compiled by our legal team. Please check back later.';
   }
 

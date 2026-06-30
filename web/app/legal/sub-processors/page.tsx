@@ -13,7 +13,8 @@ export default function SubProcessorsPage() {
   let content = '';
   try {
     content = fs.readFileSync(filePath, 'utf8');
-  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (_e) {
     content = '# Sub-processor Disclosure\n\nThis document is currently being compiled. Please check back later.';
   }
 
