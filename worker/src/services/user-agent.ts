@@ -12,5 +12,6 @@ const USER_AGENTS = [
 ];
 
 export function getRandomUserAgent(): string {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  const index = Math.floor(Math.random() * USER_AGENTS.length);
+  return USER_AGENTS[index] || USER_AGENTS[0];
 }
