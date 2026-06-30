@@ -198,47 +198,53 @@ export async function POST(request: NextRequest) {
           2
         );
 
+        // Verify chunk completeness immediately after persisting chunk
         const chunks = await retryWithBackoff(
           () => persistenceAdapter.findAnalysisChunks({ analysisId }),
           2
         );
-        const COMPLETED_STATUS = 'completed';
-        const completedChunks = chunks ? chunks.filter(c => c.status === COMPLETED_STATUS) : [];
+        const FINAL_CHUNK_STATUS = 'completed';
+        const finalChunks = chunks ? chunks.filter(c => c.status === FINAL_CHUNK_STATUS) : [];
 
-        const completedIndexes = new Set(completedChunks.map(c => c.chunk_index));
-        let allChunksCompleted = true;
-        const missingChunks: number[] = [];
+        const receivedIndexSet = new Set(finalChunks.map(c => c.chunk_index));
+        let isFullyReceived = true;
+        const unreceived: number[] = [];
         for (let i = 1; i <= resolvedTotal; i++) {
-          if (!completedIndexes.has(i)) {
-            allChunksCompleted = false;
-            missingChunks.push(i);
+          if (!receivedIndexSet.has(i)) {
+            isFullyReceived = false;
+            unreceived.push(i);
           }
         }
 
-        let hitTimeout = false;
-        if (!allChunksCompleted && completedChunks.length > 0) {
-          const minQuorum = Math.ceil(resolvedTotal * 0.6);
-          if (completedChunks.length >= minQuorum) {
-            const now = Date.now();
-            const timestamps = completedChunks.map((c: any) => new Date(c.updated_at).getTime());
-            const newestTime = Math.max(...timestamps);
-            if (now - newestTime >= 30000) {
-              hitTimeout = true;
-              if (missingChunks.length > 0) {
-                console.warn('[analyses/persist] Chunk quorum timeout: missing chunks detected', {
+        // Check if we've exceeded the timeout window while waiting for chunks
+        let exceedsTimeout = false;
+        if (!isFullyReceived && finalChunks.length > 0) {
+          const minimumChunkThreshold = Math.ceil(resolvedTotal * 0.6);
+          if (finalChunks.length >= minimumChunkThreshold) {
+            const currentTime = Date.now();
+            const chunkTimes = finalChunks.map((c: any) => new Date(c.updated_at).getTime());
+            const latestChunkTime = Math.max(...chunkTimes);
+            const elapsedMs = currentTime - latestChunkTime;
+
+            if (elapsedMs >= 30000) {
+              exceedsTimeout = true;
+              if (unreceived.length > 0) {
+                console.error('[analyses/persist] Chunk reception timeout after waiting 30s: chunks missing', {
                   analysisId,
                   videoId,
-                  completedCount: completedChunks.length,
-                  totalExpected: resolvedTotal,
-                  missingChunkIndexes: missingChunks
+                  receivedCount: finalChunks.length,
+                  expectedTotal: resolvedTotal,
+                  unreceived,
+                  elapsedMs
                 });
               }
             }
           }
         }
 
-        if (hitTimeout && missingChunks.length > 0) {
-          const partialReport: PersistedValidationReport = {
+        // If timeout detected AND chunks are missing, mark as partial before proceeding
+        if (exceedsTimeout && unreceived.length > 0) {
+          const incompletionReport: PersistedValidationReport = {
             ...priorReport,
             status: 'partial',
             model_used: model || null,
@@ -252,17 +258,17 @@ export async function POST(request: NextRequest) {
               payload: validPayload ?? null,
               model: model || null,
               validationPassed: false,
-              validationReport: partialReport,
+              validationReport: incompletionReport,
             }),
             2
           );
 
-          return { type: 'partial_timeout' as const, analysisId, missingChunks };
+          return { type: 'partial_timeout' as const, analysisId, missingChunks: unreceived };
         }
 
-        if (allChunksCompleted) {
+        if (isFullyReceived) {
           const chunkMap = new Map<number, any>();
-          completedChunks.forEach(c => {
+          finalChunks.forEach(c => {
             chunkMap.set(c.chunk_index, c.payload);
           });
 
@@ -293,6 +299,34 @@ export async function POST(request: NextRequest) {
             if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.edges)) {
               stitchedEdges.push(...p.knowledgeGraph.edges);
             }
+          }
+
+          // CRITICAL SAFETY CHECK: Verify all expected chunks are present before stitching
+          if (finalChunks.length !== resolvedTotal) {
+            console.error('[analyses/persist] Safety halt: incomplete chunk set detected before stitching', {
+              analysisId,
+              persisted: finalChunks.length,
+              expected: resolvedTotal,
+              unreceived
+            });
+            const safetyReport: PersistedValidationReport = {
+              ...priorReport,
+              status: 'partial',
+              model_used: model || null,
+              valid: false,
+            };
+            await retryWithBackoff(
+              () => persistenceAdapter.updateAnalysisResult({
+                analysisId,
+                markdown,
+                payload: validPayload ?? null,
+                model: model || null,
+                validationPassed: false,
+                validationReport: safetyReport,
+              }),
+              2
+            );
+            return { type: 'partial_timeout' as const, analysisId, missingChunks: unreceived };
           }
 
           const cleanDimensions = stitchedDimensions
@@ -387,11 +421,56 @@ export async function POST(request: NextRequest) {
         return { type: 'chunk_saved' as const, analysisId, chunkIndex };
       }
 
+      // For non-chunk requests, ALWAYS verify all chunks have been persisted before deciding final status
+      let finalStatus: string;
+      let validationPassed: boolean;
+      let finalMissingChunks: number[] = [];
+
+      if (isInterrupted) {
+        finalStatus = 'interrupted';
+        validationPassed = false;
+      } else {
+        // Explicitly verify chunk completeness BEFORE assigning final status
+        const storedChunks = await retryWithBackoff(
+          () => persistenceAdapter.findAnalysisChunks({ analysisId }),
+          2
+        );
+        const FINAL_STATUS = 'completed';
+        const finalizedChunks = storedChunks ? storedChunks.filter(c => c.status === FINAL_STATUS) : [];
+        const receivedIndices = new Set(finalizedChunks.map(c => c.chunk_index));
+
+        let allReceived = true;
+        const missing: number[] = [];
+        for (let i = 1; i <= resolvedTotal; i++) {
+          if (!receivedIndices.has(i)) {
+            allReceived = false;
+            missing.push(i);
+          }
+        }
+
+        // Only mark as 'done' if ALL chunks have been persisted
+        if (!allReceived) {
+          finalStatus = 'partial';
+          validationPassed = false;
+          finalMissingChunks = missing;
+          console.warn('[analyses/persist] Final check: incomplete chunk set prevents done status', {
+            analysisId,
+            videoId,
+            missing,
+            persisted: finalizedChunks.length,
+            expected: resolvedTotal
+          });
+        } else {
+          finalStatus = 'done';
+          validationPassed = Boolean(valid);
+        }
+      }
+
       const newReport: PersistedValidationReport = {
         ...priorReport,
-        status: isInterrupted ? 'interrupted' : 'done',
+        status: finalStatus,
         model_used: model || null,
-        valid: isInterrupted ? false : !!valid,
+        valid: finalStatus === 'done' && validationPassed,
       };
 
       await retryWithBackoff(
@@ -400,7 +479,7 @@ export async function POST(request: NextRequest) {
           markdown,
           payload: validPayload ?? null,
           model: model || null,
-          validationPassed: isInterrupted ? false : Boolean(valid),
+          validationPassed,
           validationReport: newReport,
         }),
         2
@@ -408,6 +487,10 @@ export async function POST(request: NextRequest) {
 
       if (isInterrupted) {
         return { type: 'interrupted' as const, analysisId };
+      }
+
+      if (finalStatus === 'partial') {
+        return { type: 'partial_timeout' as const, analysisId, missingChunks: finalMissingChunks };
       }
 
       const transcriptAvailable = !!priorReport.transcript_available;
