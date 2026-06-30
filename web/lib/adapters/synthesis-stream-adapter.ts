@@ -99,7 +99,7 @@ export class SynthesisStreamAdapter {
         this.handleDimension(fragment);
         break;
       case 'metadata':
-        this.handleMetadata(fragment);
+        this.handleMetadata();
         break;
       case 'complete':
       case 'done':
