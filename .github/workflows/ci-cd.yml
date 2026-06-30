@@ -107,8 +107,14 @@ jobs:
       - name: Hex Intel Environment
         uses: ./
 
-      - name: Clear ESLint cache
-        run: find . -type d -name ".eslintcache" -exec rm -rf {} + 2>/dev/null || true
+      - name: Clear ESLint cache and pnpm store
+        run: |
+          find . -type d -name ".eslintcache" -exec rm -rf {} + 2>/dev/null || true
+          rm -rf ~/.pnpm-store 2>/dev/null || true
+          rm -rf ~/.pnpm-global 2>/dev/null || true
+
+      - name: Reinstall dependencies with fresh cache
+        run: pnpm install --frozen-lockfile
 
       - name: Run linter
         run: pnpm --filter @hex-yt-intel/web run lint
