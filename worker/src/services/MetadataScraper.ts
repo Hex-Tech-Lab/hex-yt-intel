@@ -96,7 +96,10 @@ export class MetadataScraper {
 
     const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${videoId}&key=${this.apiKey}`;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => {
+      controller.abort();
+      console.error('[MetadataScraper] YouTube fetch timeout (5s) - aborting', { videoId });
+    }, 5000);
 
     try {
       const response = await fetchWithProxy(
@@ -148,6 +151,11 @@ export class MetadataScraper {
       }
 
       return this.parseMetadata(videoId, item);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        console.error('[MetadataScraper] YouTube fetch aborted (timeout)', { videoId });
+      }
+      throw err;
     } finally {
       clearTimeout(timeout);
     }
