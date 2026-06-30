@@ -16,6 +16,7 @@ env:
   NODE_VERSION: "24.16.0"
   PNPM_VERSION: "11.9.0"
   PRODUCTION_URL: https://hex-yt-intel.vercel.app
+  # Cache buster 2026-06-30T08:40:35Z - Forces fresh pnpm/ESLint caches
 
 jobs:
   # ============================================================================
