@@ -1,13 +1,15 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { SourceFile } from "ts-morph";
-import type { Finding, IRule } from "../engine";
+import type { Finding, Rule, RuleContext } from "../domain";
 
 // Import TOTAL_DIMENSIONS to check for the correct interpolated string
 const TOTAL_DIMENSIONS = 11;
 
-export const StreamResilienceRule: IRule = {
+export const StreamResilienceRule: Rule = {
   name: "stream-resilience-audit",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast;
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
     const text = source.getText();
@@ -25,9 +27,11 @@ export const StreamResilienceRule: IRule = {
   }
 };
 
-export const BundleContradictionRule: IRule = {
+export const BundleContradictionRule: Rule = {
   name: "bundle-contradiction-detector",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast;
     const findings: Finding[] = [];
     const text = source.getText();
     const expectedDimensionsMsg = `All ${TOTAL_DIMENSIONS} dimensions must be present`;
@@ -46,9 +50,11 @@ export const BundleContradictionRule: IRule = {
   }
 };
 
-export const TranscriptGuardRule: IRule = {
+export const TranscriptGuardRule: Rule = {
   name: "transcript-guard-enforcer",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast;
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
     const text = source.getText();
@@ -69,9 +75,11 @@ export const TranscriptGuardRule: IRule = {
   }
 };
 
-export const StreamSettleRule: IRule = {
+export const StreamSettleRule: Rule = {
   name: "stream-settle-audit",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast;
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
     const text = source.getText();
@@ -90,9 +98,11 @@ export const StreamSettleRule: IRule = {
   }
 };
 
-export const CascadeOrderRule: IRule = {
+export const CascadeOrderRule: Rule = {
   name: "cascade-order-enforcer",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast;
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
     if (!filePath.includes('TranscriptExtractor')) return findings;
@@ -112,9 +122,11 @@ export const CascadeOrderRule: IRule = {
   }
 };
 
-export const ProxyPromotionRule: IRule = {
+export const ProxyPromotionRule: Rule = {
   name: "proxy-promotion-audit",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast;
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
     
@@ -147,9 +159,11 @@ export const ProxyPromotionRule: IRule = {
   }
 };
 
-export const ModuleLevelDynamicImportRule: IRule = {
+export const ModuleLevelDynamicImportRule: Rule = {
   name: "module-level-dynamic-import",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast;
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
     if (!filePath.includes('.tsx') && !filePath.includes('.jsx')) return findings;
