@@ -32,7 +32,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     framework: 4,    // Detail level
     tool: 5,         // Detail level
     metric: 6        // Detail level
-  }), []);
+  }) as Record<string, number>, []);
 
   const toggleCollapse = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
