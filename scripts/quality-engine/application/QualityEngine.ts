@@ -21,6 +21,7 @@ export class QualityEngine {
   ) {}
 
   async analyze(files: string[]): Promise<Finding[]> {
+    this.ruleErrors = [];
     const existing = files.filter((f) => this.fs.exists(f));
 
     // GRAPH CONSTRUCTION: buildGraph() parses imports and constructs the overall dependency graph
