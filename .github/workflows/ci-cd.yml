@@ -108,7 +108,7 @@ jobs:
         uses: ./
 
       - name: Run linter
-        run: cd web && npx eslint . --ext .ts,.tsx --no-cache
+        run: pnpm --filter @hex-yt-intel/web run lint
 
       - name: Run QA Intel Quality Gate
         run: pnpm dlx tsx scripts/verify-quality-engine.ts
