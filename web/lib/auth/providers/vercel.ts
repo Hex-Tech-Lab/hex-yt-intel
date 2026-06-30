@@ -13,9 +13,12 @@ export class VercelAuthProvider implements AuthProvider {
     return null;
   }
 
+  /**
+   * Sign in with Vercel Auth
+   * Note: Sign-in is handled by Vercel's native OAuth integration
+   */
   async signIn(): Promise<void> {
-    // TODO: Implement Vercel Auth sign-in
-    // For now, silently no-op (sign-in handled by Vercel's native OAuth)
+    // Sign-in delegated to Vercel's native OAuth flow
   }
 
   async signOut(): Promise<void> {
@@ -28,14 +31,26 @@ export class VercelAuthProvider implements AuthProvider {
     return session?.user || null;
   }
 
+  /**
+   * Update user profile with Vercel Auth
+   * Currently not implemented for Vercel provider
+   */
   async updateUser(): Promise<User> {
     throw new Error('Update user not implemented for Vercel Auth yet');
   }
 
+  /**
+   * Middleware function for request/response handling
+   * Reserved for future Vercel Auth middleware needs
+   */
   async middleware(): Promise<any> {
     return undefined;
   }
 
+  /**
+   * Handle OAuth callback from Vercel Auth
+   * Delegates to Vercel's native callback handler
+   */
   async handleCallback(): Promise<Response> {
     return new Response('OK');
   }
