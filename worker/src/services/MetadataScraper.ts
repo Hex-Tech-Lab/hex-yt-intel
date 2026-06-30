@@ -65,17 +65,24 @@ export class MetadataScraper {
   async fetchChannelDetails(channelId: string): Promise<{ title: string; description: string }> {
     const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${this.apiKey}`;
     const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
-    
+
     if (!response.ok) {
       throw new Error(`YouTube API channel fetch failed: ${response.status}`);
     }
 
-    const data = (await response.json()) as { items?: Array<{ snippet?: Record<string, unknown> }> };
-    const snippet = data.items?.[0]?.snippet as Record<string, unknown> | undefined;
+    const data = (await response.json()) as {
+      items?: Array<{
+        snippet?: {
+          title?: string;
+          description?: string;
+        };
+      }>;
+    };
+    const snippet = data.items?.[0]?.snippet;
 
     return {
-      title: String(snippet?.title || 'Unknown Channel'),
-      description: String(snippet?.description || ''),
+      title: snippet?.title || 'Unknown Channel',
+      description: snippet?.description || '',
     };
   }
 
@@ -105,11 +112,24 @@ export class MetadataScraper {
         throw new Error(`YouTube API returned ${response.status}`);
       }
 
-      const data = (await response.json()) as { 
-        items?: Array<{ 
-          snippet?: Record<string, unknown>; 
-          statistics?: Record<string, unknown>; 
-          contentDetails?: Record<string, unknown> 
+      const data = (await response.json()) as {
+        items?: Array<{
+          snippet?: {
+            title?: string;
+            description?: string;
+            channelTitle?: string;
+            channelId?: string;
+            publishedAt?: string;
+            thumbnails?: Record<string, { url?: string }>;
+          };
+          statistics?: {
+            viewCount?: string;
+            likeCount?: string;
+            commentCount?: string;
+          };
+          contentDetails?: {
+            duration?: string;
+          };
         }>;
         error?: unknown;
       };
@@ -122,7 +142,11 @@ export class MetadataScraper {
         throw new Error('Video not found');
       }
 
-      const item = data.items[0] as VideoItem;
+      const item = data.items[0];
+      if (!item) {
+        throw new Error('Video item is null or undefined');
+      }
+
       return this.parseMetadata(videoId, item);
     } finally {
       clearTimeout(timeout);
@@ -139,22 +163,42 @@ export class MetadataScraper {
   /**
    * Parse YouTube API response into VideoMetadata
    */
-  private parseMetadata(videoId: string, video: VideoItem): VideoMetadata {
-    const snippet = video.snippet || {};
-    const stats = video.statistics || {};
-    const details = video.contentDetails || {};
+  private parseMetadata(
+    videoId: string,
+    video: {
+      snippet?: {
+        title?: string;
+        description?: string;
+        channelTitle?: string;
+        channelId?: string;
+        publishedAt?: string;
+        thumbnails?: Record<string, { url?: string }>;
+      };
+      statistics?: {
+        viewCount?: string;
+        likeCount?: string;
+        commentCount?: string;
+      };
+      contentDetails?: {
+        duration?: string;
+      };
+    }
+  ): VideoMetadata {
+    const snippet = video.snippet ?? {};
+    const stats = video.statistics ?? {};
+    const details = video.contentDetails ?? {};
 
     return {
       videoId,
-      title: String(snippet.title || ''),
-      description: String(snippet.description || ''),
-      channelTitle: String(snippet.channelTitle || ''),
-      channelId: String(snippet.channelId || ''),
-      publishedAt: String(snippet.publishedAt || ''),
+      title: snippet.title ?? '',
+      description: snippet.description ?? '',
+      channelTitle: snippet.channelTitle ?? '',
+      channelId: snippet.channelId ?? '',
+      publishedAt: snippet.publishedAt ?? '',
       duration: this.parseDuration(details.duration),
-      viewCount: parseInt(String(stats.viewCount || '0'), 10),
-      likeCount: parseInt(String(stats.likeCount || '0'), 10),
-      commentCount: parseInt(String(stats.commentCount || '0'), 10),
+      viewCount: stats.viewCount ? parseInt(stats.viewCount, 10) : 0,
+      likeCount: stats.likeCount ? parseInt(stats.likeCount, 10) : 0,
+      commentCount: stats.commentCount ? parseInt(stats.commentCount, 10) : 0,
       thumbnailUrl: this.getThumbnailUrl(snippet.thumbnails),
     };
   }
@@ -162,26 +206,25 @@ export class MetadataScraper {
   /**
    * Parse ISO 8601 duration (PT1H2M3S) to seconds
    */
-  private parseDuration(duration: any): number {
+  private parseDuration(duration?: string): number {
     if (!duration || typeof duration !== 'string') return 0;
     const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
     if (!match) return 0;
-    const hours = (parseInt(match[1] || '0') || 0) * 3600;
-    const minutes = (parseInt(match[2] || '0') || 0) * 60;
-    const seconds = parseInt(match[3] || '0') || 0;
+    const hours = (parseInt(match[1]?.slice(0, -1) ?? '0', 10) ?? 0) * 3600;
+    const minutes = (parseInt(match[2]?.slice(0, -1) ?? '0', 10) ?? 0) * 60;
+    const seconds = parseInt(match[3]?.slice(0, -1) ?? '0', 10) ?? 0;
     return hours + minutes + seconds;
   }
 
   /**
    * Get thumbnail URL with fallback chain: high → medium → default
    */
-  private getThumbnailUrl(thumbnails: Record<string, Record<string, string>> | unknown): string {
+  private getThumbnailUrl(thumbnails?: Record<string, { url?: string }>): string {
     if (!thumbnails || typeof thumbnails !== 'object') return '';
-    const t = thumbnails as Record<string, Record<string, string>>;
     return (
-      t.high?.url ||
-      t.medium?.url ||
-      t.default?.url ||
+      thumbnails.high?.url ??
+      thumbnails.medium?.url ??
+      thumbnails.default?.url ??
       ''
     );
   }
