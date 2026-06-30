@@ -23,7 +23,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   const [collapsedNodes, setCollapsedNodes] = useState<Record<string, boolean>>({});
 
   // Hierarchy score: lower is higher in the tree (Theme -> Concept -> Implementation -> Detail)
-  const typePriority = useMemo(() => ({
+  const typePriority = useMemo((): Record<string, number> => ({
     trend: 0,        // Theme level
     study: 0,        // Theme level
     person: 1,       // Concept level
