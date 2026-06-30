@@ -16,8 +16,7 @@ import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
-/** Retry async operation with exponential backoff (2^n * 1000ms). */
-async function retryWithBackoff<T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> {
+const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> => {
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -31,7 +30,7 @@ async function retryWithBackoff<T>(fn: () => Promise<T>, maxAttempts = 2): Promi
     }
   }
   throw lastError || new Error('Retry failed');
-}
+};
 
 function buildValidationFilename(title: string, channelTitle?: string | null): string {
   const cleanSlug = (text: string): string => {
@@ -80,7 +79,7 @@ export async function POST(request: NextRequest) {
       model: z.string().optional(),
       valid: z.boolean().optional(),
       contentSig: z.string(),
-      status: z.string().optional().default(`completed`),
+      status: z.string().optional().default('completed'),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
@@ -196,7 +195,7 @@ export async function POST(request: NextRequest) {
           () => persistenceAdapter.findAnalysisChunks({ analysisId }),
           2
         );
-        const COMPLETED_STATUS = `completed`;
+        const COMPLETED_STATUS = 'completed';
         const completedChunks = chunks ? chunks.filter(c => c.status === COMPLETED_STATUS) : [];
 
         const completedIndexes = new Set(completedChunks.map(c => c.chunk_index));

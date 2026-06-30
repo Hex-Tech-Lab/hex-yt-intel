@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   description: 'Terms of Service for Hex YT Intel',
 };
 
+/**
+ * TermsAndConditionsPage component loads and displays the Terms of Service document.
+ *
+ * @returns {JSX.Element} The rendered LegalPage with the terms content.
+ */
 export default async function TermsAndConditionsPage() {
   const docName = 'terms-of-service.md';
   const cwdParts = process.cwd().split(path.sep);

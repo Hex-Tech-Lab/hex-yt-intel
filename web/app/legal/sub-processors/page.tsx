@@ -8,6 +8,14 @@ export const metadata: Metadata = {
   description: 'A complete list of third-party sub-processors used by Hex-YT Intel for data processing.',
 };
 
+/**
+ * Renders the Sub-Processors legal documentation page by reading and displaying the documentation markdown.
+ *
+ * Attempts to read 'sub-processors.md' from the project's docs/legal directory,
+ * blocks path traversal, and falls back to a default message if reading fails.
+ *
+ * @returns {JSX.Element} The LegalPage component with the sub-processors content.
+ */
 export default function SubProcessorsPage() {
   const docName = 'sub-processors.md';
   const cwdParts = process.cwd().split(path.sep);
