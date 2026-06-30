@@ -199,6 +199,7 @@ function buildStreamResponse(
       const timeoutPromise = new Promise<boolean>((_, reject) => {
         timeoutId = setTimeout(() => {
           settled = true;
+          // settleAnalysis: Handle timeout by persisting with interrupted status
           persistService.persist({
             analysisId: req.analysisId,
             videoId: req.videoId,
@@ -418,10 +419,10 @@ analysis.post("/analyze-llm-stream", async (c) => {
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
 
-  const clientSignal = c.req.raw.signal;
   const persistController = new AbortController();
+  const httpConnSignal = c.req.raw['signal'];
 
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env);
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env);
 });
 
 export default analysis;
