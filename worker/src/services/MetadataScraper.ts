@@ -103,7 +103,7 @@ export class MetadataScraper {
         throw new Error('Video not found');
       }
 
-      return this.parseMetadata(videoId, data.items[0]);
+      return this.parseMetadata(videoId, data.items[0]!);
     } finally {
       clearTimeout(timeout);
     }
