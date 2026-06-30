@@ -18,10 +18,20 @@ const USER_AGENTS = [
  * @throws If the user agent pool is empty or selection fails.
  */
 export function getRandomUserAgent(): string {
-  if (USER_AGENTS.length === 0) {
+  const max = USER_AGENTS.length as number;
+  if (max === 0) {
     throw new Error('USER_AGENTS list is empty');
   }
-  const randomIndex = crypto.getRandomValues(new Uint32Array(1))[0] % USER_AGENTS.length;
+  const bytesNeeded = Math.ceil(Math.log2(max) / 8);
+  const limit = Math.pow(2, bytesNeeded * 8);
+  const range = Math.floor(limit / max) * max;
+
+  let randomValue: number;
+  do {
+    randomValue = crypto.getRandomValues(new Uint8Array(bytesNeeded)).reduce((acc, byte) => acc * 256 + byte, 0);
+  } while (randomValue >= range);
+
+  const randomIndex = randomValue % max;
   const selected = USER_AGENTS[randomIndex];
   if (!selected) {
     throw new Error(`Failed to select user agent at index ${randomIndex}`);

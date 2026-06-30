@@ -200,7 +200,7 @@ function buildStreamResponse(
             videoId: req.videoId,
             finalText,
             modelUsed,
-            status: 'failed',
+            status: 'interrupted',
             activeSecret: signingKey,
             appUrl: url,
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
