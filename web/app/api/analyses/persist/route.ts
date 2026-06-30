@@ -16,7 +16,8 @@ import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
-async function retryWithBackoff<T>(fn: () => Promise<T>, maxAttempts: number = 2): Promise<T> {
+/** Retry async operation with exponential backoff (2^n * 1000ms). */
+async function retryWithBackoff<T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> {
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -393,7 +394,7 @@ export async function POST(request: NextRequest) {
           markdown,
           payload: validPayload ?? null,
           model: model || null,
-          validationPassed: isInterrupted ? false : !!valid,
+          validationPassed: isInterrupted ? false : Boolean(valid),
           validationReport: newReport,
         }),
         2
