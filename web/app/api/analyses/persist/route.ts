@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     const conductor = new WorkflowConductor();
-    const roomResult = await conductor.routeToRoom('persist', async (_ctx) => {
+    const roomResult = await conductor.routeToRoom('persist', async () => {
       const {
         analysisId,
         videoId,

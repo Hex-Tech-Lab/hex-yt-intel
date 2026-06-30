@@ -54,7 +54,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       const savedOpen = localStorage.getItem(OPEN_KEY);
       if (savedOpen === '1') setOpen(true);
     } catch { /* noop */ }
-  }, []);
+  }, [setOpen]);
 
   useEffect(() => {
     try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* noop */ }
