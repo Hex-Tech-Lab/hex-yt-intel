@@ -13,9 +13,6 @@ runs:
         node-version: '24.x'
         cache: 'pnpm'
         cache-dependency-path: '**/pnpm-lock.yaml'
-
-    - name: Clear any corrupted pnpm cache
-      run: rm -rf ~/.pnpm-store .pnpm-store
     - name: Install dependencies
       shell: bash
       env:
