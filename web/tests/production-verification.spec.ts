@@ -164,14 +164,14 @@ test.describe('Production Verification Suite', () => {
 
       expect(response?.status()).toBeLessThan(400);
 
-      // Check that critical environment variables are available client-side
-      // This would be set by the app's environment exports
-      // envVars object will be evaluated client-side
-
-      // At minimum, the page should render without errors
-      // The actual env vars may not be available in window object depending on implementation
       const html = await page.content();
+
+      // Validate that page rendered and contains expected content length
       expect(html.length).toBeGreaterThan(500);
+
+      // Verify that critical environment exports were properly injected
+      // Check for Supabase configuration reference which requires env vars
+      expect(html.toLowerCase()).toContain('supabase');
     });
 
     test('no uninitialized environment references in HTML', async ({ page }) => {
