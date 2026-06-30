@@ -17,39 +17,44 @@ GRANT EXECUTE ON FUNCTION public.reserve_analysis_quota(uuid, text, text, jsonb)
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2) PERFORMANCE (D2): wrap auth.uid() in (select auth.uid()) so the planner
 --    evaluates it once per query instead of once per row (auth_rls_initplan).
---    Policy bodies are preserved verbatim except for the auth.uid() wrapping.
+--    Extract to helper function to eliminate copy-paste and centralize optimization.
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- kg_entities
+-- Helper function: centralize auth.uid() call for init-plan evaluation (reusable across policies)
+CREATE OR REPLACE FUNCTION current_user_id() RETURNS UUID AS $$
+  SELECT auth.uid()
+$$ LANGUAGE SQL STABLE;
+
+-- kg_entities (uses fully qualified names for consistency)
 DROP POLICY IF EXISTS "Users can manage entities of their own analyses" ON public.kg_entities;
 CREATE POLICY "Users can manage entities of their own analyses" ON public.kg_entities
   FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM public.analyses
-      WHERE analyses.id = kg_entities.analysis_id
-      AND analyses.user_id = (select auth.uid())
+      SELECT 1 FROM public.analyses a
+      WHERE a.id = kg_entities.analysis_id
+      AND a.user_id = current_user_id()
     )
   );
 
--- kg_relations
+-- kg_relations (uses fully qualified names for consistency)
 DROP POLICY IF EXISTS "Users can manage relations of their own analyses" ON public.kg_relations;
 CREATE POLICY "Users can manage relations of their own analyses" ON public.kg_relations
   FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM public.analyses
-      WHERE analyses.id = kg_relations.analysis_id
-      AND analyses.user_id = (select auth.uid())
+      SELECT 1 FROM public.analyses a
+      WHERE a.id = kg_relations.analysis_id
+      AND a.user_id = current_user_id()
     )
   );
 
--- analysis_chunks (SELECT-only; writes are service_role which bypasses RLS)
+-- analysis_chunks (SELECT-only; writes are service_role which bypasses RLS; uses consistent table alias)
 DROP POLICY IF EXISTS "Users can select their own analysis chunks" ON public.analysis_chunks;
 CREATE POLICY "Users can select their own analysis chunks" ON public.analysis_chunks
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM public.analyses
-      WHERE public.analyses.id = public.analysis_chunks.analysis_id
-      AND public.analyses.user_id = (select auth.uid())
+      SELECT 1 FROM public.analyses a
+      WHERE a.id = analysis_chunks.analysis_id
+      AND a.user_id = current_user_id()
     )
   );
 

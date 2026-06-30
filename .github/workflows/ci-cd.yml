@@ -451,11 +451,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const status = '${{ job.status }}';
-            const statusEmoji = status === 'success' ? '✅' : '❌';
+            const isSuccess = '${{ job.status }}' === 'success';
+            const statusEmoji = isSuccess ? '✅' : '❌';
+            const message = isSuccess ? 'All checks passed. Ready to merge.' : 'One or more checks failed. Not ready to merge.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `${statusEmoji} **Pipeline Status**: ${status === 'success' ? 'All checks passed. Ready to merge.' : 'One or more checks failed. Not ready to merge.'}`
+              body: `${statusEmoji} **Pipeline Status**: ${message}`
             })
