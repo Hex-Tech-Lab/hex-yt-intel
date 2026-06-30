@@ -16,6 +16,13 @@ import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
+/**
+ * Retry async operation with exponential backoff (2^n * 1000ms).
+ * @template T The return type of the async function
+ * @param fn The async function to retry
+ * @param maxAttempts Maximum number of retry attempts (default: 2)
+ * @returns The result of the successful function call
+ */
 const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> => {
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
