@@ -18,7 +18,7 @@ const USER_AGENTS = [
  * @throws If the user agent pool is empty or selection fails.
  */
 export function getRandomUserAgent(): string {
-  const max = USER_AGENTS.length as number;
+  const max = USER_AGENTS.length;
   if (max === 0) {
     throw new Error('USER_AGENTS list is empty');
   }
