@@ -13,7 +13,7 @@ export class VercelAuthProvider implements AuthProvider {
     return null;
   }
 
-  async signIn(_provider: string): Promise<void> {
+  async signIn(): Promise<void> {
     // TODO: Implement Vercel Auth sign-in
     // For now, silently no-op (sign-in handled by Vercel's native OAuth)
   }
@@ -28,15 +28,15 @@ export class VercelAuthProvider implements AuthProvider {
     return session?.user || null;
   }
 
-  async updateUser(_data: Partial<User>): Promise<User> {
+  async updateUser(): Promise<User> {
     throw new Error('Update user not implemented for Vercel Auth yet');
   }
 
-  async middleware(_req: any): Promise<any> {
+  async middleware(): Promise<any> {
     return undefined;
   }
 
-  async handleCallback(_req: any): Promise<Response> {
+  async handleCallback(): Promise<Response> {
     return new Response('OK');
   }
 }

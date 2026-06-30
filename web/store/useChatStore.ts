@@ -111,7 +111,7 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
         if (!line) continue;
         try {
           onEvent(JSON.parse(line.slice(5).trim()));
-        } catch (e) {
+        } catch {
           // partial/invalid JSON frame skipped
         }
       }

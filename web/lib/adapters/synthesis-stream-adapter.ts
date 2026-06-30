@@ -167,11 +167,7 @@ export class SynthesisStreamAdapter {
     }
   }
 
-  private handleMetadata(_: {
-    type: 'metadata';
-    model?: string;
-    persona?: string;
-  }) {
+  private handleMetadata() {
     // metadata received
   }
 

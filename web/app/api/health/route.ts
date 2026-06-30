@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   // Return 200 JSON for all automated probes and browsers to satisfy CI/CD.
   // Visual dashboard is available at /status
   return NextResponse.json({

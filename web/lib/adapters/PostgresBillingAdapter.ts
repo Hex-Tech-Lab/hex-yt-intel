@@ -78,15 +78,11 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
     }
   }
 
-  async consumeQuota(_params: {
-    userId: string;
-    tier: UserTier;
-    email?: string;
-  }): Promise<void> {
+  async consumeQuota(): Promise<void> {
     return Promise.resolve();
   }
 
-  async refund(_params: { userId: string; email?: string }): Promise<void> {
+  async refund(): Promise<void> {
     return Promise.resolve();
   }
 }

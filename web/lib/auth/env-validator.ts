@@ -12,7 +12,7 @@ export function validateAuthConfig(): void {
   };
 
   const missing = Object.entries(allRequired)
-    .filter(([_, value]) => !value)
+    .filter(([, value]) => !value)
     .map(([key]) => key);
 
   if (missing.length > 0) {

@@ -97,7 +97,7 @@ export async function GET(
           try {
             const result = await existingPromise;
             send({ ...result, type: 'complete' });
-          } catch (_err) {
+          } catch {
             send({ type: 'error', error: 'Failed to compute relations' });
           }
           controller.close();
