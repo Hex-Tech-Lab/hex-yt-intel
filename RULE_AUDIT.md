@@ -433,7 +433,7 @@ export const PromiseTimeoutEnforcementRule: IRule = {
 **Why**: Network errors silently ignored; request handler completes while operation fails.  
 **False Positive Rate**: ~8%  
 
-#### Rule #9: `rlsa-scope-mismatch-audit`
+#### Rule #9: `rls-scope-mismatch-audit`
 **Severity**: high  
 **Pattern**: `rls: true` in policy but client doesn't pass required filter  
 **Why**: False sense of security; RLS enforced server-side but client-side audit fails.  
@@ -487,7 +487,7 @@ export const PromiseTimeoutEnforcementRule: IRule = {
 
 ### Phase 4: Optional / Post-Launch
 
-9. **`rlsa-scope-mismatch-audit`** → Advanced RLS checking
+9. **`rls-scope-mismatch-audit`** → Advanced RLS checking
 10. **`lazy-load-not-preloaded`** → HTML-aware INP optimization
 
 ---

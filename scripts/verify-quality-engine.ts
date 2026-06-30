@@ -173,7 +173,7 @@ async function run() {
       skipAddingFilesFromTsConfig: true,
     });
   } catch {
-    console.error("[qa-intel] ts-morph not found (unhoisted in CI). Skipping ts-morph analysis.");
+    console.error("[qa-intel] ts-morph not found (required for verify-quality-engine). Failing run.");
     process.exit(1);
   }
 
@@ -264,7 +264,7 @@ async function run() {
     }
   }
 
-  // Treat HIGH severity as blocking (same as critical)
+  // Treat HIGH severity as blocking in CI (same as critical) and advisory in local/non-CI runs
   const highFindings = findings.filter(f => f.severity === "high");
   if (highFindings.length > 0) {
     console.error("❌ qa-intel: High-severity issues found:");
@@ -273,7 +273,8 @@ async function run() {
       console.error("❌ qa-intel: Blocking — high-severity findings must be resolved in CI.");
       process.exit(1);
     } else {
-      console.warn("⚠️ qa-intel: Warning only (local/non-CI). Please resolve high-severity findings before final merge.");
+      console.warn("⚠️ qa-intel: High-severity findings are advisory in local/non-CI runs (not blocking).");
+      console.warn("⚠️ qa-intel: Please resolve high-severity findings before final merge to avoid CI failures.");
       process.exit(0);
     }
   }
