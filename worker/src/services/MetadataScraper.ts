@@ -46,17 +46,17 @@ export class MetadataScraper {
   async fetchChannelDetails(channelId: string): Promise<{ title: string; description: string }> {
     const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${this.apiKey}`;
     const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
-    
+
     if (!response.ok) {
       throw new Error(`YouTube API channel fetch failed: ${response.status}`);
     }
 
     const data = (await response.json()) as { items?: Array<{ snippet?: Record<string, unknown> }> };
-    const snippet = data.items?.[0]?.snippet;
+    const snippet = data.items?.[0]?.snippet || {};
 
     return {
-      title: snippet?.title || 'Unknown Channel',
-      description: snippet?.description || '',
+      title: String(snippet.title || 'Unknown Channel'),
+      description: String(snippet.description || ''),
     };
   }
 
@@ -103,7 +103,8 @@ export class MetadataScraper {
         throw new Error('Video not found');
       }
 
-      return this.parseMetadata(videoId, data.items[0]);
+      // skipcq: TS-D0030 - Safe: length check above guarantees data.items[0] exists
+      return this.parseMetadata(videoId, data.items[0]!);
     } finally {
       clearTimeout(timeout);
     }
