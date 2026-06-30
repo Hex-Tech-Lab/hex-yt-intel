@@ -52,11 +52,11 @@ export class MetadataScraper {
     }
 
     const data = (await response.json()) as { items?: Array<{ snippet?: Record<string, unknown> }> };
-    const snippet = data.items?.[0]?.snippet;
+    const snippet = data.items?.[0]?.snippet as Record<string, unknown> | undefined;
 
     return {
-      title: snippet?.title || 'Unknown Channel',
-      description: snippet?.description || '',
+      title: String(snippet?.title || 'Unknown Channel'),
+      description: String(snippet?.description || ''),
     };
   }
 
@@ -103,7 +103,8 @@ export class MetadataScraper {
         throw new Error('Video not found');
       }
 
-      return this.parseMetadata(videoId, data.items[0]);
+      const item = data.items[0] as { snippet?: any; statistics?: any; contentDetails?: any };
+      return this.parseMetadata(videoId, item);
     } finally {
       clearTimeout(timeout);
     }
