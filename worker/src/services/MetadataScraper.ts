@@ -31,6 +31,25 @@ export interface VideoMetadata {
   thumbnailUrl: string;
 }
 
+interface VideoItem {
+  snippet?: {
+    title?: string;
+    description?: string;
+    channelTitle?: string;
+    channelId?: string;
+    publishedAt?: string;
+    thumbnails?: Record<string, Record<string, string>>;
+  };
+  statistics?: {
+    viewCount?: string;
+    likeCount?: string;
+    commentCount?: string;
+  };
+  contentDetails?: {
+    duration?: string;
+  };
+}
+
 export class MetadataScraper {
   private apiKey: string;
   private residentialProxyUrl?: string;
@@ -103,7 +122,7 @@ export class MetadataScraper {
         throw new Error('Video not found');
       }
 
-      const item = data.items[0] as { snippet?: any; statistics?: any; contentDetails?: any };
+      const item = data.items[0] as VideoItem;
       return this.parseMetadata(videoId, item);
     } finally {
       clearTimeout(timeout);
@@ -120,10 +139,7 @@ export class MetadataScraper {
   /**
    * Parse YouTube API response into VideoMetadata
    */
-  private parseMetadata(
-    videoId: string,
-    video: { snippet?: any; statistics?: any; contentDetails?: any }
-  ): VideoMetadata {
+  private parseMetadata(videoId: string, video: VideoItem): VideoMetadata {
     const snippet = video.snippet || {};
     const stats = video.statistics || {};
     const details = video.contentDetails || {};
