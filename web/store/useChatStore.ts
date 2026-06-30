@@ -111,9 +111,8 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
         if (!line) continue;
         try {
           onEvent(JSON.parse(line.slice(5).trim()));
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (_e) {
-          // partial/invalid JSON frame skipped
+        } catch (e) {
+          console.debug('[ChatStore] Skipping malformed SSE frame:', e instanceof Error ? e.message : String(e));
         }
       }
     }

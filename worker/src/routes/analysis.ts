@@ -169,7 +169,7 @@ function buildStreamResponse(
   let settled = false;
 
   const persistService = new PersistService();
-  const persistSignal = persistController.signal;
+  const streamCompleteController = new AbortController();
 
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
@@ -207,14 +207,13 @@ function buildStreamResponse(
             chunkIndex: req.chunkIndex,
             totalChunks: req.totalChunks,
           }).catch(() => {});
-          persistController.abort();
           reject(new Error("Persistence timeout reached (15s)"));
         }, 15000);
       });
 
       return Promise.race([persistPromise, timeoutPromise]);
     },
-    signal: persistSignal,
+    signal: streamCompleteController.signal,
     waitUntil,
   });
 

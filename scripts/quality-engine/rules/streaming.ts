@@ -9,9 +9,9 @@ export const StreamResilienceRule: Rule = {
   name: "stream-resilience-audit",
   scope: "file",
   check: (ctx: RuleContext) => {
-    const source = ctx.ast;
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     const text = source.getText();
 
     if (text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError')) {
@@ -31,7 +31,7 @@ export const BundleContradictionRule: Rule = {
   name: "bundle-contradiction-detector",
   scope: "file",
   check: (ctx: RuleContext) => {
-    const source = ctx.ast;
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const text = source.getText();
     const expectedDimensionsMsg = `All ${TOTAL_DIMENSIONS} dimensions must be present`;
@@ -39,7 +39,7 @@ export const BundleContradictionRule: Rule = {
         text.includes('ONLY generate') &&
         !text.includes('skipAllDimensionsInstruction')) {
       findings.push({
-        file: source.getFilePath().replace(/\\/g, "/"),
+        file: ctx.filePath.replace(/\\/g, "/"),
         severity: "critical",
         title: "Prompt: Contradictory instructions — 'all dims' + 'only these dims'",
         why: "LLM sees both 'All 11 dims' AND 'ONLY these dims'. LLM follows the first. The focus section is ignored.",
@@ -54,9 +54,9 @@ export const TranscriptGuardRule: Rule = {
   name: "transcript-guard-enforcer",
   scope: "file",
   check: (ctx: RuleContext) => {
-    const source = ctx.ast;
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     const text = source.getText();
     const isEntryPoint = text.includes('app.post') || text.includes('app.get');
     if (isEntryPoint && (text.includes('analyze') || text.includes('stream')) && text.includes('transcript')) {
@@ -79,9 +79,9 @@ export const StreamSettleRule: Rule = {
   name: "stream-settle-audit",
   scope: "file",
   check: (ctx: RuleContext) => {
-    const source = ctx.ast;
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     const text = source.getText();
     if (text.includes('Promise.all') && text.includes('completedIndexes') && filePath.includes('useSSEStream')) {
       if (!text.includes('streamController') && !text.includes('AbortController')) {
@@ -102,9 +102,9 @@ export const CascadeOrderRule: Rule = {
   name: "cascade-order-enforcer",
   scope: "file",
   check: (ctx: RuleContext) => {
-    const source = ctx.ast;
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     if (!filePath.includes('TranscriptExtractor')) return findings;
     const text = source.getText();
     const decodoIdx = text.indexOf('Decodo');
@@ -126,9 +126,9 @@ export const ProxyPromotionRule: Rule = {
   name: "proxy-promotion-audit",
   scope: "file",
   check: (ctx: RuleContext) => {
-    const source = ctx.ast;
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     
     // Check wrangler.toml directly if scanned, or look for proxy URL patterns in TS code
     const text = source.getText();
@@ -163,9 +163,9 @@ export const ModuleLevelDynamicImportRule: Rule = {
   name: "module-level-dynamic-import",
   scope: "file",
   check: (ctx: RuleContext) => {
-    const source = ctx.ast;
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     if (!filePath.includes('.tsx') && !filePath.includes('.jsx')) return findings;
 
     const lines = source.getText().split(/\r?\n/);

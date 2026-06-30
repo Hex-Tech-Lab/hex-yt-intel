@@ -9,12 +9,16 @@ export const metadata: Metadata = {
 };
 
 export default function SubProcessorsPage() {
-  const filePath = path.join(process.cwd(), '..', 'docs', 'legal', 'sub-processors.md');
+  const baseDir = process.cwd();
+  const docDir = '..';
+  const legalDir = 'docs/legal';
+  const fileName = 'sub-processors.md';
+  const filePath = path.join(baseDir, docDir, legalDir, fileName);
   let content = '';
   try {
     content = fs.readFileSync(filePath, 'utf8');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (_e) {
+  } catch (e) {
+    console.debug('[sub-processors] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
     content = '# Sub-processor Disclosure\n\nThis document is currently being compiled. Please check back later.';
   }
 

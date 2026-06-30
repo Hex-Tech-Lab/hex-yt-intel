@@ -80,11 +80,20 @@ Modes:
 `);
 }
 
-// Load and wrap all legacy rules
+// Load and wrap legacy rules (IRule format), pass new rules (Rule format) through unchanged
 const rules = Object.values(legacyRules)
   .filter((r): r is any => r && typeof r === "object" && "check" in r && "name" in r)
-  .map((legacyRule: unknown) => {
-    return wrapLegacyRule(legacyRule as any);
+  .map((rule: unknown) => {
+    const r = rule as any;
+    // Check if this is a new Rule format (has scope property or check function takes RuleContext)
+    // vs legacy IRule format (check function takes SourceFile directly)
+    // New rules have "scope" property or their check function signature matches Rule interface
+    if (r.scope !== undefined || (r.check && r.check.length === 1 && (r.check.toString().includes('ctx.ast') || r.check.toString().includes('ctx.filePath')))) {
+      // Already in new Rule format
+      return r as any;
+    }
+    // Legacy IRule format, wrap it
+    return wrapLegacyRule(r as any);
   });
 
 // Get file list based on mode
