@@ -13,6 +13,7 @@ export class VercelAuthProvider implements AuthProvider {
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async signIn(_provider: string): Promise<void> {
     // TODO: Implement Vercel Auth sign-in
     // For now, silently no-op (sign-in handled by Vercel's native OAuth)
@@ -28,14 +29,17 @@ export class VercelAuthProvider implements AuthProvider {
     return session?.user || null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async updateUser(_data: Partial<User>): Promise<User> {
     throw new Error('Update user not implemented for Vercel Auth yet');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async middleware(_req: any): Promise<any> {
     return undefined;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async handleCallback(_req: any): Promise<Response> {
     return new Response('OK');
   }

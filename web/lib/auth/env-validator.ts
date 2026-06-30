@@ -12,6 +12,7 @@ export function validateAuthConfig(): void {
   };
 
   const missing = Object.entries(allRequired)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     .filter(([_, value]) => !value)
     .map(([key]) => key);
 

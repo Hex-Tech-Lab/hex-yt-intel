@@ -86,7 +86,8 @@ export function DimensionAccordion({
   onSelectDimension,
   progress
 }: DimensionAccordionProps) {
-  const [_, startTransition] = useTransition();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [__, startTransition] = useTransition();
   const handleSelect = useCallback((key: string) => {
     startTransition(() => {
       onSelectDimension(key);

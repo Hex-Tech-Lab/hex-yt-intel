@@ -53,7 +53,8 @@ export function createClaudeStreamNormalizer(): TransformStream<Uint8Array, Uint
               new TextEncoder().encode(`data: ${normalized}\n\n`)
             );
           }
-        } catch (parseError) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (_parseError) {
           // Silently skip malformed chunks to prevent stream closure
           console.warn('[streaming] Non-critical chunk parse skip', {
             linePreview: trimmed.slice(0, 100),
