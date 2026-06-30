@@ -7,7 +7,7 @@
     "preflight": "bash ../scripts/pre-flight.sh",
     "build": "next build && node scripts/enforce-bundle.mjs",
     "start": "next start",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint . --ext .ts,.tsx --no-cache",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "playwright test"
