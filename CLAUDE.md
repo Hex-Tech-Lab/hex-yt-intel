@@ -61,6 +61,6 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 
 ### Runtime & Build Infrastructure
 - **Node.js**: 24.16.0 LTS
-- **pnpm**: 11.1.3
+- **pnpm**: 11.9.0
 - **Next.js**: 16.2.6
 - **TypeScript**: 5.6.2
