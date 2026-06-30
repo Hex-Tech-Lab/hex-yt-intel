@@ -114,6 +114,7 @@ export class MetadataScraper {
       if (!response.ok) {
         throw new Error(`YouTube API returned ${response.status}`);
       }
+      // settleAnalysis: Timeout is logged to mark error state on abort
 
       const data = (await response.json()) as {
         items?: Array<{
