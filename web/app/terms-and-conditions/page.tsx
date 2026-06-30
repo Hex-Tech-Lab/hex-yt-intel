@@ -9,12 +9,13 @@ export const metadata: Metadata = {
 };
 
 export default async function TermsAndConditionsPage() {
-  const filePath = path.join(process.cwd(), '..', 'docs', 'legal', 'terms-of-service.md');
+  const baseDir = process.cwd();
+  const filePath = path.join(baseDir, '..', 'docs', 'legal', 'terms-of-service.md');
   let content = '';
   try {
     content = fs.readFileSync(filePath, 'utf8');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (_e) {
+  } catch (e) {
+    console.debug('[terms-and-conditions] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
     content = '# Terms of Service\n\nThis document is currently being compiled by our legal team. Please check back later.';
   }
 

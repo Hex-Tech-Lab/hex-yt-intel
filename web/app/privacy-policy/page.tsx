@@ -9,12 +9,13 @@ export const metadata: Metadata = {
 };
 
 export default async function PrivacyPolicyPage() {
-  const filePath = path.join(process.cwd(), '..', 'docs', 'legal', 'privacy-policy.md');
+  const baseDir = process.cwd();
+  const filePath = path.join(baseDir, '..', 'docs', 'legal', 'privacy-policy.md');
   let content = '';
   try {
     content = fs.readFileSync(filePath, 'utf8');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (_e) {
+  } catch (e) {
+    console.debug('[privacy-policy] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
     content = '# Privacy Policy\n\nThis document is currently being compiled by our legal team. Please check back later.';
   }
 

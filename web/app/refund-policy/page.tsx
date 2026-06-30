@@ -9,12 +9,13 @@ export const metadata: Metadata = {
 };
 
 export default async function RefundPolicyPage() {
-  const filePath = path.join(process.cwd(), '..', 'docs', 'legal', 'refund-policy.md');
+  const baseDir = process.cwd();
+  const filePath = path.join(baseDir, '..', 'docs', 'legal', 'refund-policy.md');
   let content = '';
   try {
     content = fs.readFileSync(filePath, 'utf8');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (_e) {
+  } catch (e) {
+    console.debug('[refund-policy] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
     content = '# Refund Policy\n\nThis document is currently being compiled by our legal team. Please check back later.';
   }
 
