@@ -112,7 +112,7 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
         try {
           onEvent(JSON.parse(line.slice(5).trim()));
         } catch (e) {
-          // partial/invalid JSON frame skipped
+          console.debug('[ChatStore] Skipping malformed SSE frame:', e instanceof Error ? e.message : String(e));
         }
       }
     }

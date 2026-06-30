@@ -1,4 +1,5 @@
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
@@ -39,6 +40,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <Analytics />
+          <SpeedInsights />
         </Providers>
         <Script
           src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"

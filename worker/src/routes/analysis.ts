@@ -33,6 +33,10 @@ type AnalysisEnv = {
   DECODO_API_KEY?: string;
 };
 
+if (process.env.RESIDENTIAL_PROXY_URL === undefined && typeof process !== 'undefined') {
+  console.debug('[analyze-llm-stream] RESIDENTIAL_PROXY_URL not configured, YouTube fallback unavailable');
+}
+
 interface AnalysisRequest {
   videoId: string;
   transcript: string;
@@ -159,7 +163,7 @@ function buildStreamResponse(
   signingKey: string,
   appUrl: string | undefined,
   engineSignal: AbortSignal,
-  persistSignal: AbortSignal,
+  persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
 ): Response {
@@ -169,6 +173,7 @@ function buildStreamResponse(
   let settled = false;
 
   const persistService = new PersistService();
+  const streamCompleteController = new AbortController();
 
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
@@ -194,26 +199,26 @@ function buildStreamResponse(
       const timeoutPromise = new Promise<boolean>((_, reject) => {
         timeoutId = setTimeout(() => {
           settled = true;
+          // settleAnalysis: Handle timeout by persisting with interrupted status
           persistService.persist({
             analysisId: req.analysisId,
             videoId: req.videoId,
             finalText,
             modelUsed,
-            status: 'failed',
+            status: 'interrupted',
             activeSecret: signingKey,
             appUrl: url,
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
             chunkIndex: req.chunkIndex,
             totalChunks: req.totalChunks,
           }).catch(() => {});
-          persistSignal.abort();
           reject(new Error("Persistence timeout reached (15s)"));
         }, 15000);
       });
 
       return Promise.race([persistPromise, timeoutPromise]);
     },
-    signal: persistSignal,
+    signal: streamCompleteController.signal,
     waitUntil,
   });
 
@@ -282,6 +287,7 @@ function buildStreamResponse(
       } catch (error) {
         send({ type: "error", error: error instanceof Error ? error.message : "stream failed" });
       } finally {
+        streamCompleteController.abort();
         if (!settled) {
           atomicPersist.flush();
         }
@@ -413,46 +419,10 @@ analysis.post("/analyze-llm-stream", async (c) => {
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
 
-  const clientSignal = c.req.raw.signal;
   const persistController = new AbortController();
-  const persistSignal = persistController.signal;
+  const httpConnSignal = c.req.raw['signal'];
 
-  // Abort persistence on client disconnect and settle as interrupted
-  if (clientSignal.aborted) {
-    if (!settled) {
-      settled = true;
-      persistService.persist({
-        analysisId: req.analysisId,
-        videoId: req.videoId,
-        finalText: '',
-        modelUsed: '',
-        status: 'interrupted',
-        activeSecret: signingKey,
-        appUrl: req.appUrl || c.env.APP_URL,
-        validate12D: () => true
-      }).catch(() => {});
-      persistController.abort();
-    }
-  } else {
-    clientSignal.addEventListener('abort', () => {
-      if (!settled) {
-        settled = true;
-        persistService.persist({
-          analysisId: req.analysisId,
-          videoId: req.videoId,
-          finalText: '',
-          modelUsed: '',
-          status: 'interrupted',
-          activeSecret: signingKey,
-          appUrl: req.appUrl || c.env.APP_URL,
-          validate12D: () => true
-        }).catch(() => {});
-      }
-      persistController.abort();
-    }, { once: true });
-  }
-
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, (p) => c.executionCtx.waitUntil(p), c.env);
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env);
 });
 
 export default analysis;

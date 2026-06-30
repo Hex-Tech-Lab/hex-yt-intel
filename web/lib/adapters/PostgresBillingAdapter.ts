@@ -78,6 +78,7 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async consumeQuota(_params: {
     userId: string;
     tier: UserTier;
@@ -86,6 +87,7 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
     return Promise.resolve();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async refund(_params: { userId: string; email?: string }): Promise<void> {
     return Promise.resolve();
   }
