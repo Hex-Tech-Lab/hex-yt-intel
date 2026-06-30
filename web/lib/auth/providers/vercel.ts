@@ -46,7 +46,7 @@ export class VercelAuthProvider implements AuthProvider {
    * Update user profile with Vercel Auth
    * Currently not implemented for Vercel provider
    */
-  async updateUser(data: any): Promise<User> {
+  async updateUser(_data: any): Promise<User> {
     throw new Error('Update user not implemented for Vercel Auth yet');
   }
 
