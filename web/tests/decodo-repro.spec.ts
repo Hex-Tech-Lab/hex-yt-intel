@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test('Transcript should fallback correctly when primary fails', async ({ page }) => {
   // Mock the worker response for /fetch-transcript
