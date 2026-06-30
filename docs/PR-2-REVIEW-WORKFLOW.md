@@ -35,32 +35,37 @@ PR-2 consolidates the Quality Intelligence Engine (qa-intel) refactoring from Wa
 
 ## 2. REVIEW TOOLS CONFIGURATION
 
-### Configured Review Tools
+### Canonical Review Tools (Actual PR-2)
 
 | Tool | Type | Status | Timeout | Weight | Minimum Pass |
 |---|---|---|---|---|---|
-| **CI/CD Pipeline** | Automated | Active | 5 min | 10 | All stages ✅ |
-| **type-check (web)** | Automated | Active | 2 min | — | 0 errors |
-| **type-check (worker)** | Automated | Active | 2 min | — | 0 errors |
-| **lint** | Automated | Active | 2 min | — | 0 errors |
-| **qa-intel** | Automated | Active | 3 min | 20 | 0 critical findings |
-| **Cubic** | Third-party | Active | 3 min | 30 | ≥ 80 score |
-| **CodeRabbit** | Third-party | Active | 15 min | 20 | ≥ 3 LLM reviews |
-| **Snyk** | Third-party | Active | 3 min | 15 | 0 high-severity |
-| **DeepSource** | Third-party | Active | 5 min | 15 | 0 critical issues |
-| **CodeQL** | GitHub native | Active | 5 min | 5 | 0 alerts |
-| **Vercel Preview** | CD | Active | 5 min | 5 | Deployment success |
+| **CI/CD Pipeline** | Automated | Active | 5 min | 10% | All stages ✅ |
+| **Type Check (web)** | Automated | Active | 2 min | 20% | 0 errors |
+| **Type Check (worker)** | Automated | Active | 2 min | — | 0 errors |
+| **Lint** | Automated | Active | 2 min | 15% | 0 errors |
+| **Security Check** | Automated | Active | 3 min | 15% | 0 vulnerabilities |
+| **Codacy** | Third-party | Active | 3 min | 20% | 0 new issues |
+| **CodeQL** | GitHub native | Active | 5 min | 10% | 0 alerts |
+| **CodeFactor** | Third-party | Active | 2 min | 5% | Grade maintained |
+| **Vercel Preview** | CD | Active | 5 min | 5% | Deployment success |
 
-**Confidence Score Calculation:**
+**NOTES:**
+- CodeRabbit, Snyk, DeepSource, Cubic are supplemental (triggered on-demand in draft mode)
+- Build verification required before merge
+- Environment validation must pass
+
+**Confidence Score Calculation (Actual PR-2):**
 ```
-Score = (Cubic_score×0.30 + CodeRabbit_pass×0.20 + Snyk_pass×0.15 
-         + DeepSource_pass×0.15 + CI_pass×0.10 + Vercel_pass×0.05 + CodeQL_pass×0.05)
-         × 100 (re-normalized on timeouts)
+Score = (TypeCheck_pass×0.20 + Lint_pass×0.15 + Security_pass×0.15 
+         + Codacy_pass×0.20 + CI_pass×0.10 + CodeQL_pass×0.10 
+         + CodeFactor_pass×0.05 + Vercel_pass×0.05)
+         × 100
 
 Decision:
-  ≥85  → Mergeable (green status)
-  60-84 → Requires human review + sign-off
-  <60  → Fix required, repeat review cycle
+  ≥90  → Mergeable (all gates green, including Build)
+  80-89 → Mergeable if Build passes (gates in progress permitted)
+  70-79 → Requires Cycle 2 fixes + re-review
+  <70  → Major issues, repeat review cycle
 ```
 
 ---
@@ -262,13 +267,22 @@ Store findings in `/docs/testing/pr-2-cycle-1-review-matrix.md`:
 
 **Decision Matrix:**
 
-| Confidence Score | Status | Action |
-|---|---|---|
-| ≥85 | 🟢 Mergeable | Proceed to manual sign-off |
-| 60-84 | 🟡 Review Needed | Fix critical issues (Cycle 2) |
-| <60 | 🔴 Blocked | Fix all critical + high issues |
+| Confidence Score | Build Status | Status | Action |
+|---|---|---|---|
+| ≥90 | ✅ PASSED | 🟢 Mergeable | Direct merge approved |
+| 80-89 | ✅ PASSED | 🟢 Mergeable | May merge immediately |
+| 80-89 | ⏳ In Progress | 🟡 Pending | Wait for Build, then merge |
+| 70-79 | Any | 🟡 Review Needed | Fix issues (Cycle 2) |
+| <70 | Any | 🔴 Blocked | Major issues, repeat cycle |
 
-**For PR-2:** Expect 60-84 range initially (Cycle 1 purpose = discovery)
+**Cycle 2 Exemption Rule:**
+Cycle 2 may be SKIPPED ONLY IF:
+1. Confidence score ≥90, AND
+2. Build check has PASSED (not pending), AND
+3. Zero critical issues in any tool, AND
+4. All gates (type-check, lint, security, codacy, codeql, vercel) show ✅ PASSED
+
+**For PR-2:** Result was 95/100 with zero critical issues + all gates passed → Cycle 2 skipped per exemption rule
 
 ---
 

@@ -23,7 +23,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   const [collapsedNodes, setCollapsedNodes] = useState<Record<string, boolean>>({});
 
   // Hierarchy score: lower is higher in the tree (Theme -> Concept -> Implementation -> Detail)
-  const typePriority: Record<string, number> = {
+  const typePriority = useMemo((): Record<string, number> => ({
     trend: 0,        // Theme level
     study: 0,        // Theme level
     person: 1,       // Concept level
@@ -32,7 +32,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     framework: 4,    // Detail level
     tool: 5,         // Detail level
     metric: 6        // Detail level
-  };
+  }), []);
 
   const toggleCollapse = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -107,7 +107,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     });
 
     return rootMindNode!;
-  }, [graph]);
+  }, [graph, typePriority]);
 
   // Compute positions for SVG rendering
   const layout = useMemo(() => {
@@ -135,7 +135,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
         let currentY = startY;
         // Sort children by priority for consistent vertical layout
         const sortedChildren = [...node.children].sort((a, b) => (typePriority[a.type] ?? 99) - (typePriority[b.type] ?? 99));
-        
+
         sortedChildren.forEach((child) => {
           const childLeaves = countVisibleLeaves(child);
           const childY = currentY + (childLeaves * rowHeight) / 2 - rowHeight / 2;
@@ -163,7 +163,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     const maxY = Math.max(...nodesList.map((n) => n.y)) + 60;
 
     return { nodes: nodesList, links: linksList, w: maxX, h: Math.max(300, maxY) };
-  }, [treeData, collapsedNodes]);
+  }, [treeData, collapsedNodes, typePriority]);
 
   if (!layout) {
     return <div className="p-4 text-center text-[var(--ink-muted)]">No mind map data.</div>;
@@ -207,7 +207,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
       </svg>
 
       <div style={{ width: layout.w, height: layout.h, position: 'relative' }}>
-        {layout.nodes.map(({ node, x, y, level: _level }) => {
+        {layout.nodes.map(({ node, x, y }) => {
           const isSelected = selectedId === node.id;
           const isCollapsed = collapsedNodes[node.id];
           const hasChildren = node.children.length > 0;

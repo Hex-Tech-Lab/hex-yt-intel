@@ -13,7 +13,7 @@ export default async function RefundPolicyPage() {
   let content = '';
   try {
     content = fs.readFileSync(filePath, 'utf8');
-  } catch (e) {
+  } catch {
     content = '# Refund Policy\n\nThis document is currently being compiled by our legal team. Please check back later.';
   }
 

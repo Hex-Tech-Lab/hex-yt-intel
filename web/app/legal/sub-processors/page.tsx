@@ -13,7 +13,7 @@ export default function SubProcessorsPage() {
   let content = '';
   try {
     content = fs.readFileSync(filePath, 'utf8');
-  } catch (e) {
+  } catch {
     content = '# Sub-processor Disclosure\n\nThis document is currently being compiled. Please check back later.';
   }
 
