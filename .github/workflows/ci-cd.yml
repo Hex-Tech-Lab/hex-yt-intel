@@ -107,15 +107,8 @@ jobs:
       - name: Hex Intel Environment
         uses: ./
 
-      - name: Clear ESLint and pnpm caches
-        run: |
-          find . -type d -name ".eslintcache" -exec rm -rf {} + 2>/dev/null || true
-          find . -type d -name ".pnpm-store" -exec rm -rf {} + 2>/dev/null || true
-          find . -type d -name "node_modules/.cache" -exec rm -rf {} + 2>/dev/null || true
-          rm -rf $HOME/.pnpm-store $HOME/.pnpm-global 2>/dev/null || true
-
       - name: Run linter
-        run: pnpm --filter @hex-yt-intel/web run lint
+        run: cd web && npx eslint . --ext .ts,.tsx --no-cache
 
       - name: Run QA Intel Quality Gate
         run: pnpm dlx tsx scripts/verify-quality-engine.ts
