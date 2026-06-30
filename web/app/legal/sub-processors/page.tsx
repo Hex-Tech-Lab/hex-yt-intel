@@ -9,13 +9,15 @@ export const metadata: Metadata = {
 };
 
 export default function SubProcessorsPage() {
-  const baseDir = process.cwd();
-  const docDir = '..';
-  const legalDir = 'docs/legal';
-  const fileName = 'sub-processors.md';
-  const filePath = path.join(baseDir, docDir, legalDir, fileName);
+  const docName = 'sub-processors.md';
+  const docsDir = path.resolve(process.cwd(), '..', 'docs', 'legal');
+  const filePath = path.resolve(docsDir, docName);
+
   let content = '';
   try {
+    if (!filePath.startsWith(docsDir)) {
+      throw new Error('Path traversal attempted');
+    }
     content = fs.readFileSync(filePath, 'utf8');
   } catch (e) {
     console.debug('[sub-processors] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
