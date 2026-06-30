@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   description: 'Privacy Policy for Hex YT Intel',
 };
 
+/**
+ * Renders the privacy policy page by loading and displaying the privacy policy document.
+ *
+ * @returns {JSX.Element} The Privacy Policy page component.
+ */
 export default async function PrivacyPolicyPage() {
   const docName = 'privacy-policy.md';
   const cwdParts = process.cwd().split(path.sep);
