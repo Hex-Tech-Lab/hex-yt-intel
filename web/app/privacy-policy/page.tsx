@@ -10,15 +10,19 @@ export const metadata: Metadata = {
 
 export default async function PrivacyPolicyPage() {
   const docName = 'privacy-policy.md';
-  const docsDir = path.resolve(process.cwd(), '..', 'docs', 'legal');
-  const legalDocsPath = path.resolve(docsDir, docName);
+  const cwdParts = process.cwd().split(path.sep);
+  const baseDir = cwdParts.slice(0, -1).join(path.sep);
+  const docsDir = path.join(baseDir, 'docs', 'legal');
+  const legalDocsPath = path.join(docsDir, docName);
+  const realDocsDir = path.resolve(docsDir);
+  const realPath = path.resolve(legalDocsPath);
 
   let content = '';
   try {
-    if (!legalDocsPath.startsWith(docsDir)) {
-      throw new Error('Path traversal attempted');
+    if (!realPath.startsWith(realDocsDir + path.sep) && realPath !== realDocsDir) {
+      throw new Error('Path traversal blocked');
     }
-    content = fs.readFileSync(legalDocsPath, 'utf8');
+    content = fs.readFileSync(realPath, 'utf8');
   } catch (e) {
     console.debug('[privacy-policy] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
     content = '# Privacy Policy\n\nThis document is currently being compiled by our legal team. Please check back later.';

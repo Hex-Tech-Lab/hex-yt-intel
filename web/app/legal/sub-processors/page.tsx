@@ -10,15 +10,19 @@ export const metadata: Metadata = {
 
 export default function SubProcessorsPage() {
   const docName = 'sub-processors.md';
-  const docsDir = path.resolve(process.cwd(), '..', 'docs', 'legal');
-  const filePath = path.resolve(docsDir, docName);
+  const cwdParts = process.cwd().split(path.sep);
+  const baseDir = cwdParts.slice(0, -1).join(path.sep);
+  const docsDir = path.join(baseDir, 'docs', 'legal');
+  const filePath = path.join(docsDir, docName);
+  const realDocsDir = path.resolve(docsDir);
+  const realPath = path.resolve(filePath);
 
   let content = '';
   try {
-    if (!filePath.startsWith(docsDir)) {
-      throw new Error('Path traversal attempted');
+    if (!realPath.startsWith(realDocsDir + path.sep) && realPath !== realDocsDir) {
+      throw new Error('Path traversal blocked');
     }
-    content = fs.readFileSync(filePath, 'utf8');
+    content = fs.readFileSync(realPath, 'utf8');
   } catch (e) {
     console.debug('[sub-processors] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
     content = '# Sub-processor Disclosure\n\nThis document is currently being compiled. Please check back later.';
