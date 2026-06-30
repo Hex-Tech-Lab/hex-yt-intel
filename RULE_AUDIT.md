@@ -1,14 +1,14 @@
 # qa-intel Rule Set Audit & Coverage Expansion Plan (v1.0)
 
 **Date**: 2026-06-29  
-**Scope**: `scripts/quality-engine/rules/` (43 total rules)  
+**Scope**: `scripts/quality-engine/rules/` (42 total rules)  
 **Baseline**: @typescript-eslint, ESLint strict-mode, Cloudflare Workers best practices
 
 ---
 
 ## Executive Summary
 
-The qa-intel rule set provides strong domain-specific coverage for **streaming**, **persistence**, **RLS security**, and **UI performance**, with 43 rules across 5 categories. However, significant gaps exist in:
+The qa-intel rule set provides strong domain-specific coverage for **streaming**, **persistence**, **RLS security**, and **UI performance**, with 42 rules across 5 categories. However, significant gaps exist in:
 - **Type safety & null coalescing** (no TypeScript strict-mode equivalents)
 - **Async/await patterns** (limited Promise handling detection)
 - **RLS boundary enforcement** (only detects Supabase direct access, not missing `.eq()` constraints)
@@ -19,9 +19,9 @@ This audit identifies **7-10 high-signal candidates** from proven ESLint + TypeS
 
 ---
 
-## Part 1: Current Rule Inventory (43 Rules)
+## Part 1: Current Rule Inventory (42 Rules)
 
-### 1.1 Architecture Rules (12 rules)
+### 1.1 Architecture Rules (11 rules)
 
 | # | Rule Name | Pattern Detected | Severity | False Positive Risk | Category |
 |---|-----------|------------------|----------|---------------------|----------|
@@ -36,9 +36,6 @@ This audit identifies **7-10 high-signal candidates** from proven ESLint + TypeS
 | 9 | `hardcoded-domain-logic` | Hardcoded persona lists in validation | medium | High (domain-specific regex; may match unrelated strings) | Coupling |
 | 10 | `state-sync-audit` | `setUrl()` without `setIsValid()` | medium | High (pattern assumes naming convention) | State |
 | 11 | `graph-aware-boundary` | Domain files importing from `/adapters/` | critical | Low (requires dependency graph context) | Boundary |
-| 12 | **DUPLICATE** | `canvas-stale-data-audit` [appears in UI also] | high | Medium | Dependency |
-
-**Architecture Overlap**: `canvas-stale-data-audit` is exported from both `architecture.ts` and `ui.ts`. Potential double-counting in engine registration.
 
 ---
 
