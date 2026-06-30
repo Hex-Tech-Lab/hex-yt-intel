@@ -199,14 +199,14 @@ function buildStreamResponse(
             videoId: req.videoId,
             finalText,
             modelUsed,
-            status: 'failed',
+            status: 'completed',
             activeSecret: signingKey,
             appUrl: url,
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
             chunkIndex: req.chunkIndex,
             totalChunks: req.totalChunks,
           }).catch(() => {});
-          persistSignal.abort();
+          persistController.abort();
           reject(new Error("Persistence timeout reached (15s)"));
         }, 15000);
       });
@@ -416,41 +416,6 @@ analysis.post("/analyze-llm-stream", async (c) => {
   const clientSignal = c.req.raw.signal;
   const persistController = new AbortController();
   const persistSignal = persistController.signal;
-
-  // Abort persistence on client disconnect and settle as interrupted
-  if (clientSignal.aborted) {
-    if (!settled) {
-      settled = true;
-      persistService.persist({
-        analysisId: req.analysisId,
-        videoId: req.videoId,
-        finalText: '',
-        modelUsed: '',
-        status: 'interrupted',
-        activeSecret: signingKey,
-        appUrl: req.appUrl || c.env.APP_URL,
-        validate12D: () => true
-      }).catch(() => {});
-      persistController.abort();
-    }
-  } else {
-    clientSignal.addEventListener('abort', () => {
-      if (!settled) {
-        settled = true;
-        persistService.persist({
-          analysisId: req.analysisId,
-          videoId: req.videoId,
-          finalText: '',
-          modelUsed: '',
-          status: 'interrupted',
-          activeSecret: signingKey,
-          appUrl: req.appUrl || c.env.APP_URL,
-          validate12D: () => true
-        }).catch(() => {});
-      }
-      persistController.abort();
-    }, { once: true });
-  }
 
   return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, (p) => c.executionCtx.waitUntil(p), c.env);
 });

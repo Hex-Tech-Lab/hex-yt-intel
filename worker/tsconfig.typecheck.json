@@ -13,8 +13,11 @@
     "types": ["@cloudflare/workers-types"],
     "declaration": false,
     "sourceMap": false,
-    "noEmit": true
+    "noEmit": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "paths": {}
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "../web/**/*", "../packages/**/*"]
 }
