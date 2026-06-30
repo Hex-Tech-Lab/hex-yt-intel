@@ -16,6 +16,22 @@ import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
+async function retryWithBackoff<T>(fn: () => Promise<T>, maxAttempts: number = 2): Promise<T> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxAttempts) {
+        const delayMs = Math.pow(2, attempt - 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError || new Error('Retry failed');
+}
+
 function buildValidationFilename(title: string, channelTitle?: string | null): string {
   const cleanSlug = (text: string): string => {
     return text
@@ -63,7 +79,7 @@ export async function POST(request: NextRequest) {
       model: z.string().optional(),
       valid: z.boolean().optional(),
       contentSig: z.string(),
-      status: z.string().optional().default('completed'),
+      status: z.string().optional().default(`completed`),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
@@ -139,7 +155,10 @@ export async function POST(request: NextRequest) {
       }
 
       const persistenceAdapter = new SupabasePersistenceAdapter();
-      const row = await persistenceAdapter.findAnalysisForPersist({ analysisId, videoId });
+      const row = await retryWithBackoff(
+        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId }),
+        2
+      );
 
       if (!row) {
         Sentry.captureMessage('analysis-persist: row not found', {
@@ -161,26 +180,35 @@ export async function POST(request: NextRequest) {
           ? (validPayload.dimensions as any[]).map((d: any) => d.number)
           : [];
 
-        await persistenceAdapter.persistAnalysisChunk({
-          analysisId,
-          chunkIndex,
-          dimensionsCovered,
-          payload,
-          status: status as any,
-        });
+        await retryWithBackoff(
+          () => persistenceAdapter.persistAnalysisChunk({
+            analysisId,
+            chunkIndex,
+            dimensionsCovered,
+            payload,
+            status: status as any,
+          }),
+          2
+        );
 
-        const chunks = await persistenceAdapter.findAnalysisChunks({ analysisId });
-        const completedChunks = chunks ? chunks.filter(c => c.status === 'completed') : [];
+        const chunks = await retryWithBackoff(
+          () => persistenceAdapter.findAnalysisChunks({ analysisId }),
+          2
+        );
+        const COMPLETED_STATUS = `completed`;
+        const completedChunks = chunks ? chunks.filter(c => c.status === COMPLETED_STATUS) : [];
 
         const completedIndexes = new Set(completedChunks.map(c => c.chunk_index));
         let allChunksCompleted = true;
+        const missingChunks: number[] = [];
         for (let i = 1; i <= resolvedTotal; i++) {
           if (!completedIndexes.has(i)) {
             allChunksCompleted = false;
-            break;
+            missingChunks.push(i);
           }
         }
 
+        let hitTimeout = false;
         if (!allChunksCompleted && completedChunks.length > 0) {
           const minQuorum = Math.ceil(resolvedTotal * 0.6);
           if (completedChunks.length >= minQuorum) {
@@ -188,9 +216,41 @@ export async function POST(request: NextRequest) {
             const timestamps = completedChunks.map((c: any) => new Date(c.updated_at).getTime());
             const newestTime = Math.max(...timestamps);
             if (now - newestTime >= 30000) {
-              allChunksCompleted = true;
+              hitTimeout = true;
+              if (missingChunks.length > 0) {
+                console.warn('[analyses/persist] Chunk quorum timeout: missing chunks detected', {
+                  analysisId,
+                  videoId,
+                  completedCount: completedChunks.length,
+                  totalExpected: resolvedTotal,
+                  missingChunkIndexes: missingChunks
+                });
+              }
             }
           }
+        }
+
+        if (hitTimeout && missingChunks.length > 0) {
+          const partialReport: PersistedValidationReport = {
+            ...priorReport,
+            status: 'partial',
+            model_used: model || null,
+            valid: false,
+          };
+
+          await retryWithBackoff(
+            () => persistenceAdapter.updateAnalysisResult({
+              analysisId,
+              markdown,
+              payload: validPayload ?? null,
+              model: model || null,
+              validationPassed: false,
+              validationReport: partialReport,
+            }),
+            2
+          );
+
+          return { type: 'partial_timeout' as const, analysisId, missingChunks };
         }
 
         if (allChunksCompleted) {
@@ -268,21 +328,25 @@ export async function POST(request: NextRequest) {
             });
           }
 
+          const finalStatus = isStitchedValid ? 'done' : 'failed';
           const newReport: PersistedValidationReport = {
             ...priorReport,
-            status: isStitchedValid ? 'completed' : 'failed',
+            status: finalStatus,
             model_used: model || null,
             valid: isStitchedValid,
           };
 
-          await persistenceAdapter.updateAnalysisResult({
-            analysisId,
-            markdown: stitchedMarkdown,
-            payload: stitchedPayload,
-            model: model || null,
-            validationPassed: isStitchedValid,
-            validationReport: newReport,
-          });
+          await retryWithBackoff(
+            () => persistenceAdapter.updateAnalysisResult({
+              analysisId,
+              markdown: stitchedMarkdown,
+              payload: stitchedPayload,
+              model: model || null,
+              validationPassed: isStitchedValid,
+              validationReport: newReport,
+            }),
+            2
+          );
 
           const cachedPayload: CachedAnalysisResult = {
             id: analysisId,
@@ -323,14 +387,17 @@ export async function POST(request: NextRequest) {
         valid: isInterrupted ? false : !!valid,
       };
 
-      await persistenceAdapter.updateAnalysisResult({
-        analysisId,
-        markdown,
-        payload: validPayload ?? null,
-        model: model || null,
-        validationPassed: isInterrupted ? false : !!valid,
-        validationReport: newReport,
-      });
+      await retryWithBackoff(
+        () => persistenceAdapter.updateAnalysisResult({
+          analysisId,
+          markdown,
+          payload: validPayload ?? null,
+          model: model || null,
+          validationPassed: isInterrupted ? false : !!valid,
+          validationReport: newReport,
+        }),
+        2
+      );
 
       if (isInterrupted) {
         return { type: 'interrupted' as const, analysisId };
@@ -378,6 +445,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: data.error }, { status: data.status });
       case 'chunk_saved':
         return NextResponse.json({ ok: true, analysisId: data.analysisId, chunkIndex: data.chunkIndex, status: 'chunk_saved' });
+      case 'partial_timeout':
+        return NextResponse.json({ ok: true, analysisId: data.analysisId, status: 'partial', missingChunks: data.missingChunks });
       case 'interrupted':
         return NextResponse.json({ ok: true, analysisId: data.analysisId, status: 'interrupted' });
       case 'ok':
