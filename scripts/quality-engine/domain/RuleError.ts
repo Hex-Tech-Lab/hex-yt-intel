@@ -1,3 +1,5 @@
+import type { Finding } from './Finding';
+
 export interface RuleError {
   ruleName: string;
   filePath: string;
@@ -6,6 +8,6 @@ export interface RuleError {
 }
 
 export interface AnalysisResult {
-  findings: any[]; // Finding[]
+  findings: Finding[];
   errors: RuleError[];
 }
