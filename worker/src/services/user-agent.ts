@@ -11,6 +11,9 @@ const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
 ];
 
+/** Returns a random user agent string to bypass YouTube API restrictions */
 export function getRandomUserAgent(): string {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  const index = Math.floor(Math.random() * USER_AGENTS.length);
+  const agent = USER_AGENTS[index];
+  return agent || USER_AGENTS[0] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 }
