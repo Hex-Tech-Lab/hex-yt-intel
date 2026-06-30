@@ -160,6 +160,7 @@ function buildStreamResponse(
   appUrl: string | undefined,
   engineSignal: AbortSignal,
   persistSignal: AbortSignal,
+  persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
 ): Response {
@@ -417,7 +418,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
   const persistController = new AbortController();
   const persistSignal = persistController.signal;
 
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, (p) => c.executionCtx.waitUntil(p), c.env);
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env);
 });
 
 export default analysis;
