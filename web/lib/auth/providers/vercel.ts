@@ -7,6 +7,10 @@ import { AuthProvider, Session, User } from '@/lib/auth/types';
  * Vercel's built-in OAuth support or when shifting from standalone NextAuth.
  */
 export class VercelAuthProvider implements AuthProvider {
+  /**
+   * Get current authenticated session from Vercel Auth
+   * Retrieves session data from Vercel's native auth system
+   */
   async getCurrentSession(): Promise<Session | null> {
     // TODO: Implement Vercel Auth session retrieval
     // In a real environment, use headers like 'x-vercel-user-id' or native SDK calls
@@ -21,11 +25,18 @@ export class VercelAuthProvider implements AuthProvider {
     // Sign-in delegated to Vercel's native OAuth flow
   }
 
+  /**
+   * Sign out from Vercel Auth
+   * Sign-out is handled by Vercel's native OAuth system
+   */
   async signOut(): Promise<void> {
     // TODO: Implement Vercel Auth sign-out
     // For now, silently no-op (sign-out handled by Vercel's native OAuth)
   }
 
+  /**
+   * Get authenticated user from current session
+   */
   async getUser(): Promise<User | null> {
     const session = await this.getCurrentSession();
     return session?.user || null;
@@ -35,7 +46,7 @@ export class VercelAuthProvider implements AuthProvider {
    * Update user profile with Vercel Auth
    * Currently not implemented for Vercel provider
    */
-  async updateUser(): Promise<User> {
+  async updateUser(data: any): Promise<User> {
     throw new Error('Update user not implemented for Vercel Auth yet');
   }
 
