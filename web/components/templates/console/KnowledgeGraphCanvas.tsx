@@ -125,8 +125,8 @@ export function KnowledgeGraphCanvas({
   const fit = useCallback(() => {
     try {
       fgRef.current?.zoomToFit(400, compact ? 24 : 48);
-    } catch {
-      /* ref not ready */
+    } catch (e) {
+      console.debug('[KnowledgeGraphCanvas] zoomToFit skipped (ref not ready):', e);
     }
   }, [compact]);
 
@@ -179,8 +179,8 @@ export function KnowledgeGraphCanvas({
           try {
             fgRef.current?.centerAt(node.x, node.y, 600);
             fgRef.current?.zoom(compact ? 2.2 : 2.6, 600);
-          } catch {
-            /* noop */
+          } catch (e) {
+            console.debug('[KnowledgeGraphCanvas] centerAt/zoom animation skipped:', e);
           }
         }}
         onNodeHover={handleHover as any}
@@ -189,12 +189,12 @@ export function KnowledgeGraphCanvas({
           const idx = data.links.indexOf(l);
           const dim = neighborhood ? !neighborhood.links.has(`${idx}`) : false;
           const base = KIND_COLOR[l.kind as RelationKind] || COL.slate;
-          return `rgb(${base} / ${dim ? 0.05 : 0.3 + l.strength * 0.35})`;
+          return `rgb(${base} / ${dim ? 0.03 : 0.12 + l.strength * 0.18})`;
         }}
         linkWidth={(l: any) => {
           const idx = data.links.indexOf(l);
           const active = neighborhood ? neighborhood.links.has(`${idx}`) : false;
-          return (active ? 1.8 : 0.5) + l.strength * 0.8;
+          return active ? 1.5 : 0.4 + l.strength * 0.4;
         }}
         linkLineDash={(l: any) => (l.kind === 'contrarian' ? [4, 3] : null)}
         nodeCanvasObject={(n: any, ctx: CanvasRenderingContext2D, scale: number) => {
@@ -204,19 +204,21 @@ export function KnowledgeGraphCanvas({
           const isRoot = graph.rootId === node.id;
           const isActive = node.id === selectedId || node.id === hoverActive;
           const r = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4);
+          const typeRgb = TYPE_COLOR[node.entityType || ''] || COL.slate;
 
-          // Draw base backing container (slate/dark theme)
+          // Draw base backing container filled with node category color (glowing fill)
           ctx.beginPath();
           ctx.arc(node.x!, node.y!, r, 0, 2 * Math.PI);
-          ctx.fillStyle = dim ? 'rgba(30, 41, 59, 0.2)' : 'rgba(15, 23, 42, 0.9)';
+          ctx.fillStyle = dim 
+            ? 'rgba(30, 41, 59, 0.1)' 
+            : `rgb(${typeRgb} / ${isActive ? '0.85' : (isRoot ? '0.6' : '0.3')})`;
           ctx.fill();
 
           // Colored border/ring based on entity type!
-          const typeRgb = TYPE_COLOR[node.entityType || ''] || COL.slate;
           ctx.beginPath();
           ctx.arc(node.x!, node.y!, r, 0, 2 * Math.PI);
           ctx.lineWidth = (isActive || node.id === selectedId ? 2.5 : 1.25) / scale;
-          ctx.strokeStyle = dim ? `rgb(${COL.slate} / 0.15)` : `rgb(${typeRgb} / ${node.inPersona || isRoot ? '0.95' : '0.6'})`;
+          ctx.strokeStyle = dim ? `rgb(${COL.slate} / 0.1)` : `rgb(${typeRgb} / ${node.inPersona || isRoot || isActive ? '1.0' : '0.7'})`;
           ctx.stroke();
 
           // Active/selected double ring
@@ -237,10 +239,19 @@ export function KnowledgeGraphCanvas({
             ctx.stroke();
           }
 
-          const showLabel = isActive || node.id === selectedId || node.weight >= 2 || scale > (compact ? 1.2 : 0.8);
+          // Check if node is a neighbor of the hover or active node
+          const isNeighbor = neighborhood?.nodes.has(node.id) || (hoverActive && data.links.some(l => {
+            const sId = typeof l.source === 'object' ? (l.source as any).id : l.source;
+            const tId = typeof l.target === 'object' ? (l.target as any).id : l.target;
+            return (sId === node.id && tId === hoverActive) || (tId === node.id && sId === hoverActive);
+          }));
+
+          // Hide labels when zoomed out (Obsidian star-map style) except for selected, hovered, and connection neighbors
+          const showLabel = isActive || isNeighbor || (scale > 1.3 && node.weight >= 1.5) || scale > 2.0;
+
           if (showLabel && !dim) {
-            const baseFontSize = compact ? 9 : 10;
-            const clampedFontSize = Math.max(7.5, baseFontSize / scale);
+            const baseFontSize = compact ? 8.5 : 9.5;
+            const clampedFontSize = Math.max(6.5, Math.min(12, baseFontSize / Math.sqrt(scale)));
             ctx.font = `500 ${clampedFontSize}px Inter, system-ui, -apple-system, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
