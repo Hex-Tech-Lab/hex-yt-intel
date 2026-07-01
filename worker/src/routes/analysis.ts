@@ -211,11 +211,11 @@ function buildStreamResponse(
         return result;
       });
 
-      const timeoutPromise = new Promise<boolean>((_, reject) => {
+      const timeoutPromise = new Promise<boolean>((resolve) => {
         timeoutId = setTimeout(() => {
           settled = true;
           // settleAnalysis: Handle timeout by persisting with interrupted status
-          persistService.persist({
+          resolve(persistService.persist({
             analysisId: req.analysisId,
             videoId: req.videoId,
             finalText,
@@ -226,12 +226,13 @@ function buildStreamResponse(
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
             chunkIndex: req.chunkIndex,
             totalChunks: req.totalChunks,
-          }).catch(() => {});
-          reject(new Error("Persistence timeout reached (15s)"));
+          }));
         }, 15000);
       });
 
-      return Promise.race([persistPromise, timeoutPromise]);
+      return Promise.race([persistPromise, timeoutPromise]).finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+      });
     },
     signal: persistController.signal,
     waitUntil,

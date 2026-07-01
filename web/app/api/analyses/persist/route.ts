@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       model: z.string().optional(),
       valid: z.boolean().optional(),
       contentSig: z.string(),
-      status: z.string().optional().default('completed'),
+      status: z.enum(['completed', 'failed', 'interrupted']).optional().default('completed'),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
             chunkIndex,
             dimensionsCovered,
             payload,
-            status: status as any,
+            status,
           }),
           2
         );
@@ -429,15 +429,16 @@ export async function POST(request: NextRequest) {
         return { type: 'chunk_saved' as const, analysisId, chunkIndex };
       }
 
-      // For non-chunk requests, ALWAYS verify all chunks have been persisted before deciding final status
+      // For chunked requests, verify all chunks have been persisted before deciding final status
       let finalStatus: string;
       let validationPassed: boolean;
       let finalMissingChunks: number[] = [];
+      const expectsChunkSet = totalChunks !== undefined;
 
       if (isInterrupted) {
         finalStatus = 'interrupted';
         validationPassed = false;
-      } else {
+      } else if (expectsChunkSet) {
         // Explicitly verify chunk completeness BEFORE assigning final status
         const storedChunks = await retryWithBackoff(
           () => persistenceAdapter.findAnalysisChunks({ analysisId }),
@@ -472,6 +473,10 @@ export async function POST(request: NextRequest) {
           finalStatus = 'done';
           validationPassed = Boolean(valid);
         }
+      } else {
+        // Non-chunk finalization: accept valid/invalid status directly
+        validationPassed = Boolean(valid);
+        finalStatus = validationPassed ? 'done' : 'failed';
       }
 
       const newReport: PersistedValidationReport = {
