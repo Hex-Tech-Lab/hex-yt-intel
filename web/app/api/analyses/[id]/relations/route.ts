@@ -103,7 +103,9 @@ export async function GET(
             return;
           } catch (e) {
             console.error('[relations/route] Malformed cache, purging:', cacheKey, e);
-            await deleteRedisKey(cacheKey).catch(() => {});
+            await deleteRedisKey(cacheKey).catch(deleteErr => {
+              console.warn('[relations/route] Failed to delete malformed cache key', { cacheKey, error: String(deleteErr) });
+            });
           }
         }
 
@@ -152,7 +154,9 @@ export async function GET(
           };
 
           if (insights.length > 0) {
-            await setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).catch(() => {});
+            await setRedisValue(cacheKey, JSON.stringify(result), CACHE_TTL_SECONDS).catch(cacheErr => {
+              console.warn('[relations/route] Failed to cache relation insights', { cacheKey, error: String(cacheErr) });
+            });
           }
 
           resolvePromise(result);

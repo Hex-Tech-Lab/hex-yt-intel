@@ -91,7 +91,9 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
   let timedOut = false;
   const timeout = setTimeout(() => {
     timedOut = true;
-    reader.cancel().catch(() => {});
+    reader.cancel().catch(e => {
+      console.debug('[useChatStore] Failed to cancel stream on timeout', { error: String(e) });
+    });
   }, 25000);
 
   try {

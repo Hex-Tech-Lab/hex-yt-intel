@@ -208,12 +208,13 @@ export async function POST(request: NextRequest) {
         return { type: 'error' as const, error: 'Analysis not found', status: 404 };
       }
 
-      const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport) 
-        ? row.validationReport 
+      const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport)
+        ? row.validationReport
         : { status: 'processing' };
       const isInterrupted = status === 'interrupted';
 
       if (chunkIndex !== undefined && validPayload && 'dimensions' in validPayload) {
+        // Process this specific chunk; return early if chunk is complete or timeout detected.
         const dimensionsCovered = Array.isArray(validPayload.dimensions)
           ? (validPayload.dimensions as any[]).map((d: any) => d.number)
           : [];
@@ -435,7 +436,9 @@ export async function POST(request: NextRequest) {
             cached_at: new Date().toISOString(),
           };
           const cacheKey = generateCacheKey('edge-stream', stitchedMarkdown, '5.1');
-          await setAnalysisCache(cacheKey, cachedPayload).catch(() => {});
+          await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+            console.warn('[analyses/persist] Failed to cache stitched result', { analysisId, error: String(e) });
+          });
 
           if (!!priorReport.transcript_available) {
             await publishValidationTask({
@@ -445,7 +448,9 @@ export async function POST(request: NextRequest) {
               userId: row.userId,
               analysisId,
               metadata: { title: row.title, channelTitle: row.channelTitle || '' },
-            }).catch(() => {});
+            }).catch(e => {
+              console.warn('[analyses/persist] Failed to publish validation task for chunks', { analysisId, error: String(e) });
+            });
           }
         }
 
@@ -545,7 +550,9 @@ export async function POST(request: NextRequest) {
         cached_at: new Date().toISOString(),
       };
       const cacheKey = generateCacheKey('edge-stream', markdown, '5.1');
-      await setAnalysisCache(cacheKey, cachedPayload).catch(() => {});
+      await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+        console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
+      });
 
       if (transcriptAvailable) {
         await publishValidationTask({
@@ -555,7 +562,9 @@ export async function POST(request: NextRequest) {
           userId: row.userId,
           analysisId,
           metadata: { title: row.title, channelTitle: row.channelTitle || '' },
-        }).catch(() => {});
+        }).catch(e => {
+          console.warn('[analyses/persist] Failed to publish validation task', { analysisId, error: String(e) });
+        });
       }
 
       return { type: 'ok' as const, analysisId };
