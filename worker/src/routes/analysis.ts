@@ -174,16 +174,14 @@ function buildStreamResponse(
 
   const persistService = new PersistService();
 
-  // Monitor client disconnect and immediately signal persist abort
+  // Monitor client disconnect to settle early without aborting persist
   if (httpConnSignal && !httpConnSignal.aborted) {
     httpConnSignal.addEventListener(
       'abort',
       () => {
         if (!settled) {
           settled = true;
-          console.debug('[analyze-llm-stream] Client disconnected, signaling persist abort');
-          // Abort persist immediately when client disconnects
-          persistController.abort();
+          console.debug('[analyze-llm-stream] Client disconnected, allowing persist to complete');
         }
       },
       { once: true },
