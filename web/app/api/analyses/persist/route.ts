@@ -17,7 +17,9 @@ import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
 /**
- * Retry async operation with exponential backoff (2^n * 1000ms).
+ * Retry async operation with exponential backoff (2^n * 1000ms) and randomized jitter.
+ * Jitter prevents thundering herd: with 5 concurrent streams retrying at identical times,
+ * all would hammer the database simultaneously. Jitter spreads them across staggered intervals.
  * @template T The return type of the async function
  * @param fn The async function to retry
  * @param maxAttempts Maximum number of retry attempts (default: 2)
@@ -31,7 +33,13 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       if (attempt < maxAttempts) {
-        const delayMs = Math.pow(2, attempt - 1) * 1000;
+        // Base delay with exponential backoff: 1s for attempt 1, 2s for attempt 2, etc.
+        const baseDelayMs = Math.pow(2, attempt - 1) * 1000;
+        // Jitter: randomize ±50% around base delay to prevent synchronized retry waves
+        // For baseDelayMs=1000: jitter range is [500, 1500]
+        // For baseDelayMs=2000: jitter range is [1000, 3000]
+        const jitterFactor = 0.5 + Math.random(); // Range: [0.5, 1.5]
+        const delayMs = Math.floor(baseDelayMs * jitterFactor);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }

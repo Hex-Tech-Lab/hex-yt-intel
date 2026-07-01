@@ -162,7 +162,7 @@ function buildStreamResponse(
   req: StreamRequest,
   signingKey: string,
   appUrl: string | undefined,
-  engineSignal: AbortSignal,
+  httpConnSignal: AbortSignal | undefined,
   persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
@@ -174,6 +174,36 @@ function buildStreamResponse(
 
   const persistService = new PersistService();
   const streamCompleteController = new AbortController();
+
+  // Monitor client disconnect and immediately settle analysis as interrupted
+  if (httpConnSignal && !httpConnSignal.aborted) {
+    httpConnSignal.addEventListener(
+      'abort',
+      () => {
+        if (!settled) {
+          settled = true;
+          console.debug('[analyze-llm-stream] Client disconnected, immediately persisting as interrupted');
+          persistService.persist({
+            analysisId: req.analysisId,
+            videoId: req.videoId,
+            finalText,
+            modelUsed,
+            status: 'interrupted',
+            activeSecret: signingKey,
+            appUrl: appUrl || "https://yt-intel.getmytestdrive.com",
+            validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
+            chunkIndex: req.chunkIndex,
+            totalChunks: req.totalChunks,
+          }).catch((err) => {
+            console.error('[analyze-llm-stream] Failed to persist interrupted state on client disconnect:', err instanceof Error ? err.message : String(err));
+          });
+          // Abort stream complete controller to stop any pending operations
+          streamCompleteController.abort();
+        }
+      },
+      { once: true },
+    );
+  }
 
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
@@ -199,6 +229,8 @@ function buildStreamResponse(
       const timeoutPromise = new Promise<boolean>((_, reject) => {
         timeoutId = setTimeout(() => {
           settled = true;
+          // Abort the persist signal to trigger atomicPersist cleanup and cancel in-flight operations
+          streamCompleteController.abort();
           // settleAnalysis: Handle timeout by persisting with interrupted status
           persistService.persist({
             analysisId: req.analysisId,
@@ -274,7 +306,7 @@ function buildStreamResponse(
               send({ type: "status", ...statusEvent });
             },
           },
-          engineSignal,
+          httpConnSignal,
         );
 
         if (!result.produced && !result.finalText) {
