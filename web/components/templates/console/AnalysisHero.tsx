@@ -116,7 +116,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                   <button
                     type="button"
                     onClick={onReanalyze}
-                    className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--line)] bg-transparent text-[var(--ink-secondary)] py-3 px-4 font-sans text-sm font-medium cursor-pointer transition-all duration-[var(--dur-fast)]"
+                    className="inline-flex items-center gap-1.5 rounded-[7px] border border-[var(--line)] bg-transparent text-[var(--ink-secondary)] py-3 px-4 font-sans text-sm font-medium cursor-pointer transition-all duration-[var(--dur-fast)]"
                   >
                     <Icon icon="solar:refresh-linear" size={16} />
                   </button>
@@ -126,7 +126,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                     type="button"
                     title="Cancel analysis"
                     onClick={onCancel}
-                    className="inline-flex items-center justify-center rounded-[10px] border border-[var(--err)] bg-[rgba(239,68,68,0.15)] text-[var(--err)] py-3 px-4 font-sans text-sm font-semibold cursor-pointer transition-all duration-[var(--dur-fast)]"
+                    className="inline-flex items-center justify-center rounded-[7px] border border-[var(--err)] bg-[rgba(239,68,68,0.15)] text-[var(--err)] py-3 px-4 font-sans text-sm font-semibold cursor-pointer transition-all duration-[var(--dur-fast)]"
                   >
                     <Icon icon="solar:stop-circle-linear" size={16} style={{ color: "var(--err)" }} />
                   </button>
@@ -135,7 +135,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                   type="button"
                   onClick={onAnalyze}
                   disabled={disabled}
-                  className={`inline-flex items-center gap-2.5 rounded-[10px] border-none py-3 px-5 font-sans text-sm font-bold transition-all duration-[var(--dur-fast)] ${streaming ? 'bg-[var(--bg)] text-[var(--accent)] shadow-none' : 'bg-[var(--accent-strong)] text-[var(--void)] shadow-[0_4px_14px_var(--accent-glow)]'} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${disabled && !streaming ? 'opacity-40' : 'opacity-100'}`}
+                  className={`inline-flex items-center justify-center gap-2.5 rounded-[7px] border-none min-h-[44px] py-2.5 px-5 font-sans text-sm font-bold leading-none transition-all duration-[var(--dur-fast)] ${streaming ? 'bg-[var(--bg)] text-[var(--accent)] shadow-none' : 'bg-[var(--accent-strong)] text-[var(--void)] shadow-[0_4px_14px_var(--accent-glow)]'} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${disabled && !streaming ? 'opacity-40' : 'opacity-100'}`}
                 >
                   <Icon 
                     icon={streaming ? "solar:refresh-linear" : "solar:bolt-linear"} 
