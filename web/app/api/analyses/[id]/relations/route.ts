@@ -115,8 +115,7 @@ export async function GET(
           try {
             const result = await existingPromise;
             send({ ...result, type: 'complete' });
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          } catch (_err) {
+          } catch {
             send({ type: 'error', error: 'Failed to compute relations' });
           }
           controller.close();

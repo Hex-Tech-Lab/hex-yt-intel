@@ -53,7 +53,10 @@ interface RateLimitStatusResponse {
   description: string;
 }
 
-/** Handle GET request to retrieve current rate limit status for authenticated user */
+/**
+ * GET /api/rate-limit-status
+ * Returns current rate limit status for authenticated user
+ */
 export async function GET() {
   try {
     // 1. Auth check

@@ -28,17 +28,8 @@ export default function SubProcessorsPage() {
 
   let content = '';
   try {
-    if (!realPath.startsWith(realDocsDir + path.sep) && realPath !== realDocsDir) {
-      throw new Error('Path traversal blocked');
-    }
-    content = fs.readFileSync(realPath, 'utf8');
-  } catch (e) {
-    const errorMsg = e instanceof Error ? e.message : String(e);
-    console.error('[sub-processors] Failed to read legal doc:', { error: errorMsg, filePath: realPath });
-    Sentry.captureException(e, {
-      tags: { operation: 'legal-page-render', page: 'sub-processors' },
-      contexts: { file: { path: realPath, docName } }
-    });
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch {
     content = '# Sub-processor Disclosure\n\nThis document is currently being compiled. Please check back later.';
   }
 

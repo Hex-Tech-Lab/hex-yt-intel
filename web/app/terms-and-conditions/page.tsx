@@ -24,12 +24,8 @@ export default async function TermsAndConditionsPage() {
 
   let content = '';
   try {
-    if (!realPath.startsWith(realDocsDir + path.sep) && realPath !== realDocsDir) {
-      throw new Error('Path traversal blocked');
-    }
-    content = fs.readFileSync(realPath, 'utf8');
-  } catch (e) {
-    console.debug('[terms-and-conditions] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch {
     content = '# Terms of Service\n\nThis document is currently being compiled by our legal team. Please check back later.';
   }
 

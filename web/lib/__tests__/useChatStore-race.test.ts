@@ -21,14 +21,11 @@ vi.mock('@/lib/chat/outbox', () => ({
 }));
 
 // Track SSE event callbacks so tests can inject events
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let _sseCallback: ((e: Record<string, unknown>) => void) | null = null;
 let fetchMock: ReturnType<typeof vi.fn>;
 
 describe('useChatStore race conditions', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    _sseCallback = null;
     fetchMock = vi.fn();
     global.fetch = fetchMock;
 

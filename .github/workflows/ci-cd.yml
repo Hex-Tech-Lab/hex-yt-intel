@@ -90,6 +90,23 @@ jobs:
           name: type-check-report
           path: .turbo/coverage/
 
+  worker-typecheck:
+    name: Worker TypeCheck
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Hex Intel Environment
+        uses: ./
+
+      - name: Run worker typecheck
+        run: pnpm --filter youtube-intelligence-worker run typecheck
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -137,7 +154,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [setup, type-check, lint]
+    needs: [setup, type-check, worker-typecheck, lint]
     if: needs.setup.outputs.build-needed == 'true' || github.event_name == 'pull_request'
     steps:
       - name: Checkout code
