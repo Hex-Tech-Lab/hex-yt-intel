@@ -6,6 +6,7 @@ import { CacheAdapter } from "../infra/CacheAdapter";
 import { createCache } from "../cache";
 import { wrapLegacyRule, type LegacyIRule } from "../infra/LegacyRuleAdapter";
 import type { FileSystemPort } from "../application/ports/FileSystemPort";
+import type { Rule } from "../domain/Rule";
 import * as legacyRules from "../rules";
 import { SardCalibrationIngester } from "./SardCalibrationIngester";
 import type { CalibrationExample, CalibrationResult } from "./types";
@@ -24,11 +25,24 @@ async function main() {
   const project = new Project({ useInMemoryFileSystem: true });
   const loader = new TsMorphLoader(project);
   
-  // 3. Load active rules
-  const rules = Object.values(legacyRules)
+  // 3. Load active rules (handle both legacy IRule and new Rule formats)
+  const rules: Rule[] = Object.values(legacyRules)
     .filter((r): r is any => r && typeof r === "object" && "check" in r && "name" in r)
-    .map((legacyRule) => {
-      return wrapLegacyRule(legacyRule as unknown as LegacyIRule);
+    .map((rule) => {
+      // Detect new Rule format explicitly (same heuristic as verify-quality-engine.ts):
+      // a `scope` property, or a check body that consumes the RuleContext (ctx.ast/ctx.filePath).
+      // Arity is unreliable — some legacy IRule checks also declare a single parameter,
+      // which would misclassify them and pass a RuleContext where a SourceFile is expected.
+      const isNewRule =
+        (rule as { scope?: unknown }).scope !== undefined ||
+        (typeof rule.check === "function" &&
+          (rule.check.toString().includes("ctx.ast") ||
+            rule.check.toString().includes("ctx.filePath")));
+      if (isNewRule) {
+        return rule as Rule;
+      }
+      // Legacy IRule format — wrap so it receives a SourceFile.
+      return wrapLegacyRule(rule as unknown as LegacyIRule);
     });
   
   const cache = new CacheAdapter(createCache(false));

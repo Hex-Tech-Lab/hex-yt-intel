@@ -16,7 +16,66 @@ import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
+/** Calculate exponential backoff delay with jitter to prevent thundering herd on retry. */
+const calculateBackoffDelay = (attempt: number): number => {
+  const baseDelayMs = Math.pow(2, attempt - 1) * 1000;
+  const jitterFactor = 0.5 + Math.random();
+  return Math.floor(baseDelayMs * jitterFactor);
+};
+
+/** Log retry failure to Sentry and console with appropriate severity based on attempt number. */
+const logRetryFailure = (error: Error, attempt: number, maxAttempts: number, isFinal: boolean): void => {
+  if (isFinal) {
+    Sentry.captureException(error, {
+      tags: { operation: 'persist-retry', final: true, maxAttempts },
+      level: 'error',
+      contexts: { retry: { finalAttempt: maxAttempts, exhausted: true } }
+    });
+    console.error('[analyses/persist] All retry attempts exhausted', {
+      maxAttempts,
+      error: error.message
+    });
+  } else {
+    Sentry.captureException(error, {
+      tags: { operation: 'persist-retry', attempt, maxAttempts },
+      level: 'info',
+      contexts: { retry: { attempt, maxAttempts } }
+    });
+    console.warn('[analyses/persist] Retry attempt failed, will retry', {
+      attempt,
+      maxAttempts,
+      error: error.message
+    });
+  }
+};
+
+/** Coerce an unknown thrown value into an Error instance. */
+const toError = (value: unknown): Error =>
+  value instanceof Error ? value : new Error(String(value));
+
+/** Sleep for the jittered backoff delay corresponding to the given attempt. */
+const backoffDelay = (attempt: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, calculateBackoffDelay(attempt)));
+
+/** Retry async operation with exponential backoff and jitter; logs to Sentry on failure. */
+const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> => {
+  let lastError = new Error('Retry failed');
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = toError(error);
+      const isFinalAttempt = attempt === maxAttempts;
+      logRetryFailure(lastError, attempt, maxAttempts, isFinalAttempt);
+      if (!isFinalAttempt) await backoffDelay(attempt);
+    }
+  }
+  throw lastError;
+};
+
+/** Build sanitized validation report filename from title, channel, and timestamp. */
 function buildValidationFilename(title: string, channelTitle?: string | null): string {
+  /** Convert text to URL-safe slug by removing special characters. */
   const cleanSlug = (text: string): string => {
     return text
       .replace(/[^a-zA-Z0-9]/g, '-')
@@ -24,6 +83,7 @@ function buildValidationFilename(title: string, channelTitle?: string | null): s
       .replace(/^-|-$/g, '')
       || 'unknown';
   };
+  /** Format current timestamp as YYYY-MM-DD_HH-MM-SS string. */
   const getFormattedTimestamp = (): string => {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -63,7 +123,7 @@ export async function POST(request: NextRequest) {
       model: z.string().optional(),
       valid: z.boolean().optional(),
       contentSig: z.string(),
-      status: z.string().optional().default('completed'),
+      status: z.enum(['completed', 'failed', 'interrupted']).optional().default('completed'),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
@@ -139,7 +199,10 @@ export async function POST(request: NextRequest) {
       }
 
       const persistenceAdapter = new SupabasePersistenceAdapter();
-      const row = await persistenceAdapter.findAnalysisForPersist({ analysisId, videoId });
+      const row = await retryWithBackoff(
+        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId }),
+        2
+      );
 
       if (!row) {
         Sentry.captureMessage('analysis-persist: row not found', {
@@ -151,51 +214,103 @@ export async function POST(request: NextRequest) {
         return { type: 'error' as const, error: 'Analysis not found', status: 404 };
       }
 
-      const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport) 
-        ? row.validationReport 
+      const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport)
+        ? row.validationReport
         : { status: 'processing' };
       const isInterrupted = status === 'interrupted';
 
       if (chunkIndex !== undefined && validPayload && 'dimensions' in validPayload) {
+        // Process this specific chunk; return early if chunk is complete or timeout detected.
         const dimensionsCovered = Array.isArray(validPayload.dimensions)
           ? (validPayload.dimensions as any[]).map((d: any) => d.number)
           : [];
 
-        await persistenceAdapter.persistAnalysisChunk({
-          analysisId,
-          chunkIndex,
-          dimensionsCovered,
-          payload,
-          status: status as any,
-        });
+        await retryWithBackoff(
+          () => persistenceAdapter.persistAnalysisChunk({
+            analysisId,
+            chunkIndex,
+            dimensionsCovered,
+            payload,
+            status,
+          }),
+          2
+        );
 
-        const chunks = await persistenceAdapter.findAnalysisChunks({ analysisId });
-        const completedChunks = chunks ? chunks.filter(c => c.status === 'completed') : [];
+        // Verify chunk completeness immediately after persisting chunk
+        const chunks = await retryWithBackoff(
+          () => persistenceAdapter.findAnalysisChunks({ analysisId }),
+          2
+        );
+        const FINAL_CHUNK_STATUS = 'completed';
+        const finalChunks = chunks ? chunks.filter(c => c.status === FINAL_CHUNK_STATUS) : [];
 
-        const completedIndexes = new Set(completedChunks.map(c => c.chunk_index));
-        let allChunksCompleted = true;
+        const receivedIndexSet = new Set(finalChunks.map(c => c.chunk_index));
+        let isFullyReceived = true;
+        const unreceived: number[] = [];
         for (let i = 1; i <= resolvedTotal; i++) {
-          if (!completedIndexes.has(i)) {
-            allChunksCompleted = false;
-            break;
+          if (!receivedIndexSet.has(i)) {
+            isFullyReceived = false;
+            unreceived.push(i);
           }
         }
 
-        if (!allChunksCompleted && completedChunks.length > 0) {
-          const minQuorum = Math.ceil(resolvedTotal * 0.6);
-          if (completedChunks.length >= minQuorum) {
-            const now = Date.now();
-            const timestamps = completedChunks.map((c: any) => new Date(c.updated_at).getTime());
-            const newestTime = Math.max(...timestamps);
-            if (now - newestTime >= 30000) {
-              allChunksCompleted = true;
+        // Check if we've exceeded the timeout window while waiting for chunks
+        let exceedsTimeout = false;
+        if (!isFullyReceived && finalChunks.length > 0) {
+          const minimumChunkThreshold = Math.ceil(resolvedTotal * 0.6);
+          if (finalChunks.length >= minimumChunkThreshold) {
+            const currentTime = Date.now();
+            const chunkTimes = finalChunks
+              .map(c => c.updated_at)
+              .filter((t): t is string => t !== null)
+              .map(t => new Date(t).getTime())
+              .filter(Number.isFinite);
+            const latestChunkTime = chunkTimes.length > 0 ? Math.max(...chunkTimes) : null;
+            const elapsedMs = latestChunkTime === null ? 0 : currentTime - latestChunkTime;
+
+            if (latestChunkTime !== null && elapsedMs >= 30000) {
+              exceedsTimeout = true;
+              if (unreceived.length > 0) {
+                console.error('[analyses/persist] Chunk reception timeout after waiting 30s: chunks missing', {
+                  analysisId,
+                  videoId,
+                  receivedCount: finalChunks.length,
+                  expectedTotal: resolvedTotal,
+                  unreceived,
+                  elapsedMs
+                });
+              }
             }
           }
         }
 
-        if (allChunksCompleted) {
+        // If timeout detected AND chunks are missing, mark as partial before proceeding
+        if (exceedsTimeout && unreceived.length > 0) {
+          const incompletionReport: PersistedValidationReport = {
+            ...priorReport,
+            status: 'partial',
+            model_used: model || null,
+            valid: false,
+          };
+
+          await retryWithBackoff(
+            () => persistenceAdapter.updateAnalysisResult({
+              analysisId,
+              markdown,
+              payload: validPayload ?? null,
+              model: model || null,
+              validationPassed: false,
+              validationReport: incompletionReport,
+            }),
+            2
+          );
+
+          return { type: 'partial_timeout' as const, analysisId, missingChunks: unreceived };
+        }
+
+        if (isFullyReceived) {
           const chunkMap = new Map<number, any>();
-          completedChunks.forEach(c => {
+          finalChunks.forEach(c => {
             chunkMap.set(c.chunk_index, c.payload);
           });
 
@@ -226,6 +341,34 @@ export async function POST(request: NextRequest) {
             if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.edges)) {
               stitchedEdges.push(...p.knowledgeGraph.edges);
             }
+          }
+
+          // CRITICAL SAFETY CHECK: Verify all expected chunks are present before stitching
+          if (finalChunks.length !== resolvedTotal) {
+            console.error('[analyses/persist] Safety halt: incomplete chunk set detected before stitching', {
+              analysisId,
+              persisted: finalChunks.length,
+              expected: resolvedTotal,
+              unreceived
+            });
+            const safetyReport: PersistedValidationReport = {
+              ...priorReport,
+              status: 'partial',
+              model_used: model || null,
+              valid: false,
+            };
+            await retryWithBackoff(
+              () => persistenceAdapter.updateAnalysisResult({
+                analysisId,
+                markdown,
+                payload: validPayload ?? null,
+                model: model || null,
+                validationPassed: false,
+                validationReport: safetyReport,
+              }),
+              2
+            );
+            return { type: 'partial_timeout' as const, analysisId, missingChunks: unreceived };
           }
 
           const cleanDimensions = stitchedDimensions
@@ -268,21 +411,25 @@ export async function POST(request: NextRequest) {
             });
           }
 
+          const finalStatus = isStitchedValid ? 'done' : 'failed';
           const newReport: PersistedValidationReport = {
             ...priorReport,
-            status: isStitchedValid ? 'completed' : 'failed',
+            status: finalStatus,
             model_used: model || null,
             valid: isStitchedValid,
           };
 
-          await persistenceAdapter.updateAnalysisResult({
-            analysisId,
-            markdown: stitchedMarkdown,
-            payload: stitchedPayload,
-            model: model || null,
-            validationPassed: isStitchedValid,
-            validationReport: newReport,
-          });
+          await retryWithBackoff(
+            () => persistenceAdapter.updateAnalysisResult({
+              analysisId,
+              markdown: stitchedMarkdown,
+              payload: stitchedPayload,
+              model: model || null,
+              validationPassed: isStitchedValid,
+              validationReport: newReport,
+            }),
+            2
+          );
 
           const cachedPayload: CachedAnalysisResult = {
             id: analysisId,
@@ -299,7 +446,10 @@ export async function POST(request: NextRequest) {
             cached_at: new Date().toISOString(),
           };
           const cacheKey = generateCacheKey('edge-stream', stitchedMarkdown, '5.1');
-          await setAnalysisCache(cacheKey, cachedPayload).catch(() => {});
+          await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+            Sentry.captureException(e, { contexts: { persist: { phase: 'cache_stitched_result', analysisId } } });
+            console.warn('[analyses/persist] Failed to cache stitched result', { analysisId, error: String(e) });
+          });
 
           if (!!priorReport.transcript_available) {
             await publishValidationTask({
@@ -309,31 +459,91 @@ export async function POST(request: NextRequest) {
               userId: row.userId,
               analysisId,
               metadata: { title: row.title, channelTitle: row.channelTitle || '' },
-            }).catch(() => {});
+            }).catch(e => {
+              Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task_chunks', analysisId } } });
+              console.warn('[analyses/persist] Failed to publish validation task for chunks', { analysisId, error: String(e) });
+            });
           }
         }
 
         return { type: 'chunk_saved' as const, analysisId, chunkIndex };
       }
 
+      // For chunked requests, verify all chunks have been persisted before deciding final status
+      let finalStatus: string;
+      let validationPassed: boolean;
+      let finalMissingChunks: number[] = [];
+      const expectsChunkSet = totalChunks !== undefined;
+
+      if (isInterrupted) {
+        finalStatus = 'interrupted';
+        validationPassed = false;
+      } else if (expectsChunkSet) {
+        // Explicitly verify chunk completeness BEFORE assigning final status
+        const storedChunks = await retryWithBackoff(
+          () => persistenceAdapter.findAnalysisChunks({ analysisId }),
+          2
+        );
+        const FINAL_STATUS = 'completed';
+        const finalizedChunks = storedChunks ? storedChunks.filter(c => c.status === FINAL_STATUS) : [];
+        const receivedIndices = new Set(finalizedChunks.map(c => c.chunk_index));
+
+        let allReceived = true;
+        const missing: number[] = [];
+        for (let i = 1; i <= resolvedTotal; i++) {
+          if (!receivedIndices.has(i)) {
+            allReceived = false;
+            missing.push(i);
+          }
+        }
+
+        // Only mark as 'done' if ALL chunks have been persisted
+        if (!allReceived) {
+          finalStatus = 'partial';
+          validationPassed = false;
+          finalMissingChunks = missing;
+          console.warn('[analyses/persist] Final check: incomplete chunk set prevents done status', {
+            analysisId,
+            videoId,
+            missing,
+            persisted: finalizedChunks.length,
+            expected: resolvedTotal
+          });
+        } else {
+          finalStatus = 'done';
+          validationPassed = Boolean(valid);
+        }
+      } else {
+        // Non-chunk finalization: accept valid/invalid status directly
+        validationPassed = Boolean(valid);
+        finalStatus = validationPassed ? 'done' : 'failed';
+      }
+
       const newReport: PersistedValidationReport = {
         ...priorReport,
-        status: isInterrupted ? 'interrupted' : 'done',
+        status: finalStatus,
         model_used: model || null,
-        valid: isInterrupted ? false : !!valid,
+        valid: finalStatus === 'done' && validationPassed,
       };
 
-      await persistenceAdapter.updateAnalysisResult({
-        analysisId,
-        markdown,
-        payload: validPayload ?? null,
-        model: model || null,
-        validationPassed: isInterrupted ? false : !!valid,
-        validationReport: newReport,
-      });
+      await retryWithBackoff(
+        () => persistenceAdapter.updateAnalysisResult({
+          analysisId,
+          markdown,
+          payload: validPayload ?? null,
+          model: model || null,
+          validationPassed,
+          validationReport: newReport,
+        }),
+        2
+      );
 
       if (isInterrupted) {
         return { type: 'interrupted' as const, analysisId };
+      }
+
+      if (finalStatus === 'partial') {
+        return { type: 'partial_timeout' as const, analysisId, missingChunks: finalMissingChunks };
       }
 
       const transcriptAvailable = !!priorReport.transcript_available;
@@ -352,7 +562,10 @@ export async function POST(request: NextRequest) {
         cached_at: new Date().toISOString(),
       };
       const cacheKey = generateCacheKey('edge-stream', markdown, '5.1');
-      await setAnalysisCache(cacheKey, cachedPayload).catch(() => {});
+      await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+        Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
+        console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
+      });
 
       if (transcriptAvailable) {
         await publishValidationTask({
@@ -362,7 +575,10 @@ export async function POST(request: NextRequest) {
           userId: row.userId,
           analysisId,
           metadata: { title: row.title, channelTitle: row.channelTitle || '' },
-        }).catch(() => {});
+        }).catch(e => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task', analysisId } } });
+          console.warn('[analyses/persist] Failed to publish validation task', { analysisId, error: String(e) });
+        });
       }
 
       return { type: 'ok' as const, analysisId };
@@ -378,6 +594,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: data.error }, { status: data.status });
       case 'chunk_saved':
         return NextResponse.json({ ok: true, analysisId: data.analysisId, chunkIndex: data.chunkIndex, status: 'chunk_saved' });
+      case 'partial_timeout':
+        return NextResponse.json({ ok: true, analysisId: data.analysisId, status: 'partial', missingChunks: data.missingChunks });
       case 'interrupted':
         return NextResponse.json({ ok: true, analysisId: data.analysisId, status: 'interrupted' });
       case 'ok':

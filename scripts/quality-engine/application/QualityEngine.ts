@@ -1,6 +1,7 @@
 import { SourceGraph } from "../domain/SourceGraph";
 import type { Finding } from "../domain/Finding";
 import type { Rule } from "../domain/Rule";
+import type { RuleError } from "../domain/RuleError";
 import type { CachePort } from "./ports/CachePort";
 import type { FileLoaderPort } from "./ports/FileLoaderPort";
 import type { FileSystemPort } from "./ports/FileSystemPort";
@@ -9,6 +10,7 @@ import type { EngineConfig } from "./EngineConfig";
 
 export class QualityEngine {
   private registry = new SourceRegistry();
+  ruleErrors: RuleError[] = [];
 
   constructor(
     private readonly rules: Rule[],
@@ -19,8 +21,9 @@ export class QualityEngine {
   ) {}
 
   async analyze(files: string[]): Promise<Finding[]> {
+    this.ruleErrors = [];
     const existing = files.filter((f) => this.fs.exists(f));
-    
+
     // GRAPH CONSTRUCTION: buildGraph() parses imports and constructs the overall dependency graph
     const needsGraph = this.rules.some(r => r.scope === "graph" || r.scope === "neighbors" || this.config.defaultScope === "graph" || this.config.defaultScope === "neighbors");
     const graph = needsGraph ? await this.buildGraph(existing) : new SourceGraph();
@@ -57,7 +60,14 @@ export class QualityEngine {
 
               findings.push(...ruleFindings);
             } catch (ruleErr) {
+              const errorMsg = ruleErr instanceof Error ? ruleErr.message : String(ruleErr);
               console.error(`Rule "${rule.name}" failed on file ${file}:`, ruleErr);
+              this.ruleErrors.push({
+                ruleName: rule.name,
+                filePath: file,
+                message: errorMsg,
+                timestamp: Date.now(),
+              });
             }
           }
         } catch (fileErr) {

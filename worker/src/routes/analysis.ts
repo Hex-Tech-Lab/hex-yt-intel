@@ -11,6 +11,7 @@ import { hmacHex } from "../crypto";
 import { isValidAppUrl } from "../middleware/cors";
 import type { ReasoningEnginePort } from "../ports/ReasoningEnginePort";
 
+/** Compare two hex strings for equality using constant-time comparison to prevent timing attacks. */
 function timingSafeEqualHex(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
@@ -32,6 +33,10 @@ type AnalysisEnv = {
   RESIDENTIAL_PROXY_URL?: string;
   DECODO_API_KEY?: string;
 };
+
+if (typeof process !== 'undefined' && process.env?.RESIDENTIAL_PROXY_URL === undefined) {
+  console.debug('[analyze-llm-stream] RESIDENTIAL_PROXY_URL not configured, YouTube fallback unavailable', { config: 'proxy-disabled' });
+}
 
 interface AnalysisRequest {
   videoId: string;
@@ -80,6 +85,7 @@ interface TokenVerificationResult {
   msg: string;
 }
 
+/** Verify HMAC signature of stream request token using stored secret. Returns validation result and secret. */
 async function verifyStreamToken(
   videoId: string,
   analysisId: string,
@@ -117,6 +123,7 @@ async function verifyStreamToken(
   return { isValid: false, secret: activeSecret, msg };
 }
 
+/** Fetch video transcript if missing or invalid; attempts multiple sources before returning fallback message. */
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
@@ -153,13 +160,13 @@ async function fetchTranscriptIfMissing(
   return transcript;
 }
 
+/** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
 function buildStreamResponse(
   engine: ReasoningEnginePort,
   req: StreamRequest,
   signingKey: string,
   appUrl: string | undefined,
-  engineSignal: AbortSignal,
-  persistSignal: AbortSignal,
+  httpConnSignal: AbortSignal | undefined,
   persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
@@ -170,6 +177,20 @@ function buildStreamResponse(
   let settled = false;
 
   const persistService = new PersistService();
+
+  // Monitor client disconnect to settle early without aborting persist
+  if (httpConnSignal && !httpConnSignal.aborted) {
+    httpConnSignal.addEventListener(
+      'abort',
+      () => {
+        if (!settled) {
+          settled = true;
+          console.debug('[analyze-llm-stream] Client disconnected, allowing persist to complete', { event: 'http-abort' });
+        }
+      },
+      { once: true },
+    );
+  }
 
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
@@ -192,29 +213,30 @@ function buildStreamResponse(
         return result;
       });
 
-      const timeoutPromise = new Promise<boolean>((_, reject) => {
+      const timeoutPromise = new Promise<boolean>((resolve) => {
         timeoutId = setTimeout(() => {
           settled = true;
-          persistService.persist({
+          // settleAnalysis: Handle timeout by persisting with interrupted status
+          resolve(persistService.persist({
             analysisId: req.analysisId,
             videoId: req.videoId,
             finalText,
             modelUsed,
-            status: 'completed',
+            status: 'interrupted',
             activeSecret: signingKey,
             appUrl: url,
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
             chunkIndex: req.chunkIndex,
             totalChunks: req.totalChunks,
-          }).catch(() => {});
-          persistController.abort();
-          reject(new Error("Persistence timeout reached (15s)"));
+          }));
         }, 15000);
       });
 
-      return Promise.race([persistPromise, timeoutPromise]);
+      return Promise.race([persistPromise, timeoutPromise]).finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+      });
     },
-    signal: persistSignal,
+    signal: persistController.signal,
     waitUntil,
   });
 
@@ -270,7 +292,7 @@ function buildStreamResponse(
               send({ type: "status", ...statusEvent });
             },
           },
-          engineSignal,
+          httpConnSignal,
         );
 
         if (!result.produced && !result.finalText) {
@@ -286,6 +308,7 @@ function buildStreamResponse(
         if (!settled) {
           atomicPersist.flush();
         }
+        persistController.abort();
         controller.close();
       }
     },
@@ -414,11 +437,10 @@ analysis.post("/analyze-llm-stream", async (c) => {
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
 
-  const clientSignal = c.req.raw.signal;
   const persistController = new AbortController();
-  const persistSignal = persistController.signal;
+  const httpConnSignal = c.req.raw['signal'];
 
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env);
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env);
 });
 
 export default analysis;

@@ -18,6 +18,7 @@ if (flags.help || flags.h) {
   process.exit(0);
 }
 
+/** Parse command-line arguments and extract flags, mode, baseline, compare, CI, and Redis cache settings. */
 function parseCliFlags() {
   const args = process.argv.slice(2);
   const f: Record<string, boolean | string> = {};
@@ -58,6 +59,7 @@ function parseCliFlags() {
   };
 }
 
+/** Display command-line usage information and available options. */
 function showHelp() {
   console.log(`
 Usage: qa-intel [options]
@@ -80,25 +82,19 @@ Modes:
 `);
 }
 
-// Initialize ts-morph Project — guarded for unhoisted packages in pnpm strict mode
-let project: import("ts-morph").Project;
-try {
-  const { Project: TsMorphProject } = await import("ts-morph");
-  project = new TsMorphProject({
-    tsConfigFilePath: path.join(process.cwd(), "tsconfig.json"),
-    skipAddingFilesFromTsConfig: true,
-  });
-} catch (depErr) {
-  console.error("[qa-intel] ts-morph module resolution failed — unhoisted or missing.", depErr instanceof Error ? depErr.message : String(depErr));
-  console.error("[qa-intel] Package resolution failures must not mask structural code health. Exiting with failure.");
-  process.exit(1);
-}
-
-// Load and wrap all legacy rules
+// Load and wrap legacy rules (IRule format), pass new rules (Rule format) through unchanged
 const rules = Object.values(legacyRules)
   .filter((r): r is any => r && typeof r === "object" && "check" in r && "name" in r)
-  .map((legacyRule: unknown) => {
-    return wrapLegacyRule(legacyRule as any);
+  .map((rule: unknown) => {
+    const r = rule as any;
+    // Check if this is a new Rule format (has scope property or check function references RuleContext)
+    // vs legacy IRule format (check function takes SourceFile directly)
+    if (r.scope !== undefined || (r.check && (r.check.toString().includes('ctx.ast') || r.check.toString().includes('ctx.filePath')))) {
+      // Already in new Rule format
+      return r as any;
+    }
+    // Legacy IRule format, wrap it
+    return wrapLegacyRule(r as any);
   });
 
 // Get file list based on mode
@@ -177,6 +173,7 @@ const concurrency = isNaN(concurrencyFlag) ? 3 : concurrencyFlag;
 const legacyCache = createCache(useRedisCache);
 const cacheAdapter = new CacheAdapter(legacyCache);
 
+/** Execute quality analysis engine on specified files and report findings. */
 async function run() {
   // Initialize ts-morph Project — guard unhoisted packages in pnpm strict mode
   let project: import("ts-morph").Project;
@@ -186,9 +183,10 @@ async function run() {
       tsConfigFilePath: path.join(process.cwd(), "tsconfig.json"),
       skipAddingFilesFromTsConfig: true,
     });
-  } catch {
-    console.error("[qa-intel] ts-morph not found (unhoisted in CI). Skipping ts-morph analysis.");
-    process.exit(0);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[qa-intel] Failed to load ts-morph (required for verify-quality-engine). Failing run.", { error: message });
+    process.exit(1);
   }
 
   // Construct QualityEngine
@@ -213,6 +211,31 @@ async function run() {
   console.log("-------------------------------------------------");
 
   const findings = await engine.analyze(fileList);
+
+  // Surface per-rule errors if any occurred — always hard-fail if rules are broken
+  if (engine.ruleErrors && engine.ruleErrors.length > 0) {
+    console.error("\n❌ [qa-intel] Per-rule execution errors detected during analysis:");
+    const errorsByRule: Record<string, Array<{ file: string; message: string }>> = {};
+    for (const err of engine.ruleErrors) {
+      if (!errorsByRule[err.ruleName]) {
+        errorsByRule[err.ruleName] = [];
+      }
+      errorsByRule[err.ruleName].push({
+        file: err.filePath,
+        message: err.message
+      });
+    }
+    Object.entries(errorsByRule).forEach(([ruleName, errors]) => {
+      console.error(`\n  Rule: "${ruleName}" (${errors.length} error${errors.length !== 1 ? 's' : ''})`);
+      errors.forEach(err => {
+        console.error(`    File: ${err.file}`);
+        console.error(`    Error: ${err.message}`);
+      });
+    });
+    console.error("\n  Investigate rule implementations for: " + Object.keys(errorsByRule).join(", "));
+    console.error("\n❌ qa-intel: Rule execution errors are blocking. Cannot proceed with quality gate.");
+    process.exit(1);
+  }
 
   // Handle baseline
   const baselinePath = path.resolve(process.cwd(), ".qa-intel/baseline.json");
@@ -255,7 +278,22 @@ async function run() {
     }
   }
 
-  const nonCritical = findings.filter(f => f.severity !== "critical");
+  // Treat HIGH severity as blocking in CI (same as critical) and advisory in local/non-CI runs
+  const highFindings = findings.filter(f => f.severity === "high");
+  if (highFindings.length > 0) {
+    console.error("❌ qa-intel: High-severity issues found:");
+    console.error(JSON.stringify(highFindings, null, 2));
+    if (ci) {
+      console.error("❌ qa-intel: Blocking — high-severity findings must be resolved in CI.");
+      process.exit(1);
+    } else {
+      console.warn("⚠️ qa-intel: High-severity findings are advisory in local/non-CI runs (not blocking).");
+      console.warn("⚠️ qa-intel: Please resolve high-severity findings before final merge to avoid CI failures.");
+      process.exit(0);
+    }
+  }
+
+  const nonCritical = findings.filter(f => f.severity !== "critical" && f.severity !== "high");
   if (nonCritical.length > 0) {
     console.warn("⚠️ qa-intel: Medium/Low issues found:");
     console.warn(JSON.stringify(nonCritical, null, 2));
