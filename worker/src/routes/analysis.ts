@@ -34,7 +34,7 @@ type AnalysisEnv = {
 };
 
 if (typeof process !== 'undefined' && process.env?.RESIDENTIAL_PROXY_URL === undefined) {
-  console.debug('[analyze-llm-stream] RESIDENTIAL_PROXY_URL not configured, YouTube fallback unavailable');
+  console.debug('[analyze-llm-stream] RESIDENTIAL_PROXY_URL not configured, YouTube fallback unavailable', { config: 'proxy-disabled' });
 }
 
 interface AnalysisRequest {
