@@ -39,7 +39,7 @@ Resolution order at read time: **Layer 2 (user) overrides Layer 1 (admin) overri
 |---|---|---|---|
 | Streams = 5 | `synthesis.ts` ✅ | keep | already SSOT |
 | Dimensions = 11 | `synthesis.ts` ✅ | keep | qa-intel must import, not literal-string it |
-| Vercel `maxDuration` 30 / 60 | persist:3, analyses:6, chat/persist:3, messages:3 | `config/limits.ts` `EDGE_MAX_DURATION` | scattered — unify |
+| Vercel `maxDuration` 30 / 60 | chat:3, persist:3, analyses:6, chat/persist:3, messages:3 | `config/limits.ts` `EDGE_MAX_DURATION` | 5 routes — unify |
 | LLM total timeout `120000` ×2 | `LLMCascade.ts:84,145` | `config/timeouts.ts` `LLM_STREAM_TIMEOUT_MS` | also unreachable vs ~58s CF budget → set 50000 |
 | LLM handshake `15000` | `LLMCascade.ts:150` | `config/timeouts.ts` `LLM_HANDSHAKE_MS` | doc says 3s — reconcile |
 | Chat cascade `50000` | `chat-stream.ts:141` | `config/timeouts.ts` `CHAT_STREAM_TIMEOUT_MS` | |
@@ -52,7 +52,7 @@ Resolution order at read time: **Layer 2 (user) overrides Layer 1 (admin) overri
 | Refusal window `20..400` | `LLMCascade.ts:233` | `config/llm.ts` `REFUSAL_MIN/MAX` | |
 | Chunk grace `30000` | persist route | `config/timeouts.ts` `CHUNK_GRACE_MS` | reaper-related |
 | Reaper staleness `5min` (proposed) | (new) | `config/timeouts.ts` `REAPER_STALE_MS` | |
-| qa-intel `MAX_DEPTH = 15` | `architecture.ts:120` | `config/qa-intel.ts` | engine-local SSOT |
+| qa-intel `MAX_DEPTH = 15` | `architecture.ts:126` | `config/qa-intel.ts` | engine-local SSOT |
 
 **Rule:** after migration, `grep` for each literal must return exactly **one** definition. Add a qa-intel rule "magic-number-outside-config" to enforce going forward.
 

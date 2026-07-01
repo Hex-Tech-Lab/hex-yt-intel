@@ -6,6 +6,7 @@ import { CacheAdapter } from "../infra/CacheAdapter";
 import { createCache } from "../cache";
 import { wrapLegacyRule, type LegacyIRule } from "../infra/LegacyRuleAdapter";
 import type { FileSystemPort } from "../application/ports/FileSystemPort";
+import type { Rule } from "../domain/Rule";
 import * as legacyRules from "../rules";
 import { SardCalibrationIngester } from "./SardCalibrationIngester";
 import type { CalibrationExample, CalibrationResult } from "./types";
@@ -24,11 +25,19 @@ async function main() {
   const project = new Project({ useInMemoryFileSystem: true });
   const loader = new TsMorphLoader(project);
   
-  // 3. Load active rules
-  const rules = Object.values(legacyRules)
+  // 3. Load active rules (handle both legacy IRule and new Rule formats)
+  const rules: Rule[] = Object.values(legacyRules)
     .filter((r): r is any => r && typeof r === "object" && "check" in r && "name" in r)
-    .map((legacyRule) => {
-      return wrapLegacyRule(legacyRule as unknown as LegacyIRule);
+    .map((rule) => {
+      // Check if this is already a new Rule (check has 1 parameter: RuleContext)
+      // or a legacy IRule (check has 2 parameters: SourceFile, RuleContext)
+      const checkArity = (rule.check as Function).length;
+      if (checkArity === 1) {
+        // Already new Rule format — return as-is
+        return rule as Rule;
+      }
+      // Legacy IRule format (arity 2) — wrap it
+      return wrapLegacyRule(rule as unknown as LegacyIRule);
     });
   
   const cache = new CacheAdapter(createCache(false));
