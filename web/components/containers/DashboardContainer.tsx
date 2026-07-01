@@ -21,8 +21,10 @@ import { WordCloud } from '@/components/templates/console/WordCloud';
 import { MindMap } from '@/components/templates/console/MindMap';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useInputStore } from '@/store/useInputStore';
+import { useChatStore } from '@/store/useChatStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
+import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
@@ -113,6 +115,128 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const initializeAnalysis = useAnalysisStore((s) => s.initializeAnalysis);
+  const setVideoMetadata = useAnalysisStore((s) => s.setVideoMetadata);
+  const setStatus = useAnalysisStore((s) => s.setStatus);
+  const initSynthesis = useSynthesisNucleus((s) => s.initializeAnalysis);
+
+  // Auto-restore already analyzed videos
+  useEffect(() => {
+    if (!url) return;
+
+    // Extract video ID
+    let videoId = 'unknown';
+    try {
+      const normalized = url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`;
+      const parsed = new URL(normalized);
+      if (parsed.hostname?.includes('youtu.be')) {
+        videoId = parsed.pathname.slice(1);
+      } else if (parsed.pathname.includes('/shorts/')) {
+        videoId = parsed.pathname.split('/')[2] || 'unknown';
+      } else if (parsed.pathname.includes('/live/')) {
+        videoId = parsed.pathname.split('/')[2] || 'unknown';
+      } else if (parsed.pathname.includes('/embed/') || parsed.pathname.includes('/v/')) {
+        videoId = parsed.pathname.split('/')[2] || 'unknown';
+      } else {
+        videoId = parsed.searchParams.get('v') || 'unknown';
+      }
+    } catch (e) {
+      console.debug('[AutoRestore] URL parsing exception:', e);
+      videoId = 'unknown';
+    }
+
+    if (videoId === 'unknown' || videoId.length < 5) return;
+
+    let cancelled = false;
+
+    // Check if there's already a completed analysis for this videoId
+    void (async () => {
+      try {
+        let res;
+        try {
+          res = await fetch(`/api/analyses/check?videoId=${videoId}`);
+        } finally {
+          // resource cleanup
+        }
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (data.exists && data.status === 'complete' && data.analysisId) {
+          console.log('[AutoRestore] Completed analysis detected for video, fetching details:', data.analysisId);
+          
+          // Trigger the restoration flow just like history restoration
+          let restoreRes;
+          try {
+            restoreRes = await fetch(`/api/analyses/${data.analysisId}`);
+          } finally {
+            // resource cleanup
+          }
+          if (!restoreRes.ok) return;
+          const restoreData = await restoreRes.json();
+          if (cancelled) return;
+
+          const dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
+          
+          startTransition(() => {
+            initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown);
+            setVideoMetadata({
+              videoId: restoreData.videoId,
+              title: restoreData.title,
+              channelTitle: restoreData.channelTitle || 'Unknown',
+              publishedAt: restoreData.analysisAt || restoreData.created_at || new Date().toISOString(),
+              duration: restoreData.duration || 0,
+              viewCount: restoreData.viewCount || 0,
+              likeCount: restoreData.likeCount || 0,
+            } as any);
+
+            initSynthesis({
+              id: restoreData.id,
+              videoId: restoreData.videoId,
+              title: restoreData.title,
+              channelTitle: restoreData.channelTitle,
+              model: restoreData.model,
+              analysisAt: restoreData.analysisAt,
+              detectedPersona: restoreData.detectedPersona,
+              dimensions,
+              validation: restoreData.validation_report,
+              streaming: restoreData.streaming,
+            });
+
+            setStatus('complete');
+          });
+
+          // Ground/Select the chat session in the background
+          void (async () => {
+            try {
+              const chatStore = useChatStore.getState();
+              await chatStore.loadConversations();
+              const existing = chatStore.conversations.find((c) => 
+                c.analysisId === restoreData.id || c.videoId === restoreData.videoId
+              );
+              if (existing) {
+                if (existing.analysisId !== restoreData.id) {
+                  await chatStore.updateConversationAnalysisId(existing.id, restoreData.id);
+                }
+                await chatStore.selectConversation(existing.id);
+              } else {
+                useChatStore.setState({ activeId: null });
+              }
+            } catch (e) {
+              console.debug('[AutoRestore] Background chat session restoration failed:', e);
+            }
+          })();
+        }
+      } catch (err) {
+        console.debug('[AutoRestore] Pre-flight cache check failed:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url, initializeAnalysis, initSynthesis, setStatus, setVideoMetadata]);
 
   const supabase = createClient();
   const router = useRouter();
