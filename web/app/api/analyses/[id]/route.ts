@@ -28,7 +28,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses', 'id, video_id, title, channel_title, model_used, analysis_markdown, analysis_payload, validation_report, analysis_at, created_at, detected_persona, streaming_interrupted, updated_at');
+    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses', 'id, video_id, title, channel_title, model_used, analysis_markdown, analysis_payload, validation_report, created_at, updated_at');
 
     const errorResponses: Record<string, { error: string; status: number }> = {
       Unauthorized: { error: 'Unauthorized', status: 401 },
