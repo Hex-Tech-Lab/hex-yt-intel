@@ -534,7 +534,7 @@ const SAFE_TIMEOUT_PATTERNS = [
 
 ## Part 6: Coverage Before/After
 
-### Current Coverage (43 rules)
+### Current Coverage (42 rules)
 
 | Category | Rules | Gaps |
 |----------|-------|------|
@@ -542,8 +542,8 @@ const SAFE_TIMEOUT_PATTERNS = [
 | **Streaming** | 7 | External API versioning, chunk ordering |
 | **Persistence** | 5 | Out-of-order chunk handling |
 | **UI** | 10 | Lazy loading, image optimization |
-| **Architecture** | 12 | Circular imports, type safety |
-| **Total** | 43 | ~15 medium-to-high gaps |
+| **Architecture** | 11 | Circular imports, type safety |
+| **Total** | 42 | ~15 medium-to-high gaps |
 
 ### Proposed Coverage (50-53 rules)
 
