@@ -231,9 +231,9 @@ export class MetadataScraper {
   private getThumbnailUrl(thumbnails?: Record<string, { url?: string }>): string {
     if (!thumbnails || typeof thumbnails !== 'object') return '';
     return (
-      thumbnails.high?.url ??
-      thumbnails.medium?.url ??
-      thumbnails.default?.url ??
+      thumbnails.high?.url ||
+      thumbnails.medium?.url ||
+      thumbnails.default?.url ||
       ''
     );
   }
