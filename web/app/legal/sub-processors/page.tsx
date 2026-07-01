@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Metadata } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { LegalPage } from '@/components/templates/LegalPage';
 
 export const metadata: Metadata = {
@@ -32,7 +33,12 @@ export default function SubProcessorsPage() {
     }
     content = fs.readFileSync(realPath, 'utf8');
   } catch (e) {
-    console.debug('[sub-processors] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    console.error('[sub-processors] Failed to read legal doc:', { error: errorMsg, filePath: realPath });
+    Sentry.captureException(e, {
+      tags: { operation: 'legal-page-render', page: 'sub-processors' },
+      contexts: { file: { path: realPath, docName } }
+    });
     content = '# Sub-processor Disclosure\n\nThis document is currently being compiled. Please check back later.';
   }
 

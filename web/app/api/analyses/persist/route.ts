@@ -20,6 +20,7 @@ import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
  * Retry async operation with exponential backoff (2^n * 1000ms) and randomized jitter.
  * Jitter prevents thundering herd: with 5 concurrent streams retrying at identical times,
  * all would hammer the database simultaneously. Jitter spreads them across staggered intervals.
+ * Captures individual retry failures to Sentry for observability.
  * @template T The return type of the async function
  * @param fn The async function to retry
  * @param maxAttempts Maximum number of retry attempts (default: 2)
@@ -33,6 +34,18 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       if (attempt < maxAttempts) {
+        // Capture retry failure attempt before waiting for next retry
+        Sentry.captureException(error, {
+          tags: { operation: 'persist-retry', attempt, maxAttempts },
+          level: 'info',
+          contexts: { retry: { attempt, maxAttempts } }
+        });
+        console.warn('[analyses/persist] Retry attempt failed, will retry', {
+          attempt,
+          maxAttempts,
+          error: lastError.message
+        });
+
         // Base delay with exponential backoff: 1s for attempt 1, 2s for attempt 2, etc.
         const baseDelayMs = Math.pow(2, attempt - 1) * 1000;
         // Jitter: randomize ±50% around base delay to prevent synchronized retry waves
@@ -43,6 +56,18 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
+  }
+  // Capture final failure after all retries exhausted
+  if (lastError) {
+    Sentry.captureException(lastError, {
+      tags: { operation: 'persist-retry', final: true, maxAttempts },
+      level: 'error',
+      contexts: { retry: { finalAttempt: maxAttempts, exhausted: true } }
+    });
+    console.error('[analyses/persist] All retry attempts exhausted', {
+      maxAttempts,
+      error: lastError.message
+    });
   }
   throw lastError || new Error('Retry failed');
 };
