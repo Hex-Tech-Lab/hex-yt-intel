@@ -78,8 +78,9 @@ export class MetadataScraper {
     const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${videoId}&key=${this.apiKey}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => {
+      // Only abort here; the AbortError is logged once in the catch block below
+      // to avoid double-counting a single timeout as two error records.
       controller.abort();
-      console.error('[MetadataScraper] YouTube fetch timeout (5s) - aborting', { videoId });
     }, 5000);
 
     try {

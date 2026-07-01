@@ -447,6 +447,7 @@ export async function POST(request: NextRequest) {
           };
           const cacheKey = generateCacheKey('edge-stream', stitchedMarkdown, '5.1');
           await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+            Sentry.captureException(e, { contexts: { persist: { phase: 'cache_stitched_result', analysisId } } });
             console.warn('[analyses/persist] Failed to cache stitched result', { analysisId, error: String(e) });
           });
 
@@ -459,6 +460,7 @@ export async function POST(request: NextRequest) {
               analysisId,
               metadata: { title: row.title, channelTitle: row.channelTitle || '' },
             }).catch(e => {
+              Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task_chunks', analysisId } } });
               console.warn('[analyses/persist] Failed to publish validation task for chunks', { analysisId, error: String(e) });
             });
           }
@@ -561,6 +563,7 @@ export async function POST(request: NextRequest) {
       };
       const cacheKey = generateCacheKey('edge-stream', markdown, '5.1');
       await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+        Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
         console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
       });
 
@@ -573,6 +576,7 @@ export async function POST(request: NextRequest) {
           analysisId,
           metadata: { title: row.title, channelTitle: row.channelTitle || '' },
         }).catch(e => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish validation task', { analysisId, error: String(e) });
         });
       }

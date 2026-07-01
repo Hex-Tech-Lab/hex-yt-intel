@@ -104,6 +104,7 @@ export async function GET(
           } catch (e) {
             console.error('[relations/route] Malformed cache, purging:', cacheKey, e);
             await deleteRedisKey(cacheKey).catch(deleteErr => {
+              Sentry.captureException(deleteErr, { contexts: { relations: { phase: 'delete_malformed_cache', cacheKey } } });
               console.warn('[relations/route] Failed to delete malformed cache key', { cacheKey, error: String(deleteErr) });
             });
           }

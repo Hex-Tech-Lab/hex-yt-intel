@@ -29,14 +29,19 @@ async function main() {
   const rules: Rule[] = Object.values(legacyRules)
     .filter((r): r is any => r && typeof r === "object" && "check" in r && "name" in r)
     .map((rule) => {
-      // Check if this is already a new Rule (check has 1 parameter: RuleContext)
-      // or a legacy IRule (check has 2 parameters: SourceFile, RuleContext)
-      const checkArity = (rule.check as Function).length;
-      if (checkArity === 1) {
-        // Already new Rule format — return as-is
+      // Detect new Rule format explicitly (same heuristic as verify-quality-engine.ts):
+      // a `scope` property, or a check body that consumes the RuleContext (ctx.ast/ctx.filePath).
+      // Arity is unreliable — some legacy IRule checks also declare a single parameter,
+      // which would misclassify them and pass a RuleContext where a SourceFile is expected.
+      const isNewRule =
+        (rule as { scope?: unknown }).scope !== undefined ||
+        (typeof rule.check === "function" &&
+          (rule.check.toString().includes("ctx.ast") ||
+            rule.check.toString().includes("ctx.filePath")));
+      if (isNewRule) {
         return rule as Rule;
       }
-      // Legacy IRule format (arity 2) — wrap it
+      // Legacy IRule format — wrap so it receives a SourceFile.
       return wrapLegacyRule(rule as unknown as LegacyIRule);
     });
   
