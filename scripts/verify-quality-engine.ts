@@ -183,8 +183,9 @@ async function run() {
       tsConfigFilePath: path.join(process.cwd(), "tsconfig.json"),
       skipAddingFilesFromTsConfig: true,
     });
-  } catch {
-    console.error("[qa-intel] ts-morph not found (required for verify-quality-engine). Failing run.");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[qa-intel] Failed to load ts-morph (required for verify-quality-engine). Failing run.", { error: message });
     process.exit(1);
   }
 
