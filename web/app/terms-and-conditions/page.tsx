@@ -8,20 +8,8 @@ export const metadata: Metadata = {
   description: 'Terms of Service for Hex YT Intel',
 };
 
-/**
- * TermsAndConditionsPage component loads and displays the Terms of Service document.
- *
- * @returns {JSX.Element} The rendered LegalPage with the terms content.
- */
 export default async function TermsAndConditionsPage() {
-  const docName = 'terms-of-service.md';
-  const cwdParts = process.cwd().split(path.sep);
-  const baseDir = cwdParts.slice(0, -1).join(path.sep);
-  const docsDir = path.join(baseDir, 'docs', 'legal');
-  const filePath = path.join(docsDir, docName);
-  const realDocsDir = path.resolve(docsDir);
-  const realPath = path.resolve(filePath);
-
+  const filePath = path.join(process.cwd(), '..', 'docs', 'legal', 'terms-of-service.md');
   let content = '';
   try {
     content = fs.readFileSync(filePath, 'utf8');
