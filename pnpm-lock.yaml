@@ -50,6 +50,9 @@ importers:
       typescript:
         specifier: 6.0.3
         version: 6.0.3
+      vercel-plugin:
+        specifier: 0.0.1
+        version: 0.0.1
 
   web:
     dependencies:
@@ -5512,6 +5515,9 @@ packages:
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
+
+  vercel-plugin@0.0.1:
+    resolution: {integrity: sha512-BoYikz/IaRpBOkAW93o/zLBwG7BOqXL7WaT+j7VPD5hSzaHvXrwTQoJyUnH1vZXVMuYjvbm7brHJmzKZ+4QWzQ==}
 
   vercel@54.14.0:
     resolution: {integrity: sha512-C753akCiJtBfcH+2kh+n3V7awcw/ESUxLzg6KC+SjDFociFWAm6queymFgILvaa9kHi3ouXosurvqhVtnLrjRA==}
@@ -11470,6 +11476,8 @@ snapshots:
       punycode: 2.3.1
 
   util-deprecate@1.0.2: {}
+
+  vercel-plugin@0.0.1: {}
 
   vercel@54.14.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(rollup@4.61.1):
     dependencies:
