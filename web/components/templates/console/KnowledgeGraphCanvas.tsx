@@ -246,8 +246,10 @@ export function KnowledgeGraphCanvas({
             return (sId === node.id && tId === hoverActive) || (tId === node.id && sId === hoverActive);
           }));
 
-          // Hide labels when zoomed out (Obsidian star-map style) except for selected, hovered, and connection neighbors
-          const showLabel = isActive || isNeighbor || (scale > 1.3 && node.weight >= 1.5) || scale > 2.0;
+          // Show labels for selected/hovered/neighbor nodes and any meaningful node,
+          // plus everything once the user zooms in. Meaningful nodes stay labelled at
+          // default zoom so the graph isn't a blank dot-cloud.
+          const showLabel = isActive || isNeighbor || node.weight >= 1.5 || scale > (compact ? 1.2 : 0.8);
 
           if (showLabel && !dim) {
             const baseFontSize = compact ? 8.5 : 9.5;
