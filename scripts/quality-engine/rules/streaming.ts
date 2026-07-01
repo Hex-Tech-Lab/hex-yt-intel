@@ -143,13 +143,18 @@ export const ProxyPromotionRule: Rule = {
     } else if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
       // If we see proxy configuration reference in TypeScript, ensure wrangler.toml exists and configures it,
       // or check that it's properly handled as a secret.
-      if (text.includes('RESIDENTIAL_PROXY_URL') && !text.includes('process.env.RESIDENTIAL_PROXY_URL')) {
+      const hasProxyReference = text.includes('RESIDENTIAL_PROXY_URL');
+      const hasSecureAccess = text.includes('process.env.RESIDENTIAL_PROXY_URL') ||
+                              text.includes('c.env.RESIDENTIAL_PROXY_URL') ||
+                              text.includes('env.RESIDENTIAL_PROXY_URL');
+      const isTypeDefinition = text.includes('RESIDENTIAL_PROXY_URL?: string') || text.includes('RESIDENTIAL_PROXY_URL: string');
+      if (hasProxyReference && !hasSecureAccess && !isTypeDefinition) {
         findings.push({
           file: filePath,
           severity: "high",
           title: "Config: Proxy URL accessed directly without env secret",
           why: "Hardcoded proxy URL patterns or raw references in TypeScript code violate secret hygiene.",
-          fix: "Access RESIDENTIAL_PROXY_URL exclusively via process.env.RESIDENTIAL_PROXY_URL."
+          fix: "Access RESIDENTIAL_PROXY_URL via process.env (Node.js) or c.env/env (Hono bindings)."
         });
       }
     }
