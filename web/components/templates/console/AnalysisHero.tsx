@@ -76,7 +76,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
       <div className="mt-4 max-w-[640px]">
         <CornerFrame tone={streaming ? "accent" : "line"}>
           <GlowBorder active={streaming} radius="control">
-            <div className="flex items-center gap-3 bg-[var(--surface)] p-2.5 rounded-[7px] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-[var(--surface)] p-2.5 rounded-[7px] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
               <span aria-hidden className={`grid place-items-center w-10 h-10 rounded-lg bg-[var(--bg)] ${streaming ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} flex-none border border-[var(--line)]`}>
                 <Icon icon="solar:link-round-angle-linear" size={20} />
               </span>
@@ -89,7 +89,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                 aria-label="YouTube video URL"
                 aria-invalid={status === "error"}
                 aria-describedby={status === "error" ? "hero-error" : undefined}
-                className="hx-field min-w-0 flex-1 bg-transparent border-none outline-none px-1 font-mono text-sm text-[var(--ink)]"
+                className="hx-field min-w-[140px] flex-1 bg-transparent border-none outline-none px-1 font-mono text-sm text-[var(--ink)]"
               />
               {url && (
                 <div className="flex items-center gap-1 flex-shrink-0">
