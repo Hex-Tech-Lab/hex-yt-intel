@@ -51,12 +51,19 @@ export class MetadataScraper {
       throw new Error(`YouTube API channel fetch failed: ${response.status}`);
     }
 
-    const data = (await response.json()) as { items?: Array<{ snippet?: Record<string, unknown> }> };
-    const snippet = data.items?.[0]?.snippet || {};
+    const data = (await response.json()) as {
+      items?: Array<{
+        snippet?: {
+          title?: string;
+          description?: string;
+        };
+      }>;
+    };
+    const snippet = data.items?.[0]?.snippet;
 
     return {
-      title: String(snippet.title || 'Unknown Channel'),
-      description: String(snippet.description || ''),
+      title: snippet?.title || 'Unknown Channel',
+      description: snippet?.description || '',
     };
   }
 
@@ -120,8 +127,17 @@ export class MetadataScraper {
         throw new Error('Video not found');
       }
 
-      // skipcq: TS-D0030 - Safe: length check above guarantees data.items[0] exists
-      return this.parseMetadata(videoId, data.items[0]!);
+      const item = data.items[0];
+      if (!item) {
+        throw new Error('Video item is null or undefined');
+      }
+
+      return this.parseMetadata(videoId, item);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        console.error('[MetadataScraper] YouTube fetch aborted (timeout)', { videoId });
+      }
+      throw err;
     } finally {
       clearTimeout(timeout);
     }

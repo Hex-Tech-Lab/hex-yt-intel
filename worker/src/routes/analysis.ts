@@ -166,8 +166,7 @@ function buildStreamResponse(
   req: StreamRequest,
   signingKey: string,
   appUrl: string | undefined,
-  engineSignal: AbortSignal,
-  persistSignal: AbortSignal,
+  httpConnSignal: AbortSignal | undefined,
   persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
@@ -223,15 +222,13 @@ function buildStreamResponse(
             videoId: req.videoId,
             finalText,
             modelUsed,
-            status: 'completed',
+            status: 'interrupted',
             activeSecret: signingKey,
             appUrl: url,
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
             chunkIndex: req.chunkIndex,
             totalChunks: req.totalChunks,
-          }).catch(() => {});
-          persistController.abort();
-          reject(new Error("Persistence timeout reached (15s)"));
+          }));
         }, 15000);
       });
 
@@ -443,7 +440,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
   const persistController = new AbortController();
   const httpConnSignal = c.req.raw['signal'];
 
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, clientSignal, persistSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env);
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env);
 });
 
 export default analysis;
