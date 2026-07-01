@@ -18,6 +18,7 @@ if (flags.help || flags.h) {
   process.exit(0);
 }
 
+/** Parse command-line arguments and extract flags, mode, baseline, compare, CI, and Redis cache settings. */
 function parseCliFlags() {
   const args = process.argv.slice(2);
   const f: Record<string, boolean | string> = {};
@@ -58,6 +59,7 @@ function parseCliFlags() {
   };
 }
 
+/** Display command-line usage information and available options. */
 function showHelp() {
   console.log(`
 Usage: qa-intel [options]
@@ -171,6 +173,7 @@ const concurrency = isNaN(concurrencyFlag) ? 3 : concurrencyFlag;
 const legacyCache = createCache(useRedisCache);
 const cacheAdapter = new CacheAdapter(legacyCache);
 
+/** Execute quality analysis engine on specified files and report findings. */
 async function run() {
   // Initialize ts-morph Project — guard unhoisted packages in pnpm strict mode
   let project: import("ts-morph").Project;

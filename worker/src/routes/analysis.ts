@@ -11,6 +11,7 @@ import { hmacHex } from "../crypto";
 import { isValidAppUrl } from "../middleware/cors";
 import type { ReasoningEnginePort } from "../ports/ReasoningEnginePort";
 
+/** Compare two hex strings for equality using constant-time comparison to prevent timing attacks. */
 function timingSafeEqualHex(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
@@ -84,6 +85,7 @@ interface TokenVerificationResult {
   msg: string;
 }
 
+/** Verify HMAC signature of stream request token using stored secret. Returns validation result and secret. */
 async function verifyStreamToken(
   videoId: string,
   analysisId: string,
@@ -121,6 +123,7 @@ async function verifyStreamToken(
   return { isValid: false, secret: activeSecret, msg };
 }
 
+/** Fetch video transcript if missing or invalid; attempts multiple sources before returning fallback message. */
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
@@ -157,6 +160,7 @@ async function fetchTranscriptIfMissing(
   return transcript;
 }
 
+/** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
 function buildStreamResponse(
   engine: ReasoningEnginePort,
   req: StreamRequest,

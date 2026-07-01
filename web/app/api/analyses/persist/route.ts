@@ -71,6 +71,7 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
 
 /** Build sanitized validation report filename from title, channel, and timestamp. */
 function buildValidationFilename(title: string, channelTitle?: string | null): string {
+  /** Convert text to URL-safe slug by removing special characters. */
   const cleanSlug = (text: string): string => {
     return text
       .replace(/[^a-zA-Z0-9]/g, '-')
@@ -78,6 +79,7 @@ function buildValidationFilename(title: string, channelTitle?: string | null): s
       .replace(/^-|-$/g, '')
       || 'unknown';
   };
+  /** Format current timestamp as YYYY-MM-DD_HH-MM-SS string. */
   const getFormattedTimestamp = (): string => {
     const now = new Date();
     const yyyy = now.getFullYear();
