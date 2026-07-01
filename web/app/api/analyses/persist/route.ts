@@ -260,11 +260,15 @@ export async function POST(request: NextRequest) {
           const minimumChunkThreshold = Math.ceil(resolvedTotal * 0.6);
           if (finalChunks.length >= minimumChunkThreshold) {
             const currentTime = Date.now();
-            const chunkTimes = finalChunks.map((c: any) => new Date(c.updated_at).getTime());
-            const latestChunkTime = Math.max(...chunkTimes);
-            const elapsedMs = currentTime - latestChunkTime;
+            const chunkTimes = finalChunks
+              .map(c => c.updated_at)
+              .filter((t): t is string => t !== null)
+              .map(t => new Date(t).getTime())
+              .filter(Number.isFinite);
+            const latestChunkTime = chunkTimes.length > 0 ? Math.max(...chunkTimes) : null;
+            const elapsedMs = latestChunkTime === null ? 0 : currentTime - latestChunkTime;
 
-            if (elapsedMs >= 30000) {
+            if (latestChunkTime !== null && elapsedMs >= 30000) {
               exceedsTimeout = true;
               if (unreceived.length > 0) {
                 console.error('[analyses/persist] Chunk reception timeout after waiting 30s: chunks missing', {
