@@ -172,7 +172,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
           </span>
           <PersistStatusIndicator state={persistState} />
         </button>
-        <button onClick={() => setOpen(true)} aria-label="Expand chat" title="Expand" className="grid place-items-center w-7 h-7 rounded-[7px] border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer">
+        <button onClick={() => setOpen(true)} aria-label="Expand chat" title="Expand" className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer">
           <Icon icon="solar:alt-arrow-up-linear" size={16} />
         </button>
       </div>
@@ -201,8 +201,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
           <PersistStatusIndicator state={persistState} />
         </div>
         <div className="flex gap-1.5">
-          <button onClick={handleNew} title="New chat" className="grid place-items-center w-7 h-7 rounded-[7px] border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:pen-new-square-linear" size={14} /></button>
-          <button onClick={() => setOpen(false)} aria-label="Collapse chat" title="Collapse" className="grid place-items-center w-7 h-7 rounded-[7px] border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:alt-arrow-down-linear" size={16} /></button>
+          <button onClick={handleNew} title="New chat" className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:pen-new-square-linear" size={14} /></button>
+          <button onClick={() => setOpen(false)} aria-label="Collapse chat" title="Collapse" className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:alt-arrow-down-linear" size={16} /></button>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                 {c.analysisId && <Icon icon="solar:link-round-angle-linear" size={12} className="flex-shrink-0 opacity-70" />}
                 <span className="overflow-hidden text-ellipsis">{c.title}</span>
               </button>
-              <button onClick={() => void deleteConversation(c.id)} title="Delete" className="grid place-items-center w-[22px] h-[22px] rounded-[7px] border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:trash-bin-minimalistic-linear" size={12} /></button>
+              <button onClick={() => void deleteConversation(c.id)} title="Delete" className="grid place-items-center w-[22px] h-[22px] rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:trash-bin-minimalistic-linear" size={12} /></button>
             </div>
           ))}
         </div>
@@ -241,7 +241,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
             return (
               <div key={m.id} className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
                 <div 
-                  className={isUser ? "max-w-[85%] py-3 px-4 rounded-[7px] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] border-none whitespace-pre-wrap break-words" : "prose prose-invert max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 py-3 px-4 rounded-[7px] text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words"}
+                  className={isUser ? "max-w-[85%] py-3 px-4 rounded-lg text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] border-none whitespace-pre-wrap break-words" : "prose prose-invert max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 py-3 px-4 rounded-lg text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words"}
                 >
                   {isUser ? (
                     body
@@ -304,7 +304,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                   <div className="flex flex-wrap gap-1.5 max-w-[92%]">
                     {options.map((opt) => (
                       <button key={opt} onClick={() => void submit(opt)} disabled={sending}
-                        className={`py-2 px-3 rounded-[7px] border border-[var(--accent)] bg-[rgb(6_182_212_/_0.10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        className={`py-2 px-3 rounded-lg border border-[var(--accent)] bg-[rgb(6_182_212_/_0.10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         {opt}
                       </button>
                     ))}

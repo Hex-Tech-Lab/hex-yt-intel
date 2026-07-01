@@ -67,7 +67,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
               onClick={() => setExportOpen(false)}
             />
             <div 
-              className="hx-rise absolute top-[calc(100%_+_8px)] right-0 w-40 bg-[var(--surface-raised)] border border-[var(--line-strong)] rounded-[10px] p-1 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5"
+              className="hx-rise absolute top-[calc(100%_+_8px)] right-0 w-40 bg-[var(--surface-raised)] border border-[var(--line-strong)] rounded-xl p-1 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5"
             >
               <button
                 onClick={() => { onExport?.('pdf'); setExportOpen(false); }}
@@ -90,7 +90,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
 
       {tier && (
         <span
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-[7px] border border-[rgb(6_182_212_/_0.3)] bg-[rgb(6_182_212_/_0.10)] py-1 px-[11px] font-mono text-[11px] font-semibold tracking-wider text-[var(--accent-ink)]"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[rgb(6_182_212_/_0.3)] bg-[rgb(6_182_212_/_0.10)] py-1 px-[11px] font-mono text-[11px] font-semibold tracking-wider text-[var(--accent-ink)]"
         >
           <Icon icon="solar:crown-minimalistic-linear" size={12} />
           {tier.toUpperCase()}
