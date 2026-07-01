@@ -1,20 +1,26 @@
 # Session Exit Report: Console Stability & Quality Hardening (2026-07-01)
 
 **Location**: `/docs/history/SESSION_EXIT_2026_07_01.md`  
-**Version**: `1.2.1`  
-**Build**: `e56137b`  
-**Timestamp**: `2026-07-01T13:06:00+03:00`  
-**Purpose**: Document stabilization fixes for the knowledge graph, word cloud, details drawer, worker validation, history restoration query, history chat grounding state, and client-side handshake timeouts.
+**Version**: `1.3.0`  
+**Build**: `6d1dc52`  
+**Timestamp**: `2026-07-01T13:17:00+03:00`  
+**Purpose**: Document stabilization fixes for the knowledge graph, word cloud, details drawer, worker validation, history restoration query, history chat grounding state, client-side handshake timeouts, and automatic analysis/chat restoration on URL entry.
 
 ---
 
 ## 1. Summary of Changes
 
-### 1.1 Client-Side Handshake Timeout Stability (v1.2.1)
+### 1.1 Automatic Analysis & Chat Restoration on URL Entry (v1.3.0)
+- **Root Cause**: Previously, entering or pasting a URL that was already analyzed would show the empty hero console page, forcing the user to click the "Analyze" button again and manually trigger the analysis sequence. The corresponding chat session history was also not restored automatically upon URL entry.
+- **Resolution**:
+  - Implemented an auto-restore `useEffect` hook in [DashboardContainer.tsx](file:///home/kellyb_dev/projects/hex-yt-intel/web/components/containers/DashboardContainer.tsx).
+  - On URL mount or input change, it extracts the `videoId`, queries the database check endpoint (`/api/analyses/check?videoId=...`), and—if a completed analysis exists—automatically fetches and restores the analysis markdown, rehydrates the synthesis nucleus store, sets the status to `'complete'`, and loads the correct chat session history in the background.
+
+### 1.2 Client-Side Handshake Timeout Stability (v1.2.1)
 - **Root Cause**: The client-side stream fetches hit OpenRouter and the Cloudflare worker simultaneously in 5 parallel connections. Under load or cold start spikes, response handshakes could take slightly more than 10 seconds, causing a timeout abort (`Stream 5 failed: Handshake timed out after 10s`).
 - **Resolution**: Updated the timeout window in [useSSEStream.ts](file:///home/kellyb_dev/projects/hex-yt-intel/web/hooks/useSSEStream.ts) from `10000ms` (10 seconds) to `25000ms` (25 seconds), directly matching the stratified connection limits and preventing transient network queueing or cold start latency spikes from aborting parallel streams.
 
-### 1.2 History Restoration Chat Grounding & State Leakage
+### 1.3 History Restoration Chat Grounding & State Leakage
 - **Root Cause**: 
   - **State Pollution**: `initializeAnalysis` in `analysis-state-store.ts` merged new analysis requests with the previous video's dimension data if `existing` was not null. This caused the dimensions of the old video to bleed into the newly restored or created analysis.
   - **Dangling Chat Context**: Restoring an analysis or starting a new video run did not reset or switch the active chat session (`activeId` in `useChatStore`), showing the old chat context under the newly selected video.
