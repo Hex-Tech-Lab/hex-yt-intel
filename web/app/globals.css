@@ -384,3 +384,54 @@ button:focus-visible,
   transform: translateY(-1px);
 }
 
+/* Additional button roles — same system, token-driven. */
+.btn-ghost {
+  background: transparent !important;
+  color: var(--ink-secondary) !important;
+  padding: 10px 24px;
+  border-radius: var(--radius-control);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out-quint), color 0.2s var(--ease-out-quint);
+}
+.btn-ghost:hover { background: var(--line-faint) !important; color: var(--ink) !important; }
+
+.btn-danger {
+  background: rgb(239 68 68 / 0.15) !important;
+  color: var(--err) !important;
+  border: 1px solid var(--err) !important;
+  padding: 10px 24px;
+  border-radius: var(--radius-control);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out-quint);
+}
+.btn-danger:hover { background: rgb(239 68 68 / 0.25) !important; }
+
+/* Size modifiers — compose with a variant class above. */
+.btn-sm { padding: 8px 14px; font-size: 12px; }
+.btn-icon { padding: 0 !important; width: 44px; height: 44px; justify-content: center; }
+.btn-icon-sm { padding: 0 !important; width: 36px; height: 36px; justify-content: center; }
+
+/* Shared disabled state for all button roles. */
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-ghost:disabled,
+.btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
