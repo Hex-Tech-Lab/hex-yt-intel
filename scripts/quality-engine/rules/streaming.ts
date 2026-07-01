@@ -1,6 +1,7 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { SourceFile } from "ts-morph";
-import type { Finding, Rule, RuleContext } from "../domain";
+import type { Finding } from "../domain/Finding";
+import type { Rule, RuleContext } from "../domain/Rule";
 
 // Import TOTAL_DIMENSIONS to check for the correct interpolated string
 const TOTAL_DIMENSIONS = 11;

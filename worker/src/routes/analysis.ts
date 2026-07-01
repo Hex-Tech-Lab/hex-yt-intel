@@ -33,7 +33,7 @@ type AnalysisEnv = {
   DECODO_API_KEY?: string;
 };
 
-if (typeof process !== 'undefined' && process.env.RESIDENTIAL_PROXY_URL === undefined) {
+if (typeof process !== 'undefined' && process.env?.RESIDENTIAL_PROXY_URL === undefined) {
   console.debug('[analyze-llm-stream] RESIDENTIAL_PROXY_URL not configured, YouTube fallback unavailable');
 }
 
@@ -302,10 +302,10 @@ function buildStreamResponse(
       } catch (error) {
         send({ type: "error", error: error instanceof Error ? error.message : "stream failed" });
       } finally {
-        persistController.abort();
         if (!settled) {
           atomicPersist.flush();
         }
+        persistController.abort();
         controller.close();
       }
     },
