@@ -16,16 +16,37 @@ import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
-/**
- * Retry async operation with exponential backoff (2^n * 1000ms) and randomized jitter.
- * Jitter prevents thundering herd: with 5 concurrent streams retrying at identical times,
- * all would hammer the database simultaneously. Jitter spreads them across staggered intervals.
- * Captures individual retry failures to Sentry for observability.
- * @template T The return type of the async function
- * @param fn The async function to retry
- * @param maxAttempts Maximum number of retry attempts (default: 2)
- * @returns The result of the successful function call
- */
+const calculateBackoffDelay = (attempt: number): number => {
+  const baseDelayMs = Math.pow(2, attempt - 1) * 1000;
+  const jitterFactor = 0.5 + Math.random();
+  return Math.floor(baseDelayMs * jitterFactor);
+};
+
+const logRetryFailure = (error: Error, attempt: number, maxAttempts: number, isFinal: boolean): void => {
+  if (isFinal) {
+    Sentry.captureException(error, {
+      tags: { operation: 'persist-retry', final: true, maxAttempts },
+      level: 'error',
+      contexts: { retry: { finalAttempt: maxAttempts, exhausted: true } }
+    });
+    console.error('[analyses/persist] All retry attempts exhausted', {
+      maxAttempts,
+      error: error.message
+    });
+  } else {
+    Sentry.captureException(error, {
+      tags: { operation: 'persist-retry', attempt, maxAttempts },
+      level: 'info',
+      contexts: { retry: { attempt, maxAttempts } }
+    });
+    console.warn('[analyses/persist] Retry attempt failed, will retry', {
+      attempt,
+      maxAttempts,
+      error: error.message
+    });
+  }
+};
+
 const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> => {
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -33,41 +54,14 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
       return await fn();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      if (attempt < maxAttempts) {
-        // Capture retry failure attempt before waiting for next retry
-        Sentry.captureException(error, {
-          tags: { operation: 'persist-retry', attempt, maxAttempts },
-          level: 'info',
-          contexts: { retry: { attempt, maxAttempts } }
-        });
-        console.warn('[analyses/persist] Retry attempt failed, will retry', {
-          attempt,
-          maxAttempts,
-          error: lastError.message
-        });
+      const isFinalAttempt = attempt === maxAttempts;
+      logRetryFailure(lastError, attempt, maxAttempts, isFinalAttempt);
 
-        // Base delay with exponential backoff: 1s for attempt 1, 2s for attempt 2, etc.
-        const baseDelayMs = Math.pow(2, attempt - 1) * 1000;
-        // Jitter: randomize ±50% around base delay to prevent synchronized retry waves
-        // For baseDelayMs=1000: jitter range is [500, 1500]
-        // For baseDelayMs=2000: jitter range is [1000, 3000]
-        const jitterFactor = 0.5 + Math.random(); // Range: [0.5, 1.5]
-        const delayMs = Math.floor(baseDelayMs * jitterFactor);
+      if (!isFinalAttempt) {
+        const delayMs = calculateBackoffDelay(attempt);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
-  }
-  // Capture final failure after all retries exhausted
-  if (lastError) {
-    Sentry.captureException(lastError, {
-      tags: { operation: 'persist-retry', final: true, maxAttempts },
-      level: 'error',
-      contexts: { retry: { finalAttempt: maxAttempts, exhausted: true } }
-    });
-    console.error('[analyses/persist] All retry attempts exhausted', {
-      maxAttempts,
-      error: lastError.message
-    });
   }
   throw lastError || new Error('Retry failed');
 };
