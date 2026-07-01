@@ -209,7 +209,7 @@ async function run() {
 
   const findings = await engine.analyze(fileList);
 
-  // Surface per-rule errors if any occurred
+  // Surface per-rule errors if any occurred — always hard-fail if rules are broken
   if (engine.ruleErrors && engine.ruleErrors.length > 0) {
     console.error("\n❌ [qa-intel] Per-rule execution errors detected during analysis:");
     const errorsByRule: Record<string, Array<{ file: string; message: string }>> = {};
@@ -230,6 +230,8 @@ async function run() {
       });
     });
     console.error("\n  Investigate rule implementations for: " + Object.keys(errorsByRule).join(", "));
+    console.error("\n❌ qa-intel: Rule execution errors are blocking. Cannot proceed with quality gate.");
+    process.exit(1);
   }
 
   // Handle baseline

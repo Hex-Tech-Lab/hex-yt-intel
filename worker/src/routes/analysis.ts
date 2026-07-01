@@ -33,7 +33,7 @@ type AnalysisEnv = {
   DECODO_API_KEY?: string;
 };
 
-if (process.env.RESIDENTIAL_PROXY_URL === undefined && typeof process !== 'undefined') {
+if (typeof process !== 'undefined' && process.env.RESIDENTIAL_PROXY_URL === undefined) {
   console.debug('[analyze-llm-stream] RESIDENTIAL_PROXY_URL not configured, YouTube fallback unavailable');
 }
 
