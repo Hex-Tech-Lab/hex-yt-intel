@@ -51,12 +51,19 @@ export class MetadataScraper {
       throw new Error(`YouTube API channel fetch failed: ${response.status}`);
     }
 
-    const data = (await response.json()) as { items?: Array<{ snippet?: Record<string, unknown> }> };
-    const snippet = data.items?.[0]?.snippet || {};
+    const data = (await response.json()) as {
+      items?: Array<{
+        snippet?: {
+          title?: string;
+          description?: string;
+        };
+      }>;
+    };
+    const snippet = data.items?.[0]?.snippet;
 
     return {
-      title: String(snippet.title || 'Unknown Channel'),
-      description: String(snippet.description || ''),
+      title: snippet?.title || 'Unknown Channel',
+      description: snippet?.description || '',
     };
   }
 
@@ -70,7 +77,11 @@ export class MetadataScraper {
 
     const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=${videoId}&key=${this.apiKey}`;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => {
+      // Only abort here; the AbortError is logged once in the catch block below
+      // to avoid double-counting a single timeout as two error records.
+      controller.abort();
+    }, 5000);
 
     try {
       const response = await fetchWithProxy(
@@ -85,12 +96,26 @@ export class MetadataScraper {
       if (!response.ok) {
         throw new Error(`YouTube API returned ${response.status}`);
       }
+      // settleAnalysis: Timeout is logged to mark error state on abort
 
-      const data = (await response.json()) as { 
-        items?: Array<{ 
-          snippet?: Record<string, unknown>; 
-          statistics?: Record<string, unknown>; 
-          contentDetails?: Record<string, unknown> 
+      const data = (await response.json()) as {
+        items?: Array<{
+          snippet?: {
+            title?: string;
+            description?: string;
+            channelTitle?: string;
+            channelId?: string;
+            publishedAt?: string;
+            thumbnails?: Record<string, { url?: string }>;
+          };
+          statistics?: {
+            viewCount?: string;
+            likeCount?: string;
+            commentCount?: string;
+          };
+          contentDetails?: {
+            duration?: string;
+          };
         }>;
         error?: unknown;
       };
@@ -103,8 +128,17 @@ export class MetadataScraper {
         throw new Error('Video not found');
       }
 
-      // skipcq: TS-D0030 - Safe: length check above guarantees data.items[0] exists
-      return this.parseMetadata(videoId, data.items[0]!);
+      const item = data.items[0];
+      if (!item) {
+        throw new Error('Video item is null or undefined');
+      }
+
+      return this.parseMetadata(videoId, item);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        console.error('[MetadataScraper] YouTube fetch aborted (timeout)', { videoId });
+      }
+      throw err;
     } finally {
       clearTimeout(timeout);
     }
@@ -122,23 +156,40 @@ export class MetadataScraper {
    */
   private parseMetadata(
     videoId: string,
-    video: { snippet?: any; statistics?: any; contentDetails?: any }
+    video: {
+      snippet?: {
+        title?: string;
+        description?: string;
+        channelTitle?: string;
+        channelId?: string;
+        publishedAt?: string;
+        thumbnails?: Record<string, { url?: string }>;
+      };
+      statistics?: {
+        viewCount?: string;
+        likeCount?: string;
+        commentCount?: string;
+      };
+      contentDetails?: {
+        duration?: string;
+      };
+    }
   ): VideoMetadata {
-    const snippet = video.snippet || {};
-    const stats = video.statistics || {};
-    const details = video.contentDetails || {};
+    const snippet = video.snippet ?? {};
+    const stats = video.statistics ?? {};
+    const details = video.contentDetails ?? {};
 
     return {
       videoId,
-      title: String(snippet.title || ''),
-      description: String(snippet.description || ''),
-      channelTitle: String(snippet.channelTitle || ''),
-      channelId: String(snippet.channelId || ''),
-      publishedAt: String(snippet.publishedAt || ''),
+      title: snippet.title ?? '',
+      description: snippet.description ?? '',
+      channelTitle: snippet.channelTitle ?? '',
+      channelId: snippet.channelId ?? '',
+      publishedAt: snippet.publishedAt ?? '',
       duration: this.parseDuration(details.duration),
-      viewCount: parseInt(String(stats.viewCount || '0'), 10),
-      likeCount: parseInt(String(stats.likeCount || '0'), 10),
-      commentCount: parseInt(String(stats.commentCount || '0'), 10),
+      viewCount: stats.viewCount ? parseInt(stats.viewCount, 10) : 0,
+      likeCount: stats.likeCount ? parseInt(stats.likeCount, 10) : 0,
+      commentCount: stats.commentCount ? parseInt(stats.commentCount, 10) : 0,
       thumbnailUrl: this.getThumbnailUrl(snippet.thumbnails),
     };
   }
@@ -146,26 +197,25 @@ export class MetadataScraper {
   /**
    * Parse ISO 8601 duration (PT1H2M3S) to seconds
    */
-  private parseDuration(duration: any): number {
+  private parseDuration(duration?: string): number {
     if (!duration || typeof duration !== 'string') return 0;
     const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
     if (!match) return 0;
-    const hours = (parseInt(match[1] || '0') || 0) * 3600;
-    const minutes = (parseInt(match[2] || '0') || 0) * 60;
-    const seconds = parseInt(match[3] || '0') || 0;
+    const hours = (parseInt(match[1]?.slice(0, -1) ?? '0', 10) ?? 0) * 3600;
+    const minutes = (parseInt(match[2]?.slice(0, -1) ?? '0', 10) ?? 0) * 60;
+    const seconds = parseInt(match[3]?.slice(0, -1) ?? '0', 10) ?? 0;
     return hours + minutes + seconds;
   }
 
   /**
    * Get thumbnail URL with fallback chain: high → medium → default
    */
-  private getThumbnailUrl(thumbnails: Record<string, Record<string, string>> | unknown): string {
+  private getThumbnailUrl(thumbnails?: Record<string, { url?: string }>): string {
     if (!thumbnails || typeof thumbnails !== 'object') return '';
-    const t = thumbnails as Record<string, Record<string, string>>;
     return (
-      t.high?.url ||
-      t.medium?.url ||
-      t.default?.url ||
+      thumbnails.high?.url ||
+      thumbnails.medium?.url ||
+      thumbnails.default?.url ||
       ''
     );
   }

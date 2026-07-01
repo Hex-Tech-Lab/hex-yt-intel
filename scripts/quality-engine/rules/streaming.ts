@@ -1,12 +1,15 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { SourceFile } from "ts-morph";
-import type { Finding, IRule } from "../engine";
+import type { Finding } from "../domain/Finding";
+import type { Rule, RuleContext } from "../domain/Rule";
 
-export const StreamResilienceRule: IRule = {
+export const StreamResilienceRule: Rule = {
   name: "stream-resilience-audit",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     const text = source.getText();
 
     if (text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError')) {
@@ -22,16 +25,19 @@ export const StreamResilienceRule: IRule = {
   }
 };
 
-export const BundleContradictionRule: IRule = {
+export const BundleContradictionRule: Rule = {
   name: "bundle-contradiction-detector",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const text = source.getText();
-    if (text.includes('All ${TOTAL_DIMENSIONS} dimensions must be present') &&
+    const allDimensionsPattern = /All (?:\$\{TOTAL_DIMENSIONS\}|11) dimensions must be present/;
+    if (allDimensionsPattern.test(text) &&
         text.includes('ONLY generate') &&
         !text.includes('skipAllDimensionsInstruction')) {
       findings.push({
-        file: source.getFilePath().replace(/\\/g, "/"),
+        file: ctx.filePath.replace(/\\/g, "/"),
         severity: "critical",
         title: "Prompt: Contradictory instructions — 'all dims' + 'only these dims'",
         why: "LLM sees both 'All 11 dims' AND 'ONLY these dims'. LLM follows the first. The focus section is ignored.",
@@ -42,11 +48,13 @@ export const BundleContradictionRule: IRule = {
   }
 };
 
-export const TranscriptGuardRule: IRule = {
+export const TranscriptGuardRule: Rule = {
   name: "transcript-guard-enforcer",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     const text = source.getText();
     const isEntryPoint = text.includes('app.post') || text.includes('app.get');
     if (isEntryPoint && (text.includes('analyze') || text.includes('stream')) && text.includes('transcript')) {
@@ -65,11 +73,13 @@ export const TranscriptGuardRule: IRule = {
   }
 };
 
-export const StreamSettleRule: IRule = {
+export const StreamSettleRule: Rule = {
   name: "stream-settle-audit",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     const text = source.getText();
     if (text.includes('Promise.all') && text.includes('completedIndexes') && filePath.includes('useSSEStream')) {
       if (!text.includes('streamController') && !text.includes('AbortController')) {
@@ -86,11 +96,13 @@ export const StreamSettleRule: IRule = {
   }
 };
 
-export const CascadeOrderRule: IRule = {
+export const CascadeOrderRule: Rule = {
   name: "cascade-order-enforcer",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     if (!filePath.includes('TranscriptExtractor')) return findings;
     const text = source.getText();
     const decodoIdx = text.indexOf('Decodo');
@@ -108,11 +120,13 @@ export const CascadeOrderRule: IRule = {
   }
 };
 
-export const ProxyPromotionRule: IRule = {
+export const ProxyPromotionRule: Rule = {
   name: "proxy-promotion-audit",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     
     // Check wrangler.toml directly if scanned, or look for proxy URL patterns in TS code
     const text = source.getText();
@@ -129,13 +143,18 @@ export const ProxyPromotionRule: IRule = {
     } else if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
       // If we see proxy configuration reference in TypeScript, ensure wrangler.toml exists and configures it,
       // or check that it's properly handled as a secret.
-      if (text.includes('RESIDENTIAL_PROXY_URL') && !text.includes('process.env.RESIDENTIAL_PROXY_URL')) {
+      const hasProxyReference = text.includes('RESIDENTIAL_PROXY_URL');
+      const hasSecureAccess = text.includes('process.env.RESIDENTIAL_PROXY_URL') ||
+                              text.includes('c.env.RESIDENTIAL_PROXY_URL') ||
+                              text.includes('env.RESIDENTIAL_PROXY_URL');
+      const isTypeDefinition = text.includes('RESIDENTIAL_PROXY_URL?: string') || text.includes('RESIDENTIAL_PROXY_URL: string');
+      if (hasProxyReference && !hasSecureAccess && !isTypeDefinition) {
         findings.push({
           file: filePath,
           severity: "high",
           title: "Config: Proxy URL accessed directly without env secret",
           why: "Hardcoded proxy URL patterns or raw references in TypeScript code violate secret hygiene.",
-          fix: "Access RESIDENTIAL_PROXY_URL exclusively via process.env.RESIDENTIAL_PROXY_URL."
+          fix: "Access RESIDENTIAL_PROXY_URL via process.env (Node.js) or c.env/env (Hono bindings)."
         });
       }
     }
@@ -143,11 +162,13 @@ export const ProxyPromotionRule: IRule = {
   }
 };
 
-export const ModuleLevelDynamicImportRule: IRule = {
+export const ModuleLevelDynamicImportRule: Rule = {
   name: "module-level-dynamic-import",
-  check: (source: SourceFile) => {
+  scope: "file",
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
-    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const filePath = ctx.filePath.replace(/\\/g, "/");
     if (!filePath.includes('.tsx') && !filePath.includes('.jsx')) return findings;
 
     const lines = source.getText().split(/\r?\n/);

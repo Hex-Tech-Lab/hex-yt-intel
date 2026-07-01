@@ -9,7 +9,11 @@
       "Bash(time *)",
       "mcp__claude_ai_Cloudflare_Developer_Platform__workers_get_worker",
       "mcp__claude_ai_Cloudflare_Developer_Platform__workers_get_worker_code",
-      "mcp__claude_ai_Context7__query-docs"
+      "mcp__claude_ai_Context7__query-docs",
+      "mcp__Vercel__get_project",
+      "mcp__Vercel__list_deployments",
+      "mcp__Vercel__get_deployment",
+      "mcp__Vercel__list_projects"
     ]
   }
 }

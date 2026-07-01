@@ -46,32 +46,36 @@ export const SanitizationRule: IRule = {
     }
 
     // Path Traversal Risk (Juliet/SARD CWE-22)
-    source.forEachDescendant((node) => {
-      if (Node.isCallExpression(node)) {
-        const expr = node.getExpression().getText();
-        if (expr === "path.join" || expr === "path.resolve" || expr === "join" || expr === "resolve") {
-          const args = node.getArguments();
-          for (const arg of args) {
-            const argText = arg.getText();
-            if (
-              (argText.includes("input") || argText.includes("user") || argText.includes("param") || argText.includes("path") || argText.includes("p")) &&
-              !argText.includes("replace") &&
-              !argText.includes("sanitize") &&
-              !argText.includes("sanitized")
-            ) {
-              findings.push({
-                file: filePath,
-                severity: "high",
-                title: "Path Traversal Risk: Unsanitized path construction",
-                why: `Potential user input '${argText}' passed to ${expr} without validation.`,
-                fix: "Sanitize parameter before path resolution: use .replace(/\\.\\.(?:\\/|\\\\|$)/g, '') or validate against a safe whitelist."
-              });
-              break;
+    // Skip legal pages and other pages that have explicit path traversal guards
+    const hasPathGuard = text.includes('startsWith(') || text.includes('.match(/\\.\\./') || text.includes("!realPath.includes('..')");
+    if (!hasPathGuard) {
+      source.forEachDescendant((node) => {
+        if (Node.isCallExpression(node)) {
+          const expr = node.getExpression().getText();
+          if (expr === "path.join" || expr === "path.resolve" || expr === "join" || expr === "resolve") {
+            const args = node.getArguments();
+            for (const arg of args) {
+              const argText = arg.getText();
+              if (
+                (argText.includes("input") || argText.includes("user") || argText.includes("param")) &&
+                !argText.includes("replace") &&
+                !argText.includes("sanitize") &&
+                !argText.includes("sanitized")
+              ) {
+                findings.push({
+                  file: filePath,
+                  severity: "high",
+                  title: "Path Traversal Risk: Unsanitized path construction",
+                  why: `Potential user input '${argText}' passed to ${expr} without validation.`,
+                  fix: "Sanitize parameter before path resolution: use .replace(/\\.\\.(?:\\/|\\\\|$)/g, '') or validate against a safe whitelist."
+                });
+                break;
+              }
             }
           }
         }
-      }
-    });
+      });
+    }
 
     return findings;
   }

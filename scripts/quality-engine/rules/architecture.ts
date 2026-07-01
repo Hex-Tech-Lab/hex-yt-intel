@@ -1,14 +1,16 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { SourceFile } from "ts-morph";
-import type { Finding, IRule } from "../engine";
+import type { Finding } from "../domain/Finding";
+import type { Rule, RuleContext } from "../domain/Rule";
 
 function normalizePosixPath(p: string): string {
   return p.replace(/\\/g, "/").replace(/\/+/g, "/");
 }
 
-export const HexagonalBoundaryRule: IRule = {
+export const HexagonalBoundaryRule: Rule = {
   name: "hexagonal-boundary-enforcer",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
     const isAdapter = filePath.includes("/adapters/");
@@ -34,9 +36,10 @@ export const HexagonalBoundaryRule: IRule = {
   }
 };
 
-export const ComplexityRule: IRule = {
+export const ComplexityRule: Rule = {
     name: "complexity-monitor",
-    check: (source: SourceFile) => {
+    check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
       const findings: Finding[] = [];
       const filePath = normalizePosixPath(source.getFilePath());
       const lines = source.getText().split(/\r?\n/).length;
@@ -53,9 +56,10 @@ export const ComplexityRule: IRule = {
     }
 };
 
-export const ErrorTaxonomyRule: IRule = {
+export const ErrorTaxonomyRule: Rule = {
   name: "error-taxonomy-audit",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
 
@@ -80,9 +84,10 @@ export const ErrorTaxonomyRule: IRule = {
   }
 };
 
-export const CrossPlatformRule: IRule = {
+export const CrossPlatformRule: Rule = {
   name: "cross-platform-compatibility",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
@@ -101,9 +106,10 @@ export const CrossPlatformRule: IRule = {
   }
 };
 
-export const SchemaContractRule: IRule = {
+export const SchemaContractRule: Rule = {
   name: "schema-contract-audit",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
@@ -187,9 +193,10 @@ export const SchemaContractRule: IRule = {
   }
 };
 
-export const RedundantValidationRule: IRule = {
+export const RedundantValidationRule: Rule = {
   name: "redundant-validation-detector",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
@@ -211,9 +218,10 @@ export const RedundantValidationRule: IRule = {
   }
 };
 
-export const WorkflowRule: IRule = {
+export const WorkflowRule: Rule = {
   name: "workflow-safety-check",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
 
@@ -262,9 +270,10 @@ export const WorkflowRule: IRule = {
   }
 };
 
-export const TranscriptUnsafeAccessRule: IRule = {
+export const TranscriptUnsafeAccessRule: Rule = {
   name: "transcript-unsafe-access",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
     if (!filePath.includes('Transcript') && !filePath.includes('transcript')) return findings;
@@ -284,9 +293,10 @@ export const TranscriptUnsafeAccessRule: IRule = {
   }
 };
 
-export const HardcodedDomainLogicRule: IRule = {
+export const HardcodedDomainLogicRule: Rule = {
   name: "hardcoded-domain-logic",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
@@ -305,9 +315,10 @@ export const HardcodedDomainLogicRule: IRule = {
   }
 };
 
-export const StateSyncRule: IRule = {
+export const StateSyncRule: Rule = {
   name: "state-sync-audit",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
     const text = source.getText();
@@ -328,10 +339,11 @@ export const StateSyncRule: IRule = {
   }
 };
 
-export const GraphAwareBoundaryRule: IRule = {
+export const GraphAwareBoundaryRule: Rule = {
   name: "graph-aware-boundary",
   scope: "file",
-  check: (source: SourceFile) => {
+  check: (ctx: RuleContext) => {
+    const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const filePath = normalizePosixPath(source.getFilePath());
     
