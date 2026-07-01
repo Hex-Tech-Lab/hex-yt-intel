@@ -304,7 +304,7 @@ function buildStreamResponse(
       } catch (error) {
         send({ type: "error", error: error instanceof Error ? error.message : "stream failed" });
       } finally {
-        streamCompleteController.abort();
+        persistController.abort();
         if (!settled) {
           atomicPersist.flush();
         }
