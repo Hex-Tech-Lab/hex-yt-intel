@@ -68,13 +68,12 @@ async function hasSupabaseAuth(
           response.headers.set('Pragma', 'no-cache');
 
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, {
-              ...options,
-              path: options?.path ?? '/',
-              secure: options?.secure ?? true,
-              httpOnly: options?.httpOnly ?? true,
-              sameSite: options?.sameSite ?? 'lax',
-            });
+            // Spread Supabase's cookie options as-is (official @supabase/ssr pattern).
+            // Do NOT force httpOnly/secure/sameSite: Supabase's auth token cookies are
+            // intentionally browser-readable so the client SDK can hydrate the session.
+            // Forcing httpOnly:true on a refresh made the browser lose its own session
+            // after a reload (e.g. switching to Desktop Site) → sign-in redirect loop.
+            response.cookies.set(name, value, { ...options, path: options?.path ?? '/' });
           });
         },
       },
