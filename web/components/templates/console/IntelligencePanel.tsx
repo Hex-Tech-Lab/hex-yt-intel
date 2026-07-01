@@ -206,7 +206,7 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
       {selectedNode.keyTerms.length > 0 && (
         <div className="flex flex-wrap gap-1.25">
           {selectedNode.keyTerms.map((t) => (
-            <span key={t} className="p-0.5 px-2 rounded-full border border-[var(--line)] text-[var(--ink-secondary)] font-mono text-[10px] tracking-tight">
+            <span key={t} className="p-0.5 px-2 rounded-[7px] border border-[var(--line)] text-[var(--ink-secondary)] font-mono text-[10px] tracking-tight">
               {t}
             </span>
           ))}

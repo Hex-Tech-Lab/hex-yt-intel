@@ -76,7 +76,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
 
       {tier && (
         <span
-          className="inline-flex items-center gap-1.5 rounded-full border border-[rgb(6_182_212_/_0.3)] bg-[rgb(6_182_212_/_0.10)] py-1 px-[11px] font-mono text-[11px] font-semibold tracking-wider text-[var(--accent-ink)]"
+          className="inline-flex items-center gap-1.5 rounded-[7px] border border-[rgb(6_182_212_/_0.3)] bg-[rgb(6_182_212_/_0.10)] py-1 px-[11px] font-mono text-[11px] font-semibold tracking-wider text-[var(--accent-ink)]"
         >
           <Icon icon="solar:crown-minimalistic-linear" size={12} />
           {tier.toUpperCase()}
