@@ -47,6 +47,11 @@ export async function GET(
       return NextResponse.json({ error: 'Analysis payload stub is missing', status: 'incomplete' }, { status: 404 });
     }
 
+    // Persona lives inside analysis_payload.persona.primary — there is no
+    // detected_persona/analysis_at/streaming_interrupted column on `analyses`.
+    const payload = (analysis.analysis_payload || {}) as { persona?: { primary?: { id?: string; label?: string } } };
+    const primaryPersona = payload.persona?.primary;
+
     return NextResponse.json({
       id: analysis.id,
       videoId: analysis.video_id,
@@ -56,12 +61,12 @@ export async function GET(
       analysis_markdown: safeReconstructMarkdown(analysis),
       analysis_payload: analysis.analysis_payload || null,
       validation_report: report,
-      analysisAt: analysis.analysis_at || analysis.created_at,
-      detectedPersona: analysis.detected_persona || null,
-      streaming: { 
-        started: analysis.created_at, 
-        interrupted: analysis.streaming_interrupted || false,
-        dimensionsReceived: [] 
+      analysisAt: analysis.created_at,
+      detectedPersona: primaryPersona?.id ?? primaryPersona?.label ?? null,
+      streaming: {
+        started: analysis.created_at,
+        interrupted: false,
+        dimensionsReceived: []
       },
     });
   } catch (err) {

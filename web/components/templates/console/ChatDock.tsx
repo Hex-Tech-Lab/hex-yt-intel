@@ -226,8 +226,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       )}
 
       {/* Messages — centered column for readable line length */}
-      <div ref={listRef} aria-live="polite" className="flex-1 overflow-y-auto py-4 px-0">
-        <div className="max-w-[820px] mx-auto px-5 flex flex-col gap-3">
+      <div ref={listRef} aria-live="polite" className="flex-1 overflow-y-auto py-5 px-0">
+        <div className="max-w-[820px] mx-auto px-5 lg:px-6 flex flex-col gap-4">
           {messages.length === 0 && !sending && (
             <div className="my-6 mx-auto text-center text-[var(--ink-muted)] font-mono text-xs leading-[1.6]">
               <Icon icon="solar:chat-square-like-linear" size={28} className="text-[var(--ink-muted)] mb-2 mx-auto" />
@@ -241,7 +241,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
             return (
               <div key={m.id} className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
                 <div 
-                  className={isUser ? "max-w-[80%] py-[9px] px-[13px] rounded-xl text-[13.5px] leading-[1.55] bg-[var(--accent)] text-[var(--void)] border-none rounded-br-[4px] whitespace-pre-wrap break-words" : "prose prose-invert max-w-[80%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 py-[9px] px-[13px] rounded-xl text-[13.5px] leading-[1.55] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] rounded-bl-[4px] break-words"}
+                  className={isUser ? "max-w-[85%] py-3 px-4 rounded-[7px] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] border-none whitespace-pre-wrap break-words" : "prose prose-invert max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 py-3 px-4 rounded-[7px] text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words"}
                 >
                   {isUser ? (
                     body
@@ -304,7 +304,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                   <div className="flex flex-wrap gap-1.5 max-w-[92%]">
                     {options.map((opt) => (
                       <button key={opt} onClick={() => void submit(opt)} disabled={sending}
-                        className={`py-1.5 px-[11px] rounded-full border border-[var(--accent)] bg-[rgb(6_182_212_/_0.10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        className={`py-2 px-3 rounded-[7px] border border-[var(--accent)] bg-[rgb(6_182_212_/_0.10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         {opt}
                       </button>
                     ))}
@@ -325,7 +325,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       </div>
 
       {/* Composer */}
-      <div className="border-t border-[var(--line)] p-3">
+      <div className="border-t border-[var(--line)] px-5 lg:px-6 py-4">
         <div className="max-w-[820px] mx-auto flex gap-2 items-end">
           <textarea
             ref={inputRef}

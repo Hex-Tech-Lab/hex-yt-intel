@@ -204,6 +204,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               streaming: restoreData.streaming,
             });
 
+            // Rehydrate the rich metadata stores (persona / knowledge graph /
+            // classification / monetization) so restored graphs render real
+            // content — matches the history-click restore path in AnalysisHistory.
+            if (restoreData.analysis_payload) {
+              const payload = restoreData.analysis_payload;
+              const nucleus = useSynthesisNucleus.getState();
+              if (payload.persona) nucleus.setPersonaConfig(payload.persona);
+              if (payload.knowledgeGraph) nucleus.setKnowledgeGraph(payload.knowledgeGraph);
+              if (payload.classification) nucleus.setClassification(payload.classification);
+              if (payload.monetizationVerdict) nucleus.setMonetizationVerdict(payload.monetizationVerdict);
+            }
+
             setStatus('complete');
           });
 
