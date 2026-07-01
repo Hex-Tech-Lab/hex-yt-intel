@@ -53,9 +53,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     try {
       const savedOpen = localStorage.getItem(OPEN_KEY);
       if (savedOpen === '1') setOpen(true);
-    } catch (e) {
-      console.debug('[ChatDock] localStorage read failed:', e instanceof Error ? e.message : String(e));
-    }
+    } catch { /* noop */ }
   }, [setOpen]);
 
   useEffect(() => {

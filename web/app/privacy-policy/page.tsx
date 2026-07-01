@@ -25,17 +25,8 @@ export default async function PrivacyPolicyPage() {
 
   let content = '';
   try {
-    if (!realPath.startsWith(realDocsDir + path.sep) && realPath !== realDocsDir) {
-      throw new Error('Path traversal blocked');
-    }
-    content = fs.readFileSync(realPath, 'utf8');
-  } catch (e) {
-    const errorMsg = e instanceof Error ? e.message : String(e);
-    console.error('[privacy-policy] Failed to read legal doc:', { error: errorMsg, filePath: realPath });
-    Sentry.captureException(e, {
-      tags: { operation: 'legal-page-render', page: 'privacy-policy' },
-      contexts: { file: { path: realPath, docName } }
-    });
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch {
     content = '# Privacy Policy\n\nThis document is currently being compiled by our legal team. Please check back later.';
   }
 

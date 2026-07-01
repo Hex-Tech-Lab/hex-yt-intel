@@ -23,7 +23,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   const [collapsedNodes, setCollapsedNodes] = useState<Record<string, boolean>>({});
 
   // Hierarchy score: lower is higher in the tree (Theme -> Concept -> Implementation -> Detail)
-  const typePriority = useMemo(() => ({
+  const typePriority = useMemo((): Record<string, number> => ({
     trend: 0,        // Theme level
     study: 0,        // Theme level
     person: 1,       // Concept level
@@ -32,7 +32,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     framework: 4,    // Detail level
     tool: 5,         // Detail level
     metric: 6        // Detail level
-  }) as Record<string, number>, []);
+  }), []);
 
   const toggleCollapse = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -135,7 +135,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
         let currentY = startY;
         // Sort children by priority for consistent vertical layout
         const sortedChildren = [...node.children].sort((a, b) => (typePriority[a.type] ?? 99) - (typePriority[b.type] ?? 99));
-        
+
         sortedChildren.forEach((child) => {
           const childLeaves = countVisibleLeaves(child);
           const childY = currentY + (childLeaves * rowHeight) / 2 - rowHeight / 2;

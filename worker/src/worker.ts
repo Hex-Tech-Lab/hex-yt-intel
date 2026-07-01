@@ -28,7 +28,7 @@ type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use("*", sentry(app, (env) => ({
+app.use("*", sentry(app, (env: Env) => ({
   dsn: env.SENTRY_DSN,
   tracesSampleRate: 1.0,
 })));
