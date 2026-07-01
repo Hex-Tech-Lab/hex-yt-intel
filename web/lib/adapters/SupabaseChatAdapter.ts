@@ -2,15 +2,6 @@ import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 import type { ChatMessage, ChatConversation } from '@/lib/types/chat';
 
-interface ConversationRow {
-  id: string;
-  user_id: string;
-  title: string | null;
-  analysis_id: string | null;
-  created_at: string;
-  updated_at: string;
-  last_message_at: string | null;
-}
 
 interface MessageRow {
   id: string;
@@ -28,7 +19,7 @@ export class SupabaseChatAdapter {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('chat_conversations')
-        .select('id, user_id, title, analysis_id, created_at, updated_at, last_message_at')
+        .select('id, user_id, title, analysis_id, created_at, updated_at, last_message_at, analyses(video_id)')
         .eq('user_id', userId)
         .order('last_message_at', { ascending: false })
         .limit(100);
@@ -38,11 +29,12 @@ export class SupabaseChatAdapter {
         throw error;
       }
 
-      return (data || []).map((r: ConversationRow) => ({
+      return (data || []).map((r: any) => ({
         id: r.id,
         userId: r.user_id,
         title: r.title || 'Untitled',
         analysisId: r.analysis_id,
+        videoId: r.analyses?.video_id || null,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
         lastMessageAt: r.last_message_at || r.created_at,

@@ -73,6 +73,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
           id: e.id,
           label: e.label,
           type: e.type,
+          entityType: e.type || 'concept',
           weight: e.weight
         }));
         const edges = (data.relations || []).map((r: any) => ({
@@ -126,6 +127,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
           polarity: typeof n.polarity === 'number' ? n.polarity : 0,
           keyTerms: Array.isArray(n.keyTerms) ? n.keyTerms : [],
           inPersona: typeof n.inPersona === 'boolean' ? n.inPersona : true,
+          entityType: n.entityType || n.type || 'concept',
         }));
 
         // Validate edges: check required fields and filter out malformed ones

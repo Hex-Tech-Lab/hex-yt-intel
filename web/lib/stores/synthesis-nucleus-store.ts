@@ -44,9 +44,16 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
   return {
     ...readSubStores(),
 
-    initializeAnalysis: (payload: Partial<UCISPayload>) => {
+    initializeAnalysis: (payload: Partial<UCISPayload> & { analysisPayload?: any }) => {
       useAnalysisStateStore.getState().initializeAnalysis(payload);
       useAnalysisStreamingStore.getState().clearStreamError();
+      const ap = payload.analysisPayload;
+      if (ap) {
+        if (ap.persona) useAnalysisMetadataStore.getState().setPersonaConfig(ap.persona);
+        if (ap.knowledgeGraph) useAnalysisMetadataStore.getState().setKnowledgeGraph(ap.knowledgeGraph);
+        if (ap.classification) useAnalysisMetadataStore.getState().setClassification(ap.classification);
+        if (ap.monetizationVerdict) useAnalysisMetadataStore.getState().setMonetizationVerdict(ap.monetizationVerdict);
+      }
     },
 
     addDimension: (dimension: UCISDimension) => {

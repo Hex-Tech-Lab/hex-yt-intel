@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, startTransition, useTransition } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useChatStore } from '@/store/useChatStore';
+import { useAnalysisStore } from '@/store/useAnalysisStore';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
@@ -29,6 +30,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     isChatOpen: open, setChatOpen: setOpen,
   } = useChatStore();
   const [showThreads, setShowThreads] = useState(false);
+  const videoId = useAnalysisStore((s) => s.videoMetadata?.videoId);
   const [localInput, setLocalInput] = useState('');
   const [input, setInput] = useState('');
   const [, startInputTransition] = useTransition();
@@ -53,11 +55,17 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     try {
       const savedOpen = localStorage.getItem(OPEN_KEY);
       if (savedOpen === '1') setOpen(true);
-    } catch { /* noop */ }
+    } catch (e) {
+      console.debug('[ChatDock] LocalStorage open_key read failed:', e);
+    }
   }, [setOpen]);
 
   useEffect(() => {
-    try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* noop */ }
+    try {
+      localStorage.setItem(OPEN_KEY, open ? '1' : '0');
+    } catch (e) {
+      console.debug('[ChatDock] LocalStorage open_key write failed:', e);
+    }
     if (!open) {
       setShowThreads(false);
       return;
@@ -71,14 +79,20 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
       const state = useChatStore.getState();
       
-      // If we have an analysis, try to ground in that thread
-      if (analysisId) {
-        const existing = state.conversations.find((c) => c.analysisId === analysisId);
+      // If we have an analysis or videoId context, try to ground in that thread
+      if (analysisId || videoId) {
+        const existing = state.conversations.find((c) => 
+          (analysisId && c.analysisId === analysisId) || 
+          (videoId && c.videoId === videoId)
+        );
         if (existing) {
-          // Always call selectConversation — it has its own messagesByConv guard
-          // to skip fetching if messages are already loaded
+          // If the conversation matched by videoId but has a different analysisId (due to re-analysis),
+          // update it in-place and save to database.
+          if (analysisId && existing.analysisId !== analysisId) {
+            void useChatStore.getState().updateConversationAnalysisId(existing.id, analysisId);
+          }
           await selectConversation(existing.id);
-        } else {
+        } else if (analysisId) {
           await newConversation({ analysisId });
         }
       } else {
@@ -102,7 +116,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     return () => {
       cancelled = true;
     };
-  }, [open, analysisId, loadConversations, selectConversation, newConversation]);
+  }, [open, analysisId, videoId, loadConversations, selectConversation, newConversation]);
 
   useEffect(() => {
     if (open && activeId) void selectConversation(activeId);
@@ -344,8 +358,8 @@ function parseAssistant(content: string): { body: string; options: string[] } {
   try {
     const arr = JSON.parse(m[1] ?? '[]');
     if (Array.isArray(arr)) options = arr.filter((x) => typeof x === 'string').slice(0, 4);
-  } catch {
-    /* malformed / still streaming */
+  } catch (e) {
+    console.debug('[ChatDock] Assistant reply options JSON parse failed (streaming/malformed):', e);
   }
   const body = content.slice(0, m.index).trim();
   return { body: body || content.trim(), options };

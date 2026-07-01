@@ -12,8 +12,20 @@ export class ValidationService {
   validate12D(analysis: unknown, expectedCount?: number): boolean {
     if (typeof analysis !== 'string') return false;
 
-    const trimmed = analysis.trim();
-    // Clamp expectedCount to a sane range: positive integer, max 11 dimensions
+    let trimmed = analysis.trim();
+    if (trimmed.startsWith('```')) {
+      const firstBrace = trimmed.indexOf('{');
+      const firstHash = trimmed.indexOf('#');
+      if (firstBrace !== -1 && (firstHash === -1 || firstBrace < firstHash)) {
+        trimmed = trimmed.slice(firstBrace);
+      } else if (firstHash !== -1) {
+        trimmed = trimmed.slice(firstHash);
+      }
+    }
+    if (trimmed.endsWith('```')) {
+      trimmed = trimmed.slice(0, -3).trimEnd();
+    }
+
     const targetCount = Number.isFinite(expectedCount) && expectedCount! > 0
       ? Math.min(Math.floor(expectedCount!), 11)
       : 8;

@@ -14,22 +14,29 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const body: unknown = await request.json().catch(() => ({}));
   const payloadSchema = z.object({
-    title: z.string().transform(v => v.trim().slice(0, 120)).default(''),
+    title: z.string().transform(v => v.trim().slice(0, 120)).optional(),
+    analysisId: z.string().uuid().nullable().optional(),
   });
 
   const parsed = payloadSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid payload', details: parsed.error.flatten() }, { status: 400 });
   }
-  const { title } = parsed.data;
+  const { title, analysisId } = parsed.data;
 
-  if (!title) return NextResponse.json({ error: 'Title required' }, { status: 400 });
+  const updates: Record<string, any> = {};
+  if (title !== undefined) updates.title = title;
+  if (analysisId !== undefined) updates.analysis_id = analysisId;
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'Payload must contain title or analysisId' }, { status: 400 });
+  }
 
   // RLS scopes the update to the owner.
-  const { error } = await supabase.from('chat_conversations').update({ title }).eq('id', id);
+  const { error } = await supabase.from('chat_conversations').update(updates).eq('id', id);
   if (error) {
-    console.error('[chat] rename conversation failed:', error.message);
-    return NextResponse.json({ error: 'Failed to rename conversation' }, { status: 500 });
+    console.error('[chat] update conversation failed:', error.message);
+    return NextResponse.json({ error: 'Failed to update conversation' }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
 }
