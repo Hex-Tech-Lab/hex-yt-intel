@@ -381,20 +381,20 @@ function PersistStatusIndicator({ state }: { state: 'idle' | 'saving' | 'saved' 
 
   switch (state) {
     case 'saving':
-      color = '#f59e0b'; // amber
+      color = 'var(--warn)';
       label = 'saving';
       pulse = true;
       break;
     case 'saved':
-      color = '#10b981'; // emerald
+      color = 'var(--ok)';
       label = 'saved';
       break;
     case 'failed':
-      color = '#f43f5e'; // rose
+      color = 'var(--err)';
       label = 'save failed';
       break;
     case 'aborted':
-      color = '#94a3b8'; // slate
+      color = 'var(--ink-muted)';
       label = 'aborted';
       break;
   }
