@@ -185,7 +185,7 @@ function buildStreamResponse(
       () => {
         if (!settled) {
           settled = true;
-          console.debug('[analyze-llm-stream] Client disconnected, allowing persist to complete');
+          console.debug('[analyze-llm-stream] Client disconnected, allowing persist to complete', { event: 'http-abort' });
         }
       },
       { once: true },
