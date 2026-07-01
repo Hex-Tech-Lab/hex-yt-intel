@@ -71,7 +71,25 @@ export async function GET(request: NextRequest) {
   }
 
   if (sessionError) {
+    // The exchange can fail on a stale/replayed authorization code — e.g. when a
+    // Desktop/Mobile-site reload re-fires this callback while the user is already
+    // signed in. Before dead-ending on the error page, check whether a valid
+    // session already exists; if so, just send them into the app.
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        return response;
+      }
+    } catch {
+      // fall through to the error page below
+    }
+
     const message = sessionError instanceof Error ? sessionError.message : 'Authentication failed';
+    Sentry.captureMessage('auth-callback: code exchange failed with no existing session', {
+      level: 'warning',
+      tags: { operation: 'auth-callback' },
+      extra: { message, userAgent: request.headers.get('user-agent') },
+    });
     return NextResponse.redirect(
       new URL(`/auth/error?error=${encodeURIComponent(message)}`, request.url)
     );
