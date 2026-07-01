@@ -16,12 +16,14 @@ import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
+/** Calculate exponential backoff delay with jitter to prevent thundering herd on retry. */
 const calculateBackoffDelay = (attempt: number): number => {
   const baseDelayMs = Math.pow(2, attempt - 1) * 1000;
   const jitterFactor = 0.5 + Math.random();
   return Math.floor(baseDelayMs * jitterFactor);
 };
 
+/** Log retry failure to Sentry and console with appropriate severity based on attempt number. */
 const logRetryFailure = (error: Error, attempt: number, maxAttempts: number, isFinal: boolean): void => {
   if (isFinal) {
     Sentry.captureException(error, {
@@ -47,6 +49,7 @@ const logRetryFailure = (error: Error, attempt: number, maxAttempts: number, isF
   }
 };
 
+/** Retry async operation with exponential backoff and jitter; logs to Sentry on failure. */
 const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> => {
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -66,6 +69,7 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
   throw lastError || new Error('Retry failed');
 };
 
+/** Build sanitized validation report filename from title, channel, and timestamp. */
 function buildValidationFilename(title: string, channelTitle?: string | null): string {
   const cleanSlug = (text: string): string => {
     return text
