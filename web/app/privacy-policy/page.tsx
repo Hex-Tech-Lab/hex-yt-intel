@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Metadata } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { LegalPage } from '@/components/templates/LegalPage';
 
 export const metadata: Metadata = {
@@ -29,7 +30,12 @@ export default async function PrivacyPolicyPage() {
     }
     content = fs.readFileSync(realPath, 'utf8');
   } catch (e) {
-    console.debug('[privacy-policy] Failed to read legal doc:', e instanceof Error ? e.message : String(e));
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    console.error('[privacy-policy] Failed to read legal doc:', { error: errorMsg, filePath: realPath });
+    Sentry.captureException(e, {
+      tags: { operation: 'legal-page-render', page: 'privacy-policy' },
+      contexts: { file: { path: realPath, docName } }
+    });
     content = '# Privacy Policy\n\nThis document is currently being compiled by our legal team. Please check back later.';
   }
 
