@@ -26,7 +26,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
         type="button"
         onClick={() => setMobileNav(true)}
         aria-label="Open menu"
-        className="lg:hidden grid place-items-center flex-none w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
+        className="xl:hidden grid place-items-center flex-none w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
       >
         <Icon icon="solar:hamburger-menu-linear" size={18} />
       </button>
@@ -111,7 +111,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
           type="button"
           onClick={() => setMobileRight(true)}
           aria-label="Open intelligence panel"
-          className="lg:hidden grid place-items-center flex-none w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
+          className="xl:hidden grid place-items-center flex-none w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
         >
           <Icon icon="solar:widget-linear" size={18} />
         </button>

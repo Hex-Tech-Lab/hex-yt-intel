@@ -34,16 +34,16 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   const drawerBase =
     'overflow-y-auto flex flex-col rounded-xl border border-[var(--line)] ' +
     'fixed inset-y-2 z-50 w-[300px] max-w-[86vw] shadow-2xl transition-transform duration-300 ease-out ' +
-    'lg:static lg:inset-auto lg:z-auto lg:w-full lg:max-w-none lg:h-full lg:shadow-none lg:translate-x-0 lg:transition-none';
+    'xl:static xl:inset-auto xl:z-auto xl:w-full xl:max-w-none xl:h-full xl:shadow-none xl:translate-x-0 xl:transition-none';
 
   return (
-    <div className={`grid min-h-screen lg:h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden overflow-y-auto lg:overflow-hidden gap-2 p-2 grid-cols-1 ${
-      rightPanel ? "lg:grid-cols-[260px_1fr_390px]" : "lg:grid-cols-[260px_1fr]"
+    <div className={`grid min-h-screen xl:h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden overflow-y-auto xl:overflow-hidden gap-2 p-3 grid-cols-1 ${
+      rightPanel ? "xl:grid-cols-[260px_1fr_390px]" : "xl:grid-cols-[260px_1fr]"
     }`}>
       {/* Mobile drawer backdrop */}
       {anyDrawerOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm xl:hidden"
           onClick={() => { setMobileNav(false); setMobileRight(false); }}
           aria-hidden
         />
@@ -52,20 +52,20 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
       {/* Left sidebar — hamburger drawer on mobile, static column on desktop */}
       <aside
         inert={isAnyOverlayOpen ? true : undefined}
-        className={`${drawerBase} left-2 bg-[var(--void)] lg:left-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-[calc(100%+1rem)]'}`}
+        className={`${drawerBase} left-2 bg-[var(--void)] xl:left-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-[calc(100%+1rem)]'}`}
       >
         {sidebar}
       </aside>
 
       <main
         inert={isAnyOverlayOpen ? true : undefined}
-        className="relative flex flex-col h-auto lg:h-full min-w-0 min-h-[calc(100vh-1rem)] lg:min-h-0 overflow-hidden bg-[var(--bg)] border border-[var(--line)] rounded-xl"
+        className="relative flex flex-col h-auto xl:h-full min-w-0 min-h-[calc(100vh-1rem)] xl:min-h-0 overflow-hidden bg-[var(--bg)] border border-[var(--line)] rounded-xl"
       >
         <header className="border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.8)] backdrop-blur-md z-20">
           {topbar}
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6 lg:px-8 scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 xl:p-6 xl:px-8 scroll-smooth">
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1 min-w-0">
               {children}
@@ -79,7 +79,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
       {rightPanel && (
         <aside
           inert={isAnyOverlayOpen ? true : undefined}
-          className={`${drawerBase} right-2 bg-[var(--surface)] p-3 px-4 lg:right-auto ${mobileRightOpen ? 'translate-x-0' : 'translate-x-[calc(100%+1rem)]'}`}
+          className={`${drawerBase} right-2 bg-[var(--surface)] p-3 px-4 xl:right-auto ${mobileRightOpen ? 'translate-x-0' : 'translate-x-[calc(100%+1rem)]'}`}
         >
           {rightPanel}
         </aside>
