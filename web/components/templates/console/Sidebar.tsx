@@ -51,7 +51,7 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope, children, foo
               type="button"
               onClick={() => onNavigate(it.key)}
               aria-current={active ? "page" : undefined}
-              className={`hx-navitem group flex items-center gap-3 rounded-[10px] py-2.5 px-3 text-sm font-sans border-none cursor-pointer text-left transition-all duration-[var(--dur-fast)] ${active ? 'bg-[rgb(6_182_212_/_0.10)] text-[var(--ink)] shadow-[inset_0_0_0_1px_rgb(6_182_212_/_0.15)]' : 'bg-transparent text-[var(--ink-secondary)] shadow-none'}`}
+              className={`hx-navitem group flex items-center gap-3 rounded-lg py-2.5 px-3 text-sm font-sans border-none cursor-pointer text-left transition-all duration-[var(--dur-fast)] ${active ? 'bg-[rgb(6_182_212_/_0.10)] text-[var(--ink)] shadow-[inset_0_0_0_1px_rgb(6_182_212_/_0.15)]' : 'bg-transparent text-[var(--ink-secondary)] shadow-none'}`}
             >
               <Icon icon={it.icon} size={18} className={`transition-colors duration-[var(--dur-fast)] ${active ? 'text-[var(--accent)]' : 'text-inherit'}`} />
               <span className={`flex-1 ${active ? 'font-semibold' : 'font-normal'}`}>{it.label}</span>
@@ -77,7 +77,7 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope, children, foo
         <button
           type="button"
           onClick={repoScope.onClick}
-          className={`hx-navitem flex items-center justify-between rounded-[10px] border border-[var(--line)] bg-[rgb(26_31_43_/_0.6)] py-3 px-3.5 text-xs text-[var(--ink-secondary)] cursor-pointer font-sans transition-all duration-[var(--dur-fast)] ${children ? 'mt-0' : 'mt-auto'}`}
+          className={`hx-navitem flex items-center justify-between rounded-lg border border-[var(--line)] bg-[rgb(26_31_43_/_0.6)] py-3 px-3.5 text-xs text-[var(--ink-secondary)] cursor-pointer font-sans transition-all duration-[var(--dur-fast)] ${children ? 'mt-0' : 'mt-auto'}`}
         >
           <span className="flex items-center gap-2.5">
             <Icon icon="solar:folder-with-files-linear" size={16} className="text-[var(--accent)] opacity-80" />

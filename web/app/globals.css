@@ -26,9 +26,21 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   
-  --radius-control: 0px;
-  --radius-card: 0px;
-  --radius-pill: 0px;
+  /* --- RADII — SINGLE SOURCE OF TRUTH. Slightly rounded, never pills. ----- */
+  /* Semantic tokens (reference from shared UI / components). */
+  --radius-control: 7px;   /* buttons · inputs · chips · toggles */
+  --radius-card: 10px;     /* cards · panels · popovers */
+  --radius-pill: 7px;      /* legacy alias — intentionally NOT a pill */
+
+  /* Tailwind radius scale — every rounded-* utility resolves from here, so the
+     entire app is consistently slightly-rounded from one place. */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-lg: 7px;    /* controls (buttons / inputs / chips) */
+  --radius-xl: 10px;   /* cards / panels */
+  --radius-2xl: 12px;  /* large cards */
+  --radius-3xl: 14px;
 }
 
 * {
@@ -68,10 +80,10 @@
   --err: #EF4444;
   --info: #06B6D4;            /* aliases accent — info == processing hue    */
 
-  /* --- Radii (Frozen Design System: 0px mandate) ------------------------ */
-  --radius-control: 0px;
-  --radius-card: 0px;
-  --radius-pill: 0px;
+  /* --- Radii — one source of truth (see @theme). Slightly rounded. ------ */
+  --radius-control: 7px;
+  --radius-card: 10px;
+  --radius-pill: 7px;
 
   /* --- Type families ----------------------------------------------------- */
   --font-sans: var(--inter-font), ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -295,7 +307,7 @@
    box-shadow ring (not blocked by inline outline). Buttons/cards use outline. */
 .hx-field:focus-visible {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent) !important;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
 }
 button:focus-visible,
 [role="button"]:focus-visible,
@@ -330,7 +342,7 @@ button:focus-visible,
   background: var(--accent-strong) !important; 
   color: var(--void) !important; 
   padding: 10px 24px; 
-  border-radius: 8px; 
+  border-radius: var(--radius-control); 
   font-family: var(--font-sans); 
   font-weight: 600; 
   font-size: 14px;
@@ -354,7 +366,7 @@ button:focus-visible,
   color: var(--ink) !important;
   border: 1px solid var(--line) !important;
   padding: 10px 24px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   font-family: var(--font-sans);
   font-weight: 600;
   font-size: 14px;

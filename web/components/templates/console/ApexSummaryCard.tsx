@@ -95,7 +95,7 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
     >
       <CornerFrame tone={streaming ? "accent" : "line"}>
         <article
-          className={`bg-[var(--surface)] p-6 rounded-[15px] border border-[var(--line-faint)] min-h-[320px] flex flex-col ${streaming ? "animate-flare" : ""}`}
+          className={`bg-[var(--surface)] p-6 rounded-2xl border border-[var(--line-faint)] min-h-[320px] flex flex-col ${streaming ? "animate-flare" : ""}`}
         >
           <header className="flex items-center justify-between mb-6">
             <div className="flex flex-col gap-1">
