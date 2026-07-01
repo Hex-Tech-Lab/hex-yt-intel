@@ -60,35 +60,19 @@ export function BentoMetadata({
       variants={container}
       initial="hidden"
       animate="show"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(12, 1fr)",
-        gridAutoRows: "minmax(80px, auto)",
-        gap: 12,
-        marginTop: 32,
-      }}
+      className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-12 gap-3 mt-6 sm:mt-8"
     >
       {/* Title Card (Large) */}
       <motion.div
         variants={item}
-        style={{
-          gridColumn: "span 8",
-          gridRow: "span 2",
-          background: "var(--surface)",
-          border: "1px solid var(--line)",
-          borderRadius: 16,
-          padding: 24,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
+        className="col-span-2 sm:col-span-4 xl:col-span-8 xl:row-span-2 min-w-0 flex flex-col justify-between gap-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 sm:p-6"
       >
         <MonoLabel index="01">video intelligence context</MonoLabel>
-        <div>
-          <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", color: "var(--ink)", lineHeight: 1.2, marginTop: 12 }}>
+        <div className="min-w-0">
+          <h2 className="mt-3 text-[22px] sm:text-2xl font-bold tracking-[-0.02em] leading-tight text-[var(--ink)] break-words">
             {title}
           </h2>
-          <p style={{ color: "var(--accent)", fontSize: 14, fontWeight: 500, marginTop: 4 }}>
+          <p className="mt-1 text-sm font-medium text-[var(--accent)] break-words">
             {channelTitle}
           </p>
         </div>
@@ -97,85 +81,41 @@ export function BentoMetadata({
       {/* View Count (Small) */}
       <motion.div
         variants={item}
-        style={{
-          gridColumn: "span 2",
-          background: "var(--surface)",
-          border: "1px solid var(--line)",
-          borderRadius: 16,
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-        }}
+        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
       >
-        <Icon icon="solar:eye-linear" size={20} style={{ color: "var(--ink-muted)", marginBottom: 4 }} />
-        <span style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)" }}>{formatViews(viewCount)}</span>
-        <span style={{ fontSize: 11, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Views</span>
+        <Icon icon="solar:eye-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
+        <span className="text-lg font-bold text-[var(--ink)]">{formatViews(viewCount)}</span>
+        <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Views</span>
       </motion.div>
 
       {/* Like Count (Small) */}
       <motion.div
         variants={item}
-        style={{
-          gridColumn: "span 2",
-          background: "var(--surface)",
-          border: "1px solid var(--line)",
-          borderRadius: 16,
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-        }}
+        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
       >
-        <Icon icon="solar:heart-linear" size={20} style={{ color: "var(--ink-muted)", marginBottom: 4 }} />
-        <span style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)" }}>{formatViews(likeCount)}</span>
-        <span style={{ fontSize: 11, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Likes</span>
+        <Icon icon="solar:heart-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
+        <span className="text-lg font-bold text-[var(--ink)]">{formatViews(likeCount)}</span>
+        <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Likes</span>
       </motion.div>
 
       {/* Duration (Small) */}
       <motion.div
         variants={item}
-        style={{
-          gridColumn: "span 2",
-          background: "var(--surface)",
-          border: "1px solid var(--line)",
-          borderRadius: 16,
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-        }}
+        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
       >
-        <Icon icon="solar:clock-circle-linear" size={20} style={{ color: "var(--ink-muted)", marginBottom: 4 }} />
-        <span style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)" }}>{formatDuration(duration)}</span>
-        <span style={{ fontSize: 11, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Length</span>
+        <Icon icon="solar:clock-circle-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
+        <span className="text-lg font-bold text-[var(--ink)]">{formatDuration(duration)}</span>
+        <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Length</span>
       </motion.div>
 
       {/* Published (Small) */}
       <motion.div
         variants={item}
-        style={{
-          gridColumn: "span 2",
-          background: "var(--surface)",
-          border: "1px solid var(--line)",
-          borderRadius: 16,
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-        }}
+        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
       >
-        <Icon icon="solar:calendar-linear" size={20} style={{ color: "var(--ink-muted)", marginBottom: 4 }} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{new Date(publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}</span>
-        <span style={{ fontSize: 11, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Date</span>
+        <Icon icon="solar:calendar-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
+        <span className="text-[13px] font-bold text-[var(--ink)]">{new Date(publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}</span>
+        <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Date</span>
       </motion.div>
     </motion.section>
   );
