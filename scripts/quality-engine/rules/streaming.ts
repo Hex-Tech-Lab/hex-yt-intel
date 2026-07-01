@@ -35,8 +35,8 @@ export const BundleContradictionRule: Rule = {
     const source = ctx.ast as SourceFile;
     const findings: Finding[] = [];
     const text = source.getText();
-    const expectedDimensionsMsg = `All ${TOTAL_DIMENSIONS} dimensions must be present`;
-    if (text.includes(expectedDimensionsMsg) &&
+    const allDimensionsPattern = /All (?:\$\{TOTAL_DIMENSIONS\}|11) dimensions must be present/;
+    if (allDimensionsPattern.test(text) &&
         text.includes('ONLY generate') &&
         !text.includes('skipAllDimensionsInstruction')) {
       findings.push({
