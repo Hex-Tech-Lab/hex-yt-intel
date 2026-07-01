@@ -15,7 +15,7 @@ function timingSafeStringEqual(a: string, b: string): boolean {
 async function hasSupabaseAuth(
   request: NextRequest,
   response: NextResponse
-): Promise<boolean> {
+): Promise<{ ok: boolean; diag: Record<string, unknown> }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const allCookies = request.cookies.getAll();
@@ -47,14 +47,14 @@ async function hasSupabaseAuth(
     if (!supabaseUrl || !supabaseAnonKey) {
       diag.outcome = 'env_missing';
       console.error('[middleware] auth-diag', diag);
-      return false;
+      return { ok: false, diag };
     }
 
     const isPlaceholderCred = (v: string) => v.includes('dummy') || v.includes('ci-build-placeholder');
     if (isPlaceholderCred(supabaseUrl) || isPlaceholderCred(supabaseAnonKey)) {
       diag.outcome = 'placeholder_creds';
       console.error('[middleware] auth-diag', diag);
-      return false;
+      return { ok: false, diag };
     }
 
     const client = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -88,20 +88,21 @@ async function hasSupabaseAuth(
       const { data: { user: bearerUser }, error: bearerError } = await client.auth.getUser(token);
       if (bearerError || !bearerUser) {
         diag.outcome = 'bearer_invalid';
-        return false;
+        diag.supabaseError = bearerError?.message ?? null;
+        return { ok: false, diag };
       }
-      return true;
+      return { ok: true, diag };
     }
 
     const { data: { user }, error } = await client.auth.getUser();
     diag.outcome = user ? 'authenticated' : 'rejected';
     diag.supabaseError = error?.message ?? null;
-    return !!user;
+    return { ok: !!user, diag };
   } catch (err) {
     diag.outcome = 'threw';
     diag.error = String(err);
     console.error('[middleware] auth-diag', diag);
-    return false;
+    return { ok: false, diag };
   }
 }
 
@@ -173,12 +174,21 @@ export async function middleware(request: NextRequest) {
   // onto the response only (not back onto request). See supabase/ssr docs.
   const supabaseResponse = NextResponse.next();
 
-  const isAuthenticated = await hasSupabaseAuth(request, supabaseResponse);
+  const { ok: isAuthenticated, diag } = await hasSupabaseAuth(request, supabaseResponse);
 
   if (!isAuthenticated) {
     Sentry.captureMessage('Auth Failure', {
       level: 'warning',
-      tags: { pathname },
+      tags: {
+        pathname,
+        outcome: String(diag.outcome ?? 'unknown'),
+        hadAuthCookie: String(Array.isArray(diag.authCookieNames) && (diag.authCookieNames as unknown[]).length > 0),
+      },
+      extra: {
+        ...diag,
+        userAgent: request.headers.get('user-agent'),
+        secFetchSite: request.headers.get('sec-fetch-site'),
+      },
     });
 
     if (pathname.startsWith('/api/')) {
