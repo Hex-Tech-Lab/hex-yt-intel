@@ -214,8 +214,6 @@ function buildStreamResponse(
       const timeoutPromise = new Promise<boolean>((_, reject) => {
         timeoutId = setTimeout(() => {
           settled = true;
-          // Abort the persist signal to trigger atomicPersist cleanup and cancel in-flight operations
-          persistController.abort();
           // settleAnalysis: Handle timeout by persisting with interrupted status
           persistService.persist({
             analysisId: req.analysisId,
