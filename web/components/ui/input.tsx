@@ -2,10 +2,14 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   ref?: React.Ref<HTMLInputElement>;
 }
 
+/**
+ * Canonical input — token-driven, matching the design system. Focus ring comes
+ * from the shared .hx-field class in globals.css (box-shadow, on-brand cyan).
+ */
 const Input = ({ className = '', type = 'text', ref, ...props }: InputProps) => (
   <input
     type={type}
-    className={`flex h-10 w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#0A0E17] disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+    className={`hx-field flex h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     ref={ref}
     {...props}
   />
