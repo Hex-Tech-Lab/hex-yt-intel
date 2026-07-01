@@ -589,6 +589,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           onSearchChange={(v) => startTransition(() => setSearch(v))}
           onExport={handleExport}
           tier={tierLabel}
+          hasRightPanel={rightPanelItems.length > 0}
           account={<div title={profile.email} className="w-8 h-8 rounded-lg bg-[var(--accent)] grid place-items-center text-[var(--void)] font-bold text-xs">{profile.initials}</div>}
         />
       }

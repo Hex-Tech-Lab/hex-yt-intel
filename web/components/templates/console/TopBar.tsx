@@ -2,6 +2,7 @@
 
 import { ReactNode, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
+import { useUIStore } from '@/store/useUIStore';
 
 export interface TopBarProps {
   search: string;
@@ -10,13 +11,26 @@ export interface TopBarProps {
   onExport?: (format: 'pdf' | 'markdown') => void;
   tier?: string;
   account?: ReactNode;
+  hasRightPanel?: boolean;
 }
 
-export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier, account }: TopBarProps) {
+export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier, account, hasRightPanel }: TopBarProps) {
   const [exportOpen, setExportOpen] = useState(false);
+  const setMobileNav = useUIStore((s) => s.setMobileNav);
+  const setMobileRight = useUIStore((s) => s.setMobileRight);
 
   return (
-    <div className="flex items-center gap-3 py-3 px-6">
+    <div className="flex items-center gap-2 sm:gap-3 py-3 px-3 sm:px-6">
+      {/* Mobile: open the left navigation drawer */}
+      <button
+        type="button"
+        onClick={() => setMobileNav(true)}
+        aria-label="Open menu"
+        className="lg:hidden grid place-items-center flex-none w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
+      >
+        <Icon icon="solar:hamburger-menu-linear" size={18} />
+      </button>
+
       <label
         className="flex min-w-0 flex-1 items-center gap-2 max-w-[460px] rounded-lg border border-[var(--line)] bg-[rgb(26_31_43_/_0.6)] py-2 px-3"
       >
@@ -29,7 +43,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
           aria-label="Search syntheses"
           className="hx-field min-w-0 flex-1 bg-transparent border-none outline-none text-[var(--ink)] font-sans text-[13.5px]"
         />
-        <kbd className="font-mono text-[10px] text-[var(--ink-muted)] border border-[var(--line)] rounded px-1.5 py-0.5">
+        <kbd className="hidden sm:block font-mono text-[10px] text-[var(--ink-muted)] border border-[var(--line)] rounded px-1.5 py-0.5">
           ⌘K
         </kbd>
       </label>
@@ -76,7 +90,7 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
 
       {tier && (
         <span
-          className="inline-flex items-center gap-1.5 rounded-[7px] border border-[rgb(6_182_212_/_0.3)] bg-[rgb(6_182_212_/_0.10)] py-1 px-[11px] font-mono text-[11px] font-semibold tracking-wider text-[var(--accent-ink)]"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-[7px] border border-[rgb(6_182_212_/_0.3)] bg-[rgb(6_182_212_/_0.10)] py-1 px-[11px] font-mono text-[11px] font-semibold tracking-wider text-[var(--accent-ink)]"
         >
           <Icon icon="solar:crown-minimalistic-linear" size={12} />
           {tier.toUpperCase()}
@@ -89,6 +103,18 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
         >
           <Icon icon="solar:user-linear" size={16} />
         </span>
+      )}
+
+      {/* Mobile: open the right intelligence panel drawer */}
+      {hasRightPanel && (
+        <button
+          type="button"
+          onClick={() => setMobileRight(true)}
+          aria-label="Open intelligence panel"
+          className="lg:hidden grid place-items-center flex-none w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
+        >
+          <Icon icon="solar:widget-linear" size={18} />
+        </button>
       )}
     </div>
   );
