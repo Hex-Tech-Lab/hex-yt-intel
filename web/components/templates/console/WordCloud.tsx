@@ -54,7 +54,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
   // Compute collision-free layout
   const wordsLayout = useMemo(() => {
-    if (!graph.nodes || graph.nodes.length === 0) return [];
+    if (!graph.nodes || graph.nodes.length === 0 || size.w < 50) return [];
 
     // 1. Tokenize labels and aggregate weights
     const tokenMap: Record<string, { label: string; weight: number; type: string; id: string; maxWeight: number }> = {};
@@ -171,8 +171,19 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           y - h / 2 < 5 ||
           y + h / 2 > size.h - 5;
 
-        if (!hasOverlap && !isOutOfBounds) {
-          placedWord = candidate;
+        if (!hasOverlap) {
+          if (!isOutOfBounds) {
+            placedWord = candidate;
+          } else {
+            // Attempt to clamp candidate inside boundaries to maximize word density
+            const clampedX = Math.max(w / 2 + 5, Math.min(size.w - w / 2 - 5, x));
+            const clampedY = Math.max(h / 2 + 5, Math.min(size.h - h / 2 - 5, y));
+            const clampedCandidate = { ...candidate, x: clampedX, y: clampedY };
+            const hasOverlapAfterClamping = placed.some((other) => checkOverlap(clampedCandidate, other));
+            if (!hasOverlapAfterClamping) {
+              placedWord = clampedCandidate;
+            }
+          }
         }
 
         theta += step;

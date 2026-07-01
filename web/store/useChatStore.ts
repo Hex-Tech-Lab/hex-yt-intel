@@ -36,6 +36,7 @@ interface ChatState {
   newConversation: (opts?: { analysisId?: string | null; title?: string }) => Promise<string | null>;
   sendMessage: (text: string, opts?: { analysisId?: string | null }) => Promise<void>;
   renameConversation: (id: string, title: string) => Promise<void>;
+  updateConversationAnalysisId: (id: string, analysisId: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
   bindNetwork: () => void;
   flushOutbox: () => Promise<void>;
@@ -111,8 +112,8 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
         if (!line) continue;
         try {
           onEvent(JSON.parse(line.slice(5).trim()));
-        } catch {
-          // partial/invalid JSON frame skipped
+        } catch (e) {
+          console.debug('[ChatStore] Skipped parsing partial JSON frame:', e);
         }
       }
     }
@@ -400,6 +401,17 @@ export const useChatStore = create<ChatState>((set, get) => {
         const msg = err instanceof Error ? err.message : String(err);
         Sentry.captureException(err, { contexts: { renameConversation: { conversationId: id } } });
         console.error('[ChatStore]', { message: 'optimistic rename failed', error: msg, conversationId: id });
+      }
+    },
+
+    updateConversationAnalysisId: async (id, analysisId) => {
+      set((s) => ({ conversations: s.conversations.map((c) => (c.id === id ? { ...c, analysisId } : c)) }));
+      try {
+        await api(`/api/chat/conversations/${id}`, { method: 'PATCH', body: JSON.stringify({ analysisId }) });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        Sentry.captureException(err, { contexts: { updateConversationAnalysisId: { conversationId: id, analysisId } } });
+        console.error('[ChatStore]', { message: 'optimistic update analysisId failed', error: msg, conversationId: id });
       }
     },
 

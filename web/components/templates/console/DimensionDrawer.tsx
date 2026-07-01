@@ -2,7 +2,6 @@
 
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useEffect, useRef, useCallback } from 'react';
-import { useUIStore } from '@/store/useUIStore';
 import { SelectedDimensionReadout } from '@/components/dashboard/SelectedDimensionReadout';
 
 export interface DimensionDrawerProps {
@@ -14,7 +13,6 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const setOverlayOpen = useUIStore((s) => s.setOverlayOpen);
 
   const handleClose = useCallback(() => {
     onClose();
@@ -22,11 +20,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
 
   useEffect(() => {
     if (!dimension) {
-      setOverlayOpen(false);
       return;
     }
 
-    setOverlayOpen(true, 'dimension-drawer');
     previousFocusRef.current = document.activeElement as HTMLElement;
 
     requestAnimationFrame(() => closeBtnRef.current?.focus());
@@ -60,11 +56,10 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      setOverlayOpen(false);
       const prev = previousFocusRef.current;
       requestAnimationFrame(() => prev?.focus());
     };
-  }, [dimension, onClose, setOverlayOpen]);
+  }, [dimension, onClose]);
 
   if (!dimension) return null;
 
@@ -81,7 +76,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-label={`${dimension.label} details`}
-        className="fixed right-0 top-0 bottom-0 w-[min(90vw,480px)] bg-[var(--bg)] border-l border-[var(--line)] flex flex-col z-[101] animate-in slide-in-from-right duration-300 ease-out"
+        className="fixed right-0 top-0 bottom-0 w-[min(90vw,390px)] bg-[var(--bg)] border-l border-[var(--line)] flex flex-col z-[101] animate-in slide-in-from-right duration-300 ease-out"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.6)]">

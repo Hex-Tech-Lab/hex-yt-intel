@@ -12,6 +12,8 @@ export interface ChatConversation {
   title: string;
   /** Optional analysis this thread is grounded in (nullable = general chat). */
   analysisId: string | null;
+  /** Optional video this thread is associated with. */
+  videoId?: string | null;
   createdAt: string;
   updatedAt: string;
   lastMessageAt: string;
