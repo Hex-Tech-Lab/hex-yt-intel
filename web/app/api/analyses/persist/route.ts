@@ -49,24 +49,28 @@ const logRetryFailure = (error: Error, attempt: number, maxAttempts: number, isF
   }
 };
 
+/** Coerce an unknown thrown value into an Error instance. */
+const toError = (value: unknown): Error =>
+  value instanceof Error ? value : new Error(String(value));
+
+/** Sleep for the jittered backoff delay corresponding to the given attempt. */
+const backoffDelay = (attempt: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, calculateBackoffDelay(attempt)));
+
 /** Retry async operation with exponential backoff and jitter; logs to Sentry on failure. */
 const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> => {
-  let lastError: Error | null = null;
+  let lastError = new Error('Retry failed');
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+      lastError = toError(error);
       const isFinalAttempt = attempt === maxAttempts;
       logRetryFailure(lastError, attempt, maxAttempts, isFinalAttempt);
-
-      if (!isFinalAttempt) {
-        const delayMs = calculateBackoffDelay(attempt);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
+      if (!isFinalAttempt) await backoffDelay(attempt);
     }
   }
-  throw lastError || new Error('Retry failed');
+  throw lastError;
 };
 
 /** Build sanitized validation report filename from title, channel, and timestamp. */
