@@ -50,16 +50,19 @@ export const useAnalysisStateStore = create<AnalysisStateStore>((set, get) => ({
     set((state) => {
       const now = new Date().toISOString();
       const existing = state.analysis;
-      const hasFreshId = Boolean(payload.id && payload.id.length > 0);
+      const hasFreshId = Boolean(payload.id && payload.id.length > 0 && (!existing || payload.id !== existing.id));
       const hasDimensions = Boolean(payload.dimensions && Object.keys(payload.dimensions).length > 0);
 
-      if (!existing) return { analysis: newPayload(payload, now), isStreaming: !hasDimensions };
-      if (hasFreshId && hasDimensions) {
-        const restored = mergePayload(existing, payload);
-        restored.dimensions = payload.dimensions!;
-        return { analysis: restored, isStreaming: false };
+      if (!existing || hasFreshId) {
+        return { analysis: newPayload(payload, now), isStreaming: !hasDimensions };
       }
-      return { analysis: mergePayload(existing, payload), isStreaming: true };
+
+      // Same analysis ID - merge/patch
+      const restored = mergePayload(existing, payload);
+      if (hasDimensions) {
+        restored.dimensions = payload.dimensions!;
+      }
+      return { analysis: restored, isStreaming: !hasDimensions };
     });
   },
 

@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, startTransition } from 'react';
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
+import { useChatStore } from '@/store/useChatStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 
@@ -78,6 +79,27 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         setStatus('complete');
         onSelectAnalysis?.();
       });
+
+      // Pre-ground the chat conversation for the restored analysis in the background
+      void (async () => {
+        try {
+          const chatStore = useChatStore.getState();
+          await chatStore.loadConversations();
+          const existing = chatStore.conversations.find((c) => 
+            c.analysisId === data.id || c.videoId === data.videoId
+          );
+          if (existing) {
+            if (existing.analysisId !== data.id) {
+              await chatStore.updateConversationAnalysisId(existing.id, data.id);
+            }
+            await chatStore.selectConversation(existing.id);
+          } else {
+            useChatStore.setState({ activeId: null });
+          }
+        } catch (e) {
+          console.debug('[AnalysisHistory] Background chat session restoration failed:', e);
+        }
+      })();
     } catch (err) {
       console.error('Error restoring analysis:', err);
       setRestoreError(err instanceof Error ? err.message : 'Unknown restoration error');
