@@ -31,25 +31,6 @@ export interface VideoMetadata {
   thumbnailUrl: string;
 }
 
-interface VideoItem {
-  snippet?: {
-    title?: string;
-    description?: string;
-    channelTitle?: string;
-    channelId?: string;
-    publishedAt?: string;
-    thumbnails?: Record<string, Record<string, string>>;
-  };
-  statistics?: {
-    viewCount?: string;
-    likeCount?: string;
-    commentCount?: string;
-  };
-  contentDetails?: {
-    duration?: string;
-  };
-}
-
 export class MetadataScraper {
   private apiKey: string;
   private residentialProxyUrl?: string;

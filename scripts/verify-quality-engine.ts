@@ -85,10 +85,9 @@ const rules = Object.values(legacyRules)
   .filter((r): r is any => r && typeof r === "object" && "check" in r && "name" in r)
   .map((rule: unknown) => {
     const r = rule as any;
-    // Check if this is a new Rule format (has scope property or check function takes RuleContext)
+    // Check if this is a new Rule format (has scope property or check function references RuleContext)
     // vs legacy IRule format (check function takes SourceFile directly)
-    // New rules have "scope" property or their check function signature matches Rule interface
-    if (r.scope !== undefined || (r.check && r.check.length === 1 && (r.check.toString().includes('ctx.ast') || r.check.toString().includes('ctx.filePath')))) {
+    if (r.scope !== undefined || (r.check && (r.check.toString().includes('ctx.ast') || r.check.toString().includes('ctx.filePath')))) {
       // Already in new Rule format
       return r as any;
     }
