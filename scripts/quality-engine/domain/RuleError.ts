@@ -1,4 +1,4 @@
-import type { Finding } from '../engine';
+import type { Finding } from './Finding';
 
 export interface RuleError {
   ruleName: string;
