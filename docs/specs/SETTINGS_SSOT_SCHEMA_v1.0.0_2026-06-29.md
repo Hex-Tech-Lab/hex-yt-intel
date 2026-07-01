@@ -1,3 +1,13 @@
+---
+**Filename**: SETTINGS_SSOT_SCHEMA_v1.0.0_2026-06-29.md  
+**Location**: `/docs/specs/`  
+**Version**: 1.0.0  
+**Build**: Schema (post-live, informational)  
+**Timestamp**: 2026-06-29T00:00:00Z  
+**Purpose**: Single-source-of-truth specification for all admin and user configuration constants
+
+---
+
 # SETTINGS & SINGLE-SOURCE-OF-TRUTH (SSOT) SCHEMA
 **Version**: 1.0.0 · **Date**: 2026-06-29 · **Status**: SPEC (schema only — page is post-live)
 **Principle**: Every value that *could* vary is defined **once**, in one typed source, and every engine/function/route reads it from that source. No magic number written 2/3/n times. Framed as an **admin settings model** (settings for *us*, not the user) + a **user settings model**, both governed by a **security matrix**.
