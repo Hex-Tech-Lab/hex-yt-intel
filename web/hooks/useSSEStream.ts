@@ -204,7 +204,7 @@ export function useSSEStream() {
                 };
 
                 const streamController = new AbortController();
-                const timeoutId = setTimeout(() => streamController.abort(), 10000);
+                const timeoutId = setTimeout(() => streamController.abort(), 25000);
 
                 const controller = new AbortController();
                 currentSignal.addEventListener('abort', () => controller.abort(), { once: true });
@@ -224,7 +224,7 @@ export function useSSEStream() {
                   clearTimeout(timeoutId);
                   if (streamController.signal.aborted) timedOut = true;
                   if (fetchErr.name === 'AbortError') {
-                    throw new Error(timedOut ? 'Handshake timed out after 10s.' : 'Request aborted.');
+                    throw new Error(timedOut ? 'Handshake timed out after 25s.' : 'Request aborted.');
                   }
                   throw fetchErr;
                 } finally {
