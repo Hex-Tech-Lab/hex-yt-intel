@@ -563,7 +563,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [selectedDimensionKey, dimensions]);
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div className="relative w-full min-h-[100dvh] xl:h-screen overflow-x-hidden xl:overflow-hidden">
       <DashboardLayout
         sidebar={
           <Sidebar

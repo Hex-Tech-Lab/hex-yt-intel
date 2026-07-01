@@ -37,7 +37,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
     'xl:static xl:inset-auto xl:z-auto xl:w-full xl:max-w-none xl:h-full xl:shadow-none xl:translate-x-0 xl:transition-none';
 
   return (
-    <div className={`grid min-h-screen xl:h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden overflow-y-auto xl:overflow-hidden gap-2 p-3 grid-cols-1 ${
+    <div className={`grid min-h-[100dvh] xl:h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden xl:overflow-hidden gap-2 p-2 sm:p-3 grid-cols-1 ${
       rightPanel ? "xl:grid-cols-[260px_1fr_390px]" : "xl:grid-cols-[260px_1fr]"
     }`}>
       {/* Mobile drawer backdrop */}
@@ -65,7 +65,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           {topbar}
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 xl:p-6 xl:px-8 scroll-smooth">
+        <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8 xl:px-10 xl:py-8 scroll-smooth">
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1 min-w-0">
               {children}
