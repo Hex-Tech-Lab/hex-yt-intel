@@ -57,7 +57,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   }, [setOpen]);
 
   useEffect(() => {
-    try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch (e) { console.debug('[ChatDock] localStorage write failed:', e instanceof Error ? e.message : String(e)); }
+    try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* noop */ }
     if (!open) {
       setShowThreads(false);
       return;
@@ -344,8 +344,8 @@ function parseAssistant(content: string): { body: string; options: string[] } {
   try {
     const arr = JSON.parse(m[1] ?? '[]');
     if (Array.isArray(arr)) options = arr.filter((x) => typeof x === 'string').slice(0, 4);
-  } catch (e) {
-    console.debug('[ChatDock] OPTIONS parse failed (malformed/streaming):', e instanceof Error ? e.message : String(e));
+  } catch {
+    /* malformed / still streaming */
   }
   const body = content.slice(0, m.index).trim();
   return { body: body || content.trim(), options };
