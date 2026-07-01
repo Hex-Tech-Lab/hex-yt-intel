@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
+import { useChatStore } from '@/store/useChatStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
@@ -39,7 +40,8 @@ export function useSSEStream() {
       if (parsed.pathname.includes('/live/')) return parsed.pathname.split('/')[2] || 'unknown';
       if (parsed.pathname.includes('/embed/') || parsed.pathname.includes('/v/')) return parsed.pathname.split('/')[2] || 'unknown';
       return parsed.searchParams.get('v') || 'unknown';
-    } catch {
+    } catch (e) {
+      console.debug('[useSSEStream] Failed to parse YouTube URL:', e);
       return 'unknown';
     }
   };
@@ -77,6 +79,7 @@ export function useSSEStream() {
     // Set immediate status to update UI instantly without frame delays
     clearAnalysis();
     resetSynthesis();
+    useChatStore.setState({ activeId: null });
     setIsLoading(true);
     setStatus('downloading');
     setError(null);
@@ -244,7 +247,11 @@ export function useSSEStream() {
                     adapter.processLine(trimmed.slice(5).trim());
                     return;
                   }
-                  try { adapter.processLine(trimmed); } catch { /* skip */ }
+                  try {
+                    adapter.processLine(trimmed);
+                  } catch (e) {
+                    console.debug('[useSSEStream] Ignored non-data line processing failure:', e);
+                  }
                 };
 
                 try {
