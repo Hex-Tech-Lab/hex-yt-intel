@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { MonoLabel, StatusBadge, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
+import { Button } from '@/components/ui/button';
 
 export interface AnalysisHeroProps {
   url: string;
@@ -113,37 +114,29 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
               )}
               <div className="flex gap-2 flex-shrink-0">
                 {status === "done" && (
-                  <button
-                    type="button"
-                    onClick={onReanalyze}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-secondary)] py-3 px-4 font-sans text-sm font-medium cursor-pointer transition-all duration-[var(--dur-fast)]"
-                  >
+                  <Button type="button" variant="outline" size="icon" title="Re-analyze" onClick={onReanalyze}>
                     <Icon icon="solar:refresh-linear" size={16} />
-                  </button>
+                  </Button>
                 )}
                 {streaming && onCancel && (
-                  <button
-                    type="button"
-                    title="Cancel analysis"
-                    onClick={onCancel}
-                    className="inline-flex items-center justify-center rounded-lg border border-[var(--err)] bg-[rgba(239,68,68,0.15)] text-[var(--err)] py-3 px-4 font-sans text-sm font-semibold cursor-pointer transition-all duration-[var(--dur-fast)]"
-                  >
-                    <Icon icon="solar:stop-circle-linear" size={16} style={{ color: "var(--err)" }} />
-                  </button>
+                  <Button type="button" variant="danger" size="icon" title="Cancel analysis" onClick={onCancel}>
+                    <Icon icon="solar:stop-circle-linear" size={16} />
+                  </Button>
                 )}
-                <button
+                <Button
                   type="button"
+                  variant="primary"
+                  size="md"
                   onClick={onAnalyze}
                   disabled={disabled}
-                  className={`inline-flex items-center justify-center gap-2.5 rounded-lg border-none min-h-[44px] py-2.5 px-5 font-sans text-sm font-bold leading-none transition-all duration-[var(--dur-fast)] ${streaming ? 'bg-[var(--bg)] text-[var(--accent)] shadow-none' : 'bg-[var(--accent-strong)] text-[var(--void)] shadow-[0_4px_14px_var(--accent-glow)]'} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'} ${disabled && !streaming ? 'opacity-40' : 'opacity-100'}`}
                 >
-                  <Icon 
-                    icon={streaming ? "solar:refresh-linear" : "solar:bolt-linear"} 
-                    size={16} 
-                    className={streaming ? "hx-anispin" : ""} 
+                  <Icon
+                    icon={streaming ? "solar:refresh-linear" : "solar:bolt-linear"}
+                    size={16}
+                    className={streaming ? "hx-anispin" : ""}
                   />
                   {streaming ? "Analyzing" : "Analyze"}
-                </button>
+                </Button>
               </div>
             </div>
           </GlowBorder>
