@@ -118,7 +118,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
               cursor: "pointer",
               transition: "all var(--dur-fast)",
             }}
-            onMouseOver={(e) => e.currentTarget.style.background = "rgb(6 182 212 / 0.10)"}
+            onMouseOver={(e) => e.currentTarget.style.background = "var(--accent-a10)"}
             onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
           >
             Manage in Billing Portal

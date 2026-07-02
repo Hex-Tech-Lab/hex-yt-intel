@@ -34,7 +34,7 @@ const DimensionItem = memo(function DimensionItem({
   const indexStr = String(index + 1).padStart(2, '0');
   const variant = isSelected ? 'selected' : 'default';
   const classMap = {
-    selected: 'bg-[rgb(6_182_212_/_0.04)] border-[var(--accent)] text-[var(--ink)] shadow-[0_0_15px_-3px_rgba(6,182,212,0.15)]',
+    selected: 'bg-[var(--accent-a04)] border-[var(--accent)] text-[var(--ink)] shadow-[0_0_15px_-3px_var(--accent-a15)]',
     default: 'bg-[var(--surface)] border-[var(--line-faint)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)] hover:bg-[var(--surface-raised)]/50',
   } as const;
   const buttonClass = classMap[variant];

@@ -65,7 +65,7 @@ export interface CornerFrameProps {
 }
 
 export function CornerFrame({ children, tone = "line", size = 14, className = "", style = {} }: CornerFrameProps) {
-  const color = tone === "accent" ? "rgb(6 182 212 / 0.7)" : "rgb(51 65 85 / 0.6)";
+  const color = tone === "accent" ? "var(--accent-a70)" : "rgb(51 65 85 / 0.6)";
   
   const Arm = ({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) => {
     const base: CSSProperties = { position: "absolute", width: size, height: size, pointerEvents: "none", color, zIndex: 5 };

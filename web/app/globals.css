@@ -74,6 +74,21 @@
   --accent-ink: #67E8F9;      /* cyan-300 — accent text on dark (AAA 9.2:1) */
   --accent-glow: rgb(6 182 212 / 0.40); /* ambient glow blob                */
 
+  /* --- Accent alphas — one source of truth for translucent accent fills.
+     Named by opacity ×100 (a03 = 3%). Use var(--accent-aNN) everywhere
+     instead of hardcoding rgb(6 182 212 / …) literals. ------------------- */
+  --accent-a03: rgb(6 182 212 / 0.03);
+  --accent-a04: rgb(6 182 212 / 0.04);
+  --accent-a05: rgb(6 182 212 / 0.05);
+  --accent-a06: rgb(6 182 212 / 0.06);
+  --accent-a10: rgb(6 182 212 / 0.10);
+  --accent-a12: rgb(6 182 212 / 0.12);
+  --accent-a15: rgb(6 182 212 / 0.15);
+  --accent-a30: rgb(6 182 212 / 0.30);
+  --accent-a40: rgb(6 182 212 / 0.40);
+  --accent-a70: rgb(6 182 212 / 0.70);
+  /* --accent-glow above is the semantic alias of --accent-a40. */
+
   /* --- Semantic status (data states, never decoration) ------------------- */
   --ok: #22C55E;
   --warn: #F59E0B;
@@ -234,9 +249,9 @@
   color: var(--ink-secondary);
 }
 
-.hx-mono-index { color: rgb(6 182 212 / 0.7); }
+.hx-mono-index { color: var(--accent-a70); }
 
-::selection { background: rgb(6 182 212 / 0.30); }
+::selection { background: var(--accent-a30); }
 
 /* ============================================================================
    MOTION & UI COMPONENTS
@@ -258,7 +273,7 @@
 
 /* Custom component classes */
 .hx-navitem:hover {
-  background: rgb(6 182 212 / 0.06) !important;
+  background: var(--accent-a06) !important;
   color: var(--ink) !important;
 }
 
