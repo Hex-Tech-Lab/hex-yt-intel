@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
+import { entityHex, entityRgb } from '@/lib/design/entityColors';
 
 interface MindMapProps {
   graph: KnowledgeGraph;
@@ -169,17 +170,6 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     return <div className="p-4 text-center text-[var(--ink-muted)]">No mind map data.</div>;
   }
 
-  const colors: Record<string, string> = {
-    person: 'border-rose-500/50 text-rose-400 bg-rose-950/20',
-    concept: 'border-purple-500/50 text-purple-400 bg-purple-950/20',
-    framework: 'border-yellow-500/50 text-yellow-400 bg-yellow-950/20',
-    tool: 'border-cyan-500/50 text-cyan-400 bg-cyan-950/20',
-    organization: 'border-blue-500/50 text-blue-400 bg-blue-950/20',
-    study: 'border-emerald-500/50 text-emerald-400 bg-emerald-950/20',
-    trend: 'border-orange-500/50 text-orange-400 bg-orange-950/20',
-    metric: 'border-pink-500/50 text-pink-400 bg-pink-950/20',
-  };
-
   return (
     <div 
       className="relative w-full overflow-auto hx-custom-scrollbar border border-[var(--line-faint)] bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg p-4 js-mind-map-container"
@@ -211,7 +201,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
           const isSelected = selectedId === node.id;
           const isCollapsed = collapsedNodes[node.id];
           const hasChildren = node.children.length > 0;
-          const typeStyle = colors[node.type] || 'border-[var(--line)] text-[var(--ink-secondary)] bg-[var(--surface-raised)]/40';
+          const typeRgb = entityRgb(node.type);
 
           return (
             <div
@@ -224,9 +214,12 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
                 width: 160,
                 cursor: 'pointer',
                 zIndex: isSelected ? 20 : 10,
+                color: entityHex(node.type),
+                background: `rgb(${typeRgb} / 0.12)`,
+                borderColor: isSelected ? 'var(--accent)' : `rgb(${typeRgb} / 0.5)`,
               }}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg border text-[10.5px] font-sans leading-tight transition-all duration-200 ${typeStyle} ${
-                isSelected ? 'ring-2 ring-[var(--accent)] border-[var(--accent)] scale-[1.03] shadow-lg shadow-[var(--accent-glow)]' : 'hover:scale-[1.02] hover:border-[var(--ink-muted)]'
+              className={`flex items-center justify-between px-3 py-2 rounded-lg border text-[10.5px] font-sans leading-tight transition-all duration-200 ${
+                isSelected ? 'ring-2 ring-[var(--accent)] scale-[1.03] shadow-lg shadow-[var(--accent-glow)]' : 'hover:scale-[1.02]'
               }`}
             >
               <div className="flex flex-col truncate pr-1">
