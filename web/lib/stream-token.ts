@@ -52,7 +52,27 @@ export async function verifyChatToken(conversationId: string, userId: string, ex
   return timingSafeEqualHex(expected, sig);
 }
 
-export async function verifyContentSig(markdown: string, sig: string): Promise<boolean> {
-  const expected = await hmacHex(env.streamHmacSecret, markdown);
+/**
+ * Verify a server-to-server content signature.
+ *
+ * When `binding` is supplied (the Cloudflare Worker's newer persist calls), the
+ * signature is bound to a specific analysis id and carries an expiry — this
+ * prevents an observed persist body from being replayed indefinitely or against
+ * a different analysis. When omitted, we fall back to the legacy content-only
+ * signature so a non-atomic worker/web rollout can't cause a persistence outage.
+ * Remove the legacy branch once the worker signer is fully deployed.
+ */
+export async function verifyContentSig(
+  message: string,
+  sig: string,
+  binding?: { analysisId: string; exp: number }
+): Promise<boolean> {
+  if (binding) {
+    if (!Number.isFinite(binding.exp) || Date.now() > binding.exp) return false;
+    const bound = `persist:${binding.analysisId}:${binding.exp}:${message}`;
+    const expected = await hmacHex(env.streamHmacSecret, bound);
+    return timingSafeEqualHex(expected, sig);
+  }
+  const expected = await hmacHex(env.streamHmacSecret, message);
   return timingSafeEqualHex(expected, sig);
 }

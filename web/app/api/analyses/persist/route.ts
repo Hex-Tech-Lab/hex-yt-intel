@@ -123,6 +123,9 @@ export async function POST(request: NextRequest) {
       model: z.string().optional(),
       valid: z.boolean().optional(),
       contentSig: z.string(),
+      // Expiry for the bound content signature (see verifyContentSig). Optional
+      // for backward compat with a worker that hasn't shipped the bound signer yet.
+      exp: z.number().int().optional(),
       status: z.enum(['completed', 'failed', 'interrupted']).optional().default('completed'),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
@@ -148,6 +151,7 @@ export async function POST(request: NextRequest) {
         model,
         valid,
         contentSig,
+        exp,
         status,
         chunkIndex,
         totalChunks
@@ -158,7 +162,7 @@ export async function POST(request: NextRequest) {
       const canonical = JSON.stringify({ markdown, payload: payload ?? null });
       let isSigValid = false;
       try {
-        isSigValid = await verifyContentSig(canonical, contentSig);
+        isSigValid = await verifyContentSig(canonical, contentSig, exp !== undefined ? { analysisId, exp } : undefined);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         Sentry.captureException(error, { contexts: { persist: { phase: 'verifyContentSig', analysisId, videoId } } });
