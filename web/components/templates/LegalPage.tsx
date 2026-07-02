@@ -21,16 +21,16 @@ export function LegalPage({ content }: LegalPageProps) {
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_-20%,#06B6D415,transparent_50%)] pointer-events-none" />
       
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#11141DCC] backdrop-blur-xl border-b border-[#1E293B]">
-        <div className="max-w-[1200px] mx-auto h-16 px-8 flex items-center justify-between">
-          <Link href="/?v=landing" className="flex items-center gap-3 group">
-            <span className="flex items-center justify-center w-7 h-7 bg-[#0891B2] text-[#0B0E14] rounded-lg shadow-[0_4px_12px_rgba(6,182,212,0.4)] transition-transform group-hover:scale-105">
+        <div className="max-w-[1200px] mx-auto h-16 px-5 sm:px-8 flex items-center justify-between gap-3">
+          <Link href="/?v=landing" className="flex items-center gap-2 sm:gap-3 group min-w-0">
+            <span className="flex items-center justify-center w-7 h-7 flex-none bg-[#0891B2] text-[#0B0E14] rounded-lg shadow-[0_4px_12px_rgba(6,182,212,0.4)] transition-transform group-hover:scale-105">
               <Icon icon="solar:graph-up-linear" size={18} />
             </span>
-            <span className="font-mono text-[15px] font-bold tracking-[0.04em] text-[#E2E8F0]">
+            <span className="font-mono text-[13px] sm:text-[15px] font-bold tracking-[0.04em] text-[#E2E8F0] truncate">
               HEX{"\u00b7"}YT{"\u00b7"}INTEL
             </span>
           </Link>
-          <nav className="flex gap-4 items-center">
+          <nav className="flex gap-2 sm:gap-4 items-center flex-none">
             <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none" }}>Pricing</Link>
             <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none" }}>
               <Icon icon="solar:sun-bold-duotone" size={16} />
@@ -40,7 +40,7 @@ export function LegalPage({ content }: LegalPageProps) {
         </div>
       </header>
 
-      <main className="relative z-10 max-w-[1280px] mx-auto px-12 pt-48 pb-32">
+      <main className="relative z-10 max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-12 pt-28 sm:pt-36 pb-24 sm:pb-32">
         <div className="max-w-[800px] w-full">
           {/* Breadcrumbs & Title Section */}
           <div className="mb-16 animate-hx-rise">
@@ -78,11 +78,12 @@ export function LegalPage({ content }: LegalPageProps) {
         .prose h1 {
           font-family: var(--font-sans);
           font-weight: 500;
-          font-size: 48px !important;
+          font-size: clamp(30px, 8vw, 48px) !important;
           line-height: 1.05 !important;
           letter-spacing: -0.02em !important;
           margin-bottom: 12px !important;
           color: #E2E8F0 !important;
+          overflow-wrap: break-word;
         }
 
         .prose p:first-of-type strong {

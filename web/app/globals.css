@@ -43,10 +43,15 @@
   --radius-3xl: 14px;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Base reset lives in @layer base so Tailwind's utilities (a later layer) win.
+   Unlayered, this universal rule would beat every padding/margin utility
+   regardless of specificity — which silently zeroed px-*/py-*/mx-* app-wide. */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 }
 
 :root {
