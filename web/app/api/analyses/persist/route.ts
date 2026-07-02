@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       const canonical = JSON.stringify({ markdown, payload: payload ?? null });
       let isSigValid = false;
       try {
-        isSigValid = await verifyContentSig(canonical, contentSig, exp !== undefined ? { analysisId, exp } : undefined);
+        isSigValid = await verifyContentSig(canonical, contentSig, exp !== undefined ? { purpose: 'persist', id: analysisId, exp } : undefined);
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         Sentry.captureException(error, { contexts: { persist: { phase: 'verifyContentSig', analysisId, videoId } } });

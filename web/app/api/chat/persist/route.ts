@@ -24,6 +24,9 @@ export async function POST(request: NextRequest) {
       userId: z.string(),
       content: z.string(),
       contentSig: z.string(),
+      // Expiry for the bound content signature (see verifyContentSig). Optional
+      // for backward compat with a worker that hasn't shipped the bound signer yet.
+      exp: z.number().int().optional(),
     });
 
     const parsed = payloadSchema.safeParse(body);
@@ -31,12 +34,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const { conversationId, userId, content, contentSig } = parsed.data;
+    const { conversationId, userId, content, contentSig, exp } = parsed.data;
 
-    // Tamper check: the worker signed the exact reply text with the shared secret.
+    // Tamper check: the worker signed the exact reply text with the shared secret,
+    // bound to this conversation + an expiry so it can't be replayed or reused.
     let isSigValid = false;
     try {
-      isSigValid = await verifyContentSig(content, contentSig);
+      isSigValid = await verifyContentSig(content, contentSig, exp !== undefined ? { purpose: 'chat-persist', id: conversationId, exp } : undefined);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       Sentry.captureException(error, { contexts: { persist: { phase: 'chat-verifyContentSig', conversationId } } });

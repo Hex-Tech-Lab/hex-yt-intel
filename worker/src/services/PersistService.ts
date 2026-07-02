@@ -1,6 +1,6 @@
 import { reconstructMarkdown, extractJsonPayload } from './MarkdownReconstructor';
 import { UCISPayloadSchema, ChunkPayloadSchema } from './ZodSchemas';
-import { hmacHex } from '../crypto';
+import { signBoundContent } from '../crypto';
 
 /**
  * How long a signed persist body stays valid. Generous (10 min) to absorb
@@ -73,7 +73,7 @@ export class PersistService {
     // body can't be replayed indefinitely or against a different analysis. Must
     // stay in lockstep with verifyContentSig() on the Vercel side.
     const exp = Date.now() + PERSIST_SIG_TTL_MS;
-    const contentSig = await hmacHex(options.activeSecret, `persist:${options.analysisId}:${exp}:${canonical}`);
+    const contentSig = await signBoundContent(options.activeSecret, 'persist', options.analysisId, exp, canonical);
 
     return this._attemptPersist({
       ...options,
@@ -168,7 +168,7 @@ export class PersistService {
     const valid = options.validate12D(markdown);
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
     const exp = Date.now() + PERSIST_SIG_TTL_MS;
-    const contentSig = await hmacHex(options.activeSecret, `persist:${options.analysisId}:${exp}:${canonical}`);
+    const contentSig = await signBoundContent(options.activeSecret, 'persist', options.analysisId, exp, canonical);
 
     const maxRetries = 2;
     for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {

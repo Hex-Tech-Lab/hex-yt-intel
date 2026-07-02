@@ -6,6 +6,14 @@ import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CHAT_CASCADE } from "../../web/lib/config/cascade";
 import { translateModelId } from "./services/model-id-translator";
 import { createAtomicPersist } from "./services/atomic-persist";
+import { signBoundContent } from "./crypto";
+
+/**
+ * TTL for the bound chat-persist content signature. Generous (10 min) to absorb
+ * the persist retry/timeout window while still bounding replay. Mirrors the
+ * analysis persist TTL and must be tolerated by the Vercel verifier.
+ */
+const CHAT_PERSIST_SIG_TTL_MS = 600_000;
 
 /**
  * Direct browser->worker chat streaming. Mirrors /analyze-llm-stream: the Vercel
@@ -319,7 +327,10 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         persist: async (status) => {
           if (persisted) return false;
           send({ type: "persist", status: "saving", requestId: req.requestId });
-          const contentSig = await hmacHex(signingKey, full);
+          // Bind the persist signature to this conversation + an expiry so an
+          // observed body can't be replayed. Verified on Vercel by verifyContentSig.
+          const persistExp = Date.now() + CHAT_PERSIST_SIG_TTL_MS;
+          const contentSig = await signBoundContent(signingKey, "chat-persist", req.conversationId, persistExp, full);
           const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
 
           const persistController = new AbortController();
@@ -334,6 +345,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
                 userId: req.userId,
                 content: full,
                 contentSig,
+                exp: persistExp,
                 status,
               }),
               signal: persistController.signal,
