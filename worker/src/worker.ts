@@ -22,6 +22,7 @@ type Env = {
   SENTRY_DSN?: string;
   ALLOWED_APP_ORIGINS?: string;
   NODE_ENV?: string;
+  ENVIRONMENT?: string;
   DEV_HMAC_SECRET?: string;
   DECODO_API_KEY?: string;
 };

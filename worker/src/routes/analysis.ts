@@ -8,6 +8,7 @@ import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
 import { PersistService } from "../services/PersistService";
 import { createAtomicPersist } from "../services/atomic-persist";
 import { hmacHex, secretFingerprint } from "../crypto";
+import { isProductionEnv } from "../env-utils";
 import { isValidAppUrl } from "../middleware/cors";
 import type { ReasoningEnginePort } from "../ports/ReasoningEnginePort";
 
@@ -29,6 +30,7 @@ type AnalysisEnv = {
   SENTRY_DSN?: string;
   ALLOWED_APP_ORIGINS?: string;
   NODE_ENV?: string;
+  ENVIRONMENT?: string;
   DEV_HMAC_SECRET?: string;
   RESIDENTIAL_PROXY_URL?: string;
   DECODO_API_KEY?: string;
@@ -103,7 +105,10 @@ async function verifyStreamToken(
   const activeSecret = secret;
   const secretsToTry = [secret];
 
-  if (env.DEV_HMAC_SECRET) {
+  // DEV_HMAC_SECRET is a local/preview convenience only — never accept it in
+  // production (matches the chat verifier; prevents a non-prod secret from
+  // authenticating against the prod worker).
+  if (!isProductionEnv(env) && env.DEV_HMAC_SECRET) {
     secretsToTry.push(env.DEV_HMAC_SECRET);
   }
 
@@ -399,7 +404,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: `Missing required fields: ${missing.join(", ")}` }, 400);
   }
 
-  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, c.env.NODE_ENV === "production")) {
+  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, isProductionEnv(c.env))) {
     console.warn("[analyze-llm-stream] Blocked untrusted appUrl callback redirect:", req.appUrl);
     return c.json({ error: "Invalid appUrl callback destination" }, 400);
   }

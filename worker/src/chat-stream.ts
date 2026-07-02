@@ -7,6 +7,7 @@ import { CHAT_CASCADE } from "../../web/lib/config/cascade";
 import { translateModelId } from "./services/model-id-translator";
 import { createAtomicPersist } from "./services/atomic-persist";
 import { signBoundContent, secretFingerprint } from "./crypto";
+import { isProductionEnv } from "./env-utils";
 
 /**
  * TTL for the bound chat-persist content signature. Generous (10 min) to absorb
@@ -31,6 +32,7 @@ type ChatEnv = {
   APP_URL?: string;
   ALLOWED_APP_ORIGINS?: string;
   NODE_ENV?: string;
+  ENVIRONMENT?: string;
   DEV_HMAC_SECRET?: string;
 };
 
@@ -223,7 +225,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   if (!req.requestId) {
     return c.json({ error: "Missing requestId — client cannot correlate SSE events" }, 400);
   }
-  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, c.env.NODE_ENV === "production")) {
+  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, isProductionEnv(c.env))) {
     console.warn("[chat-stream] Blocked untrusted appUrl callback redirect:", req.appUrl);
     return c.json({ error: "Invalid appUrl callback destination" }, 400);
   }
@@ -237,15 +239,15 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   let signingKey = secret;
   let isTokenValid = false;
 
-  // Support both production secret and local/preview fallback secret
+  // Accept the configured DEV_HMAC_SECRET as a fallback ONLY outside production
+  // (local `wrangler dev` / preview). The previous code also pushed a hardcoded
+  // 'dev-hmac-secret-123' — a source-visible secret that, combined with the
+  // broken NODE_ENV prod check, let anyone forge a valid chat token in
+  // production. That hardcoded fallback is removed; local dev must set
+  // DEV_HMAC_SECRET explicitly.
   const secretsToTry = [secret];
-  // Only try DEV_HMAC_SECRET in non-production environments
-  if (c.env.NODE_ENV !== "production" && c.env.DEV_HMAC_SECRET) {
+  if (!isProductionEnv(c.env) && c.env.DEV_HMAC_SECRET) {
     secretsToTry.push(c.env.DEV_HMAC_SECRET);
-  }
-  // Hardcoded recovery fallback for unconfigured preview branches (non-production only)
-  if (c.env.NODE_ENV !== "production") {
-    secretsToTry.push('dev-hmac-secret-123');
   }
 
   for (const s of secretsToTry) {
