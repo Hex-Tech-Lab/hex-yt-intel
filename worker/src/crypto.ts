@@ -10,6 +10,17 @@ export const hmacHex = async (secret: string, message: string): Promise<string> 
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
 };
 
+/**
+ * Non-reversible fingerprint of a secret, for diagnostics. It's the HMAC of a
+ * fixed label, truncated — two systems that share a secret produce the same
+ * fingerprint, so ops can compare Vercel vs the Worker in logs WITHOUT ever
+ * logging the secret itself. Returns "unset" for a missing secret.
+ */
+export const secretFingerprint = async (secret: string | undefined | null): Promise<string> => {
+  if (!secret) return 'unset';
+  return (await hmacHex(secret, 'hmac-fingerprint-v1')).slice(0, 10);
+};
+
 /** The two server-to-server persist flows that sign content with the shared secret. */
 export type BoundSigPurpose = 'persist' | 'chat-persist';
 

@@ -6,7 +6,7 @@ import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CHAT_CASCADE } from "../../web/lib/config/cascade";
 import { translateModelId } from "./services/model-id-translator";
 import { createAtomicPersist } from "./services/atomic-persist";
-import { signBoundContent } from "./crypto";
+import { signBoundContent, secretFingerprint } from "./crypto";
 
 /**
  * TTL for the bound chat-persist content signature. Generous (10 min) to absorb
@@ -262,27 +262,18 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   }
 
   if (!isTokenValid) {
-    const isPreview = c.env.NODE_ENV !== "production";
-    const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `chat:${req.conversationId}:${req.userId}:${req.exp}:${modelStr}`;
-
-    if (isPreview) {
-      const isFallback = signingKey === "dev-hmac-secret-123";
-      console.warn("[chat-stream] HMAC Mismatch Diagnostic:", {
-        providedSig: req.sig,
-        message: msg,
-        signingKeyType: isFallback ? "FALLBACK" : "CONFIGURED",
-      });
-      return c.json({
-        error: "Invalid token",
-        debug: {
-          msg: msg,
-          sig: req.sig,
-          signingKeyType: isFallback ? "FALLBACK" : "CONFIGURED"
-        }
-      }, 401);
-    }
-    return c.json({ error: "Invalid token" }, 401);
+    // Diagnostics to SERVER logs only — never echo the internal signed message
+    // (conversationId/userId/exp) or the sig to the client. Secret fingerprints
+    // let ops compare the Worker's secrets against the Vercel signer's without
+    // logging the secrets. (Expiry is already handled earlier, so this is a
+    // signature mismatch.)
+    console.warn("[chat-stream] stream token rejected", {
+      reason: "invalid_signature",
+      conversationId: req.conversationId,
+      workerSecretFp: await secretFingerprint(secret),
+      workerDevSecretFp: await secretFingerprint(c.env.DEV_HMAC_SECRET),
+    });
+    return c.json({ error: "Invalid token", reason: "invalid_signature" }, 401);
   }
 
   const encoder = new TextEncoder();

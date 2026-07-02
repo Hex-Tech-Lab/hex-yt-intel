@@ -7,7 +7,7 @@ import { ValidationService } from "../services/ValidationService";
 import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
 import { PersistService } from "../services/PersistService";
 import { createAtomicPersist } from "../services/atomic-persist";
-import { hmacHex } from "../crypto";
+import { hmacHex, secretFingerprint } from "../crypto";
 import { isValidAppUrl } from "../middleware/cors";
 import type { ReasoningEnginePort } from "../ports/ReasoningEnginePort";
 
@@ -412,27 +412,23 @@ analysis.post("/analyze-llm-stream", async (c) => {
   const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env);
 
   if (!isTokenValid) {
-    const isPreview = c.env.NODE_ENV !== "production";
-    if (isPreview) {
-      const isFallbackUsed = signingKey === "dev-hmac-secret-123";
-      console.warn("[analyze-llm-stream] HMAC Mismatch Diagnostic:", {
-        providedSig: req.sig,
-        message: msg,
-        isFallbackUsed,
-      });
-      return c.json(
-        {
-          error: "Invalid token",
-          debug: {
-            msg,
-            sig: req.sig,
-            isFallbackUsed,
-          },
-        },
-        401,
-      );
-    }
-    return c.json({ error: "Invalid token" }, 401);
+    // `msg` is "" only on the expiry early-return; otherwise it's the reconstructed
+    // message from the signature-mismatch path.
+    const reason = msg === "" ? "expired" : "invalid_signature";
+    // Full diagnostics go to SERVER logs only — never the client response, which
+    // previously echoed the internal msg (analysisId/models/exp) + sig to any
+    // caller (the prod worker leaked this because NODE_ENV is unset, so the old
+    // NODE_ENV !== "production" guard was always true). Secret fingerprints let
+    // ops compare the Worker's secrets against the Vercel signer's without
+    // logging the secrets themselves.
+    console.warn("[analyze-llm-stream] stream token rejected", {
+      reason,
+      videoId: req.videoId,
+      analysisId: req.analysisId,
+      workerSecretFp: await secretFingerprint(c.env.STREAM_HMAC_SECRET),
+      workerDevSecretFp: await secretFingerprint(c.env.DEV_HMAC_SECRET),
+    });
+    return c.json({ error: "Invalid token", reason }, 401);
   }
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
