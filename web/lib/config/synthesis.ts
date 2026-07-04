@@ -9,6 +9,14 @@
 export const TOTAL_DIMENSIONS = 11;
 export const TOTAL_STREAMS = 5;
 
+/**
+ * Minimum derived dimensions for an analysis to count as "usable". Single source
+ * of truth shared by the cache read path (below this a cached row is a miss) and
+ * the reaper (below this a stuck row is failed rather than salvaged), so the two
+ * never disagree on the same analysis state.
+ */
+export const MIN_USABLE_DIMENSIONS = 8;
+
 export const STREAM_BUNDLES: number[][] = [
   [1],             // Apex (largest, has persona)
   [8],             // Semantic / KG (large, has knowledgeGraph)
