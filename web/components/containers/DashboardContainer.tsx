@@ -20,6 +20,7 @@ import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion'
 import { WordCloud } from '@/components/templates/console/WordCloud';
 import { MindMap } from '@/components/templates/console/MindMap';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
+import { useUIStore } from '@/store/useUIStore';
 import { useInputStore } from '@/store/useInputStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
@@ -265,6 +266,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { graph } = useKnowledgeGraph(nucleus.analysis?.id);
   const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, status === 'complete');
   const [search, setSearch] = useState('');
+  // Closes the mobile/tablet nav drawer. The console/history/settings views
+  // switch via in-page `activeNav` state (not a route change), so the layout's
+  // close-on-route-change effect never fires for them — we close it explicitly.
+  const setMobileNav = useUIStore((s) => s.setMobileNav);
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
@@ -570,6 +575,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             items={sidebarItems}
             activeKey={activeNav}
             onNavigate={(key) => {
+              // Dismiss the mobile/tablet drawer on any selection (iPad: the
+              // in-page view switch below is not a route change, so the layout
+              // won't auto-close it).
+              setMobileNav(false);
               if (key === 'atlas') {
                 router.push('/atlas');
               } else {
