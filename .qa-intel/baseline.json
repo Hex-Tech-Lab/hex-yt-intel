@@ -1,34 +1,34 @@
 [
   {
-    "file": "/home/user/hex-yt-intel/web/utils/supabase/server.ts",
+    "file": "web/utils/supabase/server.ts",
     "severity": "high",
     "title": "Error: Empty catch block swallows error silently",
     "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
     "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/store/useInputStore.ts",
+    "file": "web/store/useInputStore.ts",
     "severity": "high",
     "title": "INP: Synchronous validation in onChange/state setter",
     "why": "Zod safeParse (regex) runs on every keystroke. Blocks UI for 200-500ms per keystroke.",
     "fix": "Remove validation from the state setter. Defer to submit/analyze time: validate only when user triggers action."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/store/useChatStore.ts",
+    "file": "web/store/useChatStore.ts",
     "severity": "medium",
     "title": "Error: .catch(() => {}) swallows promise rejection",
     "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
     "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/youtube.ts",
+    "file": "web/lib/youtube.ts",
     "severity": "high",
     "title": "Error: Empty catch block swallows error silently",
     "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
     "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/redis.ts",
+    "file": "web/lib/redis.ts",
     "severity": "high",
     "title": "Retry: Flag may interfere with atomic-persist retry loop",
     "why": "Attempt-tracking flag (persistAttempted, hasAttempted) may block retries after first failure. Atomic-persist manages its own retry state.",
@@ -42,35 +42,35 @@
     "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/embeddings.ts",
+    "file": "web/lib/embeddings.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/api-client.ts",
+    "file": "web/lib/api-client.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/utils/ucis-parser.ts",
+    "file": "web/lib/utils/ucis-parser.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'headerRegex.exec' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/utils/format.tsx",
+    "file": "web/lib/utils/format.tsx",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'ansiRegex.exec' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/usecases/CreateAnalysisUseCase.ts",
+    "file": "web/lib/usecases/CreateAnalysisUseCase.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'this.metadataIngestion.fetch' detected without an explicit finally block.",
@@ -84,21 +84,21 @@
     "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/services/worker-llm.ts",
+    "file": "web/lib/services/worker-llm.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/services/sentry-telemetry.ts",
+    "file": "web/lib/services/sentry-telemetry.ts",
     "severity": "high",
     "title": "Persist: No error state or retry on failure",
     "why": "Persist endpoint call without error state propagation or retry logic.",
     "fix": "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/services/sentry-telemetry.ts",
+    "file": "web/lib/services/sentry-telemetry.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
@@ -112,49 +112,49 @@
     "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/services/openrouter.ts",
+    "file": "web/lib/services/openrouter.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/services/WorkflowConductor.ts",
+    "file": "web/lib/services/WorkflowConductor.ts",
     "severity": "medium",
     "title": "Error: .catch(() => {}) swallows promise rejection",
     "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
     "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/services/WorkflowConductor.ts",
+    "file": "web/lib/services/WorkflowConductor.ts",
     "severity": "medium",
     "title": "Error: .catch(() => {}) swallows promise rejection",
     "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
     "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/services/WorkflowConductor.ts",
+    "file": "web/lib/services/WorkflowConductor.ts",
     "severity": "medium",
     "title": "Error: .catch(() => {}) swallows promise rejection",
     "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
     "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/prompts/ucis-v5.1.ts",
+    "file": "web/lib/prompts/ucis-v5.1.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (578 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/ports/AnalysisPersistencePort.ts",
+    "file": "web/lib/ports/AnalysisPersistencePort.ts",
     "severity": "high",
     "title": "Persist: No error state or retry on failure",
     "why": "Persist endpoint call without error state propagation or retry logic.",
     "fix": "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/intelligence/relations-engine.ts",
+    "file": "web/lib/intelligence/relations-engine.ts",
     "severity": "medium",
     "title": "Validation: Manual range check duplicates Zod schema",
     "why": "Zod already enforces .min()/.max() bounds. Manual if-check after schema parse is redundant and can drift.",
@@ -168,21 +168,21 @@
     "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/intelligence/relations-engine.ts",
+    "file": "web/lib/intelligence/relations-engine.ts",
     "severity": "high",
     "title": "Error: Empty catch block swallows error silently",
     "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
     "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/chat/outbox.ts",
+    "file": "web/lib/chat/outbox.ts",
     "severity": "high",
     "title": "Error: Empty catch block swallows error silently",
     "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
     "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/adapters/stream-delta-handler.ts",
+    "file": "web/lib/adapters/stream-delta-handler.ts",
     "severity": "high",
     "title": "Error: Empty catch block swallows error silently",
     "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
@@ -196,42 +196,42 @@
     "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/adapters/WorkerIngestionAdapter.ts",
+    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/adapters/WorkerIngestionAdapter.ts",
+    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/adapters/UpstashVectorAdapter.ts",
+    "file": "web/lib/adapters/UpstashVectorAdapter.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'ns.fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/adapters/UpstashVectorAdapter.ts",
+    "file": "web/lib/adapters/UpstashVectorAdapter.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'ns.fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/adapters/SupabasePersistenceAdapter.ts",
+    "file": "web/lib/adapters/SupabasePersistenceAdapter.ts",
     "severity": "high",
     "title": "Persist: No error state or retry on failure",
     "why": "Persist endpoint call without error state propagation or retry logic.",
     "fix": "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/adapters/SupabaseAnalysisAdapter.ts",
+    "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
     "severity": "high",
     "title": "Persist: No error state or retry on failure",
     "why": "Persist endpoint call without error state propagation or retry logic.",
@@ -245,49 +245,49 @@
     "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/adapters/DecodoAdapter.ts",
+    "file": "web/lib/adapters/DecodoAdapter.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/lib/__tests__/indent-heuristic.test.ts",
+    "file": "web/lib/__tests__/indent-heuristic.test.ts",
     "severity": "medium",
     "title": "Cross-Platform: LF-only string splitting",
     "why": "1 instance(s) of .split('\\n') detected. CRLF line endings (Windows) will not be handled.",
     "fix": "Replace .split('\\n') with .split(/\\r?\\n/) for cross-platform compatibility."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/hooks/useSearch.ts",
+    "file": "web/hooks/useSearch.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/hooks/useRelations.ts",
+    "file": "web/hooks/useRelations.ts",
     "severity": "medium",
     "title": "Cross-Platform: LF-only string splitting",
     "why": "1 instance(s) of .split('\\n') detected. CRLF line endings (Windows) will not be handled.",
     "fix": "Replace .split('\\n') with .split(/\\r?\\n/) for cross-platform compatibility."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/hooks/useRelations.ts",
+    "file": "web/hooks/useRelations.ts",
     "severity": "high",
     "title": "Error: Empty catch block swallows error silently",
     "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
     "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/hooks/useRelations.ts",
+    "file": "web/hooks/useRelations.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/hooks/useKnowledgeGraph.ts",
+    "file": "web/hooks/useKnowledgeGraph.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
@@ -301,147 +301,147 @@
     "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/hooks/useEagerVideoMetadata.ts",
+    "file": "web/hooks/useEagerVideoMetadata.ts",
     "severity": "high",
     "title": "Error: Empty catch block swallows error silently",
     "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
     "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/hooks/useEagerVideoMetadata.ts",
+    "file": "web/hooks/useEagerVideoMetadata.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/hooks/useAnalysisHistory.ts",
+    "file": "web/hooks/useAnalysisHistory.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/components/LandingThree.tsx",
+    "file": "web/components/LandingThree.tsx",
     "severity": "high",
     "title": "Canvas: d3/canvas render effect missing data dependency",
     "why": "useEffect renders d3 visualization but dependency array doesn't include the data variable.",
     "fix": "Add graphData/nodes/words to the useEffect dependency array."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/components/containers/DashboardContainer.tsx",
+    "file": "web/components/containers/DashboardContainer.tsx",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (701 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/components/billing/billing-dashboard-client.tsx",
+    "file": "web/components/billing/billing-dashboard-client.tsx",
     "severity": "medium",
     "title": "Error: .catch(() => {}) swallows promise rejection",
     "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
     "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/components/billing/billing-dashboard-client.tsx",
+    "file": "web/components/billing/billing-dashboard-client.tsx",
     "severity": "medium",
     "title": "Promise: Unhandled clipboard promise rejection",
     "why": "navigator.clipboard returns a Promise. Without catch, permission denial causes unhandled rejection in console.",
     "fix": "Wrap in try/catch or add .catch(() => {}): await navigator.clipboard.writeText(text).catch(() => {})"
   },
   {
-    "file": "/home/user/hex-yt-intel/web/components/billing/billing-dashboard-client.tsx",
+    "file": "web/components/billing/billing-dashboard-client.tsx",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/app/status/status-dashboard-client.tsx",
+    "file": "web/app/status/status-dashboard-client.tsx",
     "severity": "medium",
     "title": "Performance: Hover triggers synchronous state re-render",
     "why": "Direct state setting on hover events forces synchronous React rendering on mouse interactions.",
     "fix": "Wrap hover state updates inside React startTransition or use transition deferral hook."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/app/search/page.tsx",
+    "file": "web/app/search/page.tsx",
     "severity": "medium",
     "title": "Accessibility: Toast notification missing role/aria-live",
     "why": "showToast() renders a notification but the container lacks role='alert' or aria-live='polite'. Screen readers won't announce the toast.",
     "fix": "Add role='alert' aria-live='assertive' (for errors) or role='status' aria-live='polite' (for info) to the toast container element."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/app/atlas/AtlasClient.tsx",
+    "file": "web/app/atlas/AtlasClient.tsx",
     "severity": "high",
     "title": "Persist: No error state or retry on failure",
     "why": "Persist endpoint call without error state propagation or retry logic.",
     "fix": "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/app/atlas/AtlasClient.tsx",
+    "file": "web/app/atlas/AtlasClient.tsx",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/app/api/auth/signin/route.ts",
+    "file": "web/app/api/auth/signin/route.ts",
     "severity": "high",
     "title": "Auth: POST 307 redirect preserves POST method",
     "why": "307 redirect preserves the POST method but target may only handle GET. Use 303 to force GET.",
     "fix": "Change 307 to 303 redirect when redirecting POST to a GET-only route."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/app/api/analyses/persist/route.ts",
+    "file": "web/app/api/analyses/persist/route.ts",
     "severity": "medium",
     "title": "Complexity: Monolithic File",
     "why": "File exceeds 500 lines (620 lines).",
     "fix": "Decompose into smaller, domain-specific modules."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/app/api/analyses/persist/route.ts",
+    "file": "web/app/api/analyses/persist/route.ts",
     "severity": "medium",
     "title": "Validation: Manual range check duplicates Zod schema",
     "why": "Zod already enforces .min()/.max() bounds. Manual if-check after schema parse is redundant and can drift.",
     "fix": "Remove manual range validation after schema.safeParse() — Zod handles it. Keep only post-parse semantic checks."
   },
   {
-    "file": "/home/user/hex-yt-intel/web/app/api/analyses/[id]/relations/route.ts",
+    "file": "web/app/api/analyses/[id]/relations/route.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 're.exec' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/worker/src/dimension-parser.ts",
+    "file": "worker/src/dimension-parser.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'this.dimensionPattern.exec' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/worker/src/dimension-parser.ts",
+    "file": "worker/src/dimension-parser.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'this.dimensionSeparator.exec' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/worker/src/dimension-parser.ts",
+    "file": "worker/src/dimension-parser.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'this.dimensionPattern.exec' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/worker/src/chat-stream.ts",
+    "file": "worker/src/chat-stream.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
     "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
   },
   {
-    "file": "/home/user/hex-yt-intel/worker/src/chat-stream.ts",
+    "file": "worker/src/chat-stream.ts",
     "severity": "medium",
     "title": "Workflow: Missing finally block for I/O",
     "why": "Risky I/O call 'fetch' detected without an explicit finally block.",

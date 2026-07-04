@@ -109,19 +109,26 @@ export const SecretsExposureRule: IRule = {
           // constant label / already-redacted placeholder (`{ token: '[REDACTED]' }`),
           // not the live secret — don't flag code that followed this rule's own
           // advice. `{ token: accessToken }` (identifier value) still fires.
+          // Only a KNOWN PLACEHOLDER literal counts as redacted — a real secret
+          // hardcoded as a string (`{ token: 'sk-live-…' }`) must still be flagged.
+          const REDACTION_PLACEHOLDER = /^(?:\[?redacted\]?|<redacted>|masked|hidden|\*{2,}|x{3,}|n\/a)$/i;
           const isRedactedKey = (idNode: Node): boolean => {
             const parent = idNode.getParent();
             if (parent && Node.isPropertyAssignment(parent) && parent.getNameNode() === idNode) {
               const init = parent.getInitializer();
-              return !!init && Node.isStringLiteral(init);
+              return !!init && Node.isStringLiteral(init) &&
+                REDACTION_PLACEHOLDER.test(init.getLiteralText().trim());
             }
             return false;
           };
+          // Normalize separators so snake/SCREAMING_CASE variants match the same
+          // patterns as camelCase (`api_key`, `OPENAI_API_KEY` → `apikey`).
+          const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
           const idNodes = node.getArguments()
-            .flatMap(a => [a, ...a.getDescendants()])
-            .filter(n => Node.isIdentifier(n) && !isRedactedKey(n));
+            .flatMap(a => Node.isIdentifier(a) ? [a] : a.getDescendantsOfKind(SyntaxKind.Identifier))
+            .filter(n => !isRedactedKey(n));
           const hit = sensitivePatterns.find(p =>
-            idNodes.some(id => id.getText().toLowerCase().includes(p)),
+            idNodes.some(id => normalize(id.getText()).includes(p)),
           );
           if (hit) {
             findings.push({
