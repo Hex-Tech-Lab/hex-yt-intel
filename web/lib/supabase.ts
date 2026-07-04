@@ -1,7 +1,18 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { env } from './env';
-import { cookies } from 'next/headers';
+
+// `next/headers` is a Next.js server-only module. It is imported LAZILY (inside
+// the two request-scoped helpers below) rather than at module scope, because
+// this file is also transitively pulled into the Cloudflare Worker bundle (via
+// the persistence adapter → settings service → prompt factory). A static
+// top-level `import { cookies } from 'next/headers'` made esbuild try to resolve
+// a Next-only module for the Worker build, breaking `wrangler deploy`. The
+// service-role and anon clients below never touch cookies, so the Worker never
+// loads this — the dynamic import only runs in the Next.js request context.
+type NextCookies = (typeof import('next/headers'))['cookies'];
+const loadCookies = async (): Promise<NextCookies> =>
+  (await import('next/headers')).cookies;
 
 /**
  * Synchronous Supabase client factory (backward compatible)
@@ -35,10 +46,15 @@ export async function getSupabaseClientWithAuth() {
   let cookieStore: { getAll: () => { name: string; value: string }[]; set: (name: string, value: string, options?: Record<string, unknown>) => void };
   let hasCookies = false;
   try {
+    const cookies = await loadCookies();
     cookieStore = await cookies();
     hasCookies = true;
-  } catch {
-    // Cookieless context (e.g., static generation / build-time page validation)
+  } catch (cookieError) {
+    // Cookieless context (e.g., static generation / build-time page validation),
+    // or the server-only `next/headers` module was unavailable. Fall back to a
+    // cookieless client. Logged at debug level so the fallback stays observable
+    // without adding noise to normal request handling.
+    console.debug('[supabase] cookie store unavailable; using cookieless client', cookieError);
   }
 
   return createServerClient(
@@ -65,8 +81,12 @@ export async function getSupabaseClientWithAuth() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
-          } catch {
-            // Called from a Server Component; ignored (middleware refreshes the session).
+          } catch (writeError) {
+            // Called from a Server Component; cookie writes are illegal there and
+            // Next.js throws. Ignored — middleware refreshes the session on the
+            // next request. Logged at debug level so the swallow stays observable
+            // without adding noise (this only fires on a token refresh, not per render).
+            console.debug('[supabase] cookie write skipped in RSC context', writeError);
           }
         },
       },
@@ -102,6 +122,7 @@ export function getSupabaseClientWithToken(accessToken: string) {
  */
 export async function extractUserToken(): Promise<string | null> {
   try {
+    const cookies = await loadCookies();
     const cookieStore = await cookies();
     const token = cookieStore.get('sb-auth-token')?.value;
     return token || null;
