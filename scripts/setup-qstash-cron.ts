@@ -9,28 +9,27 @@ if (!token || !productionUrl) {
 }
 
 const client = new Client({ token });
-const SCHEDULE_NAME = "daily-dream-sequence-dedup";
-const CRON_SCHEDULE = "0 3 * * *"; // Daily at 3 AM
+const baseUrl = productionUrl.replace(/\/$/, "");
+
+// All scheduled QStash jobs, registered idempotently by name.
+const SCHEDULES: Array<{ name: string; cron: string; path: string }> = [
+  { name: "daily-dream-sequence-dedup", cron: "0 3 * * *", path: "/api/webhooks/dream-sequence" }, // daily 3 AM
+  // Stuck-analysis reaper (ADR 007): settle rows orphaned in `processing`.
+  { name: "stuck-analysis-reaper", cron: "*/15 * * * *", path: "/api/webhooks/reaper" }, // every 15 min
+];
 
 async function setupCron() {
   try {
-    const schedules = await client.schedules.list();
-    const existing = schedules.find((s) => s.name === SCHEDULE_NAME);
-
-    if (existing) {
-      console.log(`✅ Cron schedule '${SCHEDULE_NAME}' already exists (ID: ${existing.scheduleId}).`);
-      return;
+    const existing = await client.schedules.list();
+    for (const schedule of SCHEDULES) {
+      if (existing.find((s) => s.name === schedule.name)) {
+        console.log(`✅ Cron schedule '${schedule.name}' already exists.`);
+        continue;
+      }
+      const destination = `${baseUrl}${schedule.path}`;
+      await client.schedules.create({ name: schedule.name, cron: schedule.cron, destination });
+      console.log(`🚀 Cron schedule '${schedule.name}' created → ${destination} (${schedule.cron}).`);
     }
-
-    const destination = `${productionUrl.replace(/\/$/, '')}/api/webhooks/dream-sequence`;
-    
-    await client.schedules.create({
-      name: SCHEDULE_NAME,
-      cron: CRON_SCHEDULE,
-      destination: destination,
-    });
-    
-    console.log(`🚀 Cron schedule '${SCHEDULE_NAME}' created successfully pointing to ${destination}.`);
   } catch (error) {
     console.error("❌ Failed to setup QStash cron schedule:", error);
     process.exit(1);

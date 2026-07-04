@@ -1,5 +1,6 @@
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
+import { MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
 import * as Sentry from '@sentry/nextjs';
 import type {
   CachedAnalysis,
@@ -64,9 +65,9 @@ export class SupabaseAnalysisAdapter {
     const dimensions = parseUcisDimensions(existing.analysis_markdown);
     const dimensionCount = Object.keys(dimensions).length;
 
-    if (dimensionCount < 8) {
+    if (dimensionCount < MIN_USABLE_DIMENSIONS) {
       console.warn(
-        `[PersistenceAdapter] Cache for ${existing.id} has ${dimensionCount} dimensions (<8) — treating as miss.`
+        `[PersistenceAdapter] Cache for ${existing.id} has ${dimensionCount} dimensions (<${MIN_USABLE_DIMENSIONS}) — treating as miss.`
       );
       return null;
     }
@@ -188,6 +189,11 @@ export class SupabaseAnalysisAdapter {
     return { id: rpcData as string };
   }
 
+  // Retry / error-state propagation is intentionally NOT handled here: this
+  // adapter is the persistence sink (single DB write). Retry with backoff and
+  // failure-state settling are owned by the caller layer — the persist route's
+  // `retryWithBackoff` and the Worker's atomic-persist — so the responsibility
+  // lives once, at the right seam (SoC), not duplicated in every adapter.
   static async persistAnalysis(params: {
     analysisId: string;
     analysisPayload: UCISPayloadV2 | null;
