@@ -1,0 +1,471 @@
+[
+  {
+    "file": "web/utils/supabase/server.ts",
+    "severity": "high",
+    "title": "Error: Empty catch block swallows error silently",
+    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
+    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
+  },
+  {
+    "file": "web/store/useInputStore.ts",
+    "severity": "high",
+    "title": "INP: Synchronous validation in onChange/state setter",
+    "why": "Zod safeParse (regex) runs on every keystroke. Blocks UI for 200-500ms per keystroke.",
+    "fix": "Remove validation from the state setter. Defer to submit/analyze time: validate only when user triggers action."
+  },
+  {
+    "file": "web/store/useChatStore.ts",
+    "severity": "medium",
+    "title": "Error: .catch(() => {}) swallows promise rejection",
+    "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
+    "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
+  },
+  {
+    "file": "web/lib/youtube.ts",
+    "severity": "high",
+    "title": "Error: Empty catch block swallows error silently",
+    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
+    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
+  },
+  {
+    "file": "web/lib/redis.ts",
+    "severity": "high",
+    "title": "Retry: Flag may interfere with atomic-persist retry loop",
+    "why": "Attempt-tracking flag (persistAttempted, hasAttempted) may block retries after first failure. Atomic-persist manages its own retry state.",
+    "fix": "Let atomic-persist manage retry logic. Remove attempt-tracking flags that return early from retry callbacks."
+  },
+  {
+    "file": "web/lib/embeddings.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  },
+  {
+    "file": "web/lib/embeddings.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/api-client.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/utils/ucis-parser.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'headerRegex.exec' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/utils/format.tsx",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'ansiRegex.exec' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/usecases/CreateAnalysisUseCase.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'this.metadataIngestion.fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/services/worker-llm.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  },
+  {
+    "file": "web/lib/services/worker-llm.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/services/sentry-telemetry.ts",
+    "severity": "high",
+    "title": "Persist: No error state or retry on failure",
+    "why": "Persist endpoint call without error state propagation or retry logic.",
+    "fix": "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
+  },
+  {
+    "file": "web/lib/services/sentry-telemetry.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/services/openrouter.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  },
+  {
+    "file": "web/lib/services/openrouter.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/services/WorkflowConductor.ts",
+    "severity": "medium",
+    "title": "Error: .catch(() => {}) swallows promise rejection",
+    "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
+    "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
+  },
+  {
+    "file": "web/lib/services/WorkflowConductor.ts",
+    "severity": "medium",
+    "title": "Error: .catch(() => {}) swallows promise rejection",
+    "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
+    "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
+  },
+  {
+    "file": "web/lib/services/WorkflowConductor.ts",
+    "severity": "medium",
+    "title": "Error: .catch(() => {}) swallows promise rejection",
+    "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
+    "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
+  },
+  {
+    "file": "web/lib/prompts/ucis-v5.1.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (578 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/lib/ports/AnalysisPersistencePort.ts",
+    "severity": "high",
+    "title": "Persist: No error state or retry on failure",
+    "why": "Persist endpoint call without error state propagation or retry logic.",
+    "fix": "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
+  },
+  {
+    "file": "web/lib/intelligence/relations-engine.ts",
+    "severity": "medium",
+    "title": "Validation: Manual range check duplicates Zod schema",
+    "why": "Zod already enforces .min()/.max() bounds. Manual if-check after schema parse is redundant and can drift.",
+    "fix": "Remove manual range validation after schema.safeParse() — Zod handles it. Keep only post-parse semantic checks."
+  },
+  {
+    "file": "web/lib/intelligence/relations-engine.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  },
+  {
+    "file": "web/lib/intelligence/relations-engine.ts",
+    "severity": "high",
+    "title": "Error: Empty catch block swallows error silently",
+    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
+    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
+  },
+  {
+    "file": "web/lib/chat/outbox.ts",
+    "severity": "high",
+    "title": "Error: Empty catch block swallows error silently",
+    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
+    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
+  },
+  {
+    "file": "web/lib/adapters/stream-delta-handler.ts",
+    "severity": "high",
+    "title": "Error: Empty catch block swallows error silently",
+    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
+    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
+  },
+  {
+    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  },
+  {
+    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/adapters/WorkerIngestionAdapter.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/adapters/UpstashVectorAdapter.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'ns.fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/adapters/UpstashVectorAdapter.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'ns.fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/adapters/SupabasePersistenceAdapter.ts",
+    "severity": "high",
+    "title": "Persist: No error state or retry on failure",
+    "why": "Persist endpoint call without error state propagation or retry logic.",
+    "fix": "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
+  },
+  {
+    "file": "web/lib/adapters/SupabaseAnalysisAdapter.ts",
+    "severity": "high",
+    "title": "Persist: No error state or retry on failure",
+    "why": "Persist endpoint call without error state propagation or retry logic.",
+    "fix": "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
+  },
+  {
+    "file": "web/lib/adapters/DecodoAdapter.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  },
+  {
+    "file": "web/lib/adapters/DecodoAdapter.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/lib/__tests__/indent-heuristic.test.ts",
+    "severity": "medium",
+    "title": "Cross-Platform: LF-only string splitting",
+    "why": "1 instance(s) of .split('\\n') detected. CRLF line endings (Windows) will not be handled.",
+    "fix": "Replace .split('\\n') with .split(/\\r?\\n/) for cross-platform compatibility."
+  },
+  {
+    "file": "web/hooks/useSearch.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/hooks/useRelations.ts",
+    "severity": "medium",
+    "title": "Cross-Platform: LF-only string splitting",
+    "why": "1 instance(s) of .split('\\n') detected. CRLF line endings (Windows) will not be handled.",
+    "fix": "Replace .split('\\n') with .split(/\\r?\\n/) for cross-platform compatibility."
+  },
+  {
+    "file": "web/hooks/useRelations.ts",
+    "severity": "high",
+    "title": "Error: Empty catch block swallows error silently",
+    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
+    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
+  },
+  {
+    "file": "web/hooks/useRelations.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/hooks/useKnowledgeGraph.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/hooks/useEagerVideoMetadata.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  },
+  {
+    "file": "web/hooks/useEagerVideoMetadata.ts",
+    "severity": "high",
+    "title": "Error: Empty catch block swallows error silently",
+    "why": "Empty catch() hides failures. Clipboard, fetch, or persist errors are silently lost.",
+    "fix": "At minimum, log the error: catch(e) { console.error('[context]', e) }"
+  },
+  {
+    "file": "web/hooks/useEagerVideoMetadata.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/hooks/useAnalysisHistory.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/components/LandingThree.tsx",
+    "severity": "high",
+    "title": "Canvas: d3/canvas render effect missing data dependency",
+    "why": "useEffect renders d3 visualization but dependency array doesn't include the data variable.",
+    "fix": "Add graphData/nodes/words to the useEffect dependency array."
+  },
+  {
+    "file": "web/components/containers/DashboardContainer.tsx",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (701 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/components/billing/billing-dashboard-client.tsx",
+    "severity": "medium",
+    "title": "Error: .catch(() => {}) swallows promise rejection",
+    "why": "Empty .catch(() => {}) hides failures. User gets no feedback when action fails.",
+    "fix": "Replace with .catch(e => console.error('[context]', e)) or .catch(e => showToast('Error: ' + e.message))"
+  },
+  {
+    "file": "web/components/billing/billing-dashboard-client.tsx",
+    "severity": "medium",
+    "title": "Promise: Unhandled clipboard promise rejection",
+    "why": "navigator.clipboard returns a Promise. Without catch, permission denial causes unhandled rejection in console.",
+    "fix": "Wrap in try/catch or add .catch(() => {}): await navigator.clipboard.writeText(text).catch(() => {})"
+  },
+  {
+    "file": "web/components/billing/billing-dashboard-client.tsx",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/app/status/status-dashboard-client.tsx",
+    "severity": "medium",
+    "title": "Performance: Hover triggers synchronous state re-render",
+    "why": "Direct state setting on hover events forces synchronous React rendering on mouse interactions.",
+    "fix": "Wrap hover state updates inside React startTransition or use transition deferral hook."
+  },
+  {
+    "file": "web/app/search/page.tsx",
+    "severity": "medium",
+    "title": "Accessibility: Toast notification missing role/aria-live",
+    "why": "showToast() renders a notification but the container lacks role='alert' or aria-live='polite'. Screen readers won't announce the toast.",
+    "fix": "Add role='alert' aria-live='assertive' (for errors) or role='status' aria-live='polite' (for info) to the toast container element."
+  },
+  {
+    "file": "web/app/atlas/AtlasClient.tsx",
+    "severity": "high",
+    "title": "Persist: No error state or retry on failure",
+    "why": "Persist endpoint call without error state propagation or retry logic.",
+    "fix": "Add exponential backoff retry (2 attempts) and set error state if all attempts fail."
+  },
+  {
+    "file": "web/app/atlas/AtlasClient.tsx",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "web/app/api/auth/signin/route.ts",
+    "severity": "high",
+    "title": "Auth: POST 307 redirect preserves POST method",
+    "why": "307 redirect preserves the POST method but target may only handle GET. Use 303 to force GET.",
+    "fix": "Change 307 to 303 redirect when redirecting POST to a GET-only route."
+  },
+  {
+    "file": "web/app/api/analyses/persist/route.ts",
+    "severity": "medium",
+    "title": "Complexity: Monolithic File",
+    "why": "File exceeds 500 lines (620 lines).",
+    "fix": "Decompose into smaller, domain-specific modules."
+  },
+  {
+    "file": "web/app/api/analyses/persist/route.ts",
+    "severity": "medium",
+    "title": "Validation: Manual range check duplicates Zod schema",
+    "why": "Zod already enforces .min()/.max() bounds. Manual if-check after schema parse is redundant and can drift.",
+    "fix": "Remove manual range validation after schema.safeParse() — Zod handles it. Keep only post-parse semantic checks."
+  },
+  {
+    "file": "web/app/api/analyses/[id]/relations/route.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 're.exec' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "worker/src/dimension-parser.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'this.dimensionPattern.exec' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "worker/src/dimension-parser.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'this.dimensionSeparator.exec' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "worker/src/dimension-parser.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'this.dimensionPattern.exec' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "worker/src/chat-stream.ts",
+    "severity": "medium",
+    "title": "Workflow: Missing finally block for I/O",
+    "why": "Risky I/O call 'fetch' detected without an explicit finally block.",
+    "fix": "Ensure all I/O operations are wrapped in a try/finally block to guarantee resource cleanup."
+  },
+  {
+    "file": "worker/src/services/atomic-persist.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  },
+  {
+    "file": "worker/src/services/TranscriptExtractor.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  },
+  {
+    "file": "worker/src/services/LLMCascade.ts",
+    "severity": "high",
+    "title": "Stream: Timeout abort does not settle error state",
+    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
+    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
+  }
+]
