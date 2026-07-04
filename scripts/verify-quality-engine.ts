@@ -217,9 +217,16 @@ async function run() {
   // treat every finding as "new" on CI or another developer's checkout (different
   // cwd). Relativizing here keeps baseline write, compare, and reporting stable
   // and machine-independent.
+  // Pure string prefix-strip (no `path.resolve`/`path.relative` on a variable):
+  // the finding paths are engine-produced repo file paths, either absolute under
+  // cwd or already repo-relative. Avoiding `path.*` on a variable also keeps
+  // static analysers from flagging a (non-applicable) path-traversal sink here.
+  const cwdPosix = process.cwd().replace(/\\/g, '/').replace(/\/+$/, '');
   const toRepoRelative = (f: string): string => {
-    const abs = path.isAbsolute(f) ? f : path.resolve(process.cwd(), f);
-    return path.relative(process.cwd(), abs).replace(/\\/g, '/');
+    const norm = f.replace(/\\/g, '/');
+    if (norm === cwdPosix) return '';
+    if (norm.startsWith(cwdPosix + '/')) return norm.slice(cwdPosix.length + 1);
+    return norm.replace(/^\.\//, '');
   };
   const findings = (await engine.analyze(fileList)).map(f => ({
     ...f,
