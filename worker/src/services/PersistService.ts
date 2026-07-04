@@ -1,6 +1,14 @@
 import { reconstructMarkdown, extractJsonPayload } from './MarkdownReconstructor';
 import { UCISPayloadSchema, ChunkPayloadSchema } from './ZodSchemas';
-import { hmacHex } from '../crypto';
+import { signBoundContent } from '../crypto';
+
+/**
+ * How long a signed persist body stays valid. Generous (10 min) to absorb
+ * retries, ctx.waitUntil scheduling delay, and any Cloudflare↔Vercel clock
+ * skew, while still bounding the replay window. Must be tolerated by the
+ * Vercel-side verifyContentSig() expiry check.
+ */
+const PERSIST_SIG_TTL_MS = 600_000;
 
 export interface PersistOptions {
   analysisId: string;
@@ -61,7 +69,11 @@ export class PersistService {
 
     const valid = options.validate12D(markdown);
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
-    const contentSig = await hmacHex(options.activeSecret, canonical);
+    // Bind the signature to this analysis id and an expiry so an observed persist
+    // body can't be replayed indefinitely or against a different analysis. Must
+    // stay in lockstep with verifyContentSig() on the Vercel side.
+    const exp = Date.now() + PERSIST_SIG_TTL_MS;
+    const contentSig = await signBoundContent(options.activeSecret, 'persist', options.analysisId, exp, canonical);
 
     return this._attemptPersist({
       ...options,
@@ -69,6 +81,7 @@ export class PersistService {
       jsonPayload,
       valid,
       contentSig,
+      exp,
     });
   }
 
@@ -85,6 +98,7 @@ export class PersistService {
     appUrl: string;
     valid: boolean;
     contentSig: string;
+    exp: number;
     chunkIndex?: number;
     totalChunks?: number;
   }): Promise<boolean> {
@@ -103,6 +117,7 @@ export class PersistService {
             model: params.modelUsed,
             valid: params.valid,
             contentSig: params.contentSig,
+            exp: params.exp,
             status: params.status,
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,
@@ -152,7 +167,8 @@ export class PersistService {
 
     const valid = options.validate12D(markdown);
     const canonical = JSON.stringify({ markdown, payload: jsonPayload });
-    const contentSig = await hmacHex(options.activeSecret, canonical);
+    const exp = Date.now() + PERSIST_SIG_TTL_MS;
+    const contentSig = await signBoundContent(options.activeSecret, 'persist', options.analysisId, exp, canonical);
 
     const maxRetries = 2;
     for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {
@@ -169,6 +185,7 @@ export class PersistService {
             model: options.modelUsed,
             valid,
             contentSig,
+            exp,
             status: options.status,
           }),
         });

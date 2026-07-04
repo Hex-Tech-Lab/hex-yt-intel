@@ -84,7 +84,7 @@ export function PricingComparisonTable() {
             <th style={{ padding: "24px 20px", textAlign: "center" }}>
                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Free</p>
             </th>
-            <th style={{ padding: "24px 20px", textAlign: "center", background: "rgb(6 182 212 / 0.05)" }}>
+            <th style={{ padding: "24px 20px", textAlign: "center", background: "var(--accent-a05)" }}>
                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--accent)" }}>Pro</p>
             </th>
             <th style={{ padding: "24px 20px", textAlign: "center" }}>
@@ -112,7 +112,7 @@ export function PricingComparisonTable() {
                   <td style={{ padding: "16px 20px", textAlign: "center" }}>
                     <CheckOrValue value={feat.free} />
                   </td>
-                  <td style={{ padding: "16px 20px", textAlign: "center", background: "rgb(6 182 212 / 0.03)" }}>
+                  <td style={{ padding: "16px 20px", textAlign: "center", background: "var(--accent-a03)" }}>
                     <CheckOrValue value={feat.pro} />
                   </td>
                   <td style={{ padding: "16px 20px", textAlign: "center" }}>

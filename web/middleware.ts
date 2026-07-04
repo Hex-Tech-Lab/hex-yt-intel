@@ -120,24 +120,32 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Explicitly allow public API routes to pass through without auth checks.
-  // This includes auth callbacks, webhooks, public health checks, and metadata requests.
+  // Public allowlist. THIS IS THE ONLY WAY A ROUTE UNDER THE MATCHER SKIPS AUTH.
+  // The gate below is fail-CLOSED: anything not listed here (and not a dev bypass)
+  // requires a valid Supabase session. When adding a new endpoint whose legitimate
+  // caller has NO user session cookie — an external webhook, a server-to-server
+  // (S2S) call, or a pre-auth redirect — add it here explicitly; otherwise leave
+  // it out and it is protected by default.
   const publicRoutes = [
-    '/auth/callback',      // Supabase OAuth callback
-    '/api/stripe',         // Stripe webhooks
-    '/api/webhooks',       // Generic webhooks
+    '/auth/callback',      // Supabase OAuth callback (page, outside matcher — defensive)
+    '/api/auth/signin',    // Legacy redirect to /auth/signin (no session by definition)
+    '/api/stripe',         // Stripe webhooks (signature-verified)
+    '/api/billing/webhook', // Paddle billing webhook (signature-verified, external)
+    '/api/webhooks',       // Generic webhooks (QStash/validation — signature/secret gated)
     '/api/health',         // Health check endpoint
     '/api/metadata',       // Public video metadata endpoint
     '/api/transcript-proxy', // Transcript proxy (diagnostic bypass for routing validation)
-    // S2S persist: the Cloudflare Worker posts here from ctx.waitUntil with NO
-    // cookies. It is gated by an HMAC content signature inside the handler, not
-    // by session auth — so it must bypass the cookie-based middleware gate.
-    // Without this it matches the '/api/analyses' protected prefix and the
-    // worker's call dies with a 401 ("Auth session missing!").
+    // S2S persist: the Cloudflare Worker posts to these from ctx.waitUntil with NO
+    // cookies. They are gated by an HMAC content signature inside the handler, not
+    // by session auth — so they must bypass the cookie-based middleware gate. The
+    // handlers themselves own error-state handling and retry/backoff.
     '/api/analyses/persist',
+    '/api/chat/persist',
   ];
 
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
+  // Segment-boundary match so a public prefix can't unintentionally exempt a
+  // sibling route (e.g. '/api/stripe' must NOT exempt '/api/stripe-admin').
+  if (publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))) {
     return NextResponse.next();
   }
 
@@ -152,22 +160,21 @@ export async function middleware(request: NextRequest) {
       const isValidBypass = timingSafeStringEqual(testSecret, devBypassToken);
 
       if (isValidBypass) {
-        console.info('[middleware] Development bypass token validated. Halting downstream actions.');
+        console.info('[middleware] Development bypass credential accepted; skipping auth.');
         return NextResponse.next(); // ← CRITICAL: MUST RETURN EXPLICITLY TO EXIT THE FUNCTION
       }
     } catch {
       // Token comparison failed — treat as unauthorized bypass attempt
-      console.warn('[middleware] Invalid bypass token format');
+      console.warn('[middleware] Invalid bypass credential format');
     }
   }
 
-  // Protected routes (require auth)
-  const protectedRoutes = ['/analyses', '/api/analyses', '/api/search'];
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
-
-  if (!isProtectedRoute) {
-    return NextResponse.next();
-  }
+  // Fail-CLOSED: every route the matcher sees (see `config.matcher` below:
+  // /analyses/:path* and /api/:path*) that reached this point is neither public
+  // nor a dev bypass, so it requires a valid session. Previously this was an
+  // allowlist of protected prefixes with an open fallthrough, which meant any
+  // new /api/* endpoint (e.g. /api/admin, /api/billing) shipped unauthenticated
+  // by default. Defaulting to protected removes that whole class of bug.
 
   // Official @supabase/ssr pattern: plain NextResponse.next(), cookies written
   // onto the response only (not back onto request). See supabase/ssr docs.
@@ -176,19 +183,28 @@ export async function middleware(request: NextRequest) {
   const { ok: isAuthenticated, diag } = await hasSupabaseAuth(request, supabaseResponse);
 
   if (!isAuthenticated) {
-    Sentry.captureMessage('Auth Failure', {
-      level: 'warning',
-      tags: {
-        pathname,
-        outcome: String(diag.outcome ?? 'unknown'),
-        hadAuthCookie: String(Array.isArray(diag.authCookieNames) && (diag.authCookieNames as unknown[]).length > 0),
-      },
-      extra: {
-        ...diag,
-        userAgent: request.headers.get('user-agent'),
-        secFetchSite: request.headers.get('sec-fetch-site'),
-      },
-    });
+    // Only report to Sentry when a real credential was present but failed
+    // validation — that's an auth regression worth investigating. Anonymous,
+    // credential-less hits on the (now much larger) fail-closed surface are
+    // expected (scanners, logged-out navigation) and would only create noise.
+    // A present Bearer credential counts too, so API clients stay observable.
+    const hadAuthCookie = Array.isArray(diag.authCookieNames) && (diag.authCookieNames as unknown[]).length > 0;
+    const hadCredential = hadAuthCookie || (request.headers.get('authorization')?.startsWith('Bearer ') ?? false);
+    if (hadCredential) {
+      Sentry.captureMessage('Auth Failure', {
+        level: 'warning',
+        tags: {
+          pathname,
+          outcome: String(diag.outcome ?? 'unknown'),
+          hadAuthCookie: String(hadAuthCookie),
+        },
+        extra: {
+          ...diag,
+          userAgent: request.headers.get('user-agent'),
+          secFetchSite: request.headers.get('sec-fetch-site'),
+        },
+      });
+    }
 
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

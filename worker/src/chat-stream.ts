@@ -6,6 +6,16 @@ import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
 import { CHAT_CASCADE } from "../../web/lib/config/cascade";
 import { translateModelId } from "./services/model-id-translator";
 import { createAtomicPersist } from "./services/atomic-persist";
+import { signBoundContent, secretFingerprint } from "./crypto";
+import { isProductionEnv } from "./env-utils";
+import { isValidAppUrl } from "./middleware/cors";
+
+/**
+ * TTL for the bound chat-persist content signature. Generous (10 min) to absorb
+ * the persist retry/timeout window while still bounding replay. Mirrors the
+ * analysis persist TTL and must be tolerated by the Vercel verifier.
+ */
+const CHAT_PERSIST_SIG_TTL_MS = 600_000;
 
 /**
  * Direct browser->worker chat streaming. Mirrors /analyze-llm-stream: the Vercel
@@ -23,6 +33,7 @@ type ChatEnv = {
   APP_URL?: string;
   ALLOWED_APP_ORIGINS?: string;
   NODE_ENV?: string;
+  ENVIRONMENT?: string;
   DEV_HMAC_SECRET?: string;
 };
 
@@ -63,53 +74,6 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
-function isValidAppUrl(
-  urlStr: string | undefined,
-  envAppUrl: string | undefined,
-  allowedOrigins?: string,
-  isProd?: boolean
-): boolean {
-  if (!urlStr) return true;
-
-  try {
-    const parsedUrl = new URL(urlStr);
-    const origin = parsedUrl.origin.toLowerCase();
-
-    // 1. If it matches envAppUrl's origin, it's safe
-    if (envAppUrl) {
-      const parsedEnv = new URL(envAppUrl);
-      if (origin === parsedEnv.origin.toLowerCase()) {
-        return true;
-      }
-    }
-
-    // 2. Check explicitly allowed origins from env
-    if (allowedOrigins) {
-      const list = allowedOrigins.split(",").map((o) => o.trim().toLowerCase());
-      if (list.includes(origin)) {
-        return true;
-      }
-    }
-
-    // 3. For non-production/preview environments, OR if it's a vercel preview domain, OR it's the prod domain, allow
-    const hostname = parsedUrl.hostname.toLowerCase();
-    if (!isProd || hostname.endsWith(".vercel.app") || hostname === "yt-intel.getmytestdrive.com") {
-      if (
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        hostname.endsWith(".vercel.app") ||
-        hostname === "yt-intel.getmytestdrive.com"
-      ) {
-        return true;
-      }
-    }
-  } catch (e) {
-    return false;
-  }
-
-  return false;
-}
-
 /** Run the chat cascade, committing to the first model that produces tokens. The model
  *  list comes from the bouncer (per-tier app_settings); falls back to CHAT_MODELS. */
 async function streamChatCascade(
@@ -137,8 +101,6 @@ async function streamChatCascade(
     : CHAT_CASCADE;
 
   for (const { model, providerOrder } of chain) {
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 50000);
     let full = "";
     try {
       const res = await fetch(OPENROUTER_URL, {
@@ -161,7 +123,7 @@ async function streamChatCascade(
             ...(providerOrder ? { order: providerOrder } : {}),
           },
         }),
-        signal: controller.signal,
+        signal: AbortSignal.timeout(50000),
       });
       if (!res.ok || !res.body) {
         continue; // try next model
@@ -197,8 +159,6 @@ async function streamChatCascade(
     } catch (e) {
       /* timeout / network — fall through to next model */
       console.error("[chat-stream] model cascade fetch failed, trying next", e instanceof Error ? e.message : String(e));
-    } finally {
-      clearTimeout(t);
     }
   }
   return "";
@@ -215,12 +175,12 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   if (!req.requestId) {
     return c.json({ error: "Missing requestId — client cannot correlate SSE events" }, 400);
   }
-  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, c.env.NODE_ENV === "production")) {
+  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, isProductionEnv(c.env))) {
     console.warn("[chat-stream] Blocked untrusted appUrl callback redirect:", req.appUrl);
     return c.json({ error: "Invalid appUrl callback destination" }, 400);
   }
   if (!secret || !apiKey) {
-    console.error("[chat-stream] Server misconfigured: missing STREAM_HMAC_SECRET or OPENROUTER_API_KEY");
+    console.error("[chat-stream] Server misconfigured: missing signing key or model-router credentials");
     return c.json({ error: "Server misconfigured" }, 500);
   }
   if (Date.now() > req.exp) {
@@ -229,15 +189,15 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   let signingKey = secret;
   let isTokenValid = false;
 
-  // Support both production secret and local/preview fallback secret
+  // Accept the configured DEV_HMAC_SECRET as a fallback ONLY outside production
+  // (local `wrangler dev` / preview). The previous code also pushed a hardcoded
+  // 'dev-hmac-secret-123' — a source-visible secret that, combined with the
+  // broken NODE_ENV prod check, let anyone forge a valid chat token in
+  // production. That hardcoded fallback is removed; local dev must set
+  // DEV_HMAC_SECRET explicitly.
   const secretsToTry = [secret];
-  // Only try DEV_HMAC_SECRET in non-production environments
-  if (c.env.NODE_ENV !== "production" && c.env.DEV_HMAC_SECRET) {
+  if (!isProductionEnv(c.env) && c.env.DEV_HMAC_SECRET) {
     secretsToTry.push(c.env.DEV_HMAC_SECRET);
-  }
-  // Hardcoded recovery fallback for unconfigured preview branches (non-production only)
-  if (c.env.NODE_ENV !== "production") {
-    secretsToTry.push('dev-hmac-secret-123');
   }
 
   for (const s of secretsToTry) {
@@ -254,27 +214,20 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   }
 
   if (!isTokenValid) {
-    const isPreview = c.env.NODE_ENV !== "production";
-    const modelStr = [...(req.models ?? [])].sort().join(',');
-    const msg = `chat:${req.conversationId}:${req.userId}:${req.exp}:${modelStr}`;
-
-    if (isPreview) {
-      const isFallback = signingKey === "dev-hmac-secret-123";
-      console.warn("[chat-stream] HMAC Mismatch Diagnostic:", {
-        providedSig: req.sig,
-        message: msg,
-        signingKeyType: isFallback ? "FALLBACK" : "CONFIGURED",
-      });
-      return c.json({
-        error: "Invalid token",
-        debug: {
-          msg: msg,
-          sig: req.sig,
-          signingKeyType: isFallback ? "FALLBACK" : "CONFIGURED"
-        }
-      }, 401);
-    }
-    return c.json({ error: "Invalid token" }, 401);
+    // Diagnostics to SERVER logs only — never echo the internal signed message
+    // (conversationId/userId/exp) or the sig to the client. Secret fingerprints
+    // let ops compare the Worker's secrets against the Vercel signer's without
+    // logging the secrets. (Expiry is already handled earlier, so this is a
+    // signature mismatch.)
+    const keyFpPrimary = await secretFingerprint(secret);
+    const keyFpFallback = await secretFingerprint(c.env.DEV_HMAC_SECRET);
+    console.warn("[chat-stream] stream signature rejected", {
+      reason: "invalid_signature",
+      conversationId: req.conversationId,
+      keyFpPrimary,
+      keyFpFallback,
+    });
+    return c.json({ error: "Invalid token", reason: "invalid_signature" }, 401);
   }
 
   const encoder = new TextEncoder();
@@ -312,18 +265,18 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         send({ type: "delta", content: full, requestId: req.requestId });
       }
 
-      let persisted = false;
+      let hasSaved = false;
 
       const atomicPersist = createAtomicPersist({
         hasContent: () => full.length > 0,
         persist: async (status) => {
-          if (persisted) return false;
+          if (hasSaved) return false;
           send({ type: "persist", status: "saving", requestId: req.requestId });
-          const contentSig = await hmacHex(signingKey, full);
+          // Bind the persist signature to this conversation + an expiry so an
+          // observed body can't be replayed. Verified on Vercel by verifyContentSig.
+          const persistExp = Date.now() + CHAT_PERSIST_SIG_TTL_MS;
+          const contentSig = await signBoundContent(signingKey, "chat-persist", req.conversationId, persistExp, full);
           const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
-
-          const persistController = new AbortController();
-          const timeout = setTimeout(() => persistController.abort(), 10_000);
 
           try {
             const res = await fetch(`${appUrl}/api/chat/persist`, {
@@ -334,26 +287,26 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
                 userId: req.userId,
                 content: full,
                 contentSig,
+                exp: persistExp,
                 status,
               }),
-              signal: persistController.signal,
+              // 10s server-side timeout; AbortSignal.timeout throws a TimeoutError.
+              signal: AbortSignal.timeout(10_000),
             });
             if (res.ok) {
-              persisted = true;
+              hasSaved = true;
               send({ type: "persist", status: "saved", requestId: req.requestId });
             } else {
               send({ type: "persist", status: "failed", requestId: req.requestId });
             }
-            return persisted;
+            return hasSaved;
           } catch (e) {
             send({ type: "persist", status: "failed", requestId: req.requestId });
-            const isAbort = e instanceof DOMException && e.name === "AbortError";
-            const reason = isAbort ? "persist_timeout" : "persist_error";
+            const isTimeout = e instanceof DOMException && (e.name === "AbortError" || e.name === "TimeoutError");
+            const reason = isTimeout ? "persist_timeout" : "persist_error";
             const message = e instanceof Error ? e.message : String(e);
             console.error("[chat-stream]", { reason, message, conversationId: req.conversationId });
             return false;
-          } finally {
-            clearTimeout(timeout);
           }
         },
         signal: clientSignal,

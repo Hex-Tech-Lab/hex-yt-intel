@@ -214,7 +214,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
             <div key={c.id} className="flex items-center gap-1.5 py-0.5 px-2">
               <button
                 onClick={() => { void selectConversation(c.id); setShowThreads(false); }}
-                className={`flex-1 min-w-0 text-left p-2 rounded-lg border-none cursor-pointer font-mono text-[11.5px] overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-[7px] ${c.id === activeId ? 'bg-[rgb(6_182_212_/_0.12)] text-[var(--accent-ink)]' : 'bg-transparent text-[var(--ink-secondary)]'}`}
+                className={`flex-1 min-w-0 text-left p-2 rounded-lg border-none cursor-pointer font-mono text-[11.5px] overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-[7px] ${c.id === activeId ? 'bg-[var(--accent-a12)] text-[var(--accent-ink)]' : 'bg-transparent text-[var(--ink-secondary)]'}`}
               >
                 {c.analysisId && <Icon icon="solar:link-round-angle-linear" size={12} className="flex-shrink-0 opacity-70" />}
                 <span className="overflow-hidden text-ellipsis">{c.title}</span>
@@ -304,7 +304,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                   <div className="flex flex-wrap gap-1.5 max-w-[92%]">
                     {options.map((opt) => (
                       <button key={opt} onClick={() => void submit(opt)} disabled={sending}
-                        className={`py-2 px-3 rounded-lg border border-[var(--accent)] bg-[rgb(6_182_212_/_0.10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        className={`py-2 px-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-a10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         {opt}
                       </button>
                     ))}

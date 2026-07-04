@@ -1,4 +1,5 @@
 import type { ErrorHandler } from "hono";
+import { isProductionEnv } from "../env-utils";
 
 export const errorHandler: ErrorHandler = (err, c) => {
   const errorMessage = err instanceof Error ? err.message : "Unknown error";
@@ -11,7 +12,9 @@ export const errorHandler: ErrorHandler = (err, c) => {
     method: c.req.method,
   });
 
-  const isDev = typeof process !== "undefined" && process.env.NODE_ENV !== "production";
+  // Never leak error messages/stacks to clients in production. Detect prod from
+  // the worker's ENVIRONMENT var (NODE_ENV is unset on Workers); fail closed.
+  const isDev = !isProductionEnv(c.env as { ENVIRONMENT?: string; NODE_ENV?: string });
 
   return c.json(
     {

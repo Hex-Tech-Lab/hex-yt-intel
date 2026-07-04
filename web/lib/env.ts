@@ -160,13 +160,25 @@ const isVercel = Boolean(process.env.VERCEL);
   get decodoApiKey(): string | undefined { return validateEnvVar('DECODO_API_KEY', false); },
   get streamHmacSecret(): string {
     const val = validateEnvVar('STREAM_HMAC_SECRET', true);
-    if (!val) {
-      if (this.isProduction) {
-        throw new Error('STREAM_HMAC_SECRET is required in production but was not configured. Failing closed.');
-      }
-      return 'dev-hmac-secret-123';
+    if (val) return val;
+    if (this.isProduction) {
+      throw new Error('STREAM_HMAC_SECRET is required in production but was not configured. Failing closed.');
     }
-    return val;
+    // Non-production (local `next dev` / Vercel preview): fall back to the SAME
+    // explicit DEV_HMAC_SECRET the Worker verifier accepts, so web-signed stream
+    // tokens verify there. The previous hardcoded 'dev-hmac-secret-123' fallback
+    // is removed: it was a source-visible secret, and — now that the Worker no
+    // longer honours that literal — it was the last remaining asymmetry that
+    // produced preview 401s when STREAM_HMAC_SECRET was unset on one side only.
+    // Read DEV_HMAC_SECRET straight from the environment: it's a non-production
+    // convenience var (no managed mock/required semantics), so it isn't part of
+    // the typed EnvVar union that validateEnvVar covers.
+    const devSecret = process.env.DEV_HMAC_SECRET;
+    if (devSecret) return devSecret;
+    throw new Error(
+      'No stream signing secret configured. Set STREAM_HMAC_SECRET (all envs), ' +
+        'or DEV_HMAC_SECRET for local/preview, matching the Worker verifier.',
+    );
   },
 };
 
