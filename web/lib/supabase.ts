@@ -68,6 +68,14 @@ export async function getSupabaseClientWithAuth() {
     // or the server-only `next/headers` module was unavailable. Fall back to a
     // cookieless client. Logged at debug level so the fallback stays observable
     // without adding noise to normal request handling.
+    //
+    // NOTE: AGENTS.md's "Sentry.captureException in every catch block" is
+    // intentionally NOT applied in this module. `Sentry` here is `@sentry/nextjs`
+    // (Next-only) and this file is in the Cloudflare Worker bundle chain (see the
+    // top-of-file note); a static Sentry import would leak the Next SDK into the
+    // Worker bundle — the exact class of break this file's lazy `loadCookies`
+    // guards against. This path is also a benign, expected fallback, not a fault
+    // (cf. the abort-skip precedent), so it is not a Sentry-worthy event.
     console.debug(
       '[supabase] cookie store unavailable; using cookieless client',
       cookieError instanceof Error ? cookieError.message : String(cookieError),
@@ -103,6 +111,8 @@ export async function getSupabaseClientWithAuth() {
             // Next.js throws. Ignored — middleware refreshes the session on the
             // next request. Logged at debug level so the swallow stays observable
             // without adding noise (this only fires on a token refresh, not per render).
+            // Sentry is intentionally omitted here (benign, expected path + Worker
+            // bundle safety) — see the cookieless-fallback catch above for the rationale.
             console.debug(
               '[supabase] cookie write skipped in RSC context',
               writeError instanceof Error ? writeError.message : String(writeError),
