@@ -183,12 +183,14 @@ export async function middleware(request: NextRequest) {
   const { ok: isAuthenticated, diag } = await hasSupabaseAuth(request, supabaseResponse);
 
   if (!isAuthenticated) {
-    // Only report to Sentry when a session cookie was actually present but failed
-    // validation — that's a real auth regression worth investigating. Anonymous,
-    // cookieless hits on the (now much larger) fail-closed surface are expected
-    // (scanners, logged-out navigation) and would only create alert noise.
+    // Only report to Sentry when a real credential was present but failed
+    // validation — that's an auth regression worth investigating. Anonymous,
+    // credential-less hits on the (now much larger) fail-closed surface are
+    // expected (scanners, logged-out navigation) and would only create noise.
+    // A present Bearer credential counts too, so API clients stay observable.
     const hadAuthCookie = Array.isArray(diag.authCookieNames) && (diag.authCookieNames as unknown[]).length > 0;
-    if (hadAuthCookie) {
+    const hadCredential = hadAuthCookie || (request.headers.get('authorization')?.startsWith('Bearer ') ?? false);
+    if (hadCredential) {
       Sentry.captureMessage('Auth Failure', {
         level: 'warning',
         tags: {

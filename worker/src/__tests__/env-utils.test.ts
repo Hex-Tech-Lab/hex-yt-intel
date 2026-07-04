@@ -15,6 +15,12 @@ describe('isProductionEnv', () => {
     expect(isProductionEnv({ ENVIRONMENT: 'production', NODE_ENV: 'development' })).toBe(true);
   });
 
+  it('normalizes casing/whitespace so mis-cased prod labels stay production', () => {
+    expect(isProductionEnv({ ENVIRONMENT: 'Production' })).toBe(true);
+    expect(isProductionEnv({ ENVIRONMENT: ' production ' })).toBe(true);
+    expect(isProductionEnv({ ENVIRONMENT: 'PRODUCTION' })).toBe(true);
+  });
+
   it('is false for local/preview when ENVIRONMENT is non-production', () => {
     expect(isProductionEnv({ ENVIRONMENT: 'preview' })).toBe(false);
     expect(isProductionEnv({ ENVIRONMENT: 'development' })).toBe(false);

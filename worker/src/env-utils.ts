@@ -16,7 +16,8 @@ export function isProductionEnv(
   env: { ENVIRONMENT?: string; NODE_ENV?: string } | undefined | null,
 ): boolean {
   if (!env) return true;
-  if (env.ENVIRONMENT) return env.ENVIRONMENT === 'production';
-  if (env.NODE_ENV) return env.NODE_ENV === 'production';
-  return true;
+  // Normalize casing/whitespace so "Production"/" production " still read as prod.
+  const label = (env.ENVIRONMENT ?? env.NODE_ENV ?? '').trim().toLowerCase();
+  if (!label) return true; // unknown/unset → fail closed to production
+  return label === 'production';
 }

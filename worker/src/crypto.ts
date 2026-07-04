@@ -16,9 +16,16 @@ export const hmacHex = async (secret: string, message: string): Promise<string> 
  * fingerprint, so ops can compare Vercel vs the Worker in logs WITHOUT ever
  * logging the secret itself. Returns "unset" for a missing secret.
  */
+const _fpCache = new Map<string, string>();
 export const secretFingerprint = async (secret: string | undefined | null): Promise<string> => {
   if (!secret) return 'unset';
-  return (await hmacHex(secret, 'hmac-fingerprint-v1')).slice(0, 10);
+  // Memoize per isolate: the secrets don't change at runtime, so an attacker
+  // spamming the 401 path can't force repeated HMAC work for diagnostics.
+  const cached = _fpCache.get(secret);
+  if (cached) return cached;
+  const fp = (await hmacHex(secret, 'hmac-fingerprint-v1')).slice(0, 10);
+  _fpCache.set(secret, fp);
+  return fp;
 };
 
 /** The two server-to-server persist flows that sign content with the shared secret. */
