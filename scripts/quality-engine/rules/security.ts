@@ -110,7 +110,7 @@ export const SecretsExposureRule: IRule = {
           // not the live secret — don't flag code that followed this rule's own
           // advice. `{ token: accessToken }` (identifier value) still fires.
           // Only a KNOWN PLACEHOLDER literal counts as redacted — a real secret
-          // hardcoded as a string (`{ token: 'sk-live-…' }`) must still be flagged.
+          // hardcoded as a string-literal value must still be flagged, not skipped.
           const REDACTION_PLACEHOLDER = /^(?:\[?redacted\]?|<redacted>|masked|hidden|\*{2,}|x{3,}|n\/a)$/i;
           const isRedactedKey = (idNode: Node): boolean => {
             const parent = idNode.getParent();
@@ -124,8 +124,22 @@ export const SecretsExposureRule: IRule = {
           // Normalize separators so snake/SCREAMING_CASE variants match the same
           // patterns as camelCase (`api_key`, `OPENAI_API_KEY` → `apikey`).
           const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+          // Candidates = every identifier in the args PLUS string-literal object
+          // KEYS (`{ 'access_token': v }`) — a quoted key is a real secret-name
+          // signal. String-literal *values* and message args are still excluded
+          // (only a PropertyAssignment *name* qualifies), preserving the guard
+          // against flagging log messages like 'Token signing failed'.
+          const isKeyName = (n: Node): boolean => {
+            const parent = n.getParent();
+            return !!parent && Node.isPropertyAssignment(parent) && parent.getNameNode() === n;
+          };
           const idNodes = node.getArguments()
-            .flatMap(a => Node.isIdentifier(a) ? [a] : a.getDescendantsOfKind(SyntaxKind.Identifier))
+            .flatMap(a => Node.isIdentifier(a)
+              ? [a]
+              : [
+                  ...a.getDescendantsOfKind(SyntaxKind.Identifier),
+                  ...a.getDescendantsOfKind(SyntaxKind.StringLiteral).filter(isKeyName),
+                ])
             .filter(n => !isRedactedKey(n));
           const hit = sensitivePatterns.find(p =>
             idNodes.some(id => normalize(id.getText()).includes(p)),
