@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import * as Sentry from '@sentry/nextjs';
-import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import * as Sentry from '@sentry/nextjs';
+
+import { useAuth } from '@/hooks/useAuth';
 
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -14,15 +15,6 @@ interface HealthStatus {
     worker: { status: 'ok' | 'error'; latency?: number; error?: string };
   };
   uptime?: number;
-}
-
-interface UsageStats {
-  analyses_total: number;
-  searches_total: number;
-  active_users: number;
-  pro_users: number;
-  free_users: number;
-  avg_api_latency: number;
 }
 
 const StatusBadge = ({ status }: { status: 'ok' | 'error' }) => {
@@ -71,7 +63,6 @@ export function AdminDashboardsClient() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [health, setHealth] = useState<HealthStatus | null>(null);
-  const [stats] = useState<UsageStats | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   // Redirect if not authenticated
@@ -95,14 +86,6 @@ export function AdminDashboardsClient() {
           const healthData = await healthRes.json();
           setHealth(healthData);
         }
-
-        // Fetch usage stats (requires admin endpoint to be created)
-        // For now, we'll fetch from usage_logs
-        // const statsRes = await fetch('/api/admin/stats');
-        // if (statsRes.ok) {
-        //   const statsData = await statsRes.json();
-        //   setStats(statsData);
-        // }
 
         setLastUpdate(new Date());
       } catch (error) {
@@ -221,38 +204,16 @@ export function AdminDashboardsClient() {
           </div>
         )}
 
-        {/* Key Metrics — only rendered once the usage-stats endpoint exists and
-            returns real data. Until then we show nothing rather than a grid of
-            hollow '-' placeholders (AGENTS.md: no empty-state fake dashboards). */}
-        {stats && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Key Metrics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <MetricCard title="Total Analyses" value={stats.analyses_total} unit="count" trend="up" />
-              <MetricCard title="Total Searches" value={stats.searches_total} unit="count" trend="up" />
-              <MetricCard title="Active Users" value={stats.active_users} unit="users" />
-              <MetricCard title="Pro Users" value={stats.pro_users} unit="users" trend="up" />
-            </div>
-          </div>
-        )}
-
-        {/* Performance — every card is backed by a real source (stats or the
-            live /api/health payload). No hardcoded/placeholder figures. */}
-        {(stats || health?.uptime != null) && (
+        {/* Performance — only cards backed by the live /api/health payload are
+            shown. Aggregate usage metrics (analyses/searches/users/latency) are
+            intentionally omitted until a real /api/admin/stats endpoint exists;
+            we never render hollow '-' placeholders or hardcoded figures
+            (AGENTS.md: no empty-state fake dashboards). */}
+        {health?.uptime != null && (
           <div className="mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Performance</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {stats && (
-                <MetricCard
-                  title="Avg API Latency"
-                  value={stats.avg_api_latency}
-                  unit="ms"
-                  trend="neutral"
-                />
-              )}
-              {health?.uptime != null && (
-                <MetricCard title="Uptime" value={health.uptime} unit="seconds" trend="up" />
-              )}
+              <MetricCard title="Uptime" value={health.uptime} unit="seconds" trend="up" />
             </div>
           </div>
         )}
