@@ -137,12 +137,15 @@ export async function middleware(request: NextRequest) {
     '/api/transcript-proxy', // Transcript proxy (diagnostic bypass for routing validation)
     // S2S persist: the Cloudflare Worker posts to these from ctx.waitUntil with NO
     // cookies. They are gated by an HMAC content signature inside the handler, not
-    // by session auth — so they must bypass the cookie-based middleware gate.
+    // by session auth — so they must bypass the cookie-based middleware gate. The
+    // handlers themselves own error-state handling and retry/backoff.
     '/api/analyses/persist',
     '/api/chat/persist',
   ];
 
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
+  // Segment-boundary match so a public prefix can't unintentionally exempt a
+  // sibling route (e.g. '/api/stripe' must NOT exempt '/api/stripe-admin').
+  if (publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))) {
     return NextResponse.next();
   }
 
@@ -157,12 +160,12 @@ export async function middleware(request: NextRequest) {
       const isValidBypass = timingSafeStringEqual(testSecret, devBypassToken);
 
       if (isValidBypass) {
-        console.info('[middleware] Development bypass token validated. Halting downstream actions.');
+        console.info('[middleware] Development bypass credential accepted; skipping auth.');
         return NextResponse.next(); // ← CRITICAL: MUST RETURN EXPLICITLY TO EXIT THE FUNCTION
       }
     } catch {
       // Token comparison failed — treat as unauthorized bypass attempt
-      console.warn('[middleware] Invalid bypass token format');
+      console.warn('[middleware] Invalid bypass credential format');
     }
   }
 

@@ -78,8 +78,9 @@ export async function GET(request: NextRequest) {
       if (user) {
         return response;
       }
-    } catch {
-      // fall through to the error page below
+    } catch (recoverErr) {
+      // No existing session to recover — fall through to the error page below.
+      console.warn('[auth-callback] session recovery check failed', recoverErr instanceof Error ? recoverErr.message : String(recoverErr));
     }
 
     const message = sessionError instanceof Error ? sessionError.message : 'Authentication failed';

@@ -426,12 +426,14 @@ analysis.post("/analyze-llm-stream", async (c) => {
     // NODE_ENV !== "production" guard was always true). Secret fingerprints let
     // ops compare the Worker's secrets against the Vercel signer's without
     // logging the secrets themselves.
-    console.warn("[analyze-llm-stream] stream token rejected", {
+    const keyFpPrimary = await secretFingerprint(c.env.STREAM_HMAC_SECRET);
+    const keyFpFallback = await secretFingerprint(c.env.DEV_HMAC_SECRET);
+    console.warn("[analyze-llm-stream] stream signature rejected", {
       reason,
       videoId: req.videoId,
       analysisId: req.analysisId,
-      workerSecretFp: await secretFingerprint(c.env.STREAM_HMAC_SECRET),
-      workerDevSecretFp: await secretFingerprint(c.env.DEV_HMAC_SECRET),
+      keyFpPrimary,
+      keyFpFallback,
     });
     return c.json({ error: "Invalid token", reason }, 401);
   }
