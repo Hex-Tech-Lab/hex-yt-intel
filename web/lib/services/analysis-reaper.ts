@@ -16,16 +16,16 @@
  */
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
-import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { TOTAL_DIMENSIONS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
 import * as Sentry from '@sentry/nextjs';
 
 /**
  * Minimum dimensions for a partial analysis to be salvaged as `completed`.
- * Mirrors the cache-hit "usable" threshold in SupabaseAnalysisAdapter
- * (`dimensionCount < 8` is treated as a miss), so the reaper and the read path
- * agree on what counts as a usable analysis.
+ * Re-exports the single-source `MIN_USABLE_DIMENSIONS` so the reaper and the
+ * cache read path (SupabaseAnalysisAdapter) can never disagree on what counts
+ * as a usable analysis.
  */
-export const MIN_SALVAGEABLE_DIMENSIONS = 8;
+export const MIN_SALVAGEABLE_DIMENSIONS = MIN_USABLE_DIMENSIONS;
 
 /**
  * A `processing` row is only reaped once it is older than this. The Worker's
@@ -65,6 +65,44 @@ interface StuckRow {
   validation_report: Record<string, unknown> | null;
 }
 
+export interface SettlePatch {
+  billing_status: ReapOutcome;
+  validation_passed: boolean;
+  validation_report: Record<string, unknown>;
+  updated_at: string;
+}
+
+/**
+ * Build the terminal-state row patch for a stuck analysis (pure — no I/O).
+ * Salvages a full analysis as complete, a usable partial as partial, and
+ * anything below the threshold as failed; preserves the prior report fields.
+ * Exported for unit testing.
+ */
+export function buildSettlePatch(
+  analysisMarkdown: string | null | undefined,
+  existingReport: unknown,
+  nowIso: string = new Date().toISOString(),
+): { outcome: ReapOutcome; patch: SettlePatch } {
+  const { outcome, dimensionCount } = decideReapOutcome(analysisMarkdown);
+  const isComplete = outcome === 'completed' && dimensionCount >= TOTAL_DIMENSIONS;
+  const reportStatus = outcome === 'failed' ? 'failed' : isComplete ? 'complete' : 'partial';
+  // jsonb can decode to an array/scalar too; only spread a plain object so the
+  // report shape stays consistent.
+  const baseReport =
+    existingReport && typeof existingReport === 'object' && !Array.isArray(existingReport)
+      ? (existingReport as Record<string, unknown>)
+      : {};
+  return {
+    outcome,
+    patch: {
+      billing_status: outcome,
+      validation_passed: isComplete,
+      validation_report: { ...baseReport, status: reportStatus, reaped: true, reaped_at: nowIso, reaped_dimensions: dimensionCount },
+      updated_at: nowIso,
+    },
+  };
+}
+
 /**
  * Sweep and settle stuck `processing` analyses. Safe to run repeatedly.
  */
@@ -86,26 +124,14 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
   const result: SweepResult = { scanned: stuck.length, completed: 0, failed: 0, raced: 0 };
 
   for (const row of stuck) {
-    const { outcome, dimensionCount } = decideReapOutcome(row.analysis_markdown);
-    const isComplete = outcome === 'completed' && dimensionCount >= TOTAL_DIMENSIONS;
-    const reportStatus = outcome === 'failed' ? 'failed' : isComplete ? 'complete' : 'partial';
-    const nowIso = new Date().toISOString();
-    const baseReport = row.validation_report && typeof row.validation_report === 'object' ? row.validation_report : {};
+    const { outcome, patch } = buildSettlePatch(row.analysis_markdown, row.validation_report);
 
     // Single-winner UPDATE: only mutate rows STILL `processing`, so a concurrent
     // legitimate settle (which also writes billing_status) wins the race and we
     // never clobber a real completion.
     const { error: updErr, count } = await service
       .from('analyses')
-      .update(
-        {
-          billing_status: outcome,
-          validation_passed: isComplete,
-          validation_report: { ...baseReport, status: reportStatus, reaped: true, reaped_at: nowIso, reaped_dimensions: dimensionCount },
-          updated_at: nowIso,
-        },
-        { count: 'exact' },
-      )
+      .update(patch, { count: 'exact' })
       .eq('id', row.id)
       .eq('billing_status', 'processing');
 

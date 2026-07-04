@@ -12,6 +12,10 @@ import { verifyQStashSignature } from '@/lib/qstash-client';
 import { sweepStuckAnalyses } from '@/lib/services/analysis-reaper';
 import * as Sentry from '@sentry/nextjs';
 
+/**
+ * QStash-scheduled POST handler: verify the Upstash signature, then run one
+ * stuck-analysis sweep. Returns the sweep stats as JSON; 401 on a bad signature.
+ */
 export async function POST(request: NextRequest) {
   try {
     // Read cloned body first: needed for signature verification without consuming the stream.
