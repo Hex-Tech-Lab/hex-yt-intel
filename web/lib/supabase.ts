@@ -11,8 +11,22 @@ import { env } from './env';
 // service-role and anon clients below never touch cookies, so the Worker never
 // loads this — the dynamic import only runs in the Next.js request context.
 type NextCookies = (typeof import('next/headers'))['cookies'];
-const loadCookies = async (): Promise<NextCookies> =>
-  (await import('next/headers')).cookies;
+let cookiesFn: NextCookies | undefined;
+/**
+ * Lazily and dynamically load the Next.js server-only `cookies` function.
+ *
+ * Kept out of module scope (see the block comment above) so `next/headers`
+ * never enters the Cloudflare Worker bundle. The result is memoized: the
+ * `cookies` export is a stable binding and the per-request work is calling it,
+ * not importing it, so caching keeps the request path off repeated `import()`
+ * promise churn.
+ */
+const loadCookies = async (): Promise<NextCookies> => {
+  if (!cookiesFn) {
+    cookiesFn = (await import('next/headers')).cookies;
+  }
+  return cookiesFn;
+};
 
 /**
  * Synchronous Supabase client factory (backward compatible)
@@ -54,7 +68,10 @@ export async function getSupabaseClientWithAuth() {
     // or the server-only `next/headers` module was unavailable. Fall back to a
     // cookieless client. Logged at debug level so the fallback stays observable
     // without adding noise to normal request handling.
-    console.debug('[supabase] cookie store unavailable; using cookieless client', cookieError);
+    console.debug(
+      '[supabase] cookie store unavailable; using cookieless client',
+      cookieError instanceof Error ? cookieError.message : String(cookieError),
+    );
   }
 
   return createServerClient(
@@ -86,7 +103,10 @@ export async function getSupabaseClientWithAuth() {
             // Next.js throws. Ignored — middleware refreshes the session on the
             // next request. Logged at debug level so the swallow stays observable
             // without adding noise (this only fires on a token refresh, not per render).
-            console.debug('[supabase] cookie write skipped in RSC context', writeError);
+            console.debug(
+              '[supabase] cookie write skipped in RSC context',
+              writeError instanceof Error ? writeError.message : String(writeError),
+            );
           }
         },
       },
