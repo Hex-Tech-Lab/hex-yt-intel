@@ -17,6 +17,7 @@ export default function AuthErrorForm() {
     EmailSignInError: 'Check your email address',
     CredentialsSignin: 'Sign in failed',
     SessionCallback: 'Session callback error',
+    admin_check_failed: 'Admin access check failed — please try again shortly',
     default: 'Authentication error',
   };
 

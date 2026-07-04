@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, startTransition } fr
 import dynamic from 'next/dynamic';
 import { forceCollide, forceCenter, forceManyBody } from 'd3-force';
 import type { KnowledgeGraph, RelationKind } from '@/lib/types/knowledge-graph';
+import { ENTITY_RGB, entityRgb } from '@/lib/design/entity-colors';
 
 // react-force-graph-2d touches `window`, so it must be client-only.
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
@@ -17,18 +18,6 @@ const COL = {
   slate: '71 85 105',
   muted: '100 116 139',
   ink: '226 232 240',
-};
-
-// Colored rings colors by entityType
-const TYPE_COLOR: Record<string, string> = {
-  person: '244 63 94',       // rose
-  concept: '168 85 247',     // purple
-  framework: '234 179 8',    // yellow
-  tool: '6 182 212',         // cyan
-  organization: '59 130 246', // blue
-  study: '16 185 129',       // emerald
-  trend: '249 115 22',       // orange
-  metric: '236 72 153',      // pink
 };
 
 const KIND_COLOR: Record<RelationKind, string> = {
@@ -204,7 +193,9 @@ export function KnowledgeGraphCanvas({
           const isRoot = graph.rootId === node.id;
           const isActive = node.id === selectedId || node.id === hoverActive;
           const r = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4);
-          const typeRgb = TYPE_COLOR[node.entityType || ''] || COL.slate;
+          // entityRgb already defaults to ENTITY_DEFAULT_RGB for missing/unknown
+          // types, so there's no separate "unknown" colour to keep in sync here.
+          const typeRgb = entityRgb(node.entityType);
 
           // Draw base backing container filled with node category color (glowing fill)
           ctx.beginPath();
@@ -313,7 +304,7 @@ export function KnowledgeGraphCanvas({
         fontFamily: 'var(--font-mono)',
         fontSize: compact ? 9 : 10,
       }}>
-        {Object.entries(TYPE_COLOR).map(([type, colorRgb]) => (
+        {Object.entries(ENTITY_RGB).map(([type, colorRgb]) => (
           <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{
               width: 8,

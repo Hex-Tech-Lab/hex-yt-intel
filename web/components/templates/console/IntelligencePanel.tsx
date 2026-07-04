@@ -151,7 +151,7 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
       <div className="flex flex-col gap-3">
         <MonoLabel index="//">graph intelligence</MonoLabel>
         {rootNode && (
-          <div className="border border-[var(--line)] rounded-xl p-3 bg-[rgb(6_182_212_/_0.06)]">
+          <div className="border border-[var(--line)] rounded-xl p-3 bg-[var(--accent-a06)]">
             <div className="flex items-center gap-1.75 text-[var(--accent-ink)] font-mono text-xs tracking-tight uppercase">
               <Icon icon="solar:crown-minimalistic-linear" size={14} />
               Foundational dimension

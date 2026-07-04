@@ -46,15 +46,13 @@ export async function GET(request: NextRequest) {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
+          // Same pattern as middleware.ts: spread Supabase's cookie options
+          // as-is (it already sets sameSite=lax / secure / browser-readable
+          // correctly) and only guarantee a path. Do NOT force httpOnly or
+          // other attributes — forcing them is what caused the Desktop/Mobile
+          // mode-switch sign-in loop.
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set({
-              name,
-              value,
-              ...options,
-              sameSite: 'lax',
-              secure: process.env.NODE_ENV === 'production',
-              path: '/',
-            });
+            response.cookies.set(name, value, { ...options, path: options?.path ?? '/' });
           });
         },
       },
@@ -80,8 +78,9 @@ export async function GET(request: NextRequest) {
       if (user) {
         return response;
       }
-    } catch {
-      // fall through to the error page below
+    } catch (recoverErr) {
+      // No existing session to recover — fall through to the error page below.
+      console.warn('[auth-callback] session recovery check failed', recoverErr instanceof Error ? recoverErr.message : String(recoverErr));
     }
 
     const message = sessionError instanceof Error ? sessionError.message : 'Authentication failed';

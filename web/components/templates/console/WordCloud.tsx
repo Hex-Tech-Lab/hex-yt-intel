@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo, startTransition } from 'react';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
+import { entityHex, entityRgb } from '@/lib/design/entity-colors';
 
 interface WordCloudProps {
   graph: KnowledgeGraph;
@@ -19,20 +20,7 @@ interface PlacedWord {
   w: number;
   h: number;
   fontSize: number;
-  color: string;
-  bgRgb: string;
 }
-
-const TYPE_COLORS: Record<string, { text: string; bg: string }> = {
-  person: { text: '#f43f5e', bg: '244 63 94' },
-  concept: { text: '#a855f7', bg: '168 85 247' },
-  framework: { text: '#eab308', bg: '234 179 8' },
-  tool: { text: '#06b6d4', bg: '6 182 212' },
-  organization: { text: '#3b82f6', bg: '59 130 246' },
-  study: { text: '#10b981', bg: '16 185 129' },
-  trend: { text: '#f97316', bg: '249 115 22' },
-  metric: { text: '#ec4899', bg: '236 72 153' },
-};
 
 export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -40,6 +28,18 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   const [size, setSize] = useState({ w: 320, h: 220 });
   const hoveredWordIdRef = useRef<string | null>(null);
   const wordsLayoutRef = useRef<PlacedWord[]>([]);
+  // Chip corner radius + active text color resolved from the design system
+  // (canvas can't read CSS custom properties directly).
+  const radiusRef = useRef(7);
+  const inkRef = useRef('#E2E8F0');
+
+  useEffect(() => {
+    const cs = getComputedStyle(document.documentElement);
+    const parsedRadius = parseFloat(cs.getPropertyValue('--radius-control'));
+    if (!Number.isNaN(parsedRadius)) radiusRef.current = parsedRadius;
+    const ink = cs.getPropertyValue('--ink').trim();
+    if (ink) inkRef.current = ink;
+  }, []);
 
   // Resize handling
   useEffect(() => {
@@ -58,13 +58,13 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     // 1. Tokenize labels and aggregate weights
     const tokenMap: Record<string, { label: string; weight: number; type: string; id: string; maxWeight: number }> = {};
-    
+
     graph.nodes.forEach(node => {
       const words = node.label.split(/\s+/).filter(w => w.length > 2);
       words.forEach(word => {
         const key = word.toLowerCase().replace(/[^\w]/g, '');
         if (!key || key.length < 3) return;
-        
+
         if (!tokenMap[key]) {
           tokenMap[key] = {
             label: word,
@@ -124,6 +124,14 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       );
     };
 
+    // Archimedean spiral tuned to actually span the canvas: the radius grows
+    // from the center out to (and past) the edge across the iteration budget,
+    // so words after the first find open space instead of piling on the center.
+    const maxRadius = Math.max(size.w, size.h) / 2;
+    const angleStep = 0.35;
+    const radiusStep = maxRadius / 220;
+    const yScale = 0.62; // squash vertically to the canvas' wide aspect
+
     sortedTokens.forEach((token) => {
       const weight = token.weight;
       const fontSize = Math.max(10, Math.min(15, 9 + weight * 0.8));
@@ -133,23 +141,20 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         testCtx.font = `600 ${fontSize}px Inter, sans-serif`;
       }
       const textMetrics = testCtx ? testCtx.measureText(text) : { width: text.length * fontSize * 0.6 };
-      
-      // Pill dimensions
-      const w = textMetrics.width + 16; 
+
+      // Chip dimensions (slightly-rounded rectangle, not a pill)
+      const w = textMetrics.width + 16;
       const h = fontSize + 10;
 
       let placedWord: PlacedWord | null = null;
-      let theta = Math.random() * Math.PI * 2;
-      const step = 0.12;
-      const spiralSpread = 2.2;
+      let angle = Math.random() * Math.PI * 2;
+      let radius = 0;
       let iterations = 0;
 
-      while (!placedWord && iterations < 400) {
-        const distance = step * theta * spiralSpread;
-        const x = center.x + distance * Math.cos(theta);
-        const y = center.y + distance * Math.sin(theta) * 0.8;
+      while (!placedWord && iterations < 500) {
+        const x = center.x + radius * Math.cos(angle);
+        const y = center.y + radius * Math.sin(angle) * yScale;
 
-        const theme = TYPE_COLORS[token.type] || { text: '#94a3b8', bg: '148 163 184' };
         const candidate: PlacedWord = {
           id: token.id,
           label: text,
@@ -160,8 +165,6 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           w,
           h,
           fontSize,
-          color: theme.text,
-          bgRgb: theme.bg,
         };
 
         const hasOverlap = placed.some((other) => checkOverlap(candidate, other));
@@ -186,7 +189,8 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           }
         }
 
-        theta += step;
+        angle += angleStep;
+        radius += radiusStep;
         iterations++;
       }
 
@@ -210,20 +214,24 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     ctx.clearRect(0, 0, size.w, size.h);
 
+    const radius = radiusRef.current;
+
     wordsLayoutRef.current.forEach((word) => {
       const isSelected = selectedId === word.id;
       const isHovered = hoveredWordIdRef.current === word.id;
       const active = isSelected || isHovered;
+      const rgb = entityRgb(word.type);
 
       ctx.beginPath();
-      ctx.roundRect(word.x - word.w / 2, word.y - word.h / 2, word.w, word.h, word.h / 2);
-      ctx.fillStyle = `rgba(${word.bgRgb}, ${active ? 0.25 : 0.12})`;
+      // Slightly-rounded rectangle chip (design-system radius), not a pill.
+      ctx.roundRect(word.x - word.w / 2, word.y - word.h / 2, word.w, word.h, radius);
+      ctx.fillStyle = `rgb(${rgb} / ${active ? 0.25 : 0.12})`;
       ctx.fill();
-      ctx.strokeStyle = active ? word.color : `rgba(${word.bgRgb}, 0.3)`;
+      ctx.strokeStyle = active ? entityHex(word.type) : `rgb(${rgb} / 0.3)`;
       ctx.lineWidth = active ? 1.5 : 0.8;
       ctx.stroke();
 
-      ctx.fillStyle = active ? '#ffffff' : word.color;
+      ctx.fillStyle = active ? inkRef.current : entityHex(word.type);
       ctx.font = `${active ? '700' : '600'} ${word.fontSize}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';

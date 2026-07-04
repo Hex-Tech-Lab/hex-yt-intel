@@ -7,7 +7,8 @@ import { ValidationService } from "../services/ValidationService";
 import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
 import { PersistService } from "../services/PersistService";
 import { createAtomicPersist } from "../services/atomic-persist";
-import { hmacHex } from "../crypto";
+import { hmacHex, secretFingerprint } from "../crypto";
+import { isProductionEnv } from "../env-utils";
 import { isValidAppUrl } from "../middleware/cors";
 import type { ReasoningEnginePort } from "../ports/ReasoningEnginePort";
 
@@ -29,6 +30,7 @@ type AnalysisEnv = {
   SENTRY_DSN?: string;
   ALLOWED_APP_ORIGINS?: string;
   NODE_ENV?: string;
+  ENVIRONMENT?: string;
   DEV_HMAC_SECRET?: string;
   RESIDENTIAL_PROXY_URL?: string;
   DECODO_API_KEY?: string;
@@ -103,7 +105,10 @@ async function verifyStreamToken(
   const activeSecret = secret;
   const secretsToTry = [secret];
 
-  if (env.DEV_HMAC_SECRET) {
+  // DEV_HMAC_SECRET is a local/preview convenience only — never accept it in
+  // production (matches the chat verifier; prevents a non-prod secret from
+  // authenticating against the prod worker).
+  if (!isProductionEnv(env) && env.DEV_HMAC_SECRET) {
     secretsToTry.push(env.DEV_HMAC_SECRET);
   }
 
@@ -399,7 +404,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: `Missing required fields: ${missing.join(", ")}` }, 400);
   }
 
-  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, c.env.NODE_ENV === "production")) {
+  if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, isProductionEnv(c.env))) {
     console.warn("[analyze-llm-stream] Blocked untrusted appUrl callback redirect:", req.appUrl);
     return c.json({ error: "Invalid appUrl callback destination" }, 400);
   }
@@ -412,27 +417,25 @@ analysis.post("/analyze-llm-stream", async (c) => {
   const { isValid: isTokenValid, secret: signingKey, msg } = await verifyStreamToken(req.videoId, req.analysisId, req.exp, req.sig, req.models, c.env);
 
   if (!isTokenValid) {
-    const isPreview = c.env.NODE_ENV !== "production";
-    if (isPreview) {
-      const isFallbackUsed = signingKey === "dev-hmac-secret-123";
-      console.warn("[analyze-llm-stream] HMAC Mismatch Diagnostic:", {
-        providedSig: req.sig,
-        message: msg,
-        isFallbackUsed,
-      });
-      return c.json(
-        {
-          error: "Invalid token",
-          debug: {
-            msg,
-            sig: req.sig,
-            isFallbackUsed,
-          },
-        },
-        401,
-      );
-    }
-    return c.json({ error: "Invalid token" }, 401);
+    // `msg` is "" only on the expiry early-return; otherwise it's the reconstructed
+    // message from the signature-mismatch path.
+    const reason = msg === "" ? "expired" : "invalid_signature";
+    // Full diagnostics go to SERVER logs only — never the client response, which
+    // previously echoed the internal msg (analysisId/models/exp) + sig to any
+    // caller (the prod worker leaked this because NODE_ENV is unset, so the old
+    // NODE_ENV !== "production" guard was always true). Secret fingerprints let
+    // ops compare the Worker's secrets against the Vercel signer's without
+    // logging the secrets themselves.
+    const keyFpPrimary = await secretFingerprint(c.env.STREAM_HMAC_SECRET);
+    const keyFpFallback = await secretFingerprint(c.env.DEV_HMAC_SECRET);
+    console.warn("[analyze-llm-stream] stream signature rejected", {
+      reason,
+      videoId: req.videoId,
+      analysisId: req.analysisId,
+      keyFpPrimary,
+      keyFpFallback,
+    });
+    return c.json({ error: "Invalid token", reason }, 401);
   }
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
