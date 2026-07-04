@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo, startTransition } from 'react';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
-import { entityHex, entityRgb } from '@/lib/design/entityColors';
+import { entityHex, entityRgb } from '@/lib/design/entity-colors';
 
 interface WordCloudProps {
   graph: KnowledgeGraph;

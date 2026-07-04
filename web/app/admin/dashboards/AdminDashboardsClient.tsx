@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
@@ -105,7 +106,11 @@ export function AdminDashboardsClient() {
 
         setLastUpdate(new Date());
       } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('[admin-dashboards]', { message, url: '/api/health' });
+        Sentry.captureException(error, {
+          contexts: { admin: { operation: 'fetchDashboardData' } },
+        });
       } finally {
         // Loading complete
       }
@@ -216,41 +221,41 @@ export function AdminDashboardsClient() {
           </div>
         )}
 
-        {/* Metrics Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Key Metrics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard title="Total Analyses" value={stats?.analyses_total || '-'} unit="count" trend="up" />
-            <MetricCard title="Total Searches" value={stats?.searches_total || '-'} unit="count" trend="up" />
-            <MetricCard title="Active Users" value={stats?.active_users || '-'} unit="users" />
-            <MetricCard title="Pro Users" value={stats?.pro_users || '-'} unit="users" trend="up" />
+        {/* Key Metrics — only rendered once the usage-stats endpoint exists and
+            returns real data. Until then we show nothing rather than a grid of
+            hollow '-' placeholders (AGENTS.md: no empty-state fake dashboards). */}
+        {stats && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Key Metrics</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard title="Total Analyses" value={stats.analyses_total} unit="count" trend="up" />
+              <MetricCard title="Total Searches" value={stats.searches_total} unit="count" trend="up" />
+              <MetricCard title="Active Users" value={stats.active_users} unit="users" />
+              <MetricCard title="Pro Users" value={stats.pro_users} unit="users" trend="up" />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Performance Metrics */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Performance</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MetricCard
-              title="Avg API Latency"
-              value={stats?.avg_api_latency || '-'}
-              unit="ms"
-              trend="neutral"
-            />
-            <MetricCard
-              title="Error Rate (24h)"
-              value="0.12"
-              unit="%"
-              trend="down"
-            />
-            <MetricCard
-              title="Uptime"
-              value={health?.uptime || '-'}
-              unit="seconds"
-              trend="up"
-            />
+        {/* Performance — every card is backed by a real source (stats or the
+            live /api/health payload). No hardcoded/placeholder figures. */}
+        {(stats || health?.uptime != null) && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Performance</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {stats && (
+                <MetricCard
+                  title="Avg API Latency"
+                  value={stats.avg_api_latency}
+                  unit="ms"
+                  trend="neutral"
+                />
+              )}
+              {health?.uptime != null && (
+                <MetricCard title="Uptime" value={health.uptime} unit="seconds" trend="up" />
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Links to Sentry */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

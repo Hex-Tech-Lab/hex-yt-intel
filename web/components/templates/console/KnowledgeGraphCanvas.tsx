@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, startTransition } fr
 import dynamic from 'next/dynamic';
 import { forceCollide, forceCenter, forceManyBody } from 'd3-force';
 import type { KnowledgeGraph, RelationKind } from '@/lib/types/knowledge-graph';
-import { ENTITY_RGB, entityRgb } from '@/lib/design/entityColors';
+import { ENTITY_RGB, entityRgb } from '@/lib/design/entity-colors';
 
 // react-force-graph-2d touches `window`, so it must be client-only.
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
@@ -193,7 +193,9 @@ export function KnowledgeGraphCanvas({
           const isRoot = graph.rootId === node.id;
           const isActive = node.id === selectedId || node.id === hoverActive;
           const r = (compact ? 3.5 : 5) + node.weight * (compact ? 2.5 : 4);
-          const typeRgb = node.entityType ? entityRgb(node.entityType) : COL.slate;
+          // entityRgb already defaults to ENTITY_DEFAULT_RGB for missing/unknown
+          // types, so there's no separate "unknown" colour to keep in sync here.
+          const typeRgb = entityRgb(node.entityType);
 
           // Draw base backing container filled with node category color (glowing fill)
           ctx.beginPath();
