@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "build": "esbuild src/worker.ts --bundle --format=esm --outfile=dist/worker.js --external:node:* --external:next",
+    "build": "esbuild src/worker.ts --bundle --format=esm --outfile=dist/worker.js --external:node:* --external:next --external:next/*",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json 2>&1 | grep '^src/' || true",
     "test": "echo \"No tests yet\""
   },
