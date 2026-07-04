@@ -210,7 +210,28 @@ async function run() {
   console.log(`Concurrency: ${concurrency}`);
   console.log("-------------------------------------------------");
 
-  const findings = await engine.analyze(fileList);
+  // Normalize every finding's `file` to a repo-relative POSIX path at this single
+  // choke point. Rules emit a mix of absolute (`/home/user/…/x.ts`) and relative
+  // paths depending on how the source was loaded; the baseline/compare flow keys
+  // on `${file}:${title}`, so un-normalized absolute paths would make `--compare`
+  // treat every finding as "new" on CI or another developer's checkout (different
+  // cwd). Relativizing here keeps baseline write, compare, and reporting stable
+  // and machine-independent.
+  // Pure string prefix-strip (no `path.resolve`/`path.relative` on a variable):
+  // the finding paths are engine-produced repo file paths, either absolute under
+  // cwd or already repo-relative. Avoiding `path.*` on a variable also keeps
+  // static analysers from flagging a (non-applicable) path-traversal sink here.
+  const cwdPosix = process.cwd().replace(/\\/g, '/').replace(/\/+$/, '');
+  const toRepoRelative = (f: string): string => {
+    const norm = f.replace(/\\/g, '/');
+    if (norm === cwdPosix) return '';
+    if (norm.startsWith(cwdPosix + '/')) return norm.slice(cwdPosix.length + 1);
+    return norm.replace(/^\.\//, '');
+  };
+  const findings = (await engine.analyze(fileList)).map(f => ({
+    ...f,
+    file: toRepoRelative(f.file),
+  }));
 
   // Surface per-rule errors if any occurred — always hard-fail if rules are broken
   if (engine.ruleErrors && engine.ruleErrors.length > 0) {

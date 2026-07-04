@@ -94,14 +94,62 @@ export const SecretsExposureRule: IRule = {
         const isLogCall = expr.includes('console.') || expr.includes('logInfo') || expr.includes('logError');
         
         if ((isSentryCall || isLogCall) && node.getArguments().length > 0) {
-          const args = node.getArguments().map(a => a.getText()).join(' ');
-          const sensitivePatterns = ['token', 'secret', 'password', 'apiKey', 'bearer', 'authorization'];
-          if (sensitivePatterns.some(p => args.toLowerCase().includes(p))) {
+          // Precision guard (dataflow-lite): match the sensitive patterns only
+          // against the *identifier surface* of the arguments — variable names,
+          // object-literal keys, property accesses, and `${...}` interpolations —
+          // NEVER string-literal text. A real leak passes a secret-named symbol
+          // (`console.log(accessToken)`, `Sentry.captureException(e, { token })`);
+          // a benign log carries the pattern only inside its message string
+          // (`'Token signing failed'`, `'STRIPE_WEBHOOK_SECRET not configured'`),
+          // which must not trip this rule. Matching raw arg text (the previous
+          // behaviour) flagged every such label and made this security signal
+          // ~100% false-positive in full-mode scans.
+          const sensitivePatterns = ['token', 'secret', 'password', 'apikey', 'bearer', 'authorization'];
+          // A secret-named object KEY whose value is a string literal is a
+          // constant label / already-redacted placeholder (`{ token: '[REDACTED]' }`),
+          // not the live secret — don't flag code that followed this rule's own
+          // advice. `{ token: accessToken }` (identifier value) still fires.
+          // Only a KNOWN PLACEHOLDER literal counts as redacted — a real secret
+          // hardcoded as a string-literal value must still be flagged, not skipped.
+          const REDACTION_PLACEHOLDER = /^(?:\[?redacted\]?|<redacted>|masked|hidden|\*{2,}|x{3,}|n\/a)$/i;
+          const isRedactedKey = (idNode: Node): boolean => {
+            const parent = idNode.getParent();
+            if (parent && Node.isPropertyAssignment(parent) && parent.getNameNode() === idNode) {
+              const init = parent.getInitializer();
+              return !!init && Node.isStringLiteral(init) &&
+                REDACTION_PLACEHOLDER.test(init.getLiteralText().trim());
+            }
+            return false;
+          };
+          // Normalize separators so snake/SCREAMING_CASE variants match the same
+          // patterns as camelCase (`api_key`, `OPENAI_API_KEY` → `apikey`).
+          const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+          // Candidates = every identifier in the args PLUS string-literal object
+          // KEYS (`{ 'access_token': v }`) — a quoted key is a real secret-name
+          // signal. String-literal *values* and message args are still excluded
+          // (only a PropertyAssignment *name* qualifies), preserving the guard
+          // against flagging log messages like 'Token signing failed'.
+          const isKeyName = (n: Node): boolean => {
+            const parent = n.getParent();
+            return !!parent && Node.isPropertyAssignment(parent) && parent.getNameNode() === n;
+          };
+          const idNodes = node.getArguments()
+            .flatMap(a => Node.isIdentifier(a)
+              ? [a]
+              : [
+                  ...a.getDescendantsOfKind(SyntaxKind.Identifier),
+                  ...a.getDescendantsOfKind(SyntaxKind.StringLiteral).filter(isKeyName),
+                ])
+            .filter(n => !isRedactedKey(n));
+          const hit = sensitivePatterns.find(p =>
+            idNodes.some(id => normalize(id.getText()).includes(p)),
+          );
+          if (hit) {
             findings.push({
               file: filePath,
               severity: "high",
               title: "Secrets Exposure: Sensitive data in telemetry",
-              why: `Potential secret/key field '${sensitivePatterns.find(p => args.toLowerCase().includes(p))}' passed to ${expr}.`,
+              why: `Potential secret/key identifier '${hit}' passed to ${expr}.`,
               fix: "Redact sensitive values before passing to Sentry/logs: replace with '[REDACTED]' or hash."
             });
           }
