@@ -15,7 +15,8 @@ function jsonFenced(nums: number[]): string {
     schemaVersion: '2.0',
     dimensions: nums.map((n) => ({ number: n, name: `Dim ${n}`, content: 'x' })),
   };
-  return '```json\n' + JSON.stringify(payload, null, 2) + '\n```';
+  const fence = '```';
+  return `${fence}json\n${JSON.stringify(payload, null, 2)}\n${fence}`;
 }
 
 describe('parseUcisDimensionNumbers', () => {
