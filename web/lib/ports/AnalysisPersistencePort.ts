@@ -25,6 +25,35 @@ export interface AnalysisStub {
   id: string;
 }
 
+/**
+ * One video-centric history row: every analysis a user ran for the same
+ * underlying video (collapsing archived re-runs) rolled up into a single entry.
+ * Backs the history overview table.
+ */
+export interface HistoryOverviewItem {
+  /** Canonical video id with any `_archived_<ts>` suffix stripped. */
+  baseVideoId: string;
+  /** Winner analysis id (most complete, newest on ties) — target for open/restore. */
+  analysisId: string;
+  title: string;
+  channelTitle: string | null;
+  /** ISO 8601 of the earliest / latest analysis for this video. */
+  firstAnalyzedAt: string;
+  lastAnalyzedAt: string;
+  /** How many times this video was analyzed (including archived re-runs). */
+  timesAnalyzed: number;
+  /** Summed opens across every attempt. */
+  views: number;
+  /** Highest UCIS dimension count achieved across attempts (0..11). */
+  bestDimensions: number;
+  /** UCIS dimension numbers present in the winner analysis, ascending. */
+  presentDimensions: number[];
+  /** UCIS dimension numbers absent from the winner — offer to re-analyze these. */
+  missingDimensions: number[];
+  /** Honest rollup: complete (validated) | partial (usable) | processing | failed. */
+  status: 'complete' | 'partial' | 'processing' | 'failed';
+}
+
 /** Parameters for the validation_report blob persisted alongside the stub. */
 export interface ValidationReportInput {
   status: 'processing';
@@ -49,6 +78,14 @@ export interface AnalysisPersistencePort {
     validationReport: ValidationReportInput;
   }): Promise<AnalysisStub>;
 
+  /**
+   * Persist a completed analysis. This port is a pure contract: implementations
+   * perform a single idempotent write and surface failures by throwing. Retry
+   * and error-state propagation are deliberately NOT the port's concern — they
+   * are owned by the calling route/use-case layer (the persist route's
+   * `retryWithBackoff` and the Worker's atomic-persist), so persistence
+   * resilience policy lives once at that seam rather than in every adapter.
+   */
   persistAnalysis(params: {
     analysisId: string;
     analysisPayload: UCISPayloadV2 | null;
@@ -66,6 +103,12 @@ export interface AnalysisPersistencePort {
     createdAt: string;
     status: 'completed' | 'processing' | 'incomplete';
   }>>;
+
+  /**
+   * Fetch the video-centric history overview: one aggregated row per underlying
+   * video (archived re-runs collapsed), ordered by most-recently analyzed.
+   */
+  getUserHistoryOverview(params: { userId: string }): Promise<HistoryOverviewItem[]>;
 
   /**
    * Look up a single analysis by its ID and userId.

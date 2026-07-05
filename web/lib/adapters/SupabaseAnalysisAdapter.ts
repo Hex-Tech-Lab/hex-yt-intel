@@ -6,10 +6,12 @@ import type {
   CachedAnalysis,
   AnalysisStub,
   ValidationReportInput,
+  HistoryOverviewItem,
 } from '@/lib/ports';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { isPersistedValidationReport } from '@/lib/types/validation-report';
+import { mapHistoryOverviewRow, type RawHistoryOverviewRow } from '@/lib/utils/history-overview';
 
 export class SupabaseAnalysisAdapter {
   static async findCachedAnalysis(params: {
@@ -266,6 +268,34 @@ export class SupabaseAnalysisAdapter {
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'getUserHistory' },
+        extra: { userId: params.userId },
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Video-centric history overview. The base-video grouping, winner selection,
+   * dimension extraction and rollup status all live in the
+   * `get_user_history_overview` Postgres function (one round trip, no markdown
+   * shipped to the app); this method only coerces the rows to the domain shape.
+   */
+  static async getUserHistoryOverview(params: { userId: string }): Promise<HistoryOverviewItem[]> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service.rpc('get_user_history_overview', {
+        p_user_id: params.userId,
+      });
+
+      if (error) {
+        console.error('[SupabaseAnalysisAdapter] getUserHistoryOverview failed:', error);
+        throw error;
+      }
+
+      return ((data as RawHistoryOverviewRow[]) || []).map(mapHistoryOverviewRow);
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'getUserHistoryOverview' },
         extra: { userId: params.userId },
       });
       throw error;

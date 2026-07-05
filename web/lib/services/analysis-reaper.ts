@@ -15,7 +15,7 @@
  * `billing_status = 'processing'`) so a legitimately-late settle always wins.
  */
 import { getSupabaseServiceClient } from '@/lib/supabase';
-import { parseUcisDimensions } from '@/lib/parse-ucis-dimensions';
+import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
 import { TOTAL_DIMENSIONS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
 import * as Sentry from '@sentry/nextjs';
 
@@ -44,8 +44,10 @@ export function decideReapOutcome(analysisMarkdown: string | null | undefined): 
   outcome: ReapOutcome;
   dimensionCount: number;
 } {
-  const dims = analysisMarkdown ? parseUcisDimensions(analysisMarkdown) : {};
-  const dimensionCount = Object.keys(dims).length;
+  // Count across BOTH persisted formats (```json-fenced payload and stitched
+  // "### DIMENSION" markdown) — the markdown-only parser returned 0 for JSON
+  // rows, which failed salvageable analyses.
+  const dimensionCount = countUcisDimensions(analysisMarkdown);
   return {
     outcome: dimensionCount >= MIN_SALVAGEABLE_DIMENSIONS ? 'completed' : 'failed',
     dimensionCount,
