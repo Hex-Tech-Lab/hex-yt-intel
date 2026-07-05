@@ -22,7 +22,7 @@ export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadout
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-4 hx-custom-scrollbar">
+    <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-4 hx-custom-scrollbar">
       {dimension.content ? (
         <div className="text-[14px] leading-relaxed text-[var(--ink-secondary)]">
           <ReactMarkdown
@@ -47,8 +47,8 @@ export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadout
               },
               pre: ({ children }) => <pre className="bg-[var(--surface)] border border-[var(--line-faint)] rounded-md p-3 font-mono text-[12px] leading-relaxed overflow-x-auto my-3">{children}</pre>,
               table: ({ children }) => (
-                <div className="my-4 rounded-md border border-[var(--line-faint)] overflow-hidden">
-                  <table className="w-full text-[12px] border-collapse">{children}</table>
+                <div className="my-4 rounded-md border border-[var(--line-faint)] overflow-x-auto hx-custom-scrollbar">
+                  <table className="min-w-full text-[12px] border-collapse">{children}</table>
                 </div>
               ),
               thead: ({ children }) => <thead className="bg-[var(--surface)] border-b border-[var(--line-faint)]">{children}</thead>,

@@ -53,9 +53,22 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
       }
     };
 
+    // Close on any pointer press outside the drawer. Using a passive document
+    // listener (instead of a full-screen backdrop element) lets the very same
+    // press also reach the underlying UI — so tapping a *different* dimension
+    // in the accordion closes this panel AND selects the new one in one gesture,
+    // rather than requiring a throwaway first click to dismiss the backdrop.
+    const handlePointerDown = (e: PointerEvent) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handlePointerDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handlePointerDown);
       const prev = previousFocusRef.current;
       requestAnimationFrame(() => prev?.focus());
     };
@@ -65,12 +78,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
 
   return (
     <>
-      {/* Transparent backdrop — catches outside clicks, no dimming */}
-      <div
-        onClick={handleClose}
-        className="fixed inset-0 z-[100]"
-        style={{ background: 'transparent' }}
-      />
+      {/* Outside-click dismissal is handled by the document `pointerdown`
+          listener above (not a backdrop element) so the same press can also
+          land on the accordion and switch dimensions in a single click. */}
       <div
         ref={drawerRef}
         role="dialog"
