@@ -7,6 +7,7 @@ import type {
   CachedAnalysis,
   AnalysisStub,
   ValidationReportInput,
+  HistoryOverviewItem,
   ChatPersistencePort,
   SettingsPersistencePort,
 } from '@/lib/ports';
@@ -28,6 +29,10 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.upsertProcessingStub(params);
   }
 
+  // SoC: this delegate performs the single idempotent persist write (+ KG fan-out)
+  // and throws on failure. Retry (the persist route's `retryWithBackoff`) and
+  // error-state settling are owned by the calling route/use-case layer, not the
+  // persistence adapter.
   async persistAnalysis(params: { analysisId: string; analysisPayload: UCISPayloadV2 | null; analysisMarkdown: string; validationPassed: boolean }): Promise<void> {
     await SupabaseAnalysisAdapter.persistAnalysis(params);
 
@@ -54,6 +59,10 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
 
   getUserHistory(params: { userId: string }): Promise<Array<{ id: string; videoId: string; title: string; createdAt: string; status: 'completed' | 'processing' | 'incomplete' }>> {
     return SupabaseAnalysisAdapter.getUserHistory(params);
+  }
+
+  getUserHistoryOverview(params: { userId: string }): Promise<HistoryOverviewItem[]> {
+    return SupabaseAnalysisAdapter.getUserHistoryOverview(params);
   }
 
   findAnalysisById(params: { userId: string; analysisId: string }): Promise<{ id: string; title: string; videoId: string; analysisMarkdown: string; createdAt: string } | null> {
