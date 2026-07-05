@@ -65,7 +65,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('pointerdown', handlePointerDown, { passive: true });
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('pointerdown', handlePointerDown);
