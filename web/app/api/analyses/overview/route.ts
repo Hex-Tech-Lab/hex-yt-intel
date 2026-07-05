@@ -27,11 +27,13 @@ export async function GET() {
     const items = await persistenceAdapter.getUserHistoryOverview({ userId: identity.userId });
     return NextResponse.json({ items }, { status: 200 });
   } catch (error) {
+    // Log the real error server-side; never echo raw DB/RPC text to the client
+    // (it can leak function/column/schema identifiers). Return a generic message.
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('[analyses/overview GET] Exception:', { message: errorMessage });
     Sentry.captureException(error, { contexts: { api: { endpoint: '/api/analyses/overview (GET)' } } });
     return NextResponse.json(
-      { error: errorMessage, code: 'ERR_HISTORY_OVERVIEW_FAILED' },
+      { error: 'Failed to load history overview', code: 'ERR_HISTORY_OVERVIEW_FAILED' },
       { status: 500 }
     );
   }
