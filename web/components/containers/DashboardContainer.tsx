@@ -596,6 +596,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         <TopBar
           search={search}
           onSearchChange={(v) => startTransition(() => setSearch(v))}
+          onSearchSubmit={() => {
+            const q = search.trim();
+            if (q) router.push(`/search?q=${encodeURIComponent(q)}`);
+          }}
           onExport={handleExport}
           tier={tierLabel}
           hasRightPanel={rightPanelItems.length > 0}

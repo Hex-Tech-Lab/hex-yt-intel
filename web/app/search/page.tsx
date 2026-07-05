@@ -59,6 +59,14 @@ export default function SearchPage() {
   const [savedSearches, setSavedSearches] = useState<Set<string>>(new Set());
   const [allChannels, setAllChannels] = useState<string[]>([]);
 
+  // Seed the query from a `?q=` param on mount (e.g. arriving from the console
+  // TopBar search box). Read from location directly to avoid a useSearchParams
+  // Suspense boundary; the debounced search effect then runs automatically.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) setQuery(q);
+  }, [setQuery]);
+
   // Redirect to signin if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
