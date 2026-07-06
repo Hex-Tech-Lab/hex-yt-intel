@@ -52,10 +52,16 @@ export interface ExecutiveDigest {
   overview: string;
 }
 
-const DIGEST_HEADERS: Array<{ key: keyof ExecutiveDigest; re: RegExp }> = [
-  { key: 'snapshot', re: /^####\s*0\.1\b[^\n]*/im },
-  { key: 'takeaways', re: /^####\s*0\.2\b[^\n]*/im },
-  { key: 'overview', re: /^####\s*0\.3\b[^\n]*/im },
+interface TierLocation {
+  key: keyof ExecutiveDigest;
+  start: number;
+  headerLen: number;
+}
+
+const DIGEST_HEADERS: Array<{ key: keyof ExecutiveDigest; headerRe: RegExp }> = [
+  { key: 'snapshot', headerRe: /^####\s*0\.1\b[^\n]*/imu },
+  { key: 'takeaways', headerRe: /^####\s*0\.2\b[^\n]*/imu },
+  { key: 'overview', headerRe: /^####\s*0\.3\b[^\n]*/imu },
 ];
 
 /**
@@ -67,35 +73,36 @@ const DIGEST_HEADERS: Array<{ key: keyof ExecutiveDigest; re: RegExp }> = [
 export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveDigest | null {
   if (!raw || !raw.trim()) return null;
 
-  let md = raw.trim();
-  if (md.startsWith('```')) {
-    md = md.replace(/^```[a-zA-Z0-9]*[ \t]*\r?\n/, '').replace(/\r?\n?```[ \t\r\n]*$/, '').trim();
+  let markdown = raw.trim();
+  if (markdown.startsWith('```')) {
+    markdown = markdown
+      .replace(/^```[a-zA-Z0-9]*[ \t]*\r?\n/u, '')
+      .replace(/\r?\n?```[ \t\r\n]*$/u, '')
+      .trim();
   }
 
-  // Locate each header; slice content up to the next present header.
-  const found = DIGEST_HEADERS
-    .map(({ key, re }) => {
-      const m = re.exec(md);
-      return m ? { key, start: m.index, headerLen: m[0].length } : null;
-    })
-    .filter((x): x is { key: keyof ExecutiveDigest; start: number; headerLen: number } => x !== null)
-    .sort((a, b) => a.start - b.start);
-
-  if (found.length === 0) return null;
-
-  const sections: Record<string, string> = {};
-  for (let i = 0; i < found.length; i++) {
-    const cur = found[i]!;
-    const contentStart = cur.start + cur.headerLen;
-    const contentEnd = found[i + 1]?.start ?? md.length;
-    sections[cur.key] = md.slice(contentStart, contentEnd).trim();
+  // Locate each present header, then slice content up to the next one.
+  const located: TierLocation[] = [];
+  for (const { key, headerRe } of DIGEST_HEADERS) {
+    const match = markdown.match(headerRe);
+    if (match && match.index !== undefined) {
+      located.push({ key, start: match.index, headerLen: match[0].length });
+    }
   }
+  if (located.length === 0) return null;
+  located.sort((a, b) => a.start - b.start);
 
-  const takeawaysBlock = sections.takeaways ?? '';
-  const takeaways = takeawaysBlock
-    .split(/\r?\n/)
-    .map((l) => l.replace(/^\s*[-*•]\s+/, '').trim())
-    .filter((l) => l.length > 0);
+  const sections: Partial<Record<keyof ExecutiveDigest, string>> = {};
+  located.forEach((entry, index) => {
+    const contentStart = entry.start + entry.headerLen;
+    const contentEnd = located[index + 1]?.start ?? markdown.length;
+    sections[entry.key] = markdown.slice(contentStart, contentEnd).trim();
+  });
+
+  const takeaways = (sections.takeaways ?? '')
+    .split(/\r?\n/u)
+    .map((line) => line.replace(/^\s*[-*•]\s+/u, '').trim())
+    .filter((line) => line.length > 0);
 
   return {
     snapshot: sections.snapshot ?? '',

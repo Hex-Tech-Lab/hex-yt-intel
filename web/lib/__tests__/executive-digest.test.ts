@@ -22,25 +22,29 @@ const SAMPLE = [
 
 describe('parseExecutiveDigest', () => {
   it('extracts all three tiers', () => {
-    const d = parseExecutiveDigest(SAMPLE);
-    expect(d).not.toBeNull();
-    expect(d!.snapshot).toContain('vanilla cake');
-    expect(d!.overview).toContain('frosting options');
-    expect(d!.overview.split(/\n\s*\n/).length).toBe(2); // two paragraphs preserved
+    const digest = parseExecutiveDigest(SAMPLE);
+    expect(digest).not.toBeNull();
+    if (!digest) return;
+    expect(digest.snapshot).toContain('vanilla cake');
+    expect(digest.overview).toContain('frosting options');
+    expect(digest.overview.split(/\n\s*\n/u)).toHaveLength(2); // two paragraphs preserved
   });
 
   it('normalises bullets across -, * and • markers', () => {
-    const d = parseExecutiveDigest(SAMPLE)!;
-    expect(d.takeaways).toHaveLength(3);
-    expect(d.takeaways[0]).toBe('Uses 2 cups flour and 1½ cups sugar');
-    expect(d.takeaways[2]).toBe('Bake at 350°F for 30 minutes');
+    const digest = parseExecutiveDigest(SAMPLE);
+    expect(digest).not.toBeNull();
+    if (!digest) return;
+    expect(digest.takeaways).toHaveLength(3);
+    expect(digest.takeaways[0]).toBe('Uses 2 cups flour and 1½ cups sugar');
+    expect(digest.takeaways[2]).toBe('Bake at 350°F for 30 minutes');
   });
 
   it('tolerates a leading ```-fence', () => {
-    const fenced = '```markdown\n' + SAMPLE + '\n```';
-    const d = parseExecutiveDigest(fenced);
-    expect(d).not.toBeNull();
-    expect(d!.snapshot).toContain('vanilla cake');
+    const fenced = ['```markdown', SAMPLE, '```'].join('\n');
+    const digest = parseExecutiveDigest(fenced);
+    expect(digest).not.toBeNull();
+    if (!digest) return;
+    expect(digest.snapshot).toContain('vanilla cake');
   });
 
   it('returns null when no tiers are present', () => {
@@ -50,18 +54,19 @@ describe('parseExecutiveDigest', () => {
   });
 
   it('survives a partial digest (only one tier emitted)', () => {
-    const d = parseExecutiveDigest('#### 0.1 Snapshot\nOnly the snapshot was produced.');
-    expect(d).not.toBeNull();
-    expect(d!.snapshot).toContain('Only the snapshot');
-    expect(d!.takeaways).toHaveLength(0);
-    expect(d!.overview).toBe('');
+    const digest = parseExecutiveDigest('#### 0.1 Snapshot\nOnly the snapshot was produced.');
+    expect(digest).not.toBeNull();
+    if (!digest) return;
+    expect(digest.snapshot).toContain('Only the snapshot');
+    expect(digest.takeaways).toHaveLength(0);
+    expect(digest.overview).toBe('');
   });
 });
 
 describe('buildExecutiveDigestUserMessage', () => {
   it('embeds the trimmed analysis markdown', () => {
-    const msg = buildExecutiveDigestUserMessage('   ### DIMENSION 1\ncontent  ');
-    expect(msg).toContain('### DIMENSION 1');
-    expect(msg.startsWith('Here is the completed')).toBe(true);
+    const message = buildExecutiveDigestUserMessage('   ### DIMENSION 1\ncontent  ');
+    expect(message).toContain('### DIMENSION 1');
+    expect(message.startsWith('Here is the completed')).toBe(true);
   });
 });
