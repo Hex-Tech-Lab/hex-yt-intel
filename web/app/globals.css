@@ -456,3 +456,13 @@ button:focus-visible,
   box-shadow: none !important;
 }
 
+/* Button labels never wrap: an icon + label must stay on one line. Without
+   this the landing "Sign in" button (icon + text) breaks after "Sign" on a
+   squeezed mobile header and renders at double height. */
+.btn-primary,
+.btn-secondary,
+.btn-ghost,
+.btn-danger {
+  white-space: nowrap;
+}
+
