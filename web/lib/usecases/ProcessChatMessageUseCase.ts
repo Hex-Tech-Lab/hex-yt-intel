@@ -236,13 +236,8 @@ export class ProcessChatMessageUseCase {
     const descriptionSection = description
       ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
       : '';
-    const grounding =
-      `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
-      `Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. ` +
-      `Do not ask which video — you have it.` +
-      descriptionSection +
-      `--- ANALYSIS ---\n` +
-      groundedMarkdown.slice(0, 12000);
+    const channelSuffix = groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : '';
+    const grounding = `You are the analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. Do not ask which video — you have it.${descriptionSection}--- ANALYSIS ---\n${groundedMarkdown.slice(0, 12000)}`;
 
     // 9. Resolve LLM models based on reasoning flag
     const chatModels = isReasoning
