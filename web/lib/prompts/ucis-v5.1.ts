@@ -244,10 +244,20 @@ Key assumptions – Base case – Optimistic – Pessimistic – Tail risk.
 
 *Theory → executable workflows.*
 
+#### 7.1 Implementation Systems
+
+For each actionable system extracted from the content, repeat the following template (generate one **System: [Name]** block per actionable system):
+
 **System: [Name]**
 - Source section, difficulty, time investment, prerequisite knowledge.
-- **Step-by-step implementation**: numbered, specific, with parameters and durations.
+- **Step-by-step implementation** (numbered, specific, with parameters and durations):
+  1. [Step] — [parameters, duration]
+  2. [Step] — [parameters, duration]
 - **Success metrics**, **common pitfalls**, **troubleshooting guide**, **risk factors & mitigation**.
+
+#### 7.2 Execution Sequencing & Dependencies
+
+Recommended order of execution across systems, prerequisite chains, and quick-win vs. long-horizon classification.
 
 ---
 
