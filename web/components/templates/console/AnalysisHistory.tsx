@@ -35,6 +35,38 @@ function MetricChip({ icon, children, title }: { icon: string; children: ReactNo
   );
 }
 
+/**
+ * At-a-glance completeness map: one numbered cell per dimension (1..N).
+ * Generated dimensions read green; missing ones read as dashed hollow cells,
+ * so a partial analysis is legible without opening it. (A future "thin /
+ * insufficient-data" amber tier needs a per-dimension substantive signal from
+ * the history-overview function — tracked separately.)
+ */
+function DimensionDots({ present }: { present: number[] }) {
+  const presentSet = new Set(present);
+  return (
+    <div className="flex items-center gap-1 flex-wrap mt-3 pt-3 border-t border-[var(--line-faint)]">
+      <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Dimensions</span>
+      {Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => i + 1).map((n) => {
+        const isPresent = presentSet.has(n);
+        return (
+          <span
+            key={n}
+            title={`Dimension ${n}: ${isPresent ? 'generated' : 'missing'}`}
+            className={`inline-grid place-items-center w-5 h-5 rounded text-[9px] font-mono font-semibold tabular-nums ${
+              isPresent
+                ? 'bg-[var(--ok)]/15 text-[var(--ok)] border border-[var(--ok)]/40'
+                : 'bg-transparent text-[var(--ink-muted)] border border-dashed border-[var(--line)]'
+            }`}
+          >
+            {n}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const { items, isLoading, error } = useHistoryOverview();
   const { initializeAnalysis, setIsLoading, setStatus, setVideoMetadata } = useAnalysisStore();
@@ -271,16 +303,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                     </span>
                   </div>
 
-                  {/* Missing dimensions — the "what to re-analyze" set */}
-                  {item.missingDimensions.length > 0 && item.status !== 'processing' && (
-                    <div className="flex items-center gap-1.5 flex-wrap mt-3 pt-3 border-t border-[var(--line-faint)]">
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Missing</span>
-                      {item.missingDimensions.map((n) => (
-                        <span key={n} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg)] border border-[var(--line-faint)] text-[var(--ink-secondary)]">
-                          {n}
-                        </span>
-                      ))}
-                    </div>
+                  {/* Per-dimension completeness map (green = generated, hollow = missing) */}
+                  {item.status !== 'processing' && (item.presentDimensions.length > 0 || item.missingDimensions.length > 0) && (
+                    <DimensionDots present={item.presentDimensions} />
                   )}
                 </div>
               );
