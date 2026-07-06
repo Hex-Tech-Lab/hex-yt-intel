@@ -246,7 +246,7 @@ Key assumptions – Base case – Optimistic – Pessimistic – Tail risk.
 
 #### 7.1 Implementation Systems
 
-For each actionable system extracted from the content:
+For each actionable system extracted from the content, repeat the following template (generate one **System: [Name]** block per actionable system):
 
 **System: [Name]**
 - Source section, difficulty, time investment, prerequisite knowledge.
