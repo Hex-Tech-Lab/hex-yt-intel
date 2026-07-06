@@ -21,7 +21,7 @@ import { MarkdownAccumulator } from './markdown-accumulator';
 import { StreamStatusTracker } from './stream-status-tracker';
 
 export interface StreamAdapterOptions {
-  onError?: (error: string) => void;
+  onError?: (error: string, code?: string) => void;
   onComplete?: () => void;
   onProgress?: (received: number, expected: number) => void;
   isPartialStream?: boolean;
