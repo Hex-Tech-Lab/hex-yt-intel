@@ -153,8 +153,20 @@ export class ProcessChatMessageUseCase {
       }
     }
 
+    // After creation / idempotent lookup the user row is always present.
+    // Narrow the type once here so the rest of the flow needs no non-null assertions.
+    if (!userRow) {
+      console.error('[chat-usecase] Invariant violated: user message row missing after persistence');
+      return {
+        type: 'error',
+        code: 'ERR_MESSAGE_PERSIST',
+        status: 500,
+        message: 'Failed to persist user message.',
+      };
+    }
+
     // 5. If it's a retry and we already generated a reply, return it immediately without regening
-    if (isRetry && userRow) {
+    if (isRetry) {
       const laterAssistant = await this.chatPersistence.findAssistantByParentId({
         conversationId,
         parentId: userRow.id,
@@ -182,9 +194,9 @@ export class ProcessChatMessageUseCase {
     }
 
     // 7. Get last 20 messages for context replay (constructed in-memory to save a query)
-    const historyMessages = userRow && !allMessages.some((m) => m.id === userRow!.id)
-      ? [...allMessages, userRow]
-      : allMessages;
+    const historyMessages = allMessages.some((m) => m.id === userRow.id)
+      ? allMessages
+      : [...allMessages, userRow];
     const HISTORY_TURNS = 20;
     const history = historyMessages.slice(-HISTORY_TURNS);
 
@@ -233,12 +245,12 @@ export class ProcessChatMessageUseCase {
         userId,
         role: 'assistant',
         content: refusal,
-        parentMessageId: userRow!.id,
+        parentMessageId: userRow.id,
       });
       return {
         type: 'success',
         data: {
-          user: userRow!,
+          user: userRow,
           assistant,
           ...(newTitle ? { title: newTitle } : {}),
         },
@@ -275,7 +287,7 @@ export class ProcessChatMessageUseCase {
     return {
       type: 'success',
       data: {
-        user: userRow!,
+        user: userRow,
         ...(newTitle ? { title: newTitle } : {}),
         stream: {
           url: `${env.cloudflareWorkerUrl}/chat-stream`,

@@ -10,27 +10,27 @@ import { ProcessChatMessageUseCase } from '@/lib/usecases/ProcessChatMessageUseC
 
 type Grounding = { title: string; channelTitle: string | null; description: string | null; analysisMarkdown: string | null; status: string } | null;
 
-function makeDeps(opts: { analysisId: string | null; grounding: Grounding }) {
+const makeDeps = (opts: { analysisId: string | null; grounding: Grounding }) => {
   let assistantContent: string | null = null;
   const chatPersistence = {
-    getConversation: async () => ({ id: 'c1', userId: 'user-1', analysisId: opts.analysisId, title: 'New chat' }),
-    getMessages: async () => [],
-    createMessage: async (m: { role: string; content: string }) => {
+    getConversation: () => Promise.resolve({ id: 'c1', userId: 'user-1', analysisId: opts.analysisId, title: 'New chat' }),
+    getMessages: () => Promise.resolve([]),
+    createMessage: (m: { role: string; content: string }) => {
       if (m.role === 'assistant') assistantContent = m.content;
-      return { id: m.role === 'assistant' ? 'a1' : 'u1', role: m.role, content: m.content, clientMsgId: null };
+      return Promise.resolve({ id: m.role === 'assistant' ? 'a1' : 'u1', role: m.role, content: m.content, clientMsgId: null });
     },
-    findMessageByClientMsgId: async () => null,
-    findAssistantByParentId: async () => null,
-    updateConversationTitle: async () => undefined,
-    getAnalysisGrounding: async () => opts.grounding,
+    findMessageByClientMsgId: () => Promise.resolve(null),
+    findAssistantByParentId: () => Promise.resolve(null),
+    updateConversationTitle: () => Promise.resolve(undefined),
+    getAnalysisGrounding: () => Promise.resolve(opts.grounding),
   } as never;
-  const modelResolution = { resolveModels: async () => ['model-a'] } as never;
-  const tokenCrypto = { signChatToken: async () => ({ sig: 'deadbeef', exp: Date.now() + 60_000 }) } as never;
+  const modelResolution = { resolveModels: () => Promise.resolve(['model-a']) } as never;
+  const tokenCrypto = { signChatToken: () => Promise.resolve({ sig: 'deadbeef', exp: Date.now() + 60_000 }) } as never;
   return {
     useCase: new ProcessChatMessageUseCase(chatPersistence, modelResolution, tokenCrypto),
     getAssistant: () => assistantContent,
   };
-}
+};
 
 const baseParams = { conversationId: 'c1', userId: 'user-1', tier: 'free' as const, content: 'give me the recipe', clientMsgId: null };
 
