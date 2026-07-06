@@ -114,8 +114,9 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
               )}
               <div className="flex gap-2 flex-shrink-0">
                 {status === "done" && (
-                  <Button type="button" variant="outline" size="icon" title="Re-analyze" onClick={onReanalyze}>
+                  <Button type="button" variant="outline" size="md" title="Re-analyze this video (bypasses cache)" onClick={onReanalyze}>
                     <Icon icon="solar:refresh-linear" size={16} />
+                    Re-analyze
                   </Button>
                 )}
                 {streaming && onCancel && (

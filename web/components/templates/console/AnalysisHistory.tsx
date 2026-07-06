@@ -5,6 +5,7 @@ import { useHistoryOverview } from '@/hooks/useHistoryOverview';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useChatStore } from '@/store/useChatStore';
+import { useInputStore } from '@/store/useInputStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
@@ -55,6 +56,15 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       const data = await res.json();
 
       const dimensions = parseToUCISDimensions(data.analysis_markdown || '');
+
+      // Repopulate the URL input from the restored video so the Analyze /
+      // re-analyze controls are enabled — both bail on an empty `url`, so
+      // without this the box shows only its placeholder and both buttons no-op.
+      if (data.videoId) {
+        const restoredUrl = `https://www.youtube.com/watch?v=${data.videoId}`;
+        useInputStore.getState().setUrl(restoredUrl);
+        useInputStore.getState().validateUrl(restoredUrl);
+      }
 
       startTransition(() => {
         initializeAnalysis(data.id, data.title, data.analysis_markdown);
