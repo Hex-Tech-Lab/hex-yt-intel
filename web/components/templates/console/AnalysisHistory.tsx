@@ -1,26 +1,44 @@
 'use client';
 
-import { useState, useMemo, useEffect, startTransition } from 'react';
-import { useAnalysisHistory } from '@/hooks/useAnalysisHistory';
+import { useState, useMemo, useEffect, startTransition, type ReactNode } from 'react';
+import { useHistoryOverview } from '@/hooks/useHistoryOverview';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useChatStore } from '@/store/useChatStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
+import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import type { HistoryOverviewItem } from '@/lib/ports';
 
-type SortOrder = 'date-desc' | 'date-asc';
-type FilterStatus = 'all' | 'completed' | 'processing' | 'incomplete';
+type SortOrder = 'recent' | 'oldest' | 'most-analyzed';
+type FilterStatus = 'all' | HistoryOverviewItem['status'];
 
 export interface AnalysisHistoryProps {
-  /** Called when user selects an analysis from the history list; parent should switch to console view. */
+  /** Called when user selects an analysis; parent should switch to console view. */
   onSelectAnalysis?: () => void;
 }
 
+const STATUS_STYLE: Record<HistoryOverviewItem['status'], { label: string; cls: string }> = {
+  complete: { label: 'Complete', cls: 'bg-[var(--ok)]/10 text-[var(--ok)]' },
+  partial: { label: 'Partial', cls: 'bg-[var(--accent)]/12 text-[var(--accent-ink)]' },
+  processing: { label: 'Processing', cls: 'bg-[var(--accent)]/10 text-[var(--accent)]' },
+  failed: { label: 'Failed', cls: 'bg-[var(--ink-muted)]/10 text-[var(--ink-muted)]' },
+};
+
+function MetricChip({ icon, children, title }: { icon: string; children: ReactNode; title: string }) {
+  return (
+    <span title={title} className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--ink-secondary)]">
+      <Icon icon={icon} size={12} className="text-[var(--ink-muted)]" />
+      {children}
+    </span>
+  );
+}
+
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
-  const { items, isLoading, error } = useAnalysisHistory();
+  const { items, isLoading, error } = useHistoryOverview();
   const { initializeAnalysis, setIsLoading, setStatus, setVideoMetadata } = useAnalysisStore();
   const { initializeAnalysis: initSynthesis } = useSynthesisNucleus();
-  const [sortBy, setSortBy] = useState<SortOrder>('date-desc');
+  const [sortBy, setSortBy] = useState<SortOrder>('recent');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [currentPage, setCurrentPage] = useState(0);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -33,15 +51,12 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/analyses/${analysisId}`);
-      if (!res.ok) {
-        throw new Error(`Restoration failed (HTTP ${res.status})`);
-      }
+      if (!res.ok) throw new Error(`Restoration failed (HTTP ${res.status})`);
       const data = await res.json();
-      
+
       const dimensions = parseToUCISDimensions(data.analysis_markdown || '');
-      
+
       startTransition(() => {
-        // Update Global Store (for header/metadata/button)
         initializeAnalysis(data.id, data.title, data.analysis_markdown);
         setVideoMetadata({
           videoId: data.videoId,
@@ -51,9 +66,8 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           duration: data.duration || 0,
           viewCount: data.viewCount || 0,
           likeCount: data.likeCount || 0,
-        } as any);
+        } as never);
 
-        // Update Nucleus Store (for grid/graph/relations)
         initSynthesis({
           id: data.id,
           videoId: data.videoId,
@@ -85,9 +99,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         try {
           const chatStore = useChatStore.getState();
           await chatStore.loadConversations();
-          const existing = chatStore.conversations.find((c) => 
-            c.analysisId === data.id || c.videoId === data.videoId
-          );
+          const existing = chatStore.conversations.find((c) => c.analysisId === data.id || c.videoId === data.videoId);
           if (existing) {
             if (existing.analysisId !== data.id) {
               await chatStore.updateConversationAnalysisId(existing.id, data.id);
@@ -112,37 +124,28 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   const filteredAndSorted = useMemo(() => {
     let result = [...items];
-
-    if (filterStatus !== 'all') {
-      result = result.filter(item => item.status === filterStatus);
-    }
-
+    if (filterStatus !== 'all') result = result.filter((item) => item.status === filterStatus);
     result.sort((a, b) => {
-      const aTime = new Date(a.createdAt).getTime();
-      const bTime = new Date(b.createdAt).getTime();
-      return sortBy === 'date-desc' ? bTime - aTime : aTime - bTime;
+      if (sortBy === 'most-analyzed') return b.timesAnalyzed - a.timesAnalyzed;
+      const aTime = new Date(a.lastAnalyzedAt).getTime();
+      const bTime = new Date(b.lastAnalyzedAt).getTime();
+      return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
     });
-
     return result;
   }, [items, filterStatus, sortBy]);
 
   const totalPages = Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredAndSorted.slice(
-    currentPage * ITEMS_PER_PAGE,
-    (currentPage + 1) * ITEMS_PER_PAGE
-  );
+  const paginatedItems = filteredAndSorted.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
 
   useEffect(() => {
-    if (currentPage > 0 && currentPage >= totalPages && totalPages > 0) {
-      setCurrentPage(0);
-    }
+    if (currentPage > 0 && currentPage >= totalPages && totalPages > 0) setCurrentPage(0);
   }, [currentPage, totalPages]);
 
   if (isLoading) {
     return (
       <div className="p-12 text-center text-[var(--ink-secondary)]">
         <Icon icon="solar:refresh-linear" size={24} className="hx-anispin inline-block mb-4" />
-        <p>Loading your analysis history...</p>
+        <p>Loading your analysis history…</p>
       </div>
     );
   }
@@ -167,110 +170,134 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   return (
     <div className="flex flex-col gap-6 pb-20">
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-[var(--ink)]">
-            Analysis History ({filteredAndSorted.length})
-          </h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-semibold text-[var(--ink)]">
+          Analysis History <span className="text-[var(--ink-muted)] font-normal">({filteredAndSorted.length})</span>
+        </h2>
+      </div>
+
+      {restoreError && (
+        <div className="p-3 rounded-lg border border-[var(--err)]/20 bg-[var(--err)]/5 text-[var(--err)] text-sm flex items-center gap-2">
+          <Icon icon="solar:danger-circle-linear" size={16} />
+          {restoreError}
         </div>
+      )}
 
-        {restoreError && (
-          <div className="mb-4 p-3 rounded-lg border border-[var(--err)]/20 bg-[var(--err)]/5 text-[var(--err)] text-sm flex items-center gap-2">
-            <Icon icon="solar:danger-circle-linear" size={16} />
-            {restoreError}
-          </div>
-        )}
+      <div className="flex gap-3 flex-wrap">
+        <select
+          value={sortBy}
+          onChange={(e) => { setSortBy(e.target.value as SortOrder); setCurrentPage(0); }}
+          className="px-3 py-2 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] cursor-pointer transition-colors hover:border-[var(--accent)] outline-none"
+        >
+          <option value="recent">Recently analyzed</option>
+          <option value="oldest">Oldest first</option>
+          <option value="most-analyzed">Most analyzed</option>
+        </select>
 
-        <div className="flex gap-3 mb-4 flex-wrap">
-          <select
-            value={sortBy}
-            onChange={e => { setSortBy(e.target.value as SortOrder); setCurrentPage(0); }}
-            className="px-3 py-2 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] cursor-pointer transition-colors hover:border-[var(--accent)] outline-none"
-          >
-            <option value="date-desc">Newest First</option>
-            <option value="date-asc">Oldest First</option>
-          </select>
+        <select
+          value={filterStatus}
+          onChange={(e) => { setFilterStatus(e.target.value as FilterStatus); setCurrentPage(0); }}
+          className="px-3 py-2 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] cursor-pointer transition-colors hover:border-[var(--accent)] outline-none"
+        >
+          <option value="all">All status</option>
+          <option value="complete">Complete</option>
+          <option value="partial">Partial</option>
+          <option value="processing">Processing</option>
+          <option value="failed">Failed</option>
+        </select>
+      </div>
 
-          <select
-            value={filterStatus}
-            onChange={e => { setFilterStatus(e.target.value as FilterStatus); setCurrentPage(0); }}
-            className="px-3 py-2 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] cursor-pointer transition-colors hover:border-[var(--accent)] outline-none"
-          >
-            <option value="all">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="processing">Processing</option>
-            <option value="incomplete">Incomplete</option>
-          </select>
+      {filteredAndSorted.length === 0 ? (
+        <div className="p-6 text-center text-[var(--ink-secondary)] rounded-lg border border-[var(--line)]">
+          <p>No analyses match the selected filter.</p>
         </div>
-
-        {filteredAndSorted.length === 0 ? (
-          <div className="p-6 text-center text-[var(--ink-secondary)] rounded-lg border border-[var(--line)]">
-            <p>No analyses match the selected filter.</p>
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-col gap-2 mb-4">
-              {paginatedItems.map((item, idx) => (
+      ) : (
+        <>
+          <div className="flex flex-col gap-2.5">
+            {paginatedItems.map((item, idx) => {
+              const busy = loadingId === item.analysisId;
+              const status = STATUS_STYLE[item.status];
+              return (
                 <div
-                  key={item.id}
-                  onClick={() => restoreAnalysis(item.id)}
-                  className={`flex items-center justify-between p-3 px-4 rounded-lg border border-[var(--line)] bg-[var(--surface)] transition-all hx-rise ${
-                    loadingId === item.id ? 'cursor-wait opacity-60' : 'cursor-pointer hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'
+                  key={item.baseVideoId}
+                  onClick={() => !busy && restoreAnalysis(item.analysisId)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !busy) { e.preventDefault(); restoreAnalysis(item.analysisId); } }}
+                  className={`rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 transition-all hx-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                    busy ? 'cursor-wait opacity-60' : 'cursor-pointer hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'
                   }`}
                   style={{ animationDelay: `${idx * 40}ms` }}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-[var(--ink-muted)]">
-                        {new Date(item.createdAt).toLocaleDateString()}
-                      </span>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
-                        item.status === 'completed' ? 'bg-[var(--ok)]/10 text-[var(--ok)]' :
-                        item.status === 'processing' ? 'bg-[var(--accent)]/10 text-[var(--accent)]' :
-                        'bg-[var(--ink-muted)]/10 text-[var(--ink-muted)]'
-                      }`}>
-                        {item.status}
-                      </span>
+                  {/* Title row */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{item.title || 'Untitled Analysis'}</h3>
+                      {item.channelTitle && (
+                        <p className="text-[12px] text-[var(--ink-muted)] truncate mt-0.5">{item.channelTitle}</p>
+                      )}
                     </div>
-                    <h3 className="text-sm font-medium text-[var(--ink)] truncate group-hover:text-[var(--accent)]">
-                      {item.title || 'Untitled Analysis'}
-                    </h3>
+                    <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${status.cls}`}>
+                      {status.label}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3 ml-4">
-                    <Icon 
-                      icon={loadingId === item.id ? "solar:refresh-linear" : "solar:alt-arrow-right-linear"} 
-                      size={16} 
-                      className={loadingId === item.id ? "hx-anispin text-[var(--accent)]" : "text-[var(--ink-muted)]"} 
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6">
-                <button
-                  disabled={currentPage === 0}
-                  onClick={() => setCurrentPage(p => p - 1)}
-                  className="px-4 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:border-[var(--ink-muted)] transition-colors"
-                >
-                  Previous
-                </button>
-                <span className="text-xs font-mono text-[var(--ink-muted)]">
-                  Page {currentPage + 1} of {totalPages}
-                </span>
-                <button
-                  disabled={currentPage === totalPages - 1}
-                  onClick={() => setCurrentPage(p => p + 1)}
-                  className="px-4 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:border-[var(--ink-muted)] transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+                  {/* Metrics row — wraps on narrow screens (no horizontal overflow) */}
+                  <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
+                    <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions produced">
+                      <span className="text-[var(--ink)] font-semibold">{item.bestDimensions}</span>/{TOTAL_DIMENSIONS} dims
+                    </MetricChip>
+                    <MetricChip icon="solar:refresh-linear" title="Times analyzed (including re-runs)">
+                      {item.timesAnalyzed}× analyzed
+                    </MetricChip>
+                    <MetricChip icon="solar:eye-linear" title="Times opened">
+                      {item.views} views
+                    </MetricChip>
+                    <MetricChip icon="solar:calendar-minimalistic-linear" title="Last analyzed">
+                      {new Date(item.lastAnalyzedAt).toLocaleDateString()}
+                    </MetricChip>
+                    <span className="ml-auto inline-flex items-center text-[var(--ink-muted)]">
+                      <Icon icon={busy ? 'solar:refresh-linear' : 'solar:alt-arrow-right-linear'} size={16} className={busy ? 'hx-anispin text-[var(--accent)]' : ''} />
+                    </span>
+                  </div>
+
+                  {/* Missing dimensions — the "what to re-analyze" set */}
+                  {item.missingDimensions.length > 0 && item.status !== 'processing' && (
+                    <div className="flex items-center gap-1.5 flex-wrap mt-3 pt-3 border-t border-[var(--line-faint)]">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Missing</span>
+                      {item.missingDimensions.map((n) => (
+                        <span key={n} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg)] border border-[var(--line-faint)] text-[var(--ink-secondary)]">
+                          {n}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <button
+                disabled={currentPage === 0}
+                onClick={() => setCurrentPage((p) => p - 1)}
+                className="px-4 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:border-[var(--ink-muted)] transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-xs font-mono text-[var(--ink-muted)]">Page {currentPage + 1} of {totalPages}</span>
+              <button
+                disabled={currentPage === totalPages - 1}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="px-4 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] text-xs font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:border-[var(--ink-muted)] transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
