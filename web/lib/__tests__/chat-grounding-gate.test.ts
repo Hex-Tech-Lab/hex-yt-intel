@@ -21,7 +21,7 @@ const makeDeps = (opts: { analysisId: string | null; grounding: Grounding }) => 
     },
     findMessageByClientMsgId: () => Promise.resolve(null),
     findAssistantByParentId: () => Promise.resolve(null),
-    updateConversationTitle: () => Promise.resolve(undefined),
+    updateConversationTitle: () => Promise.resolve(),
     getAnalysisGrounding: () => Promise.resolve(opts.grounding),
   } as never;
   const modelResolution = { resolveModels: () => Promise.resolve(['model-a']) } as never;
@@ -44,6 +44,8 @@ describe('ProcessChatMessageUseCase grounding gate', () => {
     expect(res.data.payload).toBeUndefined();
     expect(res.data.assistant).toBeDefined();
     expect(getAssistant()).toMatch(/no transcript|captions|can only answer/i);
+    // Refusal still auto-titles a brand-new chat, so title rides back on the payload.
+    expect(res.data.title).toBe('give me the recipe');
   });
 
   it('refuses when the bound analysis has empty markdown (no-transcript / failed)', async () => {
@@ -55,6 +57,7 @@ describe('ProcessChatMessageUseCase grounding gate', () => {
     if (res.type !== 'success') throw new Error('expected success');
     expect(res.data.stream).toBeUndefined();
     expect(res.data.assistant?.content).toMatch(/can only answer|no transcript|captions/i);
+    expect(res.data.title).toBe('give me the recipe');
   });
 
   it('gives a "still generating" refusal while the analysis is processing', async () => {
@@ -66,6 +69,7 @@ describe('ProcessChatMessageUseCase grounding gate', () => {
     if (res.type !== 'success') throw new Error('expected success');
     expect(res.data.stream).toBeUndefined();
     expect(res.data.assistant?.content).toMatch(/still being generated|once the synthesis/i);
+    expect(res.data.title).toBe('give me the recipe');
   });
 
   it('streams (mints token + grounding) when real analysis content exists', async () => {

@@ -200,39 +200,13 @@ export class ProcessChatMessageUseCase {
     const HISTORY_TURNS = 20;
     const history = historyMessages.slice(-HISTORY_TURNS);
 
-    // 8. Grounding retrieval
-    let grounding = '';
-    if (groundingResult) {
-      const md = typeof groundingResult.analysisMarkdown === 'string' ? groundingResult.analysisMarkdown : '';
-      const status = groundingResult.status;
-      const description = groundingResult.description;
-      const descriptionSection = description 
-        ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
-        : '';
-
-      if (md.trim().length > 0) {
-        grounding =
-          `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
-          `Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. ` +
-          `Do not ask which video — you have it.` +
-          descriptionSection +
-          `--- ANALYSIS ---\n` +
-          md.slice(0, 12000);
-      } else {
-        grounding =
-          `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
-          `The full ${status === 'processing' ? 'analysis is still being generated' : 'analysis is not available yet'} — answer from the title/topic and description ` +
-          `and let the user know richer answers will be available once the synthesis finishes. Never claim you don't know which video this is.` +
-          descriptionSection;
-      }
-    }
-
-    // 8b. GROUNDING GATE (security). The chat's entire universe is THIS video's
+    // 8. GROUNDING GATE (security). The chat's entire universe is THIS video's
     // analysis — it must never answer from general knowledge or bind to another
     // video. If the bound analysis has no usable content, do NOT mint a stream
     // token; refuse with a controlled, persisted assistant turn instead. This is
     // what stops an ungrounded model from inventing answers (e.g. a full recipe)
-    // for a video that has no transcript.
+    // for a video that has no transcript. Gating first also means the grounding
+    // string below is only ever built for the has-content path (no dead branch).
     const groundedMarkdown =
       typeof groundingResult?.analysisMarkdown === 'string' ? groundingResult.analysisMarkdown.trim() : '';
     if (groundedMarkdown.length === 0) {
@@ -256,6 +230,19 @@ export class ProcessChatMessageUseCase {
         },
       };
     }
+
+    // 8b. Grounding retrieval — markdown is guaranteed non-empty past the gate.
+    const description = groundingResult.description;
+    const descriptionSection = description
+      ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
+      : '';
+    const grounding =
+      `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
+      `Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. ` +
+      `Do not ask which video — you have it.` +
+      descriptionSection +
+      `--- ANALYSIS ---\n` +
+      groundedMarkdown.slice(0, 12000);
 
     // 9. Resolve LLM models based on reasoning flag
     const chatModels = isReasoning
