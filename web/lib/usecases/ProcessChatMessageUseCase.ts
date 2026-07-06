@@ -215,6 +215,36 @@ export class ProcessChatMessageUseCase {
       }
     }
 
+    // 8b. GROUNDING GATE (security). The chat's entire universe is THIS video's
+    // analysis — it must never answer from general knowledge or bind to another
+    // video. If the bound analysis has no usable content, do NOT mint a stream
+    // token; refuse with a controlled, persisted assistant turn instead. This is
+    // what stops an ungrounded model from inventing answers (e.g. a full recipe)
+    // for a video that has no transcript.
+    const groundedMarkdown =
+      typeof groundingResult?.analysisMarkdown === 'string' ? groundingResult.analysisMarkdown.trim() : '';
+    if (groundedMarkdown.length === 0) {
+      const refusal =
+        groundingResult?.status === 'processing'
+          ? "This video's analysis is still being generated — I'll be able to answer from it once the synthesis finishes."
+          : "I can only answer from this video's own analysis, and it doesn't have one: no transcript or captions were available, so there's nothing for me to ground on. Try a video that has captions and I'll answer strictly from its analysis.";
+      const assistant = await this.chatPersistence.createMessage({
+        conversationId,
+        userId,
+        role: 'assistant',
+        content: refusal,
+        parentMessageId: userRow!.id,
+      });
+      return {
+        type: 'success',
+        data: {
+          user: userRow!,
+          assistant,
+          ...(newTitle ? { title: newTitle } : {}),
+        },
+      };
+    }
+
     // 9. Resolve LLM models based on reasoning flag
     const chatModels = isReasoning
       ? await this.modelResolution.resolveModels(tier, 'reasoning')
