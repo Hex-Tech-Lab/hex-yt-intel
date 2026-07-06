@@ -10,6 +10,7 @@ import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import type { Dimension } from '@/components/templates/console/DimensionAccordion';
 import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
+import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
@@ -429,6 +430,22 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       : `${profile.analysesUsed} / ${profile.monthlyLimit} monthly analyses`;
   const historyBadge = analysisHistory.length > 0 ? String(analysisHistory.length) : undefined;
 
+  // Partial-analysis awareness: count dimensions that actually carry content and,
+  // when a completed analysis is missing some of the 11, surface which ones so the
+  // user can decide whether to re-analyze (a re-run bypasses the cache).
+  const partialInfo = useMemo(() => {
+    const dims = nucleus.analysis?.dimensions;
+    if (status !== 'complete' || !dims) return null;
+    const present = Object.entries(dims)
+      .filter(([, d]) => d && typeof (d as { content?: unknown }).content === 'string' && ((d as { content: string }).content).trim().length > 0)
+      .map(([k]) => Number(k))
+      .filter((n) => Number.isFinite(n));
+    const presentCount = new Set(present).size;
+    if (presentCount === 0 || presentCount >= TOTAL_DIMENSIONS) return null;
+    const missing = Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => i + 1).filter((n) => !present.includes(n));
+    return { presentCount, missing };
+  }, [nucleus.analysis?.dimensions, status]);
+
   const getUserTimezone = (): string => {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -534,11 +551,17 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
     return nucleus.projection.visibleDimensions.map((dim) => {
       let dimStatus: 'idle' | 'streaming' | 'done' | 'error' = 'idle';
-      
+
       const isReceived = receivedList.includes(dim.number);
+      // A restored analysis is 'complete' but its streaming.dimensionsReceived is
+      // empty (nothing streamed this session), so keying 'done' purely on
+      // isReceived greyed out every restored dimension — including the ones that
+      // actually have content. Treat a dimension with real content as done so
+      // partial restores show their created dimensions as expandable.
+      const hasContent = typeof dim.content === 'string' && dim.content.trim().length > 0;
 
       if (status === 'complete') {
-        dimStatus = isReceived ? 'done' : 'idle';
+        dimStatus = (isReceived || hasContent) ? 'done' : 'idle';
       } else if (status === 'analyzing' || status === 'downloading') {
         if (!isReceived) {
           dimStatus = 'idle';
@@ -648,6 +671,17 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
               {consoleTab === 'synthesis' ? (
                 <>
+                  {partialInfo && (
+                    <div
+                      role="status"
+                      className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs leading-relaxed text-[var(--ink-secondary)]"
+                    >
+                      <span className="font-mono font-semibold text-[var(--accent-ink)]">Partial analysis</span>
+                      {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
+                      <span className="text-[var(--ink-muted)]">Missing: {partialInfo.missing.join(', ')}.</span>
+                      {' Use Re-analyze to attempt the rest.'}
+                    </div>
+                  )}
                   {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
                   <DimensionAccordion
                     dimensions={dimensions}
