@@ -147,7 +147,7 @@ export class StreamStatusTracker {
       error: string;
       code?: string;
     },
-    onErrorCallback?: (error: string) => void
+    onErrorCallback?: (error: string, code?: string) => void
   ) {
     const store = this.synthStore.getState();
     store.setStreamError(fragment.error);
@@ -155,7 +155,7 @@ export class StreamStatusTracker {
     this.analysisStore.getState().logError(`Edge stream error: ${fragment.error}`);
 
     if (onErrorCallback) {
-      onErrorCallback(fragment.error);
+      onErrorCallback(fragment.error, fragment.code);
     }
 
     console.error('[Adapter] Stream error:', fragment);
