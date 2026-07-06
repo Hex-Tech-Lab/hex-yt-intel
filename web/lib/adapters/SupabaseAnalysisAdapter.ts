@@ -390,6 +390,7 @@ export class SupabaseAnalysisAdapter {
 
   static async getAnalysisGrounding(params: {
     analysisId: string;
+    userId?: string;
   }): Promise<{
     title: string;
     channelTitle: string | null;
@@ -399,11 +400,17 @@ export class SupabaseAnalysisAdapter {
   } | null> {
     try {
       const service = getSupabaseServiceClient();
-      const { data, error } = await service
+      // Defense-in-depth against cross-video grounding: when a userId is given,
+      // constrain the row to that owner so a conversation can never resolve
+      // grounding from an analysis its owner doesn't hold (even legacy rows).
+      let query = service
         .from('analyses')
         .select('title, channel_title, analysis_markdown, validation_report')
-        .eq('id', params.analysisId)
-        .maybeSingle();
+        .eq('id', params.analysisId);
+      if (params.userId) {
+        query = query.eq('user_id', params.userId);
+      }
+      const { data, error } = await query.maybeSingle();
 
       const handlerMap = {
         ERROR: () => { throw error; },

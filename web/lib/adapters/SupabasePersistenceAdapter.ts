@@ -73,7 +73,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.findAnalysisForPersist(params);
   }
 
-  getAnalysisGrounding(params: { analysisId: string }): Promise<{ title: string; channelTitle: string | null; description: string | null; analysisMarkdown: string | null; status: string } | null> {
+  getAnalysisGrounding(params: { analysisId: string; userId?: string }): Promise<{ title: string; channelTitle: string | null; description: string | null; analysisMarkdown: string | null; status: string } | null> {
     return SupabaseAnalysisAdapter.getAnalysisGrounding(params);
   }
 
