@@ -293,6 +293,18 @@ export function useSSEStream() {
                 const handleStreamError = (i: number, error: string) => {
                   if (hasSettled) return;
                   failedIndexes.add(i);
+                  // "No transcript available" is deterministic for the whole
+                  // video — every bundle fetches the same transcript, so all
+                  // five fail identically. Surface a clear, actionable message
+                  // (the video simply has no captions — common for Shorts)
+                  // instead of an alarming "Critical stream failure [Bundle N]".
+                  if (/no transcript available|transcript unavailable/i.test(error)) {
+                    settleAnalysis(
+                      'error',
+                      "This video has no captions or transcript available, so it can't be analyzed. YouTube Shorts and some uploads don't include subtitles — try a video that offers a CC (captions) track.",
+                    );
+                    return;
+                  }
                   if (ABORT_ON_PARTIAL_FAILURE) {
                     settleAnalysis('error', `Critical stream failure: [Bundle ${i + 1}] ${error}`);
                   } else {
