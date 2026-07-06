@@ -12,6 +12,7 @@ type Grounding = { title: string; channelTitle: string | null; description: stri
 
 const makeDeps = (opts: { analysisId: string | null; grounding: Grounding }) => {
   let assistantContent: string | null = null;
+  let groundingArgs: { analysisId: string; userId?: string } | null = null;
   const chatPersistence = {
     getConversation: () => Promise.resolve({ id: 'c1', userId: 'user-1', analysisId: opts.analysisId, title: 'New chat' }),
     getMessages: () => Promise.resolve([]),
@@ -22,13 +23,17 @@ const makeDeps = (opts: { analysisId: string | null; grounding: Grounding }) => 
     findMessageByClientMsgId: () => Promise.resolve(null),
     findAssistantByParentId: () => Promise.resolve(null),
     updateConversationTitle: () => Promise.resolve(),
-    getAnalysisGrounding: () => Promise.resolve(opts.grounding),
+    getAnalysisGrounding: (p: { analysisId: string; userId?: string }) => {
+      groundingArgs = p;
+      return Promise.resolve(opts.grounding);
+    },
   } as never;
   const modelResolution = { resolveModels: () => Promise.resolve(['model-a']) } as never;
   const tokenCrypto = { signChatToken: () => Promise.resolve({ sig: 'deadbeef', exp: Date.now() + 60_000 }) } as never;
   return {
     useCase: new ProcessChatMessageUseCase(chatPersistence, modelResolution, tokenCrypto),
     getAssistant: () => assistantContent,
+    getGroundingArgs: () => groundingArgs,
   };
 };
 
@@ -73,7 +78,7 @@ describe('ProcessChatMessageUseCase grounding gate', () => {
   });
 
   it('streams (mints token + grounding) when real analysis content exists', async () => {
-    const { useCase } = makeDeps({
+    const { useCase, getGroundingArgs } = makeDeps({
       analysisId: 'an-1',
       grounding: {
         title: 'Real Video',
@@ -89,5 +94,8 @@ describe('ProcessChatMessageUseCase grounding gate', () => {
     expect(res.data.payload).toBeDefined();
     expect(res.data.payload?.grounding).toContain('Real Video');
     expect(res.data.payload?.grounding).toContain('Substantive analysis content');
+    // Defense-in-depth: grounding is fetched scoped to the caller so a
+    // conversation can never resolve another user's analysis (cross-video leak).
+    expect(getGroundingArgs()).toEqual({ analysisId: 'an-1', userId: 'user-1' });
   });
 });

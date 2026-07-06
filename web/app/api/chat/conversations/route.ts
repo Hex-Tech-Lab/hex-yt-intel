@@ -45,6 +45,25 @@ export async function POST(request: NextRequest) {
 
     const { analysisId, title } = parsed.data;
 
+    // Bind a conversation only to an analysis the caller actually owns. Without
+    // this, an authenticated user could pass any analysis UUID and ground their
+    // chat in someone else's video (cross-video / cross-user grounding leak, and
+    // an IDOR into private analysis content). Respond 404 — not 403 — so we don't
+    // confirm the existence of an analysis the caller can't see.
+    if (analysisId) {
+      const owned = await persistenceAdapter.verifyOwnership({
+        analysisId,
+        userId: identity.userId,
+        select: 'id',
+      });
+      if (!owned) {
+        return NextResponse.json(
+          { error: 'Analysis not found', code: 'ERR_ANALYSIS_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+    }
+
     const conversation = await persistenceAdapter.createConversation({
       userId: identity.userId,
       analysisId,

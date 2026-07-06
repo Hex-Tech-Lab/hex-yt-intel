@@ -48,6 +48,8 @@ export interface ChatPersistencePort {
 
   getAnalysisGrounding(params: {
     analysisId: string;
+    /** When provided, the analysis must belong to this user or null is returned. */
+    userId?: string;
   }): Promise<{
     title: string;
     channelTitle: string | null;
