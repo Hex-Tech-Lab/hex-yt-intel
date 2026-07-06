@@ -137,7 +137,7 @@ export class ProcessChatMessageUseCase {
             throw error;
           }),
           conv.analysisId
-            ? this.chatPersistence.getAnalysisGrounding({ analysisId: conv.analysisId })
+            ? this.chatPersistence.getAnalysisGrounding({ analysisId: conv.analysisId, userId })
             : Promise.resolve(null),
         ]);
         userRow = createdMsg;
@@ -149,7 +149,7 @@ export class ProcessChatMessageUseCase {
     } else {
       // Message already exists, just fetch grounding if conversation has analysisId
       if (conv.analysisId) {
-        groundingResult = await this.chatPersistence.getAnalysisGrounding({ analysisId: conv.analysisId });
+        groundingResult = await this.chatPersistence.getAnalysisGrounding({ analysisId: conv.analysisId, userId });
       }
     }
 
