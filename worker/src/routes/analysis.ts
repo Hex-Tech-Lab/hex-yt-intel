@@ -268,7 +268,7 @@ function buildStreamResponse(
       const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value : undefined;
 
       if (!resolvedTranscript || !resolvedTranscript.trim() || resolvedTranscript.includes("Transcript unavailable") || resolvedTranscript.includes("content ingestion failed")) {
-        send({ type: "error", error: "No transcript available" });
+        send({ type: "error", error: "No transcript available", code: "ERR_NO_TRANSCRIPT" });
         controller.close();
         return;
       }

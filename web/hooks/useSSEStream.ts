@@ -290,9 +290,24 @@ export function useSSEStream() {
                   }
                 };
 
-                const handleStreamError = (i: number, error: string) => {
+                const handleStreamError = (i: number, error: string, code?: string) => {
                   if (hasSettled) return;
                   failedIndexes.add(i);
+                  // A missing transcript is deterministic for the whole video —
+                  // every bundle fetches the same transcript, so all five fail
+                  // identically. Surface a clear, actionable message (the video
+                  // simply has no captions — common for Shorts) instead of an
+                  // alarming "Critical stream failure [Bundle N]". Prefer the
+                  // stable worker code; fall back to text only for older frames.
+                  const isNoTranscript =
+                    code === 'ERR_NO_TRANSCRIPT' || /no transcript available|transcript unavailable/i.test(error);
+                  if (isNoTranscript) {
+                    settleAnalysis(
+                      'error',
+                      "This video has no captions or transcript available, so it can't be analyzed. YouTube Shorts and some uploads don't include subtitles — try a video that offers a CC (captions) track.",
+                    );
+                    return;
+                  }
                   if (ABORT_ON_PARTIAL_FAILURE) {
                     settleAnalysis('error', `Critical stream failure: [Bundle ${i + 1}] ${error}`);
                   } else {
@@ -308,10 +323,10 @@ export function useSSEStream() {
                   adapters.push(new SynthesisStreamAdapter({
                     isPartialStream: true,
                     dimensions,
-                    onError: (error) => {
+                    onError: (error, code) => {
                       if (currentSignal.aborted || hasSettled) return;
                       store.logError(`[Bundle ${i + 1}] error: ${error}`);
-                      handleStreamError(i, error);
+                      handleStreamError(i, error, code);
                     },
                     onComplete: () => {
                       if (currentSignal.aborted || hasSettled) return;
