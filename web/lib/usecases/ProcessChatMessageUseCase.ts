@@ -153,8 +153,20 @@ export class ProcessChatMessageUseCase {
       }
     }
 
+    // After creation / idempotent lookup the user row is always present.
+    // Narrow the type once here so the rest of the flow needs no non-null assertions.
+    if (!userRow) {
+      console.error('[chat-usecase] Invariant violated: user message row missing after persistence');
+      return {
+        type: 'error',
+        code: 'ERR_MESSAGE_PERSIST',
+        status: 500,
+        message: 'Failed to persist user message.',
+      };
+    }
+
     // 5. If it's a retry and we already generated a reply, return it immediately without regening
-    if (isRetry && userRow) {
+    if (isRetry) {
       const laterAssistant = await this.chatPersistence.findAssistantByParentId({
         conversationId,
         parentId: userRow.id,
@@ -182,38 +194,50 @@ export class ProcessChatMessageUseCase {
     }
 
     // 7. Get last 20 messages for context replay (constructed in-memory to save a query)
-    const historyMessages = userRow && !allMessages.some((m) => m.id === userRow!.id)
-      ? [...allMessages, userRow]
-      : allMessages;
+    const historyMessages = allMessages.some((m) => m.id === userRow.id)
+      ? allMessages
+      : [...allMessages, userRow];
     const HISTORY_TURNS = 20;
     const history = historyMessages.slice(-HISTORY_TURNS);
 
-    // 8. Grounding retrieval
-    let grounding = '';
-    if (groundingResult) {
-      const md = typeof groundingResult.analysisMarkdown === 'string' ? groundingResult.analysisMarkdown : '';
-      const status = groundingResult.status;
-      const description = groundingResult.description;
-      const descriptionSection = description 
-        ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
-        : '';
-
-      if (md.trim().length > 0) {
-        grounding =
-          `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
-          `Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. ` +
-          `Do not ask which video — you have it.` +
-          descriptionSection +
-          `--- ANALYSIS ---\n` +
-          md.slice(0, 12000);
-      } else {
-        grounding =
-          `You are the analyst for the YouTube video "${groundingResult.title}"${groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : ''}. ` +
-          `The full ${status === 'processing' ? 'analysis is still being generated' : 'analysis is not available yet'} — answer from the title/topic and description ` +
-          `and let the user know richer answers will be available once the synthesis finishes. Never claim you don't know which video this is.` +
-          descriptionSection;
-      }
+    // 8. GROUNDING GATE (security). The chat's entire universe is THIS video's
+    // analysis — it must never answer from general knowledge or bind to another
+    // video. If the bound analysis has no usable content, do NOT mint a stream
+    // token; refuse with a controlled, persisted assistant turn instead. This is
+    // what stops an ungrounded model from inventing answers (e.g. a full recipe)
+    // for a video that has no transcript. Gating first also means the grounding
+    // string below is only ever built for the has-content path (no dead branch).
+    const groundedMarkdown =
+      typeof groundingResult?.analysisMarkdown === 'string' ? groundingResult.analysisMarkdown.trim() : '';
+    if (groundedMarkdown.length === 0) {
+      const refusal =
+        groundingResult?.status === 'processing'
+          ? "This video's analysis is still being generated — I'll be able to answer from it once the synthesis finishes."
+          : "I can only answer from this video's own analysis, and it doesn't have one: no transcript or captions were available, so there's nothing for me to ground on. Try a video that has captions and I'll answer strictly from its analysis.";
+      const assistant = await this.chatPersistence.createMessage({
+        conversationId,
+        userId,
+        role: 'assistant',
+        content: refusal,
+        parentMessageId: userRow.id,
+      });
+      return {
+        type: 'success',
+        data: {
+          user: userRow,
+          assistant,
+          ...(newTitle ? { title: newTitle } : {}),
+        },
+      };
     }
+
+    // 8b. Grounding retrieval — markdown is guaranteed non-empty past the gate.
+    const description = groundingResult.description;
+    const descriptionSection = description
+      ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
+      : '';
+    const channelSuffix = groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : '';
+    const grounding = `You are the analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. Do not ask which video — you have it.${descriptionSection}--- ANALYSIS ---\n${groundedMarkdown.slice(0, 12000)}`;
 
     // 9. Resolve LLM models based on reasoning flag
     const chatModels = isReasoning
@@ -245,7 +269,7 @@ export class ProcessChatMessageUseCase {
     return {
       type: 'success',
       data: {
-        user: userRow!,
+        user: userRow,
         ...(newTitle ? { title: newTitle } : {}),
         stream: {
           url: `${env.cloudflareWorkerUrl}/chat-stream`,
