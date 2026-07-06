@@ -104,12 +104,11 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       }
       
       if (cancelled) return;
+      // On open / conversation load, always land on the latest message
+      // (the list otherwise stays pinned at the top).
       requestAnimationFrame(() => {
         if (cancelled) return;
-        const el = listRef.current;
-        if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 80) {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        }
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
       });
     })();
 
@@ -125,8 +124,11 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
+    // While streaming, only follow if the user is already at the bottom (don't
+    // yank them up mid-read). On open or a message-set change (conversation
+    // switch / initial load), always land on the latest message.
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    if (!sending || nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, sending, open]);
 
   const scrollToBottom = () => {

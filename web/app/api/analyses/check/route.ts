@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       async () => {
         const { data, error } = await supabase
           .from('analyses')
-          .select('id, title, channel_title, analysis_markdown, created_at, model_used, validation_report, status')
+          .select('id, title, channel_title, analysis_markdown, created_at, model_used, validation_report, billing_status')
           .eq('video_id', normalizedVideoId)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
@@ -73,7 +73,11 @@ export async function GET(request: NextRequest) {
       const validationReport = (existingAnalysis.validation_report as any) || {};
       const metadataPayload = validationReport.metadata || (existingAnalysis as any).metadata || {};
 
-      if (existingAnalysis.status === 'complete' || existingAnalysis.status === 'success') {
+      // NOTE: `analyses` has no `status` column — completeness lives in
+      // `billing_status`. Selecting the phantom `status` previously errored the
+      // whole query (swallowed by the catch → null), so the pre-flight always
+      // reported "none" and auto-restore never fired: every refresh lost the dims.
+      if (existingAnalysis.billing_status === 'completed') {
         return NextResponse.json({
           exists: true,
           status: 'complete',
@@ -89,7 +93,7 @@ export async function GET(request: NextRequest) {
       const PROCESSING_STALE_MS = 120_000;
       const ageMs = Date.now() - new Date(existingAnalysis.created_at).getTime();
 
-      if (validationReport.status === 'error' || existingAnalysis.status === 'failed') {
+      if (validationReport.status === 'error' || existingAnalysis.billing_status === 'failed') {
         return NextResponse.json({
           status: 'error',
           exists: true,
