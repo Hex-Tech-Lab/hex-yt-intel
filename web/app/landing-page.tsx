@@ -13,44 +13,50 @@ import { Footer } from '@/components/Footer';
 
 function Nav() {
   return (
-    <header style={{ 
-      display: "flex", 
-      alignItems: "center", 
-      justifyContent: "space-between", 
-      padding: "12px 32px", 
-      borderBottom: "1px solid var(--line)", 
-      background: "rgb(17 20 29 / 0.7)", 
-      backdropFilter: "blur(12px)", 
-      position: "sticky", 
-      top: 0, 
-      zIndex: 50 
+    <header style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+      // Shrink chrome on narrow viewports so the nav never overflows the screen
+      // (the Sign-in button was clipping off the right edge on mobile).
+      padding: "12px clamp(14px, 4vw, 32px)",
+      borderBottom: "1px solid var(--line)",
+      background: "rgb(17 20 29 / 0.7)",
+      backdropFilter: "blur(12px)",
+      position: "sticky",
+      top: 0,
+      zIndex: 50,
+      maxWidth: "100%",
+      boxSizing: "border-box",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ 
-          display: "grid", 
-          placeItems: "center", 
-          width: 28, 
-          height: 28, 
-          borderRadius: 8, 
-          background: "var(--accent-strong)", 
-          color: "var(--void)" 
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <span style={{
+          display: "grid",
+          placeItems: "center",
+          width: 28,
+          height: 28,
+          flex: "none",
+          borderRadius: 8,
+          background: "var(--accent-strong)",
+          color: "var(--void)"
         }}>
           <Icon icon="solar:graph-up-linear" size={17} />
         </span>
-        <span style={{ 
-          fontFamily: "var(--font-mono)", 
-          fontSize: 14, 
-          fontWeight: 600, 
-          letterSpacing: "0.04em", 
-          color: "var(--ink)" 
+        <span style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "clamp(11px, 3.4vw, 14px)",
+          fontWeight: 600,
+          letterSpacing: "0.04em",
+          color: "var(--ink)",
+          whiteSpace: "nowrap",
         }}>HEX·YT·INTEL</span>
       </div>
-      <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
-        <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none" }}>
+      <nav style={{ display: "flex", gap: "clamp(6px, 2vw, 16px)", alignItems: "center", flex: "none" }}>
+        <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none", padding: "9px clamp(12px, 3.2vw, 24px)" }}>
           Pricing
         </Link>
-        <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none" }}>
-          <Icon icon="solar:sun-bold-duotone" size={16} />
+        <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none", padding: "9px clamp(12px, 3.2vw, 24px)" }}>
           Sign in
         </Link>
       </nav>
