@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { verifyResourceOwnership } from '@/lib/services/ownership';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+import { SupabaseAnalysisAdapter } from '@/lib/adapters/SupabaseAnalysisAdapter';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 
 export const runtime = 'edge';
@@ -28,7 +29,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses', 'id, video_id, title, channel_title, model_used, analysis_markdown, analysis_payload, validation_report, created_at, updated_at');
+    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses', 'id, user_id, video_id, title, channel_title, model_used, analysis_markdown, analysis_payload, validation_report, created_at, updated_at');
 
     const errorResponses: Record<string, { error: string; status: number }> = {
       Unauthorized: { error: 'Unauthorized', status: 401 },
@@ -45,6 +46,14 @@ export async function GET(
 
     if (!analysis.analysis_payload && !analysis.analysis_markdown) {
       return NextResponse.json({ error: 'Analysis payload stub is missing', status: 'incomplete' }, { status: 404 });
+    }
+
+    // Count this open as a "view" (product decision: every open of a saved
+    // analysis counts). Only reached for an owned, non-stub row, so it is safe
+    // to attribute the view here. Atomic + self-contained error handling, so it
+    // never breaks rendering the analysis.
+    if (analysis.user_id) {
+      await SupabaseAnalysisAdapter.incrementViewCount({ analysisId: analysis.id, userId: analysis.user_id });
     }
 
     // Persona lives inside analysis_payload.persona.primary — there is no

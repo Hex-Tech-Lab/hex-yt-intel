@@ -524,4 +524,30 @@ export class SupabaseAnalysisAdapter {
       throw error;
     }
   }
+
+  /**
+   * Atomically bump `viewed_count` for one owned analysis row (surfaced as
+   * "Views" in the history overview). Delegates to the `increment_analysis_view`
+   * RPC so the increment is a single `col = col + 1` UPDATE — a read-modify-write
+   * would race concurrent opens and lose counts. Best-effort: a failed view
+   * bump must never break rendering the analysis, so the caller fires this
+   * without awaiting and this method swallows/reports rather than rethrows.
+   */
+  static async incrementViewCount(params: { analysisId: string; userId: string }): Promise<void> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { error } = await service.rpc('increment_analysis_view', {
+        p_analysis_id: params.analysisId,
+        p_user_id: params.userId,
+      });
+      if (error) throw error;
+    } catch (error: unknown) {
+      // Non-fatal: log for observability but do not surface to the read path.
+      console.warn('[SupabaseAnalysisAdapter] incrementViewCount failed:', error instanceof Error ? error.message : String(error));
+      Sentry.captureException(error, {
+        tags: { method: 'incrementViewCount' },
+        extra: { analysisId: params.analysisId, userId: params.userId },
+      });
+    }
+  }
 }
