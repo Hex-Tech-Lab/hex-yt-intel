@@ -89,6 +89,10 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.verifyOwnership(params);
   }
 
+  saveExecutiveDigest(params: { analysisId: string; userId: string; digest: unknown }): Promise<boolean> {
+    return SupabaseAnalysisAdapter.saveExecutiveDigest(params);
+  }
+
   async updateAnalysisResult(params: {
     analysisId: string;
     markdown: string;

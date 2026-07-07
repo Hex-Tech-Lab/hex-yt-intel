@@ -18,6 +18,8 @@ import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGr
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
+import { ExecutiveDigestCard } from '@/components/dashboard/ExecutiveDigestCard';
+import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
 import { WordCloud } from '@/components/templates/console/WordCloud';
 import { MindMap } from '@/components/templates/console/MindMap';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
@@ -446,6 +448,51 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     return { presentCount, missing };
   }, [nucleus.analysis?.dimensions, status]);
 
+  // Dimension 0 — executive digest. Generated once (the cheap "#12 call") the
+  // first time a completed, full analysis is viewed, then cached server-side, so
+  // re-opening it returns the stored digest without re-spending. Skipped for
+  // partial analyses (a re-run makes a fresh analysis id with its own digest).
+  const analysisId = nucleus.analysis?.id ?? null;
+  const [digest, setDigest] = useState<StoredExecutiveDigest | null>(null);
+  const [digestLoading, setDigestLoading] = useState(false);
+  const digestFetchedForRef = useRef<string | null>(null);
+
+  // Reset the card whenever we switch to a different analysis.
+  useEffect(() => {
+    setDigest(null);
+    setDigestLoading(false);
+    digestFetchedForRef.current = null;
+  }, [analysisId]);
+
+  useEffect(() => {
+    if (status !== 'complete' || !analysisId || partialInfo) return;
+    if (digestFetchedForRef.current === analysisId) return;
+    digestFetchedForRef.current = analysisId;
+
+    let cancelled = false;
+    setDigestLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch('/api/analyses/digest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ analysisId }),
+        });
+        if (!res.ok) return; // 409 (no content) / 5xx — just show no card
+        const data = await res.json();
+        if (!cancelled && data?.digest) setDigest(data.digest as StoredExecutiveDigest);
+      } catch (err) {
+        console.debug('[digest] generation request failed:', err);
+      } finally {
+        if (!cancelled) setDigestLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status, analysisId, partialInfo]);
+
   const getUserTimezone = (): string => {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -671,6 +718,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
               {consoleTab === 'synthesis' ? (
                 <>
+                  {status === 'complete' && (digest || digestLoading) && (
+                    <ExecutiveDigestCard digest={digest} loading={digestLoading} />
+                  )}
                   {partialInfo && (
                     <div
                       role="status"
