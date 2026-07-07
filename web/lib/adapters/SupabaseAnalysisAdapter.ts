@@ -555,7 +555,7 @@ export class SupabaseAnalysisAdapter {
         console.error('[SupabaseAnalysisAdapter] saveExecutiveDigest failed:', error.message);
         throw error;
       }
-      return !!data;
+      return Boolean(data);
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'saveExecutiveDigest' },

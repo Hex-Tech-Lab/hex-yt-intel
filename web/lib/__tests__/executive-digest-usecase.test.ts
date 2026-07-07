@@ -47,7 +47,7 @@ const makeDeps = (opts: { row: Row; completion?: string; completionThrows?: bool
   };
 };
 
-const baseParams = { analysisId: 'an-1', userId: 'user-1', models: ['test/model'] as const };
+const baseParams = { analysisId: 'an-1', userId: 'user-1', models: [{ model: 'test/model' }] as const };
 
 describe('GenerateExecutiveDigestUseCase', () => {
   it('404s when the analysis is not owned / not found', async () => {

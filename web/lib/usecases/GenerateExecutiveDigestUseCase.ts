@@ -6,6 +6,7 @@ import {
 } from '@/lib/prompts/executive-digest';
 import type {
   TextCompletionPort,
+  CompletionModel,
   DigestPersistencePort,
   StoredExecutiveDigest,
 } from '@/lib/ports/ExecutiveDigestPorts';
@@ -14,7 +15,7 @@ export interface GenerateExecutiveDigestParams {
   analysisId: string;
   userId: string;
   /** Cheap cascade for the single digest completion. */
-  models: readonly string[];
+  models: readonly CompletionModel[];
   /** Re-generate even if a digest already exists (default false = idempotent). */
   force?: boolean;
 }

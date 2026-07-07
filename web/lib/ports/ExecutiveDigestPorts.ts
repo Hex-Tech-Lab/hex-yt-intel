@@ -1,5 +1,11 @@
 import type { ExecutiveDigest } from '@/lib/prompts/executive-digest';
 
+/** One entry in the completion cascade: a model id plus optional provider routing. */
+export interface CompletionModel {
+  model: string;
+  providerOrder?: readonly string[];
+}
+
 /**
  * A single non-streaming text completion. The digest pass (the "#12 call") is a
  * short, cheap synthesis over already-condensed material — not a stream — so it
@@ -9,8 +15,8 @@ export interface TextCompletionPort {
   complete(params: {
     system: string;
     user: string;
-    /** Cascade of model ids, tried in order until one returns text. */
-    models: readonly string[];
+    /** Cascade entries, tried in order until one returns text; each carries its own provider routing. */
+    models: readonly CompletionModel[];
     maxTokens?: number;
   }): Promise<{ text: string; model: string }>;
 }

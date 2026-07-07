@@ -44,8 +44,8 @@ export function ExecutiveDigestCard({ digest, loading }: ExecutiveDigestCardProp
           {digest.takeaways.length > 0 && (
             <Tier label="Key Takeaways">
               <ul className="flex flex-col gap-1.5">
-                {digest.takeaways.map((t, i) => (
-                  <li key={i} className="flex gap-2 text-sm leading-relaxed text-[var(--ink-secondary)]">
+                {digest.takeaways.map((t) => (
+                  <li key={t} className="flex gap-2 text-sm leading-relaxed text-[var(--ink-secondary)]">
                     <span aria-hidden className="mt-[0.4em] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
                     <span>{t}</span>
                   </li>
@@ -61,8 +61,8 @@ export function ExecutiveDigestCard({ digest, loading }: ExecutiveDigestCardProp
                   .split(/\n{2,}/)
                   .map((p) => p.trim())
                   .filter(Boolean)
-                  .map((p, i) => (
-                    <p key={i} className="text-sm leading-relaxed text-[var(--ink-secondary)]">
+                  .map((p) => (
+                    <p key={p} className="text-sm leading-relaxed text-[var(--ink-secondary)]">
                       {p}
                     </p>
                   ))}
