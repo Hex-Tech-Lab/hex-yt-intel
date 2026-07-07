@@ -192,5 +192,16 @@ export interface AnalysisPersistencePort {
     userId: string;
     select: string;  // made required
   }): Promise<any | null>;
+
+  /**
+   * Persist the Dimension-0 executive digest (three-tier summary) for one owned
+   * analysis. Scoped by user_id defense-in-depth even though the caller has
+   * already verified ownership. Returns true when a row was updated.
+   */
+  saveExecutiveDigest(params: {
+    analysisId: string;
+    userId: string;
+    digest: unknown;
+  }): Promise<boolean>;
 }
 

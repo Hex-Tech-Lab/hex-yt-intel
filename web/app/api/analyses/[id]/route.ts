@@ -29,7 +29,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses', 'id, user_id, video_id, title, channel_title, model_used, analysis_markdown, analysis_payload, validation_report, created_at, updated_at');
+    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses', 'id, user_id, video_id, title, channel_title, model_used, analysis_markdown, analysis_payload, validation_report, executive_digest, created_at, updated_at');
 
     const errorResponses: Record<string, { error: string; status: number }> = {
       Unauthorized: { error: 'Unauthorized', status: 401 },
@@ -70,6 +70,7 @@ export async function GET(
       analysis_markdown: safeReconstructMarkdown(analysis),
       analysis_payload: analysis.analysis_payload || null,
       validation_report: report,
+      executiveDigest: analysis.executive_digest || null,
       analysisAt: analysis.created_at,
       detectedPersona: primaryPersona?.id ?? primaryPersona?.label ?? null,
       streaming: {

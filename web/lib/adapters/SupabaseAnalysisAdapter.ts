@@ -533,6 +533,39 @@ export class SupabaseAnalysisAdapter {
   }
 
   /**
+   * Persist the Dimension-0 executive digest jsonb for one owned analysis.
+   * Scoped by user_id defense-in-depth. Returns true when a row was updated.
+   */
+  static async saveExecutiveDigest(params: {
+    analysisId: string;
+    userId: string;
+    digest: unknown;
+  }): Promise<boolean> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analyses')
+        .update({ executive_digest: params.digest })
+        .eq('id', params.analysisId)
+        .eq('user_id', params.userId)
+        .select('id')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabaseAnalysisAdapter] saveExecutiveDigest failed:', error.message);
+        throw error;
+      }
+      return Boolean(data);
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'saveExecutiveDigest' },
+        extra: { analysisId: params.analysisId, userId: params.userId },
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Atomically bump `viewed_count` for one owned analysis row (surfaced as
    * "Views" in the history overview). Delegates to the `increment_analysis_view`
    * RPC so the increment is a single `col = col + 1` UPDATE — a read-modify-write
