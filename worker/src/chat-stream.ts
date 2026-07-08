@@ -208,7 +208,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     const modelStr = [...(req.models ?? [])].sort().join(',');
     const msg = `chat:${req.conversationId}:${req.userId}:${req.exp}:${modelStr}`;
     const expected = await hmacHex(s, msg);
-    
+
     if (timingSafeEqualHex(expected, req.sig)) {
       signingKey = s;
       isTokenValid = true;
@@ -240,20 +240,13 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   const rawReq = c.req.raw;
   const clientSignal = rawReq.signal;
 
-  // Build adaptive OPTIONS before streaming starts
-  let adaptiveOptions: string[] = [];
-  try {
-    const currentTopic = history && history.length > 0
-      ? history[history.length - 1]?.content || ""
-      : grounding;
-    adaptiveOptions = await buildAdaptiveOptions(req.knowledgeContext, currentTopic);
-  } catch (err) {
-    // Fallback to empty if OPTIONS generation fails
-    console.warn("[chat-stream] OPTIONS generation failed, will send empty options",
-      err instanceof Error ? err.message : String(err));
-    adaptiveOptions = [];
-  }
-
+  // Stream assembly order (deterministic and non-blocking):
+  // 1. OPTIONS event (adaptive or empty) — sent immediately with fallback to static
+  // 2. Streaming chat deltas (LLM completion)
+  // 3. PERSIST status (saving/saved/failed)
+  // 4. DONE event (stream closed)
+  //
+  // OPTIONS generation is moved INSIDE the stream start (non-blocking init).
   const stream = new ReadableStream({
     async start(controller) {
       const send = (obj: unknown) => {
@@ -265,11 +258,49 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         }
       };
 
-      // Send OPTIONS as first event (before delta streaming starts)
-      if (adaptiveOptions.length > 0) {
-        send({ type: "options", content: adaptiveOptions, requestId: req.requestId });
-      }
+      // STAGE 1: Emit OPTIONS event immediately (deterministic contract)
+      // OPTIONS are generated asynchronously in the background and sent when ready.
+      // This ensures the stream starts promptly without blocking on personalization.
+      // Fallback: static options are always available.
+      let optionsSent = false;
+      const emitOptions = async () => {
+        try {
+          const currentTopic = history && history.length > 0
+            ? history[history.length - 1]?.content || ""
+            : grounding;
+          const adaptiveOptions = await buildAdaptiveOptions(req.knowledgeContext, currentTopic);
+          // Emit adaptive options if generated
+          if (adaptiveOptions.length > 0) {
+            send({ type: "options", content: adaptiveOptions, requestId: req.requestId });
+            optionsSent = true;
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn("[chat-stream] adaptive OPTIONS generation failed, will attempt static fallback", {
+            conversationId: req.conversationId,
+            error: msg,
+          });
+        }
+      };
 
+      // Start personalization in parallel (fire and forget)
+      const optionsPromise = emitOptions().then(() => {
+        // If adaptive options were not sent (failed or empty), send static fallback
+        if (!optionsSent) {
+          send({ type: "options", content: ["Ask a follow-up question?", "Summarize this topic?", "What's next?"], requestId: req.requestId });
+        }
+      }).catch((err) => {
+        // Final fallback: emit static options on any error
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[chat-stream] OPTIONS fallback failed (this should not happen)", {
+          conversationId: req.conversationId,
+          error: msg,
+        });
+        send({ type: "options", content: [], requestId: req.requestId });
+      });
+
+      // STAGE 2: Stream chat deltas (LLM completion) immediately
+      // This runs in parallel with OPTIONS generation, ensuring fast content start.
       let full = "";
       try {
         full = await streamChatCascade(apiKey, grounding, history, (chunk) => {
@@ -287,6 +318,10 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         send({ type: "delta", content: full, requestId: req.requestId });
       }
 
+      // Wait for OPTIONS to complete before proceeding to PERSIST (deterministic ordering)
+      await optionsPromise;
+
+      // STAGE 3: Persist chat content server-to-server
       let hasSaved = false;
 
       const atomicPersist = createAtomicPersist({
@@ -337,6 +372,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
 
       atomicPersist.flush();
 
+      // STAGE 4: Emit DONE event (stream closed)
       send({ type: "done", requestId: req.requestId });
       controller.close();
     },
