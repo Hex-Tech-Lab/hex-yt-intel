@@ -95,20 +95,15 @@ test.describe('TEST SUITE 2: Chat Grounding (Analyze → Chat)', () => {
     await sendBtn.click();
 
     // Wait for response message to appear
-    try {
-      // Look for a new message that isn't from the user (should be assistant)
-      await page.waitForTimeout(3000);
-      const chatMessages = page.locator('[role="article"], .message, .chat-message');
-      const messageCount = await chatMessages.count();
+    const chatMessages = page.locator('[role="article"], .message, .chat-message');
+    await chatMessages.first().waitFor({ timeout: 3000 });
+    const messageCount = await chatMessages.count();
 
-      const responseTime = Date.now() - startTime;
-      console.log(`[Chat Response] Received in ${responseTime}ms, total messages: ${messageCount}`);
+    const responseTime = Date.now() - startTime;
+    console.log(`[Chat Response] Received in ${responseTime}ms, total messages: ${messageCount}`);
 
-      // Should have received messages
-      expect(messageCount).toBeGreaterThan(0);
-    } catch (e) {
-      console.warn('[Chat Response] Timeout or no messages found', e);
-    }
+    // Must have received at least one message
+    expect(messageCount).toBeGreaterThan(0);
   });
 
   test('Chat response mentions video-specific concepts (not generic)', async ({
@@ -151,14 +146,14 @@ test.describe('TEST SUITE 2: Chat Grounding (Analyze → Chat)', () => {
     await sendBtn.click();
 
     // Wait for response
-    await page.waitForTimeout(2000);
+    const messageElements = page.locator('[role="article"], .message, .chat-message');
+    await messageElements.first().waitFor({ timeout: 5000 });
 
-    // Get chat content
-    const chatContent = await page.content();
     console.log('[Chat Response] Received and rendered');
 
-    // Response should exist (specific verification would require mocking or real content)
-    expect(chatContent).toBeTruthy();
+    // Verify at least one message is displayed
+    const messageCount = await messageElements.count();
+    expect(messageCount).toBeGreaterThan(0);
   });
 
   test('No hallucination: chat refuses without grounding', async ({
@@ -206,22 +201,29 @@ test.describe('TEST SUITE 2: Chat Grounding (Analyze → Chat)', () => {
     // Wait for completion
     await waitForAnalysisComplete(analysisId);
 
-    // Make direct API call to verify chat endpoint
-    try {
-      const chatResponse = await page.request.post(`${DEPLOYMENT_URL}/api/chat/messages`, {
-        data: {
-          conversationId: 'test-conv-id',
-          message: 'What is this video about?',
-          analysisId: analysisId,
-        },
-      });
+    // Create conversation first (ADR 009: ownership binding enforced at creation)
+    const convResponse = await page.request.post(`${DEPLOYMENT_URL}/api/chat/conversations`, {
+      data: { analysisId },
+    });
+
+    const convData = await convResponse.json();
+    const conversationId = (convData as { id?: string }).id;
+
+    if (conversationId) {
+      // Make direct API call to verify chat message endpoint with real conversation
+      const chatResponse = await page.request.post(
+        `${DEPLOYMENT_URL}/api/chat/conversations/${conversationId}/messages`,
+        {
+          data: {
+            content: 'What is this video about?',
+          },
+        }
+      );
 
       console.log(`[Chat API] Status: ${chatResponse.status()}`);
 
-      // Should be 200, 201, or stream (202)
-      expect([200, 201, 202, 400, 401, 422]).toContain(chatResponse.status());
-    } catch (_e) {
-      console.log('[Chat API] Direct call not available or requires specific setup');
+      // Should only accept success codes for message sending
+      expect([200, 201, 202]).toContain(chatResponse.status());
     }
   });
 
