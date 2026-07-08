@@ -38,7 +38,7 @@ import {
 export async function POST(req: NextRequest) {
   const authAdapter = new SupabaseAuthAdapter();
 
-  // Authenticate user
+  // Step 1: Authenticate user
   const identity = await authAdapter.authenticate();
   if (!identity) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   try {
     const body: unknown = await req.json().catch(() => ({}));
 
-    // Validate request payload
+    // Step 2: Validate request payload
     const parsed = QuestionCaptureRequestSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -58,24 +58,31 @@ export async function POST(req: NextRequest) {
 
     const { conversationId, userId, question, analysisId, timestamp } = parsed.data;
 
-    // Verify user ownership (route-level security check)
+    // Step 3: Verify user ID matches authenticated identity (double-check against token)
     if (userId !== identity.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Verify that the conversation belongs to the user
+    // Step 4: Verify conversation ownership (prevents IDOR via non-existent/foreign conversation)
     const persistenceAdapter = new SupabasePersistenceAdapter();
-    const conversation = await persistenceAdapter.getConversation({ conversationId });
-    if (!conversation || conversation.userId !== identity.userId) {
-      return NextResponse.json({ error: 'Forbidden: conversation not found or not owned' }, { status: 403 });
+    const conversation = await persistenceAdapter.verifyChatOwnership({
+      conversationId,
+      userId: identity.userId,
+      select: 'id', // Minimal columns needed
+    });
+    if (!conversation) {
+      return NextResponse.json(
+        { error: 'Forbidden: conversation not found or not owned' },
+        { status: 403 }
+      );
     }
 
-    // Generate question ID and timestamp
+    // Step 5: Generate question ID and timestamp
     const questionId = randomUUID();
     const now = new Date().toISOString();
     const storedAt = timestamp || now;
 
-    // Prepare metadata
+    // Step 6: Prepare metadata for storage
     const metadata: QuestionStorageMetadata = {
       conversationId,
       userId,
@@ -84,31 +91,29 @@ export async function POST(req: NextRequest) {
       question,
     };
 
-    // Store question in Supabase Storage (fire-and-forget pattern)
-    // If storage fails, log but don't fail the chat request
+    // Step 7: Store question in Supabase Storage (fire-and-forget, non-blocking)
+    // Failures are logged explicitly but don't interrupt the response
     captureQuestionToStorage(metadata, questionId).catch((error) => {
       const msg = error instanceof Error ? error.message : String(error);
       Sentry.captureException(error, {
-        tags: { operation: 'question-capture-storage' },
-        contexts: {
-          request: { questionId, userId, conversationId }
-        },
+        tags: { operation: 'question-capture-storage', phase: 'async-write' },
+        contexts: { request: { questionId, userId, conversationId } },
       });
-      console.error('[question-capture] Storage write failed:', msg);
-      // Silently fail — don't interrupt chat flow
+      // Log explicitly — this failure does NOT affect the chat response
+      console.warn('[question-capture] Async storage failed (non-blocking):', msg);
     });
 
-    // Build response
+    // Step 8: Build and validate response
     const response: QuestionCaptureResponseOutput = {
       success: true,
       questionId,
       stored_at: storedAt,
     };
 
-    // Validate response before returning
     const validatedResponse = QuestionCaptureResponseSchema.safeParse(response);
     if (!validatedResponse.success) {
-      console.error('[question-capture] Response validation failed:', validatedResponse.error);
+      const err = validatedResponse.error;
+      console.error('[question-capture] Response validation failed:', err.flatten());
       return NextResponse.json(
         { error: 'Internal server error' },
         { status: 500 }
@@ -119,7 +124,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, {
-      tags: { operation: 'question-capture' },
+      tags: { operation: 'question-capture', phase: 'request-handler' },
       contexts: { api: { endpoint: '/api/chat/capture-question' } },
     });
     console.error('[question-capture] Unexpected error:', msg);
@@ -136,46 +141,52 @@ export async function POST(req: NextRequest) {
 
 /**
  * Store question metadata in Supabase Storage as markdown file.
- * File path: /raw/{userId}/questions/{ISO_TIMESTAMP}_{questionId}.md
+ * Fire-and-forget pattern: errors are logged but don't propagate to the caller.
  *
- * Fire-and-forget: errors are logged but don't propagate to the caller.
+ * File path: /raw/{userId}/questions/{ISO_TIMESTAMP}_{questionId}.md
+ * Idempotency: upsert: false prevents overwrites; duplicate filenames are treated as success.
  */
 async function captureQuestionToStorage(
   metadata: QuestionStorageMetadata,
   questionId: string
 ): Promise<void> {
+  let filePath = '';
   try {
     const supabaseClient = getSupabaseServiceClient();
 
-    // Construct file path
-    const isoTimestamp = metadata.timestamp.replace(/[:.]/g, '-').split('Z')[0]; // Safe for filenames
+    // Construct file path with safe timestamp (ISO format → filename-safe)
+    const isoTimestamp = metadata.timestamp.replace(/[:.]/g, '-').split('Z')[0];
     const fileName = `${isoTimestamp}_${questionId}.md`;
-    const filePath = `raw/${metadata.userId}/questions/${fileName}`;
+    filePath = `raw/${metadata.userId}/questions/${fileName}`;
 
-    // Build markdown content
+    // Build markdown content (YAML front matter + question)
     const content = buildQuestionMarkdown(metadata, questionId);
 
-    // Upload to storage
+    // Upload to Supabase Storage bucket
     const { error } = await supabaseClient.storage
       .from('analyses')
       .upload(filePath, content, {
         contentType: 'text/markdown; charset=utf-8',
-        upsert: false, // Fail if file already exists (idempotency guard)
+        upsert: false, // Idempotency guard: fail if file already exists
       });
 
+    // Handle upload errors
     if (error) {
-      // If file exists (idempotency), silently succeed; other errors propagate
-      if (error.message.includes('already exists') || error.message.includes('Duplicate')) {
+      const isDuplicate = error.message.includes('already exists') || error.message.includes('Duplicate');
+      if (isDuplicate) {
+        // Treat duplicate as idempotent success
         console.debug('[question-capture] File already exists (idempotent):', filePath);
         return;
       }
+      // Other errors (permission, storage full, etc.) are critical
       throw error;
     }
 
-    console.debug('[question-capture] Question stored:', filePath);
+    console.debug('[question-capture] Question stored successfully:', filePath);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to store question in Supabase Storage: ${msg}`);
+    const context = `failed to store question in Supabase Storage (path=${filePath})`;
+    throw new Error(`[question-capture] ${context}: ${msg}`);
   }
 }
 
