@@ -18,7 +18,7 @@ test.describe('TEST SUITE 1: Analysis Creation → Streaming → Completion', ()
   });
 
   test('Monitor status transitions: starting → model → complete', async ({
-    authenticatedPage: _page,
+    authenticatedPage: page,
     submitAnalysis,
     waitForAnalysisComplete: _waitForAnalysisComplete,
   }) => {
