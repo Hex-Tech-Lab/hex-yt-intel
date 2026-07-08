@@ -1,6 +1,6 @@
-import { getBillingProvider } from '../billing-factory';
-import { stripe, STRIPE_PRICING } from '../stripe';
-import { SupabasePersistenceAdapter } from '../adapters/SupabasePersistenceAdapter';
+import { getBillingProvider } from '@lib/billing-factory';
+import { stripe, STRIPE_PRICING } from '@lib/stripe';
+import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAdapter';
 
 /**
  * BILLING DATA CONSOLIDATION LAW (2026-06-08)

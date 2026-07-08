@@ -1,7 +1,7 @@
 import type { PersonaId } from '@/lib/prompts';
 import { rankPersonas } from '@/lib/prompts';
-import { resolveUCISPromptTemplate } from '../services/settings';
-import { UCIS_V5_1_SYSTEM } from '../prompts/ucis-v5.1';
+import { resolveUCISPromptTemplate } from '@lib/services/settings';
+import { UCIS_V5_1_SYSTEM } from '@lib/prompts/ucis-v5.1';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 export interface GetUCISPromptParams {

@@ -1,6 +1,6 @@
 /**
- * Test script for Dream Sequence Webhook
- * Simulates a QStash request to the webhook endpoint
+ * Test script for Oracle Sequence Webhook
+ * Simulates a QStash request to the webhook endpoint for Knowledge Graph entity deduplication
  */
 
 async function testWebhook() {
@@ -10,7 +10,7 @@ async function testWebhook() {
   };
 
   try {
-    const response = await fetch('http://localhost:5173/api/webhooks/dream-sequence', {
+    const response = await fetch('http://localhost:5173/api/webhooks/oracle-sequence', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

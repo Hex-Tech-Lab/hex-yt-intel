@@ -1,6 +1,6 @@
 import 'server-only';
-import { SupabaseAuthAdapter } from '../adapters/SupabaseAuthAdapter';
-import { SupabasePersistenceAdapter } from '../adapters/SupabasePersistenceAdapter';
+import { SupabaseAuthAdapter } from '@lib/adapters/SupabaseAuthAdapter';
+import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAdapter';
 
 /**
  * Free-tier monthly analysis allowance. Source of truth is MONTHLY_QUOTAS in

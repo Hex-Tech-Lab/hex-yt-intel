@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 import { executeRedisScript } from '@/lib/redis';
 import type { QuotaGateResult, TrafficGuardPort, RateLimitStatus } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
-import { RATE_LIMITS } from '../constants/rate-limits';
+import { RATE_LIMITS } from '@lib/constants/rate-limits';
 import { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
 
 /**
