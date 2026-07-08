@@ -13,7 +13,7 @@ export class StreamStatusTracker {
   public handleStatus(
     fragment: {
       type: 'status';
-      stage: 'starting' | 'model' | 'fallback';
+      stage: 'extracting' | 'starting' | 'model' | 'fallback';
       videoId?: string;
       model?: string;
       from?: string;
@@ -25,7 +25,9 @@ export class StreamStatusTracker {
     rebuildMarkdown: (force?: boolean) => void
   ) {
     const store = this.analysisStore.getState();
-    if (fragment.stage === 'starting') {
+    if (fragment.stage === 'extracting') {
+      store.logInfo(`Preparing analysis for video ID: ${fragment.videoId}`);
+    } else if (fragment.stage === 'starting') {
       store.logInfo(`Edge pipeline start for video ID: ${fragment.videoId}`);
     } else if (fragment.stage === 'model') {
       store.logInfo(`Contacting OpenRouter endpoint...`);
