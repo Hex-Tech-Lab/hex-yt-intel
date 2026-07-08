@@ -3,9 +3,9 @@
  *
  * A short module-level TTL cache avoids a Supabase round-trip on every request.
  */
-import { SupabasePersistenceAdapter } from '../adapters/SupabasePersistenceAdapter';
-import { UCIS_V5_1_SYSTEM } from '../prompts/ucis-v5.1';
-import { getRedisValue, setRedisValue, deleteRedisKey } from '../redis';
+import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAdapter';
+import { UCIS_V5_1_SYSTEM } from '@lib/prompts/ucis-v5.1';
+import { getRedisValue, setRedisValue, deleteRedisKey } from '@lib/redis';
 
 export interface PromptHistoryEntry {
   version: string;

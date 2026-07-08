@@ -119,6 +119,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
 
     const colWidth = 190;
     const rowHeight = 48;
+    const nodeWidth = 160;
 
     const countVisibleLeaves = (node: MindNode): number => {
       if (collapsedNodes[node.id] || node.children.length === 0) return 1;
@@ -140,11 +141,12 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
         sortedChildren.forEach((child) => {
           const childLeaves = countVisibleLeaves(child);
           const childY = currentY + (childLeaves * rowHeight) / 2 - rowHeight / 2;
+          const childX = 20 + (level + 1) * colWidth;
 
           linksList.push({
-            sourceX: x + 150, // offset right border of node container
+            sourceX: x + nodeWidth, // right edge of parent node
             sourceY: y + 16,  // center vertical
-            targetX: x + colWidth,
+            targetX: childX, // left edge of child node
             targetY: childY + 16,
             targetId: child.id,
           });

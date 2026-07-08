@@ -13,7 +13,7 @@ const baseUrl = productionUrl.replace(/\/$/, "");
 
 // All scheduled QStash jobs, registered idempotently by name.
 const SCHEDULES: Array<{ name: string; cron: string; path: string }> = [
-  { name: "daily-dream-sequence-dedup", cron: "0 3 * * *", path: "/api/webhooks/dream-sequence" }, // daily 3 AM
+  { name: "daily-oracle-sequence-dedup", cron: "0 3 * * *", path: "/api/webhooks/oracle-sequence" }, // daily 3 AM (canonical node dedup)
   // Stuck-analysis reaper (ADR 007): settle rows orphaned in `processing`.
   { name: "stuck-analysis-reaper", cron: "*/15 * * * *", path: "/api/webhooks/reaper" }, // every 15 min
 ];

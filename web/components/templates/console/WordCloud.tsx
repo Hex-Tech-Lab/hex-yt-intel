@@ -109,6 +109,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 50);
 
+    const maxTokenWeight = sortedTokens.length > 0 && sortedTokens[0] ? sortedTokens[0].weight : 1;
     const center = { x: size.w / 2, y: size.h / 2 };
     const placed: PlacedWord[] = [];
 
@@ -134,7 +135,8 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     sortedTokens.forEach((token) => {
       const weight = token.weight;
-      const fontSize = Math.max(10, Math.min(15, 9 + weight * 0.8));
+      const normalizedWeight = maxTokenWeight > 0 ? Math.min(1, weight / maxTokenWeight) : 0.5;
+      const fontSize = Math.max(11, Math.min(26, 10 + normalizedWeight * 16));
       const text = token.label;
 
       if (testCtx) {
