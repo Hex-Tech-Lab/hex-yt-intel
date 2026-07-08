@@ -65,7 +65,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           {topbar}
         </header>
 
-        <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 sm:py-8 xl:px-10 xl:py-8 scroll-smooth">
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 xl:px-8 xl:py-6 scroll-smooth">
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1 min-w-0">
               {children}
