@@ -141,9 +141,17 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       // ratio is also approximately 1.43, making the cloud proportional.
       const logMin = Math.log(Math.max(minTokenWeight, 1));
       const logMax = Math.log(Math.max(maxTokenWeight, 1));
-      const logNormalizedWeight =
-        logMax > logMin ? (Math.log(Math.max(weight, 1)) - logMin) / (logMax - logMin) : 0.5;
-      const fontSize = Math.max(11, Math.min(26, 11 + logNormalizedWeight * 15));
+      let normalizedWeight: number;
+      if (logMax > logMin) {
+        // Logarithmic normalization
+        normalizedWeight = (Math.log(Math.max(weight, 1)) - logMin) / (logMax - logMin);
+      } else {
+        // Fallback to linear normalization when all weights are identical
+        const linearMin = Math.max(minTokenWeight, 1);
+        const linearMax = Math.max(maxTokenWeight, 1);
+        normalizedWeight = linearMax > linearMin ? (Math.max(weight, 1) - linearMin) / (linearMax - linearMin) : 0.5;
+      }
+      const fontSize = Math.max(11, Math.min(26, 11 + normalizedWeight * 15));
       const text = token.label;
 
       if (testCtx) {

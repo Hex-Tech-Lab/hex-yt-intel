@@ -85,9 +85,17 @@ if [ "$CURRENT_BRANCH" = "$BRANCH" ]; then
   fi
 else
   log "Switching to $BRANCH..."
-  git checkout "$BRANCH" 2>&1 | tee -a "$LOG_FILE"
-  git pull origin "$BRANCH" 2>&1 | tee -a "$LOG_FILE"
-  log_success "Switched and pulled $BRANCH"
+  if git checkout "$BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+    if git pull origin "$BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+      log_success "Switched and pulled $BRANCH"
+    else
+      log_error "Pull failed after checkout"
+      exit 1
+    fi
+  else
+    log_error "Checkout to $BRANCH failed"
+    exit 1
+  fi
 fi
 
 # Stage 4: Install dependencies
