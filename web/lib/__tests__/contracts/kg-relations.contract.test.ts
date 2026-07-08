@@ -17,11 +17,11 @@
  * ✗ Vector index assumptions (no existence checks)
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import type { GraphNode, GraphEdge, KnowledgeGraph } from '@/lib/types/knowledge-graph';
 import { AggregateGlobalGraphUseCase } from '@/lib/usecases/AggregateGlobalGraphUseCase';
 import { DeduplicateGraphUseCase } from '@/lib/usecases/DeduplicateGraphUseCase';
-import type { VectorDedupPort, DedupResult } from '@/lib/ports/VectorDedupPort';
+import type { VectorDedupPort } from '@/lib/ports/VectorDedupPort';
 
 // ============================================================================
 // MOCKS & TEST DATA
