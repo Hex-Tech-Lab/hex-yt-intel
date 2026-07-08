@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
+import type { ChatMessage } from '@/lib/types/chat';
 
 /**
  * PART 1: Conversation Creation Contracts
