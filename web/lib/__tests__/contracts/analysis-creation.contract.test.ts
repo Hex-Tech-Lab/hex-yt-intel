@@ -370,6 +370,7 @@ describe('Contract Audit: Analysis Creation → Streaming Flow', () => {
     it('VIOLATION: persona field mismatch - client sends p1|p2|p3|p4|p5', () => {
       // This documents the CRITICAL violation
       const clientPersona = 'p1'; // What client sends
+      const workerExpectation = 'creator'; // What worker LLM generates
       const adapterExpectation = ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager']; // What adapter validates
 
       // The persona fragment from worker will have id: 'creator'
@@ -377,6 +378,7 @@ describe('Contract Audit: Analysis Creation → Streaming Flow', () => {
       // This causes a semantic mismatch in the persona mapping
       expect(clientPersona).not.toMatch(/^(creator|indieMaker|consultant|researcher|productManager)$/);
       expect(adapterExpectation).toContain('creator');
+      expect(adapterExpectation).toContain(workerExpectation);
     });
   });
 

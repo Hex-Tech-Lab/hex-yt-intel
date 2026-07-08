@@ -675,6 +675,7 @@ describe('[CONTRACT] Search API: Ownership & IDOR Defense', () => {
       // But client never sees raw metadata, only enriched results
       const upstashMetadata = { analysisId: 'a123' }; // Internal
       const clientSeeesMetadata = false; // Should be filtered by enrichment
+      expect(upstashMetadata).toHaveProperty('analysisId');
       expect(clientSeeesMetadata).toBe(false);
     });
 
