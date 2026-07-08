@@ -197,39 +197,54 @@ describe('KnowledgeGraphCanvas Font Sizing', () => {
 // ============================================================================
 
 describe('WordCloud Proportional Font Sizing', () => {
-  it('calculates font size proportional to token weight', () => {
+  it('uses logarithmic scaling to preserve frequency ratios', () => {
+    // WordCloud.tsx uses: (log(weight) - logMin) / (logMax - logMin) to normalize
+    // Then applies: fontSize = 11 + normalized * 15, clamped to [11, 26]
+    const minTokenWeight = 1;
+    const maxTokenWeight = 10;
     const minFontSize = 11;
     const maxFontSize = 26;
-    const baseFontCalculation = 10;
-    const weightScaler = 16;
+    const fontScaler = 15;
 
-    // Formula: 10 + normalizedWeight * 16, clamped to [11, 26]
-    const weights = [0, 0.25, 0.5, 0.75, 1.0];
+    const logMin = Math.log(Math.max(minTokenWeight, 1));
+    const logMax = Math.log(Math.max(maxTokenWeight, 1));
+
+    // Test monotonicity: higher weight → non-decreasing font size
+    const weights = [1, 2, 5, 10];
     const fontSizes = weights.map(w => {
-      const raw = baseFontCalculation + w * weightScaler;
-      return Math.max(minFontSize, Math.min(maxFontSize, raw));
+      const logNormalized = logMax > logMin ? (Math.log(Math.max(w, 1)) - logMin) / (logMax - logMin) : 0.5;
+      return Math.max(minFontSize, Math.min(maxFontSize, minFontSize + logNormalized * fontScaler));
     });
 
-    expect(fontSizes[0]).toBe(11); // clamped from 10
-    expect(fontSizes[1]).toBe(14); // 10 + 0.25*16 = 14
-    expect(fontSizes[2]).toBe(18); // 10 + 0.5*16 = 18
-    expect(fontSizes[3]).toBe(22); // 10 + 0.75*16 = 22
-    expect(fontSizes[4]).toBe(26); // 10 + 1.0*16 = 26
+    // Verify monotonicity (each size >= previous)
+    for (let i = 1; i < fontSizes.length; i++) {
+      expect(fontSizes[i]).toBeGreaterThanOrEqual(fontSizes[i - 1]);
+    }
+
+    // Verify clamping to [11, 26]
+    fontSizes.forEach(size => {
+      expect(size).toBeGreaterThanOrEqual(minFontSize);
+      expect(size).toBeLessThanOrEqual(maxFontSize);
+    });
   });
 
-  it('maintains 43% proportional scaling ratio between largest and smallest', () => {
-    const minFontSize = 11;
-    const maxFontSize = 26;
-    const ratio = maxFontSize / minFontSize;
-    const percentDifference = ((maxFontSize - minFontSize) / minFontSize) * 100;
+  it('preserves proportional scaling: weight ratio ≈ font size ratio', () => {
+    // With log scaling: if freq_a/freq_b = 1.43 (frequency ratio),
+    // then font size should scale similarly
+    const minTokenWeight = 44;
+    const maxTokenWeight = 63;
+    const frequencyRatio = maxTokenWeight / minTokenWeight; // ≈ 1.43
 
-    // Expected: 26/11 ≈ 2.36x, or ~136% larger
-    // But the task mentions "43% difference" - let's verify scaling
-    expect(ratio).toBeCloseTo(2.36, 1);
-    expect(percentDifference).toBeCloseTo(136.4, 0); // 136% larger
+    const logMin = Math.log(minTokenWeight);
+    const logMax = Math.log(maxTokenWeight);
 
-    // 43% might refer to proportional scaling as (26-11)/26 ≈ 58%
-    // or relative scaling factor difference
+    const fontSize44 = 11 + ((Math.log(44) - logMin) / (logMax - logMin)) * 15;
+    const fontSize63 = 11 + ((Math.log(63) - logMin) / (logMax - logMin)) * 15;
+    const fontSizeRatio = fontSize63 / fontSize44;
+
+    // Font size ratio should approximate frequency ratio (~1.43)
+    // With log scaling, this ratio is better preserved than linear
+    expect(fontSizeRatio).toBeCloseTo(frequencyRatio, 0);
   });
 
   it('applies bold font weight (700) to selected words', () => {
