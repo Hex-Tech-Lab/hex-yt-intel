@@ -51,7 +51,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
+  const { id: conversationId } = await params;
   const authAdapter = new SupabaseAuthAdapter();
   const identity = await authAdapter.authenticate();
   if (!identity) {
@@ -73,7 +73,18 @@ export async function POST(
 
     const { content: rawContent, clientMsgId } = parsed.data;
 
+    // Step 1: Verify conversation ownership (prevents IDOR via non-existent/foreign conversation)
     const persistenceAdapter = new SupabasePersistenceAdapter();
+    const conversation = await persistenceAdapter.verifyChatOwnership({
+      conversationId,
+      userId,
+      select: 'id, analysis_id', // Minimal columns; analysis_id needed for later capture
+    });
+    if (!conversation) {
+      return NextResponse.json({ error: 'Conversation not found or not owned' }, { status: 404 });
+    }
+
+    // Step 2: Process the message using the use case
     const modelAdapter = new SettingsModelAdapter();
     const tokenAdapter = new StreamTokenAdapter();
 
@@ -91,7 +102,7 @@ export async function POST(
     );
 
     const result = await useCase.execute({
-      conversationId: id,
+      conversationId,
       userId,
       tier,
       content: rawContent,
@@ -105,25 +116,32 @@ export async function POST(
       );
     }
 
-    // Fire-and-forget: capture the question for wiki aggregation
-    // This happens after validation but doesn't block the response
-    const conv = await persistenceAdapter.getConversation({ conversationId: id });
-    const analysisId = conv?.analysisId;
-    captureQuestionAsync(id, userId, rawContent, analysisId, request).catch((error) => {
-      console.error('[chat] Question capture failed (non-blocking):', error);
+    // Step 3: Trigger background question capture (fire-and-forget, non-blocking)
+    // Isolated in a separate async function to ensure it doesn't affect response timing.
+    // Failures are logged but don't interrupt the chat response.
+    const analysisId = conversation.analysis_id || undefined;
+    captureQuestionAsync(conversationId, userId, rawContent, analysisId, request).catch((error) => {
+      // Explicitly log capture failures (non-blocking background operation)
+      console.warn('[chat] Question capture failed (async, non-blocking):', error);
     });
 
     return NextResponse.json(result.data);
   } catch (error) {
-    console.error('[chat POST] Exception:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[chat POST] Unexpected error:', msg);
     return NextResponse.json({ error: 'Failed to process message' }, { status: 500 });
   }
 }
 
 /**
- * Fire-and-forget helper to capture the question for wiki aggregation.
- * Does not block the response; failures are logged but swallowed.
- * Follows the fire-and-forget pattern: called after the main response is ready.
+ * Fire-and-forget background task to capture the question for wiki aggregation.
+ * Isolated, non-blocking, and guarded to ensure it never interferes with chat response timing.
+ *
+ * Design:
+ * - Called after successful message processing (response already sent to client)
+ * - 5s timeout prevents hanging if capture endpoint is slow
+ * - All failures are logged at WARN level but never thrown
+ * - Uses env.appUrl validation to skip gracefully if not configured (preview environments)
  */
 async function captureQuestionAsync(
   conversationId: string,
@@ -133,20 +151,25 @@ async function captureQuestionAsync(
   request?: NextRequest
 ): Promise<void> {
   try {
-    // Use the capture-question endpoint if available (prefer this)
-    // Otherwise, silently skip (graceful fallback)
+    // Guard 1: Ensure APP_URL is configured (required for internal fetch)
     if (!env.appUrl) {
-      console.debug('[chat] APP_URL not configured, skipping question capture');
+      console.warn('[chat] APP_URL not configured, skipping question capture (preview environment)');
+      return;
+    }
+
+    // Guard 2: Ensure question is non-empty (skip trivial captures)
+    if (!question || question.trim().length === 0) {
+      console.debug('[chat] Empty question, skipping capture');
       return;
     }
 
     const captureUrl = `${env.appUrl}/api/chat/capture-question`;
 
+    // Prepare headers: preserve auth context via Cookie forwarding
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    // Forward Cookie header from the original request for auth
     if (request) {
       const cookie = request.headers.get('cookie');
       if (cookie) {
@@ -154,6 +177,7 @@ async function captureQuestionAsync(
       }
     }
 
+    // Execute capture request with strict timeout (5s hard limit)
     const response = await fetch(captureUrl, {
       method: 'POST',
       headers,
@@ -164,25 +188,47 @@ async function captureQuestionAsync(
         analysisId: analysisId || undefined,
         timestamp: new Date().toISOString(),
       }),
-      // Use a short timeout so question capture doesn't slow down the response
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(5000), // Hard timeout to prevent hanging
     });
 
+    // Log response status for visibility
     if (!response.ok) {
-      console.warn('[chat] Question capture returned non-2xx:', response.status);
+      console.warn('[chat] Question capture endpoint returned non-2xx:', {
+        status: response.status,
+        statusText: response.statusText,
+      });
       return;
     }
 
-    const result = await response.json();
+    // Parse response and validate success
+    let result: any;
+    try {
+      result = await response.json();
+    } catch (parseError) {
+      console.warn('[chat] Question capture response parse failed:', parseError);
+      return;
+    }
+
     if (!result.success) {
-      console.warn('[chat] Question capture failed:', result);
+      console.warn('[chat] Question capture endpoint returned failure:', {
+        success: result.success,
+        error: result.error,
+      });
       return;
     }
 
     console.debug('[chat] Question captured successfully:', result.questionId);
   } catch (error) {
-    // Swallow all errors; this is a non-critical background operation
+    // Catch all errors (timeout, network, JSON errors, etc.) and log explicitly
     const msg = error instanceof Error ? error.message : String(error);
-    console.debug('[chat] Question capture error (non-blocking):', msg);
+    const isTimeout = error instanceof Error && error.name === 'AbortError';
+    const level = isTimeout ? 'debug' : 'warn'; // Timeout is expected, other errors are worth noting
+
+    if (level === 'debug') {
+      console.debug('[chat] Question capture timeout (5s limit exceeded, non-blocking)');
+    } else {
+      console.warn('[chat] Question capture failed (async, non-blocking):', msg);
+    }
+    // Never throw — fire-and-forget must never interfere with chat response
   }
 }
