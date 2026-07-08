@@ -1,4 +1,5 @@
-export type PersonaId = 'p1' | 'p2' | 'p3' | 'p4' | 'p5';
+import type { PersonaId } from './types/persona';
+export { PersonaId, PERSONA_DIMENSIONS, isValidPersona, type PersonaProjection, type PersonaConfigV2 } from './types/persona';
 
 export interface PersonaConfiguration {
   personaId: PersonaId;
@@ -7,27 +8,26 @@ export interface PersonaConfiguration {
 }
 
 const PERSONA_REGISTRY: Record<PersonaId, string> = {
-  p1: 'Content Creator',
-  p2: 'Indie Maker',
-  p3: 'Consultant',
-  p4: 'Researcher',
-  p5: 'Product Manager',
+  creator: 'Content Creator',
+  indieMaker: 'Indie Maker',
+  consultant: 'Consultant',
+  researcher: 'Researcher',
+  productManager: 'Product Manager',
 };
 
 /**
  * Persona auto-detection using domain-signal keywords
- * Falls back to p1 (Content Creator) if no match
+ * Falls back to creator (Content Creator) if no match
  */
 export function detectPersona(title: string, author: string): PersonaId {
   const text = `${title} ${author}`.toLowerCase();
 
-  // Keyword patterns per persona (domain signals)
   const patterns: Record<PersonaId, RegExp> = {
-    p1: /content|creator|youtube|video|channel|viral|engagement|audience|subscriber|hack|growth|algorithm/,
-    p2: /startup|founder|saas|indiehacker|bootstrap|mrr|product-market|validation|launch|indie|maker/,
-    p3: /strategy|framework|consulting|business|advisory|implementation|process|management|case-study/,
-    p4: /research|study|scientific|academic|analysis|data|methodology|evidence|literature|peer-reviewed|experiment|hypothesis/,
-    p5: /product|roadmap|prioriti(?:es|zation)?|feature|user|customer|requirements|design|ux|pm/,
+    creator: /content|creator|youtube|video|channel|viral|engagement|audience|subscriber|hack|growth|algorithm/,
+    indieMaker: /startup|founder|saas|indiehacker|bootstrap|mrr|product-market|validation|launch|indie|maker/,
+    consultant: /strategy|framework|consulting|business|advisory|implementation|process|management|case-study/,
+    researcher: /research|study|scientific|academic|analysis|data|methodology|evidence|literature|peer-reviewed|experiment|hypothesis/,
+    productManager: /product|roadmap|prioriti(?:es|zation)?|feature|user|customer|requirements|design|ux|pm/,
   };
 
   for (const [persona, pattern] of Object.entries(patterns)) {
@@ -36,8 +36,7 @@ export function detectPersona(title: string, author: string): PersonaId {
     }
   }
 
-  // Default fallback
-  return 'p1';
+  return 'creator';
 }
 
 /**
@@ -45,7 +44,7 @@ export function detectPersona(title: string, author: string): PersonaId {
  * Returns weighted secondary/tertiary personas
  */
 export function rankPersonas(primary: PersonaId): PersonaConfiguration[] {
-  const allPersonas: PersonaId[] = ['p1', 'p2', 'p3', 'p4', 'p5'];
+  const allPersonas: PersonaId[] = ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'];
   const ordered: PersonaId[] = [primary, ...allPersonas.filter((p) => p !== primary)];
 
   return [
