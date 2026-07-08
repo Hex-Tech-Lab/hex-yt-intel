@@ -1,9 +1,9 @@
-# Session Handover: Chat Security Hardening (Double Leak) & Dimension-0 Executive Digest (2026-07-07)
+# Session Handover: Chat Security Hardening (Double Leak), Dimension-0 Executive Digest, & Full-Session Preflight/Reconciliation (2026-07-07)
 
 **Location**: `/docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-AND-DIM0.md`
-**Build (HEAD)**: `eab4984`
+**Build (HEAD)**: `c00eae5` (feature work landed at `eab4984`; `4b16de2` and `c00eae5` are the docs/reconciliation commits described in §9)
 **PRs merged this session**: #125, #126, #127 (all squash-merged to `main`, all green on required CI)
-**Purpose**: Full state handover — what changed, why, what it revealed about the codebase, and what remains open. Written so the next session needs no other context to continue safely.
+**Purpose**: This is the **Total Handover of State (THOS)** for this session — not just the three PRs, but everything the session touched, including a full preflight re-ingestion of the multi-day transcript and a code-verified reconciliation of the task tracker and `.memory/` docs against actual `main`. Written so the next session needs no other context to continue safely, and does not need to trust any single prior doc at face value.
 
 ---
 
@@ -13,6 +13,7 @@
 2. Dimension-0 (the "executive digest" — one cheap synthesis call over the finished 11-dimension analysis) is wired end-to-end and live on `main` (PR #127).
 3. **CLAUDE.md's ADR ledger was stale before this session** (stopped at ADR 005 while ADR 006 and 007 were already implemented and merged). This handover backfills it and adds ADR 008–010. If you're reading CLAUDE.md as ground truth, it is now current as of `eab4984`.
 4. **Open risk, not yet swept**: the pattern that caused Leak 2 (a route using the Supabase *service client*, which bypasses RLS, with no explicit ownership check) may exist elsewhere. Only the one instance (`POST /api/chat/conversations`) was found and fixed. See §5 Blind Spots.
+5. **A full preflight pass (§9, done after the above) found the task tracker itself was wrong in both directions** — several items marked "pending" were already built in an earlier, undocumented session, and one item marked `[DONE]` in `.memory/AGENT_LEDGER.md` (a `TimestampLink` component) turned out not to exist in the codebase at all — a real regression, silently dropped by a later UI rewrite. `.memory/project_status.md` and `.memory/MEMORY.md` were rewritten wholesale on this evidence; read §9 before trusting any backlog item's status.
 5. Task #58 (full chat red-team / identity-defense orchestration layer) is still open and is explicitly the *next* increment on top of the grounding gate — not done by this session.
 
 ---
@@ -152,12 +153,63 @@ Spot-checked while orienting for this handover: it's versioned 1.0.0, dated 2026
 
 ## 8. Open Follow-Ups (tracked + untracked)
 
-**Tracked (task list)**:
+**Tracked (task list, current status as of the §9 reconciliation pass)**:
 - #58 — Full chat red-team / identity-defense orchestration layer (explicitly the larger follow-on to #125/#126; user said "for the time being we need the minimum" — this is that minimum; #58 is the rest).
-- #52, #53 — Mobile bottom nav, KG graph rebuild (unrelated pre-existing backlog, untouched this session).
-- #23, #34, #36–39, #43–44, #46, #55–56 — pre-existing backlog, untouched.
+- #64 — Service-client ownership-check sweep (created during §9; see §9.6/9.7 and §4.1 — was untracked at the time §4.1 was originally written, is now tracked).
+- #52, #53 — Mobile bottom nav, KG node-scaling refinement (unrelated pre-existing backlog, untouched this session; #53 is a distinct, still-open complaint about the same KG component that #29 — now closed — used to also cover).
+- #34, #36–39, #43–44, #46, #55–56 — pre-existing backlog, untouched. (#23 was in this list originally but is now closed — see §9.3 — do not treat it as still open.)
 
-**Untracked, surfaced by this session, not yet a task**:
-- Service-client ownership-check sweep (§4.1) — recommend creating a task before the next security-focused session, so it isn't lost.
+**No longer untracked** (was listed as such before the §9 pass; now has a task): the service-client ownership-check sweep is #64.
+
+**Still genuinely untracked**:
 - Full-suite vitest regression run (§6) — recommend running once as a health check, not urgent.
-- `docs/architecture-index.md` staleness (§4.6) — recommend a dedicated architecture-doc-refresh session rather than an incidental fix.
+- `docs/architecture-index.md` staleness (§4.6 / §9.6) — recommend a dedicated architecture-doc-refresh session rather than an incidental fix.
+
+---
+
+## 9. Preflight & Reconciliation Pass (same session, after §1–§8 landed)
+
+After the chat-security and Dim-0 work merged, a separate instruction was given: do a preflight over the **entire multi-day session** (not just this handover's slice of it), stop treating any doc as source of truth, verify claims against real code, and reconcile the task tracker. This section is the record of that pass — it is not a restatement of §1–§8, it is new work on top of it.
+
+### 9.1 Method
+- Read the full raw session transcript (`/root/.claude/projects/-home-user-hex-yt-intel/3bd1a140-fefd-5748-9b1d-01de68e90929.jsonl`, ~5,000 lines / 16MB) rather than relying on my own earlier compacted summary of it.
+- Cross-referenced against `git log --oneline main` directly (337 commits on `main` at the time of the check) to confirm which claimed "waves"/PRs actually landed, with real SHAs and dates — not narrative recollection.
+- For every task-tracker item in a "pending" state, spot-checked the actual file(s) it referred to with `Grep`/`Read` before accepting or changing its status. Nothing was marked complete or left pending on the basis of a doc's claim alone.
+
+### 9.2 What the git-log cross-check confirmed (no discrepancy)
+- PR #106 (`c18848e`, merged 2026-07-04) is a large squashed cluster covering the Wave A–G security/audit work, the qa-intel engine rebuild, RLS/perf migration, CodeQL crypto fix, and Node/pnpm upgrades described in tasks #1–18. Confirmed real via `git log --ancestry-path` between `b054632` (#98) and `c18848e` (#106) — dozens of granular commits from 2026-06-25 through 2026-07-04 substantiate it. Task list #1–18 is accurate.
+- PRs #107–#127 (worker bundling fix, qa-intel secrets rule, history overview increments, mobile fixes, chat security, Dim-0) all have real merge commits on `main` with matching dates (2026-07-04 through 2026-07-07). Task list entries referencing these are accurate.
+
+### 9.3 What the code-level spot-check found WRONG in the tracker (corrected)
+Four tasks were marked "pending" as if the underlying feature didn't exist, when in fact it already did — apparently built in an earlier session (matching `docs/history/SESSION_EXIT_2026_07_01.md`, dated 2026-07-01) whose completion was never reflected back into the tracker:
+- **#23** (export "text-dump") — `web/app/api/analyses/[id]/export/route.ts` already renders a fully formatted PDF via PDFKit: title page, tier-gated Table of Contents, per-heading-level font/color hierarchy. Not a text-dump. MD export is a raw `.md` Blob download client-side, which is correct/expected for that format. **Marked complete.**
+- **#30** (word cloud rebuild) — `WordCloud.tsx` already implements a real Archimedean-spiral collision-free layout with boundary clamping, and size-by-weight font scaling (`fontSize = 9 + weight*0.8`, clamped 10–15px). Matches `SESSION_EXIT_2026_07_01.md` §1.4 exactly. **Marked complete.**
+- **#29** (KG nodes rendering without labels) — `KnowledgeGraphCanvas.tsx` already conditionally renders labels (always for active/neighbor/high-weight nodes, others past a zoom threshold) — a deliberate anti-clutter design from the same 2026-07-01 Obsidian-style rework, not an unaddressed bug. **Marked complete** — but noted that task #53 (KG node circles too large, weight→size scaling too flat) is a **distinct, still-open** complaint about the same component; don't conflate the two.
+- **#31** (mind map connector anchoring) — `MindMap.tsx` computes real per-node coordinates and renders cubic-bezier connector paths between them; not a stub. **Marked complete**, with the caveat that this was verified by reading the code, not by rendering it in a browser — if a user still reports visibly broken/floating connectors, that's new information, not a reason to distrust this note.
+
+### 9.4 A confirmed regression, not just staleness — the important one
+`.memory/AGENT_LEDGER.md` contains a `[DONE]` entry from **2026-06-19** claiming: *"Created TimestampLink component for clickable HH:MM:SS in dimension content. Wired into DimensionDrawer and StreamingGrid."*
+
+`grep -rl "TimestampLink" web` returns **nothing**. The component does not exist anywhere in the current codebase. `StreamingGrid` itself appears to have been superseded by the accordion-based dimension UI described in a later ledger entry ("Wave 1.8.4 — UI Accordion-to-Panel Overhaul"). The most likely explanation: the timestamp-seek feature was built, then silently dropped when the dimension UI was rewritten to the accordion pattern, and nobody went back to update the ledger to reflect the loss.
+
+**This is the concrete, verified proof of the instruction not to trust docs as SSOT.** Task #39 ("Video time-seek UI (jump video from dim/chat markers)") remains open in the tracker — correctly — but is now annotated to say this needs a **fresh build**, not a restore, since whatever existed before is simply gone. The general lesson (a ledger `[DONE]` line is not permanent proof the code still exists — later refactors can drop earlier work without anyone updating the record) is now written into `.memory/MEMORY.md` and `.memory/project_status.md` as standing guidance for future sessions.
+
+### 9.5 What was spot-checked and confirmed genuinely still pending (no change needed, but verified rather than assumed)
+- **#43** — `web/scripts/pr-review-workflow.sh` read directly: still a theatrical stub (hardcoded `PR_ID=21`, bare `sleep 600` / `sleep 900` calls, no real review logic).
+- **#44** — `SupabasePersistenceAdapter.ts` confirmed still writing both `analysis_markdown` and `analysis_payload` on every persist (dual-write, not yet normalized).
+- **#52** — grepped broadly for any bottom-tab-bar pattern across `web/components`; only a drawer-style mobile nav (`setMobileNav`/`MobileNav` in `DashboardLayout.tsx`) exists. Confirmed absent, not a naming mismatch.
+- **#55** — `AnalysisHistory.tsx` has an in-code comment marking exactly where the amber "thin/insufficient-data" tier needs to hook in; confirmed not implemented yet.
+- **#58** — confirmed `CHAT_PROTOCOL` has only the minimum identity/jailbreak-refusal line shipped in PR #125; no broader orchestration/logging/escalation layer exists yet.
+- **#36–39** (transcript-store epic) — confirmed no ephemeral-store, TTL-purge, or persisted-seek-marker code exists anywhere (a loose grep hit on `WorkerIngestionAdapter.ts` was a false positive — just a normal `fetch-transcript` call, unrelated to the epic).
+
+### 9.6 System docs rewritten on this evidence (separate from the §5 table, which only covered the chat-security/Dim-0 doc updates)
+| Doc | What changed | Commit |
+|---|---|---|
+| `.memory/project_status.md` | Full rewrite. Previously described a 2026-05-12-era state (PR #62, Cloudflare-subdomain consolidation, "PLATINUM READINESS") with zero relevance to the current system. Replaced with a theme-grouped, code-cited current-state snapshot: what's live, what's confirmed still open, the `TimestampLink` regression, known-stale docs explicitly flagged (not fixed) rather than silently ignored. | `c00eae5` |
+| `.memory/MEMORY.md` | Trimmed from a stale narrative down to a lightweight index (matching its own stated purpose) pointing at `project_status.md`, this handover, `CLAUDE.md`, `ADRS.md`, `AGENT_LEDGER.md`, and `lessons.md`, plus a short list of standing rules re-verified as still true. | `c00eae5` |
+| This handover doc | Updated header/TL;DR and added this §9. | (this edit) |
+
+**Not rewritten, deliberately flagged instead**: `docs/architecture-index.md` (stale since 2026-05-19, describes a pre-Hybrid-Edge-Architecture system — needs its own dedicated session, not an incidental patch during a reconciliation pass); `docs/PRD.md` and `docs/ROADMAP_MVP_2_0_TO_3_5.md` (not reviewed for accuracy — no claim made either way, don't assume current or stale).
+
+### 9.7 Task tracker state after this pass
+49 completed / 15 pending (was 47/17 before this pass — net +2 completed from real fixes found, +2 reclassified from "already done but uncredited" to completed, with #39 re-annotated rather than closed, plus #64 newly created). The 15 pending items are listed by theme in `.memory/project_status.md` §4 — that table, not this prose, is the one to keep current going forward.
