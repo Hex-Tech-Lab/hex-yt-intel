@@ -43,7 +43,10 @@ if [ ! -d "$REPO_ROOT/.git" ]; then
   exit 1
 fi
 
-cd "$REPO_ROOT"
+if ! cd "$REPO_ROOT"; then
+  log_error "Failed to cd to repository root"
+  exit 1
+fi
 
 log_step "Starting local sync"
 
@@ -127,7 +130,7 @@ fi
 # Stage 6: Show sync summary
 log_step "Stage 6: Sync summary"
 log "Commits behind remote:"
-git log --oneline "$BRANCH"..origin/"$BRANCH" 2>/dev/null | wc -l | xargs echo "  - " | tee -a "$LOG_FILE"
+git log --oneline "$BRANCH"..origin/"$BRANCH" 2>/dev/null | wc -l | sed 's/^ */  - /' | tee -a "$LOG_FILE"
 
 log "Latest commit:"
 git log -1 --oneline | tee -a "$LOG_FILE"
