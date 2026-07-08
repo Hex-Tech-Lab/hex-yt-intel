@@ -12,8 +12,7 @@
  * Reference: POST /api/search
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { NextRequest } from 'next/server';
+import { describe, it, expect } from 'vitest';
 
 /**
  * CONTRACT: Request Validation

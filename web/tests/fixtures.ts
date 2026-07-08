@@ -1,5 +1,4 @@
 import { test as base, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
 
 const DEPLOYMENT_URL = process.env.DEPLOYMENT_URL || 'http://localhost:3000';
 const DEV_BYPASS_TOKEN = process.env.DEV_BYPASS_TOKEN || 'test-token';
@@ -22,6 +21,7 @@ export const test = base.extend({
     // Verify we're authenticated (should be redirected to dashboard if not)
     await expect(page).not.toHaveURL(/auth\/signin/);
 
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page);
   },
 
@@ -44,9 +44,11 @@ export const test = base.extend({
       }
     };
 
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(waitForStream);
   },
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   waitForAnalysisComplete: async ({ page }, use) => {
     /**
      * Poll /api/analyses/[id]/overview until status is "complete" or timeout
@@ -82,6 +84,7 @@ export const test = base.extend({
       return false;
     };
 
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(waitForComplete);
   },
 
@@ -122,6 +125,7 @@ export const test = base.extend({
       }
     };
 
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(submit);
   },
 });

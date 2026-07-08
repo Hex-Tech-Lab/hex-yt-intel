@@ -1,5 +1,4 @@
 import { test as base, expect, TEST_YOUTUBE_URLS, TEST_MOBILE_VIEWPORTS } from './fixtures';
-import { Page } from '@playwright/test';
 
 const DEPLOYMENT_URL = process.env.DEPLOYMENT_URL || 'http://localhost:3000';
 const DEV_BYPASS_TOKEN = process.env.DEV_BYPASS_TOKEN || 'test-token';
@@ -23,6 +22,7 @@ const test = base.extend({
 
     const page = await context.newPage();
 
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use({ page, context });
     await context.close();
   },

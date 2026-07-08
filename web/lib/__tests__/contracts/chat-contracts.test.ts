@@ -9,7 +9,7 @@
  * 5. Error response contracts (409 grounding failures, 403/404 ownership checks, etc.)
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
 

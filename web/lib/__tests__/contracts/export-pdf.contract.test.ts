@@ -12,7 +12,7 @@
  * Scope: Integration contract verification, not unit tests of individual helpers.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 /**
  * Mock data: Analysis object matching the database schema.
@@ -68,19 +68,6 @@ Trust markers and risk assessment.
 Monetization potential and business model.
     `,
     ...overrides,
-  };
-}
-
-/**
- * Mock user profile with tier information.
- */
-function mockUserProfile(tier: 'free' | 'pro' | 'enterprise' | 'admin' = 'free') {
-  return {
-    id: 'test-user-456',
-    email: 'test@example.com',
-    tier,
-    role: 'user',
-    analysesUsed: 5,
   };
 }
 
@@ -155,6 +142,7 @@ describe('Export PDF Contract: Tier Gating', () => {
 
     const allowed = FULL_REPORT_TIERS.has(tier);
     expect(allowed).toBe(true);
+    expect(scope).toBe('full');
   });
 
   it('enterprise user requesting scope=full should be allowed', () => {
@@ -178,7 +166,6 @@ describe('Export PDF Contract: Tier Gating', () => {
   });
 
   it('free user requesting scope=summary should be allowed (200)', () => {
-    const tier = 'free';
     const scope = 'summary';
 
     // No tier check for summary scope
@@ -615,6 +602,7 @@ describe('Export PDF Contract: Legacy Endpoint Deprecation', () => {
     const legacyEndpoint = '/api/pdf';
     const newEndpoint = '/api/analyses/{id}/export';
 
+    expect(legacyEndpoint).toBe('/api/pdf');
     expect(newEndpoint).toContain('/analyses');
     expect(newEndpoint).toContain('/export');
   });
@@ -622,8 +610,6 @@ describe('Export PDF Contract: Legacy Endpoint Deprecation', () => {
   it('POST /api/pdf should have no tier gating (design debt)', () => {
     // Legacy endpoint accepted markdown directly without tier check
     // This is a security issue but documented for deprecation awareness
-    const hasRequest = true;
-    const hasAuth = true;
     const hasTierCheck = false; // Legacy issue
 
     expect(hasTierCheck).toBe(false);

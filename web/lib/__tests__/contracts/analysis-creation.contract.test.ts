@@ -17,7 +17,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { z } from 'zod';
 import {
   AnalysisCreateSchema,
   AnalysisJobMetadataSchema,
@@ -26,7 +25,6 @@ import {
 import {
   UCISStreamFragmentSchema,
   UCISPayloadV2Schema,
-  PersonaConfigSchema,
   UCISDimensionV2Schema,
   ClassificationDataSchema,
 } from '@/lib/validators/synthesis';
