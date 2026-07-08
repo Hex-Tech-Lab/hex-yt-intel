@@ -4,6 +4,7 @@
 # Run: chmod +x scripts/sync-local.sh && ./scripts/sync-local.sh
 
 set -e
+set -o pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_FILE="${REPO_ROOT}/.sync-log"

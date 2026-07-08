@@ -420,7 +420,7 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 
 ### Coordination Notes
 - Both waves running in parallel
-- PR limits checked upfront (150K bifs threshold)
+- PR limits checked upfront (150K line diffs threshold)
 - Cross-wave dependencies: None (independent scopes)
 - Merging strategy: Wave 3 PR first (visual), then Wave 4 (data layer)
 
