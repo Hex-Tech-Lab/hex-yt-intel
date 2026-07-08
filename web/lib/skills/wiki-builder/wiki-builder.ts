@@ -255,6 +255,35 @@ async function readQuestionsFromStorage(
 }
 
 /**
+ * Extract and parse YAML-like front matter from markdown (simple key: value parsing).
+ * Handles lines with and without quotes.
+ */
+function parseMetadata(frontMatterText: string): Record<string, string> {
+  const metadata: Record<string, string> = {};
+  for (const line of frontMatterText.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const match = trimmed.match(/^(\w+):\s*(.+)$/);
+    if (!match?.[1] || !match?.[2]) continue;
+
+    let value = match[2].trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    metadata[match[1]] = value;
+  }
+  return metadata;
+}
+
+/**
+ * Validate question has meaningful content (not just punctuation or whitespace).
+ */
+function isValidQuestion(question: string): boolean {
+  return question.length > 0 && question.replace(/[^\w\s]/g, '').trim().length > 0;
+}
+
+/**
  * Parse question markdown file with YAML front matter.
  * Format:
  * ---
@@ -283,59 +312,26 @@ function parseQuestionMarkdown(content: string, filename: string): QuestionData 
   try {
     // Extract front matter (strict: requires both delimiters)
     const frontMatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-    if (!frontMatterMatch) {
-      console.warn(`[wiki-builder] No front matter delimiters found in ${filename}`);
+    if (!frontMatterMatch?.[1] || frontMatterMatch[2] === undefined) {
+      console.warn(
+        `[wiki-builder] ${!frontMatterMatch ? 'No front matter delimiters found' : frontMatterMatch[1] ? 'No body content' : 'Empty front matter'} in ${filename}`
+      );
       return null;
     }
 
-    const frontMatterText = frontMatterMatch[1]?.trim();
+    const frontMatterText = frontMatterMatch[1].trim();
     const bodyText = frontMatterMatch[2];
 
-    if (!frontMatterText) {
-      console.warn(`[wiki-builder] Empty front matter in ${filename}`);
-      return null;
-    }
-
-    if (bodyText === undefined) {
-      console.warn(`[wiki-builder] No body content after front matter in ${filename}`);
-      return null;
-    }
-
-    // Parse YAML-like front matter (simple key: value parsing)
-    // Handles lines with and without quotes
-    const metadata: Record<string, string> = {};
-    for (const line of frontMatterText.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue; // Skip empty lines and comments
-
-      const match = trimmed.match(/^(\w+):\s*(.+)$/);
-      if (match && match[1] && match[2]) {
-        const key = match[1];
-        let value = match[2].trim();
-        // Remove surrounding quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-        metadata[key] = value;
-      }
-    }
-
-    // Extract question text (skip "# User Question" header if present)
+    const metadata = parseMetadata(frontMatterText);
     const question = bodyText.replace(/^#\s+User Question\s*\n/, '').trim();
 
-    if (!question) {
-      console.warn(`[wiki-builder] No question text found in ${filename}`);
-      return null;
-    }
-
-    // Validate question has meaningful content (not just punctuation)
-    if (question.replace(/[^\w\s]/g, '').trim().length === 0) {
-      console.warn(`[wiki-builder] Question contains only punctuation in ${filename}`);
+    if (!isValidQuestion(question)) {
+      console.warn(`[wiki-builder] Invalid question content in ${filename}`);
       return null;
     }
 
     return {
-      questionId: metadata.questionId || '', // Default empty string (will be caught by dedup if needed)
+      questionId: metadata.questionId || '',
       question,
       timestamp: metadata.timestamp || new Date().toISOString(),
       conversationId: metadata.conversationId,
