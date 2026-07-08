@@ -123,6 +123,7 @@ function filterHallucinationContent(markdown: string): string {
 describe('Export PDF Contract: Tier Gating', () => {
   it('free user requesting scope=full should be denied (402 Payment Required)', () => {
     const tier = 'free';
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const scope = 'full';
     const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
 
