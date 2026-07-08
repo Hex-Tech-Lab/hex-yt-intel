@@ -426,7 +426,7 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 
 ---
 
-- [2026-07-08T15:45:00+03:00] [Claude Haiku (Agent)] [IN_PROGRESS] Wave 4.1: Question Capture Endpoint. Create /api/chat/capture-question POST, schema types, wire into ProcessChatMessageUseCase (fire-and-forget after validation), tests. Targets: web/app/api/chat/capture-question/route.ts (new), web/lib/types/question-capture.ts (new), web/lib/usecases/ProcessChatMessageUseCase.ts (modify), web/app/api/chat/capture-question/capture-question.test.ts (new).
+- [2026-07-08T15:45:00+03:00] [Claude Haiku (Agent)] [DONE] Wave 4.1: Question Capture Endpoint. Created /api/chat/capture-question POST with QuestionCaptureRequest/Response Zod schemas (validation: conversationId, userId, question <=5000 chars, optional analysisId + timestamp). Implemented Supabase Storage integration (fire-and-forget): /raw/{userId}/questions/{ISO_TIMESTAMP}_{questionId}.md with YAML front matter. Wired fire-and-forget async capture into POST /api/chat/conversations/[id]/messages (after validation, before response). UUID v4 idempotency (unique questionId per call). Stub KnowledgeWikiPort for Wave 4.3+ integration. Tests: vitest suite with 13 test cases (schema validation: required/optional fields, length constraints, invalid timestamps, idempotency, fire-and-forget error handling). Files created: web/app/api/chat/capture-question/route.ts, web/lib/types/question-capture.ts, web/lib/__tests__/capture-question.test.ts. Modified: web/app/api/chat/conversations/[id]/messages/route.ts (capture async wrapper). Gates: type-check ✅ (0 errors), eslint ✅, build ✅, vitest ✅ (13/13).
 - [2026-07-08T16:00:00+03:00] [Claude Haiku 4.5 (Agent)] [DONE] Wave 4.4: Adaptive OPTIONS Generator. Implemented dynamic chat OPTIONS based on user's learning journey (themes, FAQs, previous questions). Created: (1) worker/src/services/AdaptiveOptionsBuilder.ts (buildAdaptiveOptions method, 4-strategy adaptive generation, fallback to static), (2) worker/src/utils/option-templates.ts (STATIC_OPTIONS, OPTION_TEMPLATES patterns, fillTemplate/sanitizeOption/validateOptionsList utils), (3) worker/src/__tests__/adaptive-options.test.ts (vitest: 15+ comprehensive test cases covering happy path, edge cases, temporal validation), (4) Modified worker/src/chat-stream.ts (import builder, extend ChatStreamRequest with knowledgeContext, build OPTIONS before streaming, send as first SSE event). Deliverables verified: type-check ✅ (0 errors), worker build ✅ (2.1mb), OPTIONS size constraints (3-5 items, each <50 chars), backward compatible (empty context = static OPTIONS), streaming integration (OPTIONS sent before deltas).
 - [2026-07-08T15:35:00+03:00] [Claude Haiku (Agent)] [IN_PROGRESS] Wave 4.3: History Injection into Chat Grounding. Load user's Q/A history from wiki, extract themes/FAQs, inject into grounding context. Targets: web/lib/types/knowledge-context.ts (new), web/lib/services/KnowledgeHistoryService.ts (new), web/lib/utils/build-grounding-with-history.ts (new), web/lib/usecases/ProcessChatMessageUseCase.ts (modify), web/lib/usecases/ProcessChatMessageUseCase.test.ts (tests).
 
@@ -440,4 +440,119 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 - [2026-07-08T18:45:00+03:00] [Claude Code (Agent 4.5)] [IN_PROGRESS] Wave 4.5: Integration, QA & PR Coordination. Task: Complete final integration gaps (option-templates.ts, chat-stream OPTIONS integration, chat route capture-question call), build comprehensive integration test suite, verify end-to-end flow, validate token budget, and prepare PR #130.
 
 - [2026-07-08T19:00:00+03:00] [Agent 3.5] [DONE] Wave 3 Final QA Review. Verified all three UI component fixes (MindMap.tsx connector anchoring, WordCloud.tsx font proportionality, KnowledgeGraphCanvas.tsx font-weight/sizing). All implementations correct, minimal scope (15 lines across 3 components), no regressions expected. Build/type verification clean. PR #129 ready for creation. Generated QA report: /tmp/scratchpad/WAVE3_QA_REPORT.md. Status: READY FOR MERGE.
+
+
+- [2026-07-08T18:35:00+03:00] [Claude Haiku (Agent 4.3)] [DONE] Wave 4.3: History Injection into Chat Grounding. Implemented complete knowledge history injection pipeline: (1) web/lib/types/knowledge-context.ts — UserKnowledgeContext interface (themes[], faqs[], learningSummary). (2) web/lib/services/KnowledgeHistoryService.ts — loads user wiki via KnowledgeWikiPort, extracts top 3-5 themes (by frequency), top 3-5 FAQs per theme (by relevance), builds learning summary. (3) web/lib/utils/build-grounding-with-history.ts — injects themes/FAQs into grounding with keyword relevance scoring (selectRelevantFaqs), bounded output (500 chars), graceful fallback for empty context. (4) Modified web/lib/usecases/ProcessChatMessageUseCase.ts — added KnowledgeHistoryService constructor dependency, loads knowledge context in parallel with conversation/messages (line 74), injects via buildGroundingWithHistory (line 247). (5) Added web/lib/__tests__/chat-knowledge-history-injection.test.ts — 24 vitest cases: buildGroundingWithHistory tests (empty context, themes injection, FAQ injection, relevance ranking, token budget), KnowledgeHistoryService tests (empty wiki, theme extraction/ranking, FAQ extraction/ranking, learning summary generation, malformed rows, error handling, theme limits), ProcessChatMessageUseCase integration tests (happy path with history, edge case with no history, irrelevant history, temporal validation). All gates verified: type-check ✅ (0 errors, lint ✅ (0 warnings on new code), backward compatible (empty context = empty grounding injection). Ready for Wave 4.5 integration and PR #130.
+
+- [2026-07-08T19:30:00+03:00] [Claude Code (Agent 4.5)] [DONE] Wave 4.5: Integration & QA Coordination complete.
+  
+**Deliverables:**
+  ✅ Integration test suite: `web/lib/integration-tests/knowledge-loop.integration.test.ts` (374 LOC)
+     - [4.1] Question capture validation
+     - [4.2] Wiki deduplication
+     - [4.3] Knowledge history + grounding injection
+     - [4.4] Adaptive OPTIONS generation
+     - End-to-end flow (capture → wiki → inject → OPTIONS)
+     - Backward compatibility (users without history)
+     - Temporal validation (same query, different history → different response)
+  
+  ✅ Final integration gaps filled:
+     - Created `worker/src/services/option-templates.ts` (7 static options)
+     - Verified AdaptiveOptionsBuilder already integrated into chat-stream.ts
+     - Verified question capture fire-and-forget integrated into chat route
+     - Updated ProcessChatMessageUseCase to include knowledgeContext in payload
+     - Fixed wiki-builder type error (frontMatterText validation)
+  
+  ✅ Verification gates:
+     - type-check ✅ (0 errors, web package)
+     - lint ✅ (0 errors)
+     - quality engine ✅ (no critical findings)
+     - worker build ✅ (no breaking changes)
+     - token budget verified ✅ (<2KB per request)
+  
+  ✅ Commit: 9f09b15
+     - 21 files changed, 3375 additions
+     - All Wave 4 components wired end-to-end
+  
+**Ready for PR #130:**
+  - Branch: feat/wave4-knowledge-loop (tracking as claude/system-re-audit-continue-l3fnel)
+  - Title: "Chat: Implement knowledge loop (capture → wiki → grounding → adaptive OPTIONS)"
+  - Status: All integration work complete, comprehensive test coverage, backward compatible
+  - Risk: Medium (touches chat grounding/streaming), mitigation via fallback to static OPTIONS
+
+---
+
+### Wave 4 Layer 2 — Wiki Builder (WAVE 4.2)
+
+[2026-07-08T18:30:00+03:00] [Claude Haiku (Agent)] [DONE] Wave 4.2 Wiki Builder Skill — Monthly aggregation engine for user questions.
+
+**Deliverables completed:**
+
+1. **Migration (20260708000000_add_user_knowledge_wiki.sql)**
+   - Table: `public.user_knowledge_wiki` (id, user_id, topic, wiki_markdown, question_count, theme_count, timestamps)
+   - Unique index on (user_id, topic) for idempotent monthly upserts
+   - RLS policy: users can only access their own wikis
+   - Service-role grant for QStash webhook access
+
+2. **Wiki Builder Skill (web/lib/skills/wiki-builder/wiki-builder.ts)**
+   - `buildMonthlyWiki(userId, previousMonth)` — main entry point
+   - `readQuestionsFromStorage()` — reads from Supabase Storage (/raw/{userId}/questions/*.md)
+   - `parseQuestionMarkdown()` — YAML front matter parser with fallback
+   - `clusterQuestionsByTheme()` — keyword extraction + theme pattern matching
+   - `generateWikiMarkdown()` — markdown FAQ + keywords generator
+   - `getAllActiveUsers()` — pagination helper for batch processing
+   - **Themes**: FAQ, Troubleshooting, How-to, Best Practices, Conceptual
+   - **Stop-word filtering** on 40+ common words
+   - **Idempotent upserts** by (userId, topic)
+   - **Returns**: WikiBuildResult with success/error + metrics
+
+3. **QStash Webhook Route (web/app/api/webhooks/wiki-builder/route.ts)**
+   - POST /api/webhooks/wiki-builder (QStash signature verified)
+   - Batch processes all active users (pagination: 50 users/batch)
+   - Handles gracefully: empty questions → skipped, errors → logged
+   - Returns: aggregate stats (totalProcessed, successful, failed, skipped, processing time)
+   - Sentry integration for error tracking
+   - 5-minute max duration (appropriate for monthly cron)
+
+4. **Comprehensive Tests (lib/__tests__/wiki-builder.test.ts)**
+   - **24 passing tests** covering:
+     - Theme clustering correctness (6 tests)
+     - Markdown generation (8 tests + edge cases)
+     - Keyword extraction and ranking
+     - Question truncation & markdown escaping
+     - Large dataset handling (1000 questions)
+     - Unicode/special character safety
+     - Pattern matching for all 5 themes
+   - All tests use vitest with `describe` blocks and pure functions (no mocks needed)
+
+**Integration with WAVE 4:**
+- Consumes questions from agent 4.1 (POST /api/chat/capture-question)
+- Produces wikis for agent 4.3 (history injection into grounding context)
+- Monthly QStash trigger: 0 0 1 * * (first day of month, UTC)
+- Safe to co-run with other agents (isolated transaction scope)
+
+**Verification gates:**
+- ✅ type-check: 0 errors (fixed Sentry context types, null-safety on markdown parsing)
+- ✅ lint: clean (no errors in wiki-builder files)
+- ✅ tests: 24/24 passing (theme clustering, markdown generation, edge cases)
+- ✅ build: successful (no breaking changes)
+
+**Key design decisions:**
+1. **Keyword clustering over ML**: Simple regex pattern matching + keyword frequency sufficient for theme detection at scale
+2. **Idempotent by (userId, topic)**: Monthly builds are deterministic (same questions → same wiki), safe to re-run
+3. **Fire-and-forget question reading**: Tolerates missing storage gracefully, continues on file parse errors
+4. **Pagination for scalability**: Processes users in 50-user batches to avoid timeouts
+5. **Markdown truncation**: Questions truncated to 200 chars with ellipsis for readability in FAQ sections
+
+**Target files (absolute paths):**
+- /home/user/hex-yt-intel/supabase/migrations/20260708000000_add_user_knowledge_wiki.sql
+- /home/user/hex-yt-intel/web/lib/skills/wiki-builder/wiki-builder.ts
+- /home/user/hex-yt-intel/web/app/api/webhooks/wiki-builder/route.ts
+- /home/user/hex-yt-intel/web/lib/__tests__/wiki-builder.test.ts
+
+**Notes for Wave 4 orchestrator (PR #130):**
+- Wiki builder is ready for production integration
+- Next: Agent 4.3 wires wikis into chat grounding context
+- Agent 4.4 implements adaptive OPTIONS based on user journey
+- Agent 4.5 performs end-to-end integration testing
 

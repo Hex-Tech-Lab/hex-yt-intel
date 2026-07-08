@@ -27,7 +27,7 @@ const STOP_WORDS = new Set([
 // Theme keywords for clustering
 const THEME_PATTERNS = {
   'FAQ': /^(how do|what|why|when|which|where|how to|help|question|issue|\?)/i,
-  'Troubleshooting': /^(error|problem|issue|bug|fail|crash|broken|not work|doesn't|won't|can't|cannot)/i,
+  'Troubleshooting': /^(error|problem|issue|bug|fail|crash|broken|not work|doesn't|won't|can't|cannot|why is my|doesn't work|not working)/i,
   'How-to': /^(how do|how to|how can|steps|guide|tutorial|walkthrough|what's the|what is)/i,
   'Best Practices': /^(best|practice|should|recommended|tip|trick|pattern|approach|strategy|method)/i,
   'Conceptual': /^(explain|understand|concept|definition|meaning|clarify|definition of)/i,
