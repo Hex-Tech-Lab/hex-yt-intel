@@ -102,30 +102,29 @@ describe('Wave 4 Knowledge Loop Integration Tests', () => {
 
     it('should extract top themes from user wiki', async () => {
       const mockWiki = [
-        { userId: 'u1', videoId: 'v1', theme: 'Security', question: 'Q1?', answer: 'A1', frequency: 5 },
-        { userId: 'u1', videoId: 'v2', theme: 'Security', question: 'Q2?', answer: 'A2', frequency: 3 },
-        { userId: 'u1', videoId: 'v3', theme: 'Performance', question: 'Q3?', answer: 'A3', frequency: 2 },
+        { id: 'id1', user_id: 'u1', topic: 'Security', wiki_markdown: 'Content 1', question_count: 8, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
+        { id: 'id2', user_id: 'u1', topic: 'Performance', wiki_markdown: 'Content 2', question_count: 2, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
       ];
       vi.mocked(mockWikiPort.getUserWiki).mockResolvedValueOnce(mockWiki);
 
       const context = await knowledgeHistoryService.loadUserKnowledgeContext('u1');
       expect(context.themes).toContain('Security');
       expect(context.themes).toContain('Performance');
-      // Security should rank first (frequency 5+3=8 > Performance 2)
+      // Security should rank first (question_count 8 > Performance 2)
       expect(context.themes[0]).toBe('Security');
     });
 
     it('should extract top FAQs from user wiki', async () => {
       const mockWiki = [
-        { userId: 'u1', videoId: 'v1', theme: 'Security', question: 'What is encryption?', answer: 'A cryptographic technique', frequency: 5 },
-        { userId: 'u1', videoId: 'v2', theme: 'Security', question: 'What is authentication?', answer: 'Identity verification process', frequency: 3 },
+        { id: 'id1', user_id: 'u1', topic: 'Security', wiki_markdown: 'Security content', question_count: 5, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
+        { id: 'id2', user_id: 'u1', topic: 'Authentication', wiki_markdown: 'Auth content', question_count: 3, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
       ];
       vi.mocked(mockWikiPort.getUserWiki).mockResolvedValueOnce(mockWiki);
 
       const context = await knowledgeHistoryService.loadUserKnowledgeContext('u1');
       expect(context.faqs.length).toBeGreaterThan(0);
+      expect(context.faqs[0]).toHaveProperty('theme');
       expect(context.faqs[0]).toHaveProperty('question');
-      expect(context.faqs[0]).toHaveProperty('answer');
     });
 
     it('should inject knowledge history into grounding', () => {
@@ -259,12 +258,14 @@ describe('Wave 4 Knowledge Loop Integration Tests', () => {
       // Step 2: Wiki builder aggregates questions (mocked)
       const mockWiki = [
         {
-          userId,
-          videoId: 'video-1',
-          theme: 'Security',
-          question: question1,
-          answer: 'Encryption is a cryptographic technique for securing data',
-          frequency: 3,
+          id: 'wiki-1',
+          user_id: userId,
+          topic: 'Security',
+          wiki_markdown: 'Security wiki with encryption content',
+          question_count: 3,
+          theme_count: 1,
+          created_at: '2026-07-08T00:00:00Z',
+          updated_at: '2026-07-08T00:00:00Z',
         },
       ];
       vi.mocked(mockWikiPort.getUserWiki).mockResolvedValueOnce(mockWiki);
@@ -324,12 +325,14 @@ describe('Wave 4 Knowledge Loop Integration Tests', () => {
 
       // T=1h: User has asked 5 questions, wiki is built
       const wikiAfter = Array.from({ length: 5 }, (_, i) => ({
-        userId,
-        videoId: `v${i}`,
-        theme: `Theme${i % 2}`,
-        question: `Question ${i}?`,
-        answer: `Answer ${i}`,
-        frequency: i + 1,
+        id: `wiki-${i}`,
+        user_id: userId,
+        topic: `Theme${i % 2}`,
+        wiki_markdown: `Theme${i % 2} content`,
+        question_count: i + 1,
+        theme_count: 1,
+        created_at: '2026-07-08T00:00:00Z',
+        updated_at: '2026-07-08T00:00:00Z',
       }));
       vi.mocked(mockWikiPort.getUserWiki).mockResolvedValueOnce(wikiAfter);
       const context1 = await knowledgeHistoryService.loadUserKnowledgeContext(userId);
@@ -355,7 +358,7 @@ describe('Wave 4 Knowledge Loop Integration Tests', () => {
 
       // T=1h: History accumulated
       const wikiData = [
-        { userId, videoId: 'v1', theme: 'Security', question: 'What is encryption?', answer: 'A cryptographic technique', frequency: 3 },
+        { id: 'wiki-1', user_id: userId, topic: 'Security', wiki_markdown: 'Security content', question_count: 3, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
       ];
       vi.mocked(mockWikiPort.getUserWiki).mockResolvedValueOnce(wikiData);
       const context1 = await knowledgeHistoryService.loadUserKnowledgeContext(userId);
