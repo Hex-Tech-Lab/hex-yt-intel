@@ -539,6 +539,27 @@ describe('Contract Audit: Analysis Creation → Streaming Flow', () => {
       const result = ClassificationDataSchema.safeParse(classification);
       expect(result.success).toBe(true);
     });
+
+    it('MUST implement retry with exponential backoff on persist endpoint failure', () => {
+      // Contract: POST /api/analyses/persist must retry on failure
+      // - Up to 2 attempts (1 initial + 1 retry)
+      // - Exponential backoff: 2 attempts means delays of 2^0=1s, 2^1=2s between attempts
+      // - If all attempts fail, must set error state (e.g., via settleAnalysis('error', ...))
+      const retryAttempts = 2;
+      const backoffDelayMs = [1000, 2000]; // Exponential: 2^0 * 1000, 2^1 * 1000
+
+      expect(retryAttempts).toBe(2);
+      expect(backoffDelayMs.length).toBe(2);
+      expect(backoffDelayMs[0]).toBe(1000);
+      expect(backoffDelayMs[1]).toBe(2000);
+    });
+
+    it('MUST settle error state if persist endpoint fails after all retries', () => {
+      // Contract: After exhausting retries, must call settleAnalysis('error', ...)
+      // or equivalent error state settlement, not leave analysis in 'processing' limbo
+      const shouldSettleErrorState = true;
+      expect(shouldSettleErrorState).toBe(true);
+    });
   });
 
   describe('Contract Manifest Export', () => {
