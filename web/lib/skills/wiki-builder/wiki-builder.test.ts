@@ -9,7 +9,7 @@
  * 5. Markdown generation and formatting
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import type { QuestionData, ThemeCluster } from './wiki-builder';
 import {
   clusterQuestionsByTheme,
@@ -100,7 +100,6 @@ describe('Wiki Builder Data Correctness Tests', () => {
     });
 
     it('should return null for question with only punctuation', () => {
-      const content = '---\nquestionId: q1\n---\n\n# User Question\n\n??? !!! ...';
       // Question has only punctuation, no meaningful words
       const question = '??? !!! ...';
       const hasContent = question.replace(/[^\w\s]/g, '').trim().length > 0;
@@ -129,7 +128,6 @@ describe('Wiki Builder Data Correctness Tests', () => {
     });
 
     it('should treat analysisId "null" string as undefined', () => {
-      const content = '---\nquestionId: q1\nanalysisId: null\n---\n# User Question\n\nWhat is test?';
       // analysisId: null should be treated as undefined
       const analysisId = 'null';
       const isUndefined = analysisId === 'null';

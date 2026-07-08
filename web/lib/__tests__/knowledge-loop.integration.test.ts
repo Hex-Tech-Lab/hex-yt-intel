@@ -252,7 +252,6 @@ describe('Wave 4 Knowledge Loop Integration Tests', () => {
 
     it('should process complete flow: capture → wiki → inject → OPTIONS', async () => {
       // Step 1: Question captured by POST /api/chat/conversations/[id]/messages
-      const question1 = 'What is encryption?';
       const userId = 'user-456';
 
       // Step 2: Wiki builder aggregates questions (mocked)

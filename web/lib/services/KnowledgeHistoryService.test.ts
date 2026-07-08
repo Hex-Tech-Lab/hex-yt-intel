@@ -12,7 +12,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { KnowledgeHistoryService, type KnowledgeWikiPort } from './KnowledgeHistoryService';
 import { EMPTY_KNOWLEDGE_CONTEXT } from '@/lib/types/knowledge-context';
-import type { UserKnowledgeContext } from '@/lib/types/knowledge-context';
 
 describe('KnowledgeHistoryService Data Correctness Tests', () => {
   let mockWikiPort: KnowledgeWikiPort;

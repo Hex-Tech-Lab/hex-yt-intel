@@ -309,7 +309,7 @@ function parseQuestionMarkdown(content: string, filename: string): QuestionData 
       if (!trimmed || trimmed.startsWith('#')) continue; // Skip empty lines and comments
 
       const match = trimmed.match(/^(\w+):\s*(.+)$/);
-      if (match) {
+      if (match && match[1] && match[2]) {
         const key = match[1];
         let value = match[2].trim();
         // Remove surrounding quotes if present
@@ -321,7 +321,7 @@ function parseQuestionMarkdown(content: string, filename: string): QuestionData 
     }
 
     // Extract question text (skip "# User Question" header if present)
-    let question = bodyText.replace(/^#\s+User Question\s*\n/, '').trim();
+    const question = bodyText.replace(/^#\s+User Question\s*\n/, '').trim();
 
     if (!question) {
       console.warn(`[wiki-builder] No question text found in ${filename}`);
