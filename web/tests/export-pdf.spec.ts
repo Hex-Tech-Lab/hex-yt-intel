@@ -69,7 +69,7 @@ test.describe('TEST SUITE 3: Export PDF', () => {
 
         console.log(`[PDF] Downloaded: ${fileName}`);
         expect(fileName).toMatch(/\.pdf$/i);
-      } catch (e) {
+      } catch (_e) {
         console.log('[PDF] Download not triggered via standard mechanism');
       }
     } else {
@@ -79,9 +79,9 @@ test.describe('TEST SUITE 3: Export PDF', () => {
 
   test('PDF file exists and is not empty (>10KB)', async ({
     authenticatedPage: page,
-    context,
-    submitAnalysis,
-    waitForAnalysisComplete,
+    context: _context,
+    submitAnalysis: _submitAnalysis,
+    waitForAnalysisComplete: _waitForAnalysisComplete,
   }) => {
     // Create temp directory for downloads
     const tempDir = path.join('/tmp', `playwright-pdf-${Date.now()}`);
@@ -203,7 +203,7 @@ test.describe('TEST SUITE 3: Export PDF', () => {
       } else {
         console.log(`[PDF] API not available or not ready: ${pdfResponse.status()}`);
       }
-    } catch (e) {
+    } catch (_e) {
       console.log('[PDF] Could not fetch via API');
     }
   });
@@ -262,7 +262,7 @@ test.describe('TEST SUITE 3: Export PDF', () => {
 
       // Should succeed or return expected error
       expect([200, 400, 401, 404, 405]).toContain(pdfResponse.status());
-    } catch (e) {
+    } catch (_e) {
       console.log('[PDF API] Endpoint not available');
     }
   });

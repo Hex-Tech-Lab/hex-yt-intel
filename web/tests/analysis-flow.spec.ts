@@ -3,7 +3,7 @@ import { test, expect, TEST_YOUTUBE_URLS } from './fixtures';
 const DEPLOYMENT_URL = process.env.DEPLOYMENT_URL || 'http://localhost:3000';
 
 test.describe('TEST SUITE 1: Analysis Creation → Streaming → Completion', () => {
-  test('Submit URL and stream begins within 5s', async ({ authenticatedPage: page, submitAnalysis, waitForAnalysisStream }) => {
+  test('Submit URL and stream begins within 5s', async ({ authenticatedPage: _page, submitAnalysis, waitForAnalysisStream: _waitForAnalysisStream }) => {
     const startTime = Date.now();
 
     // Submit analysis
@@ -18,9 +18,9 @@ test.describe('TEST SUITE 1: Analysis Creation → Streaming → Completion', ()
   });
 
   test('Monitor status transitions: starting → model → complete', async ({
-    authenticatedPage: page,
+    authenticatedPage: _page,
     submitAnalysis,
-    waitForAnalysisComplete,
+    waitForAnalysisComplete: _waitForAnalysisComplete,
   }) => {
     // Submit analysis
     const result = await submitAnalysis(TEST_YOUTUBE_URLS.testVideo1);
@@ -114,7 +114,7 @@ test.describe('TEST SUITE 1: Analysis Creation → Streaming → Completion', ()
   });
 
   test('Status transitions complete within 60 seconds', async ({
-    authenticatedPage: page,
+    authenticatedPage: _page,
     submitAnalysis,
     waitForAnalysisComplete,
   }) => {
@@ -158,14 +158,14 @@ test.describe('TEST SUITE 1: Analysis Creation → Streaming → Completion', ()
       // Should return error (4xx or 5xx)
       console.log(`[Invalid URL] Response status: ${response.status()}`);
       expect([400, 422, 500]).toContain(response.status());
-    } catch (e) {
+    } catch (_e) {
       // May not make request if client-side validation catches it
       console.log('[Invalid URL] Client-side validation prevented submission');
     }
   });
 
   test('Response headers include persona information', async ({
-    authenticatedPage: page,
+    authenticatedPage: _page,
     submitAnalysis,
   }) => {
     const result = await submitAnalysis(TEST_YOUTUBE_URLS.testVideo1);
@@ -180,7 +180,7 @@ test.describe('TEST SUITE 1: Analysis Creation → Streaming → Completion', ()
   });
 
   test('Contract: 200/202 status codes for successful submission', async ({
-    authenticatedPage: page,
+    authenticatedPage: _page,
     submitAnalysis,
   }) => {
     const result = await submitAnalysis(TEST_YOUTUBE_URLS.testVideo1);
