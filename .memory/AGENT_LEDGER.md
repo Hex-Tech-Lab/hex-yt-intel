@@ -392,3 +392,32 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 - [2026-07-07T00:15:00+00:00] [Claude (Agent)] [DONE] [SINK: Chat Security Hardening — Double Leak] Backfilled CLAUDE.md ADR ledger (was stale at ADR 005 while 006/007 were already merged), appended ADR 008-010 to .memory/ADRS.md, appended lessons 9-12 to .memory/lessons.md, wrote docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-AND-DIM0.md and indexed it in docs/history/INDEX_HANDOVER_VERSIONS.md. Flagged (not fixed, out of scope): service-client ownership-check sweep needed beyond the one instance found (§4.1 of the handover), docs/architecture-index.md stale since 2026-05-19. Session complete, all 3 PRs merged and verified on main at eab4984.
 - [2026-07-08T00:00:00+00:00] [Claude Haiku (Agent)] [DONE] [WAVE 1: #64 Service-Client Security Audit] Comprehensive repo sweep for service-client routes accepting client-supplied IDs. Method: (1) grep all 24 service-client call sites, (2) traced to API routes, (3) reviewed 14+ endpoint handlers. Findings: 8 routes with explicit verifyOwnership(), 5 with auth-client + user_id scope, 2 server-to-server HMAC-protected. Zero new IDOR vectors found — pattern from #126 (service-client + no ownership check) was endemic only to that one instance. All user-facing routes now properly scoped. Recommendation: close #64 as RESOLVED — scope was audit/sweep, scope complete, pattern confirmed sound post-fix. No fix work needed.
 - [2026-07-08T15:30:00+03:00] [Claude Haiku (Agent)] [DONE] [WAVE 2: dream-sequence → oracle-sequence Refactor + /api/pdf Deletion] (1) Renamed /api/webhooks/dream-sequence → oracle-sequence (reflects canonical node dedup pattern for Knowledge Graph). Updated QStash cron config (name: daily-oracle-sequence-dedup), test script, and log messages. (2) Deleted /api/pdf/route.ts (orphaned endpoint; all PDF generation uses /api/analyses/[id]/export). Verified: zero production callers of /api/pdf found via codebase scan. (3) All references updated (dream-sequence→oracle-sequence in 3 files). Build verified ✅ (next build passed, oracle-sequence correctly registered), type-check ✅ (0 errors), lint ✅ (0 errors related to changes). Commit fb5bcf6.
+
+---
+
+## Wave 3-4 Parallel Execution (2026-07-08 T=0)
+
+[IN_PROGRESS] **Wave 3 Orchestrator** (a1787c93d0a01fdb9)
+- Task: Coordinate UI fixes (Mind Map anchors, KG fonts, Word Cloud proportionality)
+- Files: web/components/templates/{MindMap,WordCloud,KnowledgeGraphViz}.tsx
+- Agents: 5 sub-agents (3.1-3.5)
+- Target PR: #129 "UI: Fix rendering issues"
+- Status: Spawned sub-agents in parallel
+- Timeline: T=0-6h
+
+[IN_PROGRESS] **Wave 4 Orchestrator** (ab3a699868794f628)
+- Task: Implement knowledge loop (capture → wiki → grounding → OPTIONS)
+- Files: web/lib/usecases/, web/app/api/chat/, worker/
+- Agents: 5 sub-agents (4.1-4.5)
+- Target PR: #130 "Chat: Knowledge loop implementation"
+- Status: Spawned sub-agents in parallel
+- Timeline: T=0-8h
+
+---
+
+### Coordination Notes
+- Both waves running in parallel
+- PR limits checked upfront (150K bifs threshold)
+- Cross-wave dependencies: None (independent scopes)
+- Merging strategy: Wave 3 PR first (visual), then Wave 4 (data layer)
+
