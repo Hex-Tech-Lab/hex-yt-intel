@@ -1,4 +1,4 @@
-# hex-yt-intel: Master Infrastructure & Architectural Spec (v1.4.1)
+# hex-yt-intel: Master Infrastructure & Architectural Spec (v1.4.2)
 
 ---
 
@@ -42,6 +42,13 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 | 003 | 2026-05-16 | LLM Model Cascade (nemotron-3-nano lead + free fallbacks → Haiku 4.5) | ✅ |
 | 004 | 2026-05-21 | Request-Scoped Supabase Client | ✅ |
 | 005 | 2026-06-01 | Hybrid Edge Architecture (Vercel/CF) | ✅ |
+| 006 | 2026-06-06 | Structured JSON Streaming (see `docs/specs/ADR_006_STRUCTURED_JSON_STREAMING_2026-06-06.md`) | ✅ |
+| 007 | 2026-07-05 | Stuck-Analysis Reaper (QStash-driven finalize sweep for orphaned `processing` rows; PR #110) | ✅ |
+| 008 | 2026-07-07 | Chat Grounding Security Gate — no usable analysis ⇒ refuse, never answer from general knowledge (PR #125) | ✅ |
+| 009 | 2026-07-07 | Chat Conversation↔Analysis Ownership Binding — owner-verified at creation + userId-scoped grounding read (PR #126) | ✅ |
+| 010 | 2026-07-07 | Dimension-0 Executive Digest — single idempotent cheap-cascade completion, uncounted (PR #127) | ✅ |
+
+Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-AND-DIM0.md` §2 and `.memory/ADRS.md`.
 
 ---
 
