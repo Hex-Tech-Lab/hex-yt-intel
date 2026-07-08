@@ -46,13 +46,13 @@ const clientToBouncer: ContractPoint = {
   sentFields: {
     url: { type: 'string', optional: false },
     timezone: { type: 'string', optional: false },
-    persona: { type: 'string (p1|p2|p3|p4|p5)', optional: true },
+    persona: { type: 'string (creator|indieMaker|consultant|researcher|productManager)', optional: true },
     forceRefresh: { type: 'boolean', optional: true },
   },
   expectedFields: {
     url: { type: 'string (VideoUrlSchema)', optional: false },
     timezone: { type: 'string (IANA tz)', optional: false },
-    persona: { type: 'string (p1|p2|p3|p4|p5)', optional: true },
+    persona: { type: 'string (creator|indieMaker|consultant|researcher|productManager)', optional: true },
     forceRefresh: { type: 'boolean', optional: true },
   },
   violations: [],
@@ -69,7 +69,7 @@ const bouncerToClient: ContractPoint = {
     title: { type: 'string', optional: false },
     metadata: { type: 'AnalysisJobMetadata', optional: false },
     transcript: { type: 'string', optional: false },
-    persona: { type: 'string (p1|p2|p3|p4|p5)', optional: false },
+    persona: { type: 'string (creator|indieMaker|consultant|researcher|productManager)', optional: false },
     timezone: { type: 'string', optional: false },
     models: { type: 'string[]', optional: false },
     stream: { type: '{ url, sig, exp }', optional: true },
@@ -83,7 +83,7 @@ const bouncerToClient: ContractPoint = {
     title: { type: 'string', optional: false },
     metadata: { type: 'AnalysisJobMetadata', optional: false },
     transcript: { type: 'string', optional: false },
-    persona: { type: 'string (p1|p2|p3|p4|p5)', optional: false },
+    persona: { type: 'string (creator|indieMaker|consultant|researcher|productManager)', optional: false },
     timezone: { type: 'string', optional: false },
     models: { type: 'string[]', optional: true },
     stream: { type: '{ url, sig, exp }', optional: true },
@@ -100,7 +100,7 @@ const clientToWorker: ContractPoint = {
     analysisId: { type: 'string', optional: false },
     transcript: { type: 'string', optional: false },
     metadata: { type: 'AnalysisJobMetadata', optional: false },
-    persona: { type: 'string (p1|p2|p3|p4|p5)', optional: false },
+    persona: { type: 'string (creator|indieMaker|consultant|researcher|productManager)', optional: false },
     timezone: { type: 'string', optional: false },
     models: { type: 'string[]', optional: true },
     sig: { type: 'string', optional: false },
@@ -128,7 +128,7 @@ const clientToWorker: ContractPoint = {
   violations: [
     {
       field: 'persona',
-      issue: 'Client sends p1|p2|p3|p4|p5 but worker/adapter expects creator|indieMaker|consultant|researcher|productManager in PersonaConfig fragments',
+      issue: 'Client sends creator|indieMaker|consultant|researcher|productManager but worker/adapter expects creator|indieMaker|consultant|researcher|productManager in PersonaConfig fragments',
       severity: 'CRITICAL',
     },
   ],
@@ -174,7 +174,7 @@ const workerStreamPersonaFragment: ContractPoint = {
   violations: [
     {
       field: 'config.primary.id',
-      issue: 'Worker receives persona as p1|p2|p3|p4|p5 but must emit creator|indieMaker|consultant|researcher|productManager',
+      issue: 'Worker receives persona as creator|indieMaker|consultant|researcher|productManager but must emit creator|indieMaker|consultant|researcher|productManager',
       severity: 'CRITICAL',
     },
   ],
@@ -266,8 +266,8 @@ describe('Contract Audit: Analysis Creation → Streaming Flow', () => {
     });
 
     it('should enforce persona enum from AnalysisCreateSchema', () => {
-      const validPersonas = ['p1', 'p2', 'p3', 'p4', 'p5'];
-      const invalidPersonas = ['creator', 'consultant', 'invalid'];
+      const validPersonas = ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'];
+      const invalidPersonas = ['p1', 'p2', 'p3', 'invalid'];
 
       validPersonas.forEach((persona) => {
         const result = AnalysisCreateSchema.safeParse({
@@ -349,7 +349,7 @@ describe('Contract Audit: Analysis Creation → Streaming Flow', () => {
           likeCount: '50',
           commentCount: '10',
         },
-        persona: 'p1', // Sent as p1
+        persona: 'creator',
         timezone: 'UTC',
         models: ['model1', 'model2'],
         sig: 'signature',
@@ -367,18 +367,17 @@ describe('Contract Audit: Analysis Creation → Streaming Flow', () => {
       expect(streamRequest.exp).toBeDefined();
     });
 
-    it('VIOLATION: persona field mismatch - client sends p1|p2|p3|p4|p5', () => {
-      // This documents the CRITICAL violation
-      const clientPersona = 'p1'; // What client sends
-      const workerExpectation = 'creator'; // What worker LLM generates
-      const adapterExpectation = ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager']; // What adapter validates
+    it('should enforce consistent persona naming across client and worker', () => {
+      // Persona enum unified: client sends creator|indieMaker|consultant|researcher|productManager
+      // which matches worker LLM generation and adapter validation
+      const clientPersona = 'creator';
+      const workerExpectation = 'creator';
+      const adapterExpectation = ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'];
 
-      // The persona fragment from worker will have id: 'creator'
-      // But it was initialized from 'p1' from client
-      // This causes a semantic mismatch in the persona mapping
-      expect(clientPersona).not.toMatch(/^(creator|indieMaker|consultant|researcher|productManager)$/);
+      expect(clientPersona).toMatch(/^(creator|indieMaker|consultant|researcher|productManager)$/);
       expect(adapterExpectation).toContain('creator');
       expect(adapterExpectation).toContain(workerExpectation);
+      expect(clientPersona).toBe(workerExpectation);
     });
   });
 
@@ -746,7 +745,7 @@ export const contractManifest = {
       id: 'VIOLATION_1',
       severity: 'CRITICAL',
       title: 'Persona Type Mismatch: p1-p5 vs creator/indieMaker/...',
-      description: 'Client sends p1|p2|p3|p4|p5 but adapter expects creator|indieMaker|consultant|researcher|productManager',
+      description: 'Client sends creator|indieMaker|consultant|researcher|productManager but adapter expects creator|indieMaker|consultant|researcher|productManager',
       affectedFiles: [
         'web/lib/prompts.ts',
         'web/lib/types/persona.ts',
