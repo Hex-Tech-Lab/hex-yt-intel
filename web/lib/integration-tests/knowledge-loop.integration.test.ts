@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { UserKnowledgeContext, FAQItem } from '@/lib/types/knowledge-context';
+import type { UserKnowledgeContext } from '@/lib/types/knowledge-context';
 import { EMPTY_KNOWLEDGE_CONTEXT } from '@/lib/types/knowledge-context';
 import { KnowledgeHistoryService, type KnowledgeWikiPort } from '@/lib/services/KnowledgeHistoryService';
 import { buildGroundingWithHistory } from '@/lib/utils/build-grounding-with-history';
@@ -135,7 +135,7 @@ describe('Wave 4 Knowledge Loop Integration Tests', () => {
         faqs: [
           { theme: 'Security', question: 'What is encryption?', answer: 'Cryptographic technique', relevanceScore: 5 },
         ],
-        learningSummary: 'You've previously asked 12 questions across 3 videos',
+        learningSummary: "You've previously asked 12 questions across 3 videos",
       };
 
       const enrichedGrounding = buildGroundingWithHistory(
@@ -254,7 +254,6 @@ describe('Wave 4 Knowledge Loop Integration Tests', () => {
     it('should process complete flow: capture → wiki → inject → OPTIONS', async () => {
       // Step 1: Question captured by POST /api/chat/conversations/[id]/messages
       const question1 = 'What is encryption?';
-      const conversationId = 'conv-123';
       const userId = 'user-456';
 
       // Step 2: Wiki builder aggregates questions (mocked)

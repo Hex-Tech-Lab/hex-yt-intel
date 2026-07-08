@@ -79,8 +79,8 @@ The chat system **refuses to generate any response** without a grounded analysis
 User asks question
   → System checks: does conversation have analysis_id?
   → System checks: does analysis have markdown (non-empty)?
-  → If NO markdown: return 409 "ERR_NO_ANALYSIS_CONTENT" + refuse stream token
-  → If YES markdown: proceed with generation
+  → If NO markdown: return success response with assistant refusal message
+  → If YES markdown: proceed with generation and streaming response
 ```
 
 **Result**: Model NEVER answers from general knowledge. ALWAYS grounded to video content.
@@ -104,7 +104,7 @@ Enforced at route level, keyed by `(userId, conversationId, tier)`:
 | pro | 30 | Yes (idempotent) |
 | enterprise | 100 | Yes (idempotent) |
 
-**Mechanism**: Redis counter with TTL; increments only on NEW messages (clientMsgId deduplication prevents retries from incrementing).
+**Mechanism**: In-memory turn limit check using static tier limits; clientMsgId deduplication prevents retries from incrementing.
 
 ---
 

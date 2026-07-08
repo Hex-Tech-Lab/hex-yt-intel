@@ -24,7 +24,7 @@
 }
 ```
 
-**Global-Graph Endpoint** (`POST /api/atlas/global-graph`)
+**Global-Graph Endpoint** (`GET /api/atlas/global-graph`)
 ```typescript
 // Returns:
 {
@@ -92,8 +92,8 @@ for (const node of allNodes) {
 }
 
 for (const edge of allEdges) {
-  const source = nodesById.get(edge.source_id);  // Lookup by ID
-  const target = nodesById.get(edge.target_id);  // Lookup by ID
+  const source = nodesById.get(edge.source);  // Lookup by ID
+  const target = nodesById.get(edge.target);  // Lookup by ID
 }
 ```
 
@@ -123,36 +123,32 @@ SELECT * FROM knowledge_graph_edges;
 ```
 
 **Fix**: Add cascading cleanup in `DeduplicateGraphUseCase`
+(Note: GraphPersistencePort does not have a `deleteEdges` method; use `persistKnowledgeGraph` with delete+insert semantics or add this method to the port interface)
 ```typescript
 // After deduplicateNodes() deletes:
 const deletedNodeIds = result.deletedIds;
-await this.graphPort.deleteEdges({
-  where: {
-    OR: [
-      { source_id: { in: deletedNodeIds } },
-      { target_id: { in: deletedNodeIds } }
-    ]
-  }
-});
+// TODO: Implement edge cleanup - either add deleteEdges to port or use persistKnowledgeGraph
+// to rebuild graph with orphaned edges removed
 ```
 
 **Severity**: 🟡 **MEDIUM** — Inconsistent relational data, query failures
 
 ---
 
-### Contract Violation #4: No Input Validation
+### Contract Violation #4: Incomplete Input Validation
 
 **Oracle-Sequence Webhook** (`POST /api/webhooks/oracle-sequence`)
 
 ```typescript
-// Current:
+// Current: Has presence checks for tenantId and analysisId (returns 400 if missing)
+// But missing:
+// - UUID format validation (tenantId, analysisId)
+// - analysisId existence check (does analysis exist?)
+// - tenantId ownership verification (does tenant own analysis?)
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  // NO VALIDATION of:
-  // - tenantId format (UUID?)
-  // - analysisId format (UUID?)
-  // - analysisId existence (does analysis exist?)
-  // - tenantId ownership (does tenant own analysis?)
+  if (!body.tenantId || !body.analysisId) return res.status(400);
+  // Missing UUID format, existence, and ownership checks
 }
 ```
 

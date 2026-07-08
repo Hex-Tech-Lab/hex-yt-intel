@@ -111,7 +111,6 @@ async function processAllUsers(): Promise<Omit<WebhookResult, 'processingTime'>>
     const { users, totalCount } = await getAllActiveUsers(supabase, batchSize, offset);
 
     if (!users.length) {
-      hasMore = false;
       break;
     }
 

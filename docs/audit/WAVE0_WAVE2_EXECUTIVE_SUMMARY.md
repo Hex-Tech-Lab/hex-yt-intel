@@ -248,10 +248,10 @@ User required **full-spectrum system re-audit** before MoR payment integration. 
 ## 🚀 Path to Production
 
 ### Before MoR Payment Integration (BLOCKING)
-1. ✅ Fix Persona Type Mismatch (Agent 1) — needed for persona-based features
-2. ✅ Fix KG Edge Mapping (Agent 4) — prevents data corruption
-3. ✅ Fix 409 Digest (Agent 2) — ensures analyses persist properly
-4. ✅ Run all contract tests to baseline
+1. - [ ] Fix Persona Type Mismatch (Agent 1) — needed for persona-based features
+2. - [ ] Fix KG Edge Mapping (Agent 4) — prevents data corruption
+3. - [ ] Fix 409 Digest (Agent 2) — ensures analyses persist properly
+4. - [ ] Run all contract tests to baseline
 
 ### Before Payment Launch (HIGH)
 5. ✅ Normalize KG schemas (Agent 4) — coordinate with clients
@@ -337,7 +337,7 @@ If Sender ≠ Receiver → Violation → Test → Fix
 - Search flow (Wave 0 Agent 5) ✅
 - Plus 5 Wave 2 stabilization paths ✅
 
-✅ **Contract integrity verified** — 249 contract tests created, violations documented
+✅ **Contract integrity verified** — 316 contract tests created, violations documented
 
 ✅ **Logic/functionality correctness** — 53 E2E tests cover happy paths + edge cases
 

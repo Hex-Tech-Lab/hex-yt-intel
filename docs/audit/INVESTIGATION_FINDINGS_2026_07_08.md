@@ -5,9 +5,9 @@
 
 ---
 
-## ✅ Dream-Sequence Webhook (SOLVED)
+## ✅ Oracle-Sequence Webhook (SOLVED)
 
-**Route**: `POST /api/webhooks/dream-sequence`  
+**Route**: `POST /api/webhooks/oracle-sequence`  
 **Trigger**: QStash-scheduled task after analysis completion  
 **Purpose**: Knowledge Graph Deduplication
 
