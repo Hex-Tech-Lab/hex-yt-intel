@@ -10,7 +10,7 @@ test.describe('TEST SUITE 4: Search → Results', () => {
   test('Search page is accessible', async ({ authenticatedPage: page }) => {
     // Navigate to search page
     const response = await page.goto(`${DEPLOYMENT_URL}/search`, { waitUntil: 'load' });
-    expect([200, 302, 307]).toContain(response?.status());
+    expect([200, 302, 303]).toContain(response?.status());
 
     // Should have search input
     const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
@@ -235,8 +235,8 @@ test.describe('TEST SUITE 4: Search → Results', () => {
 
     console.log(`[Search Auth] Response status: ${response?.status()}`);
 
-    // Should either require auth (307/302 redirect) or be accessible
-    // Depends on implementation
-    expect([200, 302, 307, 401]).toContain(response?.status());
+    // Should either require auth (303/302 redirect) or be accessible
+    // Depends on implementation; 303 is preferred for POST→GET redirects
+    expect([200, 302, 303, 401]).toContain(response?.status());
   });
 });

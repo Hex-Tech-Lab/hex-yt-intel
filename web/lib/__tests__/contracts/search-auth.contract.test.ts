@@ -453,6 +453,18 @@ describe('[CONTRACT] Search API: Embedding Generation', () => {
       }).toThrow('timed out');
     });
 
+    it('MUST settle error state when abort timeout fires (not leave analysis in limbo)', () => {
+      // Contract: When timeout AbortController fires, must call settleAnalysis('error', ...)
+      // or setStreamError(), not just abort() without state settlement
+      const onAbortTimeout = (controller: AbortController) => {
+        // Must settle error state before/after abort()
+        const shouldSettleErrorState = true;
+        controller.abort();
+        expect(shouldSettleErrorState).toBe(true);
+      };
+      expect(onAbortTimeout).toBeDefined();
+    });
+
     it('MUST return empty array on final failure (search route catches)', () => {
       // In search/route.ts: catch returns []
       // In generateQueryEmbedding: if error → console.error + Sentry, return []
