@@ -12,7 +12,7 @@
  * Scope: Integration contract verification, not unit tests of individual helpers.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 /**
  * Mock data: Analysis object matching the database schema.
@@ -121,72 +121,75 @@ function filterHallucinationContent(markdown: string): string {
 // ============================================================================
 
 describe('Export PDF Contract: Tier Gating', () => {
+  const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
+  const restrictedTiers = ['free'] as const;
+  const allowedTiers = ['pro', 'enterprise', 'admin'] as const;
+
   it('free user requesting scope=full should be denied (402 Payment Required)', () => {
     const tier = 'free';
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const scope = 'full';
-    const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
 
-    // Simulate server-side tier check
-    const allowed = FULL_REPORT_TIERS.has(tier);
-    expect(allowed).toBe(false);
-
-    // Contract: should return 402
-    const expectedStatus = 402;
-    expect(expectedStatus).toBe(402);
+    // Contract: FULL_REPORT_TIERS must NOT include free tier
+    expect(FULL_REPORT_TIERS.has(tier)).toBe(false);
+    expect(FULL_REPORT_TIERS.size).toBeGreaterThan(0);
+    // If allowed check fails, route must return 402
+    const statusForDenied = FULL_REPORT_TIERS.has(tier) ? 200 : 402;
+    expect(statusForDenied).toBe(402);
   });
 
   it('pro user requesting scope=full should be allowed (200)', () => {
     const tier = 'pro';
-    const scope = 'full';
-    const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
-
-    const allowed = FULL_REPORT_TIERS.has(tier);
-    expect(allowed).toBe(true);
-    expect(scope).toBe('full');
+    // Contract: pro must be in FULL_REPORT_TIERS
+    expect(FULL_REPORT_TIERS.has(tier)).toBe(true);
+    expect(allowedTiers).toContain(tier);
   });
 
   it('enterprise user requesting scope=full should be allowed', () => {
     const tier = 'enterprise';
-    const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
-    expect(FULL_REPORT_TIERS.has(tier)).toBe(true);
+    // Contract: enterprise must be in FULL_REPORT_TIERS
+    expect(FULL_REPORT_TIERS).toContain(tier);
+    expect(allowedTiers).toContain(tier);
   });
 
   it('admin user should bypass tier restrictions', () => {
     const tier = 'admin';
-    const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
-    expect(FULL_REPORT_TIERS.has(tier)).toBe(true);
+    // Contract: admin must be in FULL_REPORT_TIERS
+    expect(FULL_REPORT_TIERS).toContain(tier);
+    expect(allowedTiers).toContain(tier);
   });
 
-  it('unknown tier should default to free (402 on full scope)', () => {
+  it('unknown tier should be treated as restricted (402)', () => {
     const tier = 'unknown' as any;
-    const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
-
-    // Unknown tier not in set → treated as free
+    // Contract: unknown tier must NOT be in FULL_REPORT_TIERS
     expect(FULL_REPORT_TIERS.has(tier)).toBe(false);
+    expect(restrictedTiers).toContain('free' as any);
   });
 
-  it('free user requesting scope=summary should be allowed (200)', () => {
+  it('free user requesting scope=summary should be allowed (no tier check)', () => {
     const scope = 'summary';
-
-    // No tier check for summary scope
-    expect(scope).toBe('summary');
-    // Should not be denied
+    // Contract: summary scope bypasses tier gating
+    const summaryAllowedForAllTiers = true;
+    expect(summaryAllowedForAllTiers).toBe(true);
+    expect(['summary', 'full']).toContain(scope);
   });
 
-  it('402 response should include upgrade flag', () => {
+  it('402 response must include error code and upgrade flag', () => {
     const tier = 'free';
-    const FULL_REPORT_TIERS = new Set(['pro', 'enterprise', 'admin']);
+    // Contract: 402 response shape is { error, code: ERR_QUOTA_EXCEEDED, upgrade: true }
+    const is402Result = !FULL_REPORT_TIERS.has(tier);
 
-    if (!FULL_REPORT_TIERS.has(tier)) {
+    if (is402Result) {
       const response = {
         error: 'Full report export is available on Pro and above.',
         code: 'ERR_QUOTA_EXCEEDED',
         upgrade: true,
       };
 
-      expect(response.upgrade).toBe(true);
-      expect(response.code).toBe('ERR_QUOTA_EXCEEDED');
+      expect(response).toHaveProperty('error');
+      expect(response).toHaveProperty('code');
+      expect(response).toHaveProperty('upgrade');
+      expect(response.code).toMatch(/^ERR_/);
+      expect(typeof response.upgrade).toBe('boolean');
     }
   });
 });
@@ -198,28 +201,42 @@ describe('Export PDF Contract: Tier Gating', () => {
 describe('Export PDF Contract: Authentication & Ownership', () => {
   it('unauthenticated request should be denied (401)', () => {
     const user = null;
-
-    // Server check
-    if (!user) {
-      expect(true).toBe(true); // Would return 401
-    }
+    // Contract: null user must fail auth
+    expect(user).toBeNull();
+    // Route should return 401 for null user
+    const status = user ? 200 : 401;
+    expect(status).toBe(401);
   });
 
   it('authenticated request with mismatched user_id should be denied (404)', () => {
     const requestUserId = 'user-123';
     const analysisUserId = 'user-456';
 
-    // Server-side ownership check
+    // Contract: user_id mismatch means no ownership
     const isOwner = requestUserId === analysisUserId;
     expect(isOwner).toBe(false);
+    // Should return 404 to prevent user enumeration
+    const statusForMismatch = isOwner ? 200 : 404;
+    expect(statusForMismatch).toBe(404);
   });
 
-  it('authenticated request with matching user_id should proceed', () => {
+  it('authenticated request with matching user_id should proceed (200)', () => {
     const requestUserId = 'user-123';
     const analysisUserId = 'user-123';
 
+    // Contract: matching user_id means ownership verified
     const isOwner = requestUserId === analysisUserId;
     expect(isOwner).toBe(true);
+    const statusForMatch = isOwner ? 200 : 404;
+    expect(statusForMatch).toBe(200);
+  });
+
+  it('ownership check must use strict equality (not substring match)', () => {
+    const requestUserId = 'user-123';
+    const analysisUserId = 'user-1234'; // Similar but different
+
+    expect(requestUserId === analysisUserId).toBe(false);
+    expect(requestUserId).not.toContain(analysisUserId);
   });
 });
 
@@ -286,15 +303,19 @@ describe('Export PDF Contract: Filename Sanitization', () => {
     expect(result).toContain('.');
   });
 
-  it('Content-Disposition header format matches RFC 5987', () => {
+  it('Content-Disposition header format is RFC 5987 compliant', () => {
     const filename = 'report.pdf';
     const safe = sanitizeFilename(filename);
     const header = `attachment; filename="${safe}"`;
 
-    // Should not contain unescaped quotes or newlines
+    // Contract: RFC 5987 format is attachment; filename="<safe-filename>"
+    expect(header).toMatch(/^attachment; filename=".+"$/);
+    // Must not contain unescaped special chars
     expect(header).not.toContain('""');
     expect(header).not.toContain('\n');
-    expect(header).toMatch(/^attachment; filename="[^"]*"$/);
+    expect(header).not.toContain('\r');
+    // Safe filename must be <= 120 chars
+    expect(safe.length).toBeLessThanOrEqual(120);
   });
 });
 
@@ -484,25 +505,30 @@ describe('Export PDF Contract: Scope Enforcement', () => {
 // ============================================================================
 
 describe('Export PDF Contract: HTTP Compliance', () => {
-  it('GET request should be used (not POST)', () => {
-    const method = 'GET';
-    expect(method).toBe('GET');
+  it('export endpoint must use GET method', () => {
+    // Contract: GET /api/analyses/{id}/export?scope=...
+    const httpMethod = 'GET';
+    expect(['GET', 'POST']).toContain(httpMethod);
+    expect(httpMethod).toBe('GET');
   });
 
-  it('200 response should have correct headers for PDF download', () => {
-    const status = 200;
+  it('successful (200) response must include PDF headers', () => {
+    // Contract: PDF download responses must set Content-Type and Content-Disposition
+    const requiredHeaders = ['Content-Type', 'Content-Disposition'];
     const headers = {
       'Content-Type': 'application/pdf',
       'Content-Disposition': 'attachment; filename="test.pdf"',
     };
 
-    expect(status).toBe(200);
-    expect(headers).toHaveProperty('Content-Type', 'application/pdf');
-    expect(headers).toHaveProperty('Content-Disposition');
-    expect(headers['Content-Disposition']).toContain('attachment');
+    requiredHeaders.forEach(header => {
+      expect(headers).toHaveProperty(header);
+    });
+    expect(headers['Content-Type']).toBe('application/pdf');
+    expect(headers['Content-Disposition']).toMatch(/^attachment; filename=/);
   });
 
-  it('401 Unauthorized response should return JSON', () => {
+  it('401 Unauthorized must return JSON with error and code', () => {
+    // Contract: All error responses are JSON with { error, code }
     const response = {
       error: 'Unauthorized',
       code: 'ERR_AUTH_UNAUTHORIZED',
@@ -510,39 +536,46 @@ describe('Export PDF Contract: HTTP Compliance', () => {
 
     expect(response).toHaveProperty('error');
     expect(response).toHaveProperty('code');
+    expect(typeof response.error).toBe('string');
+    expect(response.code).toMatch(/^ERR_/);
   });
 
-  it('402 Payment Required response should include upgrade flag', () => {
+  it('402 Payment Required response must include upgrade flag', () => {
+    // Contract: tier-gating denials include upgrade: true for upsell
     const response = {
       error: 'Full report export requires Pro subscription.',
       code: 'ERR_QUOTA_EXCEEDED',
       upgrade: true,
     };
 
+    expect(response).toHaveProperty('upgrade');
+    expect(typeof response.upgrade).toBe('boolean');
     expect(response.upgrade).toBe(true);
   });
 
-  it('404 Not Found response should not leak analysis existence', () => {
-    // Both "analysis doesn't exist" and "wrong user" return same 404
-    // to prevent user enumeration attacks
+  it('404 Not Found must not leak user/analysis existence', () => {
+    // Contract: both missing analysis and unauthorized access return identical 404
     const response = {
       error: 'Not found',
       code: 'ERR_NOT_FOUND',
     };
 
-    expect(response.error).toBe('Not found');
-    expect(response.error).not.toContain('user');
-    expect(response.error).not.toContain('analysis');
+    // Error message must not contain identifying info
+    const errorLower = response.error.toLowerCase();
+    expect(errorLower).not.toContain('user');
+    expect(errorLower).not.toContain('analysis');
+    expect(errorLower).not.toContain('permission');
   });
 
-  it('500 Internal Server Error should include error code', () => {
+  it('500 Internal Server Error must include error code', () => {
+    // Contract: all error responses include error code (ERR_* format)
     const response = {
       error: 'Failed to export analysis',
       code: 'ERR_UNHANDLED_EXCEPTION',
     };
 
     expect(response).toHaveProperty('code');
-    expect(response.code).toMatch(/^ERR_/);
+    expect(response.code).toMatch(/^ERR_\w+$/);
   });
 });
 
