@@ -88,7 +88,7 @@ User asks question
 ### Ownership Binding (ADR 009)
 Conversation is cryptographically bound to:
 1. **User ID**: Conversation ONLY accessible by creator
-2. **Analysis ID**: Conversation ONLY gounded to one video
+2. **Analysis ID**: Conversation ONLY grounded to one video
 3. **S2S Signature**: Worker-to-server HMAC prevents tampering
 
 **IDOR Defense**:

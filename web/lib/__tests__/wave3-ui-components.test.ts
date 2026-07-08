@@ -200,7 +200,6 @@ describe('WordCloud Proportional Font Sizing', () => {
   it('calculates font size proportional to token weight', () => {
     const minFontSize = 11;
     const maxFontSize = 26;
-    const fontSizeRange = maxFontSize - minFontSize;
     const baseFontCalculation = 10;
     const weightScaler = 16;
 
@@ -250,7 +249,7 @@ describe('WordCloud Proportional Font Sizing', () => {
     expect(fontWeight).toBe(700);
 
     // Simulate deselection
-    const newSelectedId = null;
+    const newSelectedId: string | null = null;
     const isNowSelected = newSelectedId === wordId;
     const newFontWeight = isNowSelected ? 700 : 600;
 
@@ -414,7 +413,7 @@ describe('Layout Calculations', () => {
 
     expect(canvasHeight).toBe(220);
     expect(canvasWidth).toBe(400);
-    expect(canvasHeight / canvasWidth).toBeCloseTo(0.55, 2);
+    expect(aspectRatio).toBeCloseTo(0.55, 2);
   });
 
   it('applies vertical squashing to word cloud layout', () => {

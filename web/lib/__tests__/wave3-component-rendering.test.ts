@@ -249,7 +249,7 @@ describe('Visual Regression: No Console Errors', () => {
   });
 
   it('components should support hover state independently of selection', () => {
-    let selectedId: string | null = 'node-1';
+    const selectedId: string | null = 'node-1';
     let hoveredId: string | null = null;
 
     // Hover different node
