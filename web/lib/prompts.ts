@@ -1,5 +1,6 @@
 import type { PersonaId } from './types/persona';
-export { PersonaId, PERSONA_DIMENSIONS, isValidPersona, type PersonaProjection, type PersonaConfigV2 } from './types/persona';
+export type { PersonaId, PersonaProjection, PersonaConfigV2 } from './types/persona';
+export { PERSONA_DIMENSIONS, isValidPersona } from './types/persona';
 
 export interface PersonaConfiguration {
   personaId: PersonaId;
