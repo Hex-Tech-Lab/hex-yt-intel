@@ -127,7 +127,6 @@ describe('Export PDF Contract: Tier Gating', () => {
 
   it('free user requesting scope=full should be denied (402 Payment Required)', () => {
     const tier = 'free';
-    const scope = 'full';
 
     // Contract: FULL_REPORT_TIERS must NOT include free tier
     expect(FULL_REPORT_TIERS.has(tier)).toBe(false);

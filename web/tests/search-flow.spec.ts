@@ -101,12 +101,14 @@ test.describe('TEST SUITE 4: Search → Results', () => {
     }
   });
 
-  test('Search API contract: GET /api/search returns array', async ({
+  test('Search API contract: POST /api/search returns array', async ({
     authenticatedPage: page,
   }) => {
     // Test search API directly
     try {
-      const response = await page.request.get(`${DEPLOYMENT_URL}/api/search?q=video`);
+      const response = await page.request.post(`${DEPLOYMENT_URL}/api/search`, {
+        data: { query: 'video' },
+      });
 
       console.log(`[Search API] Status: ${response.status()}`);
 

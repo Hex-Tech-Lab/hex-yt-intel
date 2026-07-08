@@ -185,7 +185,7 @@ test.describe('TEST SUITE 1: Analysis Creation → Streaming → Completion', ()
   }) => {
     const result = await submitAnalysis(TEST_YOUTUBE_URLS.testVideo1);
 
-    expect(result?.response.status()).toMatch(/^(200|202)$/);
+    expect([200, 202]).toContain(result?.response.status());
     console.log(`[Contract] Submission returned: ${result?.response.status()}`);
   });
 });
