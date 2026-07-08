@@ -165,7 +165,7 @@ async function readQuestionsFromStorage(
 ): Promise<QuestionData[]> {
   try {
     const monthStart = new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1);
-    const monthEnd = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0);
+    const monthEnd = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0, 23, 59, 59, 999);
 
     // List all files in /raw/{userId}/questions/
     const { data: files, error: listError } = await supabase.storage

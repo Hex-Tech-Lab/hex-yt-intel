@@ -5,7 +5,7 @@ export const maxDuration = 10;
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import * as Sentry from '@sentry/nextjs';
-import { SupabaseAuthAdapter } from '@/lib/adapters';
+import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import {
   QuestionCaptureRequestSchema,
@@ -61,6 +61,13 @@ export async function POST(req: NextRequest) {
     // Verify user ownership (route-level security check)
     if (userId !== identity.userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Verify that the conversation belongs to the user
+    const persistenceAdapter = new SupabasePersistenceAdapter();
+    const conversation = await persistenceAdapter.getConversation({ conversationId });
+    if (!conversation || conversation.userId !== identity.userId) {
+      return NextResponse.json({ error: 'Forbidden: conversation not found or not owned' }, { status: 403 });
     }
 
     // Generate question ID and timestamp

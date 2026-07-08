@@ -109,7 +109,7 @@ export async function POST(
     // This happens after validation but doesn't block the response
     const conv = await persistenceAdapter.getConversation({ conversationId: id });
     const analysisId = conv?.analysisId;
-    captureQuestionAsync(id, userId, rawContent, analysisId).catch((error) => {
+    captureQuestionAsync(id, userId, rawContent, analysisId, request).catch((error) => {
       console.error('[chat] Question capture failed (non-blocking):', error);
     });
 
@@ -129,7 +129,8 @@ async function captureQuestionAsync(
   conversationId: string,
   userId: string,
   question: string,
-  analysisId?: string | null
+  analysisId?: string | null,
+  request?: NextRequest
 ): Promise<void> {
   try {
     // Use the capture-question endpoint if available (prefer this)
@@ -141,11 +142,21 @@ async function captureQuestionAsync(
 
     const captureUrl = `${env.appUrl}/api/chat/capture-question`;
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Forward Cookie header from the original request for auth
+    if (request) {
+      const cookie = request.headers.get('cookie');
+      if (cookie) {
+        headers['Cookie'] = cookie;
+      }
+    }
+
     const response = await fetch(captureUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         conversationId,
         userId,
