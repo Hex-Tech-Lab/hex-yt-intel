@@ -141,6 +141,9 @@ describe('[CONTRACT] Search API: Request Validation', () => {
         if (!query || typeof query !== 'string') {
           throw new Error('Query parameter is required and must be a string');
         }
+        if (typeof topK === 'number' && (topK < 1 || topK > 50)) {
+          throw new Error('topK must be between 1 and 50');
+        }
       }).not.toThrow();
     });
   });

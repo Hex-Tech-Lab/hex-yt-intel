@@ -187,9 +187,8 @@ test.describe('TEST SUITE 2: Chat Grounding (Analyze → Chat)', () => {
         await page.waitForTimeout(2000);
 
         // Should either refuse or show error message
-        const content = await page.content();
         console.log('[No Grounding] Chat behavior observed');
-      } catch (e) {
+      } catch (_e) {
         console.log('[No Grounding] Send disabled or error occurred');
       }
     }
@@ -221,7 +220,7 @@ test.describe('TEST SUITE 2: Chat Grounding (Analyze → Chat)', () => {
 
       // Should be 200, 201, or stream (202)
       expect([200, 201, 202, 400, 401, 422]).toContain(chatResponse.status());
-    } catch (e) {
+    } catch (_e) {
       console.log('[Chat API] Direct call not available or requires specific setup');
     }
   });

@@ -126,7 +126,7 @@ test.describe('TEST SUITE 5: Mobile Responsiveness', () => {
       const response = await responsePromise;
       console.log(`[Mobile Submission] Status: ${response.status()}`);
       expect([200, 202]).toContain(response.status());
-    } catch (e) {
+    } catch (_e) {
       console.log('[Mobile Submission] Response not captured');
     }
   });

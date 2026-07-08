@@ -1,4 +1,4 @@
-import { test, expect, TEST_YOUTUBE_URLS } from './fixtures';
+import { test, expect } from './fixtures';
 
 const DEPLOYMENT_URL = process.env.DEPLOYMENT_URL || 'http://localhost:3000';
 
@@ -123,7 +123,7 @@ test.describe('TEST SUITE 4: Search → Results', () => {
           expect(Array.isArray(data.results)).toBe(true);
         }
       }
-    } catch (e) {
+    } catch (e) { // eslint-disable-line @typescript-eslint/no-unused-vars
       console.log('[Search API] Endpoint test skipped');
     }
   });
