@@ -239,14 +239,18 @@ describe('WordCloud Proportional Font Sizing', () => {
     // then font size should scale similarly
     const minTokenWeight = 44;
     const maxTokenWeight = 63;
-    const frequencyRatio = maxTokenWeight / minTokenWeight; // ≈ 1.43
+
+    // Use intermediate weights (50, 56) instead of extremes to avoid clamping and test ratio preservation
+    const weight1 = 50;
+    const weight2 = 56;
+    const frequencyRatio = weight2 / weight1; // ≈ 1.12
 
     const logMin = Math.log(minTokenWeight);
     const logMax = Math.log(maxTokenWeight);
 
-    const fontSize44 = 11 + ((Math.log(44) - logMin) / (logMax - logMin)) * 15;
-    const fontSize63 = 11 + ((Math.log(63) - logMin) / (logMax - logMin)) * 15;
-    const fontSizeRatio = fontSize63 / fontSize44;
+    const fontSize1 = 11 + ((Math.log(weight1) - logMin) / (logMax - logMin)) * 15;
+    const fontSize2 = 11 + ((Math.log(weight2) - logMin) / (logMax - logMin)) * 15;
+    const fontSizeRatio = fontSize2 / fontSize1;
 
     // Font size ratio should approximate frequency ratio (~1.43)
     // With log scaling, this ratio is better preserved than linear

@@ -29,12 +29,12 @@ create unique index if not exists idx_user_knowledge_wiki_unique_topic
 create index if not exists idx_user_knowledge_wiki_by_user
   on public.user_knowledge_wiki(user_id, updated_at desc);
 
--- Row Level Security: users can only see their own wikis
+-- Row Level Security: users can only READ their own wikis (mutations via service-role only)
 alter table public.user_knowledge_wiki enable row level security;
 
-drop policy if exists "own wikis" on public.user_knowledge_wiki;
-create policy "own wikis" on public.user_knowledge_wiki
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "users can read own wikis" on public.user_knowledge_wiki;
+create policy "users can read own wikis" on public.user_knowledge_wiki
+  for select using (auth.uid() = user_id);
 
 -- Grant service-role full access (needed for QStash webhook + wiki builder)
 grant all on public.user_knowledge_wiki to service_role;

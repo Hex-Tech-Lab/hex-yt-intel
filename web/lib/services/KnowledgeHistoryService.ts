@@ -4,15 +4,17 @@ import { EMPTY_KNOWLEDGE_CONTEXT } from '@/lib/types/knowledge-context';
 /**
  * Represents a row from the public.user_knowledge_wiki table
  * Built by previous analyses via the question capture flow (Wave 4.1).
+ * Stores aggregated wiki articles (one per topic) with markdown content.
  */
 interface WikiRow {
-  userId: string;
-  videoId: string;
-  theme: string;
-  question: string;
-  answer: string;
-  frequency?: number;
-  createdAt?: string;
+  id: string;
+  user_id: string;
+  topic: string;
+  wiki_markdown: string;
+  question_count: number;
+  theme_count: number;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -50,57 +52,37 @@ export class KnowledgeHistoryService {
         return EMPTY_KNOWLEDGE_CONTEXT;
       }
 
-      // Group by theme and rank by frequency
-      const themeMap = new Map<string, number>();
-      const faqsByTheme = new Map<string, FAQItem[]>();
+      // Extract themes from wiki topics, ranked by question count
+      const themeEntries = wiki
+        .map((row) => ({
+          theme: row.topic.trim() || 'General',
+          score: row.question_count || 1,
+        }))
+        .filter((entry) => entry.theme);
 
-      for (const row of wiki) {
-        const theme = row.theme?.trim() || 'General';
-        const question = row.question?.trim() || '';
-        const answer = row.answer?.trim() || '';
-
-        // Skip malformed rows
-        if (!question || !answer) {
-          continue;
-        }
-
-        // Count theme frequency
-        themeMap.set(theme, (themeMap.get(theme) ?? 0) + 1);
-
-        // Collect FAQ items per theme
-        if (!faqsByTheme.has(theme)) {
-          faqsByTheme.set(theme, []);
-        }
-        faqsByTheme.get(theme)!.push({
-          theme,
-          question,
-          answer,
-          relevanceScore: row.frequency ?? 1,
-        });
-      }
-
-      // Extract top 3-5 themes (ranked by frequency)
-      const topThemes = Array.from(themeMap.entries())
-        .sort(([, freqA], [, freqB]) => freqB - freqA)
+      // Get top 3-5 themes by question count
+      const topThemes = themeEntries
+        .sort((a, b) => b.score - a.score)
         .slice(0, 5)
-        .map(([theme]) => theme);
+        .map((entry) => entry.theme);
 
-      // Extract top 3-5 FAQ items from each theme (ranked by relevance/frequency)
-      const topFaqs: FAQItem[] = [];
-      for (const theme of topThemes) {
-        const themeFaqs = faqsByTheme.get(theme) ?? [];
-        // Sort by relevance score (higher = more relevant)
-        themeFaqs.sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0));
-        // Take top 3-5 per theme
-        topFaqs.push(...themeFaqs.slice(0, 5));
-      }
+      // Build FAQ items from wiki entries (one per topic)
+      const topFaqs: FAQItem[] = themeEntries
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map((entry) => ({
+          theme: entry.theme,
+          question: entry.theme,
+          answer: entry.theme, // Placeholder: actual answer would require parsing wiki_markdown
+          relevanceScore: entry.score,
+        }));
 
       // Build learning summary
-      const uniqueVideos = new Set(wiki.map((w) => w.videoId)).size;
-      const totalQuestions = wiki.length;
+      const totalTopics = wiki.length;
+      const totalQuestions = wiki.reduce((sum, row) => sum + (row.question_count || 0), 0);
       const learningSummary =
-        uniqueVideos > 0
-          ? `You've previously asked about: ${topThemes.join(', ')} (${totalQuestions} questions across ${uniqueVideos} videos)`
+        totalQuestions > 0
+          ? `You've previously asked about: ${topThemes.join(', ')} (${totalQuestions} questions across ${totalTopics} topics)`
           : '';
 
       return {
