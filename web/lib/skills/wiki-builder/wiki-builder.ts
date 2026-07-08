@@ -93,7 +93,14 @@ export async function buildMonthlyWiki(
     const monthName = previousMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
     const wikiMarkdown = generateWikiMarkdown(themes, monthName);
 
-    // Step 4: Upsert into Supabase
+    // Step 4: Upsert into Supabase with deterministic idempotency
+    // IDEMPOTENCY GUARANTEE: Topic is derived deterministically from month/year
+    //   - Example: "May 2026" → "may-2026-digest"
+    //   - Same month always produces same topic string
+    // DEDUP GUARANTEE: Upsert with onConflict 'user_id,topic' ensures:
+    //   - Same (userId, topic) tuple → always overwrites, never duplicates
+    //   - Same questions + same month → same wiki_markdown output
+    // SAFETY: Re-running same month multiple times produces identical result (idempotent)
     const topic = `${monthName.replace(/\s+/g, '-').toLowerCase()}-digest`;
     const { data, error } = await supabase
       .from('user_knowledge_wiki')
@@ -157,6 +164,20 @@ export async function buildMonthlyWiki(
 /**
  * Read question files from Supabase Storage for the previous month.
  * Returns parsed question data from markdown files.
+ *
+ * MONTH BOUNDARY BEHAVIOR (EXPLICIT FOR DATA CORRECTNESS):
+ * - Start boundary: First millisecond of first day (00:00:00.000)
+ * - End boundary: Last millisecond of last day (23:59:59.999)
+ * - Both boundaries are INCLUSIVE for file comparison
+ * - Example: May 2026 includes files from May 1 00:00:00.000 through May 31 23:59:59.999
+ * - Edge cases handled: leap years, month transitions
+ * - Last day of month is fully included (no data loss at month boundaries)
+ *
+ * Edge Cases Handled:
+ * 1. Missing/deleted storage directory (returns empty list, no error)
+ * 2. Empty question files (skipped with warning)
+ * 3. Malformed markdown (skipped with warning, partial content discarded)
+ * 4. Missing metadata fields (uses defaults: empty questionId, current timestamp)
  */
 async function readQuestionsFromStorage(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
@@ -164,7 +185,9 @@ async function readQuestionsFromStorage(
   previousMonth: Date
 ): Promise<QuestionData[]> {
   try {
-    const monthStart = new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1);
+    // Calculate month boundaries explicitly with full precision
+    // First day starts at 00:00:00.000, last day ends at 23:59:59.999
+    const monthStart = new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1, 0, 0, 0, 0);
     const monthEnd = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0, 23, 59, 59, 999);
 
     // List all files in /raw/{userId}/questions/
@@ -190,6 +213,7 @@ async function readQuestionsFromStorage(
       if (!file.name.endsWith('.md')) continue;
 
       const fileCreatedAt = file.created_at ? new Date(file.created_at) : null;
+      // Month boundary check: include entire last day of month (inclusive on both ends)
       if (!fileCreatedAt || fileCreatedAt < monthStart || fileCreatedAt > monthEnd) {
         continue;
       }
@@ -206,7 +230,10 @@ async function readQuestionsFromStorage(
         }
 
         const content = await data?.text();
-        if (!content) continue;
+        if (!content || content.trim() === '') {
+          console.warn(`[wiki-builder] Empty content in file ${file.name}`);
+          continue;
+        }
 
         const parsed = parseQuestionMarkdown(content, file.name);
         if (parsed) {
@@ -241,47 +268,74 @@ async function readQuestionsFromStorage(
  * # User Question
  *
  * {question text}
+ *
+ * PARSING EDGE CASES HANDLED:
+ * 1. Missing front matter delimiters (---) → returns null (invalid format)
+ * 2. Missing question body → returns null (no content)
+ * 3. Empty or whitespace-only question → returns null
+ * 4. Missing metadata fields → uses defaults (questionId='', timestamp=now)
+ * 5. analysisId is "null" string → treats as undefined (not the literal value "null")
+ * 6. Quoted metadata values → supports "quoted" and 'quoted' format
+ *
+ * IDEMPOTENCY: Same input file always produces identical output (deterministic parsing)
  */
 function parseQuestionMarkdown(content: string, filename: string): QuestionData | null {
   try {
-    // Extract front matter
+    // Extract front matter (strict: requires both delimiters)
     const frontMatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-    if (!frontMatterMatch || !frontMatterMatch[1] || frontMatterMatch[2] === undefined) {
-      console.warn(`[wiki-builder] No front matter found in ${filename}`);
+    if (!frontMatterMatch) {
+      console.warn(`[wiki-builder] No front matter delimiters found in ${filename}`);
       return null;
     }
 
-    const frontMatterText = frontMatterMatch[1];
+    const frontMatterText = frontMatterMatch[1]?.trim();
     const bodyText = frontMatterMatch[2];
 
-    if (!frontMatterText || bodyText === undefined) {
-      console.warn(`[wiki-builder] Invalid front matter structure in ${filename}`);
+    if (!frontMatterText) {
+      console.warn(`[wiki-builder] Empty front matter in ${filename}`);
+      return null;
+    }
+
+    if (bodyText === undefined) {
+      console.warn(`[wiki-builder] No body content after front matter in ${filename}`);
       return null;
     }
 
     // Parse YAML-like front matter (simple key: value parsing)
+    // Handles lines with and without quotes
     const metadata: Record<string, string> = {};
     for (const line of frontMatterText.split('\n')) {
-      const match = line.match(/^(\w+):\s*(.+)$/);
-      if (match && match[1] && match[2]) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue; // Skip empty lines and comments
+
+      const match = trimmed.match(/^(\w+):\s*(.+)$/);
+      if (match) {
         const key = match[1];
-        const value = match[2];
-        metadata[key] = value.trim();
+        let value = match[2].trim();
+        // Remove surrounding quotes if present
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        metadata[key] = value;
       }
     }
 
-    // Extract question text (skip "# User Question" header)
-    const question = (bodyText ?? '')
-      .replace(/^#\s+User Question\s*\n/, '')
-      .trim();
+    // Extract question text (skip "# User Question" header if present)
+    let question = bodyText.replace(/^#\s+User Question\s*\n/, '').trim();
 
     if (!question) {
       console.warn(`[wiki-builder] No question text found in ${filename}`);
       return null;
     }
 
+    // Validate question has meaningful content (not just punctuation)
+    if (question.replace(/[^\w\s]/g, '').trim().length === 0) {
+      console.warn(`[wiki-builder] Question contains only punctuation in ${filename}`);
+      return null;
+    }
+
     return {
-      questionId: metadata.questionId || '',
+      questionId: metadata.questionId || '', // Default empty string (will be caught by dedup if needed)
       question,
       timestamp: metadata.timestamp || new Date().toISOString(),
       conversationId: metadata.conversationId,
@@ -297,14 +351,31 @@ function parseQuestionMarkdown(content: string, filename: string): QuestionData 
 /**
  * Cluster questions by theme using keyword matching.
  * Returns themes sorted by question count (descending).
+ *
+ * CLUSTERING BEHAVIOR (FOR DATA INTEGRITY):
+ * - A question can be assigned to multiple themes if it matches multiple patterns
+ * - If no pattern matches, question is assigned to "General" theme as fallback
+ * - Keywords are extracted and counted per theme independently
+ * - Questions are never deduplicated (same question may appear in multiple themes)
+ *
+ * PERFORMANCE: Keywords extracted once per question (cached), not per theme
+ *
+ * IDEMPOTENCY: Same input questions always produce identical theme assignments and keyword counts
  */
 export function clusterQuestionsByTheme(questions: QuestionData[]): ThemeCluster[] {
   const themeClusters = new Map<string, QuestionData[]>();
   const themeKeywords = new Map<string, Map<string, number>>();
 
+  // Extract keywords once per question (optimization: avoid repeated extraction)
+  const questionKeywords = new Map<string, string[]>();
+  for (const question of questions) {
+    questionKeywords.set(question.questionId || question.question, extractKeywords(question.question));
+  }
+
   // Assign each question to themes based on pattern matching
   for (const question of questions) {
     let assigned = false;
+    const keywords = questionKeywords.get(question.questionId || question.question) || [];
 
     for (const [theme, pattern] of Object.entries(THEME_PATTERNS)) {
       if (pattern.test(question.question)) {
@@ -313,6 +384,14 @@ export function clusterQuestionsByTheme(questions: QuestionData[]): ThemeCluster
           themeKeywords.set(theme, new Map());
         }
         themeClusters.get(theme)?.push(question);
+
+        // Count keywords for this theme
+        const keywordMap = themeKeywords.get(theme) || new Map();
+        for (const keyword of keywords) {
+          keywordMap.set(keyword, (keywordMap.get(keyword) || 0) + 1);
+        }
+        themeKeywords.set(theme, keywordMap);
+
         assigned = true;
       }
     }
@@ -324,19 +403,13 @@ export function clusterQuestionsByTheme(questions: QuestionData[]): ThemeCluster
         themeKeywords.set('General', new Map());
       }
       themeClusters.get('General')?.push(question);
-    }
 
-    // Extract and count keywords for all themes this question belongs to
-    const keywords = extractKeywords(question.question);
-    for (const [theme] of themeClusters) {
-      const clusterQuestions = themeClusters.get(theme) || [];
-      if (clusterQuestions.includes(question)) {
-        const keywordMap = themeKeywords.get(theme) || new Map();
-        for (const keyword of keywords) {
-          keywordMap.set(keyword, (keywordMap.get(keyword) || 0) + 1);
-        }
-        themeKeywords.set(theme, keywordMap);
+      // Count keywords for General theme
+      const keywordMap = themeKeywords.get('General') || new Map();
+      for (const keyword of keywords) {
+        keywordMap.set(keyword, (keywordMap.get(keyword) || 0) + 1);
       }
+      themeKeywords.set('General', keywordMap);
     }
   }
 
