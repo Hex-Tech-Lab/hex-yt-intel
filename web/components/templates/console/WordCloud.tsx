@@ -110,6 +110,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       .slice(0, 50);
 
     const maxTokenWeight = sortedTokens.length > 0 && sortedTokens[0] ? sortedTokens[0].weight : 1;
+    const minTokenWeight = sortedTokens.length > 0 ? Math.min(...sortedTokens.map(t => t.weight)) : 1;
     const center = { x: size.w / 2, y: size.h / 2 };
     const placed: PlacedWord[] = [];
 
@@ -135,8 +136,14 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     sortedTokens.forEach((token) => {
       const weight = token.weight;
-      const normalizedWeight = maxTokenWeight > 0 ? Math.min(1, weight / maxTokenWeight) : 0.5;
-      const fontSize = Math.max(11, Math.min(26, 10 + normalizedWeight * 16));
+      // Use logarithmic scaling to preserve frequency ratios in font size.
+      // This ensures that if frequency_a/frequency_b = 1.43, the font size
+      // ratio is also approximately 1.43, making the cloud proportional.
+      const logMin = Math.log(Math.max(minTokenWeight, 1));
+      const logMax = Math.log(Math.max(maxTokenWeight, 1));
+      const logNormalizedWeight =
+        logMax > logMin ? (Math.log(Math.max(weight, 1)) - logMin) / (logMax - logMin) : 0.5;
+      const fontSize = Math.max(11, Math.min(26, 11 + logNormalizedWeight * 15));
       const text = token.label;
 
       if (testCtx) {
