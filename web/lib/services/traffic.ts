@@ -9,8 +9,8 @@ import { NextResponse } from 'next/server';
 import type { TrafficGuardPort, RateLimitStatus } from '@/lib/ports';
 import { RATE_LIMITS } from '@/lib/constants/rate-limits';
 import type { Tier, Endpoint } from '@/lib/constants/rate-limits';
-import { RedisTrafficAdapter } from '../adapters/RedisTrafficAdapter';
-import { SupabasePersistenceAdapter } from '../adapters/SupabasePersistenceAdapter';
+import { RedisTrafficAdapter } from '@lib/adapters/RedisTrafficAdapter';
+import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAdapter';
 
 /** Admin account exempt from traffic limits and billing charges. */
 export function isValidAdminEmail(email: string | undefined): boolean {

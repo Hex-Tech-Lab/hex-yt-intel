@@ -1,8 +1,8 @@
 import * as Sentry from '@sentry/nextjs';
 import type { UserTier } from '@/lib/types/billing';
 import type { ModelResolutionPort } from '@/lib/ports';
-import { CHAT_CASCADE, ANALYSIS_CASCADE, REASONING_CASCADE } from '../config/cascade';
-import { getRedisValue, setRedisValue } from '../redis';
+import { CHAT_CASCADE, ANALYSIS_CASCADE, REASONING_CASCADE } from '@lib/config/cascade';
+import { getRedisValue, setRedisValue } from '@lib/redis';
 import { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
 
 type ModelKind = 'chat' | 'analysis';
