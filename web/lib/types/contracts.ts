@@ -74,7 +74,7 @@ export const AnalysisCreateSchema = z.object({
     )
     .default('Africa/Cairo')
     .describe('IANA timezone for timestamps'),
-  persona: z.enum(['p1', 'p2', 'p3', 'p4', 'p5']).optional().describe('Target persona (p1=Content Creator, p2=Indie Maker, p3=Consultant, p4=Researcher, p5=Product Manager)'),
+  persona: z.enum(['creator', 'indieMaker', 'consultant', 'researcher', 'productManager']).optional().describe('Target persona'),
   forceRefresh: z.boolean().optional().default(false).describe('Force cache bypass and generate fresh analysis'),
 });
 

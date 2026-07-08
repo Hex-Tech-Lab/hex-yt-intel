@@ -20,7 +20,7 @@ import type {
   RelatedRef,
   RelationKind,
   SynthesisInput,
-} from '../types/knowledge-graph';
+} from '@lib/types/knowledge-graph';
 import type { SimilarityEngine } from './similarity';
 import { TfIdfSimilarityEngine } from './similarity';
 
