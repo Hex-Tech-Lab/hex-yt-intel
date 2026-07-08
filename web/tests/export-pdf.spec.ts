@@ -227,16 +227,13 @@ test.describe('TEST SUITE 3: Export PDF', () => {
     );
     const analysisData = await analysisResp.json();
 
-    // Analysis should contain dimension headers
+    // Analysis must contain dimension headers
     const analysisContent = analysisData.analysis || '';
     const dimensionPattern = /DIMENSION\s+\d+|Dimension\s+\d+|###\s+.*Dimension/i;
 
-    const hasDimensions = dimensionPattern.test(analysisContent);
-    console.log(`[PDF Content] Has dimension headers: ${hasDimensions}`);
-
-    if (hasDimensions) {
-      expect(analysisContent).toMatch(dimensionPattern);
-    }
+    console.log(`[PDF Content] Dimension headers present: ${dimensionPattern.test(analysisContent)}`);
+    // Should fail if dimensions are missing - this is a contract requirement
+    expect(analysisContent).toMatch(dimensionPattern);
   });
 
   test('PDF API contract: accepts analysisId parameter', async ({
