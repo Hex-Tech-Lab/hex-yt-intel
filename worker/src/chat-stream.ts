@@ -9,6 +9,7 @@ import { createAtomicPersist } from "./services/atomic-persist";
 import { signBoundContent, secretFingerprint } from "./crypto";
 import { isProductionEnv } from "./env-utils";
 import { isValidAppUrl } from "./middleware/cors";
+import { buildAdaptiveOptions, type UserKnowledgeContext } from "./services/AdaptiveOptionsBuilder";
 
 /**
  * TTL for the bound chat-persist content signature. Generous (10 min) to absorb
@@ -48,6 +49,8 @@ interface ChatStreamRequest {
   exp: number;
   appUrl?: string;
   requestId?: string;
+  // Optional user knowledge context for adaptive OPTIONS generation
+  knowledgeContext?: UserKnowledgeContext;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -237,6 +240,20 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   const rawReq = c.req.raw;
   const clientSignal = rawReq.signal;
 
+  // Build adaptive OPTIONS before streaming starts
+  let adaptiveOptions: string[] = [];
+  try {
+    const currentTopic = history && history.length > 0
+      ? history[history.length - 1]?.content || ""
+      : grounding;
+    adaptiveOptions = await buildAdaptiveOptions(req.knowledgeContext, currentTopic);
+  } catch (err) {
+    // Fallback to empty if OPTIONS generation fails
+    console.warn("[chat-stream] OPTIONS generation failed, will send empty options",
+      err instanceof Error ? err.message : String(err));
+    adaptiveOptions = [];
+  }
+
   const stream = new ReadableStream({
     async start(controller) {
       const send = (obj: unknown) => {
@@ -247,6 +264,11 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           console.warn("[chat-stream] client disconnected during stream send", e instanceof Error ? e.message : String(e));
         }
       };
+
+      // Send OPTIONS as first event (before delta streaming starts)
+      if (adaptiveOptions.length > 0) {
+        send({ type: "options", content: adaptiveOptions, requestId: req.requestId });
+      }
 
       let full = "";
       try {
