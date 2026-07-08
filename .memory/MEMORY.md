@@ -1,80 +1,23 @@
 # hex-yt-intel: Quick Reference
 
-**Session**: 2026-05-12 (Consolidation Complete)  
-**Status**: ✅ **DEPLOYMENT COMPLETE & VERIFIED**
+**Purpose of this file**: a lightweight index pointing to the current source of truth — not a status narrative itself. The previous version of this file described a 2026-05-12-era state (worker subdomain consolidation, a 16-section v3.2 framework, a Claude-3.5-Haiku ban against a model roster that no longer exists) that is no longer current. That content is preserved in git history; treat none of it as live guidance.
 
 ---
 
-## Current Status: 95% Complete, Ready for Skills Platform
+## Read these, in this order, at the start of a session
 
-### 🏗️ Architectural & Security Constraints
-- **Architecture**: Hexagonal Lite + DDD. Core domain services (ReasoningEngine, PromptBuilder, LLMCascade) live in `worker/src/services/` and are NOT adapters. Only external DB/infra connectors go in `/adapters/`.
-- **LLM Ban**: Claude 3.5 Haiku is PERMANENTLY BANNED. We exclusively use `anthropic/claude-haiku-4.5` (or other verified fallbacks). Never suggest or convert to 3.5.
+1. **`.memory/project_status.md`** — current, code-verified state: what's live, what's confirmed still open, known regressions/discrepancies caught by re-checking docs against actual code. Rewritten 2026-07-07; rewrite it again wholesale (don't patch around drift) the next time it goes stale.
+2. **`docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-AND-DIM0.md`** — full narrative for the most recent work: root causes, fixes, ADRs, inflection points, blind spots, lessons.
+3. **`CLAUDE.md`** — master infrastructure spec, deployment coordinates, and the ADR ledger (§3 — backfilled 2026-07-07, was stale for weeks).
+4. **`.memory/ADRS.md`** — the append-only architectural decision log (mandatory per `AGENTS.md` — write an entry here before any cost/logic/architecture decision).
+5. **`.memory/AGENT_LEDGER.md`** — the shared concurrency ledger. Read before touching any file; append `[IN_PROGRESS]`/`[DONE]` per the protocol in `CLAUDE.md` §2. **Caveat learned 2026-07-07**: a `[DONE]` entry here is not permanent proof the described code still exists — a later refactor can silently drop earlier work (confirmed case: a 2026-06-19 entry claims a `TimestampLink` component was built and wired in; it does not exist in the current codebase). Verify against the actual file before trusting an old ledger claim.
+6. **`.memory/lessons.md`** — accumulated lessons. Lessons 1-8 are from the 2026-05-12-era Cloudflare-consolidation work (historically accurate for that era, not current-state claims). Lessons 9-12 (2026-07-07) are current.
 
-### ✅ What's Done
-- Ultimate Content Intelligence v3.2 (16 sections, fully integrated)
-- Cloudflare Worker (yt-intel.hex-tech-lab.workers.dev, LIVE, tested)
-- Skill logic (skill/src/index.ts, end-to-end verified)
-- GitHub repo (PUBLIC, https://github.com/Hex-Tech-Lab/hex-yt-intel, all code pushed)
-- Documentation (CLAUDE.md, manifest.json, README.md updated)
-- **Worker consolidation** (4 workers → 1, kellybakri → hex-tech-lab) ✅
-- **Subdomain resolved** (hex-tech-lab.workers.dev confirmed) ✅
-- **Secrets configured** (YouTube API key set via wrangler secret) ✅
-- **Tests verified** (Worker responds, skill generates 16-section analysis) ✅
+## Standing rules that are still live (verified 2026-07-07)
 
-### 🚀 NO BLOCKERS | Ready for Next Steps
-- ✅ Subdomain: hex-tech-lab.workers.dev (confirmed & deployed)
-- ✅ Workers: Consolidated to single "yt-intel" (env.production collision fixed)
-- ✅ References: All kellybakri → hex-tech-lab (updated in 4+ files)
-- ✅ Endpoint: https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata (live)
-- ✅ GitHub: All changes committed (commit 97d5b4b)
+- **Package manager**: `pnpm` only.
+- **qa-intel** (`scripts/verify-quality-engine.ts`) must be run from the **repo root**, not `web/` — fails with `ERR_MODULE_NOT_FOUND` otherwise. CI blocks on HIGH severity only.
+- **`CHAT_PROTOCOL`** (`web/lib/config/prompts.ts`) is the single source of truth for the chat's system prompt — it's bundled into the Cloudflare Worker by esbuild, there is no separate worker-side copy to sync.
+- **Service-client routes** (`getSupabaseServiceClient()`) get zero protection from Postgres RLS by design — every such route needs its own explicit ownership check in code. One IDOR from a missing check was fixed 2026-07-07 (ADR 009); a repo-wide sweep for the same pattern elsewhere is still open (task #64).
 
-### What's Next (For Next Session)
-1. Register skill with Claude Skills Platform
-2. Deploy to Claude Web (@hex-yt-intel)
-3. Test end-to-end in Claude environment
-4. Mark project COMPLETE ✅
-
----
-
-## Critical Files (Latest 2026-05-12)
-- **CLAUDE.md** — Deployment status, secrets, quick commands
-- **wrangler.toml** — Worker config (NO env.production collision)
-- **skill/manifest.json** — 16 sections, correct endpoint, platform metadata
-- **skill/src/index.ts** — CLOUDFLARE_WORKER_URL = hex-tech-lab
-
----
-
-## Latest Commits (Consolidation)
-- **97d5b4b**: docs(memory): commit memory files to GitHub
-- **785d122**: docs: update CLAUDE.md consolidation status
-- **ad1b0cb**: fix(wrangler): remove env.production name field
-- **c1f852f**: fix(cloudflare): consolidate to hex-tech-lab subdomain
-
----
-
-## Endpoint Verification (2026-05-12)
-```
-✓ https://yt-intel.hex-tech-lab.workers.dev/fetch-metadata?video_id=M-uUFLU9IFU
-✓ Returns: 179,669 views, 6,543 likes, DesignCode channel
-✓ Skill test: Generates full 16-section analysis prompt
-✓ Framework: Ultimate Content Intelligence v3.2 ready
-```
-
----
-
-## For Next Session: Skills Platform Registration
-- Use manifest.json from GitHub
-- Register @hex-yt-intel trigger
-- Endpoint: https://yt-intel.hex-tech-lab.workers.dev
-- Deploy to Claude Web (CCW)
-
----
-
-## Detail Memory Files
-- **project_status.md** — Full state, timeline, consolidation details
-- **production_fix_complete.md** — FINAL: Supabase production integration verified & fixed
-- **decisions.md** — Strategic choices & reasoning
-- **lessons.md** — 7 critical lessons (Cloudflare, docs, verification)
-- [Session Handover v1.5.2](session_handover_v1.5.2.md) - PR #62 submission status & handover for GCT1.
-- Never change OpenRouter model names unless explicitly requested. `anthropic/claude-haiku-4.5` and `anthropic/claude-sonnet-4.6:nitro` are correct.
+Do not add narrative status content back into this file — that belongs in `project_status.md`. Keep this one a short index.
