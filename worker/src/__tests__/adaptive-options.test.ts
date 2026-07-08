@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   buildAdaptiveOptions,
   getStaticOptions,
@@ -8,7 +8,6 @@ import {
   sanitizeOption,
   fillTemplate,
   validateOptionsList,
-  STATIC_OPTIONS,
 } from "../utils/option-templates";
 
 describe("AdaptiveOptionsBuilder", () => {
@@ -137,8 +136,6 @@ describe("AdaptiveOptionsBuilder", () => {
       const options1 = await buildAdaptiveOptions(context, "discussion");
       const options2 = await buildAdaptiveOptions(context, "discussion");
 
-      // At least one option should differ (randomization in templates)
-      const allSame = options1.every((opt, i) => opt === options2[i]);
       // Note: This test may occasionally fail due to random chance, but is statistically sound
       // For robustness, we just check both are valid
       expect(options1.length).toBeGreaterThanOrEqual(3);

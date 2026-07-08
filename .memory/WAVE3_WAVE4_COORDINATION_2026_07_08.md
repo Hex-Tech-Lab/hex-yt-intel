@@ -52,7 +52,7 @@
 - **CodeRabbit**: ~5-10 min wait if rate limited, can re-trigger after
 - **DeepSource**: JavaScript analyzer, check for blocking issues
 - **Codacy**: 0 new issues acceptance
-- **PR Source Limit**: Verify <150K bifs before submitting
+- **PR Source Limit**: Verify <150K diffs before submitting
 - **GitHub Actions**: Standard 7-stage pipeline
 
 ---
@@ -79,8 +79,8 @@ Start (T=0)
 │
 └─ Both PRs Submitted by T=8h
    ├─ CI runs in parallel
-   ├─ Wave 1 review (code review tools)
-   ├─ Wave 2 review (tests + deployment)
+   ├─ Code review (CodeRabbit, Codacy, DeepSource)
+   ├─ Tests + CI validation (GitHub Actions 7-stage pipeline)
    └─ Both merge by T=16h if green
 ```
 
@@ -89,8 +89,8 @@ Start (T=0)
 ## PR Grouping Strategy
 
 **PR #129 (Wave 3)**: UI Rendering Fixes
-- Scope: web/components/templates/ + web/lib/visualization/
-- Test: Visual regression + screenshot comparison
+- Scope: web/components/templates/console/ + web/lib/__tests__/
+- Test: Visual regression + component unit tests
 - Risk: Low (visual only, no data model changes)
 
 **PR #130 (Wave 4)**: Knowledge Loop Implementation

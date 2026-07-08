@@ -14,7 +14,6 @@ import {
   QuestionCaptureRequestSchema,
   QuestionCaptureResponseSchema,
 } from '@/lib/types/question-capture';
-import { z } from 'zod';
 
 describe('QuestionCaptureRequestSchema', () => {
   it('accepts valid request with required fields', () => {
@@ -156,8 +155,6 @@ describe('Question Capture Architecture', () => {
     // Even if timestamp and conversation are identical, different UUIDs
     // ensure no collisions. Storage layer uses "upsert: false" to prevent
     // overwrites (idempotent guard via unique filename).
-    const now = new Date().toISOString();
-    const conversationId = 'conv-123';
 
     // Both requests would have:
     // - Same conversationId, userId, timestamp

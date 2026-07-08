@@ -193,11 +193,13 @@ describe('WordCloud Font Sizing and Scaling', () => {
     expect(inactiveTextColor).toBe('#00FF00');
   });
 
-  it('increases opacity for selected words', () => {
+  it('changes text color based on selection state', () => {
     const isSelected = true;
-    const opacity = isSelected ? 1 : 0.7;
+    const inkColor = '#E2E8F0';
+    const entityColor = '#00FF00';
+    const textColor = isSelected ? inkColor : entityColor;
 
-    expect(opacity).toBe(1);
+    expect(textColor).toBe(inkColor);
   });
 
   it('uses proportional font sizing formula: 11 + normalizedWeight * 15', () => {

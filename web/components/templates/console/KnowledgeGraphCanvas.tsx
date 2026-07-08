@@ -250,7 +250,7 @@ export function KnowledgeGraphCanvas({
             const clampedFontSize = Math.max(minFontSize * 0.6, Math.min(maxFontSize, weightedFontSize / Math.sqrt(scale)));
 
             // Font weight: bold (700) for selected nodes, regular (400) otherwise
-            const fontWeight = isActive ? 700 : 400;
+            const fontWeight = node.id === selectedId ? 700 : 400;
             ctx.font = `${fontWeight} ${clampedFontSize}px Inter, system-ui, -apple-system, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';

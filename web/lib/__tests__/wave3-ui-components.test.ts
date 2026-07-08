@@ -136,38 +136,44 @@ describe('KnowledgeGraphCanvas Font Sizing', () => {
   });
 
   it('clamps font size within valid range', () => {
-    const baseFontSize = 9.5;
+    const nodeWeight = 0.5;
     const scale = 1.0;
-    const minFontSize = 6.5;
-    const maxFontSize = 12;
-
+    const minFontSize = 11;
+    const maxFontSize = 26;
+    const weightedFontSize = minFontSize + (nodeWeight * (maxFontSize - minFontSize));
     const clampedFontSize = Math.max(
-      minFontSize,
-      Math.min(maxFontSize, baseFontSize / Math.sqrt(scale))
+      minFontSize * 0.6,
+      Math.min(maxFontSize, weightedFontSize / Math.sqrt(scale))
     );
 
-    expect(clampedFontSize).toBeGreaterThanOrEqual(minFontSize);
+    expect(clampedFontSize).toBeGreaterThanOrEqual(minFontSize * 0.6);
     expect(clampedFontSize).toBeLessThanOrEqual(maxFontSize);
-    expect(clampedFontSize).toBe(9.5);
+    expect(clampedFontSize).toBeCloseTo(18.5, 1); // 11 + 0.5 * 15 = 18.5
   });
 
   it('scales font size down when zoomed out (scale < 1)', () => {
-    const baseFontSize = 9.5;
+    const nodeWeight = 1.0;
     const scale = 0.5; // zoomed out
-    const clampedFontSize = Math.max(6.5, Math.min(12, baseFontSize / Math.sqrt(scale)));
+    const minFontSize = 11;
+    const maxFontSize = 26;
+    const weightedFontSize = minFontSize + (nodeWeight * (maxFontSize - minFontSize));
+    const clampedFontSize = Math.max(
+      minFontSize * 0.6,
+      Math.min(maxFontSize, weightedFontSize / Math.sqrt(scale))
+    );
 
-    // Math.sqrt(0.5) ≈ 0.707, so 9.5 / 0.707 ≈ 13.4, clamped to 12
-    expect(clampedFontSize).toBeLessThanOrEqual(12);
-    expect(clampedFontSize).toBeGreaterThan(baseFontSize);
+    // sqrt(0.5) ≈ 0.707, so 26 / 0.707 ≈ 36.8, clamped to maxFontSize 26
+    expect(clampedFontSize).toBeLessThanOrEqual(maxFontSize);
+    expect(clampedFontSize).toBeGreaterThanOrEqual(minFontSize * 0.6);
   });
 
-  it('applies medium font weight (500) for normal labels', () => {
-    const fontWeight = 500;
+  it('applies regular font weight (400) for normal labels', () => {
+    const fontWeight = 400;
     const fontSize = 9.5;
     const fontFace = 'Inter, system-ui, -apple-system, sans-serif';
     const fontString = `${fontWeight} ${fontSize}px ${fontFace}`;
 
-    expect(fontString).toContain('500'); // medium weight
+    expect(fontString).toContain('400'); // regular weight
     expect(fontString).toContain('9.5px');
   });
 
