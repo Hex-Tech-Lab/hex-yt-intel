@@ -15,11 +15,12 @@ export const maxDuration = 300; // 5 minutes for processing all users
  * Header: upstash-signature (HMAC-SHA256 verification)
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { NextRequest, NextResponse } from 'next/server';
+
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { buildMonthlyWiki, getAllActiveUsers } from '@/lib/skills/wiki-builder/wiki-builder';
 import { getSupabaseServiceClient } from '@/lib/supabase';
-import * as Sentry from '@sentry/nextjs';
 
 interface WebhookResult {
   ok: boolean;
