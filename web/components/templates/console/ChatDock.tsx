@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, startTransition, useTransition } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
@@ -178,7 +179,12 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
         };
       });
     } catch (error) {
-      console.debug('[ChatDock] Follow-up prompt generation failed:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[ChatDock] Follow-up prompt generation failed:', { message, error });
+      Sentry.captureException(error, {
+        tags: { component: 'ChatDock', operation: 'followup-prompts' },
+        level: 'warning',
+      });
     }
   }, [messages, activeId, sending]);
 

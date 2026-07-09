@@ -184,7 +184,7 @@ export const ImportOrderingRule: IRule = {
         categories.types.push(specifier);
       } else if (specifier.startsWith('./') || specifier.startsWith('../') || specifier.startsWith('@/')) {
         categories.internal.push(specifier);
-      } else if (specifier === 'react' || specifier.startsWith('react') || specifier.startsWith('next')) {
+      } else if (specifier === 'react' || specifier.startsWith('react') || specifier.startsWith('next') || specifier === 'zustand' || specifier.startsWith('@sentry')) {
         categories.framework.push(specifier);
       } else {
         categories.thirdparty.push(specifier);
@@ -202,7 +202,7 @@ export const ImportOrderingRule: IRule = {
       let category: typeof order[number] = 'thirdparty';
       if (isTypeOnly) category = 'types';
       else if (specifier.startsWith('./') || specifier.startsWith('../') || specifier.startsWith('@/')) category = 'internal';
-      else if (specifier === 'react' || specifier.startsWith('react') || specifier.startsWith('next')) category = 'framework';
+      else if (specifier === 'react' || specifier.startsWith('react') || specifier.startsWith('next') || specifier === 'zustand' || specifier.startsWith('@sentry')) category = 'framework';
 
       const currentCategoryIndex = order.indexOf(category);
       if (currentCategoryIndex < lastCategory) {
