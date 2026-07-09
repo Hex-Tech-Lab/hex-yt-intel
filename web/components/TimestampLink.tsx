@@ -1,0 +1,84 @@
+'use client';
+
+import { useVideoStore } from '@/store/useVideoStore';
+import { useCallback } from 'react';
+
+export interface TimestampLinkProps {
+  timestamp: string; // Format: HH:MM:SS or MM:SS or just seconds
+  children?: React.ReactNode;
+  className?: string;
+}
+
+/**
+ * Converts a timestamp string to seconds
+ * Supports formats: HH:MM:SS, MM:SS, or raw seconds
+ */
+function parseTimestamp(timestamp: string): number {
+  const parts = timestamp.split(':').map(p => parseInt(p, 10)).filter(p => !isNaN(p));
+
+  if (parts.length === 3) {
+    // HH:MM:SS
+    const hours = parts[0] ?? 0;
+    const minutes = parts[1] ?? 0;
+    const seconds = parts[2] ?? 0;
+    return hours * 3600 + minutes * 60 + seconds;
+  } else if (parts.length === 2) {
+    // MM:SS
+    const minutes = parts[0] ?? 0;
+    const seconds = parts[1] ?? 0;
+    return minutes * 60 + seconds;
+  } else if (parts.length === 1) {
+    // Raw seconds
+    return parts[0] ?? 0;
+  }
+
+  return 0;
+}
+
+/**
+ * TimestampLink component for clickable timestamps in video content
+ * Clicking the timestamp seeks the video player to that position
+ */
+export function TimestampLink({ timestamp, children, className = '' }: TimestampLinkProps) {
+  const { setSeekTo } = useVideoStore();
+  const seconds = parseTimestamp(timestamp);
+
+  const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (seconds >= 0) {
+      setSeekTo(seconds);
+    }
+  }, [seconds, setSeekTo]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLAnchorElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (seconds >= 0) {
+        setSeekTo(seconds);
+      }
+    }
+  }, [seconds, setSeekTo]);
+
+  return (
+    <a
+      href={`#${timestamp}`}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm font-mono transition-colors hover:bg-accent/20 active:bg-accent/30 cursor-pointer text-accent hover:text-accent-bright focus:outline-none focus:ring-1 focus:ring-accent ${className}`}
+      title={`Seek to ${timestamp}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`Seek to ${timestamp}`}
+    >
+      {children || (
+        <>
+          <span aria-hidden="true">⏱</span>
+          <span>{timestamp}</span>
+        </>
+      )}
+    </a>
+  );
+}
