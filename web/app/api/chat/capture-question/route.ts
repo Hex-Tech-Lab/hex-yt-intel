@@ -140,6 +140,37 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * Build markdown content for question storage.
+ * Format: YAML front matter + content.
+ *
+ * P0 Security Fix: YAML injection prevention
+ * - Quotes and escapes all YAML values to prevent injection via newlines/special chars
+ * - Question content is stored as raw markdown (not in front matter)
+ */
+const buildQuestionMarkdown = (metadata: QuestionStorageMetadata, questionId: string): string => {
+  // Helper: escape YAML string values (quote and escape internal quotes)
+  const escapeYamlValue = (value: string | null | undefined): string => {
+    if (!value) return 'null';
+    return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  };
+
+  const frontMatter = `---
+questionId: ${escapeYamlValue(questionId)}
+conversationId: ${escapeYamlValue(metadata.conversationId)}
+userId: ${escapeYamlValue(metadata.userId)}
+analysisId: ${escapeYamlValue(metadata.analysisId)}
+timestamp: ${escapeYamlValue(metadata.timestamp)}
+---
+
+# User Question
+
+${metadata.question}
+`;
+
+  return frontMatter;
+};
+
+/**
  * Store question metadata in Supabase Storage as markdown file.
  * Fire-and-forget pattern: errors are logged but don't propagate to the caller.
  *
@@ -195,34 +226,3 @@ async function captureQuestionToStorage(
     throw new Error(`[question-capture] ${context}: ${msg}`);
   }
 }
-
-/**
- * Build markdown content for question storage.
- * Format: YAML front matter + content.
- *
- * P0 Security Fix: YAML injection prevention
- * - Quotes and escapes all YAML values to prevent injection via newlines/special chars
- * - Question content is stored as raw markdown (not in front matter)
- */
-const buildQuestionMarkdown = (metadata: QuestionStorageMetadata, questionId: string): string => {
-  // Helper: escape YAML string values (quote and escape internal quotes)
-  const escapeYamlValue = (value: string | null | undefined): string => {
-    if (!value) return 'null';
-    return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-  };
-
-  const frontMatter = `---
-questionId: ${escapeYamlValue(questionId)}
-conversationId: ${escapeYamlValue(metadata.conversationId)}
-userId: ${escapeYamlValue(metadata.userId)}
-analysisId: ${escapeYamlValue(metadata.analysisId)}
-timestamp: ${escapeYamlValue(metadata.timestamp)}
----
-
-# User Question
-
-${metadata.question}
-`;
-
-  return frontMatter;
-};
