@@ -108,7 +108,8 @@ function extractCubicScore(prNumber: number): { score: number; comment?: string 
       }
     }
   } catch (error) {
-    // Silently return 0 for API errors
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[pr-confidence] Failed to extract Cubic score:', msg);
   }
   return { score: 0 };
 }
@@ -144,7 +145,8 @@ function extractCodeRabbitScore(prNumber: number): { score: number; comment?: st
       }
     }
   } catch (error) {
-    // Silently return 0
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[pr-confidence] Failed to extract CodeRabbit score:', msg);
   }
   return { score: 0 };
 }
@@ -180,7 +182,8 @@ function extractSnyxScore(prNumber: number): { score: number; comment?: string }
       }
     }
   } catch (error) {
-    // Silently return 0
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[pr-confidence] Failed to extract Snyk score:', msg);
   }
   return { score: 0 };
 }
@@ -240,7 +243,8 @@ function extractVercelStatus(prNumber: number): { score: number; status?: string
       }
     }
   } catch (error) {
-    // Silently fail
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[pr-confidence] Failed to extract Vercel status:', msg);
   }
   return { score: 0, status: 'not-deployed' };
 }
