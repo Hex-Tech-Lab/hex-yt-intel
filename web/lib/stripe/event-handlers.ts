@@ -77,10 +77,10 @@ export interface DispatchResult {
   retriable?: boolean;
 }
 
-export async function dispatchWebhookEvent(
+export const dispatchWebhookEvent = async (
   event: Stripe.Event,
   supabase: SupabaseClient
-): Promise<DispatchResult> {
+): Promise<DispatchResult> => {
   const handler = EVENT_HANDLERS[event.type];
 
   if (!handler) {
@@ -103,18 +103,14 @@ export async function dispatchWebhookEvent(
       error: message,
     };
   }
-}
+};
 
 /**
  * Check if an event type is handled
  */
-export function isHandledEventType(eventType: string): boolean {
-  return eventType in EVENT_HANDLERS;
-}
+export const isHandledEventType = (eventType: string): boolean => eventType in EVENT_HANDLERS;
 
 /**
  * Get list of all supported event types
  */
-export function getSupportedEventTypes(): string[] {
-  return Object.keys(EVENT_HANDLERS);
-}
+export const getSupportedEventTypes = (): string[] => Object.keys(EVENT_HANDLERS);
