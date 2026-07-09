@@ -14,7 +14,7 @@ export const DatabaseConstraintRule: IRule = {
       // Look for CREATE TABLE without proper constraints
       if (text.includes('CREATE TABLE')) {
         // Check for numeric columns that should have CHECK constraints
-        const numericPattern = /(\w+)\s+(INT|BIGINT|SMALLINT|NUMERIC|DECIMAL|REAL|DOUBLE)\s*[,\s;]/;
+        const numericPattern = /(\w+)\s+(INT|BIGINT|SMALLINT|NUMERIC|DECIMAL|REAL|DOUBLE)\s*[,\s;]/g;
         const matches = text.matchAll(numericPattern);
 
         for (const match of matches) {
@@ -106,22 +106,24 @@ export const DefaultValueConsistencyRule: IRule = {
       const defaultPattern = /DEFAULT\s+(?:'[^']*'|\d+|NULL|false|true)/gi;
       const matches = text.match(defaultPattern) || [];
 
-      // Check for FALSE vs 'false' (string) inconsistency
-      const hasBooleanFalse = matches.some(m => m.includes('false'));
-      const hasStringFalse = matches.some(m => m.includes("'false'"));
+      // Check for FALSE vs 'false' (string) inconsistency - be precise about word boundaries
+      const hasBooleanFalse = matches.some(m => /DEFAULT\s+false\b/i.test(m));
+      const hasStringFalse = matches.some(m => /DEFAULT\s+'false'/i.test(m));
+      const hasBooleanTrue = matches.some(m => /DEFAULT\s+true\b/i.test(m));
+      const hasStringTrue = matches.some(m => /DEFAULT\s+'true'/i.test(m));
 
-      if (hasBooleanFalse && hasStringFalse) {
+      if ((hasBooleanFalse && hasStringFalse) || (hasBooleanTrue && hasStringTrue)) {
         findings.push({
           file: filePath,
           severity: "medium",
           title: "Data Integrity: Inconsistent DEFAULT values (boolean vs string)",
-          why: "Some columns default to boolean false, others to string 'false'. This can cause comparison bugs.",
-          fix: "Standardize all boolean defaults: use FALSE (not 'false') for boolean columns, check type consistency."
+          why: "Some columns default to boolean false/true, others to string 'false'/'true'. This can cause comparison bugs.",
+          fix: "Standardize all boolean defaults: use FALSE/TRUE (not 'false'/'true') for boolean columns, check type consistency."
         });
       }
 
-      // Check for NULL defaults on columns that should be NOT NULL
-      const nullDefaults = text.match(/\w+\s+(?:VARCHAR|INT|BIGINT).*DEFAULT\s+NULL/gi) || [];
+      // Check for NULL defaults on columns that should be NOT NULL (only for explicit constraints)
+      const nullDefaults = text.match(/NOT\s+NULL.*DEFAULT\s+NULL|DEFAULT\s+NULL.*NOT\s+NULL/gi) || [];
       if (nullDefaults.length > 0) {
         findings.push({
           file: filePath,
