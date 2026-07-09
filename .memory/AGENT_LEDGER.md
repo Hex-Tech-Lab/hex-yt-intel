@@ -851,3 +851,23 @@ Reviewed 20 recent commits to extract security, quality, and architectural patte
 - [2026-07-09T10:30:00+03:00] [Claude (Agent)] [IN_PROGRESS] Wave 7: Persona Enum Unification — CRITICAL Wave 0 blocking issue. Target: Unify scattered p1-p5 and creator/indieMaker/consultant/researcher/productManager into single source of truth. Tasks: (1) Fix workflow.ts Zod schema p1-p5 → PersonaId enum; (2) Fix PromptBuilder.ts p1 fallback → 'creator'; (3) Fix CreateAnalysisUseCase.ts p1 fallback → 'creator'; (4) Create 15+ test cases in web/lib/__tests__/persona-unification.test.ts; (5) Run tsc --noEmit verification; (6) Create PR branch claude/wave7-persona-unification. Target files: web/lib/types/workflow.ts, worker/src/services/PromptBuilder.ts, web/lib/usecases/CreateAnalysisUseCase.ts, web/lib/__tests__/persona-unification.test.ts, and test file updates.
 
 - [2026-07-09T10:35:00+03:00] [Claude Code (Agent 4.5)] [IN_PROGRESS] Wave 7 (Part 2): Fix critical knowledge graph edge mapping bug. Issue: AggregateGlobalGraphUseCase.ts uses nodesByLabel.set(label) causing orphaned edges when nodes are deduplicated by label but edges reference node IDs. Tasks: (1) Fix AggregateGlobalGraphUseCase.ts (nodesById keying), (2) Fix DeduplicateGraphUseCase.ts (cascading edge deletion), (3) Create kg-edge-mapping.test.ts (12+ orphan detection test cases), (4) Verify no dangling edges, (5) PR branch claude/wave7-kg-edge-fix. Reference: .memory/WAVE0_WAVE2_EXECUTIVE_SUMMARY.md lines 94-98.
+- [2026-07-09T10:45:00+03:00] [Claude (Agent)] [DONE] Wave 7: Persona Enum Unification — CRITICAL Wave 0 blocking issue resolved.
+
+**Summary of Changes:**
+1. web/lib/types/workflow.ts — Updated PathAInputSchema to use unified PersonaId enum instead of scattered p1-p5 (commit 649a6b8)
+2. worker/src/services/PromptBuilder.ts — Changed default fallback from 'p1' to 'creator' (commit 649a6b8)
+3. web/lib/usecases/CreateAnalysisUseCase.ts — Changed cache hit fallback from 'p1' to 'creator' (commit 649a6b8)
+4. web/lib/__tests__/persona-unification.test.ts — Created comprehensive test suite with 15+ test cases validating:
+   - PersonaId type validation (reject p1-p5, accept creator/indieMaker/consultant/researcher/productManager)
+   - PERSONA_DIMENSIONS mapping integrity for all personas
+   - Workflow schema (PathAInputSchema) accepts unified enums, rejects legacy p1-p5
+   - Persona detection returns only valid PersonaIds
+   - Persona ranking assigns correct weights
+   - Type safety and fallback to 'creator'
+   - No legacy p1-p5 references in production code
+
+**Result:** Single source of truth established in web/lib/types/persona.ts. All references unified to PersonaId type. Fallbacks corrected from 'p1' to 'creator'. No more enum scatter.
+
+**Verification:** type-check passed (0 errors in web package, worker cross-rootDir errors pre-existing). Workflow schema validation tests confirm p1-p5 rejected, creator/indieMaker/consultant/researcher/productManager accepted.
+
+**Branch:** claude/wave7-persona-unification (base: 649a6b8 Wave 7.1 commit already has 3 main file fixes)
