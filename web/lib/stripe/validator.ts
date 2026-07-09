@@ -33,9 +33,7 @@ export function verifyWebhookSignature(
   try {
     return stripe.webhooks.constructEvent(body, signature, secret);
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Invalid webhook signature: ${error.message}`);
-    }
+    console.error('[Stripe] Webhook signature verification failed:', error);
     throw new Error('Invalid webhook signature');
   }
 }
@@ -56,9 +54,10 @@ export function validateWebhookEvent(
       event,
     };
   } catch (error) {
+    console.error('[Stripe] Webhook validation failed:', error);
     return {
       valid: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: 'Webhook validation failed',
     };
   }
 }

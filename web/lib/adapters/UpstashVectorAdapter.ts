@@ -51,7 +51,7 @@ export class UpstashVectorAdapter implements VectorDedupPort {
       return { success: true, deletedCount, deletedNodeIds };
     } catch (error) {
       console.error('[UpstashVectorAdapter] DeduplicateNodes failed:', error);
-      return { success: false, deletedCount, deletedNodeIds, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, deletedCount, deletedNodeIds, error: 'Deduplication operation failed' };
     }
   }
 
