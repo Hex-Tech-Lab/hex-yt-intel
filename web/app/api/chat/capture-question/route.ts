@@ -175,20 +175,22 @@ async function captureQuestionToStorage(
 
     // Handle upload errors
     if (error) {
-      const isDuplicate = error.message.includes('already exists') || error.message.includes('Duplicate');
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const isDuplicate = errorMsg.includes('already exists') || errorMsg.includes('Duplicate');
       if (isDuplicate) {
         // Treat duplicate as idempotent success
-        console.debug('[question-capture] File already exists (idempotent):', filePath);
+        console.debug('[question-capture] File already exists (idempotent)');
         return;
       }
       // Other errors (permission, storage full, etc.) are critical
       throw error;
     }
 
-    console.debug('[question-capture] Question stored successfully:', filePath);
+    console.debug('[question-capture] Question stored successfully');
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    const context = `failed to store question in Supabase Storage (path=${filePath})`;
+    // Don't include filePath in error message (information disclosure prevention)
+    const context = 'Failed to store question in Supabase Storage';
     throw new Error(`[question-capture] ${context}: ${msg}`);
   }
 }
