@@ -70,7 +70,6 @@ export const DatabaseConstraintRule: IRule = {
           if ((expr.includes('insert') || expr.includes('update')) && (expr.includes('db.') || expr.includes('supabase.'))) {
             const args = node.getArguments();
             if (args.length > 0) {
-              const argText = args[0].getText();
               // Check if there's validation before this call
               const parent = node.getFirstAncestorByKind(SyntaxKind.FunctionDeclaration) ||
                              node.getFirstAncestorByKind(SyntaxKind.ArrowFunction);
@@ -149,7 +148,6 @@ export const TruncationValidationRule: IRule = {
       if (Node.isCallExpression(node)) {
         const expr = node.getExpression().getText();
         if (expr.includes('slice') || expr.includes('substring') || expr.includes('substr')) {
-          const args = node.getArguments();
           // Check if this is truncating without indicating truncation (no ellipsis)
           const parent = node.getParent();
           if (parent && !parent.getText().includes('...') && !parent.getText().includes('ellipsis')) {

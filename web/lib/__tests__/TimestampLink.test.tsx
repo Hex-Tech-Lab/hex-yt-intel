@@ -19,7 +19,9 @@ describe('TimestampLink', () => {
   describe('Timestamp Parsing', () => {
     it('should parse HH:MM:SS format correctly', () => {
       const { container } = render(<TimestampLink timestamp="01:30:45" />);
-      fireEvent.click(container.querySelector('a')!);
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) fireEvent.click(link);
 
       const state = useVideoStore.getState();
       expect(state.seekTo).toBe(5445); // 1*3600 + 30*60 + 45
@@ -27,7 +29,9 @@ describe('TimestampLink', () => {
 
     it('should parse MM:SS format correctly', () => {
       const { container } = render(<TimestampLink timestamp="02:30" />);
-      fireEvent.click(container.querySelector('a')!);
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) fireEvent.click(link);
 
       const state = useVideoStore.getState();
       expect(state.seekTo).toBe(150); // 2*60 + 30
@@ -35,7 +39,9 @@ describe('TimestampLink', () => {
 
     it('should parse raw seconds format correctly', () => {
       const { container } = render(<TimestampLink timestamp="45" />);
-      fireEvent.click(container.querySelector('a')!);
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) fireEvent.click(link);
 
       const state = useVideoStore.getState();
       expect(state.seekTo).toBe(45);
@@ -43,7 +49,9 @@ describe('TimestampLink', () => {
 
     it('should handle zero timestamp', () => {
       const { container } = render(<TimestampLink timestamp="00:00:00" />);
-      fireEvent.click(container.querySelector('a')!);
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) fireEvent.click(link);
 
       const state = useVideoStore.getState();
       expect(state.seekTo).toBe(0);
@@ -51,7 +59,9 @@ describe('TimestampLink', () => {
 
     it('should handle invalid timestamp gracefully', () => {
       const { container } = render(<TimestampLink timestamp="invalid" />);
-      fireEvent.click(container.querySelector('a')!);
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) fireEvent.click(link);
 
       const state = useVideoStore.getState();
       expect(state.seekTo).toBe(0);
@@ -61,40 +71,48 @@ describe('TimestampLink', () => {
   describe('Click Handling', () => {
     it('should trigger setSeekTo on click', () => {
       const { container } = render(<TimestampLink timestamp="01:23" />);
-      const link = container.querySelector('a')!;
-
-      fireEvent.click(link);
-      const state = useVideoStore.getState();
-      expect(state.seekTo).toBe(83); // 1*60 + 23
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) {
+        fireEvent.click(link);
+        const state = useVideoStore.getState();
+        expect(state.seekTo).toBe(83); // 1*60 + 23
+      }
     });
 
     it('should prevent default link behavior', () => {
       const { container } = render(<TimestampLink timestamp="01:23" />);
-      const link = container.querySelector('a')!;
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) {
+        const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
 
-      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-
-      fireEvent.click(link, event as any);
-      expect(preventDefaultSpy).toHaveBeenCalled();
+        fireEvent.click(link, event as any);
+        expect(preventDefaultSpy).toHaveBeenCalled();
+      }
     });
 
     it('should stop event propagation on click', () => {
       const { container } = render(<TimestampLink timestamp="01:23" />);
-      const link = container.querySelector('a')!;
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) {
+        const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+        const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
 
-      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
-
-      fireEvent.click(link, event as any);
-      expect(stopPropagationSpy).toHaveBeenCalled();
+        fireEvent.click(link, event as any);
+        expect(stopPropagationSpy).toHaveBeenCalled();
+      }
     });
   });
 
   describe('Keyboard Handling', () => {
     it('should trigger setSeekTo on Enter key', () => {
       const { container } = render(<TimestampLink timestamp="00:30" />);
-      const link = container.querySelector('a')!;
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) {
 
       fireEvent.keyDown(link, { key: 'Enter' });
       const state = useVideoStore.getState();
