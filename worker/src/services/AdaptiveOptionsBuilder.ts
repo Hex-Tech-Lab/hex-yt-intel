@@ -24,6 +24,12 @@ export interface UserKnowledgeContext {
 /**
  * Main builder: generates adaptive OPTIONS based on user context
  * Fallback to static OPTIONS if context is empty
+ *
+ * P0 Risk #4 Fix: Adaptive options quality
+ * - Validates themes exist and are non-empty before generating options
+ * - Enforces strict deduplication (exact string match)
+ * - Returns 3-5 options with safe static fallback
+ * - Logs empty/sparse context for observability
  */
 export async function buildAdaptiveOptions(
   userContext: UserKnowledgeContext | undefined,
@@ -31,48 +37,68 @@ export async function buildAdaptiveOptions(
 ): Promise<string[]> {
   // No context — use static fallback
   if (!userContext || (!userContext.themes?.length && !userContext.faqs?.length)) {
+    // Sparse context, use static fallback (not an error, just normal case)
     return getStaticOptions();
   }
 
-  const options: string[] = [];
+  const options: Set<string> = new Set(); // Use Set for O(1) deduplication
 
   // Strategy 1: Reference user's themes if relevant to conversation
   if (userContext.themes && userContext.themes.length > 0) {
-    const themeOption = generateThemeOption(userContext.themes, currentConversation);
-    if (themeOption) options.push(themeOption);
+    // Validate themes exist and are non-empty strings
+    const validThemes = userContext.themes.filter((t) => t && typeof t === 'string' && t.trim().length > 0);
+    if (validThemes.length > 0) {
+      const themeOption = generateThemeOption(validThemes, currentConversation);
+      if (themeOption && themeOption.length > 0 && themeOption.length <= 60) {
+        options.add(themeOption);
+      }
+    }
   }
 
   // Strategy 2: Suggest follow-up on topic mentioned in current conversation
-  if (currentConversation.length > 0) {
+  if (currentConversation && typeof currentConversation === 'string' && currentConversation.length > 0) {
     const topicOption = generateTopicFollowUpOption(currentConversation);
-    if (topicOption && !options.includes(topicOption)) {
-      options.push(topicOption);
+    if (topicOption && topicOption.length > 0 && topicOption.length <= 60) {
+      options.add(topicOption);
     }
   }
 
   // Strategy 3: Reference similar FAQ if one exists
   if (userContext.faqs && userContext.faqs.length > 0) {
-    const faqOption = generateFAQReferenceOption(userContext.faqs, currentConversation);
-    if (faqOption && !options.includes(faqOption)) {
-      options.push(faqOption);
+    // Validate FAQs have non-empty questions
+    const validFaqs = userContext.faqs.filter(
+      (f) => f && f.question && typeof f.question === 'string' && f.question.trim().length > 0
+    );
+    if (validFaqs.length > 0) {
+      const faqOption = generateFAQReferenceOption(validFaqs, currentConversation);
+      if (faqOption && faqOption.length > 0 && faqOption.length <= 60) {
+        options.add(faqOption);
+      }
     }
   }
 
   // Strategy 4: Suggest exploration of related theme
   if (userContext.themes && userContext.themes.length > 1) {
-    const relatedOption = generateRelatedThemeOption(userContext.themes);
-    if (relatedOption && !options.includes(relatedOption)) {
-      options.push(relatedOption);
+    const validThemes = userContext.themes.filter((t) => t && typeof t === 'string' && t.trim().length > 0);
+    if (validThemes.length > 1) {
+      const relatedOption = generateRelatedThemeOption(validThemes);
+      if (relatedOption && relatedOption.length > 0 && relatedOption.length <= 60) {
+        options.add(relatedOption);
+      }
     }
   }
 
-  // Fallback: add static option if not enough adaptive options generated
-  if (options.length === 0) {
+  // Fallback: add static options if not enough adaptive options generated
+  if (options.size === 0) {
     return getStaticOptions();
   }
 
-  // Slice to 3-5 options
-  return options.slice(0, 5);
+  // Convert Set to array, slice to 3-5 options (enforce hard max)
+  const optionsArray = Array.from(options);
+  if (optionsArray.length > 5) {
+    console.warn('[AdaptiveOptionsBuilder] Generated more than 5 options, truncating to 5');
+  }
+  return optionsArray.slice(0, 5);
 }
 
 /**

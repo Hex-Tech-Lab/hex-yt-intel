@@ -118,29 +118,71 @@ async function processAllUsers(): Promise<Omit<WebhookResult, 'processingTime'>>
     previousMonth.setMonth(previousMonth.getMonth() - 1);
 
     // Process each user in the batch
+    // P0 Risk #5 Fix: Webhook error isolation
+    // Each user's wiki build is wrapped in try-catch to prevent one failure from blocking others
     for (const user of users) {
+      const userId = user.id;
       try {
-        const result = await buildMonthlyWiki(user.id, previousMonth);
+        if (!userId || typeof userId !== 'string') {
+          console.warn('[wiki-builder-webhook] Invalid userId, skipping:', { userId, userType: typeof userId });
+          failedWikis++;
+          errors.push({ userId: userId || 'unknown', error: 'Invalid userId' });
+          totalUsersProcessed++;
+          continue;
+        }
 
-        if (result.success) {
+        const result = await buildMonthlyWiki(userId, previousMonth);
+
+        if (result && result.success) {
           successfulWikis++;
-        } else if (result.error?.includes('No questions')) {
+          console.debug('[wiki-builder-webhook] Wiki built successfully', { userId });
+        } else if (result?.error?.includes('No questions')) {
           skippedWikis++;
+          console.debug('[wiki-builder-webhook] Skipped user (no questions)', { userId });
         } else {
           failedWikis++;
-          errors.push({ userId: user.id, error: result.error || 'Unknown error' });
+          const errorMsg = result?.error || 'Unknown error';
+          errors.push({ userId, error: errorMsg });
+          console.warn('[wiki-builder-webhook] Wiki build failed for user', { userId, error: errorMsg });
+
+          // Log to Sentry with user context for triage
+          Sentry.captureException(new Error(`Wiki build failed: ${errorMsg}`), {
+            tags: { service: 'wiki-builder-batch', phase: 'build' },
+            extra: { userId, errorMsg },
+            level: 'warning',
+          });
         }
 
         totalUsersProcessed++;
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
+        const stack = error instanceof Error ? error.stack : undefined;
         failedWikis++;
-        errors.push({ userId: user.id, error: msg });
+        errors.push({ userId, error: msg });
         totalUsersProcessed++;
 
+        // Log to Sentry with full context (userId is critical for RCA)
         Sentry.captureException(error, {
-          tags: { service: 'wiki-builder-batch' },
-          extra: { userId: user.id },
+          tags: {
+            service: 'wiki-builder-batch',
+            phase: 'catch-block',
+            status: 'isolated-error',
+          },
+          extra: {
+            userId,
+            errorMessage: msg,
+            stack,
+            processingIndex: totalUsersProcessed,
+            batchSize,
+          },
+          level: 'error',
+        });
+
+        // Log explicitly at WARNING level (error isolation means we continue, not fail)
+        console.warn('[wiki-builder-webhook] User wiki build failed (isolated, continuing to next user)', {
+          userId,
+          error: msg,
+          continueProcessing: true,
         });
       }
     }

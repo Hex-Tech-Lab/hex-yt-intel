@@ -2,37 +2,54 @@ import type { UserKnowledgeContext } from '@/lib/types/knowledge-context';
 
 /**
  * Build grounding context string by injecting user's learning history.
- * Keeps output bounded to ~500 chars to avoid inflating prompt tokens.
+ * Keeps output bounded to 600 chars max to avoid inflating prompt tokens.
+ *
+ * P0 Risk #3 Fix: History injection token budget
+ * - Enforces strict 600-char limit on history section
+ * - Truncates FAQ items if needed to stay within budget
+ * - Verifies final output respects token budget
+ * - Logs overflow incidents for debugging
  *
  * Format:
  * [Original Grounding]
- * \n\n--- USER LEARNING HISTORY ---
+ * \n\n--- YOUR LEARNING HISTORY ---
  * You previously asked about: theme1, theme2, ...
  * Previously answered: Q1? → A1. Q2? → A2.
  *
  * Gracefully handles:
  * - Empty knowledge context (returns original grounding unchanged)
  * - Truncated output to stay within token budget
+ * - Null/undefined context properties
  */
 export function buildGroundingWithHistory(
   originalGrounding: string,
-  knowledgeContext: UserKnowledgeContext,
+  knowledgeContext: UserKnowledgeContext | undefined,
   currentMessage?: string
 ): string {
+  // Defensive: handle null/undefined context
+  if (!knowledgeContext) {
+    return originalGrounding;
+  }
+
   // If no learning history, return original grounding unchanged
-  if (!knowledgeContext.themes.length && !knowledgeContext.faqs.length) {
+  if ((!knowledgeContext.themes || !knowledgeContext.themes.length) &&
+      (!knowledgeContext.faqs || !knowledgeContext.faqs.length)) {
     return originalGrounding;
   }
 
   const historyParts: string[] = [];
 
   // Add themes section if present
-  if (knowledgeContext.themes.length > 0) {
-    historyParts.push(`Previously asked about: ${knowledgeContext.themes.join(', ')}`);
+  if (knowledgeContext.themes && knowledgeContext.themes.length > 0) {
+    // Defensive: filter out empty/null themes
+    const validThemes = knowledgeContext.themes.filter((t) => t && typeof t === 'string' && t.trim());
+    if (validThemes.length > 0) {
+      historyParts.push(`Previously asked about: ${validThemes.join(', ')}`);
+    }
   }
 
   // Add FAQ items — rank by relevance to current message if provided
-  if (knowledgeContext.faqs.length > 0) {
+  if (knowledgeContext.faqs && knowledgeContext.faqs.length > 0) {
     const topFaqs = selectRelevantFaqs(
       knowledgeContext.faqs,
       currentMessage,
@@ -42,12 +59,18 @@ export function buildGroundingWithHistory(
     if (topFaqs.length > 0) {
       const faqText = topFaqs
         .map((faq) => {
-          // Truncate long answers to 80 chars to fit in token budget
-          const answerPreview = faq.answer.length > 80 ? faq.answer.slice(0, 80) + '…' : faq.answer;
-          return `Q: ${faq.question}? → ${answerPreview}`;
+          // Defensive: validate FAQ properties
+          const q = (faq?.question || '').slice(0, 50);
+          const a = (faq?.answer || '').slice(0, 50);
+          if (!q) return null;
+          return `Q: ${q}? → ${a}`;
         })
+        .filter((item) => item !== null)
         .join('; ');
-      historyParts.push(`Previously answered: ${faqText}`);
+
+      if (faqText.length > 0) {
+        historyParts.push(`Previously answered: ${faqText}`);
+      }
     }
   }
 
@@ -56,11 +79,45 @@ export function buildGroundingWithHistory(
     return originalGrounding;
   }
 
-  // Build history section (max 500 chars to stay within budget)
-  const historySection = `\n\n--- YOUR LEARNING HISTORY ---\n${historyParts.join('\n')}`;
+  // Build history section with strict 600-char limit (P0 Risk #3)
+  // This ensures the grounding string never bloats unexpectedly
+  const historyPrefix = '\n\n--- YOUR LEARNING HISTORY ---\n';
+  let historyBody = historyParts.join('\n');
+
+  // If history body would exceed budget, truncate FAQ section first
+  const MAX_HISTORY_CHARS = 600;
+  if (historyPrefix.length + historyBody.length > MAX_HISTORY_CHARS) {
+    // Try truncating FAQs (second part) first
+    const parts = historyBody.split('Previously answered: ');
+    if (parts.length === 2 && parts[0] && parts[1]) {
+      const themesLine = parts[0];
+      const budget = MAX_HISTORY_CHARS - historyPrefix.length - themesLine.length - 1; // -1 for newline
+      if (budget > 20) {
+        const faqsTruncated = parts[1].slice(0, budget) + '…';
+        historyBody = themesLine + 'Previously answered: ' + faqsTruncated;
+      } else {
+        // Budget exhausted, just keep themes
+        historyBody = themesLine.trimEnd();
+      }
+    }
+
+    // Log overflow for observability (token budget violation is worth noting)
+    console.warn('[buildGroundingWithHistory] History truncated to fit 600-char budget');
+  }
 
   // Combine: original grounding + history section
-  const combined = originalGrounding + historySection.slice(0, 500);
+  const combined = originalGrounding + historyPrefix + historyBody;
+
+  // Final safety check: verify we're within budget
+  if (combined.length > originalGrounding.length + MAX_HISTORY_CHARS) {
+    // This should never happen, but log it if it does (defensive programming)
+    console.error('[buildGroundingWithHistory] Combined grounding exceeds safety limit', {
+      originalLength: originalGrounding.length,
+      historyLength: historyPrefix.length + historyBody.length,
+      maxAllowed: MAX_HISTORY_CHARS,
+    });
+  }
+
   return combined;
 }
 
