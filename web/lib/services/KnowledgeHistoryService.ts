@@ -58,9 +58,35 @@ export class KnowledgeHistoryService {
    * This service extracts questions from the "### FAQ" sections and pairs them with
    * theme information and question count as a proxy for relevance.
    */
+  /**
+   * Load user knowledge context with a 3-second timeout guard.
+   * If wiki lookup takes too long, returns empty context instead of blocking.
+   *
+   * P0 Risk #2 Fix: Wiki parsing robustness
+   * - Timeout prevents blocking chat message processing
+   * - Gracefully falls back to empty context on timeout
+   * - Logs timeout for observability and debugging
+   */
   async loadUserKnowledgeContext(userId: string): Promise<UserKnowledgeContext> {
     try {
-      const wiki = await this.wikiPort.getUserWiki(userId);
+      // Defensive timeout: if wiki lookup doesn't complete in 3s, give up
+      // and return empty context. This ensures chat never hangs waiting for wiki.
+      let wiki: any[] | undefined;
+      try {
+        wiki = await Promise.race([
+          this.wikiPort.getUserWiki(userId),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Wiki lookup timeout (3s)')), 3000)
+          ),
+        ]);
+      } catch (timeoutError) {
+        const msg = timeoutError instanceof Error ? timeoutError.message : String(timeoutError);
+        if (msg.includes('timeout')) {
+          console.warn('[KnowledgeHistoryService] Wiki lookup timeout, returning empty context', { userId });
+          return EMPTY_KNOWLEDGE_CONTEXT;
+        }
+        throw timeoutError;
+      }
 
       // Empty history
       if (!wiki || wiki.length === 0) {
@@ -125,11 +151,15 @@ export class KnowledgeHistoryService {
  * Each FAQ item pairs a theme with an extracted question and uses the theme's
  * question_count as a proxy for relevance.
  *
+ * P0 Risk #2 Fix: Wiki parsing robustness
  * Edge Cases Handled:
  * - Missing FAQ section: theme is skipped (no questions to extract)
- * - Malformed markdown: logs warning, extracts what is parseable
- * - Empty markdown: skipped with warning
+ * - Malformed markdown: logs warning, extracts what is parseable, skips bad row
+ * - Empty markdown: skipped silently
  * - Duplicate questions: included (not deduplicated across themes)
+ * - Null/undefined theme: sanitized to 'General'
+ * - Non-string markdown: skipped with type warning
+ * - Invalid question format: filtered out, doesn't corrupt row
  */
 function extractFAQsFromWiki(
   themeEntries: Array<{ theme: string; score: number; markdown: string }>
@@ -137,46 +167,89 @@ function extractFAQsFromWiki(
   const allFaqs: FAQItem[] = [];
 
   for (const entry of themeEntries) {
-    if (!entry.markdown || entry.markdown.trim() === '') {
+    // Defensive: skip malformed entries early
+    if (!entry || typeof entry.markdown !== 'string') {
+      if (entry && entry.theme) {
+        console.warn(`[KnowledgeHistoryService] Skipping theme "${entry.theme}": markdown is not a string`);
+      }
+      continue;
+    }
+
+    if (entry.markdown.trim() === '') {
       continue;
     }
 
     try {
-      // Find the ### FAQ section for this theme
-      const faqMatch = entry.markdown.match(/### FAQ\s*\n([\s\S]*?)(?=###|$)/);
+      // Sanitize theme name (fallback to 'General' if missing)
+      const sanitizedTheme = (entry.theme || '').trim() || 'General';
+
+      // Find the ### FAQ section for this theme (defensive against malformed headers)
+      let faqMatch: RegExpMatchArray | null = null;
+      try {
+        faqMatch = entry.markdown.match(/### FAQ\s*\n([\s\S]*?)(?=###|$)/);
+      } catch (regexError) {
+        console.warn(`[KnowledgeHistoryService] Regex parse failed for theme "${sanitizedTheme}":`,
+          regexError instanceof Error ? regexError.message : String(regexError));
+        continue;
+      }
+
       if (!faqMatch || !faqMatch[1]) {
-        // No FAQ section found, skip this theme
+        // No FAQ section found, skip this theme silently (not an error)
         continue;
       }
 
       const faqSection = faqMatch[1];
 
       // Extract all lines that start with "- " (list items)
-      const questionLines = faqSection
-        .split('\n')
-        .filter((line) => line.trim().startsWith('- '))
-        .map((line) => line.replace(/^-\s+/, '').trim())
-        .filter((q) => q.length > 0);
+      const questionLines: string[] = [];
+      try {
+        faqSection
+          .split('\n')
+          .forEach((line) => {
+            if (!line || typeof line !== 'string') return;
+            if (line.trim().startsWith('- ')) {
+              const q = line.replace(/^-\s+/, '').trim();
+              // Validate question: non-empty, reasonable length (3-500 chars), no binary/null bytes
+              if (q.length > 0 && q.length <= 500 && !/[\x00-\x1f]/.test(q)) {
+                questionLines.push(q);
+              }
+            }
+          });
+      } catch (splitError) {
+        console.warn(`[KnowledgeHistoryService] Line parsing failed for theme "${sanitizedTheme}":`,
+          splitError instanceof Error ? splitError.message : String(splitError));
+        continue;
+      }
 
       // Create FAQ items from extracted questions
       for (const question of questionLines) {
-        // Truncate very long questions to keep them useful as FAQs
-        const displayQuestion = question.length > 200 ? question.substring(0, 200) + '...' : question;
+        try {
+          // Truncate very long questions to keep them useful as FAQs
+          const displayQuestion = question.length > 200 ? question.substring(0, 200) + '...' : question;
 
-        allFaqs.push({
-          theme: entry.theme,
-          question: displayQuestion,
-          answer: entry.theme, // Answer is theme name (summary of what this theme covers)
-          relevanceScore: entry.score,
-        });
+          allFaqs.push({
+            theme: sanitizedTheme,
+            question: displayQuestion,
+            answer: sanitizedTheme, // Answer is theme name (summary of what this theme covers)
+            relevanceScore: entry.score || 1,
+          });
+        } catch (faqError) {
+          // Skip individual FAQ item on error, don't corrupt the row
+          console.warn(`[KnowledgeHistoryService] Failed to add FAQ for theme "${sanitizedTheme}":`,
+            faqError instanceof Error ? faqError.message : String(faqError));
+          continue;
+        }
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.warn(`[KnowledgeHistoryService] Failed to extract FAQs from theme "${entry.theme}":`, msg);
+      const themeName = (entry && entry.theme) || 'unknown';
+      console.warn(`[KnowledgeHistoryService] Failed to extract FAQs from theme "${themeName}":`, msg);
+      // Continue to next theme — one bad row doesn't break others
       continue;
     }
   }
 
   // Sort by relevance score (question_count) and return top 5
+  // P0 Risk #3 Fix: History injection token budget is enforced at buildGroundingWithHistory level
   return allFaqs.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0)).slice(0, 5);
 }
