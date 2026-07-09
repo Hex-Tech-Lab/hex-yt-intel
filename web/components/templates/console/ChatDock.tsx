@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, startTransition, useTransition } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
 
