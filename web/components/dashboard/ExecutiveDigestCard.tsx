@@ -19,7 +19,7 @@ export function ExecutiveDigestCard({ digest, loading }: ExecutiveDigestCardProp
   return (
     <section
       aria-label="Executive digest"
-      className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/[0.06] p-4 sm:p-5"
+      className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/[0.06] p-2 sm:p-3"
     >
       <header className="mb-3 flex items-center gap-2">
         <span className="grid h-6 w-6 place-items-center rounded-md bg-[var(--accent)]/20 font-mono text-[11px] font-bold text-[var(--accent-ink)]">
@@ -34,7 +34,7 @@ export function ExecutiveDigestCard({ digest, loading }: ExecutiveDigestCardProp
       {loading && !digest ? (
         <DigestSkeleton />
       ) : digest ? (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2.5">
           {digest.snapshot && (
             <Tier label="Snapshot">
               <p className="text-sm leading-relaxed text-[var(--ink-secondary)]">{digest.snapshot}</p>

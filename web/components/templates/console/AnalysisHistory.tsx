@@ -185,7 +185,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   if (isLoading) {
     return (
-      <div className="p-12 text-center text-[var(--ink-secondary)]">
+      <div className="p-4 text-center text-[var(--ink-secondary)]">
         <Icon icon="solar:refresh-linear" size={24} className="hx-anispin inline-block mb-4" />
         <p>Loading your analysis history…</p>
       </div>
@@ -194,7 +194,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   if (error) {
     return (
-      <div className="p-12 text-center text-[var(--ink-secondary)]">
+      <div className="p-4 text-center text-[var(--ink-secondary)]">
         <Icon icon="solar:close-circle-linear" size={24} className="mb-4 text-[var(--err)]" />
         <p>{error}</p>
       </div>
@@ -203,7 +203,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   if (items.length === 0) {
     return (
-      <div className="p-12 text-center text-[var(--ink-secondary)]">
+      <div className="p-4 text-center text-[var(--ink-secondary)]">
         <Icon icon="solar:folder-open-linear" size={24} className="mb-4 opacity-50" />
         <p>No analyses yet. Start by analyzing a YouTube video above.</p>
       </div>
@@ -211,7 +211,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-20">
+    <div className="flex flex-col gap-4 pb-20">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-lg font-semibold text-[var(--ink)]">
           Analysis History <span className="text-[var(--ink-muted)] font-normal">({filteredAndSorted.length})</span>

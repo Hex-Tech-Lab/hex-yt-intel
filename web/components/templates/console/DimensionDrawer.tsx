@@ -89,7 +89,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
         className="fixed right-0 top-0 bottom-0 w-[min(90vw,390px)] bg-[var(--bg)] border-l border-[var(--line)] flex flex-col z-[101] animate-in slide-in-from-right duration-300 ease-out"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.6)]">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.6)]">
           <div className="flex items-center gap-2">
             <Icon icon={dimension.icon} size={14} />
             <span className="font-mono text-[12px] font-semibold uppercase tracking-wider text-[var(--ink)]">
