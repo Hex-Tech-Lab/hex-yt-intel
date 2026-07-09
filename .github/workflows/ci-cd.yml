@@ -489,18 +489,19 @@ jobs:
           trap "rm -f $TEMP_OUT $TEMP_ERR" EXIT
 
           # Run confidence calculator with proper error capture
-          CONFIDENCE_FILE="/tmp/confidence-result-$$.json"
           if pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr="$PR_NUMBER" > "$TEMP_OUT" 2> "$TEMP_ERR"; then
             # Success: extract JSON from stdout
             if [ -s "$TEMP_OUT" ]; then
               echo "✓ Confidence calculation succeeded"
               cat "$TEMP_OUT" | jq '.' || echo "⚠️  Warning: JSON parse failed, but output captured"
-              # Save JSON to file for safe passing to JavaScript (avoids quote escaping issues)
-              cp "$TEMP_OUT" "$CONFIDENCE_FILE"
-              echo "CONFIDENCE_FILE=$CONFIDENCE_FILE" >> $GITHUB_OUTPUT
+              # Use multiline environment variable for safe JSON passing (avoids quote escaping)
+              {
+                echo "CONFIDENCE_JSON<<EOF"
+                cat "$TEMP_OUT"
+                echo "EOF"
+              } >> $GITHUB_ENV
             else
               echo "⚠️  No output from confidence calculator"
-              echo "CONFIDENCE_FILE=" >> $GITHUB_OUTPUT
             fi
           else
             # Failure: log error but continue (graceful degradation)
@@ -510,9 +511,7 @@ jobs:
               echo "Error details:"
               cat "$TEMP_ERR" >&2
             fi
-            echo "CONFIDENCE_FILE=" >> $GITHUB_OUTPUT
           fi
-          trap "rm -f $CONFIDENCE_FILE" EXIT
         continue-on-error: true
 
       - name: Comment on PR with status and confidence
@@ -521,7 +520,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
             const status = '${{ job.status }}';
             const statusEmoji = status === 'success' ? '✅' : '❌';
 
@@ -529,13 +527,8 @@ jobs:
             let confidenceWarning = '';
 
             try {
-              // Read JSON from file (safer than string interpolation)
-              const confidenceFile = '${{ steps.confidence.outputs.CONFIDENCE_FILE }}';
-              let confidenceJson = '';
-
-              if (confidenceFile && fs.existsSync(confidenceFile)) {
-                confidenceJson = fs.readFileSync(confidenceFile, 'utf8');
-              }
+              // Read JSON from environment variable (set via $GITHUB_ENV in shell step)
+              const confidenceJson = process.env.CONFIDENCE_JSON || '';
 
               // Check if confidence calculation succeeded
               if (!confidenceJson || !confidenceJson.trim()) {
