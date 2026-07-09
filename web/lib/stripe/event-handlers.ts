@@ -91,9 +91,10 @@ export async function dispatchWebhookEvent(
     await Promise.resolve(handler(event, supabase));
     return { handled: true };
   } catch (error) {
+    console.error('[Stripe] Handler execution failed:', error);
     return {
       handled: true,
-      error: error instanceof Error ? error.message : String(error),
+      error: 'Handler execution failed',
     };
   }
 }
