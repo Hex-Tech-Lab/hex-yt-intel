@@ -200,10 +200,10 @@ function extractFAQsFromWiki(
         .forEach((line) => {
           if (!line || typeof line !== 'string') return;
           if (line.trim().startsWith('- ')) {
-            const q = line.replace(/^-\s+/, '').trim();
-            // Validate question: non-empty, reasonable length (3-500 chars), no binary/null bytes
-            if (q.length > 0 && q.length <= 500 && !/[\x00-\x1f]/.test(q)) {
-              questionLines.push(q);
+            const question = line.replace(/^-\s+/, '').trim();
+            // Validate question: non-empty, reasonable length (3-500 chars), no control characters (ASCII 0-31)
+            if (question.length > 0 && question.length <= 500 && !/[\x00-\x08\x0b-\x0c\x0e-\x1f]/.test(question)) {
+              questionLines.push(question);
             }
           }
         });
