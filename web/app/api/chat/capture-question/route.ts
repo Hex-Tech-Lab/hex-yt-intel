@@ -204,7 +204,7 @@ async function captureQuestionToStorage(
  * - Quotes and escapes all YAML values to prevent injection via newlines/special chars
  * - Question content is stored as raw markdown (not in front matter)
  */
-function buildQuestionMarkdown(metadata: QuestionStorageMetadata, questionId: string): string {
+const buildQuestionMarkdown = (metadata: QuestionStorageMetadata, questionId: string): string => {
   // Helper: escape YAML string values (quote and escape internal quotes)
   const escapeYamlValue = (value: string | null | undefined): string => {
     if (!value) return 'null';
@@ -225,4 +225,4 @@ ${metadata.question}
 `;
 
   return frontMatter;
-}
+};
