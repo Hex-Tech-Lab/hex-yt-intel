@@ -15,11 +15,12 @@ export interface WebhookValidationResult {
   valid: boolean;
   event?: Stripe.Event;
   error?: string;
+  code?: 'MISSING_SECRET' | 'INVALID_SIGNATURE' | 'MALFORMED_EVENT' | 'UNKNOWN_ERROR';
 }
 
 /**
  * Verify webhook signature and construct Stripe event
- * Throws on invalid signature; returns event on success
+ * Returns event on success, throws with code for error classification
  */
 export function verifyWebhookSignature(
   body: string,
@@ -27,20 +28,27 @@ export function verifyWebhookSignature(
   secret: string
 ): Stripe.Event {
   if (!secret) {
-    throw new Error('STRIPE_WEBHOOK_SECRET not configured');
+    const err = new Error('STRIPE_WEBHOOK_SECRET not configured');
+    (err as any).code = 'MISSING_SECRET';
+    throw err;
   }
 
   try {
     return stripe.webhooks.constructEvent(body, signature, secret);
   } catch (error) {
+    const err = new Error(error instanceof Error ? error.message : 'Invalid webhook signature');
+    // Stripe throws "No matching key version" for signature mismatch
+    (err as any).code = (error instanceof Error && error.message.includes('key version'))
+      ? 'INVALID_SIGNATURE'
+      : 'MALFORMED_EVENT';
     console.error('[Stripe] Webhook signature verification failed:', error);
-    throw new Error('Invalid webhook signature');
+    throw err;
   }
 }
 
 /**
- * Validate webhook event structure
- * Returns validation result with parsed event or error details
+ * Validate webhook event structure and signature
+ * Returns validation result with parsed event or granular error classification
  */
 export function validateWebhookEvent(
   body: string,
@@ -54,10 +62,13 @@ export function validateWebhookEvent(
       event,
     };
   } catch (error) {
-    console.error('[Stripe] Webhook validation failed:', error);
+    const code = (error as any)?.code || 'UNKNOWN_ERROR';
+    const message = error instanceof Error ? error.message : 'Webhook validation failed';
+    console.error(`[Stripe] Webhook validation failed (${code}):`, message);
     return {
       valid: false,
-      error: 'Webhook validation failed',
+      error: message,
+      code,
     };
   }
 }

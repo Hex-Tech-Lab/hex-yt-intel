@@ -66,12 +66,15 @@ export const EVENT_HANDLERS: Record<string, EventHandler> = {
 };
 
 /**
- * Dispatch Stripe event to appropriate handler
- * Returns handler found status and any errors
+ * Dispatch result distinguishes between handler-not-found vs handler-failed
+ * - handled: true + no error = successful processing (safe to skip retry)
+ * - handled: false = unrecognized event type (safe to skip)
+ * - error present = handler threw, should retry with exponential backoff
  */
 export interface DispatchResult {
   handled: boolean;
   error?: string;
+  retriable?: boolean;
 }
 
 export async function dispatchWebhookEvent(
@@ -83,18 +86,21 @@ export async function dispatchWebhookEvent(
   if (!handler) {
     return {
       handled: false,
+      retriable: false,
       error: `No handler registered for event type: ${event.type}`,
     };
   }
 
   try {
     await Promise.resolve(handler(event, supabase));
-    return { handled: true };
+    return { handled: true, retriable: false };
   } catch (error) {
-    console.error('[Stripe] Handler execution failed:', error);
+    const message = error instanceof Error ? error.message : 'Handler execution failed';
+    console.error(`[Stripe] Handler execution failed for ${event.type}:`, error);
     return {
-      handled: true,
-      error: 'Handler execution failed',
+      handled: false,
+      retriable: true,
+      error: message,
     };
   }
 }
