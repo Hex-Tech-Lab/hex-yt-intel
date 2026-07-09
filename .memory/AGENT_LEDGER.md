@@ -404,12 +404,18 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
   - Branch: claude/wave9-worker-decomp
   - Commit: 87f23cf (pushed to origin)
 
-- [2026-07-09T23:15:00+03:00] [Claude-Haiku] [IN_PROGRESS] Wave 7.11: P0 Contract Violation Fixes — Persona Schema Alignment & Search Route Hardening. Addressing DeepSource feedback (web: Grade C, JavaScript FAILED; worker: Grade A). Targets:
-  1. Fixed persona schema duplication (contracts.ts): Replace legacy p1-p5 enum with canonical z.enum(VALID_PERSONAS)
-  2. Updated persona fallback in CreateAnalysisUseCase.ts: 'p1' → 'creator' (canonical ID)
-  3. Fixed Sentry type error in search/route.ts: Wrap Zod issues in proper context object
-  4. Verified persona-unification tests correctly reject p1-p5 (legacy values)
-  5. Verified PromptBuilder.ts already defaults to 'creator' (correct)
-  6. Verified workflow.ts already uses z.enum(VALID_PERSONAS) (correct)
+- [2026-07-09T23:15:00+03:00] [Claude-Haiku] [DONE] Wave 7.11: P0 Contract Violation Fixes — Persona Schema Alignment & Search Route Hardening. Addressed DeepSource feedback (web: Grade C, JavaScript FAILED; worker: Grade A).
   
-  Commit: 1831dbc (persona schema fixes). Next: address remaining type errors and DeepSource findings.
+  Completed fixes:
+  1. ✅ Fixed persona schema duplication (web/lib/types/contracts.ts): Replaced legacy p1-p5 enum with z.enum(VALID_PERSONAS)
+  2. ✅ Updated persona fallback (web/lib/usecases/CreateAnalysisUseCase.ts): 'p1' → 'creator' (canonical ID)
+  3. ✅ Fixed Sentry type error (web/app/api/search/route.ts): Wrapped Zod issues in proper context object
+  4. ✅ Improved PromptBuilder persona validation (worker/src/services/PromptBuilder.ts): Added isValidPersona check for safe fallback
+  5. ✅ Fixed PersonaId type assertion (web/app/api/analyses/route.ts): Added explicit type cast after validation
+  6. ✅ Verified persona-unification tests correctly reject p1-p5 (legacy values)
+  7. ✅ Verified PromptBuilder.ts already defaults to 'creator' (correct)
+  8. ✅ Verified workflow.ts already uses z.enum(VALID_PERSONAS) (no manual duplication)
+  
+  Commits: 1831dbc, 877cec9, 1441b8b, f9584e3
+  
+  Remaining work: Address remaining type-check errors (unused imports, missing module references) and CodeFactor findings (10 issues). Persona schema unification is complete and type-safe.
