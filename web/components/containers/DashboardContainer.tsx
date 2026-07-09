@@ -39,9 +39,6 @@ import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer'
 import { ConsoleTabSwitcher } from './dashboard/ConsoleTabSwitcher';
 import { SidebarFooter } from './dashboard/SidebarFooter';
 import { ExpandedPanelOverlay } from './dashboard/ExpandedPanelOverlay';
-import { DashboardHeader } from './dashboard/DashboardHeader';
-import { DashboardStats } from './dashboard/DashboardStats';
-import { DashboardMainContent } from './dashboard/DashboardMainContent';
 
 import * as Sentry from '@sentry/nextjs';
 

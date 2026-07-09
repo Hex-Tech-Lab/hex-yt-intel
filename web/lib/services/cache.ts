@@ -64,13 +64,7 @@ export function generateCacheKey(
   inputHash: string,
   schemaVersion: string = '5.1'
 ): string {
-  const hash = crypto
-    .createHash('sha256')
-    .update(inputHash || '')
-    .digest('hex')
-    .substring(0, 16); // Use first 16 chars for brevity
-
-  return `ci:${modelUsed}:${hash}:${schemaVersion}`;
+  return `ci:${modelUsed}:${inputHash.substring(0, 16)}:${schemaVersion}`;
 }
 
 /**
