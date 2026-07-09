@@ -489,16 +489,18 @@ jobs:
           trap "rm -f $TEMP_OUT $TEMP_ERR" EXIT
 
           # Run confidence calculator with proper error capture
+          CONFIDENCE_FILE="/tmp/confidence-result-$$.json"
           if pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr="$PR_NUMBER" > "$TEMP_OUT" 2> "$TEMP_ERR"; then
             # Success: extract JSON from stdout
             if [ -s "$TEMP_OUT" ]; then
-              CONFIDENCE_JSON=$(cat "$TEMP_OUT")
-              echo "CONFIDENCE_JSON=$CONFIDENCE_JSON" >> $GITHUB_OUTPUT
               echo "✓ Confidence calculation succeeded"
-              echo "$CONFIDENCE_JSON" | jq '.' || echo "⚠️  Warning: JSON parse failed, but output captured"
+              cat "$TEMP_OUT" | jq '.' || echo "⚠️  Warning: JSON parse failed, but output captured"
+              # Save JSON to file for safe passing to JavaScript (avoids quote escaping issues)
+              cp "$TEMP_OUT" "$CONFIDENCE_FILE"
+              echo "CONFIDENCE_FILE=$CONFIDENCE_FILE" >> $GITHUB_OUTPUT
             else
               echo "⚠️  No output from confidence calculator"
-              echo "CONFIDENCE_JSON=" >> $GITHUB_OUTPUT
+              echo "CONFIDENCE_FILE=" >> $GITHUB_OUTPUT
             fi
           else
             # Failure: log error but continue (graceful degradation)
@@ -508,8 +510,9 @@ jobs:
               echo "Error details:"
               cat "$TEMP_ERR" >&2
             fi
-            echo "CONFIDENCE_JSON=" >> $GITHUB_OUTPUT
+            echo "CONFIDENCE_FILE=" >> $GITHUB_OUTPUT
           fi
+          trap "rm -f $CONFIDENCE_FILE" EXIT
         continue-on-error: true
 
       - name: Comment on PR with status and confidence
@@ -526,7 +529,13 @@ jobs:
             let confidenceWarning = '';
 
             try {
-              const confidenceJson = '${{ steps.confidence.outputs.CONFIDENCE_JSON }}';
+              // Read JSON from file (safer than string interpolation)
+              const confidenceFile = '${{ steps.confidence.outputs.CONFIDENCE_FILE }}';
+              let confidenceJson = '';
+
+              if (confidenceFile && fs.existsSync(confidenceFile)) {
+                confidenceJson = fs.readFileSync(confidenceFile, 'utf8');
+              }
 
               // Check if confidence calculation succeeded
               if (!confidenceJson || !confidenceJson.trim()) {

@@ -138,6 +138,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     const canInjectPrompts = (): { userMessage: typeof messages[0]; latestMessage: typeof messages[0] } | null => {
       // Guard: must have active conversation with 2+ messages
       if (!activeId || messages.length < 2) return null;
+      // Guard: only inject after streaming completes (sending state is false)
+      if (sending) return null;
 
       const latestMessage = messages[messages.length - 1];
       // Guard: latest must be assistant message
@@ -185,7 +187,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     } catch (error) {
       console.debug('[ChatDock] Follow-up prompt generation failed:', error);
     }
-  }, [messages, activeId]);
+  }, [messages, activeId, sending]);
 
   const scrollToBottom = () => {
     const el = listRef.current;
