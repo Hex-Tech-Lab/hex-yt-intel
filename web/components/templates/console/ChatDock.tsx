@@ -139,14 +139,9 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     const latestMessage = messages[messages.length - 1];
     const userMessage = messages[messages.length - 2];
 
-    const isValidForInjection = (latest: typeof latestMessage, user: typeof userMessage) => {
-      if (!latest || !user) return false;
-      if (latest.role !== 'assistant' || user.role !== 'user') return false;
-      if (latest.content.includes('OPTIONS:') || latest.content.length < 100) return false;
-      return true;
-    };
-
-    if (!isValidForInjection(latestMessage, userMessage)) return;
+    if (!latestMessage || !userMessage) return;
+    if (latestMessage.role !== 'assistant' || userMessage.role !== 'user') return;
+    if (latestMessage.content.includes('OPTIONS:') || latestMessage.content.length < 100) return;
 
     try {
       const analysisTitle = useAnalysisStore.getState().analysis?.title;
