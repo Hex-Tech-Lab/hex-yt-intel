@@ -8,7 +8,7 @@
  * 4. Output contract is stable (response shape unchanged)
  * 5. All events carry requestId for client correlation
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 type StreamEvent =
   | { type: 'options'; content: string[]; requestId?: string }
