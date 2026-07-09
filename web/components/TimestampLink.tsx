@@ -9,31 +9,11 @@ export interface TimestampLinkProps {
   className?: string;
 }
 
-/**
- * Converts a timestamp string to seconds
- * Supports formats: HH:MM:SS, MM:SS, or raw seconds
- */
-function parseTimestamp(timestamp: string): number {
+const parseTimestamp = (timestamp: string): number => {
   const parts = timestamp.split(':').map(p => parseInt(p, 10)).filter(p => !isNaN(p));
-
-  if (parts.length === 3) {
-    // HH:MM:SS
-    const hours = parts[0] ?? 0;
-    const minutes = parts[1] ?? 0;
-    const seconds = parts[2] ?? 0;
-    return hours * 3600 + minutes * 60 + seconds;
-  } else if (parts.length === 2) {
-    // MM:SS
-    const minutes = parts[0] ?? 0;
-    const seconds = parts[1] ?? 0;
-    return minutes * 60 + seconds;
-  } else if (parts.length === 1) {
-    // Raw seconds
-    return parts[0] ?? 0;
-  }
-
-  return 0;
-}
+  const multipliers = [3600, 60, 1];
+  return parts.reduce((total, part, idx) => total + (part || 0) * (multipliers[parts.length - idx - 1] || 1), 0);
+};
 
 /**
  * TimestampLink component for clickable timestamps in video content
