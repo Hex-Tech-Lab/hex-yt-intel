@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { VALID_PERSONAS } from './persona';
 
 // ─── Video Validation ───────────────────────────────────────────────────────
 export const VideoIdSchema = z.string().regex(
@@ -74,7 +75,7 @@ export const AnalysisCreateSchema = z.object({
     )
     .default('Africa/Cairo')
     .describe('IANA timezone for timestamps'),
-  persona: z.enum(['p1', 'p2', 'p3', 'p4', 'p5']).optional().describe('Target persona (p1=Content Creator, p2=Indie Maker, p3=Consultant, p4=Researcher, p5=Product Manager)'),
+  persona: z.enum(VALID_PERSONAS).optional().describe('Target persona (creator=Content Creator, indieMaker=Indie Maker, consultant=Consultant, researcher=Researcher, productManager=Product Manager)'),
   forceRefresh: z.boolean().optional().default(false).describe('Force cache bypass and generate fresh analysis'),
 });
 
