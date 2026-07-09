@@ -170,6 +170,12 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       const optionsJson = JSON.stringify(prompts);
       const updatedContent = `${latestMessage.content}\n\nOPTIONS: ${optionsJson}`;
 
+      // Re-check sending state before mutation to prevent duplicate injection during streaming
+      if (useChatStore.getState().sending) {
+        console.debug('[ChatDock] Sending state changed mid-injection, aborting to prevent duplicates');
+        return;
+      }
+
       useChatStore.setState((state) => ({
         messagesByConv: {
           ...state.messagesByConv,

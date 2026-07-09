@@ -71,7 +71,8 @@ function queryGitHub(query: string): string {
     const args = ['api', ...query.split(/\s+/)];
     return execFileSync('gh', args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch (error) {
-    // Return empty array JSON for graceful handling
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`[queryGitHub] gh CLI error: ${msg} (query: ${query.substring(0, 50)}...)`);
     return '[]';
   }
 }
@@ -255,8 +256,8 @@ function extractVercelStatus(prNumber: number): { score: number; status?: string
  */
 function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number } {
   try {
-    // Query for code scanning alerts on the PR (scoped to PR ref)
-    const alertsJson = queryGitHub(`repos/{owner}/{repo}/code-scanning/alerts?state=open&sort=updated&direction=desc --paginate --limit=50`);
+    // Query for code scanning alerts on the PR (filtered to PR's merge ref)
+    const alertsJson = queryGitHub(`repos/{owner}/{repo}/code-scanning/alerts?state=open&sort=updated&direction=desc --paginate --limit=50 --jq '.[] | select(.most_recent_instance.ref == "refs/pull/${prNumber}/merge") | .'`);
     const data = JSON.parse(alertsJson || '[]');
 
     if (!Array.isArray(data)) {
@@ -305,22 +306,13 @@ async function main(): Promise<void> {
 
   console.error(`\n📊 Calculating PR Confidence for #${prNumber}...\n`);
 
-  // Extract all scores in parallel
-  const [
-    cubicResult,
-    coderabbitResult,
-    snyxResult,
-    cicdResult,
-    vercelResult,
-    codeqlResult,
-  ] = await Promise.all([
-    Promise.resolve(extractCubicScore(prNumber)),
-    Promise.resolve(extractCodeRabbitScore(prNumber)),
-    Promise.resolve(extractSnyxScore(prNumber)),
-    Promise.resolve(extractCICDStatus(prNumber)),
-    Promise.resolve(extractVercelStatus(prNumber)),
-    Promise.resolve(extractCodeQLStatus(prNumber)),
-  ]);
+  // Extract all scores sequentially (all use execFileSync, so no parallelization benefit)
+  const cubicResult = extractCubicScore(prNumber);
+  const coderabbitResult = extractCodeRabbitScore(prNumber);
+  const snyxResult = extractSnyxScore(prNumber);
+  const cicdResult = extractCICDStatus(prNumber);
+  const vercelResult = extractVercelStatus(prNumber);
+  const codeqlResult = extractCodeQLStatus(prNumber);
 
   const breakdown: PRConfidenceBreakdown = {
     cubic: cubicResult.score,
