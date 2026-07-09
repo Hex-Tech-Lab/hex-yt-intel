@@ -113,30 +113,34 @@ describe('TimestampLink', () => {
       const link = container.querySelector('a');
       expect(link).toBeTruthy();
       if (link) {
-
-      fireEvent.keyDown(link, { key: 'Enter' });
-      const state = useVideoStore.getState();
-      expect(state.seekTo).toBe(30);
+        fireEvent.keyDown(link, { key: 'Enter' });
+        const state = useVideoStore.getState();
+        expect(state.seekTo).toBe(30);
+      }
     });
 
     it('should trigger setSeekTo on Space key', () => {
       const { container } = render(<TimestampLink timestamp="00:30" />);
-      const link = container.querySelector('a')!;
-
-      fireEvent.keyDown(link, { key: ' ' });
-      const state = useVideoStore.getState();
-      expect(state.seekTo).toBe(30);
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) {
+        fireEvent.keyDown(link, { key: ' ' });
+        const state = useVideoStore.getState();
+        expect(state.seekTo).toBe(30);
+      }
     });
 
     it('should not trigger on other keys', () => {
       const { container } = render(<TimestampLink timestamp="00:30" />);
-      const link = container.querySelector('a')!;
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) {
+        useVideoStore.setState({ seekTo: null });
+        fireEvent.keyDown(link, { key: 'a' });
 
-      useVideoStore.setState({ seekTo: null });
-      fireEvent.keyDown(link, { key: 'a' });
-
-      const state = useVideoStore.getState();
-      expect(state.seekTo).toBeNull();
+        const state = useVideoStore.getState();
+        expect(state.seekTo).toBeNull();
+      }
     });
   });
 
@@ -157,8 +161,11 @@ describe('TimestampLink', () => {
       const { container } = render(
         <TimestampLink timestamp="01:30" className="custom-class" />
       );
-      const link = container.querySelector('a')!;
-      expect(link.className).toContain('custom-class');
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) {
+        expect(link.className).toContain('custom-class');
+      }
     });
 
     it('should have proper accessibility attributes', () => {
@@ -179,7 +186,8 @@ describe('TimestampLink', () => {
       expect(useVideoStore.getState().seekTo).toBeNull();
 
       // Click to trigger seek
-      fireEvent.click(container.querySelector('a')!);
+      const link = container.querySelector('a');
+      if (link) fireEvent.click(link);
 
       // Should be updated
       expect(useVideoStore.getState().seekTo).toBe(165); // 2*60 + 45
@@ -187,20 +195,23 @@ describe('TimestampLink', () => {
 
     it('should handle multiple consecutive clicks', () => {
       const { container } = render(<TimestampLink timestamp="01:00" />);
-      const link = container.querySelector('a')!;
+      const link = container.querySelector('a');
+      expect(link).toBeTruthy();
+      if (link) {
+        fireEvent.click(link);
+        expect(useVideoStore.getState().seekTo).toBe(60);
 
-      fireEvent.click(link);
-      expect(useVideoStore.getState().seekTo).toBe(60);
-
-      fireEvent.click(link);
-      expect(useVideoStore.getState().seekTo).toBe(60);
+        fireEvent.click(link);
+        expect(useVideoStore.getState().seekTo).toBe(60);
+      }
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle very long timestamps', () => {
       const { container } = render(<TimestampLink timestamp="10:30:45" />);
-      fireEvent.click(container.querySelector('a')!);
+      const link = container.querySelector('a');
+      if (link) fireEvent.click(link);
 
       const state = useVideoStore.getState();
       expect(state.seekTo).toBe(37845); // 10*3600 + 30*60 + 45
@@ -208,7 +219,8 @@ describe('TimestampLink', () => {
 
     it('should handle single digit timestamps', () => {
       const { container } = render(<TimestampLink timestamp="5" />);
-      fireEvent.click(container.querySelector('a')!);
+      const link = container.querySelector('a');
+      if (link) fireEvent.click(link);
 
       const state = useVideoStore.getState();
       expect(state.seekTo).toBe(5);
