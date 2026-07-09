@@ -481,11 +481,12 @@ jobs:
 
           PR_NUMBER=${{ github.event.pull_request.number }}
 
-          # Create temp files for output separation
-          TEMP_OUT="/tmp/confidence-out-$$.json"
-          TEMP_ERR="/tmp/confidence-err-$$.log"
+          # Create temp files for output separation using mktemp for secure creation
+          TEMP_OUT=$(mktemp --suffix=.json)
+          TEMP_ERR=$(mktemp --suffix=.log)
 
-          trap "rm -f $TEMP_OUT $TEMP_ERR" EXIT
+          # Trap ensures cleanup even if script exits prematurely
+          trap "rm -f -- \"$TEMP_OUT\" \"$TEMP_ERR\"" EXIT
 
           # Run confidence calculator with proper error capture
           if pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr="$PR_NUMBER" > "$TEMP_OUT" 2> "$TEMP_ERR"; then
@@ -500,7 +501,7 @@ jobs:
                   echo "CONFIDENCE_JSON<<'EOF'"
                   cat "$TEMP_OUT"
                   echo "EOF"
-                } >> $GITHUB_ENV
+                } >> "$GITHUB_ENV"
               else
                 echo "⚠️  Warning: JSON validation failed, confidence score unavailable"
               fi
