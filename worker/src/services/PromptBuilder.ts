@@ -15,7 +15,7 @@ export class PromptBuilder implements PromptBuilderPort {
         publishedAt: context.metadata.publishedAt,
       },
       transcript: context.transcript || '',
-      persona: (context.persona as any) || 'p1',
+      persona: (context.persona as any) || 'creator',
       timezone: context.timezone || 'UTC',
       duration: context.metadata.duration || 0,
       skipAllDimensionsInstruction: true,
