@@ -244,14 +244,17 @@ No FAQ section here, just some content`,
   });
 
   it('limits themes to top 5 regardless of input size', async () => {
-    const wiki = Array(100)
+    const wiki = Array(10)
       .fill(null)
       .map((_, i) => ({
-        userId: 'user-1',
-        videoId: 'v' + i,
-        theme: 'Theme' + (i % 10),
-        question: 'Q' + i,
-        answer: 'A' + i,
+        id: 'id' + i,
+        user_id: 'user-1',
+        topic: 'Theme' + i,
+        wiki_markdown: `## Theme${i}\n### FAQ\n- Q${i}`,
+        question_count: (i + 1) * 10,
+        theme_count: 1,
+        created_at: '2026-07-08T00:00:00Z',
+        updated_at: '2026-07-08T00:00:00Z',
       }));
     mockWikiPort.getUserWiki.mockResolvedValue(wiki);
     const service = new KnowledgeHistoryService(mockWikiPort);
@@ -332,7 +335,24 @@ describe('ProcessChatMessageUseCase with knowledge history injection', () => {
         status: 'done',
       },
       wikiEntries: [
-        { userId: 'user-1', videoId: 'v1', theme: 'Python', question: 'How do I code', answer: 'Use Python' },
+        {
+          id: 'id1',
+          user_id: 'user-1',
+          topic: 'Python',
+          wiki_markdown: `## Python
+
+**Questions in this theme:** 1
+
+### FAQ
+- How do I code
+
+### Common Keywords
+python, code`,
+          question_count: 1,
+          theme_count: 1,
+          created_at: '2026-07-08T00:00:00Z',
+          updated_at: '2026-07-08T00:00:00Z',
+        },
       ],
     });
 
@@ -388,8 +408,25 @@ describe('ProcessChatMessageUseCase with knowledge history injection', () => {
         status: 'done',
       },
       wikiEntries: [
-        { userId: 'user-1', videoId: 'v1', theme: 'Music', question: 'What is jazz', answer: 'A genre' },
-        { userId: 'user-1', videoId: 'v1', theme: 'Music', question: 'What is blues', answer: 'Another genre' },
+        {
+          id: 'id1',
+          user_id: 'user-1',
+          topic: 'Music',
+          wiki_markdown: `## Music
+
+**Questions in this theme:** 2
+
+### FAQ
+- What is jazz
+- What is blues
+
+### Common Keywords
+music, jazz, blues`,
+          question_count: 2,
+          theme_count: 1,
+          created_at: '2026-07-08T00:00:00Z',
+          updated_at: '2026-07-08T00:00:00Z',
+        },
       ],
     });
 
