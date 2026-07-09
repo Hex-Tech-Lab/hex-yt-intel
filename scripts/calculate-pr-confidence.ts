@@ -256,8 +256,9 @@ function extractVercelStatus(prNumber: number): { score: number; status?: string
  */
 function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number } {
   try {
-    // Query for code scanning alerts on the PR (filtered to PR's merge ref)
-    const alertsJson = queryGitHub(`repos/{owner}/{repo}/code-scanning/alerts?state=open&sort=updated&direction=desc --paginate --limit=50 --jq '.[] | select(.most_recent_instance.ref == "refs/pull/${prNumber}/merge") | .'`);
+    // Query for code scanning alerts on the PR, filtered by PR ref using --jq
+    // Use pr= parameter to scope results to this PR instead of entire repo
+    const alertsJson = queryGitHub(`repos/{owner}/{repo}/code-scanning/alerts?state=open&ref=refs/pull/${prNumber}/merge&sort=updated&direction=desc --paginate --limit=50`);
     const data = JSON.parse(alertsJson || '[]');
 
     if (!Array.isArray(data)) {
