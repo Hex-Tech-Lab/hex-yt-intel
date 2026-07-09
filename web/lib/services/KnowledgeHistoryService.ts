@@ -184,14 +184,7 @@ function extractFAQsFromWiki(
       const sanitizedTheme = (entry.theme || '').trim() || 'General';
 
       // Find the ### FAQ section for this theme (defensive against malformed headers)
-      let faqMatch: RegExpMatchArray | null = null;
-      try {
-        faqMatch = entry.markdown.match(/### FAQ\s*\n([\s\S]*?)(?=###|$)/);
-      } catch (regexError) {
-        console.warn(`[KnowledgeHistoryService] Regex parse failed for theme "${sanitizedTheme}":`,
-          regexError instanceof Error ? regexError.message : String(regexError));
-        continue;
-      }
+      const faqMatch = entry.markdown.match(/### FAQ\s*\n([\s\S]*?)(?=###|$)/);
 
       if (!faqMatch || !faqMatch[1]) {
         // No FAQ section found, skip this theme silently (not an error)
@@ -202,24 +195,18 @@ function extractFAQsFromWiki(
 
       // Extract all lines that start with "- " (list items)
       const questionLines: string[] = [];
-      try {
-        faqSection
-          .split('\n')
-          .forEach((line) => {
-            if (!line || typeof line !== 'string') return;
-            if (line.trim().startsWith('- ')) {
-              const q = line.replace(/^-\s+/, '').trim();
-              // Validate question: non-empty, reasonable length (3-500 chars), no binary/null bytes
-              if (q.length > 0 && q.length <= 500 && !/[\x00-\x1f]/.test(q)) {
-                questionLines.push(q);
-              }
+      faqSection
+        .split('\n')
+        .forEach((line) => {
+          if (!line || typeof line !== 'string') return;
+          if (line.trim().startsWith('- ')) {
+            const q = line.replace(/^-\s+/, '').trim();
+            // Validate question: non-empty, reasonable length (3-500 chars), no binary/null bytes
+            if (q.length > 0 && q.length <= 500 && !/[\x00-\x1f]/.test(q)) {
+              questionLines.push(q);
             }
-          });
-      } catch (splitError) {
-        console.warn(`[KnowledgeHistoryService] Line parsing failed for theme "${sanitizedTheme}":`,
-          splitError instanceof Error ? splitError.message : String(splitError));
-        continue;
-      }
+          }
+        });
 
       // Create FAQ items from extracted questions
       for (const question of questionLines) {
