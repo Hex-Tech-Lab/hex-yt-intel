@@ -9,7 +9,15 @@ export interface TimestampLinkProps {
   className?: string;
 }
 
-// Converts timestamp string (HH:MM:SS, MM:SS, or seconds) to total seconds
+/**
+ * Converts timestamp string to total seconds.
+ * Supports multiple formats: HH:MM:SS, MM:SS, or raw seconds.
+ * @param timestamp - Timestamp string in format "HH:MM:SS", "MM:SS", or raw seconds
+ * @returns Total number of seconds
+ * @example parseTimestamp("1:30:45") // returns 5445
+ * @example parseTimestamp("30:45") // returns 1845
+ * @example parseTimestamp("45") // returns 45
+ */
 const parseTimestamp = (timestamp: string): number => {
   const parts: number[] = timestamp.split(':').map(p => parseInt(p, 10)).filter(p => !isNaN(p));
   if (parts.length === 0) return 0;
