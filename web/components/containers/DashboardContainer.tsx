@@ -169,7 +169,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
         if (data.exists && data.status === 'complete' && data.analysisId) {
           console.log('[AutoRestore] Completed analysis detected for video, fetching details:', data.analysisId);
-          
+
           // Trigger the restoration flow just like history restoration
           let restoreRes;
           try {
@@ -180,6 +180,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           if (!restoreRes.ok) return;
           const restoreData = await restoreRes.json();
           if (cancelled) return;
+
+          // Dashboard render gating: re-validate status before restoring
+          if (restoreData.analysisStatus !== 'complete') {
+            console.debug('[AutoRestore] Analysis status is not complete, skipping restore:', restoreData.analysisStatus);
+            return;
+          }
 
           const dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
           

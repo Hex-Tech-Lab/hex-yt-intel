@@ -29,7 +29,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses', 'id, user_id, video_id, title, channel_title, model_used, analysis_markdown, analysis_payload, validation_report, executive_digest, created_at, updated_at');
+    const { data: analysis, error } = await verifyResourceOwnership<any>(id, 'analyses', 'id, user_id, video_id, title, channel_title, model_used, analysis_markdown, analysis_payload, validation_report, executive_digest, created_at, updated_at, billing_status, validation_passed');
 
     const errorResponses: Record<string, { error: string; status: number }> = {
       Unauthorized: { error: 'Unauthorized', status: 401 },
@@ -61,6 +61,14 @@ export async function GET(
     const payload = (analysis.analysis_payload || {}) as { persona?: { primary?: { id?: string; label?: string } } };
     const primaryPersona = payload.persona?.primary;
 
+    // Compute frontend-visible status: only 'complete' if billing_status='completed' AND validation_passed=true
+    const analysisStatus: 'complete' | 'incomplete' | 'error' =
+      analysis.billing_status === 'completed' && analysis.validation_passed
+        ? 'complete'
+        : analysis.billing_status === 'failed' || (report as any).status === 'error'
+        ? 'error'
+        : 'incomplete';
+
     return NextResponse.json({
       id: analysis.id,
       videoId: analysis.video_id,
@@ -72,6 +80,7 @@ export async function GET(
       validation_report: report,
       executiveDigest: analysis.executive_digest || null,
       analysisAt: analysis.created_at,
+      analysisStatus,
       detectedPersona: primaryPersona?.id ?? primaryPersona?.label ?? null,
       streaming: {
         started: analysis.created_at,
