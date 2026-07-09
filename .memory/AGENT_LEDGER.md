@@ -403,3 +403,13 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
   - Comprehensive test coverage meeting minimum requirements (12+ worker, 15+ stripe)
   - Branch: claude/wave9-worker-decomp
   - Commit: 87f23cf (pushed to origin)
+
+- [2026-07-09T23:15:00+03:00] [Claude-Haiku] [IN_PROGRESS] Wave 7.11: P0 Contract Violation Fixes — Persona Schema Alignment & Search Route Hardening. Addressing DeepSource feedback (web: Grade C, JavaScript FAILED; worker: Grade A). Targets:
+  1. Fixed persona schema duplication (contracts.ts): Replace legacy p1-p5 enum with canonical z.enum(VALID_PERSONAS)
+  2. Updated persona fallback in CreateAnalysisUseCase.ts: 'p1' → 'creator' (canonical ID)
+  3. Fixed Sentry type error in search/route.ts: Wrap Zod issues in proper context object
+  4. Verified persona-unification tests correctly reject p1-p5 (legacy values)
+  5. Verified PromptBuilder.ts already defaults to 'creator' (correct)
+  6. Verified workflow.ts already uses z.enum(VALID_PERSONAS) (correct)
+  
+  Commit: 1831dbc (persona schema fixes). Next: address remaining type errors and DeepSource findings.
