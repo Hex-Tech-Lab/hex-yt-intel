@@ -147,14 +147,14 @@ describe("AdaptiveOptionsBuilder", () => {
         themes: ["security"],
       };
       const options = await buildAdaptiveOptions(context, "security topic");
-      const static = getStaticOptions();
+      const staticOptions = getStaticOptions();
 
       // Adaptive options should include theme reference
       const hasTheme = options.some((opt) => opt.includes("security"));
       expect(hasTheme).toBe(true);
 
       // Should not be identical to static options
-      const allIdentical = options.every((opt, i) => opt === static[i]);
+      const allIdentical = options.every((opt, i) => opt === staticOptions[i]);
       expect(allIdentical).toBe(false);
     });
   });

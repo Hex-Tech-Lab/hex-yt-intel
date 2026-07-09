@@ -2,8 +2,11 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+import * as Sentry from '@sentry/nextjs';
 import { NextRequest, NextResponse } from 'next/server';
+
 import { z } from 'zod';
+
 import {
   SupabaseAuthAdapter,
   SupabasePersistenceAdapter,
@@ -134,7 +137,16 @@ export async function POST(
     return NextResponse.json(result.data);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error('[chat POST] Unexpected error:', msg);
+    Sentry.captureException(error, {
+      contexts: {
+        chat: {
+          conversationId,
+          userId,
+          action: 'POST /conversations/[id]/messages',
+        },
+      },
+    });
+    console.error('[chat POST] Unexpected error:', { msg, conversationId, userId });
     return NextResponse.json({ error: 'Failed to process message' }, { status: 500 });
   }
 }

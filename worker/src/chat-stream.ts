@@ -9,7 +9,7 @@ import { createAtomicPersist } from "./services/atomic-persist";
 import { signBoundContent, secretFingerprint } from "./crypto";
 import { isProductionEnv } from "./env-utils";
 import { isValidAppUrl } from "./middleware/cors";
-import { buildAdaptiveOptions, type UserKnowledgeContext } from "./services/AdaptiveOptionsBuilder";
+import { buildAdaptiveOptions, getStaticOptions, type UserKnowledgeContext } from "./services/AdaptiveOptionsBuilder";
 
 /**
  * TTL for the bound chat-persist content signature. Generous (10 min) to absorb
@@ -277,16 +277,17 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           send({ type: "options", content: adaptiveOptions, requestId: req.requestId });
         } else {
           // Fallback to static options if adaptive generation produced nothing
-          send({ type: "options", content: ["Ask a follow-up question?", "Summarize this topic?", "What's next?"], requestId: req.requestId });
+          send({ type: "options", content: getStaticOptions(), requestId: req.requestId });
         }
       } catch (err) {
         // On error, always send static fallback to ensure OPTIONS are sent
         const msg = err instanceof Error ? err.message : String(err);
+        Sentry.captureException(err, { contexts: { chat: { conversationId: req.conversationId, requestId: req.requestId, action: 'buildAdaptiveOptions' } } });
         console.warn("[chat-stream] OPTIONS generation failed, sending static fallback", {
           conversationId: req.conversationId,
           error: msg,
         });
-        send({ type: "options", content: ["Ask a follow-up question?", "Summarize this topic?", "What's next?"], requestId: req.requestId });
+        send({ type: "options", content: getStaticOptions(), requestId: req.requestId });
       }
 
       // STAGE 2: Stream chat deltas (LLM completion)
