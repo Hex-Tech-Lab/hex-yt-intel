@@ -249,9 +249,9 @@ No FAQ section here, just some content`,
     const wiki = Array(10)
       .fill(null)
       .map((_, i) => ({
-        id: 'id' + i,
+        id: `id${i}`,
         user_id: 'user-1',
-        topic: 'Theme' + i,
+        topic: `Theme${i}`,
         wiki_markdown: `## Theme${i}\n### FAQ\n- Q${i}`,
         question_count: (i + 1) * 10,
         theme_count: 1,
