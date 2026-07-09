@@ -89,11 +89,11 @@ export function buildGroundingWithHistory(
   if (historyPrefix.length + historyBody.length > MAX_HISTORY_CHARS) {
     // Try truncating FAQs (second part) first
     const parts = historyBody.split('Previously answered: ');
-    if (parts.length === 2 && parts[0] && parts[1]) {
+    if (parts.length === 2 && parts[0] !== undefined && parts[1] !== undefined) {
       const themesLine = parts[0];
       const budget = MAX_HISTORY_CHARS - historyPrefix.length - themesLine.length - 1; // -1 for newline
       if (budget > 20) {
-        const faqsTruncated = parts[1].slice(0, budget) + '…';
+        const faqsTruncated = parts[1].slice(0, Math.max(0, budget)) + '…';
         historyBody = themesLine + 'Previously answered: ' + faqsTruncated;
       } else {
         // Budget exhausted, just keep themes
