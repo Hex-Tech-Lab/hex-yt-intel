@@ -4,6 +4,7 @@ export interface VideoState {
   isPlaying: boolean;
   seekTo: number | null;
   setPlaying: (isPlaying: boolean) => void;
+  setSeekTo: (seconds: number) => void;
   clearSeek: () => void;
 }
 
@@ -11,5 +12,6 @@ export const useVideoStore = create<VideoState>((set) => ({
   isPlaying: false,
   seekTo: null,
   setPlaying: (isPlaying) => set({ isPlaying }),
+  setSeekTo: (seconds) => set({ seekTo: seconds }),
   clearSeek: () => set({ seekTo: null }),
 }));

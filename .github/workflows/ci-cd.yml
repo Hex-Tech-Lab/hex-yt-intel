@@ -452,7 +452,18 @@ jobs:
     permissions:
       pull-requests: write
       contents: read
+      checks: read
+      security-events: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup environment
+        uses: ./
+
       - name: Check pipeline status
         run: |
           if [[ "${{ needs.type-check.result }}" == "failure" || \
@@ -464,7 +475,57 @@ jobs:
           fi
           echo "✅ Pipeline passed"
 
-      - name: Comment on PR
+      - name: Calculate PR Confidence
+        id: confidence
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER=${{ github.event.pull_request.number }}
+
+          # Create temp files for output separation using mktemp for secure creation
+          TEMP_OUT=$(mktemp --suffix=.json)
+          TEMP_ERR=$(mktemp --suffix=.log)
+
+          # Trap ensures cleanup even if script exits prematurely
+          trap "rm -f -- \"$TEMP_OUT\" \"$TEMP_ERR\"" EXIT
+
+          # Run confidence calculator with proper error capture
+          CALC_EXIT_CODE=0
+          pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr="$PR_NUMBER" > "$TEMP_OUT" 2> "$TEMP_ERR" || CALC_EXIT_CODE=$?
+
+          if [ "$CALC_EXIT_CODE" -eq 0 ]; then
+            # Success: extract JSON from stdout
+            if [ -s "$TEMP_OUT" ]; then
+              echo "✓ Confidence calculation succeeded"
+              # Validate JSON before storing in environment variable
+              if cat "$TEMP_OUT" | jq . > /dev/null 2>&1; then
+                # Use multiline environment variable for safe JSON passing (avoids quote escaping)
+                # Use quoted 'EOF' delimiter to prevent premature termination if JSON contains literal EOF
+                {
+                  echo "CONFIDENCE_JSON<<'EOF'"
+                  cat "$TEMP_OUT"
+                  echo "EOF"
+                } >> "$GITHUB_ENV"
+              else
+                echo "⚠️  Warning: JSON validation failed, confidence score unavailable"
+              fi
+            else
+              echo "⚠️  No output from confidence calculator"
+            fi
+          else
+            # Failure: log error but continue (graceful degradation)
+            echo "⚠️  Confidence calculation failed with exit code $CALC_EXIT_CODE"
+            if [ -s "$TEMP_ERR" ]; then
+              echo "Error details:"
+              cat "$TEMP_ERR" >&2
+            fi
+          fi
+        continue-on-error: true
+
+      - name: Comment on PR with status and confidence
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
@@ -472,9 +533,61 @@ jobs:
           script: |
             const status = '${{ job.status }}';
             const statusEmoji = status === 'success' ? '✅' : '❌';
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `${statusEmoji} **Pipeline Status**: ${status === 'success' ? 'All checks passed. Ready to merge.' : 'One or more checks failed. Not ready to merge.'}`
-            })
+
+            let confidenceBody = '';
+            let confidenceWarning = '';
+
+            try {
+              // Read JSON from environment variable (set via $GITHUB_ENV in shell step)
+              const confidenceJson = process.env.CONFIDENCE_JSON || '';
+
+              // Check if confidence calculation succeeded
+              if (!confidenceJson || !confidenceJson.trim()) {
+                confidenceWarning = '\n\n⚠️ **Note**: Confidence score calculation was skipped or failed. Check workflow logs for details.';
+              } else if (confidenceJson.trim().startsWith('{')) {
+                try {
+                  const confidence = JSON.parse(confidenceJson);
+                  const breakdown = confidence.breakdown;
+
+                  confidenceBody = `
+
+## 🎯 PR Confidence Score
+
+**Confidence: ${confidence.confidence}%** — *${confidence.recommendation}*
+
+### Scoring Breakdown
+| Tool | Score | Max |
+|---|---|---|
+| Cubic | ${breakdown.cubic} | 30 |
+| CodeRabbit | ${breakdown.coderabbit} | 20 |
+| Snyk | ${breakdown.snyk} | 15 |
+| CI/CD | ${breakdown.ci_cd} | 10 |
+| Vercel | ${breakdown.vercel} | 5 |
+| CodeQL | ${breakdown.codeql} | 5 |
+| **Total** | **${breakdown.cubic + breakdown.coderabbit + breakdown.snyk + breakdown.ci_cd + breakdown.vercel + breakdown.codeql}** | **85** |
+
+*Note: Confidence score is informational and does not block merging. Always conduct manual code review.*`;
+                } catch (parseErr) {
+                  console.error('Failed to parse confidence JSON:', parseErr.message);
+                  confidenceWarning = '\n\n⚠️ **Note**: Confidence score calculation failed. Check workflow logs for details.';
+                }
+              } else {
+                console.log('Unexpected confidence output format:', confidenceJson.substring(0, 100));
+                confidenceWarning = '\n\n⚠️ **Note**: Confidence score calculation produced unexpected output. Check workflow logs.';
+              }
+            } catch (e) {
+              console.error('Error processing confidence score:', e.message);
+              confidenceWarning = '\n\n⚠️ **Note**: Error processing confidence score. Check workflow logs.';
+            }
+
+            try {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `${statusEmoji} **Pipeline Status**: ${status === 'success' ? 'All checks passed. Ready to merge.' : 'One or more checks failed. Not ready to merge.'}${confidenceBody}${confidenceWarning}`
+              });
+            } catch (commentErr) {
+              console.error('Failed to post PR comment:', commentErr.message);
+              throw commentErr;
+            }

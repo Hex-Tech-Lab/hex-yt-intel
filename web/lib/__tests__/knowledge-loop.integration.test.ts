@@ -116,8 +116,47 @@ describe('Wave 4 Knowledge Loop Integration Tests', () => {
 
     it('should extract top FAQs from user wiki', async () => {
       const mockWiki = [
-        { id: 'id1', user_id: 'u1', topic: 'Security', wiki_markdown: 'Security content', question_count: 5, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
-        { id: 'id2', user_id: 'u1', topic: 'Authentication', wiki_markdown: 'Auth content', question_count: 3, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
+        {
+          id: 'id1',
+          user_id: 'u1',
+          topic: 'Security',
+          wiki_markdown: `# Security Knowledge Wiki
+
+## Security
+
+**Questions in this theme:** 2
+
+### FAQ
+- What is encryption?
+- How do I implement SSL?
+
+### Common Keywords
+encryption, ssl, security`,
+          question_count: 5,
+          theme_count: 1,
+          created_at: '2026-07-08T00:00:00Z',
+          updated_at: '2026-07-08T00:00:00Z',
+        },
+        {
+          id: 'id2',
+          user_id: 'u1',
+          topic: 'Authentication',
+          wiki_markdown: `# Authentication Knowledge Wiki
+
+## Authentication
+
+**Questions in this theme:** 1
+
+### FAQ
+- What is OAuth?
+
+### Common Keywords
+oauth, auth`,
+          question_count: 3,
+          theme_count: 1,
+          created_at: '2026-07-08T00:00:00Z',
+          updated_at: '2026-07-08T00:00:00Z',
+        },
       ];
       vi.mocked(mockWikiPort.getUserWiki).mockResolvedValueOnce(mockWiki);
 
@@ -260,7 +299,19 @@ describe('Wave 4 Knowledge Loop Integration Tests', () => {
           id: 'wiki-1',
           user_id: userId,
           topic: 'Security',
-          wiki_markdown: 'Security wiki with encryption content',
+          wiki_markdown: `# Security Knowledge Wiki
+
+## Security
+
+**Questions in this theme:** 3
+
+### FAQ
+- What are the key security considerations?
+- How do I implement encryption?
+- What is authentication?
+
+### Common Keywords
+security, encryption, authentication`,
           question_count: 3,
           theme_count: 1,
           created_at: '2026-07-08T00:00:00Z',

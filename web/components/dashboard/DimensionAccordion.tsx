@@ -30,7 +30,7 @@ export function DimensionAccordion({
   }
 
   return (
-    <div className="p-12 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
+    <div className="p-6 text-center border border-dashed border-[var(--line)] rounded-2xl bg-[var(--surface-raised)]/30">
       {status === 'complete' ? (
         <p className="text-[var(--ink-secondary)] font-mono text-sm">No synthesis dimensions were produced for this analysis.</p>
       ) : status === 'error' ? (

@@ -4,17 +4,18 @@
  * All production rules are exported from this unified index. The following
  * rule ledger documents the current state as of 2026-06-29.
  *
- * RULE COUNT AUDIT (42 total rules):
+ * RULE COUNT AUDIT (55 total rules):
  * - Architecture Rules: 11
  *   - HexagonalBoundaryRule, ComplexityRule, ErrorTaxonomyRule, CrossPlatformRule,
  *   - SchemaContractRule, RedundantValidationRule, WorkflowRule,
  *   - TranscriptUnsafeAccessRule, HardcodedDomainLogicRule, StateSyncRule,
  *   - GraphAwareBoundaryRule
  *
- * - Security Rules: 9
+ * - Security Rules: 13
  *   - CredentialLeakRule, SanitizationRule, SecretsExposureRule, AuthSecurityRule,
  *   - HmacMessageFormatRule, UnsafePropertyAccessRule, EnvPlaceholderNamespaceRule,
- *   - InsecureFallbackRule, SqlInjectionRule
+ *   - InsecureFallbackRule, SqlInjectionRule, WhitelistPathSanitizationRule,
+ *   - InformationDisclosureRule, YamlInjectionRule, ReservedKeywordRule
  *
  * - Streaming Rules: 7
  *   - StreamResilienceRule, BundleContradictionRule, TranscriptGuardRule,
@@ -31,6 +32,13 @@
  *   - StartTransitionWrappingRule, ToastAccessibilityRule, SwallowedErrorRule,
  *   - SyncImportBeforeRedirectRule, CanvasStaleDataRule
  *
+ * - Quality Rules: 6
+ *   - AsyncWithoutAwaitRule, DeadCodeRule, VariableNamingRule,
+ *   - TimeoutCleanupRule, ImportOrderingRule, ErrorObservabilityRule
+ *
+ * - Data Integrity Rules: 3
+ *   - DatabaseConstraintRule, DefaultValueConsistencyRule, TruncationValidationRule
+ *
  * MAINTENANCE NOTES:
  * - Dead module files (ArchitectureRuleEngine.ts, etc.) have been removed.
  * - All rules are now single-responsibility and independently exported.
@@ -38,7 +46,9 @@
  */
 
 export { HexagonalBoundaryRule, ComplexityRule, ErrorTaxonomyRule, CrossPlatformRule, SchemaContractRule, RedundantValidationRule, WorkflowRule, TranscriptUnsafeAccessRule, HardcodedDomainLogicRule, StateSyncRule, GraphAwareBoundaryRule } from "./architecture";
-export { CredentialLeakRule, SanitizationRule, SecretsExposureRule, AuthSecurityRule, HmacMessageFormatRule, UnsafePropertyAccessRule, EnvPlaceholderNamespaceRule, InsecureFallbackRule, SqlInjectionRule } from "./security";
+export { CredentialLeakRule, SanitizationRule, SecretsExposureRule, AuthSecurityRule, HmacMessageFormatRule, UnsafePropertyAccessRule, EnvPlaceholderNamespaceRule, InsecureFallbackRule, SqlInjectionRule, WhitelistPathSanitizationRule, InformationDisclosureRule, YamlInjectionRule, ReservedKeywordRule } from "./security";
 export { StreamResilienceRule, BundleContradictionRule, TranscriptGuardRule, StreamSettleRule, CascadeOrderRule, ProxyPromotionRule, ModuleLevelDynamicImportRule } from "./streaming";
 export { PersistResilienceRule, PersistAbortScopeRule, RetryFlagInterferenceRule, QuorumTimeoutCompletionRule, StaleStateResetRule } from "./persistence";
 export { InpAlertBlockerRule, CanvasHoverReRenderRule, OverlayCloseCascadeRule, ValidationOnChangeRule, UnhandledClipboardPromiseRule, StartTransitionWrappingRule, ToastAccessibilityRule, SwallowedErrorRule, SyncImportBeforeRedirectRule, CanvasStaleDataRule } from "./ui";
+export { AsyncWithoutAwaitRule, DeadCodeRule, VariableNamingRule, TimeoutCleanupRule, ImportOrderingRule, ErrorObservabilityRule } from "./quality";
+export { DatabaseConstraintRule, DefaultValueConsistencyRule, TruncationValidationRule } from "./data-integrity";
