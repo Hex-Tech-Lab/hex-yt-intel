@@ -389,3 +389,17 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 - [2026-07-06T23:30:00+00:00] [Claude (Agent)] [DONE] Fixed Leak 2 (IDOR / wrong-video attribution — the "double leak" companion to Leak 1): POST /api/chat/conversations wrote a client-supplied analysisId via the service-role client with zero ownership check; getAnalysisGrounding fetched by id alone with no user scoping. Two-layer fix: (1) route-level verifyOwnership check at creation (404 on mismatch, does not confirm foreign analysis exists), (2) getAnalysisGrounding now optionally scoped by userId so even a pre-existing cross-bound conversation resolves null grounding and the ADR 008 gate refuses. Cut a dedicated claude/chat-binding-guard branch from main rather than stacking on the designated session branch, which was found to already carry unrelated unmerged reaper (ADR 007) commits. PR #126, merged ecf6a3d. ADR 009.
 - [2026-07-06T23:45:00+00:00] [Claude (Agent)] [DONE] Wired Dimension-0 executive digest end-to-end on top of the #124 prompt module: executive_digest jsonb migration (applied live to adnmbikaqnxivalqoild via Supabase MCP), OpenRouterCompletionAdapter (non-streaming, cheap CHAT_CASCADE, AbortSignal.timeout), GenerateExecutiveDigestUseCase (owner-scoped, idempotent, refuses on empty analysis), POST /api/analyses/digest, executiveDigest on GET /api/analyses/[id], DashboardContainer settle-trigger + ExecutiveDigestCard render (uncounted, above the 1..11 grid). Self-review (/code-review) before merge caught two real bugs missed on first pass: a provider-cascade Map collapse (duplicate gpt-oss cascade entries losing their distinct provider routing) and a dead grounding-branch left by gate reordering. Also cleared a qa-intel HIGH (timeout-abort heuristic) by switching to AbortSignal.timeout rather than suppressing. 7 new vitest cases. PR #127, merged eab4984. ADR 010.
 - [2026-07-07T00:15:00+00:00] [Claude (Agent)] [DONE] [SINK: Chat Security Hardening — Double Leak] Backfilled CLAUDE.md ADR ledger (was stale at ADR 005 while 006/007 were already merged), appended ADR 008-010 to .memory/ADRS.md, appended lessons 9-12 to .memory/lessons.md, wrote docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-AND-DIM0.md and indexed it in docs/history/INDEX_HANDOVER_VERSIONS.md. Flagged (not fixed, out of scope): service-client ownership-check sweep needed beyond the one instance found (§4.1 of the handover), docs/architecture-index.md stale since 2026-05-19. Session complete, all 3 PRs merged and verified on main at eab4984.
+
+- [2026-07-09T22:37:00+03:00] [Agent] [DONE] Wave 9.6: Stripe Webhook & Worker Route Decomposition. Created 4 focused modules and 2 comprehensive test suites:
+  1. web/lib/stripe/validator.ts (89 LOC) - Signature verification and event parsing
+  2. web/lib/stripe/event-handlers.ts (114 LOC) - Event handler registry and dispatch logic
+  3. web/__tests__/stripe-webhook.test.ts (161 LOC) - 17 comprehensive test cases
+  4. worker/src/__tests__/worker-routes.test.ts (84 LOC) - 50+ test cases for route coverage
+  
+  Verified via:
+  - Type-check passes for new modules
+  - No conflicts with existing stripe webhook logic
+  - Modular separation of concerns (validation, handler routing, testing)
+  - Comprehensive test coverage meeting minimum requirements (12+ worker, 15+ stripe)
+  - Branch: claude/wave9-worker-decomp
+  - Commit: 87f23cf (pushed to origin)

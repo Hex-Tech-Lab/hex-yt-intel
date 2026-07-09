@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { Index } from '@upstash/vector';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
 import { guardTraffic } from '@/lib/services/traffic';
@@ -19,6 +20,11 @@ if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL
   throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
 }
 
+const SearchRequestSchema = z.object({
+  query: z.string().min(3).max(1000),
+  topK: z.number().int().min(1).max(50).default(5),
+});
+
 export async function POST(request: NextRequest) {
   try {
     // 1. Parse and validate request
@@ -33,29 +39,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate request schema
-    if (!body || typeof body !== 'object') {
+    // Validate request schema with Zod
+    const parsed = SearchRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      const errorCode = ERROR_CODES.INVALID_REQUEST_SCHEMA;
+      Sentry.captureMessage('Search: Invalid request schema', {
+        level: 'warning',
+        tags: { code: errorCode },
+        contexts: { validation: parsed.error.issues }
+      });
       return NextResponse.json(
-        { error: 'Request body must be an object' },
+        { error: 'Invalid request', details: parsed.error.issues },
         { status: 400 }
       );
     }
 
-    const { query, topK = 5 } = body as { query?: string; topK?: number };
-
-    if (!query || typeof query !== 'string') {
-      return NextResponse.json(
-        { error: 'Query parameter is required and must be a string' },
-        { status: 400 }
-      );
-    }
-
-    if (query.length < 3 || query.length > 1000) {
-      return NextResponse.json(
-        { error: 'Query must be between 3 and 1000 characters' },
-        { status: 400 }
-      );
-    }
+    const { query, topK } = parsed.data;
 
     // 2. Authentication check
     const authAdapter = new SupabaseAuthAdapter();
