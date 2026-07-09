@@ -6,6 +6,8 @@ import type {
 import type { UserTier } from '@/lib/types/billing';
 import type { ChatMessage } from '@/lib/types/chat';
 import { env } from '@/lib/env';
+import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService';
+import { buildGroundingWithHistory } from '@/lib/utils/build-grounding-with-history';
 
 export interface ProcessChatMessageUseCaseParams {
   conversationId: string;
@@ -41,7 +43,8 @@ export class ProcessChatMessageUseCase {
   constructor(
     private chatPersistence: ChatPersistencePort,
     private modelResolution: ModelResolutionPort,
-    private tokenCrypto: CryptographicTokenPort
+    private tokenCrypto: CryptographicTokenPort,
+    private knowledgeHistory: KnowledgeHistoryService
   ) {}
 
   async execute(params: ProcessChatMessageUseCaseParams): Promise<ProcessChatMessageResult> {
@@ -67,10 +70,11 @@ export class ProcessChatMessageUseCase {
       return { type: 'error', code: 'ERR_EMPTY_MESSAGE', status: 400, message: 'Empty message' };
     }
 
-    // 1. Load conversation and messages in parallel to avoid sequential network roundtrips
-    const [conv, allMessages] = await Promise.all([
+    // 1. Load conversation, messages, and user knowledge context in parallel to avoid sequential network roundtrips
+    const [conv, allMessages, knowledgeContext] = await Promise.all([
       this.chatPersistence.getConversation({ conversationId }),
       this.chatPersistence.getMessages({ conversationId }),
+      this.knowledgeHistory.loadUserKnowledgeContext(userId),
     ]);
 
     if (!conv) {
@@ -237,7 +241,10 @@ export class ProcessChatMessageUseCase {
       ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
       : '';
     const channelSuffix = groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : '';
-    const grounding = `You are the analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. Do not ask which video — you have it.${descriptionSection}--- ANALYSIS ---\n${groundedMarkdown.slice(0, 12000)}`;
+    let grounding = `You are the analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. Do not ask which video — you have it.${descriptionSection}--- ANALYSIS ---\n${groundedMarkdown.slice(0, 12000)}`;
+
+    // 8c. Inject user's learning history into grounding context
+    grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);
 
     // 9. Resolve LLM models based on reasoning flag
     const chatModels = isReasoning

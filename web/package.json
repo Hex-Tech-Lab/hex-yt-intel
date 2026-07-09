@@ -10,7 +10,8 @@
     "lint": "eslint . --ext .ts,.tsx --no-cache",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
-    "test": "playwright test"
+    "test": "playwright test",
+    "setup:cron": "tsx ../scripts/setup-qstash-cron.ts"
   },
   "dependencies": {
     "@paddle/paddle-node-sdk": "^3.8.0",

@@ -120,6 +120,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     const colWidth = 190;
     const rowHeight = 48;
     const nodeWidth = 160;
+    const nodeHeight = 32; // Consistent with py-2 (8px) + content (~16px)
 
     const countVisibleLeaves = (node: MindNode): number => {
       if (collapsedNodes[node.id] || node.children.length === 0) return 1;
@@ -144,10 +145,10 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
           const childX = 20 + (level + 1) * colWidth;
 
           linksList.push({
-            sourceX: x + nodeWidth, // right edge of parent node
-            sourceY: y + 16,  // center vertical
-            targetX: childX, // left edge of child node
-            targetY: childY + 16,
+            sourceX: x + nodeWidth, // right edge of parent node boundary
+            sourceY: y + nodeHeight / 2,  // true vertical center of parent node
+            targetX: childX, // left edge of child node boundary
+            targetY: childY + nodeHeight / 2,  // true vertical center of child node
             targetId: child.id,
           });
 

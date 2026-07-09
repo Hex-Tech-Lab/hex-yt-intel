@@ -243,9 +243,15 @@ export function KnowledgeGraphCanvas({
           const showLabel = isActive || isNeighbor || node.weight >= 1.5 || scale > (compact ? 1.2 : 0.8);
 
           if (showLabel && !dim) {
-            const baseFontSize = compact ? 8.5 : 9.5;
-            const clampedFontSize = Math.max(6.5, Math.min(12, baseFontSize / Math.sqrt(scale)));
-            ctx.font = `500 ${clampedFontSize}px Inter, system-ui, -apple-system, sans-serif`;
+            // Font size scales with node weight (frequency): 11px-26px range
+            const minFontSize = 11;
+            const maxFontSize = 26;
+            const weightedFontSize = minFontSize + (node.weight * (maxFontSize - minFontSize));
+            const clampedFontSize = Math.max(minFontSize * 0.6, Math.min(maxFontSize, weightedFontSize / Math.sqrt(scale)));
+
+            // Font weight: bold (700) for selected nodes, regular (400) otherwise
+            const fontWeight = node.id === selectedId ? 700 : 400;
+            ctx.font = `${fontWeight} ${clampedFontSize}px Inter, system-ui, -apple-system, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillStyle = `rgb(${COL.ink} / ${isActive ? 1 : 0.8})`;

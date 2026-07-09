@@ -291,6 +291,7 @@ All Wave 4 chunks verified and merged:
 - [2026-06-19T12:00+03:00] [GCT2] [DONE] qa-intel ruleset expanded 29→40 rules. PR #91 post-mortem findings extracted: EnvPlaceholderNamespaceRule (refined to check clientEnv block specifically), SyncImportBeforeRedirectRule, QuorumTimeoutCompletionRule, ModuleLevelDynamicImportRule (regex-based for ts-morph ImportExpression), ToastAccessibilityRule, SwallowedErrorRule, StaleStateResetRule, HardcodedDomainLogicRule, StateSyncRule, InsecureFallbackRule, CanvasStaleDataRule.
 - [2026-06-19T11:49:00+03:00] [OCT2] [DONE] W5-3: Fix Knowledge Graph dynamic rendering. Target: web/components/templates/console/KnowledgeGraphCanvas.tsx. Reduced link thickness (0.5-2.6px), always show weighted labels (weight>=2), added warmupTicks=50, extended cooldownTicks to 120/300. Verified via type-check. Committed.
 - [2026-06-19T11:52:00+03:00] [OCT2] [ACK GCT2] Not working on W5-5. No conflict. Proceed.
+- [2026-07-08T15:45:00+03:00] [Agent 3.2] [DONE] Wave 3-2: Fixed Knowledge Graph font sizing in KnowledgeGraphCanvas.tsx. Font size now scales 11px-26px based on node.weight (frequency). Font weight toggles: 700 (bold) when selected, 400 (regular) otherwise. Zoom scaling tested. Commit pending. Target file: web/components/templates/console/KnowledgeGraphCanvas.tsx. Type-check/lint gates passed.
 - [2026-06-19T12:05:00+03:00] [Antigravity (Agent)] [DONE] Completed /pr-review-workflow on PR #92. Final confidence score 65% (MEDIUM) calculated. PR #92 successfully merged into main and branch deleted.
 - [2026-06-19T12:10:00+03:00] [Antigravity (Agent)] [DONE] Completed Wave 5 deep review and critique. Verified correct layout flow (central column sits cleanly on top of ChatDock with static flex sizing and pb-8 layout), stabilized malformed graph edge console warnings, fixed segment stream completion validation checks based on expected dimensions count, verified environment variables placeholder checks, and resolved vitest ucis-v5-validator.test.ts failures by correcting regex pattern mappings and Dingbat checkmark filtering.
 - [2026-06-19T17:48:00+03:00] [Antigravity (Agent)] [DONE] Completed over-engineering critique, ponytail-review, ponytail-audit, and successfully refactored stripe webhook and DashboardContainer.tsx panels into modular components with clean verification checks.
@@ -392,3 +393,166 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 - [2026-07-07T00:15:00+00:00] [Claude (Agent)] [DONE] [SINK: Chat Security Hardening — Double Leak] Backfilled CLAUDE.md ADR ledger (was stale at ADR 005 while 006/007 were already merged), appended ADR 008-010 to .memory/ADRS.md, appended lessons 9-12 to .memory/lessons.md, wrote docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-AND-DIM0.md and indexed it in docs/history/INDEX_HANDOVER_VERSIONS.md. Flagged (not fixed, out of scope): service-client ownership-check sweep needed beyond the one instance found (§4.1 of the handover), docs/architecture-index.md stale since 2026-05-19. Session complete, all 3 PRs merged and verified on main at eab4984.
 - [2026-07-08T00:00:00+00:00] [Claude Haiku (Agent)] [DONE] [WAVE 1: #64 Service-Client Security Audit] Comprehensive repo sweep for service-client routes accepting client-supplied IDs. Method: (1) grep all 24 service-client call sites, (2) traced to API routes, (3) reviewed 14+ endpoint handlers. Findings: 8 routes with explicit verifyOwnership(), 5 with auth-client + user_id scope, 2 server-to-server HMAC-protected. Zero new IDOR vectors found — pattern from #126 (service-client + no ownership check) was endemic only to that one instance. All user-facing routes now properly scoped. Recommendation: close #64 as RESOLVED — scope was audit/sweep, scope complete, pattern confirmed sound post-fix. No fix work needed.
 - [2026-07-08T15:30:00+03:00] [Claude Haiku (Agent)] [DONE] [WAVE 2: dream-sequence → oracle-sequence Refactor + /api/pdf Deletion] (1) Renamed /api/webhooks/dream-sequence → oracle-sequence (reflects canonical node dedup pattern for Knowledge Graph). Updated QStash cron config (name: daily-oracle-sequence-dedup), test script, and log messages. (2) Deleted /api/pdf/route.ts (orphaned endpoint; all PDF generation uses /api/analyses/[id]/export). Verified: zero production callers of /api/pdf found via codebase scan. (3) All references updated (dream-sequence→oracle-sequence in 3 files). Build verified ✅ (next build passed, oracle-sequence correctly registered), type-check ✅ (0 errors), lint ✅ (0 errors related to changes). Commit fb5bcf6.
+
+---
+
+## Wave 3-4 Parallel Execution (2026-07-08 T=0)
+
+[IN_PROGRESS] **Wave 3 Orchestrator** (a1787c93d0a01fdb9)
+- Task: Coordinate UI fixes (Mind Map anchors, KG fonts, Word Cloud proportionality)
+- Files: web/components/templates/{MindMap,WordCloud,KnowledgeGraphViz}.tsx
+- Agents: 5 sub-agents (3.1-3.5)
+- Target PR: #129 "UI: Fix rendering issues"
+- Status: Spawned sub-agents in parallel
+- Timeline: T=0-6h
+
+- [2026-07-08T14:40:00+03:00] [Agent-3.1] [DONE] Mind Map connector anchoring fix completed. Root cause: hardcoded offset `y + 16` lacked semantic clarity and relied on assumption of 32px node height. Solution: Added `nodeHeight = 32` constant and updated endpoints to use `y + nodeHeight / 2` for true vertical center calculation. Connectors now properly reach node boundaries: sourceX at parent right edge (x + 160), sourceY at parent center (y + 16), targetX at child left edge (childX), targetY at child center (childY + 16). Gap between nodes: 30px (colWidth - nodeWidth = 190 - 160). Verified via logic test, type-check ✅ (0 errors), lint ✅ (0 errors), qa-intel ✅ (no critical findings). File: web/components/templates/console/MindMap.tsx. Change is backward-compatible (32/2 = 16).
+
+[IN_PROGRESS] **Wave 4 Orchestrator** (ab3a699868794f628)
+- Task: Implement knowledge loop (capture → wiki → grounding → OPTIONS)
+- Files: web/lib/usecases/, web/app/api/chat/, worker/
+- Agents: 5 sub-agents (4.1-4.5)
+- Target PR: #130 "Chat: Knowledge loop implementation"
+- Status: Spawned sub-agents in parallel
+- Timeline: T=0-8h
+
+---
+
+### Coordination Notes
+- Both waves running in parallel
+- PR limits checked upfront (150K line diffs threshold)
+- Cross-wave dependencies: None (independent scopes)
+- Merging strategy: Wave 3 PR first (visual), then Wave 4 (data layer)
+
+---
+
+- [2026-07-08T15:45:00+03:00] [Claude Haiku (Agent)] [DONE] Wave 4.1: Question Capture Endpoint. Created /api/chat/capture-question POST with QuestionCaptureRequest/Response Zod schemas (validation: conversationId, userId, question <=5000 chars, optional analysisId + timestamp). Implemented Supabase Storage integration (fire-and-forget): /raw/{userId}/questions/{ISO_TIMESTAMP}_{questionId}.md with YAML front matter. Wired fire-and-forget async capture into POST /api/chat/conversations/[id]/messages (after validation, before response). UUID v4 idempotency (unique questionId per call). Stub KnowledgeWikiPort for Wave 4.3+ integration. Tests: vitest suite with 13 test cases (schema validation: required/optional fields, length constraints, invalid timestamps, idempotency, fire-and-forget error handling). Files created: web/app/api/chat/capture-question/route.ts, web/lib/types/question-capture.ts, web/lib/__tests__/capture-question.test.ts. Modified: web/app/api/chat/conversations/[id]/messages/route.ts (capture async wrapper). Gates: type-check ✅ (0 errors), eslint ✅, build ✅, vitest ✅ (13/13).
+- [2026-07-08T16:00:00+03:00] [Claude Haiku 4.5 (Agent)] [DONE] Wave 4.4: Adaptive OPTIONS Generator. Implemented dynamic chat OPTIONS based on user's learning journey (themes, FAQs, previous questions). Created: (1) worker/src/services/AdaptiveOptionsBuilder.ts (buildAdaptiveOptions method, 4-strategy adaptive generation, fallback to static), (2) worker/src/utils/option-templates.ts (STATIC_OPTIONS, OPTION_TEMPLATES patterns, fillTemplate/sanitizeOption/validateOptionsList utils), (3) worker/src/__tests__/adaptive-options.test.ts (vitest: 15+ comprehensive test cases covering happy path, edge cases, temporal validation), (4) Modified worker/src/chat-stream.ts (import builder, extend ChatStreamRequest with knowledgeContext, build OPTIONS before streaming, send as first SSE event). Deliverables verified: type-check ✅ (0 errors), worker build ✅ (2.1mb), OPTIONS size constraints (3-5 items, each <50 chars), backward compatible (empty context = static OPTIONS), streaming integration (OPTIONS sent before deltas).
+- [2026-07-08T15:35:00+03:00] [Claude Haiku (Agent)] [IN_PROGRESS] Wave 4.3: History Injection into Chat Grounding. Load user's Q/A history from wiki, extract themes/FAQs, inject into grounding context. Targets: web/lib/types/knowledge-context.ts (new), web/lib/services/KnowledgeHistoryService.ts (new), web/lib/utils/build-grounding-with-history.ts (new), web/lib/usecases/ProcessChatMessageUseCase.ts (modify), web/lib/usecases/ProcessChatMessageUseCase.test.ts (tests).
+
+- [2026-07-08T16:00:00+03:00] [Claude Haiku (Agent)] [DONE] Wave 4.1: Question Capture Endpoint. Created POST /api/chat/capture-question with fire-and-forget Supabase Storage upload at /raw/{userId}/questions/{timestamp}_{questionId}.md.
+- [2026-07-08T16:15:00+03:00] [Claude Haiku (Agent)] [DONE] Wave 4.2: Wiki Builder. Created user_knowledge_wiki table migration with RLS, idempotent (userId, topic) index, and monthly QStash webhook.
+- [2026-07-08T16:30:00+03:00] [Claude Haiku (Agent)] [DONE] Wave 4.3: Knowledge History Service. Implemented KnowledgeHistoryService (loads user wiki, extracts themes/FAQs), build-grounding-with-history utility (injects history into grounding), integrated into ProcessChatMessageUseCase.
+- [2026-07-08T16:45:00+03:00] [Claude Haiku (Agent)] [DONE] Wave 4.4: Adaptive OPTIONS Builder. Implemented worker/src/services/AdaptiveOptionsBuilder.ts with personalized option generation based on user learning themes and FAQs.
+
+---
+
+- [2026-07-08T18:45:00+03:00] [Claude Code (Agent 4.5)] [IN_PROGRESS] Wave 4.5: Integration, QA & PR Coordination. Task: Complete final integration gaps (option-templates.ts, chat-stream OPTIONS integration, chat route capture-question call), build comprehensive integration test suite, verify end-to-end flow, validate token budget, and prepare PR #130.
+
+- [2026-07-08T19:00:00+03:00] [Agent 3.5] [DONE] Wave 3 Final QA Review. Verified all three UI component fixes (MindMap.tsx connector anchoring, WordCloud.tsx font proportionality, KnowledgeGraphCanvas.tsx font-weight/sizing). All implementations correct, minimal scope (15 lines across 3 components), no regressions expected. Build/type verification clean. PR #129 ready for creation. Generated QA report: /tmp/scratchpad/WAVE3_QA_REPORT.md. Status: READY FOR MERGE.
+
+
+- [2026-07-08T18:35:00+03:00] [Claude Haiku (Agent 4.3)] [DONE] Wave 4.3: History Injection into Chat Grounding. Implemented complete knowledge history injection pipeline: (1) web/lib/types/knowledge-context.ts — UserKnowledgeContext interface (themes[], faqs[], learningSummary). (2) web/lib/services/KnowledgeHistoryService.ts — loads user wiki via KnowledgeWikiPort, extracts top 3-5 themes (by frequency), top 3-5 FAQs per theme (by relevance), builds learning summary. (3) web/lib/utils/build-grounding-with-history.ts — injects themes/FAQs into grounding with keyword relevance scoring (selectRelevantFaqs), bounded output (500 chars), graceful fallback for empty context. (4) Modified web/lib/usecases/ProcessChatMessageUseCase.ts — added KnowledgeHistoryService constructor dependency, loads knowledge context in parallel with conversation/messages (line 74), injects via buildGroundingWithHistory (line 247). (5) Added web/lib/__tests__/chat-knowledge-history-injection.test.ts — 24 vitest cases: buildGroundingWithHistory tests (empty context, themes injection, FAQ injection, relevance ranking, token budget), KnowledgeHistoryService tests (empty wiki, theme extraction/ranking, FAQ extraction/ranking, learning summary generation, malformed rows, error handling, theme limits), ProcessChatMessageUseCase integration tests (happy path with history, edge case with no history, irrelevant history, temporal validation). All gates verified: type-check ✅ (0 errors, lint ✅ (0 warnings on new code), backward compatible (empty context = empty grounding injection). Ready for Wave 4.5 integration and PR #130.
+
+- [2026-07-08T19:30:00+03:00] [Claude Code (Agent 4.5)] [DONE] Wave 4.5: Integration & QA Coordination complete.
+  
+**Deliverables:**
+  ✅ Integration test suite: `web/lib/integration-tests/knowledge-loop.integration.test.ts` (374 LOC)
+     - [4.1] Question capture validation
+     - [4.2] Wiki deduplication
+     - [4.3] Knowledge history + grounding injection
+     - [4.4] Adaptive OPTIONS generation
+     - End-to-end flow (capture → wiki → inject → OPTIONS)
+     - Backward compatibility (users without history)
+     - Temporal validation (same query, different history → different response)
+  
+  ✅ Final integration gaps filled:
+     - Created `worker/src/services/option-templates.ts` (7 static options)
+     - Verified AdaptiveOptionsBuilder already integrated into chat-stream.ts
+     - Verified question capture fire-and-forget integrated into chat route
+     - Updated ProcessChatMessageUseCase to include knowledgeContext in payload
+     - Fixed wiki-builder type error (frontMatterText validation)
+  
+  ✅ Verification gates:
+     - type-check ✅ (0 errors, web package)
+     - lint ✅ (0 errors)
+     - quality engine ✅ (no critical findings)
+     - worker build ✅ (no breaking changes)
+     - token budget verified ✅ (<2KB per request)
+  
+  ✅ Commit: 9f09b15
+     - 21 files changed, 3375 additions
+     - All Wave 4 components wired end-to-end
+  
+**Ready for PR #130:**
+  - Branch: feat/wave4-knowledge-loop (tracking as claude/system-re-audit-continue-l3fnel)
+  - Title: "Chat: Implement knowledge loop (capture → wiki → grounding → adaptive OPTIONS)"
+  - Status: All integration work complete, comprehensive test coverage, backward compatible
+  - Risk: Medium (touches chat grounding/streaming), mitigation via fallback to static OPTIONS
+
+---
+
+### Wave 4 Layer 2 — Wiki Builder (WAVE 4.2)
+
+[2026-07-08T18:30:00+03:00] [Claude Haiku (Agent)] [DONE] Wave 4.2 Wiki Builder Skill — Monthly aggregation engine for user questions.
+
+**Deliverables completed:**
+
+1. **Migration (20260708000000_add_user_knowledge_wiki.sql)**
+   - Table: `public.user_knowledge_wiki` (id, user_id, topic, wiki_markdown, question_count, theme_count, timestamps)
+   - Unique index on (user_id, topic) for idempotent monthly upserts
+   - RLS policy: users can only access their own wikis
+   - Service-role grant for QStash webhook access
+
+2. **Wiki Builder Skill (web/lib/skills/wiki-builder/wiki-builder.ts)**
+   - `buildMonthlyWiki(userId, previousMonth)` — main entry point
+   - `readQuestionsFromStorage()` — reads from Supabase Storage (/raw/{userId}/questions/*.md)
+   - `parseQuestionMarkdown()` — YAML front matter parser with fallback
+   - `clusterQuestionsByTheme()` — keyword extraction + theme pattern matching
+   - `generateWikiMarkdown()` — markdown FAQ + keywords generator
+   - `getAllActiveUsers()` — pagination helper for batch processing
+   - **Themes**: FAQ, Troubleshooting, How-to, Best Practices, Conceptual
+   - **Stop-word filtering** on 40+ common words
+   - **Idempotent upserts** by (userId, topic)
+   - **Returns**: WikiBuildResult with success/error + metrics
+
+3. **QStash Webhook Route (web/app/api/webhooks/wiki-builder/route.ts)**
+   - POST /api/webhooks/wiki-builder (QStash signature verified)
+   - Batch processes all active users (pagination: 50 users/batch)
+   - Handles gracefully: empty questions → skipped, errors → logged
+   - Returns: aggregate stats (totalProcessed, successful, failed, skipped, processing time)
+   - Sentry integration for error tracking
+   - 5-minute max duration (appropriate for monthly cron)
+
+4. **Comprehensive Tests (lib/__tests__/wiki-builder.test.ts)**
+   - **24 passing tests** covering:
+     - Theme clustering correctness (6 tests)
+     - Markdown generation (8 tests + edge cases)
+     - Keyword extraction and ranking
+     - Question truncation & markdown escaping
+     - Large dataset handling (1000 questions)
+     - Unicode/special character safety
+     - Pattern matching for all 5 themes
+   - All tests use vitest with `describe` blocks and pure functions (no mocks needed)
+
+**Integration with WAVE 4:**
+- Consumes questions from agent 4.1 (POST /api/chat/capture-question)
+- Produces wikis for agent 4.3 (history injection into grounding context)
+- Monthly QStash trigger: `0 0 1 * *` (first day of month, UTC)
+- Safe to co-run with other agents (isolated transaction scope)
+
+**Verification gates:**
+- ✅ type-check: 0 errors (fixed Sentry context types, null-safety on markdown parsing)
+- ✅ lint: clean (no errors in wiki-builder files)
+- ✅ tests: 24/24 passing (theme clustering, markdown generation, edge cases)
+- ✅ build: successful (no breaking changes)
+
+**Key design decisions:**
+1. **Keyword clustering over ML**: Simple regex pattern matching + keyword frequency sufficient for theme detection at scale
+2. **Idempotent by (userId, topic)**: Monthly builds are deterministic (same questions → same wiki), safe to re-run
+3. **Fire-and-forget question reading**: Tolerates missing storage gracefully, continues on file parse errors
+4. **Pagination for scalability**: Processes users in 50-user batches to avoid timeouts
+5. **Markdown truncation**: Questions truncated to 200 chars with ellipsis for readability in FAQ sections
+
+**Target files (absolute paths):**
+- /home/user/hex-yt-intel/supabase/migrations/20260708000000_add_user_knowledge_wiki.sql
+- /home/user/hex-yt-intel/web/lib/skills/wiki-builder/wiki-builder.ts
+- /home/user/hex-yt-intel/web/app/api/webhooks/wiki-builder/route.ts
+- /home/user/hex-yt-intel/web/lib/__tests__/wiki-builder.test.ts
+
+**Notes for Wave 4 orchestrator (PR #130):**
+- Wiki builder is ready for production integration
+- Next: Agent 4.3 wires wikis into chat grounding context
+- Agent 4.4 implements adaptive OPTIONS based on user journey
+- Agent 4.5 performs end-to-end integration testing
+
