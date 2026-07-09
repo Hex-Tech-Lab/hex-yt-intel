@@ -76,9 +76,9 @@ export class KnowledgeHistoryService {
       try {
         wiki = await Promise.race([
           this.wikiPort.getUserWiki(userId),
-          new Promise<never>((_, reject) =>
-            timeoutId = setTimeout(() => reject(new Error('Wiki lookup timeout (3s)')), 3000)
-          ),
+          new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(() => reject(new Error('Wiki lookup timeout (3s)')), 3000);
+          }),
         ]).finally(() => {
           if (timeoutId) clearTimeout(timeoutId);
         });
@@ -164,9 +164,9 @@ export class KnowledgeHistoryService {
  * - Non-string markdown: skipped with type warning
  * - Invalid question format: filtered out, doesn't corrupt row
  */
-function extractFAQsFromWiki(
+const extractFAQsFromWiki = (
   themeEntries: Array<{ theme: string; score: number; markdown: string }>
-): FAQItem[] {
+): FAQItem[] => {
   const allFaqs: FAQItem[] = [];
 
   for (const entry of themeEntries) {
