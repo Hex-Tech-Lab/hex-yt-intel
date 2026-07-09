@@ -165,7 +165,7 @@ pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr=129
 
 ### Implementation Details
 
-**File**: `/scripts/calculate-pr-confidence.ts` (380 LOC)
+**File**: `/scripts/calculate-pr-confidence.ts` (373 LOC)
 
 **Data Sources**:
 - GitHub API (comments, check runs, deployments, code-scanning alerts)
@@ -175,11 +175,11 @@ pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr=129
 - CodeQL analysis results
 
 **Tool Detection**:
-- Cubic: Regex pattern `cubic[:\s]*([0-9]+)` on PR comments
+- Cubic: Regex pattern `cubic[:\s]+([0-9]+)` on PR comments
 - CodeRabbit: Regex pattern `(\d+)\s+passed` + score normalization
 - Snyk: Count of `resolved|fixed` keywords in comments
 - CI/CD: All check runs in pull_request merge commit
-- Vercel: Check runs context includes "vercel" + success state
+- Vercel: PR comments from Vercel bot containing "READY" or "PRODUCTION" status
 - CodeQL: Code-scanning alerts filtered by severity (critical/high)
 
 **Error Handling**:
