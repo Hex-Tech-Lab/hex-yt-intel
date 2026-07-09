@@ -134,23 +134,19 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
   // Generate and inject dynamic follow-up prompts after assistant responses complete
   useEffect(() => {
-    // Validate minimum requirements for prompt injection
     if (!activeId || messages.length < 2 || sending) return;
 
     const latestMessage = messages[messages.length - 1];
     const userMessage = messages[messages.length - 2];
 
-    // Check eligibility: latest is assistant, has content, no OPTIONS, not short
-    if (
-      !latestMessage ||
-      !userMessage ||
-      latestMessage.role !== 'assistant' ||
-      userMessage.role !== 'user' ||
-      latestMessage.content.includes('OPTIONS:') ||
-      latestMessage.content.length < 100
-    ) {
-      return;
-    }
+    const isValidForInjection = (latest: typeof latestMessage, user: typeof userMessage) => {
+      if (!latest || !user) return false;
+      if (latest.role !== 'assistant' || user.role !== 'user') return false;
+      if (latest.content.includes('OPTIONS:') || latest.content.length < 100) return false;
+      return true;
+    };
+
+    if (!isValidForInjection(latestMessage, userMessage)) return;
 
     try {
       const analysisTitle = useAnalysisStore.getState().analysis?.title;
@@ -171,22 +167,16 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       const updatedContent = `${latestMessage.content}\n\nOPTIONS: ${optionsJson}`;
 
       useChatStore.setState((state) => {
-        // Guard: re-verify sending state hasn't changed mid-injection (streaming may have restarted)
-        if (state.sending) {
-          console.debug('[ChatDock] Sending state changed mid-injection, aborting to prevent duplicates');
-          return state;
-        }
-        // Guard: re-verify message still exists and hasn't been mutated (OPTIONS already added)
-        const messages = state.messagesByConv[activeId as string] || [];
-        const msg = messages.find((m) => m.id === latestMessage.id);
-        if (!msg || msg.content.includes('OPTIONS:')) {
-          return state;
-        }
+        if (state.sending) return state;
+
+        const convMessages = state.messagesByConv[activeId as string] || [];
+        const msg = convMessages.find((m) => m.id === latestMessage.id);
+        if (!msg?.content || msg.content.includes('OPTIONS:')) return state;
 
         return {
           messagesByConv: {
             ...state.messagesByConv,
-            [activeId as string]: messages.map((m) =>
+            [activeId as string]: convMessages.map((m) =>
               m.id === latestMessage.id ? { ...m, content: updatedContent } : m
             ),
           },
