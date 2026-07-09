@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     // 5. Query vector index with COSINE similarity
     const searchResults = await vectorIndex.query<{ analysisId: string }>({
       vector: queryEmbedding,
-      topK: topK, // Already validated to be in [1, 50]
+      topK, // Already validated to be in [1, 50]
       includeMetadata: true,
     });
 
