@@ -19,8 +19,8 @@ export const DatabaseConstraintRule: IRule = {
 
         for (const match of matches) {
           const columnName = match[1];
-          // Look for constraints on this column
-          const constraintPattern = new RegExp(`${columnName}.*(?:NOT NULL|CHECK|DEFAULT|PRIMARY)`, 'i');
+          // Look for constraints on this column with word boundaries
+          const constraintPattern = new RegExp(`\\b${columnName}\\b.*(?:NOT NULL|CHECK|DEFAULT|PRIMARY)`, 'i');
           if (!constraintPattern.test(text)) {
             // Only flag if column name suggests it should be constrained (e.g., count, count_total, amount)
             if (columnName.includes('count') || columnName.includes('amount') || columnName.includes('total')) {
@@ -43,8 +43,8 @@ export const DatabaseConstraintRule: IRule = {
 
         for (const match of matches) {
           const columnName = match[1];
-          // Look for NOT NULL on this column
-          const notNullPattern = new RegExp(`${columnName}.*NOT NULL`, 'i');
+          // Look for NOT NULL on this column with word boundaries
+          const notNullPattern = new RegExp(`\\b${columnName}\\b.*NOT NULL`, 'i');
           if (!notNullPattern.test(text)) {
             // Only flag if column name suggests it's required (e.g., userId, status)
             if (columnName.includes('_id') || columnName === 'status' || columnName === 'name') {

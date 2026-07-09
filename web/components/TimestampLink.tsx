@@ -26,7 +26,7 @@ const parseTimestamp = (timestamp: string): number => {
   let total = 0;
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    const multiplier = multipliers[parts.length - i - 1] || 1;
+    const multiplier = multipliers[multipliers.length - parts.length + i] || 1;
     if (part !== undefined) {
       total += part * multiplier;
     }
