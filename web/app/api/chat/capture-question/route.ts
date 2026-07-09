@@ -154,8 +154,9 @@ async function captureQuestionToStorage(
   try {
     const supabaseClient = getSupabaseServiceClient();
 
-    // Sanitize userId to prevent path traversal (remove ../, ..\, etc.)
-    const sanitizedUserId = metadata.userId.replace(/\.\.\//g, '').replace(/\.\.\\/g, '').replace(/[<>:"|?*]/g, '');
+    // Sanitize userId to prevent path traversal: allow only alphanumeric, hyphens, underscores, and dots
+    // This whitelist approach is more robust than blacklisting path-traversal sequences
+    const sanitizedUserId = metadata.userId.replace(/[^a-zA-Z0-9._-]/g, '') || 'unknown-user';
 
     // Construct file path with safe timestamp (ISO format → filename-safe)
     const isoTimestamp = metadata.timestamp.replace(/[:.]/g, '-').split('Z')[0];
