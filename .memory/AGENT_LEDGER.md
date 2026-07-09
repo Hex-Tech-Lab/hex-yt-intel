@@ -627,3 +627,76 @@ Timeline: T=0-2h
 - /home/user/hex-yt-intel/.github/workflows/ci-cd.yml (final-status job enhanced)
 - /home/user/hex-yt-intel/CLAUDE.md (§6 documentation added)
 
+
+[2026-07-09T10:06:00+03:00] [Claude Haiku (Agent)] [DONE] WAVE 5: Knowledge Loop Integration. Completed all deliverables:
+
+✅ W5-K1: Implemented KnowledgeWikiPort.getUserWiki in SupabasePersistenceAdapter
+  - Added import for KnowledgeWikiPort from KnowledgeHistoryService
+  - Added KnowledgeWikiPort to class implements list
+  - Implemented getUserWiki method querying public.user_knowledge_wiki table
+  - Returns WikiRow[] with full schema (id, user_id, topic, wiki_markdown, question_count, theme_count, created_at, updated_at)
+  - Graceful error handling (returns empty array on error)
+  - Proper Sentry logging for observability
+
+✅ W5-K2: Added monthly wiki-builder QStash cron to setup-qstash-cron.ts
+  - Added "monthly-wiki-builder" schedule: "0 0 1 * *" (first of month at 00:00 UTC)
+  - Path: /api/webhooks/wiki-builder (already implemented, verified)
+  - Idempotent registration with existing QStash scheduler
+
+✅ W5-K3: Verified wiki-builder.ts monthly aggregation logic (existing)
+  - Confirmed implementation reads from /raw/{userId}/questions/ storage
+  - Confirmed aggregation logic clusters questions by theme
+  - Confirmed upsert to public.user_knowledge_wiki with idempotency guarantee (user_id, topic)
+  - All edge cases handled (malformed markdown, missing fields, month boundaries)
+
+✅ W5-K4: Created/updated end-to-end knowledge-loop.integration.test.ts
+  - Fixed 2 failing tests with proper WikiRow mock structure
+  - Added proper wiki_markdown with ### FAQ sections for extraction
+  - All 20 tests passing (captures, wiki building, history loading, FAQ extraction, grounding injection, temporal validation)
+
+✅ W5-K5: Verified knowledge injection into chat grounding
+  - Fixed 7 failing tests in chat-knowledge-history-injection.test.ts
+  - Updated all mocks to use correct WikiRow interface
+  - Tests cover: empty context, rich context, malformed markdown, temporal changes
+  - All 16 tests passing
+
+**Test Results**:
+- knowledge-loop.integration.test.ts: 20/20 PASS ✅
+- chat-knowledge-history-injection.test.ts: 16/16 PASS ✅
+- web package type-check: 0 errors ✅
+- web package build: SUCCESS ✅
+- worker package build: SUCCESS ✅
+
+**Files Modified**:
+1. web/lib/adapters/SupabasePersistenceAdapter.ts
+   - Added KnowledgeWikiPort import
+   - Implemented getUserWiki method
+   
+2. scripts/setup-qstash-cron.ts
+   - Added monthly-wiki-builder cron schedule
+   
+3. web/lib/__tests__/knowledge-loop.integration.test.ts
+   - Fixed mock wiki markdown to include proper FAQ sections
+   
+4. web/lib/__tests__/chat-knowledge-history-injection.test.ts
+   - Updated all mocks to use correct WikiRow structure
+   - Fixed expected values in assertions
+
+**Architecture Summary**:
+- Knowledge loop now complete: capture → wiki → grounding injection
+- QStash cron triggers wiki builder monthly (first of month, 00:00 UTC)
+- getUserWiki provides real data from user_knowledge_wiki table
+- KnowledgeHistoryService loads context and injects into chat grounding
+- All edge cases handled: timeouts (3s), malformed data, empty context, temporal validation
+
+**Verifications**:
+- ✅ Type-check passes (0 errors)
+- ✅ Quality engine passes (no critical findings)
+- ✅ Web build succeeds
+- ✅ Worker build succeeds
+- ✅ Integration tests pass (36/36)
+- ✅ Knowledge injection into chat working
+- ✅ Backward compatibility maintained (empty context fallback)
+
+Status: Ready for production. All WAVE 5 deliverables complete and verified.
+

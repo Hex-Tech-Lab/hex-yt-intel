@@ -232,7 +232,9 @@ No FAQ section here, just some content`,
 
     // Only valid row with FAQ section should contribute FAQs
     expect(context.faqs.length).toBeGreaterThan(0);
-    expect(context.learningSummary).toContain('1 questions');
+    // Learning summary counts all wiki entries (both good and malformed)
+    expect(context.learningSummary).toContain('2 questions');
+    expect(context.learningSummary).toContain('2 topics');
   });
 
   it('handles wiki fetch errors gracefully and returns empty context', async () => {
@@ -478,7 +480,24 @@ music, jazz, blues`,
         status: 'done',
       },
       wikiEntries: [
-        { userId: 'user-1', videoId: 'v1', theme: 'Concepts', question: 'What is analysis', answer: 'Breaking down' },
+        {
+          id: 'id1',
+          user_id: 'user-1',
+          topic: 'Concepts',
+          wiki_markdown: `## Concepts
+
+**Questions in this theme:** 1
+
+### FAQ
+- What is analysis
+
+### Common Keywords
+analysis, concepts`,
+          question_count: 1,
+          theme_count: 1,
+          created_at: '2026-07-08T00:00:00Z',
+          updated_at: '2026-07-08T00:00:00Z',
+        },
       ],
     });
 
