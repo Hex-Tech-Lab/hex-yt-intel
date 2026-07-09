@@ -9,11 +9,10 @@ import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 import type { Dimension } from '@/components/templates/console/DimensionAccordion';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
-import type { GraphData } from '@/lib/types/graph';
+import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
 export interface DashboardMainContentProps {
   status: 'idle' | 'analyzing' | 'downloading' | 'parsing' | 'complete' | 'error';
-  isAnalyzing: boolean;
   consoleTab: 'synthesis' | 'graph';
   onTabChange: (tab: 'synthesis' | 'graph') => void;
   dimensions: Dimension[];
@@ -22,7 +21,7 @@ export interface DashboardMainContentProps {
   digest: StoredExecutiveDigest | null;
   digestLoading: boolean;
   partialInfo: { presentCount: number; missing: number[] } | null;
-  graph: GraphData;
+  graph: KnowledgeGraph;
   selectedNodeId: string | null;
   onSelectNode: (id: string | null) => void;
   onFocusNode: (id: string | null) => void;
@@ -41,7 +40,6 @@ export interface DashboardMainContentProps {
  */
 export function DashboardMainContent({
   status,
-  isAnalyzing,
   consoleTab,
   onTabChange,
   dimensions,
