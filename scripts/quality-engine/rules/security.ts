@@ -452,8 +452,8 @@ export const YamlInjectionRule: IRule = {
 
     // Detect YAML front matter without proper escaping
     if (text.includes('---') && (text.includes('front matter') || text.includes('YAML') || filePath.includes('markdown'))) {
-      // Look for unescaped YAML values (missing quotes)
-      const yamlPattern = /---\n[^:]+:\s*\$\{[^}]+\}/;
+      // Look for unescaped YAML values (missing quotes) - handle both Unix and Windows line endings
+      const yamlPattern = /---[\r\n]+[^:]+:\s*\$\{[^}]+\}/;
       if (yamlPattern.test(text)) {
         findings.push({
           file: filePath,

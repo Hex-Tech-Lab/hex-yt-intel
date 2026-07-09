@@ -136,8 +136,8 @@ export const TimeoutCleanupRule: IRule = {
 
     // Look for setTimeout/setInterval without corresponding cleanup
     if (text.includes('setTimeout') || text.includes('setInterval')) {
-      const hasSetTimeout = /const\s+(\w+)\s*=\s*setTimeout/g;
-      const matches = text.matchAll(hasSetTimeout);
+      const timerPattern = /const\s+(\w+)\s*=\s*(?:setTimeout|setInterval)\s*\(/g;
+      const matches = text.matchAll(timerPattern);
 
       for (const match of matches) {
         const handleName = match[1];
@@ -147,9 +147,9 @@ export const TimeoutCleanupRule: IRule = {
           findings.push({
             file: filePath,
             severity: "medium",
-            title: `Resource Leak: setTimeout handle '${handleName}' not cleared`,
+            title: `Resource Leak: Timer handle '${handleName}' not cleared`,
             why: `Variable '${handleName}' holds a timeout/interval ID but is never cleared. This can cause memory leaks or unintended side effects.`,
-            fix: `Add cleanup in finally block or useEffect cleanup: clearTimeout(${handleName}); or register in an array for batch cleanup.`
+            fix: `Add cleanup in finally block or useEffect cleanup: clearTimeout(${handleName}); or clearInterval(${handleName});`
           });
         }
       }
@@ -182,7 +182,7 @@ export const ImportOrderingRule: IRule = {
 
       if (isTypeOnly) {
         categories.types.push(specifier);
-      } else if (specifier.startsWith('./') || specifier.startsWith('../')) {
+      } else if (specifier.startsWith('./') || specifier.startsWith('../') || specifier.startsWith('@/')) {
         categories.internal.push(specifier);
       } else if (specifier === 'react' || specifier.startsWith('react') || specifier.startsWith('next')) {
         categories.framework.push(specifier);
@@ -201,7 +201,7 @@ export const ImportOrderingRule: IRule = {
 
       let category: typeof order[number] = 'thirdparty';
       if (isTypeOnly) category = 'types';
-      else if (specifier.startsWith('./') || specifier.startsWith('../')) category = 'internal';
+      else if (specifier.startsWith('./') || specifier.startsWith('../') || specifier.startsWith('@/')) category = 'internal';
       else if (specifier === 'react' || specifier.startsWith('react') || specifier.startsWith('next')) category = 'framework';
 
       const currentCategoryIndex = order.indexOf(category);
