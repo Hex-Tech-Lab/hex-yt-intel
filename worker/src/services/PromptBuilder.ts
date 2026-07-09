@@ -2,6 +2,7 @@ import { getUCISPrompt } from '../../../web/lib/prompts/factory';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
 import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS } from '../../../web/lib/config/synthesis';
+import type { PersonaId } from '../../../web/lib/types/persona';
 
 export class PromptBuilder implements PromptBuilderPort {
   async build(context: EngineContext): Promise<string> {
@@ -15,7 +16,7 @@ export class PromptBuilder implements PromptBuilderPort {
         publishedAt: context.metadata.publishedAt,
       },
       transcript: context.transcript || '',
-      persona: (context.persona as any) || 'p1',
+      persona: (context.persona as PersonaId | undefined) || 'creator',
       timezone: context.timezone || 'UTC',
       duration: context.metadata.duration || 0,
       skipAllDimensionsInstruction: true,

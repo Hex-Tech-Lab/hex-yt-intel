@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     const queryEmbedding = await generateQueryEmbedding(query);
 
     if (!queryEmbedding || queryEmbedding.length === 0) {
-      const errorCode = ERROR_CODES.INVALID_REQUEST_SCHEMA;
+      const errorCode = ERROR_CODES.SEARCH_VECTOR_FAILED;
       Sentry.captureMessage('Failed to generate query embedding', {
         level: 'error',
         tags: { code: errorCode }
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     // 5. Query vector index with COSINE similarity
     const searchResults = await vectorIndex.query<{ analysisId: string }>({
       vector: queryEmbedding,
-      topK: Math.min(topK, 50), // Cap at 50 results
+      topK: topK, // Already validated to be in [1, 50]
       includeMetadata: true,
     });
 
