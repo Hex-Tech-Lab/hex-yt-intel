@@ -89,6 +89,16 @@ export async function buildAdaptiveOptions(
   }
 
   // Fallback: add static options if not enough adaptive options generated
+  // Must have at least 3 options per contract (3-5 range)
+  if (options.size < 3) {
+    const staticOpts = getStaticOptions();
+    for (const opt of staticOpts) {
+      if (options.size >= 3) break;
+      options.add(opt);
+    }
+  }
+
+  // Safety fallback if somehow still empty (shouldn't happen)
   if (options.size === 0) {
     return getStaticOptions();
   }
