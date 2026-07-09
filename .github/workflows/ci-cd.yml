@@ -480,7 +480,6 @@ jobs:
           set -euo pipefail
 
           PR_NUMBER=${{ github.event.pull_request.number }}
-          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
 
           # Create temp files for output separation
           TEMP_OUT="/tmp/confidence-out-$$.json"
@@ -493,13 +492,18 @@ jobs:
             # Success: extract JSON from stdout
             if [ -s "$TEMP_OUT" ]; then
               echo "✓ Confidence calculation succeeded"
-              cat "$TEMP_OUT" | jq '.' || echo "⚠️  Warning: JSON parse failed, but output captured"
-              # Use multiline environment variable for safe JSON passing (avoids quote escaping)
-              {
-                echo "CONFIDENCE_JSON<<EOF"
-                cat "$TEMP_OUT"
-                echo "EOF"
-              } >> $GITHUB_ENV
+              # Validate JSON before storing in environment variable
+              if cat "$TEMP_OUT" | jq . > /dev/null 2>&1; then
+                # Use multiline environment variable for safe JSON passing (avoids quote escaping)
+                # Use quoted 'EOF' delimiter to prevent premature termination if JSON contains literal EOF
+                {
+                  echo "CONFIDENCE_JSON<<'EOF'"
+                  cat "$TEMP_OUT"
+                  echo "EOF"
+                } >> $GITHUB_ENV
+              else
+                echo "⚠️  Warning: JSON validation failed, confidence score unavailable"
+              fi
             else
               echo "⚠️  No output from confidence calculator"
             fi
