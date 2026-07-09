@@ -11,8 +11,15 @@ export interface TimestampLinkProps {
 
 const parseTimestamp = (timestamp: string): number => {
   const parts = timestamp.split(':').map(p => parseInt(p, 10)).filter(p => !isNaN(p));
+  if (parts.length === 0) return 0;
+
   const multipliers = [3600, 60, 1];
-  return parts.reduce((total, part, idx) => total + (part || 0) * (multipliers[parts.length - idx - 1] || 1), 0);
+  let total = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const multiplier = multipliers[parts.length - i - 1] || 1;
+    total += parts[i] * multiplier;
+  }
+  return total;
 };
 
 /**
