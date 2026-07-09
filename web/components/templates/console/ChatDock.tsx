@@ -7,6 +7,7 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
+import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
 
 export interface ChatDockProps {
   /** Active analysis for grounding new threads (optional). */
@@ -130,6 +131,59 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     if (!sending || nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, sending, open]);
+
+  // Generate and inject dynamic follow-up prompts after assistant responses complete
+  useEffect(() => {
+    if (!activeId || messages.length < 2) return;
+
+    const latestMessage = messages[messages.length - 1];
+    if (!latestMessage || latestMessage.role !== 'assistant') return;
+
+    // Check if this message already has OPTIONS
+    if (latestMessage.content.includes('OPTIONS:')) return;
+
+    // Find the preceding user message
+    const userMessageIdx = messages.length - 2;
+    if (userMessageIdx < 0) return;
+    const userMessage = messages[userMessageIdx];
+    if (userMessage.role !== 'user') return;
+
+    // Don't generate prompts for error/refusal responses (short content)
+    if (latestMessage.content.length < 100) return;
+
+    // Extract context from the conversation
+    const analysisTitle = useAnalysisStore.getState().title;
+    const videoTitle = useAnalysisStore.getState().videoMetadata?.title;
+    const conversationHistory = messages.slice(-6).map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+
+    try {
+      const prompts = generateFollowupPrompts({
+        userQuestion: userMessage.content,
+        assistantResponse: latestMessage.content,
+        videoTitle: videoTitle || analysisTitle,
+        conversationHistory,
+      });
+
+      // Append prompts as OPTIONS to the message
+      const optionsJson = JSON.stringify(prompts);
+      const updatedContent = `${latestMessage.content}\n\nOPTIONS: ${optionsJson}`;
+
+      useChatStore.setState((state) => ({
+        messagesByConv: {
+          ...state.messagesByConv,
+          [activeId]: (state.messagesByConv[activeId] || []).map((m) =>
+            m.id === latestMessage.id ? { ...m, content: updatedContent } : m
+          ),
+        },
+      }));
+    } catch (error) {
+      // Silently fail — don't break chat if prompt generation fails
+      console.debug('[ChatDock] Follow-up prompt generation failed:', error);
+    }
+  }, [messages, activeId]);
 
   const scrollToBottom = () => {
     const el = listRef.current;
