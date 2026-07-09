@@ -341,7 +341,7 @@ describe('Wiki Builder Data Correctness Tests', () => {
       // Should be truncated and include ellipsis
       expect(markdown).toContain('...');
       // Should not include full 300 char question
-      const lines = markdown.split('\n');
+      const lines = markdown.split(/\r?\n/);
       const questionLine = lines.find((l) => l.startsWith('- '));
       expect(questionLine?.length).toBeLessThan(220); // 200 + "- " + "..."
     });
@@ -477,7 +477,7 @@ describe('Wiki Builder Data Correctness Tests', () => {
       const markdown2 = generateWikiMarkdown(clusters2, 'July 2026');
 
       // Output may contain questions in different order, but should be semantically identical
-      expect(markdown1.split('\n').length).toBe(markdown2.split('\n').length);
+      expect(markdown1.split(/\r?\n/).length).toBe(markdown2.split(/\r?\n/).length);
     });
   });
 });
