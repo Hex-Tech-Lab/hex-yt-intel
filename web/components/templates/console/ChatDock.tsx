@@ -170,20 +170,28 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       const optionsJson = JSON.stringify(prompts);
       const updatedContent = `${latestMessage.content}\n\nOPTIONS: ${optionsJson}`;
 
-      // Re-check sending state before mutation to prevent duplicate injection during streaming
-      if (useChatStore.getState().sending) {
-        console.debug('[ChatDock] Sending state changed mid-injection, aborting to prevent duplicates');
-        return;
-      }
+      useChatStore.setState((state) => {
+        // Guard: re-verify sending state hasn't changed mid-injection (streaming may have restarted)
+        if (state.sending) {
+          console.debug('[ChatDock] Sending state changed mid-injection, aborting to prevent duplicates');
+          return state;
+        }
+        // Guard: re-verify message still exists and hasn't been mutated (OPTIONS already added)
+        const messages = state.messagesByConv[activeId as string] || [];
+        const msg = messages.find((m) => m.id === latestMessage.id);
+        if (!msg || msg.content.includes('OPTIONS:')) {
+          return state;
+        }
 
-      useChatStore.setState((state) => ({
-        messagesByConv: {
-          ...state.messagesByConv,
-          [activeId as string]: (state.messagesByConv[activeId as string] || []).map((m) =>
-            m.id === latestMessage.id ? { ...m, content: updatedContent } : m
-          ),
-        },
-      }));
+        return {
+          messagesByConv: {
+            ...state.messagesByConv,
+            [activeId as string]: messages.map((m) =>
+              m.id === latestMessage.id ? { ...m, content: updatedContent } : m
+            ),
+          },
+        };
+      });
     } catch (error) {
       console.debug('[ChatDock] Follow-up prompt generation failed:', error);
     }
