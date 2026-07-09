@@ -55,19 +55,22 @@ export interface CachedAnalysisResult {
 /**
  * Generate cache key from analysis parameters
  * Format: ci:{modelUsed}:{transcriptHash}:{schemaVersion}
+ *
+ * ADR 006: Cache key based on input (transcript) hash for consistency.
+ * Prevents cache miss when output markdown formatting varies but analysis is identical.
  */
 export function generateCacheKey(
   modelUsed: string,
-  transcript: string,
+  inputHash: string,
   schemaVersion: string = '5.1'
 ): string {
-  const transcriptHash = crypto
+  const hash = crypto
     .createHash('sha256')
-    .update(transcript || '')
+    .update(inputHash || '')
     .digest('hex')
     .substring(0, 16); // Use first 16 chars for brevity
 
-  return `ci:${modelUsed}:${transcriptHash}:${schemaVersion}`;
+  return `ci:${modelUsed}:${hash}:${schemaVersion}`;
 }
 
 /**
