@@ -65,7 +65,7 @@ export function BentoMetadata({
       {/* Title Card (Large) */}
       <motion.div
         variants={item}
-        className="col-span-2 sm:col-span-4 xl:col-span-8 xl:row-span-2 min-w-0 flex flex-col justify-between gap-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 sm:p-6"
+        className="col-span-2 sm:col-span-4 xl:col-span-8 xl:row-span-2 min-w-0 flex flex-col justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-4"
       >
         <MonoLabel index="01">video intelligence context</MonoLabel>
         <div className="min-w-0">

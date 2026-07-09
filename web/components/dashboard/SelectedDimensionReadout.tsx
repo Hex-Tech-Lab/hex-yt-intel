@@ -10,7 +10,7 @@ interface SelectedDimensionReadoutProps {
 export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadoutProps) {
   if (!dimension) {
     return (
-      <div className="flex-1 overflow-y-auto px-5 py-8 flex flex-col items-center justify-center text-center gap-2 h-full">
+      <div className="flex-1 overflow-y-auto px-3 py-4 flex flex-col items-center justify-center text-center gap-2 h-full">
         <div className="text-[var(--ink-secondary)] font-mono text-[13px] font-semibold">
           Select a dimension to view details.
         </div>
@@ -22,7 +22,7 @@ export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadout
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-4 hx-custom-scrollbar">
+    <div className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-4 hx-custom-scrollbar">
       {dimension.content ? (
         <div className="text-[14px] leading-relaxed text-[var(--ink-secondary)]">
           <ReactMarkdown

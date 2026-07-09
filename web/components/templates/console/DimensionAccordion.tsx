@@ -51,7 +51,7 @@ const DimensionItem = memo(function DimensionItem({
           className={`w-full text-left flex items-center justify-between p-4 px-5 rounded-lg border cursor-pointer transition-all duration-300 ${buttonClass}`}
           style={{ boxSizing: 'border-box' }}
         >
-          <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <span className={`font-mono text-xs font-bold ${isSelected ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'}`}>
               {indexStr}
             </span>
@@ -66,7 +66,7 @@ const DimensionItem = memo(function DimensionItem({
               {d.label}
             </span>
           </div>
-          <div className="flex items-center gap-4 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <StatusBadge status={d.status} />
             <Icon
               icon="solar:alt-arrow-right-linear"
@@ -94,7 +94,7 @@ export function DimensionAccordion({
   }, [onSelectDimension]);
 
   return (
-    <section className="hx-rise flex flex-col gap-4">
+    <section className="hx-rise flex flex-col gap-3">
       <div className="flex items-center justify-between mb-2">
         <MonoLabel index="//">synthesis dimensions</MonoLabel>
         {progress && (

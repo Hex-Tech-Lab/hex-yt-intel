@@ -49,9 +49,9 @@ const ResultCard: React.FC<ResultCardProps> = ({
   };
 
   return (
-    <div className="p-5 bg-surface border border-line rounded-xl hover:shadow-lg hover:border-accent/30 transition-all group">
+    <div className="p-3 bg-surface border border-line rounded-xl hover:shadow-lg hover:border-accent/30 transition-all group">
       {/* Header: Title + Similarity Badge */}
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
         <button
           onClick={() => onViewClick?.(result.id)}
           className="flex-1 text-left"
