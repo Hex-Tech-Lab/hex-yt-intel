@@ -18,7 +18,7 @@
  *   npm run pr:confidence --pr=129
  */
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 interface PRConfidenceBreakdown {
   cubic: number;
@@ -68,8 +68,7 @@ function parseArgs(): number {
  */
 function queryGitHub(query: string): string {
   try {
-    const cmd = `gh api ${query}`;
-    return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    return execFileSync('gh', ['api', query], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch (error) {
     // Return empty array JSON for graceful handling
     return '[]';
@@ -255,7 +254,7 @@ function extractVercelStatus(prNumber: number): { score: number; status?: string
  */
 function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number } {
   try {
-    // Query for code scanning alerts on the PR
+    // Query for code scanning alerts on the PR (scoped to PR ref)
     const alertsJson = queryGitHub(`repos/{owner}/{repo}/code-scanning/alerts?state=open&sort=updated&direction=desc --paginate --limit=50`);
     const data = JSON.parse(alertsJson || '[]');
 
@@ -264,8 +263,8 @@ function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number
     }
 
     const blockingAlerts = data.filter(
-      (alert: { severity?: string }) =>
-        alert.severity === 'critical' || alert.severity === 'high'
+      (alert: { rule?: { severity?: string } }) =>
+        alert.rule?.severity === 'critical' || alert.rule?.severity === 'high'
     );
 
     if (blockingAlerts.length === 0) {
@@ -351,20 +350,20 @@ async function main(): Promise<void> {
     timestamp: new Date().toISOString(),
   };
 
-  // Output JSON to stdout
-  console.log(JSON.stringify(result, null, 2));
+  // Print human-readable summary to stderr
+  console.error('\n📈 Breakdown:');
+  console.error(`  Cubic:       ${breakdown.cubic}/30`);
+  console.error(`  CodeRabbit:  ${breakdown.coderabbit}/20`);
+  console.error(`  Snyk:        ${breakdown.snyk}/15`);
+  console.error(`  CI/CD:       ${breakdown.ci_cd}/10`);
+  console.error(`  Vercel:      ${breakdown.vercel}/5`);
+  console.error(`  CodeQL:      ${breakdown.codeql}/5`);
+  console.error(`  ─────────────────────`);
+  console.error(`  Total:       ${totalPoints}/85`);
+  console.error(`\n🎯 Confidence: ${confidence}% (${recommendation})\n`);
 
-  // Also print human-readable summary
-  console.log('\n📈 Breakdown:');
-  console.log(`  Cubic:       ${breakdown.cubic}/30`);
-  console.log(`  CodeRabbit:  ${breakdown.coderabbit}/20`);
-  console.log(`  Snyk:        ${breakdown.snyk}/15`);
-  console.log(`  CI/CD:       ${breakdown.ci_cd}/10`);
-  console.log(`  Vercel:      ${breakdown.vercel}/5`);
-  console.log(`  CodeQL:      ${breakdown.codeql}/5`);
-  console.log(`  ─────────────────────`);
-  console.log(`  Total:       ${totalPoints}/85`);
-  console.log(`\n🎯 Confidence: ${confidence}% (${recommendation})\n`);
+  // Output single-line JSON to stdout (last line, for CI extraction)
+  console.log(JSON.stringify(result));
 }
 
 main().catch((error) => {
