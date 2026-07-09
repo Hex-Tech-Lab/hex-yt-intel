@@ -9,6 +9,8 @@ import type { UCISDimension } from './dimension';
 
 export type PersonaId = 'creator' | 'indieMaker' | 'consultant' | 'researcher' | 'productManager';
 
+export const VALID_PERSONAS = ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'] as const;
+
 /**
  * Persona-specific dimension projection
  * Maps PersonaId → array of dimension numbers visible in that persona
