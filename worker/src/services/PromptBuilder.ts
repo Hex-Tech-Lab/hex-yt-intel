@@ -3,7 +3,7 @@ import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
 import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS } from '../../../web/lib/config/synthesis';
 import type { PersonaId } from '../../../web/lib/types/persona';
-import { isValidPersona, VALID_PERSONAS } from '../../../web/lib/types/persona';
+import { isValidPersona } from '../../../web/lib/types/persona';
 
 export class PromptBuilder implements PromptBuilderPort {
   async build(context: EngineContext): Promise<string> {
