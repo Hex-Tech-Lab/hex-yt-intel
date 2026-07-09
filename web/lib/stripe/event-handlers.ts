@@ -1,0 +1,114 @@
+/**
+ * Stripe Webhook Event Handlers
+ * Extracted from web/lib/stripe/webhook-handlers.ts for modularity and event-specific testing
+ *
+ * Responsibilities:
+ * - Handle individual Stripe event types (payment.succeeded, payment.failed, etc.)
+ * - Route events to appropriate domain logic
+ * - Maintain event type to handler mapping
+ */
+
+import Stripe from 'stripe';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  getUserIdFromEvent,
+  handleSubscriptionCreatedUpdated,
+  handleSubscriptionCanceled,
+  handleInvoicePaid,
+  handleInvoiceFailed,
+  handlePaymentIntentSucceeded,
+  handlePaymentIntentFailed,
+} from './webhook-handlers';
+
+export type EventHandler = (
+  event: Stripe.Event,
+  supabase: SupabaseClient
+) => Promise<void> | void;
+
+/**
+ * Stripe event handler registry
+ * Maps event types to their corresponding handler functions
+ */
+export const EVENT_HANDLERS: Record<string, EventHandler> = {
+  'customer.subscription.created': async (event, supabase) => {
+    const subscription = event.data.object as Stripe.Subscription;
+    await handleSubscriptionCreatedUpdated(supabase, subscription, 'success');
+  },
+
+  'customer.subscription.updated': async (event, supabase) => {
+    const subscription = event.data.object as Stripe.Subscription;
+    await handleSubscriptionCreatedUpdated(supabase, subscription, 'success');
+  },
+
+  'customer.subscription.deleted': async (event, supabase) => {
+    const subscription = event.data.object as Stripe.Subscription;
+    await handleSubscriptionCanceled(supabase, subscription);
+  },
+
+  'invoice.payment_succeeded': async (event, supabase) => {
+    const invoice = event.data.object as Stripe.Invoice;
+    await handleInvoicePaid(supabase, invoice);
+  },
+
+  'invoice.payment_failed': async (event, supabase) => {
+    const invoice = event.data.object as Stripe.Invoice;
+    await handleInvoiceFailed(supabase, invoice);
+  },
+
+  'payment_intent.succeeded': (event) => {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    handlePaymentIntentSucceeded(paymentIntent);
+  },
+
+  'payment_intent.payment_failed': (event) => {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    handlePaymentIntentFailed(paymentIntent);
+  },
+};
+
+/**
+ * Dispatch Stripe event to appropriate handler
+ * Returns handler found status and any errors
+ */
+export interface DispatchResult {
+  handled: boolean;
+  error?: string;
+}
+
+export async function dispatchWebhookEvent(
+  event: Stripe.Event,
+  supabase: SupabaseClient
+): Promise<DispatchResult> {
+  const handler = EVENT_HANDLERS[event.type];
+
+  if (!handler) {
+    return {
+      handled: false,
+      error: `No handler registered for event type: ${event.type}`,
+    };
+  }
+
+  try {
+    await Promise.resolve(handler(event, supabase));
+    return { handled: true };
+  } catch (error) {
+    return {
+      handled: true,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Check if an event type is handled
+ */
+export function isHandledEventType(eventType: string): boolean {
+  return eventType in EVENT_HANDLERS;
+}
+
+/**
+ * Get list of all supported event types
+ */
+export function getSupportedEventTypes(): string[] {
+  return Object.keys(EVENT_HANDLERS);
+}
