@@ -18,7 +18,9 @@ create table if not exists public.user_knowledge_wiki (
   updated_at      timestamptz not null default now(),
 
   constraint topic_not_empty check (char_length(topic) > 0),
-  constraint markdown_not_empty check (char_length(wiki_markdown) > 0)
+  constraint markdown_not_empty check (char_length(wiki_markdown) > 0),
+  constraint question_count_non_negative check (question_count >= 0),
+  constraint theme_count_non_negative check (theme_count >= 0)
 );
 
 -- Composite unique index for idempotent upserts (userId + topic pair)
@@ -35,6 +37,9 @@ alter table public.user_knowledge_wiki enable row level security;
 drop policy if exists "users can read own wikis" on public.user_knowledge_wiki;
 create policy "users can read own wikis" on public.user_knowledge_wiki
   for select using (auth.uid() = user_id);
+
+-- Grant authenticated users SELECT access (needed for grounding context loading)
+grant select on public.user_knowledge_wiki to authenticated;
 
 -- Grant service-role full access (needed for QStash webhook + wiki builder)
 grant all on public.user_knowledge_wiki to service_role;

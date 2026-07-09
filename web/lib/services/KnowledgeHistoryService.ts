@@ -72,13 +72,16 @@ export class KnowledgeHistoryService {
       // Defensive timeout: if wiki lookup doesn't complete in 3s, give up
       // and return empty context. This ensures chat never hangs waiting for wiki.
       let wiki: any[] | undefined;
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       try {
         wiki = await Promise.race([
           this.wikiPort.getUserWiki(userId),
           new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Wiki lookup timeout (3s)')), 3000)
+            timeoutId = setTimeout(() => reject(new Error('Wiki lookup timeout (3s)')), 3000)
           ),
-        ]);
+        ]).finally(() => {
+          if (timeoutId) clearTimeout(timeoutId);
+        });
       } catch (timeoutError) {
         const msg = timeoutError instanceof Error ? timeoutError.message : String(timeoutError);
         if (msg.includes('timeout')) {
@@ -194,9 +197,10 @@ function extractFAQsFromWiki(
       const faqSection = faqMatch[1];
 
       // Extract all lines that start with "- " (list items)
+      // Use platform-agnostic line separator to handle CRLF on Windows
       const questionLines: string[] = [];
       faqSection
-        .split('\n')
+        .split(/\r?\n/)
         .forEach((line) => {
           if (!line || typeof line !== 'string') return;
           if (line.trim().startsWith('- ')) {

@@ -60,8 +60,10 @@ export function buildGroundingWithHistory(
       const faqText = topFaqs
         .map((faq) => {
           // Defensive: validate FAQ properties
-          const q = (faq?.question || '').slice(0, 50);
-          const a = (faq?.answer || '').slice(0, 50);
+          const rawQ = faq?.question || '';
+          const rawA = faq?.answer || '';
+          const q = rawQ.slice(0, 50) + (rawQ.length > 50 ? '…' : '');
+          const a = rawA.slice(0, 50) + (rawA.length > 50 ? '…' : '');
           if (!q) return null;
           return `Q: ${q}? → ${a}`;
         })
@@ -84,38 +86,47 @@ export function buildGroundingWithHistory(
   const historyPrefix = '\n\n--- YOUR LEARNING HISTORY ---\n';
   let historyBody = historyParts.join('\n');
 
-  // If history body would exceed budget, truncate FAQ section first
+  // Enforce strict 600-char budget on history section (P0 Risk #3)
   const MAX_HISTORY_CHARS = 600;
   if (historyPrefix.length + historyBody.length > MAX_HISTORY_CHARS) {
-    // Try truncating FAQs (second part) first
-    const parts = historyBody.split('Previously answered: ');
-    if (parts.length === 2 && parts[0] !== undefined && parts[1] !== undefined) {
-      const themesLine = parts[0];
-      const budget = MAX_HISTORY_CHARS - historyPrefix.length - themesLine.length - 1; // -1 for newline
+    const marker = 'Previously answered: ';
+    const markerIdx = historyBody.indexOf(marker);
+
+    if (markerIdx !== -1) {
+      // Two-section case: themes + FAQs
+      const themesLine = historyBody.slice(0, markerIdx);
+      const faqsPart = historyBody.slice(markerIdx + marker.length);
+      const budget = MAX_HISTORY_CHARS - historyPrefix.length - themesLine.length - 1;
+
       if (budget > 20) {
-        const faqsTruncated = parts[1].slice(0, Math.max(0, budget)) + '…';
-        historyBody = themesLine + 'Previously answered: ' + faqsTruncated;
+        historyBody = themesLine + marker + faqsPart.slice(0, budget) + '…';
       } else {
-        // Budget exhausted, just keep themes
         historyBody = themesLine.trimEnd();
       }
+    } else {
+      // Single-section overflow (themes-only or unexpected shape): hard-truncate
+      const budget = Math.max(0, MAX_HISTORY_CHARS - historyPrefix.length - 1);
+      historyBody = historyBody.slice(0, budget) + (historyBody.length > budget ? '…' : '');
     }
 
-    // Log overflow for observability (token budget violation is worth noting)
     console.warn('[buildGroundingWithHistory] History truncated to fit 600-char budget');
   }
 
   // Combine: original grounding + history section
   const combined = originalGrounding + historyPrefix + historyBody;
 
-  // Final safety check: verify we're within budget
-  if (combined.length > originalGrounding.length + MAX_HISTORY_CHARS) {
-    // This should never happen, but log it if it does (defensive programming)
-    console.error('[buildGroundingWithHistory] Combined grounding exceeds safety limit', {
+  // Final enforcement: clamp combined to safety limit
+  const maxCombinedLength = originalGrounding.length + MAX_HISTORY_CHARS;
+  if (combined.length > maxCombinedLength) {
+    console.error('[buildGroundingWithHistory] Combined grounding exceeds safety limit, clamping', {
       originalLength: originalGrounding.length,
       historyLength: historyPrefix.length + historyBody.length,
       maxAllowed: MAX_HISTORY_CHARS,
+      actual: combined.length,
     });
+    // Clamp by truncating history from the end
+    const excess = combined.length - maxCombinedLength;
+    return combined.slice(0, combined.length - excess);
   }
 
   return combined;
