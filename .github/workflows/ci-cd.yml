@@ -493,7 +493,10 @@ jobs:
           trap "rm -f -- \"$TEMP_OUT\" \"$TEMP_ERR\"" EXIT
 
           # Run confidence calculator with proper error capture
-          if pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr="$PR_NUMBER" > "$TEMP_OUT" 2> "$TEMP_ERR"; then
+          CALC_EXIT_CODE=0
+          pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr="$PR_NUMBER" > "$TEMP_OUT" 2> "$TEMP_ERR" || CALC_EXIT_CODE=$?
+
+          if [ "$CALC_EXIT_CODE" -eq 0 ]; then
             # Success: extract JSON from stdout
             if [ -s "$TEMP_OUT" ]; then
               echo "✓ Confidence calculation succeeded"
@@ -514,7 +517,6 @@ jobs:
             fi
           else
             # Failure: log error but continue (graceful degradation)
-            CALC_EXIT_CODE=$?
             echo "⚠️  Confidence calculation failed with exit code $CALC_EXIT_CODE"
             if [ -s "$TEMP_ERR" ]; then
               echo "Error details:"

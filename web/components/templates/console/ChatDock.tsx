@@ -47,9 +47,15 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const processedMessageIdsRef = useRef<Set<string>>(new Set());
 
   const messages = useMemo(() => (activeId ? messagesByConv[activeId] || [] : []), [activeId, messagesByConv]);
   const activeConv = useMemo(() => conversations.find((c) => c.id === activeId) || null, [conversations, activeId]);
+
+  // Reset processed message tracking when conversation changes
+  useEffect(() => {
+    processedMessageIdsRef.current.clear();
+  }, [activeId]);
 
   useEffect(() => { bindNetwork(); }, [bindNetwork]);
 
@@ -142,7 +148,13 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
     if (!latestMessage || !userMessage) return;
     if (latestMessage.role !== 'assistant' || userMessage.role !== 'user') return;
+
+    // Idempotency: skip if already processed or OPTIONS already present
+    if (processedMessageIdsRef.current.has(latestMessage.id)) return;
     if (latestMessage.content.includes('OPTIONS:') || latestMessage.content.length < 100) return;
+
+    // Mark as processed immediately to prevent duplicate injection during rerenders
+    processedMessageIdsRef.current.add(latestMessage.id);
 
     try {
       const analysisTitle = useAnalysisStore.getState().analysis?.title;
@@ -162,11 +174,13 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       const optionsJson = JSON.stringify(prompts);
       const updatedContent = `${latestMessage.content}\n\nOPTIONS: ${optionsJson}`;
 
+      // Re-verify state at mutation time to prevent race conditions
       useChatStore.setState((state) => {
         if (state.sending) return state;
 
         const convMessages = state.messagesByConv[activeId as string] || [];
         const msg = convMessages.find((m) => m.id === latestMessage.id);
+        // Final guard: ensure message hasn't been modified since effect started
         if (!msg?.content || msg.content.includes('OPTIONS:')) return state;
 
         return {
