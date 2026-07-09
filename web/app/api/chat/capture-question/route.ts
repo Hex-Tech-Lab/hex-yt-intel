@@ -154,10 +154,13 @@ async function captureQuestionToStorage(
   try {
     const supabaseClient = getSupabaseServiceClient();
 
+    // Sanitize userId to prevent path traversal (remove ../, ..\, etc.)
+    const sanitizedUserId = metadata.userId.replace(/\.\.\//g, '').replace(/\.\.\\/g, '').replace(/[<>:"|?*]/g, '');
+
     // Construct file path with safe timestamp (ISO format → filename-safe)
     const isoTimestamp = metadata.timestamp.replace(/[:.]/g, '-').split('Z')[0];
     const fileName = `${isoTimestamp}_${questionId}.md`;
-    filePath = `raw/${metadata.userId}/questions/${fileName}`;
+    filePath = `raw/${sanitizedUserId}/questions/${fileName}`;
 
     // Build markdown content (YAML front matter + question)
     const content = buildQuestionMarkdown(metadata, questionId);
