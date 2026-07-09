@@ -11,14 +11,17 @@ export interface TimestampLinkProps {
 
 // Converts timestamp string (HH:MM:SS, MM:SS, or seconds) to total seconds
 const parseTimestamp = (timestamp: string): number => {
-  const parts = timestamp.split(':').map(p => parseInt(p, 10)).filter(p => !isNaN(p));
+  const parts: number[] = timestamp.split(':').map(p => parseInt(p, 10)).filter(p => !isNaN(p));
   if (parts.length === 0) return 0;
 
-  const multipliers = [3600, 60, 1];
+  const multipliers: number[] = [3600, 60, 1];
   let total = 0;
   for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
     const multiplier = multipliers[parts.length - i - 1] || 1;
-    total += parts[i] * multiplier;
+    if (part !== undefined) {
+      total += part * multiplier;
+    }
   }
   return total;
 };

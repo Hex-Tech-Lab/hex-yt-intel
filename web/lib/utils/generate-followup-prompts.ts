@@ -50,7 +50,7 @@ function extractKeyTopics(text: string): string[] {
       .slice(0, 3)
       .forEach((item) => {
         const match = item.match(/:\s*(.+?)(?:\.|$)/);
-        if (match) {
+        if (match && match[1]) {
           const extracted = match[1].trim().slice(0, 60);
           if (extracted.length > 3) topics.add(extracted);
         }
@@ -85,8 +85,8 @@ function detectQuestionType(userQuestion: string): string {
  * Focuses on expanding the concept or diving into specifics.
  */
 function generateElaborationPrompt(
-  userQuestion: string,
-  assistantResponse: string,
+  _userQuestion: string,
+  _assistantResponse: string,
   keyTopics: string[],
   questionType: string
 ): string {
@@ -140,8 +140,8 @@ function generateElaborationPrompt(
     ],
   };
 
-  const patterns = elaborationPatterns[questionType] || elaborationPatterns.what;
-  return patterns[Math.floor(Math.random() * patterns.length)];
+  const patterns = (elaborationPatterns[questionType] || elaborationPatterns.what) as string[];
+  return patterns[Math.floor(Math.random() * patterns.length)] ?? '';
 }
 
 /**
@@ -149,8 +149,8 @@ function generateElaborationPrompt(
  * Links the answer to related concepts or frameworks.
  */
 function generateContextualizationPrompt(
-  userQuestion: string,
-  assistantResponse: string,
+  _userQuestion: string,
+  _assistantResponse: string,
   keyTopics: string[],
   videoTitle?: string
 ): string {
@@ -168,7 +168,7 @@ function generateContextualizationPrompt(
     `What's the significance of ${topic} in relation to the whole?`,
   ];
 
-  return patterns[Math.floor(Math.random() * patterns.length)];
+  return patterns[Math.floor(Math.random() * patterns.length)] || '';
 }
 
 /**
@@ -176,8 +176,8 @@ function generateContextualizationPrompt(
  * Explores future directions, implications, or unexplored angles.
  */
 function generateForwardThinkingPrompt(
-  userQuestion: string,
-  assistantResponse: string,
+  _userQuestion: string,
+  _assistantResponse: string,
   keyTopics: string[]
 ): string {
   const topic = keyTopics[0] || 'this topic';
@@ -193,7 +193,7 @@ function generateForwardThinkingPrompt(
     `How would applying this understanding of ${topic} change our perspective?`,
   ];
 
-  return patterns[Math.floor(Math.random() * patterns.length)];
+  return patterns[Math.floor(Math.random() * patterns.length)] || '';
 }
 
 /**
