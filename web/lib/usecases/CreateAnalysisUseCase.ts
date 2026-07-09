@@ -65,15 +65,15 @@ export class CreateAnalysisUseCase {
     if (!params.forceRefresh) {
       const cached = await this.persistence.findCachedAnalysis({ userId: params.userId, videoId });
       if (cached) {
-        return { 
-          type: 'cache_hit', 
+        return {
+          type: 'cache_hit',
           data: {
             ...cached,
             status: 'done',
             markdown: cached.analysisMarkdown,
             metadata: cached.cachedReport?.metadata,
           },
-          persona: (cached.cachedReport?.persona as PersonaId) || 'p1'
+          persona: (cached.cachedReport?.persona as PersonaId) || 'creator'
         };
       }
     }
