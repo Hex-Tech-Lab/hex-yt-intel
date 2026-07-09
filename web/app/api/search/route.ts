@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       Sentry.captureMessage('Search: Invalid request schema', {
         level: 'warning',
         tags: { code: errorCode },
-        contexts: { validation: parsed.error.issues }
+        contexts: { validation: { issues: parsed.error.issues } }
       });
       return NextResponse.json(
         { error: 'Invalid request', details: parsed.error.issues },
