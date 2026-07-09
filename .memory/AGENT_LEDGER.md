@@ -528,7 +528,7 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 **Integration with WAVE 4:**
 - Consumes questions from agent 4.1 (POST /api/chat/capture-question)
 - Produces wikis for agent 4.3 (history injection into grounding context)
-- Monthly QStash trigger: 0 0 1 * * (first day of month, UTC)
+- Monthly QStash trigger: `0 0 1 * *` (first day of month, UTC)
 - Safe to co-run with other agents (isolated transaction scope)
 
 **Verification gates:**
