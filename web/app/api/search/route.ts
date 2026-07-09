@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { Index } from '@upstash/vector';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
 import { guardTraffic } from '@/lib/services/traffic';
