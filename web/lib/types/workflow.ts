@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { VALID_PERSONAS, type PersonaId } from './persona';
+import { VALID_PERSONAS } from './persona';
 
 export const WorkflowScopeSchema = z.enum(['single_video', 'cross_analysis', 'persist']);
 export type WorkflowScope = z.infer<typeof WorkflowScopeSchema>;
@@ -10,7 +10,7 @@ export const PathAInputSchema = z.object({
   tier: z.enum(['free', 'pro', 'enterprise']),
   email: z.string().email().optional(),
   timezone: z.string(),
-  persona: z.enum(VALID_PERSONAS).optional() as z.ZodType<PersonaId | undefined>,
+  persona: z.enum(VALID_PERSONAS).optional(),
   forceRefresh: z.boolean().optional(),
 });
 export type PathAInput = z.infer<typeof PathAInputSchema>;
