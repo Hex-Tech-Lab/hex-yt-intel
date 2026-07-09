@@ -134,11 +134,17 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
   // Generate and inject dynamic follow-up prompts after assistant responses complete
   useEffect(() => {
+    // Check if latest message is eligible for prompt injection
     const canInjectPrompts = (): { userMessage?: typeof messages[0]; latestMessage?: typeof messages[0] } | null => {
+      // Guard: must have active conversation with 2+ messages
       if (!activeId || messages.length < 2) return null;
+
       const latestMessage = messages[messages.length - 1];
+      // Guard: latest must be assistant message
       if (!latestMessage || latestMessage.role !== 'assistant') return null;
+      // Guard: skip if already has OPTIONS
       if (latestMessage.content.includes('OPTIONS:')) return null;
+      // Guard: skip short responses (errors, refusals)
       if (latestMessage.content.length < 100) return null;
 
       const userMessage = messages[messages.length - 2];
