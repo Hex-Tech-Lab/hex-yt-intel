@@ -477,16 +477,39 @@ jobs:
         id: confidence
         if: always() && github.event_name == 'pull_request'
         run: |
-          # Extract PR number from context
+          set -euo pipefail
+
           PR_NUMBER=${{ github.event.pull_request.number }}
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
 
-          # Run confidence calculator and capture output
-          CONFIDENCE_JSON=$(pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr="$PR_NUMBER" 2>&1 | tail -1)
-          echo "CONFIDENCE_JSON=$CONFIDENCE_JSON" >> $GITHUB_OUTPUT
+          # Create temp files for output separation
+          TEMP_OUT="/tmp/confidence-out-$$.json"
+          TEMP_ERR="/tmp/confidence-err-$$.log"
 
-          # Pretty print for logs
-          echo "$CONFIDENCE_JSON" | jq '.' || echo "Failed to calculate confidence"
+          trap "rm -f $TEMP_OUT $TEMP_ERR" EXIT
+
+          # Run confidence calculator with proper error capture
+          if pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr="$PR_NUMBER" > "$TEMP_OUT" 2> "$TEMP_ERR"; then
+            # Success: extract JSON from stdout
+            if [ -s "$TEMP_OUT" ]; then
+              CONFIDENCE_JSON=$(cat "$TEMP_OUT")
+              echo "CONFIDENCE_JSON=$CONFIDENCE_JSON" >> $GITHUB_OUTPUT
+              echo "✓ Confidence calculation succeeded"
+              echo "$CONFIDENCE_JSON" | jq '.' || echo "⚠️  Warning: JSON parse failed, but output captured"
+            else
+              echo "⚠️  No output from confidence calculator"
+              echo "CONFIDENCE_JSON=" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Failure: log error but continue (graceful degradation)
+            CALC_EXIT_CODE=$?
+            echo "⚠️  Confidence calculation failed with exit code $CALC_EXIT_CODE"
+            if [ -s "$TEMP_ERR" ]; then
+              echo "Error details:"
+              cat "$TEMP_ERR" >&2
+            fi
+            echo "CONFIDENCE_JSON=" >> $GITHUB_OUTPUT
+          fi
         continue-on-error: true
 
       - name: Comment on PR with status and confidence
@@ -500,14 +523,20 @@ jobs:
             const statusEmoji = status === 'success' ? '✅' : '❌';
 
             let confidenceBody = '';
+            let confidenceWarning = '';
 
             try {
               const confidenceJson = '${{ steps.confidence.outputs.CONFIDENCE_JSON }}';
-              if (confidenceJson && confidenceJson.trim().startsWith('{')) {
-                const confidence = JSON.parse(confidenceJson);
-                const breakdown = confidence.breakdown;
 
-                confidenceBody = `
+              // Check if confidence calculation succeeded
+              if (!confidenceJson || !confidenceJson.trim()) {
+                confidenceWarning = '\n\n⚠️ **Note**: Confidence score calculation was skipped or failed. Check workflow logs for details.';
+              } else if (confidenceJson.trim().startsWith('{')) {
+                try {
+                  const confidence = JSON.parse(confidenceJson);
+                  const breakdown = confidence.breakdown;
+
+                  confidenceBody = `
 
 ## 🎯 PR Confidence Score
 
@@ -525,14 +554,27 @@ jobs:
 | **Total** | **${breakdown.cubic + breakdown.coderabbit + breakdown.snyk + breakdown.ci_cd + breakdown.vercel + breakdown.codeql}** | **85** |
 
 *Note: Confidence score is informational and does not block merging. Always conduct manual code review.*`;
+                } catch (parseErr) {
+                  console.error('Failed to parse confidence JSON:', parseErr.message);
+                  confidenceWarning = '\n\n⚠️ **Note**: Confidence score calculation failed. Check workflow logs for details.';
+                }
+              } else {
+                console.log('Unexpected confidence output format:', confidenceJson.substring(0, 100));
+                confidenceWarning = '\n\n⚠️ **Note**: Confidence score calculation produced unexpected output. Check workflow logs.';
               }
             } catch (e) {
-              console.log('Failed to parse confidence score:', e.message);
+              console.error('Error processing confidence score:', e.message);
+              confidenceWarning = '\n\n⚠️ **Note**: Error processing confidence score. Check workflow logs.';
             }
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `${statusEmoji} **Pipeline Status**: ${status === 'success' ? 'All checks passed. Ready to merge.' : 'One or more checks failed. Not ready to merge.'}${confidenceBody}`
-            })
+            try {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `${statusEmoji} **Pipeline Status**: ${status === 'success' ? 'All checks passed. Ready to merge.' : 'One or more checks failed. Not ready to merge.'}${confidenceBody}${confidenceWarning}`
+              });
+            } catch (commentErr) {
+              console.error('Failed to post PR comment:', commentErr.message);
+              throw commentErr;
+            }

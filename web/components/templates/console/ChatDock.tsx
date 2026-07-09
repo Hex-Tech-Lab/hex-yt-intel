@@ -134,24 +134,22 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
   // Generate and inject dynamic follow-up prompts after assistant responses complete
   useEffect(() => {
-    if (!activeId || messages.length < 2) return;
+    const canInjectPrompts = (): { userMessage?: typeof messages[0]; latestMessage?: typeof messages[0] } | null => {
+      if (!activeId || messages.length < 2) return null;
+      const latestMessage = messages[messages.length - 1];
+      if (!latestMessage || latestMessage.role !== 'assistant') return null;
+      if (latestMessage.content.includes('OPTIONS:')) return null;
+      if (latestMessage.content.length < 100) return null;
 
-    const latestMessage = messages[messages.length - 1];
-    if (!latestMessage || latestMessage.role !== 'assistant') return;
+      const userMessage = messages[messages.length - 2];
+      if (userMessage.role !== 'user') return null;
+      return { userMessage, latestMessage };
+    };
 
-    // Check if this message already has OPTIONS
-    if (latestMessage.content.includes('OPTIONS:')) return;
+    const injection = canInjectPrompts();
+    if (!injection) return;
 
-    // Find the preceding user message
-    const userMessageIdx = messages.length - 2;
-    if (userMessageIdx < 0) return;
-    const userMessage = messages[userMessageIdx];
-    if (userMessage.role !== 'user') return;
-
-    // Don't generate prompts for error/refusal responses (short content)
-    if (latestMessage.content.length < 100) return;
-
-    // Extract context from the conversation
+    const { userMessage, latestMessage } = injection;
     const analysisTitle = useAnalysisStore.getState().title;
     const videoTitle = useAnalysisStore.getState().videoMetadata?.title;
     const conversationHistory = messages.slice(-6).map((m) => ({
@@ -167,7 +165,6 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
         conversationHistory,
       });
 
-      // Append prompts as OPTIONS to the message
       const optionsJson = JSON.stringify(prompts);
       const updatedContent = `${latestMessage.content}\n\nOPTIONS: ${optionsJson}`;
 
@@ -180,7 +177,6 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
         },
       }));
     } catch (error) {
-      // Silently fail — don't break chat if prompt generation fails
       console.debug('[ChatDock] Follow-up prompt generation failed:', error);
     }
   }, [messages, activeId]);
