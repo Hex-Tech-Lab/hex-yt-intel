@@ -406,6 +406,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error('Error:', error.message);
+  const msg = error instanceof Error ? error.message : String(error);
+  console.error('Error:', msg);
   process.exit(1);
 });
