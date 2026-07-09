@@ -228,8 +228,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       )}
 
       {/* Messages — centered column for readable line length */}
-      <div ref={listRef} aria-live="polite" className="flex-1 overflow-y-auto py-5 px-0">
-        <div className="max-w-[820px] mx-auto px-5 lg:px-6 flex flex-col gap-4">
+      <div ref={listRef} aria-live="polite" className="flex-1 overflow-y-auto py-3 px-0">
+        <div className="max-w-[820px] mx-auto px-3 lg:px-4 flex flex-col gap-3">
           {messages.length === 0 && !sending && (
             <div className="my-6 mx-auto text-center text-[var(--ink-muted)] font-mono text-xs leading-[1.6]">
               <Icon icon="solar:chat-square-like-linear" size={28} className="text-[var(--ink-muted)] mb-2 mx-auto" />
@@ -327,7 +327,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       </div>
 
       {/* Composer */}
-      <div className="border-t border-[var(--line)] px-5 lg:px-6 py-4">
+      <div className="border-t border-[var(--line)] px-3 lg:px-4 py-2">
         <div className="max-w-[820px] mx-auto flex gap-2 items-end">
           <textarea
             ref={inputRef}
@@ -336,7 +336,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
             onKeyDown={onKeyDown}
             rows={1}
             placeholder="Message… (Enter to send, Shift+Enter for newline)"
-            className="flex-1 resize-none max-h-[140px] py-2.5 px-3 rounded-lg border border-[var(--line)] bg-[rgb(8_11_17_/_0.8)] text-[var(--ink)] text-[13.5px] leading-normal outline-none hx-field"
+            className="flex-1 resize-none max-h-[140px] py-2 px-2.5 rounded-lg border border-[var(--line)] bg-[rgb(8_11_17_/_0.8)] text-[var(--ink)] text-[13.5px] leading-normal outline-none hx-field"
           />
           <button
             onClick={() => void handleSend()}

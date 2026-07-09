@@ -755,7 +755,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       ) : (activeNav as string) === 'history' ? (
         <AnalysisHistory onSelectAnalysis={() => setActiveNav('console')} />
       ) : (
-        <div className="p-12 text-center text-[var(--ink-secondary)]">
+        <div className="p-6 text-center text-[var(--ink-secondary)]">
           Settings coming soon...
         </div>
       )}
