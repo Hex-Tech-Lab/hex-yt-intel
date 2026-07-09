@@ -7,7 +7,10 @@
 
 import type { UCISDimension } from './dimension';
 
-export type PersonaId = 'creator' | 'indieMaker' | 'consultant' | 'researcher' | 'productManager';
+/** Source-of-truth list of valid persona IDs — derive all persona validation from this. */
+export const VALID_PERSONAS = ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'] as const;
+
+export type PersonaId = typeof VALID_PERSONAS[number];
 
 /**
  * Persona-specific dimension projection
@@ -59,9 +62,9 @@ export interface PersonaConfigV2 {
 }
 
 /**
- * Validate that a persona ID is valid
+ * Validate that a persona ID is valid (source-of-truth: VALID_PERSONAS)
  */
 export function isValidPersona(persona: unknown): persona is PersonaId {
   if (typeof persona !== 'string') return false;
-  return ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'].includes(persona);
+  return VALID_PERSONAS.includes(persona as PersonaId);
 }
