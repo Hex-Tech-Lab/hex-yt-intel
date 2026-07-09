@@ -453,6 +453,15 @@ jobs:
       pull-requests: write
       contents: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup environment
+        uses: ./
+
       - name: Check pipeline status
         run: |
           if [[ "${{ needs.type-check.result }}" == "failure" || \
@@ -464,17 +473,66 @@ jobs:
           fi
           echo "✅ Pipeline passed"
 
-      - name: Comment on PR
+      - name: Calculate PR Confidence
+        id: confidence
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          # Extract PR number from context
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+          # Run confidence calculator and capture output
+          CONFIDENCE_JSON=$(pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr="$PR_NUMBER" 2>&1 | tail -1)
+          echo "CONFIDENCE_JSON=$CONFIDENCE_JSON" >> $GITHUB_OUTPUT
+
+          # Pretty print for logs
+          echo "$CONFIDENCE_JSON" | jq '.' || echo "Failed to calculate confidence"
+        continue-on-error: true
+
+      - name: Comment on PR with status and confidence
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const fs = require('fs');
             const status = '${{ job.status }}';
             const statusEmoji = status === 'success' ? '✅' : '❌';
+
+            let confidenceBody = '';
+
+            try {
+              const confidenceJson = '${{ steps.confidence.outputs.CONFIDENCE_JSON }}';
+              if (confidenceJson && confidenceJson.trim().startsWith('{')) {
+                const confidence = JSON.parse(confidenceJson);
+                const breakdown = confidence.breakdown;
+
+                confidenceBody = `
+
+## 🎯 PR Confidence Score
+
+**Confidence: ${confidence.confidence}%** — *${confidence.recommendation}*
+
+### Scoring Breakdown
+| Tool | Score | Max |
+|---|---|---|
+| Cubic | ${breakdown.cubic} | 30 |
+| CodeRabbit | ${breakdown.coderabbit} | 20 |
+| Snyk | ${breakdown.snyk} | 15 |
+| CI/CD | ${breakdown.ci_cd} | 10 |
+| Vercel | ${breakdown.vercel} | 5 |
+| CodeQL | ${breakdown.codeql} | 5 |
+| **Total** | **${breakdown.cubic + breakdown.coderabbit + breakdown.snyk + breakdown.ci_cd + breakdown.vercel + breakdown.codeql}** | **85** |
+
+*Note: Confidence score is informational and does not block merging. Always conduct manual code review.*`;
+              }
+            } catch (e) {
+              console.log('Failed to parse confidence score:', e.message);
+            }
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `${statusEmoji} **Pipeline Status**: ${status === 'success' ? 'All checks passed. Ready to merge.' : 'One or more checks failed. Not ready to merge.'}`
+              body: `${statusEmoji} **Pipeline Status**: ${status === 'success' ? 'All checks passed. Ready to merge.' : 'One or more checks failed. Not ready to merge.'}${confidenceBody}`
             })
