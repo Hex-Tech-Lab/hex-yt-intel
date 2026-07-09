@@ -265,7 +265,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       // STAGE 1: Generate and emit OPTIONS IMMEDIATELY (blocking step)
       // This ensures OPTIONS arrive before any DELTA events.
       // We await this BEFORE starting the LLM cascade to guarantee ordering.
-      let optionsSent = false;
+      // In all code paths below, OPTIONS is guaranteed to be sent before proceeding.
       try {
         const currentTopic = history && history.length > 0
           ? history[history.length - 1]?.content || ""
@@ -275,11 +275,9 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         // Emit adaptive options if generated
         if (adaptiveOptions && adaptiveOptions.length > 0) {
           send({ type: "options", content: adaptiveOptions, requestId: req.requestId });
-          optionsSent = true;
         } else {
           // Fallback to static options if adaptive generation produced nothing
           send({ type: "options", content: ["Ask a follow-up question?", "Summarize this topic?", "What's next?"], requestId: req.requestId });
-          optionsSent = true;
         }
       } catch (err) {
         // On error, always send static fallback to ensure OPTIONS are sent
@@ -289,17 +287,6 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           error: msg,
         });
         send({ type: "options", content: ["Ask a follow-up question?", "Summarize this topic?", "What's next?"], requestId: req.requestId });
-        optionsSent = true;
-      }
-
-      // Verify OPTIONS were sent (safety check for ordering guarantee)
-      if (!optionsSent) {
-        console.error("[chat-stream] ORDERING VIOLATION: OPTIONS not sent before DELTA", {
-          conversationId: req.conversationId,
-          requestId: req.requestId,
-        });
-        // Force send static options as last resort
-        send({ type: "options", content: ["Ask a follow-up question?"], requestId: req.requestId });
       }
 
       // STAGE 2: Stream chat deltas (LLM completion)

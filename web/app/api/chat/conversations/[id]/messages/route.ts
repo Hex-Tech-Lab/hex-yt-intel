@@ -92,10 +92,10 @@ export async function POST(
     // If wiki lookup times out or fails, fall back to empty context
     // This prevents any delays in wiki fetching from blocking chat response
     const stubWikiPort = {
-      getUserWiki: async (_userId: string) => {
-        // TODO: When actual wiki adapter is integrated, replace this with real fetch
-        // For now, return empty array to unblock chat processing
-        return [] as any[];
+      getUserWiki: (_userId: string) => {
+        // Stub implementation: returns empty wiki until actual adapter is integrated
+        // Production: replace with real fetch from Supabase user_knowledge_wiki table
+        return Promise.resolve([] as any[]);
       },
     };
     const knowledgeService = new KnowledgeHistoryService(stubWikiPort);
