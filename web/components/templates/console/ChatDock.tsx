@@ -135,7 +135,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   // Generate and inject dynamic follow-up prompts after assistant responses complete
   useEffect(() => {
     // Check if latest message is eligible for prompt injection
-    const canInjectPrompts = (): { userMessage?: typeof messages[0]; latestMessage?: typeof messages[0] } | null => {
+    const canInjectPrompts = (): { userMessage: typeof messages[0]; latestMessage: typeof messages[0] } | null => {
       // Guard: must have active conversation with 2+ messages
       if (!activeId || messages.length < 2) return null;
 
@@ -148,7 +148,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       if (latestMessage.content.length < 100) return null;
 
       const userMessage = messages[messages.length - 2];
-      if (userMessage.role !== 'user') return null;
+      if (!userMessage || userMessage.role !== 'user') return null;
       return { userMessage, latestMessage };
     };
 
@@ -156,7 +156,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     if (!injection) return;
 
     const { userMessage, latestMessage } = injection;
-    const analysisTitle = useAnalysisStore.getState().title;
+    const analysisTitle = useAnalysisStore.getState().analysis?.title;
     const videoTitle = useAnalysisStore.getState().videoMetadata?.title;
     const conversationHistory = messages.slice(-6).map((m) => ({
       role: m.role as 'user' | 'assistant',
@@ -177,7 +177,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       useChatStore.setState((state) => ({
         messagesByConv: {
           ...state.messagesByConv,
-          [activeId]: (state.messagesByConv[activeId] || []).map((m) =>
+          [activeId as string]: (state.messagesByConv[activeId as string] || []).map((m) =>
             m.id === latestMessage.id ? { ...m, content: updatedContent } : m
           ),
         },
