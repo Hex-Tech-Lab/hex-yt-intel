@@ -193,14 +193,24 @@ async function captureQuestionToStorage(
 /**
  * Build markdown content for question storage.
  * Format: YAML front matter + content.
+ *
+ * P0 Security Fix: YAML injection prevention
+ * - Quotes and escapes all YAML values to prevent injection via newlines/special chars
+ * - Question content is stored as raw markdown (not in front matter)
  */
 function buildQuestionMarkdown(metadata: QuestionStorageMetadata, questionId: string): string {
+  // Helper: escape YAML string values (quote and escape internal quotes)
+  const escapeYamlValue = (value: string | null | undefined): string => {
+    if (!value) return 'null';
+    return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  };
+
   const frontMatter = `---
-questionId: ${questionId}
-conversationId: ${metadata.conversationId}
-userId: ${metadata.userId}
-analysisId: ${metadata.analysisId || 'null'}
-timestamp: ${metadata.timestamp}
+questionId: ${escapeYamlValue(questionId)}
+conversationId: ${escapeYamlValue(metadata.conversationId)}
+userId: ${escapeYamlValue(metadata.userId)}
+analysisId: ${escapeYamlValue(metadata.analysisId)}
+timestamp: ${escapeYamlValue(metadata.timestamp)}
 ---
 
 # User Question
