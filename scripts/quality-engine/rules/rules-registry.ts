@@ -87,7 +87,6 @@ export class RulesRegistry {
   }
 
   generateReport(): string {
-    const stats = this.getCategoryStats();
     let report = "# QA-Intel Rule Registry Report\n\n";
     report += `**Total Rules: ${this.getAllRules().length}**\n\n`;
     for (const category of this.getCategories()) {
