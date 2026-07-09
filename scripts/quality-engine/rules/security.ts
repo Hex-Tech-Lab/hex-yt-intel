@@ -380,6 +380,136 @@ export const SqlInjectionRule: IRule = {
   }
 };
 
+export const WhitelistPathSanitizationRule: IRule = {
+  name: "whitelist-path-sanitization",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Detect blacklist-based path sanitization (replace specific patterns)
+    // Pattern: .replace(/\.\.\//g, '') or .replace(/\.\.\\/g, '')
+    const blacklistPattern = /\.replace\(\s*\/\\\.\\\.\s*(?:\\\/|\\\\)\s*\/g\s*,\s*['"]['"]\s*\)/;
+    if (blacklistPattern.test(text)) {
+      findings.push({
+        file: filePath,
+        severity: "high",
+        title: "Security: Blacklist-based path sanitization (bypass vulnerable)",
+        why: "Removing ../ and ..\\ patterns with sequential replace() calls can be bypassed with patterns like ..// or ....//",
+        fix: "Replace with whitelist approach: .replace(/[^a-zA-Z0-9._-]/g, '') to allow only safe characters."
+      });
+    }
+
+    return findings;
+  }
+};
+
+export const InformationDisclosureRule: IRule = {
+  name: "information-disclosure-prevention",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+
+    source.forEachDescendant((node) => {
+      // Detect console/Sentry logging with sensitive info in template literals
+      if (Node.isCallExpression(node)) {
+        const expr = node.getExpression().getText();
+        const isLogOrSentry = expr.includes('console.') || expr.includes('Sentry.') || expr.includes('logError') || expr.includes('logInfo');
+
+        if (isLogOrSentry && node.getArguments().length > 0) {
+          const arg = node.getArguments()[0];
+          if (Node.isTemplateExpression(arg)) {
+            const templateText = arg.getText();
+            // Check for sensitive patterns in template
+            const sensitivPatterns = ['filePath', 'userId', 'path:', 'user:', 'id:'];
+            for (const pattern of sensitivPatterns) {
+              if (templateText.includes(pattern) && templateText.includes('$')) {
+                findings.push({
+                  file: filePath,
+                  severity: "high",
+                  title: "Information Disclosure: Sensitive paths/IDs in error logs",
+                  why: `Log message includes sensitive pattern '${pattern}' which exposes internal structure to attackers.`,
+                  fix: "Remove or redact sensitive information from error messages: log only error type/code, not internal paths or user IDs."
+                });
+                break;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return findings;
+  }
+};
+
+export const YamlInjectionRule: IRule = {
+  name: "yaml-injection-prevention",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // Detect YAML front matter without proper escaping
+    if (text.includes('---') && (text.includes('front matter') || text.includes('YAML') || filePath.includes('markdown'))) {
+      // Look for unescaped YAML values (missing quotes) - handle both Unix and Windows line endings
+      const yamlPattern = /---\r?\n[^:]+:\s*\$\{[^}]+\}/;
+      if (yamlPattern.test(text)) {
+        findings.push({
+          file: filePath,
+          severity: "high",
+          title: "Security: YAML injection vulnerability (unescaped values)",
+          why: "YAML front matter contains unquoted values that can be broken by newlines or special characters in user input.",
+          fix: "Escape YAML values: wrap in quotes and escape internal quotes. Use helper: `value = `\"${String(value).replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"')}\"`"
+        });
+      }
+    }
+
+    return findings;
+  }
+};
+
+export const ReservedKeywordRule: IRule = {
+  name: "reserved-keyword-avoidance",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+
+    // Reserved words that should not be used as identifiers in test files
+    const reservedWords = ['static', 'function', 'class', 'interface', 'type', 'const', 'let', 'var', 'async', 'await', 'return'];
+
+    source.forEachDescendant((node) => {
+      // Check variable declarations and test names
+      if (Node.isVariableDeclaration(node) || Node.isIdentifier(node)) {
+        const nameNode = node.getNameNode?.() || node;
+        if (nameNode) {
+          const name = nameNode.getText?.() ?? '';
+          for (const reserved of reservedWords) {
+            if (name.toLowerCase().includes(reserved) && name === reserved) {
+              findings.push({
+                file: filePath,
+                severity: "medium",
+                title: `Syntax Error Risk: Reserved keyword '${reserved}' used as identifier`,
+                why: `Using '${reserved}' as a variable/test name causes parse errors. JavaScript reserves this keyword.`,
+                fix: `Rename to a non-reserved alternative: '${reserved}test', 'test${reserved.charAt(0).toUpperCase() + reserved.slice(1)}', etc.`
+              });
+              break;
+            }
+          }
+        }
+      }
+    });
+
+    return findings;
+  }
+};
+
+/**
+ * Register all security-related rules with the QA-Intel engine.
+ * Includes comprehensive security checks for credential leaks, XSS/injection attacks,
+ * authentication vulnerabilities, secrets exposure, and unsafe code patterns.
+ * @param engine - The QA-Intel engine instance
+ */
 export function registerSecurityRules(engine: unknown) {
   const e = engine as any;
   e.addRule(CredentialLeakRule);
@@ -391,4 +521,8 @@ export function registerSecurityRules(engine: unknown) {
   e.addRule(EnvPlaceholderNamespaceRule);
   e.addRule(InsecureFallbackRule);
   e.addRule(SqlInjectionRule);
+  e.addRule(WhitelistPathSanitizationRule);
+  e.addRule(InformationDisclosureRule);
+  e.addRule(YamlInjectionRule);
+  e.addRule(ReservedKeywordRule);
 }
