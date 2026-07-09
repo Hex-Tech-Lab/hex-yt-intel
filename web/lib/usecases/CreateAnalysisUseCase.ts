@@ -72,7 +72,7 @@ export class CreateAnalysisUseCase {
             markdown: cached.analysisMarkdown,
             metadata: cached.cachedReport?.metadata,
           },
-          persona: (cached.cachedReport?.persona as PersonaId) || 'p1'
+          persona: (cached.cachedReport?.persona as PersonaId) || 'creator'
         };
       }
     }
