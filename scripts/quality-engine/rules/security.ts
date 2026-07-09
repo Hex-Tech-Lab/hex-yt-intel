@@ -483,7 +483,7 @@ export const ReservedKeywordRule: IRule = {
       if (Node.isVariableDeclaration(node) || Node.isIdentifier(node)) {
         const nameNode = node.getNameNode?.() || node;
         if (nameNode) {
-          const name = nameNode.getText?.() || nameNode.getText();
+          const name = nameNode.getText?.() ?? '';
           for (const reserved of reservedWords) {
             if (name.toLowerCase().includes(reserved) && name === reserved) {
               findings.push({

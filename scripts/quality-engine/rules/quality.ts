@@ -94,7 +94,7 @@ export const VariableNamingRule: IRule = {
       if (Node.isVariableDeclaration(node) || Node.isParameterDeclaration(node)) {
         const nameNode = node.getNameNode?.() || (node as any).getName?.();
         if (nameNode) {
-          const name = typeof nameNode === 'string' ? nameNode : nameNode.getText?.() || nameNode.getText();
+          const name = typeof nameNode === 'string' ? nameNode : nameNode.getText?.() ?? '';
 
           // Flag single-letter variable names (except in loops or very short scopes)
           if (name.length === 1 && name !== 'i' && name !== 'j' && name !== 'x' && name !== 'y') {
