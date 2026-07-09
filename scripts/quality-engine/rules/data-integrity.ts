@@ -169,6 +169,12 @@ export const TruncationValidationRule: IRule = {
   }
 };
 
+/**
+ * Register all data-integrity rules with the QA-Intel engine.
+ * Includes rules for database schema constraints, default value consistency,
+ * and string truncation validation.
+ * @param engine - The QA-Intel engine instance
+ */
 export function registerDataIntegrityRules(engine: unknown) {
   const e = engine as any;
   e.addRule(DatabaseConstraintRule);

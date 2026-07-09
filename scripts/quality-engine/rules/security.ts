@@ -504,6 +504,12 @@ export const ReservedKeywordRule: IRule = {
   }
 };
 
+/**
+ * Register all security-related rules with the QA-Intel engine.
+ * Includes comprehensive security checks for credential leaks, XSS/injection attacks,
+ * authentication vulnerabilities, secrets exposure, and unsafe code patterns.
+ * @param engine - The QA-Intel engine instance
+ */
 export function registerSecurityRules(engine: unknown) {
   const e = engine as any;
   e.addRule(CredentialLeakRule);

@@ -284,6 +284,12 @@ export const ErrorObservabilityRule: IRule = {
   }
 };
 
+/**
+ * Register all quality-related rules with the QA-Intel engine.
+ * Includes rules for async/await clarity, dead code detection, naming, timeouts,
+ * import ordering, and error observability.
+ * @param engine - The QA-Intel engine instance
+ */
 export function registerQualityRules(engine: unknown) {
   const e = engine as any;
   e.addRule(AsyncWithoutAwaitRule);
