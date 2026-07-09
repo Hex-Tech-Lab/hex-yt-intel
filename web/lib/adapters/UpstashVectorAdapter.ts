@@ -16,11 +16,12 @@ export class UpstashVectorAdapter implements VectorDedupPort {
   }
 
   async deduplicateNodes(
-    tenantId: string, 
+    tenantId: string,
     nodeIds: string[],
     config: { similarityThreshold: number; maxDeletes: number }
   ): Promise<DedupResult> {
     const ns = this.index.namespace(tenantId);
+    const deletedNodeIds: string[] = [];
     let deletedCount = 0;
 
     try {
@@ -38,18 +39,19 @@ export class UpstashVectorAdapter implements VectorDedupPort {
             if (res.id !== id && typeof score === 'number' && score >= config.similarityThreshold) {
               if (deletedCount >= config.maxDeletes) {
                 console.warn(`[UpstashVectorAdapter] Max deletion limit reached: ${config.maxDeletes}`);
-                return { success: true, deletedCount, error: 'Max deletion limit reached' };
+                return { success: true, deletedCount, deletedNodeIds, error: 'Max deletion limit reached' };
               }
               await ns.delete([res.id]);
+              deletedNodeIds.push(res.id);
               deletedCount++;
             }
           }
         }
       }
-      return { success: true, deletedCount };
+      return { success: true, deletedCount, deletedNodeIds };
     } catch (error) {
       console.error('[UpstashVectorAdapter] DeduplicateNodes failed:', error);
-      return { success: false, deletedCount, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, deletedCount, deletedNodeIds, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
