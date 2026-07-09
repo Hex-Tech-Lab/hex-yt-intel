@@ -74,12 +74,22 @@ function parseArgs(): number {
  */
 function queryGitHub(query: string): string {
   try {
+    // Verify gh CLI is available and authenticated
+    execFileSync('gh', ['auth', 'status'], { encoding: 'utf-8', stdio: 'pipe' });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`[queryGitHub] gh CLI authentication failed: ${msg}`);
+    process.exit(1);
+  }
+
+  try {
     const args = ['api', ...query.split(/\s+/)];
     return execFileSync('gh', args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`[queryGitHub] gh CLI error: ${msg} (query: ${query.substring(0, 50)}...)`);
-    return '[]';
+    console.error('[queryGitHub] Exiting due to API failure to ensure accurate confidence reporting');
+    process.exit(1);
   }
 }
 
@@ -168,7 +178,7 @@ function extractCodeRabbitScore(prNumber: number): { score: number; comment?: st
  * @param prNumber - Pull request number to search
  * @returns Object with score (0-15, capped at resolved count) and optional comment preview
  */
-function extractSnyxScore(prNumber: number): { score: number; comment?: string } {
+function extractSnykScore(prNumber: number): { score: number; comment?: string } {
   try {
     const commentsJson = queryGitHub(`issues/${prNumber}/comments --paginate --limit=100`);
     const data = JSON.parse(commentsJson || '[]');
@@ -209,7 +219,13 @@ function extractSnyxScore(prNumber: number): { score: number; comment?: string }
  */
 function extractCICDStatus(prNumber: number): { score: number; status?: string } {
   try {
-    const checksJson = queryGitHub(`repos/{owner}/{repo}/commits/refs/pull/${prNumber}/merge/check-runs`);
+    const repo = process.env.GITHUB_REPOSITORY || '';
+    if (!repo) {
+      console.warn('[extractCICDStatus] GITHUB_REPOSITORY not set, cannot query check runs');
+      return { score: 0, status: 'repo-unknown' };
+    }
+    // Use GitHub API's native merge ref parameter for accurate check-run status
+    const checksJson = queryGitHub(`repos/${repo}/commits/refs/pull/${prNumber}/merge/check-runs`);
     const data = JSON.parse(checksJson || '{}');
 
     const checkRuns = data.check_runs || [];
@@ -274,9 +290,14 @@ function extractVercelStatus(prNumber: number): { score: number; status?: string
  */
 function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number } {
   try {
-    // Query for code scanning alerts on the PR, filtered by PR ref using --jq
-    // Use pr= parameter to scope results to this PR instead of entire repo
-    const alertsJson = queryGitHub(`repos/{owner}/{repo}/code-scanning/alerts?state=open&ref=refs/pull/${prNumber}/merge&sort=updated&direction=desc --paginate --limit=50`);
+    // Query for code scanning alerts on the PR, filtered by PR ref
+    // Use GITHUB_REPOSITORY env var to get owner/repo in GitHub Actions context
+    const repo = process.env.GITHUB_REPOSITORY || '';
+    if (!repo) {
+      console.warn('[extractCodeQLStatus] GITHUB_REPOSITORY not set, skipping CodeQL check');
+      return { score: 5, alerts: 0 };
+    }
+    const alertsJson = queryGitHub(`repos/${repo}/code-scanning/alerts?state=open&ref=refs/pull/${prNumber}/merge&sort=updated&direction=desc --paginate --limit=50`);
     const data = JSON.parse(alertsJson || '[]');
 
     if (!Array.isArray(data)) {
@@ -334,7 +355,7 @@ async function main(): Promise<void> {
   // Extract all scores sequentially (all use execFileSync, so no parallelization benefit)
   const cubicResult = extractCubicScore(prNumber);
   const coderabbitResult = extractCodeRabbitScore(prNumber);
-  const snyxResult = extractSnyxScore(prNumber);
+  const snykResult = extractSnykScore(prNumber);
   const cicdResult = extractCICDStatus(prNumber);
   const vercelResult = extractVercelStatus(prNumber);
   const codeqlResult = extractCodeQLStatus(prNumber);
@@ -342,7 +363,7 @@ async function main(): Promise<void> {
   const breakdown: PRConfidenceBreakdown = {
     cubic: cubicResult.score,
     coderabbit: coderabbitResult.score,
-    snyk: snyxResult.score,
+    snyk: snykResult.score,
     ci_cd: cicdResult.score,
     vercel: vercelResult.score,
     codeql: codeqlResult.score,
@@ -360,7 +381,7 @@ async function main(): Promise<void> {
     details: {
       cubic_comment: cubicResult.comment,
       coderabbit_comment: coderabbitResult.comment,
-      snyk_comment: snyxResult.comment,
+      snyk_comment: snykResult.comment,
       ci_status: cicdResult.status,
       vercel_status: vercelResult.status,
       codeql_alerts: codeqlResult.alerts,
