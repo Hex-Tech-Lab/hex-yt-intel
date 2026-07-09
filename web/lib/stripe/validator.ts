@@ -18,15 +18,11 @@ export interface WebhookValidationResult {
   code?: 'MISSING_SECRET' | 'INVALID_SIGNATURE' | 'MALFORMED_EVENT' | 'UNKNOWN_ERROR';
 }
 
-/**
- * Verify webhook signature and construct Stripe event
- * Returns event on success, throws with code for error classification
- */
-export function verifyWebhookSignature(
+const verifyWebhookSignature = (
   body: string,
   signature: string,
   secret: string
-): Stripe.Event {
+): Stripe.Event => {
   if (!secret) {
     const err = new Error('STRIPE_WEBHOOK_SECRET not configured');
     (err as any).code = 'MISSING_SECRET';
@@ -44,17 +40,17 @@ export function verifyWebhookSignature(
     console.error('[Stripe] Webhook signature verification failed:', error);
     throw err;
   }
-}
+};
 
 /**
  * Validate webhook event structure and signature
  * Returns validation result with parsed event or granular error classification
  */
-export function validateWebhookEvent(
+export const validateWebhookEvent = (
   body: string,
   signature: string,
   secret: string
-): WebhookValidationResult {
+): WebhookValidationResult => {
   try {
     const event = verifyWebhookSignature(body, signature, secret);
     return {
@@ -71,29 +67,23 @@ export function validateWebhookEvent(
       code,
     };
   }
-}
+};
 
 /**
  * Extract customer ID from Stripe event
  * Works for most webhook event types that include a customer reference
  */
-export function extractCustomerIdFromEvent(event: Stripe.Event): string | null {
+export const extractCustomerIdFromEvent = (event: Stripe.Event): string | null => {
   try {
     const obj = event.data.object as any;
     return obj?.customer || null;
   } catch {
     return null;
   }
-}
+};
 
 /**
  * Validate event has required data structure
  */
-export function isValidEventStructure(event: Stripe.Event): boolean {
-  return !!(
-    event.id &&
-    event.type &&
-    event.data &&
-    typeof event.data === 'object'
-  );
-}
+export const isValidEventStructure = (event: Stripe.Event): boolean =>
+  Boolean(event.id && event.type && event.data && typeof event.data === 'object');
