@@ -65,7 +65,7 @@ export function buildGroundingWithHistory(
           if (!q) return null;
           return `Q: ${q}? → ${a}`;
         })
-        .filter((item) => item !== null)
+        .filter((item): item is string => item !== null)
         .join('; ');
 
       if (faqText.length > 0) {

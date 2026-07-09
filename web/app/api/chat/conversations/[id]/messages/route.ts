@@ -93,21 +93,9 @@ export async function POST(
     // This prevents any delays in wiki fetching from blocking chat response
     const stubWikiPort = {
       getUserWiki: async (_userId: string) => {
-        try {
-          // 2-second timeout for wiki lookup to prevent blocking
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-          // TODO: When actual wiki adapter is integrated, replace this with real fetch
-          // For now, return empty array to unblock chat processing
-          clearTimeout(timeoutId);
-          return [] as any[];
-        } catch (error) {
-          // Timeout or fetch error - log and fall back to empty context
-          console.warn('[chat] Wiki history lookup failed (timeout or error):',
-            error instanceof Error ? error.message : String(error));
-          return [];
-        }
+        // TODO: When actual wiki adapter is integrated, replace this with real fetch
+        // For now, return empty array to unblock chat processing
+        return [] as any[];
       },
     };
     const knowledgeService = new KnowledgeHistoryService(stubWikiPort);
