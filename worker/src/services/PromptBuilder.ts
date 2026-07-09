@@ -3,9 +3,12 @@ import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
 import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS } from '../../../web/lib/config/synthesis';
 import type { PersonaId } from '../../../web/lib/types/persona';
+import { isValidPersona, VALID_PERSONAS } from '../../../web/lib/types/persona';
 
 export class PromptBuilder implements PromptBuilderPort {
   async build(context: EngineContext): Promise<string> {
+    const validPersona = isValidPersona(context.persona) ? (context.persona as PersonaId) : 'creator';
+
     const basePrompt = await getUCISPrompt({
       metadata: {
         title: context.metadata.title,
@@ -16,7 +19,7 @@ export class PromptBuilder implements PromptBuilderPort {
         publishedAt: context.metadata.publishedAt,
       },
       transcript: context.transcript || '',
-      persona: (context.persona as PersonaId | undefined) || 'creator',
+      persona: validPersona,
       timezone: context.timezone || 'UTC',
       duration: context.metadata.duration || 0,
       skipAllDimensionsInstruction: true,
