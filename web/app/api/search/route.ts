@@ -19,6 +19,24 @@ if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL
   throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
 }
 
+/**
+ * Semantic search endpoint for analyzing video content.
+ *
+ * @param request - NextRequest containing JSON body with:
+ *   - query (string, required): Search query, 3-1000 characters
+ *   - topK (number, optional): Number of results to return, default 5, range [1, 50]
+ *
+ * @returns {Promise<NextResponse>} JSON response containing:
+ *   - results: Array of enriched search results with analysisId, title, videoId, excerpt, score, createdAt
+ *   - count: Number of valid results returned
+ *   - query: Echo of the search query
+ *   - tier: User's subscription tier
+ *
+ * @throws {NextResponse} 400 if query length invalid or topK out of bounds
+ * @throws {NextResponse} 401 if authentication fails
+ * @throws {NextResponse} 429 if rate limit exceeded
+ * @throws {NextResponse} 500 on embedding generation or vector search failure
+ */
 export async function POST(request: NextRequest) {
   try {
     // 1. Parse and validate request
@@ -43,6 +61,7 @@ export async function POST(request: NextRequest) {
 
     const { query, topK = 5 } = body as { query?: string; topK?: number };
 
+    // Validate query parameter
     if (!query || typeof query !== 'string') {
       return NextResponse.json(
         { error: 'Query parameter is required and must be a string' },
@@ -53,6 +72,23 @@ export async function POST(request: NextRequest) {
     if (query.length < 3 || query.length > 1000) {
       return NextResponse.json(
         { error: 'Query must be between 3 and 1000 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Validate topK parameter bounds
+    if (typeof topK !== 'number' || !Number.isInteger(topK) || topK < 1 || topK > 50) {
+      const errorCode = ERROR_CODES.INVALID_REQUEST_SCHEMA;
+      Sentry.captureMessage('Search: Invalid topK parameter', {
+        level: 'warning',
+        tags: { code: errorCode },
+        contexts: { validation: { topK, min: 1, max: 50 } }
+      });
+      return NextResponse.json(
+        {
+          error: 'Invalid topK parameter',
+          details: 'topK must be an integer between 1 and 50'
+        },
         { status: 400 }
       );
     }
@@ -187,8 +223,13 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate embedding for search query via OpenRouter
- * Uses text-embedding-3-small model for 1536-dimensional vectors
+ * Generate embedding for search query via OpenRouter.
+ *
+ * @param query - Search query string (pre-validated to be 3-1000 characters)
+ * @returns {Promise<number[]>} 1536-dimensional embedding vector, empty array on failure
+ *
+ * @throws Logs error to console and Sentry on embedding generation failure
+ * @internal Uses text-embedding-3-small model for vector generation
  */
 async function generateQueryEmbedding(query: string): Promise<number[]> {
   try {
