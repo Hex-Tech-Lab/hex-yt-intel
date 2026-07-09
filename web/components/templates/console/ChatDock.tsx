@@ -134,38 +134,32 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
   // Generate and inject dynamic follow-up prompts after assistant responses complete
   useEffect(() => {
-    // Check if latest message is eligible for prompt injection
-    const canInjectPrompts = (): { userMessage: typeof messages[0]; latestMessage: typeof messages[0] } | null => {
-      // Guard: must have active conversation with 2+ messages
-      if (!activeId || messages.length < 2) return null;
-      // Guard: only inject after streaming completes (sending state is false)
-      if (sending) return null;
+    // Validate minimum requirements for prompt injection
+    if (!activeId || messages.length < 2 || sending) return;
 
-      const latestMessage = messages[messages.length - 1];
-      // Guard: latest must be assistant message
-      if (!latestMessage || latestMessage.role !== 'assistant') return null;
-      // Guard: skip if already has OPTIONS
-      if (latestMessage.content.includes('OPTIONS:')) return null;
-      // Guard: skip short responses (errors, refusals)
-      if (latestMessage.content.length < 100) return null;
+    const latestMessage = messages[messages.length - 1];
+    const userMessage = messages[messages.length - 2];
 
-      const userMessage = messages[messages.length - 2];
-      if (!userMessage || userMessage.role !== 'user') return null;
-      return { userMessage, latestMessage };
-    };
-
-    const injection = canInjectPrompts();
-    if (!injection) return;
-
-    const { userMessage, latestMessage } = injection;
-    const analysisTitle = useAnalysisStore.getState().analysis?.title;
-    const videoTitle = useAnalysisStore.getState().videoMetadata?.title;
-    const conversationHistory = messages.slice(-6).map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    }));
+    // Check eligibility: latest is assistant, has content, no OPTIONS, not short
+    if (
+      !latestMessage ||
+      !userMessage ||
+      latestMessage.role !== 'assistant' ||
+      userMessage.role !== 'user' ||
+      latestMessage.content.includes('OPTIONS:') ||
+      latestMessage.content.length < 100
+    ) {
+      return;
+    }
 
     try {
+      const analysisTitle = useAnalysisStore.getState().analysis?.title;
+      const videoTitle = useAnalysisStore.getState().videoMetadata?.title;
+      const conversationHistory = messages.slice(-6).map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
+
       const prompts = generateFollowupPrompts({
         userQuestion: userMessage.content,
         assistantResponse: latestMessage.content,

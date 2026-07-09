@@ -68,7 +68,8 @@ function parseArgs(): number {
  */
 function queryGitHub(query: string): string {
   try {
-    return execFileSync('gh', ['api', query], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    const args = ['api', ...query.split(/\s+/)];
+    return execFileSync('gh', args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch (error) {
     // Return empty array JSON for graceful handling
     return '[]';
@@ -302,7 +303,7 @@ function getRecommendation(confidence: number): string {
 async function main(): Promise<void> {
   const prNumber = parseArgs();
 
-  console.log(`\n📊 Calculating PR Confidence for #${prNumber}...\n`);
+  console.error(`\n📊 Calculating PR Confidence for #${prNumber}...\n`);
 
   // Extract all scores in parallel
   const [
