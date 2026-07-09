@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       tier: identity.tier,
       email: identity.email,
       timezone: validation.data.timezone,
-      persona: validation.data.persona,
+      persona: validation.data.persona as PersonaId | undefined,
       forceRefresh: validation.data.forceRefresh,
     });
 
