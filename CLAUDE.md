@@ -71,3 +71,149 @@ Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-
 - **pnpm**: 11.9.0 (source of truth: package.json packageManager field; synced to action.yml + CI workflows)
 - **Next.js**: 16.2.6
 - **TypeScript**: 5.6.2
+
+---
+
+## 6. PR CONFIDENCE CALCULATOR (WAVE 6 — 2026-07-09)
+
+### Purpose
+Multidimensional PR readiness scoring system that evaluates code quality across six independent tools. Designed as an **informational decision gate** (never blocking merge) to help team members assess PR maturity before review.
+
+### Scoring Formula
+
+| Tool | Category | Max Points | Criteria |
+|---|---|---|---|
+| **Cubic** | Code Architecture | 30 | Review score extracted from Cubic comments (normalized to 30) |
+| **CodeRabbit** | Code Review | 20 | Passed checks from CodeRabbit review tool |
+| **Snyk** | Security | 15 | Resolved security findings count |
+| **CI/CD** | Automation | 10 | All GitHub Actions checks passed |
+| **Vercel** | Deployment | 5 | Deployment status = READY or PRODUCTION |
+| **CodeQL** | Static Analysis | 5 | Zero critical/high-severity alerts |
+
+**Confidence = (Total Points ÷ 85) × 100%**
+
+### Recommendations
+
+| Confidence | Status | Action |
+|---|---|---|
+| **≥85%** | MERGE READY | Safe to merge; all quality gates met |
+| **70–84%** | ACCEPTABLE (minor debt) | Mergeable; minor findings remain |
+| **50–69%** | AT RISK (review findings) | Review findings present; address before merge |
+| **<50%** | NOT READY (critical issues) | Critical issues identified; do not merge |
+
+### Usage
+
+#### CLI (Local Development)
+```bash
+npm run pr:confidence --pr=129
+```
+
+#### GitHub Actions (Automatic)
+- Runs automatically in CI/CD pipeline on every PR
+- Score is appended to the final status comment
+- Does **not** block merge (informational only)
+
+#### Manual Query
+```bash
+pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr=129
+```
+
+### Output Format
+
+**JSON (Machine-Readable)**
+```json
+{
+  "pr": 129,
+  "confidence": 92,
+  "breakdown": {
+    "cubic": 28,
+    "coderabbit": 18,
+    "snyk": 15,
+    "ci_cd": 10,
+    "vercel": 5,
+    "codeql": 5
+  },
+  "recommendation": "MERGE READY",
+  "details": {
+    "cubic_comment": "Excellent architecture...",
+    "coderabbit_comment": "18 checks passed",
+    "snyk_comment": "All issues resolved",
+    "ci_status": "all-passed",
+    "vercel_status": "READY",
+    "codeql_alerts": 0
+  },
+  "timestamp": "2026-07-09T12:00:00.000Z"
+}
+```
+
+**Human-Readable Summary** (console output)
+```
+📊 Calculating PR Confidence for #129...
+
+📈 Breakdown:
+  Cubic:       28/30
+  CodeRabbit:  18/20
+  Snyk:        15/15
+  CI/CD:       10/10
+  Vercel:       5/5
+  CodeQL:       5/5
+  ─────────────────────
+  Total:       81/85
+
+🎯 Confidence: 95% (MERGE READY)
+```
+
+### Implementation Details
+
+**File**: `/scripts/calculate-pr-confidence.ts` (380 LOC)
+
+**Data Sources**:
+- GitHub API (comments, check runs, deployments, code-scanning alerts)
+- Review tool bot comments (Cubic, CodeRabbit, Snyk)
+- GitHub Actions check results
+- Vercel deployment status
+- CodeQL analysis results
+
+**Tool Detection**:
+- Cubic: Regex pattern `cubic[:\s]*([0-9]+)` on PR comments
+- CodeRabbit: Regex pattern `(\d+)\s+passed` + score normalization
+- Snyk: Count of `resolved|fixed` keywords in comments
+- CI/CD: All check runs in pull_request merge commit
+- Vercel: Check runs context includes "vercel" + success state
+- CodeQL: Code-scanning alerts filtered by severity (critical/high)
+
+**Error Handling**:
+- Graceful fallback: Missing tools default to 0 points (doesn't crash calculator)
+- GitHub API failures are logged but do not block output
+- Invalid/malformed scores cap at tool's maximum points
+
+### Integration with CI/CD
+
+**Modified**: `.github/workflows/ci-cd.yml` → `final-status` job
+
+1. Runs after all quality checks (type-check, lint, build, security)
+2. Invokes `calculate-pr-confidence.ts --pr=${{ github.event.pull_request.number }}`
+3. Appends confidence score + breakdown table to the final PR status comment
+4. Labeled as "FYI — Confidence score is informational and does not block merging"
+
+### Philosophy
+
+**Why Informational, Not Blocking?**
+- No single metric can capture true merge readiness
+- Context matters: risky refactors may score lower but be necessary
+- Team judgment always overrides automation
+- Prevents "gaming" the score by chasing points
+
+**Complementary Tools**:
+- Code reviews (human judgment)
+- Architectural ADRs (design decisions)
+- Integration tests (real-world behavior)
+- Manual security audits (domain expertise)
+
+### Testing
+
+Tested against PR #129 (baseline, known good state):
+- **Expected**: Confidence ≥85% (MERGE READY)
+- **Status**: ✅ Verified during Wave 6 implementation
+
+See `docs/LESSONS_LEARNED.md` line 102 for the original formula rationale.

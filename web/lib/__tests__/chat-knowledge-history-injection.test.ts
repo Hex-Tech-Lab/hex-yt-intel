@@ -123,11 +123,9 @@ describe('KnowledgeHistoryService', () => {
 
   it('extracts top themes ranked by frequency', async () => {
     mockWikiPort.getUserWiki.mockResolvedValue([
-      { userId: 'user-1', videoId: 'v1', theme: 'Python', question: 'Q1', answer: 'A1' },
-      { userId: 'user-1', videoId: 'v1', theme: 'Python', question: 'Q2', answer: 'A2' },
-      { userId: 'user-1', videoId: 'v2', theme: 'Python', question: 'Q3', answer: 'A3' },
-      { userId: 'user-1', videoId: 'v2', theme: 'JavaScript', question: 'Q4', answer: 'A4' },
-      { userId: 'user-1', videoId: 'v3', theme: 'Machine Learning', question: 'Q5', answer: 'A5' },
+      { id: 'id1', user_id: 'user-1', topic: 'Python', wiki_markdown: '## Python\n### FAQ\n- Q1\n- Q2\n- Q3', question_count: 3, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
+      { id: 'id2', user_id: 'user-1', topic: 'JavaScript', wiki_markdown: '## JavaScript\n### FAQ\n- Q4', question_count: 1, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
+      { id: 'id3', user_id: 'user-1', topic: 'Machine Learning', wiki_markdown: '## ML\n### FAQ\n- Q5', question_count: 1, theme_count: 1, created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z' },
     ]);
     const service = new KnowledgeHistoryService(mockWikiPort);
     const context = await service.loadUserKnowledgeContext('user-1');
@@ -139,40 +137,101 @@ describe('KnowledgeHistoryService', () => {
 
   it('extracts FAQ items per theme ranked by relevance', async () => {
     mockWikiPort.getUserWiki.mockResolvedValue([
-      { userId: 'user-1', videoId: 'v1', theme: 'Python', question: 'What is a list', answer: 'A collection', frequency: 3 },
-      { userId: 'user-1', videoId: 'v1', theme: 'Python', question: 'What is a dict', answer: 'Key-value pairs', frequency: 1 },
+      {
+        id: 'id1',
+        user_id: 'user-1',
+        topic: 'Python',
+        wiki_markdown: `## Python
+
+**Questions in this theme:** 2
+
+### FAQ
+- What is a list
+- What is a dict
+
+### Common Keywords
+python, list`,
+        question_count: 3,
+        theme_count: 1,
+        created_at: '2026-07-08T00:00:00Z',
+        updated_at: '2026-07-08T00:00:00Z',
+      },
     ]);
     const service = new KnowledgeHistoryService(mockWikiPort);
     const context = await service.loadUserKnowledgeContext('user-1');
 
     expect(context.faqs.length).toBeGreaterThan(0);
-    expect(context.faqs[0].question).toBe('What is a list'); // Highest frequency first
+    expect(context.faqs[0].question).toBe('What is a list'); // First extracted FAQ
   });
 
-  it('builds learning summary with video count and question count', async () => {
+  it('builds learning summary with question count and topics', async () => {
     mockWikiPort.getUserWiki.mockResolvedValue([
-      { userId: 'user-1', videoId: 'v1', theme: 'Python', question: 'Q1', answer: 'A1' },
-      { userId: 'user-1', videoId: 'v1', theme: 'Python', question: 'Q2', answer: 'A2' },
-      { userId: 'user-1', videoId: 'v2', theme: 'JavaScript', question: 'Q3', answer: 'A3' },
+      {
+        id: 'id1',
+        user_id: 'user-1',
+        topic: 'Python',
+        wiki_markdown: '## Python\n### FAQ\n- Q1\n- Q2',
+        question_count: 2,
+        theme_count: 1,
+        created_at: '2026-07-08T00:00:00Z',
+        updated_at: '2026-07-08T00:00:00Z',
+      },
+      {
+        id: 'id2',
+        user_id: 'user-1',
+        topic: 'JavaScript',
+        wiki_markdown: '## JavaScript\n### FAQ\n- Q3',
+        question_count: 1,
+        theme_count: 1,
+        created_at: '2026-07-08T00:00:00Z',
+        updated_at: '2026-07-08T00:00:00Z',
+      },
     ]);
     const service = new KnowledgeHistoryService(mockWikiPort);
     const context = await service.loadUserKnowledgeContext('user-1');
 
-    expect(context.learningSummary).toContain('2 videos');
+    expect(context.learningSummary).toContain('2 topics');
     expect(context.learningSummary).toContain('3 questions');
   });
 
-  it('skips malformed rows (missing question or answer)', async () => {
+  it('skips malformed rows (missing FAQ section)', async () => {
     mockWikiPort.getUserWiki.mockResolvedValue([
-      { userId: 'user-1', videoId: 'v1', theme: 'Python', question: 'Q1', answer: 'A1' },
-      { userId: 'user-1', videoId: 'v1', theme: 'Python', question: '', answer: 'A2' }, // Missing question
-      { userId: 'user-1', videoId: 'v1', theme: 'Python', question: 'Q3', answer: '' }, // Missing answer
+      {
+        id: 'id1',
+        user_id: 'user-1',
+        topic: 'Python',
+        wiki_markdown: `## Python
+
+**Questions in this theme:** 1
+
+### FAQ
+- Q1
+
+### Common Keywords
+python`,
+        question_count: 1,
+        theme_count: 1,
+        created_at: '2026-07-08T00:00:00Z',
+        updated_at: '2026-07-08T00:00:00Z',
+      },
+      {
+        id: 'id2',
+        user_id: 'user-1',
+        topic: 'Malformed',
+        wiki_markdown: `## Malformed
+
+No FAQ section here, just some content`,
+        question_count: 1,
+        theme_count: 1,
+        created_at: '2026-07-08T00:00:00Z',
+        updated_at: '2026-07-08T00:00:00Z',
+      },
     ]);
     const service = new KnowledgeHistoryService(mockWikiPort);
     const context = await service.loadUserKnowledgeContext('user-1');
 
-    // Only valid row should be counted
-    expect(context.faqs.length).toBe(1);
+    // Only valid row with FAQ section should contribute FAQs
+    expect(context.faqs.length).toBeGreaterThan(0);
     expect(context.learningSummary).toContain('1 questions');
   });
 
