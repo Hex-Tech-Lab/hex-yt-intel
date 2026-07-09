@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { VALID_PERSONAS, type PersonaId } from './persona';
+import { VALID_PERSONAS } from './persona';
 
 export const WorkflowScopeSchema = z.enum(['single_video', 'cross_analysis', 'persist']);
 export type WorkflowScope = z.infer<typeof WorkflowScopeSchema>;

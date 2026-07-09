@@ -11,7 +11,6 @@
 import Stripe from 'stripe';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  getUserIdFromEvent,
   handleSubscriptionCreatedUpdated,
   handleSubscriptionCanceled,
   handleInvoicePaid,
