@@ -46,7 +46,10 @@ interface PRConfidenceResult {
 }
 
 /**
- * Parse command line arguments
+ * Parse command line arguments to extract PR number.
+ * Validates that --pr=<number> is provided and is a valid integer.
+ * @returns The PR number extracted from command line arguments
+ * @throws Exits process if required argument is missing or invalid
  */
 function parseArgs(): number {
   const prArg = process.argv.find((arg) => arg.startsWith('--pr='));
@@ -64,7 +67,10 @@ function parseArgs(): number {
 }
 
 /**
- * Query GitHub API using gh CLI
+ * Execute GitHub API query using gh CLI and return JSON response.
+ * Safely passes query arguments to gh without shell injection risk via execFileSync.
+ * @param query - GitHub API query string (e.g., "issues/123/comments --paginate")
+ * @returns JSON string response from GitHub API, or '[]' on error
  */
 function queryGitHub(query: string): string {
   try {
@@ -78,8 +84,10 @@ function queryGitHub(query: string): string {
 }
 
 /**
- * Extract Cubic score from PR comments
- * Cubic review tool leaves scores in comments like "Cubic Score: 28/30"
+ * Extract Cubic code review score from PR comments.
+ * Searches for patterns like "Cubic Score: 28/30" or "Cubic: 28" in review bot comments.
+ * @param prNumber - Pull request number to search
+ * @returns Object with score (0-30) and optional comment preview
  */
 function extractCubicScore(prNumber: number): { score: number; comment?: string } {
   try {
@@ -116,8 +124,10 @@ function extractCubicScore(prNumber: number): { score: number; comment?: string 
 }
 
 /**
- * Extract CodeRabbit score from PR comments
- * Looks for "passed" check counts in CodeRabbit reviews
+ * Extract CodeRabbit automated review score from PR comments.
+ * Counts "passed checks" from CodeRabbit review tool output.
+ * @param prNumber - Pull request number to search
+ * @returns Object with score (0-20, normalized from passed checks) and optional comment preview
  */
 function extractCodeRabbitScore(prNumber: number): { score: number; comment?: string } {
   try {
@@ -153,8 +163,10 @@ function extractCodeRabbitScore(prNumber: number): { score: number; comment?: st
 }
 
 /**
- * Extract Snyk score from PR comments
- * Looks for resolved security findings
+ * Extract Snyk security score from PR comments.
+ * Counts resolved or fixed security findings from Snyk bot comments.
+ * @param prNumber - Pull request number to search
+ * @returns Object with score (0-15, capped at resolved count) and optional comment preview
  */
 function extractSnyxScore(prNumber: number): { score: number; comment?: string } {
   try {
@@ -190,8 +202,10 @@ function extractSnyxScore(prNumber: number): { score: number; comment?: string }
 }
 
 /**
- * Extract CI/CD status from GitHub Actions checks
- * All checks must pass for full score
+ * Extract CI/CD status from GitHub Actions check runs.
+ * Awards full points only if all checks pass, with partial credit for partial pass.
+ * @param prNumber - Pull request number to check
+ * @returns Object with score (0-10) and status description
  */
 function extractCICDStatus(prNumber: number): { score: number; status?: string } {
   try {
@@ -221,8 +235,10 @@ function extractCICDStatus(prNumber: number): { score: number; status?: string }
 }
 
 /**
- * Extract Vercel deployment status from PR comments
- * Looks for "READY" or "PRODUCTION" status
+ * Extract Vercel deployment status from PR comments.
+ * Looks for deployment status keywords like "READY" or "PRODUCTION" in Vercel bot messages.
+ * @param prNumber - Pull request number to search
+ * @returns Object with score (0-5) and deployment status
  */
 function extractVercelStatus(prNumber: number): { score: number; status?: string } {
   try {
@@ -251,8 +267,10 @@ function extractVercelStatus(prNumber: number): { score: number; status?: string
 }
 
 /**
- * Extract CodeQL alerts from PR
- * Zero blocking alerts = full score
+ * Extract CodeQL security analysis alerts from PR code scanning.
+ * Counts critical and high-severity blocking alerts, loses 1 point per alert.
+ * @param prNumber - Pull request number to analyze
+ * @returns Object with score (0-5) and count of blocking alerts
  */
 function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number } {
   try {
@@ -284,7 +302,10 @@ function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number
 }
 
 /**
- * Calculate recommendation based on confidence percentage
+ * Generate a merge recommendation based on confidence percentage.
+ * Returns actionable guidance for PR review team.
+ * @param confidence - Confidence percentage (0-100)
+ * @returns Recommendation text: MERGE READY, ACCEPTABLE, AT RISK, or NOT READY
  */
 function getRecommendation(confidence: number): string {
   if (confidence >= 85) {
@@ -300,7 +321,10 @@ function getRecommendation(confidence: number): string {
 }
 
 /**
- * Main function
+ * Main entry point for PR confidence calculator.
+ * Orchestrates score extraction from all tools and outputs JSON result to stdout.
+ * Calculation: (sum of all tool scores / 85) × 100 = confidence %.
+ * @throws Exits process if PR argument is missing or invalid
  */
 async function main(): Promise<void> {
   const prNumber = parseArgs();
