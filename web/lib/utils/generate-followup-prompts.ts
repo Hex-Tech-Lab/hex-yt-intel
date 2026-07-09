@@ -82,7 +82,13 @@ function detectQuestionType(userQuestion: string): string {
 
 /**
  * Generate an elaboration prompt (deep-dive follow-up).
- * Focuses on expanding the concept or diving into specifics.
+ * Focuses on expanding the concept or diving into specifics by asking for more details,
+ * technical depth, components, or underlying logic depending on the question type.
+ * @param _userQuestion - Original user question (used for context detection)
+ * @param _assistantResponse - Assistant's response (used for topic extraction)
+ * @param keyTopics - Extracted key topics from the response (max 5)
+ * @param questionType - Detected question type (e.g., 'what', 'why', 'how')
+ * @returns A follow-up prompt that elaborates on the primary topic
  */
 function generateElaborationPrompt(
   _userQuestion: string,
@@ -146,7 +152,13 @@ function generateElaborationPrompt(
 
 /**
  * Generate a contextualization prompt (connect to broader framework).
- * Links the answer to related concepts or frameworks.
+ * Links the answer to related concepts, frameworks, or broader patterns to show how
+ * the response fits into a larger context or narrative.
+ * @param _userQuestion - Original user question (used for context detection)
+ * @param _assistantResponse - Assistant's response (used for topic extraction)
+ * @param keyTopics - Extracted key topics from the response (max 5)
+ * @param videoTitle - Optional video or analysis title for context
+ * @returns A follow-up prompt that contextualizes the response within a broader framework
  */
 function generateContextualizationPrompt(
   _userQuestion: string,
@@ -173,7 +185,12 @@ function generateContextualizationPrompt(
 
 /**
  * Generate a forward-thinking prompt (next implications/angles).
- * Explores future directions, implications, or unexplored angles.
+ * Explores future directions, implications, consequences, or unexplored angles that
+ * follow logically from the response or response content.
+ * @param _userQuestion - Original user question (used for context detection)
+ * @param _assistantResponse - Assistant's response (used for topic extraction)
+ * @param keyTopics - Extracted key topics from the response (max 5)
+ * @returns A follow-up prompt that explores future implications or next logical steps
  */
 function generateForwardThinkingPrompt(
   _userQuestion: string,
