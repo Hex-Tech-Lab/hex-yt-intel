@@ -9,6 +9,7 @@ export interface TimestampLinkProps {
   className?: string;
 }
 
+// Converts timestamp string (HH:MM:SS, MM:SS, or seconds) to total seconds
 const parseTimestamp = (timestamp: string): number => {
   const parts = timestamp.split(':').map(p => parseInt(p, 10)).filter(p => !isNaN(p));
   if (parts.length === 0) return 0;
