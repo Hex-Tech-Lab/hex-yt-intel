@@ -1,4 +1,7 @@
 version = 1
 
+[analyzers.javascript]
+environment = ["nodejs"]
+
 [analyzers.meta]
 skip_doc_coverage = ["function-declaration"]
