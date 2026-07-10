@@ -194,7 +194,7 @@ When Sonnet 4.6 appears again in OpenRouter logs:
      AND model_used LIKE '%sonnet-4.6%';
    ```
 4. **Extract app logs** around timestamp ± 2 minutes:
-   ```
+   ```log
    [LLMCascade] Stream {streamId} attempting model={name} tier={n}
    [LLMCascade] Stream {streamId} fallback from={prev} to={next} reason={error}
    [LLMCascade] Stream {streamId} succeeded with model={name}

@@ -72,7 +72,6 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
     ];
 
     let lastError: Error | null = null;
-    let previousModel: string | null = null;
 
     for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
       const entry = models[modelIndex];
@@ -93,9 +92,8 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
         if (modelIndex < models.length - 1) {
           const nextModel = models[modelIndex + 1].model;
           // skipcq: JS-0827
-          console.log(`[digest] Dimension 0 fallback from=${previousModel || entry.model} to=${nextModel} reason=EmptyCompletion timestamp=${new Date().toISOString()}`);
+          console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel} reason=EmptyCompletion timestamp=${new Date().toISOString()}`);
         }
-        previousModel = entry.model;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         const errorMsg = lastError.message;
@@ -104,9 +102,8 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
         if (modelIndex < models.length - 1) {
           const nextModel = models[modelIndex + 1].model;
           // skipcq: JS-0827
-          console.log(`[digest] Dimension 0 fallback from=${previousModel || entry.model} to=${nextModel} reason=${errorMsg} timestamp=${new Date().toISOString()}`);
+          console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel} reason=${errorMsg} timestamp=${new Date().toISOString()}`);
         }
-        previousModel = entry.model;
       }
     }
 

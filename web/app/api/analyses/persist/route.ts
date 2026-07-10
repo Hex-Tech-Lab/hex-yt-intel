@@ -587,7 +587,7 @@ export async function POST(request: NextRequest) {
         finalStatus,
         hasMarkdown: !!markdown,
         hasPayload: !!validPayload,
-        hasDimensions: validPayload && 'dimensions' in validPayload ? Object.keys(validPayload.dimensions || {}).length : 0,
+        hasDimensions: validPayload && 'dimensions' in validPayload ? (validPayload.dimensions?.length ?? 0) : 0,
         hasKG: validPayload?.knowledgeGraph ? (validPayload.knowledgeGraph.nodes?.length ?? 0) + ' nodes' : 'none',
         cacheKey,
       });
