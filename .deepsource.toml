@@ -1,0 +1,4 @@
+version = 1
+
+[analyzers.meta]
+skip_doc_coverage = ["function-declaration"]
