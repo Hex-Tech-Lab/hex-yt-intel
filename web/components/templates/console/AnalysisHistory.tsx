@@ -87,6 +87,15 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       if (!res.ok) throw new Error(`Restoration failed (HTTP ${res.status})`);
       const data = await res.json();
 
+      // Dashboard render gating: only restore if status is 'complete'
+      if (data.analysisStatus !== 'complete') {
+        const statusMessage =
+          data.analysisStatus === 'error'
+            ? 'This analysis failed to generate. Please try re-analyzing.'
+            : 'This analysis is still processing or incomplete. Please wait or re-analyze.';
+        throw new Error(statusMessage);
+      }
+
       const dimensions = parseToUCISDimensions(data.analysis_markdown || '');
 
       // Repopulate the URL input from the restored video so the Analyze /
