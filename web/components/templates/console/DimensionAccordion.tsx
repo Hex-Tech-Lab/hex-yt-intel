@@ -47,26 +47,28 @@ const DimensionItem = memo(function DimensionItem({
     >
       <CornerFrame tone={isSelected ? 'accent' : 'line'}>
         <button
-          onClick={() => onSelect(d.key)}
-          className={`w-full text-left flex items-center justify-between p-4 px-5 rounded-lg border cursor-pointer transition-all duration-300 ${buttonClass}`}
+          onClick={() => {
+            requestAnimationFrame(() => onSelect(d.key));
+          }}
+          className={`w-full text-left flex items-center justify-between p-3 px-4 rounded-lg border cursor-pointer transition-all duration-200 ${buttonClass}`}
           style={{ boxSizing: 'border-box' }}
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0 pl-1">
             <span className={`font-mono text-xs font-bold ${isSelected ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'}`}>
               {indexStr}
             </span>
-            <span className={`w-8 h-8 rounded-lg border grid place-items-center flex-shrink-0 transition-all ${
+            <span className={`w-7 h-7 rounded-lg border grid place-items-center flex-shrink-0 transition-all ${
               isSelected
                 ? 'bg-[var(--void)] border-[var(--accent)]/40 text-[var(--accent)]'
                 : 'bg-[var(--bg)] border-[var(--line)] text-[var(--ink-muted)]'
             }`}>
-              <Icon icon={d.icon} size={16} />
+              <Icon icon={d.icon} size={14} />
             </span>
             <span className={`font-mono text-xs uppercase tracking-wider font-bold truncate ${isSelected ? 'text-[var(--accent-ink)]' : 'text-[var(--ink-secondary)]'}`}>
               {d.label}
             </span>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 pr-1">
             <StatusBadge status={d.status} />
             <Icon
               icon="solar:alt-arrow-right-linear"
@@ -94,7 +96,7 @@ export function DimensionAccordion({
   }, [onSelectDimension]);
 
   return (
-    <section className="hx-rise flex flex-col gap-3">
+    <section className="hx-rise flex flex-col gap-4">
       <div className="flex items-center justify-between mb-2">
         <MonoLabel index="//">synthesis dimensions</MonoLabel>
         {progress && (

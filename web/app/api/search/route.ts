@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { Index } from '@upstash/vector';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
 import { guardTraffic } from '@/lib/services/traffic';
@@ -19,24 +20,11 @@ if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL
   throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
 }
 
-/**
- * Semantic search endpoint for analyzing video content.
- *
- * @param request - NextRequest containing JSON body with:
- *   - query (string, required): Search query, 3-1000 characters
- *   - topK (number, optional): Number of results to return, default 5, range [1, 50]
- *
- * @returns {Promise<NextResponse>} JSON response containing:
- *   - results: Array of enriched search results with analysisId, title, videoId, excerpt, score, createdAt
- *   - count: Number of valid results returned
- *   - query: Echo of the search query
- *   - tier: User's subscription tier
- *
- * @throws {NextResponse} 400 if query length invalid or topK out of bounds
- * @throws {NextResponse} 401 if authentication fails
- * @throws {NextResponse} 429 if rate limit exceeded
- * @throws {NextResponse} 500 on embedding generation or vector search failure
- */
+const SearchRequestSchema = z.object({
+  query: z.string().min(3).max(1000),
+  topK: z.number().int().min(1).max(50).default(5),
+});
+
 export async function POST(request: NextRequest) {
   try {
     // 1. Parse and validate request
@@ -51,47 +39,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate request schema
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json(
-        { error: 'Request body must be an object' },
-        { status: 400 }
-      );
-    }
-
-    const { query, topK = 5 } = body as { query?: string; topK?: number };
-
-    // Validate query parameter
-    if (!query || typeof query !== 'string') {
-      return NextResponse.json(
-        { error: 'Query parameter is required and must be a string' },
-        { status: 400 }
-      );
-    }
-
-    if (query.length < 3 || query.length > 1000) {
-      return NextResponse.json(
-        { error: 'Query must be between 3 and 1000 characters' },
-        { status: 400 }
-      );
-    }
-
-    // Validate topK parameter bounds
-    if (typeof topK !== 'number' || !Number.isInteger(topK) || topK < 1 || topK > 50) {
+    // Validate request schema with Zod
+    const parsed = SearchRequestSchema.safeParse(body);
+    if (!parsed.success) {
       const errorCode = ERROR_CODES.INVALID_REQUEST_SCHEMA;
-      Sentry.captureMessage('Search: Invalid topK parameter', {
+      Sentry.captureMessage('Search: Invalid request schema', {
         level: 'warning',
         tags: { code: errorCode },
-        contexts: { validation: { topK, min: 1, max: 50 } }
+        contexts: { validation: { issues: parsed.error.issues } }
       });
       return NextResponse.json(
-        {
-          error: 'Invalid topK parameter',
-          details: 'topK must be an integer between 1 and 50'
-        },
+        { error: 'Invalid request', details: parsed.error.issues },
         { status: 400 }
       );
     }
+
+    const { query, topK } = parsed.data;
 
     // 2. Authentication check
     const authAdapter = new SupabaseAuthAdapter();
@@ -135,7 +98,7 @@ export async function POST(request: NextRequest) {
     const queryEmbedding = await generateQueryEmbedding(query);
 
     if (!queryEmbedding || queryEmbedding.length === 0) {
-      const errorCode = ERROR_CODES.INVALID_REQUEST_SCHEMA;
+      const errorCode = ERROR_CODES.SEARCH_VECTOR_FAILED;
       Sentry.captureMessage('Failed to generate query embedding', {
         level: 'error',
         tags: { code: errorCode }
@@ -151,7 +114,7 @@ export async function POST(request: NextRequest) {
     // 5. Query vector index with COSINE similarity
     const searchResults = await vectorIndex.query<{ analysisId: string }>({
       vector: queryEmbedding,
-      topK: Math.min(topK, 50), // Cap at 50 results
+      topK, // Already validated to be in [1, 50]
       includeMetadata: true,
     });
 
@@ -223,13 +186,8 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate embedding for search query via OpenRouter.
- *
- * @param query - Search query string (pre-validated to be 3-1000 characters)
- * @returns {Promise<number[]>} 1536-dimensional embedding vector, empty array on failure
- *
- * @throws Logs error to console and Sentry on embedding generation failure
- * @internal Uses text-embedding-3-small model for vector generation
+ * Generate embedding for search query via OpenRouter
+ * Uses text-embedding-3-small model for 1536-dimensional vectors
  */
 async function generateQueryEmbedding(query: string): Promise<number[]> {
   try {

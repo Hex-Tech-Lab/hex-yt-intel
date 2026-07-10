@@ -449,7 +449,10 @@ export async function POST(request: NextRequest) {
             created_at: row.createdAt,
             cached_at: new Date().toISOString(),
           };
-          const cacheKey = generateCacheKey('edge-stream', stitchedMarkdown, '5.1');
+          // ADR 006: Cache key based on input (transcript) hash, not output (markdown) hash
+          // Ensures cache hit detection on identical inputs despite markdown formatting changes
+          const cacheKeyHash = row.transcriptHash || stitchedMarkdown;
+          const cacheKey = generateCacheKey('edge-stream', cacheKeyHash, '5.1');
           await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
             Sentry.captureException(e, { contexts: { persist: { phase: 'cache_stitched_result', analysisId } } });
             console.warn('[analyses/persist] Failed to cache stitched result', { analysisId, error: String(e) });

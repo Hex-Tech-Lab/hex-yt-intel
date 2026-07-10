@@ -1,6 +1,6 @@
 /**
  * Stripe Webhook Event Handlers
- * Extracted from web/lib/stripe/webhook-handlers.ts for modularity and event-specific testing
+ * Extracted for modularity and event-specific testing
  *
  * Responsibilities:
  * - Handle individual Stripe event types (payment.succeeded, payment.failed, etc.)
@@ -11,7 +11,6 @@
 import Stripe from 'stripe';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  getUserIdFromEvent,
   handleSubscriptionCreatedUpdated,
   handleSubscriptionCanceled,
   handleInvoicePaid,
@@ -67,48 +66,51 @@ export const EVENT_HANDLERS: Record<string, EventHandler> = {
 };
 
 /**
- * Dispatch Stripe event to appropriate handler
- * Returns handler found status and any errors
+ * Dispatch result distinguishes between handler-not-found vs handler-failed
+ * - handled: true + no error = successful processing (safe to skip retry)
+ * - handled: false = unrecognized event type (safe to skip)
+ * - error present = handler threw, should retry with exponential backoff
  */
 export interface DispatchResult {
   handled: boolean;
   error?: string;
+  retriable?: boolean;
 }
 
-export async function dispatchWebhookEvent(
+export const dispatchWebhookEvent = async (
   event: Stripe.Event,
   supabase: SupabaseClient
-): Promise<DispatchResult> {
+): Promise<DispatchResult> => {
   const handler = EVENT_HANDLERS[event.type];
 
   if (!handler) {
     return {
       handled: false,
+      retriable: false,
       error: `No handler registered for event type: ${event.type}`,
     };
   }
 
   try {
     await Promise.resolve(handler(event, supabase));
-    return { handled: true };
+    return { handled: true, retriable: false };
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Handler execution failed';
+    console.error(`[Stripe] Handler execution failed for ${event.type}:`, error);
     return {
-      handled: true,
-      error: error instanceof Error ? error.message : String(error),
+      handled: false,
+      retriable: true,
+      error: message,
     };
   }
-}
+};
 
 /**
  * Check if an event type is handled
  */
-export function isHandledEventType(eventType: string): boolean {
-  return eventType in EVENT_HANDLERS;
-}
+export const isHandledEventType = (eventType: string): boolean => eventType in EVENT_HANDLERS;
 
 /**
  * Get list of all supported event types
  */
-export function getSupportedEventTypes(): string[] {
-  return Object.keys(EVENT_HANDLERS);
-}
+export const getSupportedEventTypes = (): string[] => Object.keys(EVENT_HANDLERS);
