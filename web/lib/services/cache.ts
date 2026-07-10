@@ -55,19 +55,30 @@ export interface CachedAnalysisResult {
 /**
  * Generate cache key from analysis parameters
  * Format: ci:{modelUsed}:{transcriptHash}:{schemaVersion}
+ *
+ * CONTRACT: Caller MUST pass a SHA256 hash of the original transcript (first 16 chars),
+ * NOT the raw transcript or markdown output.
+ * This ensures cache keys are stable and based on INPUT per ADR 006.
+ *
+ * @param modelUsed - Model identifier (e.g., 'edge-stream', 'claude-3.5-sonnet')
+ * @param transcriptHash - Pre-computed SHA256 transcript hash (first 16+ chars), NOT raw transcript
+ * @param schemaVersion - Schema version (default: '5.1')
+ * @returns Cache key in format ci:{modelUsed}:{transcriptHash}:{schemaVersion}
  */
 export function generateCacheKey(
   modelUsed: string,
-  transcript: string,
+  transcriptHash: string,
   schemaVersion: string = '5.1'
 ): string {
-  const transcriptHash = crypto
-    .createHash('sha256')
-    .update(transcript || '')
-    .digest('hex')
-    .substring(0, 16); // Use first 16 chars for brevity
+  // Use hash as-is (assume caller has passed a pre-computed hash)
+  // Take first 16 chars for brevity
+  const cacheHash = (transcriptHash || '').substring(0, 16);
 
-  return `ci:${modelUsed}:${transcriptHash}:${schemaVersion}`;
+  if (!cacheHash) {
+    console.warn('[cache] generateCacheKey called with empty transcriptHash; cache behavior may be undefined');
+  }
+
+  return `ci:${modelUsed}:${cacheHash}:${schemaVersion}`;
 }
 
 /**
