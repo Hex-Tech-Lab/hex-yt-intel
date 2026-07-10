@@ -29,13 +29,13 @@ interface CascadeIncident {
 }
 
 // Environment configuration
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://adnmbikaqnxivalqoild.supabase.co';
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /**
  * Query Supabase REST API for analyses using Sonnet 4.6
  */
-async function findSonnetIncidents(daysBack: number = 7): Promise<AnalysisRecord[]> {
+async function findSonnetIncidents(daysBack: number = 7): Promise<{ sonnet: AnalysisRecord[]; total: number }> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysBack);
 
@@ -45,7 +45,7 @@ async function findSonnetIncidents(daysBack: number = 7): Promise<AnalysisRecord
     console.error('[RCA] ❌ Missing Supabase configuration');
     console.error('   NEXT_PUBLIC_SUPABASE_URL:', SUPABASE_URL ? '✓' : '✗');
     console.error('   NEXT_PUBLIC_SUPABASE_ANON_KEY:', SUPABASE_KEY ? '✓' : '✗');
-    return [];
+    return { sonnet: [], total: 0 };
   }
 
   try {
@@ -65,7 +65,7 @@ async function findSonnetIncidents(daysBack: number = 7): Promise<AnalysisRecord
       console.error(`[RCA] ❌ Supabase API error: ${response.status} ${response.statusText}`);
       const body = await response.text();
       console.error('[RCA] Response:', body.slice(0, 200));
-      return [];
+      return { sonnet: [], total: 0 };
     }
 
     const allData: AnalysisRecord[] = await response.json();
@@ -78,10 +78,10 @@ async function findSonnetIncidents(daysBack: number = 7): Promise<AnalysisRecord
     });
 
     console.log(`[RCA] ✓ Found ${sonnetRecords.length} Sonnet 4.6 analyses out of ${allData.length} total`);
-    return sonnetRecords;
+    return { sonnet: sonnetRecords, total: allData.length };
   } catch (error) {
     console.error('[RCA] ❌ Exception querying Supabase:', error instanceof Error ? error.message : String(error));
-    return [];
+    return { sonnet: [], total: 0 };
   }
 }
 
@@ -231,7 +231,7 @@ async function main(): Promise<void> {
 
   try {
     // Query for Sonnet 4.6 incidents
-    const sonnetRecords = await findSonnetIncidents(7);
+    const { sonnet: sonnetRecords, total: totalAnalyses } = await findSonnetIncidents(7);
 
     // Diagnose each
     const incidents = sonnetRecords.map(diagnoseIncident);
@@ -241,8 +241,8 @@ async function main(): Promise<void> {
 
     // Summary statistics
     if (incidents.length > 0) {
-      const failureRate = (incidents.length / sonnetRecords.length) * 100;
-      console.log(`\n📊 Fallback Rate: ${incidents.length}/${sonnetRecords.length} (${failureRate.toFixed(1)}%)`);
+      const fallbackRate = totalAnalyses > 0 ? (sonnetRecords.length / totalAnalyses) * 100 : 0;
+      console.log(`\n📊 Fallback Rate: ${sonnetRecords.length}/${totalAnalyses} (${fallbackRate.toFixed(1)}%)`);
       console.log('   Context: If >5% of analyses trigger Sonnet 4.6, investigate root cause.\n');
     }
   } catch (error) {

@@ -7,9 +7,7 @@ namespace AggregateGraphHelpers {
    */
   function mergeNode(existing: GraphNode, incoming: GraphNode): void {
     existing.weight += incoming.weight;
-    if (incoming.keyTerms.length > existing.keyTerms.length) {
-      existing.keyTerms = [...new Set([...existing.keyTerms, ...incoming.keyTerms])];
-    }
+    existing.keyTerms = [...new Set([...existing.keyTerms, ...incoming.keyTerms])];
   }
 
   /**
