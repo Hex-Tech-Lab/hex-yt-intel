@@ -367,6 +367,7 @@ export class SupabaseAnalysisAdapter {
   static async findAnalysisForPersist(params: {
     analysisId: string;
     videoId: string;
+    includeTranscript?: boolean;
   }): Promise<{
     id: string;
     userId: string;
@@ -379,9 +380,12 @@ export class SupabaseAnalysisAdapter {
   } | null> {
     try {
       const service = getSupabaseServiceClient();
+      const columns = params.includeTranscript
+        ? 'id, user_id, title, transcript_hash, transcript, validation_report, created_at, channel_title'
+        : 'id, user_id, title, transcript_hash, validation_report, created_at, channel_title';
       const { data, error } = await service
         .from('analyses')
-        .select('id, user_id, title, transcript_hash, transcript, validation_report, created_at, channel_title')
+        .select(columns)
         .eq('id', params.analysisId)
         .eq('video_id', params.videoId)
         .maybeSingle();
