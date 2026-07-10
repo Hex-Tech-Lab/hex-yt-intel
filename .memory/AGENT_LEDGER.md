@@ -496,23 +496,28 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
   ✅ Impact: Chat users can now access grounded analysis for completed videos
   Ready for testing and merge.
 
-- [2026-07-10T09:10:00+03:00] [Claude-Haiku] [DONE] PR #139 Post-Merge Remediation — 3 Critical Fixes
+- [2026-07-10T09:10:00+03:00] [Claude-Haiku] [DONE] PR #139 Post-Merge Remediation — 4 Critical Fixes
   
   CRITICAL FIXES APPLIED:
-  1. ✅ Commit fd1db35: Persist validation over-failing on empty dimensions
+  1. ✅ Commit 7b6167e: Chat analysis status regression fixed
+     - Was: getAnalysisGrounding read from validation_report.status
+     - Now: Reads from billing_status column (correct completion marker)
+     - Impact: Chat grounding gate now detects completed analyses correctly
+  
+  2. ✅ Commit fd1db35: Persist validation over-failing on empty dimensions
      - Was: Fail if ANY chunk had empty dimensions array
      - Now: Only fail on missing/malformed chunks
      - Impact: Valid partial analyses no longer rejected
   
-  2. ✅ Commit 2b9455c: OpenRouter completion adapter undefined reference
+  3. ✅ Commit 2b9455c: OpenRouter completion adapter undefined reference
      - Was: Sentry capture tried to access payload[0].analysisId (undefined)
      - Now: Uses digestId (always defined)
      - Impact: Digest generation errors now properly logged
   
-  3. ✅ Commit 7b6167e: Chat analysis status regression fixed
-     - Was: getAnalysisGrounding read from validation_report.status
-     - Now: Reads from billing_status column (correct completion marker)
-     - Impact: Chat grounding gate now detects completed analyses correctly
+  4. ✅ Commit 6c82db1: Chat streaming hang due to missing timeout
+     - Was: fetch to worker had no timeout, causing indefinite hangs
+     - Now: Added AbortSignal.timeout(50s) to prevent hangs
+     - Impact: Chat no longer freezes if worker becomes unresponsive
   
   REMAINING REVIEW ITEMS (non-critical):
   - WordCloud/MindMap visualization: threads marked as unresolved but likely stale
