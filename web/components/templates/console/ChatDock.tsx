@@ -298,9 +298,9 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
         </div>
       )}
 
-      {/* Messages — centered column for readable line length */}
+      {/* Messages — left-aligned for natural chat UX */}
       <div ref={listRef} aria-live="polite" className="flex-1 overflow-y-auto py-3 px-0">
-        <div className="max-w-[820px] mx-auto px-3 lg:px-4 flex flex-col gap-3">
+        <div className="px-3 lg:px-4 flex flex-col gap-3">
           {messages.length === 0 && !sending && (
             <div className="my-6 mx-auto text-center text-[var(--ink-muted)] font-mono text-xs leading-[1.6]">
               <Icon icon="solar:chat-square-like-linear" size={28} className="text-[var(--ink-muted)] mb-2 mx-auto" />
@@ -399,7 +399,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
 
       {/* Composer */}
       <div className="border-t border-[var(--line)] px-3 lg:px-4 py-2">
-        <div className="max-w-[820px] mx-auto flex gap-2 items-end">
+        <div className="flex gap-2 items-end">
           <textarea
             ref={inputRef}
             value={localInput}

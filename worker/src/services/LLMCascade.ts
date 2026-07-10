@@ -60,17 +60,24 @@ export class LLMCascade implements LLMCascadePort {
     onStatus?: (status: StreamStatusEvent) => void,
     signal?: AbortSignal
   ): Promise<{ started: boolean; finalText: string; modelUsed: string }> {
+    const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     let finalText = '';
     let modelUsed = '';
     let produced = false;
+    let previousModel: string | null = null;
 
-    for (const { model, name, providerOrder } of this.chain) {
+    for (let tierIndex = 0; tierIndex < this.chain.length; tierIndex++) {
+      const { model, name, providerOrder } = this.chain[tierIndex];
+
       if (signal?.aborted) {
-        console.warn(`[LLMCascade] Cascade aborted before attempting model: ${name}`);
+        // skipcq: JS-0827
+        console.warn(`[LLMCascade] Stream ${streamId} cascade aborted before tier ${tierIndex}`);
         break;
       }
 
-      console.log(`[LLMCascade] Attempting model: ${name} (${model})`);
+      const attemptStartTime = Date.now();
+      // skipcq: JS-0827
+      console.log(`[LLMCascade] Stream ${streamId} attempting model=${name} tier=${tierIndex} timestamp=${new Date().toISOString()}`);
       onStatus?.({ stage: 'model', model: name });
       modelUsed = name;
 
@@ -87,17 +94,32 @@ export class LLMCascade implements LLMCascadePort {
       );
 
       if (result.started && finalText && !result.error) {
-        console.log(`[LLMCascade] Model ${name} started successfully. Committed.`);
+        const durationMs = Date.now() - attemptStartTime;
+        // skipcq: JS-0827
+        console.log(`[LLMCascade] Stream ${streamId} succeeded with model=${name} durationMs=${durationMs} timestamp=${new Date().toISOString()}`);
         produced = true;
         break;
       }
 
-      // If it failed/refused mid-stream, clear the partial text and run the next model in cascade
+      // If it failed/refused mid-stream, log fallback and run the next model in cascade
       finalText = '';
       const rawError = result.error || 'No tokens produced';
       const classifiedError = classifyError(rawError);
-      console.warn(`[LLMCascade] Model ${name} failed/skipped. Raw: ${rawError}, Classified: ${classifiedError}`);
+
+      if (previousModel === null) {
+        previousModel = name;
+      }
+
+      if (tierIndex < this.chain.length - 1) {
+        const nextModel = this.chain[tierIndex + 1].name;
+        // skipcq: JS-0827
+        console.log(`[LLMCascade] Stream ${streamId} fallback from=${previousModel} to=${nextModel} reason=${classifiedError} timestamp=${new Date().toISOString()}`);
+      }
+
+      // skipcq: JS-0827
+      console.warn(`[LLMCascade] Stream ${streamId} tier ${tierIndex} failed. Raw: ${rawError}, Classified: ${classifiedError}`);
       onStatus?.({ stage: 'fallback', from: name, error: classifiedError, rawError });
+      previousModel = name;
     }
 
     return { started: produced, finalText, modelUsed };
