@@ -75,9 +75,9 @@ export function generateCacheKey(
 ): string {
   if (!transcriptHash || typeof transcriptHash !== 'string' || transcriptHash.trim() === '') {
     throw new Error(
-      `[cache] generateCacheKey: transcriptHash is required and must be non-empty. ` +
+      "[cache] generateCacheKey: transcriptHash is required and must be non-empty. " +
       `Got: ${typeof transcriptHash} "${transcriptHash}". ` +
-      `Per ADR 006, cache keys must be based on INPUT (transcript hash), not output.`
+      "Per ADR 006, cache keys must be based on INPUT (transcript hash), not output."
     );
   }
 
