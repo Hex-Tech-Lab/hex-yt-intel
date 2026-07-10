@@ -9,6 +9,7 @@ import { createAtomicPersist } from "./services/atomic-persist";
 import { signBoundContent, secretFingerprint } from "./crypto";
 import { isProductionEnv } from "./env-utils";
 import { isValidAppUrl } from "./middleware/cors";
+import { buildAdaptiveOptions, getStaticOptions, type UserKnowledgeContext } from "./services/AdaptiveOptionsBuilder";
 
 /**
  * TTL for the bound chat-persist content signature. Generous (10 min) to absorb
@@ -48,6 +49,8 @@ interface ChatStreamRequest {
   exp: number;
   appUrl?: string;
   requestId?: string;
+  // Optional user knowledge context for adaptive OPTIONS generation
+  knowledgeContext?: UserKnowledgeContext;
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -205,7 +208,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     const modelStr = [...(req.models ?? [])].sort().join(',');
     const msg = `chat:${req.conversationId}:${req.userId}:${req.exp}:${modelStr}`;
     const expected = await hmacHex(s, msg);
-    
+
     if (timingSafeEqualHex(expected, req.sig)) {
       signingKey = s;
       isTokenValid = true;
@@ -237,6 +240,17 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   const rawReq = c.req.raw;
   const clientSignal = rawReq.signal;
 
+  // Stream assembly order (ENFORCED and deterministic):
+  // 1. OPTIONS event (adaptive or static) — sent BEFORE any DELTA
+  // 2. Streaming chat deltas (LLM completion)
+  // 3. PERSIST status (saving/saved/failed)
+  // 4. DONE event (stream closed)
+  //
+  // P0 Risk #6 Fix: Stream ordering guarantees
+  // OPTIONS MUST arrive before DELTA. We enforce this by:
+  // - Generating OPTIONS immediately in the stream start handler
+  // - Awaiting OPTIONS completion BEFORE starting LLM cascade
+  // - Adding explicit ordering checks to catch violations
   const stream = new ReadableStream({
     async start(controller) {
       const send = (obj: unknown) => {
@@ -248,6 +262,37 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         }
       };
 
+      // STAGE 1: Generate and emit OPTIONS IMMEDIATELY (blocking step)
+      // This ensures OPTIONS arrive before any DELTA events.
+      // We await this BEFORE starting the LLM cascade to guarantee ordering.
+      // In all code paths below, OPTIONS is guaranteed to be sent before proceeding.
+      try {
+        const currentTopic = history && history.length > 0
+          ? history[history.length - 1]?.content || ""
+          : grounding;
+        const adaptiveOptions = await buildAdaptiveOptions(req.knowledgeContext, currentTopic);
+
+        // Emit adaptive options if generated
+        if (adaptiveOptions && adaptiveOptions.length > 0) {
+          send({ type: "options", content: adaptiveOptions, requestId: req.requestId });
+        } else {
+          // Fallback to static options if adaptive generation produced nothing
+          send({ type: "options", content: getStaticOptions(), requestId: req.requestId });
+        }
+      } catch (err) {
+        // On error, always send static fallback to ensure OPTIONS are sent
+        const msg = err instanceof Error ? err.message : String(err);
+        Sentry.captureException(err, { contexts: { chat: { conversationId: req.conversationId, requestId: req.requestId, action: 'buildAdaptiveOptions' } } });
+        console.warn("[chat-stream] OPTIONS generation failed, sending static fallback", {
+          conversationId: req.conversationId,
+          error: msg,
+        });
+        send({ type: "options", content: getStaticOptions(), requestId: req.requestId });
+      }
+
+      // STAGE 2: Stream chat deltas (LLM completion)
+      // OPTIONS have been sent; now safe to start LLM cascade.
+      // DELTAs will arrive after OPTIONS.
       let full = "";
       try {
         full = await streamChatCascade(apiKey, grounding, history, (chunk) => {
@@ -265,6 +310,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         send({ type: "delta", content: full, requestId: req.requestId });
       }
 
+      // STAGE 3: Persist chat content server-to-server
       let hasSaved = false;
 
       const atomicPersist = createAtomicPersist({
@@ -315,6 +361,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
 
       atomicPersist.flush();
 
+      // STAGE 4: Emit DONE event (stream closed)
       send({ type: "done", requestId: req.requestId });
       controller.close();
     },

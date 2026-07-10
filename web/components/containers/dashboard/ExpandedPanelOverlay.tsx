@@ -51,7 +51,7 @@ export function ExpandedPanelOverlay({
       style={getPositioning(mode)}
       className="border border-[var(--line-strong)] bg-[rgba(15,20,30,0.95)] backdrop-blur-xl rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_1px_rgba(0,242,254,0.15)] flex flex-col min-h-0 overflow-hidden"
     >
-      <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--line)] bg-[rgba(20,25,35,0.4)]">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--line)] bg-[rgba(20,25,35,0.4)]">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
           <h3 className="font-mono text-[11px] uppercase tracking-wider font-bold text-[var(--ink)]">
@@ -107,7 +107,7 @@ export function ExpandedPanelOverlay({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-5 hx-custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 hx-custom-scrollbar">
         {panelId === 'knowledge-graph' ? (
           <KnowledgeGraphCanvas graph={graph} selectedId={selectedNodeId} onSelect={onSelectNode} onFocus={onFocusNode} compact={false} />
         ) : (

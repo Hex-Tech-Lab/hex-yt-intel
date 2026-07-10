@@ -131,6 +131,13 @@ export default function SearchPage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-accent hover:text-accent-strong transition-colors mb-4 font-medium text-sm"
+          >
+            <Icon icon="solar:alt-arrow-left-linear" size={18} />
+            Back
+          </button>
           <h1 className="hx-h1 mb-2">
             Search Your Analyses
           </h1>

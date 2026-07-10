@@ -95,7 +95,7 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
     >
       <CornerFrame tone={streaming ? "accent" : "line"}>
         <article
-          className={`bg-[var(--surface)] p-6 rounded-2xl border border-[var(--line-faint)] min-h-[320px] flex flex-col ${streaming ? "animate-flare" : ""}`}
+          className={`bg-[var(--surface)] p-4 rounded-2xl border border-[var(--line-faint)] min-h-[320px] flex flex-col ${streaming ? "animate-flare" : ""}`}
         >
           <header className="flex items-center justify-between mb-6">
             <div className="flex flex-col gap-1">
@@ -142,7 +142,7 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
           </div>
           
           <footer className="mt-6 pt-4 border-t border-[var(--line-faint)] flex items-center justify-between">
-             <div className="flex items-center gap-4 text-[10px] font-mono text-[var(--ink-muted)] uppercase tracking-widest">
+             <div className="flex items-center gap-3 text-[10px] font-mono text-[var(--ink-muted)] uppercase tracking-widest">
                 <span className="flex items-center gap-1.5">
                    <span className={`w-1.5 h-1.5 rounded-full ${streaming ? 'bg-[var(--accent)] animate-pulse' : 'bg-[var(--ok)]'}`} />
                    {status}
