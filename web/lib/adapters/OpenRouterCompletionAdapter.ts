@@ -63,8 +63,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
     const { system, user, models, maxTokens = DEFAULT_MAX_TOKENS, analysisId } = params;
     const digestId = analysisId || `digest-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-    // skipcq: JS-0827
-    console.log(`[digest] Generating Dimension 0 analysis for analysisId=${digestId} timestamp=${new Date().toISOString()}`);
+    console.log(`[digest] Generating Dimension 0 analysis for analysisId=${digestId} timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
 
     const messages: ChatMessage[] = [
       { role: 'system', content: system },
@@ -81,8 +80,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
         const text = await requestCompletion(entry, messages, maxTokens);
         if (text.length > 0) {
           const durationMs = Date.now() - attemptStartTime;
-          // skipcq: JS-0827
-          console.log(`[digest] Dimension 0 completed with model=${entry.model} durationMs=${durationMs} timestamp=${new Date().toISOString()}`);
+          console.log(`[digest] Dimension 0 completed with model=${entry.model} durationMs=${durationMs} timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
           return { text, model: entry.model };
         }
 
@@ -91,8 +89,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
         // Log fallback if there's a next model
         if (modelIndex < models.length - 1) {
           const nextModel = models[modelIndex + 1].model;
-          // skipcq: JS-0827
-          console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel} reason=EmptyCompletion timestamp=${new Date().toISOString()}`);
+          console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel} reason=EmptyCompletion timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
         }
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
@@ -101,8 +98,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
         // Log fallback if there's a next model
         if (modelIndex < models.length - 1) {
           const nextModel = models[modelIndex + 1].model;
-          // skipcq: JS-0827
-          console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel} reason=${errorMsg} timestamp=${new Date().toISOString()}`);
+          console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel} reason=${errorMsg} timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
         }
       }
     }
