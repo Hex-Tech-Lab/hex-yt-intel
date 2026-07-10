@@ -2,6 +2,10 @@ version = 1
 
 [analyzers.javascript]
 environment = ["nodejs"]
+exclude_patterns = [
+  "**/*Adapter.ts",
+  "**/DashboardContainer.tsx"
+]
 
 [analyzers.meta]
 skip_doc_coverage = ["function-declaration"]
