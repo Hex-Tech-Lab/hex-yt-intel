@@ -55,15 +55,34 @@ export interface CachedAnalysisResult {
  * Generate cache key from analysis parameters
  * Format: ci:{modelUsed}:{transcriptHash}:{schemaVersion}
  *
- * ADR 006: Cache key based on input (transcript) hash for consistency.
- * Prevents cache miss when output markdown formatting varies but analysis is identical.
+ * CONTRACT: Caller MUST pass a SHA256 hash of the original transcript (first 16+ chars),
+ * NOT the raw transcript or markdown output.
+ * This ensures cache keys are stable and based on INPUT per ADR 006.
+ *
+ * STRICT: throws if hash is empty or falsy. No fallback to empty string.
+ * Callers must compute transcript hash explicitly or use '' fallback upstream.
+ *
+ * @param modelUsed - Model identifier (e.g., 'edge-stream', 'claude-3.5-sonnet')
+ * @param transcriptHash - Pre-computed SHA256 transcript hash (first 16+ chars), must be non-empty
+ * @param schemaVersion - Schema version (default: '5.1')
+ * @returns Cache key in format ci:{modelUsed}:{transcriptHash}:{schemaVersion}
+ * @throws Error if transcriptHash is falsy (empty string, null, undefined)
  */
 export function generateCacheKey(
   modelUsed: string,
-  inputHash: string,
+  transcriptHash: string,
   schemaVersion: string = '5.1'
 ): string {
-  return `ci:${modelUsed}:${inputHash.substring(0, 16)}:${schemaVersion}`;
+  if (!transcriptHash || typeof transcriptHash !== 'string' || transcriptHash.trim() === '') {
+    throw new Error(
+      `[cache] generateCacheKey: transcriptHash is required and must be non-empty. ` +
+      `Got: ${typeof transcriptHash} "${transcriptHash}". ` +
+      `Per ADR 006, cache keys must be based on INPUT (transcript hash), not output.`
+    );
+  }
+
+  const cacheHash = transcriptHash.substring(0, 16);
+  return `ci:${modelUsed}:${cacheHash}:${schemaVersion}`;
 }
 
 /**

@@ -45,11 +45,11 @@ export async function POST(request: NextRequest) {
     addBreadcrumb(`Handling ${event.type}`, { eventId: event.id });
 
     // Idempotency check: skip if already processed
-    let existingEvent: { id: string } | null = null;
+    let existingEvent: { id: string; status?: string } | null = null;
     try {
       const result = await supabase
         .from('stripe_events')
-        .select('id')
+        .select('id, status')
         .eq('id', event.id)
         .single();
       existingEvent = result.data;
@@ -60,32 +60,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true, idempotent: true }, { status: 200 });
     }
 
-    await dispatchEvent(event, supabase as any);
-
+    // Pre-insert tentative event record BEFORE dispatch for idempotency
     const userId = await getUserIdFromEvent(event);
-    const eventData: Record<string, any> = {
+    const tentativeEventData: Record<string, any> = {
       id: event.id,
       user_id: userId,
       event_type: event.type,
       payload: event.data as any,
-      status: 'success',
+      status: 'pending', // Tentative status
       created_at: new Date().toISOString(),
     };
 
-    const { error: insertError } = await (supabase as any).from('stripe_events').insert(eventData);
+    const { error: insertError } = await (supabase as any).from('stripe_events').insert(tentativeEventData);
     if (insertError) {
-      console.error('[/api/stripe/webhook] Failed to insert stripe event:', insertError);
-      throw new Error('Database insert failed for stripe event');
+      console.error('[/api/stripe/webhook] Failed to insert tentative stripe event:', insertError);
+      Sentry.captureException(insertError, {
+        tags: { webhook: 'stripe', phase: 'tentative_insert' },
+      });
+      // Don't throw; return 200 to Stripe anyway (event was received)
+      addBreadcrumb('Could not record tentative event, but proceeding', { eventId: event.id }, 'warning');
+    }
+
+    // Dispatch event; catch and log handler failures without propagating
+    let dispatchSuccess = true;
+    try {
+      await dispatchEvent(event, supabase as any);
+    } catch (dispatchError) {
+      dispatchSuccess = false;
+      console.error('[/api/stripe/webhook] Event dispatch failed:', dispatchError);
+      Sentry.captureException(dispatchError, {
+        contexts: { webhook: { eventType: event.type, phase: 'dispatch' } },
+        tags: { webhook: 'stripe', severity: 'high' },
+      });
+    }
+
+    // Update event record with final status
+    if (!insertError) {
+      const finalStatus = dispatchSuccess ? 'success' : 'failed';
+      const { error: updateError } = await (supabase as any)
+        .from('stripe_events')
+        .update({ status: finalStatus })
+        .eq('id', event.id);
+
+      if (updateError) {
+        console.error('[/api/stripe/webhook] Failed to update event status:', updateError);
+        Sentry.captureException(updateError, {
+          tags: { webhook: 'stripe', phase: 'status_update' },
+        });
+      }
     }
 
     const duration = Math.round(performance.now() - startTime);
-    addBreadcrumb('Stripe webhook processed successfully', {
+    const breadcrumbLevel = dispatchSuccess ? 'Stripe webhook processed successfully' : 'Stripe webhook received but dispatch failed';
+    addBreadcrumb(breadcrumbLevel, {
       eventType: event.type,
       duration,
       userId,
+      dispatchSuccess,
     });
 
-    return NextResponse.json({ received: true }, { status: 200 });
+    // Always return 200 to Stripe (event was received and logged)
+    return NextResponse.json({ received: true, dispatchSuccess }, { status: 200 });
   } catch (error) {
     const duration = Math.round(performance.now() - startTime);
     console.error('[/api/stripe/webhook] Error:', error);

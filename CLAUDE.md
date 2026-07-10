@@ -47,6 +47,7 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 | 008 | 2026-07-07 | Chat Grounding Security Gate — no usable analysis ⇒ refuse, never answer from general knowledge (PR #125) | ✅ |
 | 009 | 2026-07-07 | Chat Conversation↔Analysis Ownership Binding — owner-verified at creation + userId-scoped grounding read (PR #126) | ✅ |
 | 010 | 2026-07-07 | Dimension-0 Executive Digest — single idempotent cheap-cascade completion, uncounted (PR #127) | ✅ |
+| 011 | 2026-07-10 | LLM Model Routing Policy & Fallback Cascade Strategy (Wave 7 clarification; Haiku 4.5 primary, separate CHAT_CASCADE for digest) | ✅ |
 
 Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-AND-DIM0.md` §2 and `.memory/ADRS.md`.
 

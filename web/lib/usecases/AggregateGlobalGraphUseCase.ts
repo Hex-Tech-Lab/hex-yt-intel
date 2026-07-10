@@ -1,54 +1,90 @@
 import { GraphNode, GraphEdge, KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
+/**
+ * Merge node weights and keyTerms when the same node ID appears in multiple analyses.
+ * Node identity is determined by stable ID, not label.
+ */
+function mergeNode(existing: GraphNode, incoming: GraphNode): void {
+  existing.weight += incoming.weight;
+  if (incoming.keyTerms.length > existing.keyTerms.length) {
+    existing.keyTerms = [...new Set([...existing.keyTerms, ...incoming.keyTerms])];
+  }
+}
+
+/**
+ * Aggregate all nodes from multiple analyses into a single map,
+ * keyed by stable node ID.
+ */
+function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] }>): Map<string, GraphNode> {
+  const nodeMap = new Map<string, GraphNode>();
+  for (const analysis of analyses) {
+    for (const node of analysis.nodes) {
+      const existing = nodeMap.get(node.id);
+      if (existing) {
+        mergeNode(existing, node);
+      } else {
+        nodeMap.set(node.id, { ...node });
+      }
+    }
+  }
+  return nodeMap;
+}
+
+/**
+ * Merge edge strength when the same edge (source-target-kind) appears in multiple analyses.
+ */
+function mergeEdge(existing: GraphEdge, incoming: GraphEdge): void {
+  existing.strength = Math.max(existing.strength, incoming.strength);
+}
+
+/**
+ * Aggregate all edges from multiple analyses into a single map,
+ * keyed by (source, target, kind) triplet.
+ */
+function aggregateEdges(analyses: Array<{ id: string; edges: GraphEdge[] }>): Map<string, GraphEdge> {
+  const edgeMap = new Map<string, GraphEdge>();
+  for (const analysis of analyses) {
+    for (const edge of analysis.edges) {
+      const edgeKey = `${edge.source}-${edge.target}-${edge.kind}`;
+      const existing = edgeMap.get(edgeKey);
+      if (existing) {
+        mergeEdge(existing, edge);
+      } else {
+        edgeMap.set(edgeKey, { ...edge });
+      }
+    }
+  }
+  return edgeMap;
+}
+
+/**
+ * Validate edges: drop any edge whose source or target node doesn't exist
+ * (orphan edges). Returns only edges with both endpoints present.
+ */
+function validateEdges(edges: GraphEdge[], nodeMap: Map<string, GraphNode>): GraphEdge[] {
+  return Array.from(edges).filter(edge => {
+    const hasSource = nodeMap.has(edge.source);
+    const hasTarget = nodeMap.has(edge.target);
+    if (!hasSource || !hasTarget) {
+      console.warn('[KG] Dropping orphan edge', {
+        source: edge.source,
+        target: edge.target,
+        reason: `missing ${!hasSource ? 'source' : 'target'} node`,
+      });
+    }
+    return hasSource && hasTarget;
+  });
+}
+
 export class AggregateGlobalGraphUseCase {
   execute(analyses: Array<{ id: string; nodes: GraphNode[]; edges: GraphEdge[] }>): KnowledgeGraph {
-    const nodesById = new Map<string, GraphNode>();
-    const edgeMap = new Map<string, GraphEdge>();
-    const allEdges: GraphEdge[] = [];
-
-    // First pass: collect all nodes (prevents orphaned edges from cross-analysis references)
-    for (const analysis of analyses) {
-      for (const node of analysis.nodes) {
-        const existingNode = nodesById.get(node.id);
-        if (existingNode) {
-          existingNode.weight += node.weight;
-          if (node.keyTerms.length > existingNode.keyTerms.length) {
-            existingNode.keyTerms = [...new Set([...existingNode.keyTerms, ...node.keyTerms])];
-          }
-        } else {
-          nodesById.set(node.id, { ...node });
-        }
-      }
-    }
-
-    // Second pass: collect edges (now that all nodes are known)
-    for (const analysis of analyses) {
-      for (const edge of analysis.edges) {
-        allEdges.push(edge);
-      }
-    }
-
-    // Third pass: validate and aggregate edges against the complete node map
-    for (const edge of allEdges) {
-      // Verify both source and target node IDs exist in the aggregated graph
-      const sourceExists = nodesById.has(edge.source);
-      const targetExists = nodesById.has(edge.target);
-
-      // Only add edge if both referenced nodes exist (prevent orphaned edges)
-      if (sourceExists && targetExists) {
-        const edgeKey = `${edge.source}-${edge.target}-${edge.kind}`;
-        const existingEdge = edgeMap.get(edgeKey);
-        if (existingEdge) {
-          existingEdge.strength = Math.max(existingEdge.strength, edge.strength);
-        } else {
-          edgeMap.set(edgeKey, { ...edge });
-        }
-      }
-    }
+    const nodeMap = aggregateNodes(analyses);
+    const edgeMap = aggregateEdges(analyses);
+    const validatedEdges = validateEdges(Array.from(edgeMap.values()), nodeMap);
 
     return {
-      nodes: Array.from(nodesById.values()),
-      edges: Array.from(edgeMap.values()),
+      nodes: Array.from(nodeMap.values()),
+      edges: validatedEdges,
       rootId: null
     };
   }
