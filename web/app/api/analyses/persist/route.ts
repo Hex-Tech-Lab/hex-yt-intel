@@ -319,21 +319,26 @@ export async function POST(request: NextRequest) {
             chunkMap.set(c.chunk_index, c.payload);
           });
 
-          // CONTRACT VALIDATION: Verify all chunks have required payload structure
+          // CONTRACT VALIDATION: Verify all chunks have required payload structure with non-empty dimensions
           const missingChunks = [];
+          const incompleteDimensions: { chunk: number; count: number }[] = [];
           for (let i = 1; i <= resolvedTotal; i++) {
             const p = chunkMap.get(i);
             if (!p || !p.dimensions || !Array.isArray(p.dimensions)) {
               missingChunks.push(i);
+            } else if (p.dimensions.length === 0) {
+              // Chunk present but dimensions array is empty
+              incompleteDimensions.push({ chunk: i, count: 0 });
             }
           }
 
-          // If any chunks missing critical dimensions field, fail loudly instead of silently stitching empty payload
-          if (missingChunks.length > 0) {
-            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing dimensions field', {
+          // If any chunks missing critical dimensions field or have empty dimensions, fail loudly
+          if (missingChunks.length > 0 || incompleteDimensions.length > 0) {
+            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing or incomplete dimensions', {
               analysisId,
               videoId,
               missingChunks,
+              incompleteDimensions,
               totalExpected: resolvedTotal,
               totalReceived: finalChunks.length,
               receivedIndices: Array.from(chunkMap.keys()).sort()
@@ -354,7 +359,10 @@ export async function POST(request: NextRequest) {
               }),
               2
             );
-            return { type: 'error' as const, error: 'Chunk assembly failed: missing dimensions', status: 400 };
+            const errorMsg = missingChunks.length > 0
+              ? `Chunk assembly failed: ${missingChunks.length} chunks missing dimensions`
+              : `Chunk assembly failed: ${incompleteDimensions.length} chunks have empty dimensions`;
+            return { type: 'error' as const, error: errorMsg, status: 400 };
           }
 
           const stitchedDimensions: any[] = [];

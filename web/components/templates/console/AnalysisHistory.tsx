@@ -298,6 +298,11 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                     <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions produced">
                       <span className="text-[var(--ink)] font-semibold">{item.bestDimensions}</span>/{TOTAL_DIMENSIONS} dims
                     </MetricChip>
+                    {item.status === 'complete' && (
+                      <MetricChip icon="solar:star-linear" title="Executive digest (Dimension 0)">
+                        Dim.0
+                      </MetricChip>
+                    )}
                     <MetricChip icon="solar:refresh-linear" title="Times analyzed (including re-runs)">
                       {item.timesAnalyzed}× analyzed
                     </MetricChip>
