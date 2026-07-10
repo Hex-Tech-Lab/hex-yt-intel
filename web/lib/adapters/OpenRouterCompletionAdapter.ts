@@ -94,7 +94,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
         if (modelIndex < models.length - 1) {
           const nextModel = models[modelIndex + 1];
           if (nextModel) {
-            console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel.model} reason=EmptyCompletion timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
+            console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel.model} reason=EmptyCompletion timestamp=${new Date().toISOString()}`); // skipcq: [JS-0838] Observability: digest fallback flow logging
           }
         }
       } catch (error) {

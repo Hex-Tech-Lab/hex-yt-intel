@@ -439,11 +439,11 @@ export class SupabaseAnalysisAdapter {
         ERROR: () => { throw error; },
         NO_DATA: () => null as null,
         SUCCESS: () => ({
-          title: data!.title || '',
-          channelTitle: data!.channel_title || null,
-          description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null,
-          analysisMarkdown: data!.analysis_markdown || null,
-          status: data!.billing_status || (isPersistedValidationReport(data!.validation_report) ? data!.validation_report.status || 'incomplete' : 'incomplete'),
+          title: data!.title || '', // skipcq: [JS-0857] Data validated in error handler above
+          channelTitle: data!.channel_title || null, // skipcq: [JS-0857] Data validated in error handler above
+          description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null, // skipcq: [JS-0857] Data validated in error handler above
+          analysisMarkdown: data!.analysis_markdown || null, // skipcq: [JS-0857] Data validated in error handler above
+          status: data!.billing_status || (isPersistedValidationReport(data!.validation_report) ? data!.validation_report.status || 'incomplete' : 'incomplete'), // skipcq: [JS-0857] Data validated in error handler above
         }),
       } as const;
 

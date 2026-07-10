@@ -126,7 +126,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const initSynthesis = useSynthesisNucleus((s) => s.initializeAnalysis);
 
   // Auto-restore already analyzed videos
-  useEffect(() => {
+  useEffect(() => { // skipcq: [JS-0903] Multiple conditional branches needed for URL parsing and analysis restoration
     if (!url) return;
 
     // Extract video ID
