@@ -9,6 +9,7 @@ import { extractVideoId } from '@/lib/youtube';
 import type { UserTier } from '@/lib/types/billing';
 import type { PersonaId } from '@/lib/prompts';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
+import { createHash } from 'crypto';
 
 import { env } from '@/lib/env';
 
@@ -72,7 +73,7 @@ export class CreateAnalysisUseCase {
             markdown: cached.analysisMarkdown,
             metadata: cached.cachedReport?.metadata,
           },
-          persona: (cached.cachedReport?.persona as PersonaId) || 'p1'
+          persona: (cached.cachedReport?.persona as PersonaId) || 'creator'
         };
       }
     }
@@ -113,16 +114,22 @@ export class CreateAnalysisUseCase {
     });
 
     const jobMetadata = this.metadataIngestion.buildJobMetadata(ingestionResult.metadata);
-    
+
     // Resolve model cascade for the user's tier
     const rawModels = await this.modelResolution.resolveModels(params.tier, 'analysis');
     const models = [...rawModels];
+
+    // Compute transcript hash (ADR 006: input-based cache key)
+    const transcriptHash = createHash('sha256')
+      .update(ingestionResult.transcript || '')
+      .digest('hex');
 
     // Insert processing stub
     const stub = await this.persistence.upsertProcessingStub({
       videoId,
       userId: params.userId,
       title: ingestionResult.metadata.title,
+      transcriptHash,
       validationReport: {
         status: 'processing',
         transcriptAvailable: ingestionResult.transcriptAvailable,

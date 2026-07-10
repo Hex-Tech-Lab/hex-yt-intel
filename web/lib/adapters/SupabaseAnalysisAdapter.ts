@@ -99,6 +99,7 @@ export class SupabaseAnalysisAdapter {
     videoId: string;
     userId: string;
     title: string;
+    transcriptHash?: string;
     validationReport: ValidationReportInput;
   }): Promise<AnalysisStub> {
     const service = getSupabaseServiceClient();
@@ -180,15 +181,33 @@ export class SupabaseAnalysisAdapter {
       throw new Error(errMsg);
     }
 
+    const analysisId = rpcData as string;
+
+    // Store transcript hash if provided (ADR 006: cache key based on input transcript)
+    if (params.transcriptHash) {
+      const { error: hashError } = await service
+        .from('analyses')
+        .update({ transcript_hash: params.transcriptHash })
+        .eq('id', analysisId);
+
+      if (hashError) {
+        Sentry.captureException(hashError, {
+          tags: { operation: 'analysis-persist-transcript-hash' },
+          extra: { analysisId, videoId: params.videoId },
+        });
+        console.warn('[SupabaseAnalysisAdapter] Failed to store transcript hash:', hashError.message);
+      }
+    }
+
     console.log('[SupabaseAnalysisAdapter] row_persisted', {
       event: 'upsert_stub_create_complete',
-      stubId: rpcData as string,
+      stubId: analysisId,
       videoId: params.videoId,
       userId: params.userId,
       timestamp: new Date().toISOString(),
     });
 
-    return { id: rpcData as string };
+    return { id: analysisId };
   }
 
   // Retry / error-state propagation is intentionally NOT handled here: this
@@ -352,6 +371,7 @@ export class SupabaseAnalysisAdapter {
     id: string;
     userId: string;
     title: string;
+    transcriptHash?: string | null;
     validationReport: ValidationReportInput | unknown;
     createdAt: string;
     channelTitle?: string | null;
@@ -360,7 +380,7 @@ export class SupabaseAnalysisAdapter {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analyses')
-        .select('id, user_id, title, validation_report, created_at, channel_title')
+        .select('id, user_id, title, transcript_hash, validation_report, created_at, channel_title')
         .eq('id', params.analysisId)
         .eq('video_id', params.videoId)
         .maybeSingle();
@@ -375,6 +395,7 @@ export class SupabaseAnalysisAdapter {
         id: data.id,
         userId: data.user_id,
         title: data.title,
+        transcriptHash: data.transcript_hash,
         validationReport: data.validation_report,
         createdAt: data.created_at,
         channelTitle: data.channel_title,

@@ -16,7 +16,13 @@ export interface DashboardStatsProps {
   };
 }
 
+/**
+ * DashboardStats
+ * Renders video player and metadata KPIs (view/like counts, duration, etc.)
+ * Memoized to prevent re-renders when parent state changes.
+ */
 export function DashboardStats({ hasVideo, videoMetadata }: DashboardStatsProps) {
+  // Memoize the entire section to avoid re-renders from parent state changes
   const content = useMemo(
     () => (
       <div className="flex flex-col gap-3">
@@ -37,5 +43,6 @@ export function DashboardStats({ hasVideo, videoMetadata }: DashboardStatsProps)
   );
 
   if (!hasVideo) return null;
+
   return content;
 }
