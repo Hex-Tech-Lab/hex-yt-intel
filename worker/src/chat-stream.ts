@@ -379,6 +379,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
             const isTimeout = e instanceof DOMException && (e.name === "AbortError" || e.name === "TimeoutError");
             const reason = isTimeout ? "persist_timeout" : "persist_error";
             const message = e instanceof Error ? e.message : String(e);
+            Sentry.captureException(e, { contexts: { chat: { conversationId: req.conversationId, requestId: req.requestId, action: 'chatPersist', reason } } });
             // skipcq: JS-0827
             console.error("[chat-stream]", { reason, message, conversationId: req.conversationId });
             return false;

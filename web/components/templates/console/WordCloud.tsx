@@ -169,8 +169,8 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
       // Chip dimensions (slightly-rounded rectangle, not a pill)
       // Add extra padding to ensure bold text fits within collision box
-      const w = maxTextWidth + 24;
-      const h = fontSize + 12;
+      const collisionBoxWidth = maxTextWidth + 24;
+      const collisionBoxHeight = fontSize + 12;
 
       let placedWord: PlacedWord | null = null;
       let angle = Math.random() * Math.PI * 2;
@@ -188,25 +188,25 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           weight,
           x,
           y,
-          w,
-          h,
+          w: collisionBoxWidth,
+          h: collisionBoxHeight,
           fontSize,
         };
 
         const hasOverlap = placed.some((other) => checkOverlap(candidate, other));
         const isOutOfBounds =
-          x - w / 2 < 5 ||
-          x + w / 2 > size.w - 5 ||
-          y - h / 2 < 5 ||
-          y + h / 2 > size.h - 5;
+          x - collisionBoxWidth / 2 < 5 ||
+          x + collisionBoxWidth / 2 > size.w - 5 ||
+          y - collisionBoxHeight / 2 < 5 ||
+          y + collisionBoxHeight / 2 > size.h - 5;
 
         if (!hasOverlap) {
           if (!isOutOfBounds) {
             placedWord = candidate;
           } else {
             // Attempt to clamp candidate inside boundaries to maximize word density
-            const clampedX = Math.max(w / 2 + 5, Math.min(size.w - w / 2 - 5, x));
-            const clampedY = Math.max(h / 2 + 5, Math.min(size.h - h / 2 - 5, y));
+            const clampedX = Math.max(collisionBoxWidth / 2 + 5, Math.min(size.w - collisionBoxWidth / 2 - 5, x));
+            const clampedY = Math.max(collisionBoxHeight / 2 + 5, Math.min(size.h - collisionBoxHeight / 2 - 5, y));
             const clampedCandidate = { ...candidate, x: clampedX, y: clampedY };
             const hasOverlapAfterClamping = placed.some((other) => checkOverlap(clampedCandidate, other));
             if (!hasOverlapAfterClamping) {

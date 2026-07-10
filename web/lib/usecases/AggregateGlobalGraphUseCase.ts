@@ -5,6 +5,11 @@ function mergeNode(existing: GraphNode, incoming: GraphNode): void {
   existing.keyTerms = [...new Set([...existing.keyTerms, ...incoming.keyTerms])];
 }
 
+/**
+ * Aggregate nodes from multiple analyses, merging weight and keyTerms.
+ * @param analyses - Array of analyses with nodes to aggregate
+ * @returns Map of aggregated nodes indexed by ID
+ */
 export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] }>): Map<string, GraphNode> {
   const nodeMap = new Map<string, GraphNode>();
   for (const analysis of analyses) {
@@ -24,6 +29,11 @@ function mergeEdge(existing: GraphEdge, incoming: GraphEdge): void {
   existing.strength = Math.max(existing.strength, incoming.strength);
 }
 
+/**
+ * Aggregate edges from multiple analyses, keeping maximum strength.
+ * @param analyses - Array of analyses with edges to aggregate
+ * @returns Map of aggregated edges indexed by kind-aware key
+ */
 export function aggregateEdges(analyses: Array<{ id: string; edges: GraphEdge[] }>): Map<string, GraphEdge> {
   const edgeMap = new Map<string, GraphEdge>();
   for (const analysis of analyses) {
@@ -40,6 +50,12 @@ export function aggregateEdges(analyses: Array<{ id: string; edges: GraphEdge[] 
   return edgeMap;
 }
 
+/**
+ * Validate edges by filtering out those referencing non-existent nodes.
+ * @param edges - Edges to validate
+ * @param nodeMap - Map of valid nodes by ID
+ * @returns Array of edges with valid source and target nodes
+ */
 export function validateEdges(edges: GraphEdge[], nodeMap: Map<string, GraphNode>): GraphEdge[] {
   return Array.from(edges).filter(edge => {
     const hasSource = nodeMap.has(edge.source);

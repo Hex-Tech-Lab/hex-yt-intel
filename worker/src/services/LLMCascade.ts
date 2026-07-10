@@ -170,10 +170,12 @@ export class LLMCascade implements LLMCascadePort {
   ): Promise<{ started: boolean; text: string; error?: string }> {
     const controller = new AbortController();
     const handshakeTimer = setTimeout(() => {
+      // skipcq: JS-0827
       console.warn(`[LLMCascade] Handshake timeout (15s exceeded) for model ${model}`);
       controller.abort();
     }, 15000);
     const totalTimer = setTimeout(() => {
+      // skipcq: JS-0827
       console.warn(`[LLMCascade] Total execution timeout (${timeoutMs}ms exceeded) for model ${model}`);
       controller.abort();
     }, timeoutMs);
