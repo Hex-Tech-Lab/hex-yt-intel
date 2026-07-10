@@ -154,14 +154,23 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       const fontSize = Math.max(11, Math.min(26, 11 + normalizedWeight * 15));
       const text = token.label;
 
+      let maxTextWidth = 0;
       if (testCtx) {
+        // Measure with both font weights (600 and 700) and use the maximum
+        // to prevent bold text (weight 700) from extending beyond collision box
         testCtx.font = `600 ${fontSize}px Inter, sans-serif`;
+        const metrics600 = testCtx.measureText(text);
+        testCtx.font = `700 ${fontSize}px Inter, sans-serif`;
+        const metrics700 = testCtx.measureText(text);
+        maxTextWidth = Math.max(metrics600.width, metrics700.width);
+      } else {
+        maxTextWidth = text.length * fontSize * 0.6;
       }
-      const textMetrics = testCtx ? testCtx.measureText(text) : { width: text.length * fontSize * 0.6 };
 
       // Chip dimensions (slightly-rounded rectangle, not a pill)
-      const w = textMetrics.width + 16;
-      const h = fontSize + 10;
+      // Add extra padding to ensure bold text fits within collision box
+      const w = maxTextWidth + 24;
+      const h = fontSize + 12;
 
       let placedWord: PlacedWord | null = null;
       let angle = Math.random() * Math.PI * 2;
