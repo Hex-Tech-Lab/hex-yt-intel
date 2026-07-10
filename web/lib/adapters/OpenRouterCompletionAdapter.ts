@@ -58,21 +58,48 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
     user: string;
     models: readonly CompletionModel[];
     maxTokens?: number;
+    analysisId?: string;
   }): Promise<{ text: string; model: string }> {
-    const { system, user, models, maxTokens = DEFAULT_MAX_TOKENS } = params;
+    const { system, user, models, maxTokens = DEFAULT_MAX_TOKENS, analysisId } = params;
+    const digestId = analysisId || `digest-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    console.log(`[digest] Generating Dimension 0 analysis for analysisId=${digestId} timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
+
     const messages: ChatMessage[] = [
       { role: 'system', content: system },
       { role: 'user', content: user },
     ];
 
     let lastError: Error | null = null;
-    for (const entry of models) {
+
+    for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+      const entry = models[modelIndex];
+      const attemptStartTime = Date.now();
+
       try {
         const text = await requestCompletion(entry, messages, maxTokens);
-        if (text.length > 0) return { text, model: entry.model };
+        if (text.length > 0) {
+          const durationMs = Date.now() - attemptStartTime;
+          console.log(`[digest] Dimension 0 completed with model=${entry.model} durationMs=${durationMs} timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
+          return { text, model: entry.model };
+        }
+
         lastError = new Error(`Empty completion from ${entry.model}`);
+
+        // Log fallback if there's a next model
+        if (modelIndex < models.length - 1) {
+          const nextModel = models[modelIndex + 1].model;
+          console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel} reason=EmptyCompletion timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
+        }
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
+        const errorMsg = lastError.message;
+
+        // Log fallback if there's a next model
+        if (modelIndex < models.length - 1) {
+          const nextModel = models[modelIndex + 1].model;
+          console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel} reason=${errorMsg} timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
+        }
       }
     }
 

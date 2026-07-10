@@ -563,7 +563,7 @@ export async function POST(request: NextRequest) {
         video_id: videoId,
         title: row.title,
         analysis_markdown: markdown,
-        analysis_payload: (payload ?? null) as Record<string, unknown> | null,
+        analysis_payload: (validPayload ?? null) as Record<string, unknown> | null,
         validation_report: {
           transcript_available: !!priorReport.transcript_available,
           analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
@@ -578,6 +578,20 @@ export async function POST(request: NextRequest) {
         .update(row.transcript || '')
         .digest('hex');
       const cacheKey = generateCacheKey('edge-stream', hash, '5.1');
+
+      console.log('[analyses/persist] Persisting analysis', {
+        analysisId,
+        videoId,
+        modelUsed: model,
+        validationPassed,
+        finalStatus,
+        hasMarkdown: !!markdown,
+        hasPayload: !!validPayload,
+        hasDimensions: validPayload && 'dimensions' in validPayload ? (validPayload.dimensions?.length ?? 0) : 0,
+        hasKG: validPayload?.knowledgeGraph ? (validPayload.knowledgeGraph.nodes?.length ?? 0) + ' nodes' : 'none',
+        cacheKey,
+      });
+
       await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
         Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
         console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
