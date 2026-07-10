@@ -470,8 +470,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   // Dimension 0 — executive digest. Generated once (the cheap "#12 call") the
   // first time a completed, full analysis is viewed, then cached server-side, so
-  // re-opening it returns the stored digest without re-spending. Skipped for
-  // partial analyses (a re-run makes a fresh analysis id with its own digest).
+  // re-opening it returns the stored digest without re-spending. Also generated for
+  // partial analyses so Synthesis Console is accessible for re-analysis.
   const analysisId = nucleus.analysis?.id ?? null;
   const [digest, setDigest] = useState<StoredExecutiveDigest | null>(null);
   const [digestLoading, setDigestLoading] = useState(false);
@@ -485,7 +485,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [analysisId]);
 
   useEffect(() => {
-    if (status !== 'complete' || !analysisId || partialInfo) return;
+    if (!analysisId || (status === 'error')) return;
     if (digestFetchedForRef.current === analysisId) return;
     digestFetchedForRef.current = analysisId;
 
