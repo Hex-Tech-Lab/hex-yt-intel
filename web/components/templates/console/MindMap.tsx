@@ -174,32 +174,34 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   }
 
   return (
-    <div 
-      className="relative w-full overflow-auto hx-custom-scrollbar border border-[var(--line-faint)] bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg p-4 js-mind-map-container"
-      style={{ maxHeight: '420px' }}
+    <div
+      className="relative w-full overflow-auto hx-custom-scrollbar border border-[var(--line-faint)] bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg js-mind-map-container"
+      style={{ maxHeight: '420px', padding: '16px' }}
     >
-      <svg 
-        width={layout.w} 
-        height={layout.h} 
-        className="absolute inset-0 pointer-events-none"
-      >
-        {layout.links.map((link) => {
-          const midX = (link.sourceX + link.targetX) / 2;
-          const path = `M ${link.sourceX} ${link.sourceY} C ${midX} ${link.sourceY}, ${midX} ${link.targetY}, ${link.targetX} ${link.targetY}`;
-          return (
-            <path
-              key={`${link.sourceX}-${link.sourceY}-${link.targetX}-${link.targetY}`}
-              d={path}
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth={1.5}
-              strokeOpacity={0.15}
-            />
-          );
-        })}
-      </svg>
+      <div className="relative w-full h-full">
+        <svg
+          width={layout.w}
+          height={layout.h}
+          className="absolute pointer-events-none"
+          style={{ top: 0, left: 0 }}
+        >
+          {layout.links.map((link) => {
+            const midX = (link.sourceX + link.targetX) / 2;
+            const path = `M ${link.sourceX} ${link.sourceY} C ${midX} ${link.sourceY}, ${midX} ${link.targetY}, ${link.targetX} ${link.targetY}`;
+            return (
+              <path
+                key={`${link.sourceX}-${link.sourceY}-${link.targetX}-${link.targetY}`}
+                d={path}
+                fill="none"
+                stroke="var(--accent)"
+                strokeWidth={1.5}
+                strokeOpacity={0.15}
+              />
+            );
+          })}
+        </svg>
 
-      <div style={{ width: layout.w, height: layout.h, position: 'relative' }}>
+        <div style={{ width: layout.w, height: layout.h, position: 'relative' }} className="relative">
         {layout.nodes.map(({ node, x, y }) => {
           const isSelected = selectedId === node.id;
           const isCollapsed = collapsedNodes[node.id];
@@ -248,6 +250,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );
