@@ -12,8 +12,6 @@ export const VALID_PERSONAS = ['creator', 'indieMaker', 'consultant', 'researche
 
 export type PersonaId = typeof VALID_PERSONAS[number];
 
-export const VALID_PERSONAS = ['creator', 'indieMaker', 'consultant', 'researcher', 'productManager'] as const;
-
 /**
  * Persona-specific dimension projection
  * Maps PersonaId → array of dimension numbers visible in that persona

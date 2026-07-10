@@ -11,7 +11,6 @@
  */
 
 import { Redis } from '@upstash/redis';
-import crypto from 'crypto';
 
 // Lazy-loaded Redis client (prevents build-time instantiation crash)
 let redisInstance: Redis | null = null;
