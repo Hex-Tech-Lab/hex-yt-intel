@@ -322,13 +322,14 @@ export async function POST(request: NextRequest) {
           });
 
           // CONTRACT VALIDATION: Verify all chunks have required payload structure
-          // Note: Empty dimensions arrays are acceptable (a stream may generate no content for its slice)
-          // Also accept chunks with missing dimensions field — they may only have other payload data (persona, classification, etc.)
+          // Each chunk MUST have a dimensions field (can be empty array, but field must exist)
+          // This ensures consistent payload structure across all 5 streams
           const invalidChunks = [];
           for (let i = 1; i <= resolvedTotal; i++) {
             const chunkPayload = chunkMap.get(i);
-            // Fail only if chunk is completely missing
-            if (!chunkPayload) {
+            // Fail if: chunk missing entirely OR dimensions field missing/not-array
+            // (empty dimensions arrays ARE acceptable — stream may generate no content for its slice)
+            if (!chunkPayload || !('dimensions' in chunkPayload) || !Array.isArray(chunkPayload.dimensions)) {
               invalidChunks.push(i);
             }
           }
