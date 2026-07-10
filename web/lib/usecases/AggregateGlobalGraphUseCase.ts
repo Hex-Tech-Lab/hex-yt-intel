@@ -34,9 +34,23 @@ export class AggregateGlobalGraphUseCase {
       }
     }
 
+    // Filter edges to only include those with existing source/target nodes
+    const validatedEdges = Array.from(edgeMap.values()).filter(edge => {
+      const hasSource = nodeMap.has(edge.source);
+      const hasTarget = nodeMap.has(edge.target);
+      if (!hasSource || !hasTarget) {
+        console.warn('[KG] Dropping orphan edge', {
+          source: edge.source,
+          target: edge.target,
+          reason: `missing ${!hasSource ? 'source' : 'target'} node`,
+        });
+      }
+      return hasSource && hasTarget;
+    });
+
     return {
       nodes: Array.from(nodeMap.values()),
-      edges: Array.from(edgeMap.values()),
+      edges: validatedEdges,
       rootId: null
     };
   }
