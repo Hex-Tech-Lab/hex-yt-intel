@@ -495,3 +495,33 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
   ✅ Fix: Use billing_status for analysis completion check in grounding gate
   ✅ Impact: Chat users can now access grounded analysis for completed videos
   Ready for testing and merge.
+
+- [2026-07-10T09:10:00+03:00] [Claude-Haiku] [DONE] PR #139 Post-Merge Remediation — 3 Critical Fixes
+  
+  CRITICAL FIXES APPLIED:
+  1. ✅ Commit fd1db35: Persist validation over-failing on empty dimensions
+     - Was: Fail if ANY chunk had empty dimensions array
+     - Now: Only fail on missing/malformed chunks
+     - Impact: Valid partial analyses no longer rejected
+  
+  2. ✅ Commit 2b9455c: OpenRouter completion adapter undefined reference
+     - Was: Sentry capture tried to access payload[0].analysisId (undefined)
+     - Now: Uses digestId (always defined)
+     - Impact: Digest generation errors now properly logged
+  
+  3. ✅ Commit 7b6167e: Chat analysis status regression fixed
+     - Was: getAnalysisGrounding read from validation_report.status
+     - Now: Reads from billing_status column (correct completion marker)
+     - Impact: Chat grounding gate now detects completed analyses correctly
+  
+  REMAINING REVIEW ITEMS (non-critical):
+  - WordCloud/MindMap visualization: threads marked as unresolved but likely stale
+  - SupabaseAnalysisAdapter transcript selection: could be optimized but necessary for hash fallback
+  - DashboardContainer digest guard: already correctly scoped to 'complete' status
+  
+  VERIFICATION STATUS:
+  ✅ Type-check: 0 new errors
+  ✅ Git: 3 atomic commits with clear fix descriptions
+  ✅ Push: All changes pushed to origin/claude/system-re-audit-continue-l3fnel
+  
+  READY FOR: Testing and merge to main
