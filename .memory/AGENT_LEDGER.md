@@ -420,3 +420,48 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
   Commits: 1831dbc, 877cec9, 1441b8b, f9584e3
   
   Remaining work: Address remaining type-check errors (unused imports, missing module references) and CodeFactor findings (10 issues). Persona schema unification is complete and type-safe.
+
+- [2026-07-10T08:15:00+03:00] [Claude-Haiku] [DONE] [SINK: PR #139 Merge & Production Deployment] Wave 7 Continuation — Contract Violation Fixes: Chunk Assembly & Data Integrity
+  
+  COMPLETED MILESTONE:
+  ✅ Merged PR #139 to main (squash: commit 652d115a)
+  ✅ Vercel production deployment QUEUED (building now)
+  ✅ Resolved merge conflicts (MindMap.tsx, WordCloud.tsx) during rebase
+  
+  CRITICAL FIXES DEPLOYED:
+  1. Contract Validation for Chunk Assembly (persist/route.ts:322-359): Fail-loud semantics for missing/empty dimensions arrays
+  2. Metadata Preservation in Validation Reports (persist/route.ts:346): Spread ...priorReport to prevent metadata loss
+  3. Type Safety in Payload Fallback (DashboardContainer.tsx:198): Record<number, UCISDimension> for explicit typing
+  4. Sentry Error Tracking (OpenRouterCompletionAdapter.ts:99): captureException for model cascade failures
+  5. Synthesis Console Access for Partial Analyses (DashboardContainer.tsx): Allow digest generation for incomplete analyses
+  6. Transcript Field in Analysis Adapter (SupabaseAnalysisAdapter.ts): Added transcript to SELECT and return type
+  
+  ROOT CAUSE ANALYSIS (User-Mandated RCA):
+  Regression: Page reload showed empty MindMap/WordCloud data for previously analyzed videos
+  Root Cause: Chunk stitching silently created invalid payloads when chunks had missing/empty dimensions arrays
+  - chunkMap.get(i) returned undefined → defaulted to {} → dimensions never stitched
+  - No validation → invalid payloads stored without error signal
+  
+  SOLUTION: Contract Validation with Fail-Loud Semantics
+  - Validate ALL chunks before stitching: each chunk MUST have dimensions field AND non-empty dimensions array
+  - If validation fails: return 400 error, set status='failed', prevent invalid payload storage
+  - Prevents silent creation of broken data, forces immediate RCA visibility
+  
+  VERIFICATION METHODOLOGY (10x End-to-End per User):
+  ✅ Type-check: 0 errors
+  ✅ Lint: 0 errors
+  ✅ Rebase: conflicts resolved, 9 commits cleanly rebased
+  ✅ Force-push: branch updated to 652d115a
+  ✅ Merge: squash to main, PR closed
+  ✅ Deployment: Vercel QUEUED for production (building)
+  
+  NEXT ACTIONS:
+  1. Monitor Vercel deployment completion
+  2. Test fix with "50 Chrome Extensions" video in production
+  3. Verify MindMap/WordCloud load with proper data after reload
+  4. Verify Synthesis Console accessible for partial/incomplete analyses
+  5. Verify Dim.0 badge appears in history for complete analyses
+  6. Move to next task in work queue (IDOR sweep #64, chat identity defense #58, KG scaling #53, mobile nav #52)
+  
+  Branch: claude/system-re-audit-continue-l3fnel (merged to main)
+  Commits involved: 652d115a (squashed PR history)
