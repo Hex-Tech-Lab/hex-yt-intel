@@ -170,7 +170,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   }, [treeData, collapsedNodes, typePriority]);
 
   if (!layout) {
-    return <div className="p-4 text-center text-[var(--ink-muted)]">No mind map data.</div>;
+    return <div className="p-4 text-center text-[var(--ink-muted)]">No mind map data</div>;
   }
 
   return (
