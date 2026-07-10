@@ -106,6 +106,8 @@ async function streamChatCascade(
   for (const { model, providerOrder } of chain) {
     let full = "";
     try {
+      const translatedModel = translateModelId(model);
+      console.log(`[chat-cascade] Attempting model=${translatedModel} with providers=${providerOrder?.join(',') || 'default'}`);
       const res = await fetch(OPENROUTER_URL, {
         method: "POST",
         headers: {
@@ -114,7 +116,7 @@ async function streamChatCascade(
           "HTTP-Referer": HTTP_REFERER,
         },
         body: JSON.stringify({
-          model: translateModelId(model),
+          model: translatedModel,
           temperature: 0.6,
           max_tokens: 1200,
           stream: true,
@@ -128,8 +130,13 @@ async function streamChatCascade(
         }),
         signal: AbortSignal.timeout(50000),
       });
-      if (!res.ok || !res.body) {
+      if (!res.ok) {
+        console.warn(`[chat-cascade] Model ${translatedModel} returned ${res.status} ${res.statusText}`);
         continue; // try next model
+      }
+      if (!res.body) {
+        console.warn(`[chat-cascade] Model ${translatedModel} returned empty body`);
+        continue;
       }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -158,12 +165,19 @@ async function streamChatCascade(
           }
         }
       }
-      if (full) return full; // committed to this model
+      if (full) {
+        console.log(`[chat-cascade] Model ${translateModelId(model)} succeeded with ${full.length} chars`);
+        return full; // committed to this model
+      }
+      console.warn(`[chat-cascade] Model ${translateModelId(model)} produced empty response`);
     } catch (e) {
       /* timeout / network — fall through to next model */
-      console.error("[chat-stream] model cascade fetch failed, trying next", e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      const isTimeout = e instanceof DOMException && e.name === 'AbortError';
+      console.warn(`[chat-cascade] Model ${translateModelId(model)} failed: ${isTimeout ? 'timeout (50s)' : msg}`);
     }
   }
+  console.error('[chat-cascade] All models in cascade exhausted, returning empty response');
   return "";
 }
 
@@ -299,7 +313,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           send({ type: "delta", content: chunk, requestId: req.requestId });
         }, req.models);
         if (!full) {
-          full = "No response generated.";
+          full = "Sorry, I couldn't generate a response. All fallback models failed to respond. Please check your internet connection and try again.";
           send({ type: "delta", content: full, requestId: req.requestId });
         }
       } catch (err) {
