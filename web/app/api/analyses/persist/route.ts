@@ -319,26 +319,23 @@ export async function POST(request: NextRequest) {
             chunkMap.set(c.chunk_index, c.payload);
           });
 
-          // CONTRACT VALIDATION: Verify all chunks have required payload structure with non-empty dimensions
-          const missingChunks = [];
-          const incompleteDimensions: { chunk: number; count: number }[] = [];
+          // CONTRACT VALIDATION: Verify all chunks have required payload structure
+          // Note: Empty dimensions arrays are acceptable (a stream may generate no content for its slice)
+          const invalidChunks = [];
           for (let i = 1; i <= resolvedTotal; i++) {
             const chunkPayload = chunkMap.get(i);
-            if (!chunkPayload || !chunkPayload.dimensions || !Array.isArray(chunkPayload.dimensions)) {
-              missingChunks.push(i);
-            } else if (chunkPayload.dimensions.length === 0) {
-              // Chunk present but dimensions array is empty
-              incompleteDimensions.push({ chunk: i, count: 0 });
+            // Fail only if chunk is missing entirely or missing the dimensions field/type
+            if (!chunkPayload || typeof chunkPayload.dimensions === 'undefined' || !Array.isArray(chunkPayload.dimensions)) {
+              invalidChunks.push(i);
             }
           }
 
-          // If any chunks missing critical dimensions field or have empty dimensions, fail loudly
-          if (missingChunks.length > 0 || incompleteDimensions.length > 0) {
-            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing or incomplete dimensions', {
+          // If any chunks missing or malformed, fail loudly
+          if (invalidChunks.length > 0) {
+            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing or have invalid dimensions field', {
               analysisId,
               videoId,
-              missingChunks,
-              incompleteDimensions,
+              invalidChunks,
               totalExpected: resolvedTotal,
               totalReceived: finalChunks.length,
               receivedIndices: Array.from(chunkMap.keys()).sort()
@@ -360,9 +357,7 @@ export async function POST(request: NextRequest) {
               }),
               2
             );
-            const errorMsg = missingChunks.length > 0
-              ? `Chunk assembly failed: ${missingChunks.length} chunks missing dimensions`
-              : `Chunk assembly failed: ${incompleteDimensions.length} chunks have empty dimensions`;
+            const errorMsg = `Chunk assembly failed: ${invalidChunks.length} chunks missing or invalid dimensions field`;
             return { type: 'error' as const, error: errorMsg, status: 400 };
           }
 
