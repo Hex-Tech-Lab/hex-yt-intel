@@ -57,8 +57,9 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
 }
 
 function reportClipboardError(error: unknown, context: string) {
+  const message = error instanceof Error ? error.message : String(error);
   Sentry.captureException(error, { contexts: { clipboard: { context } } });
-  console.error('[DashboardContainer] Clipboard copy failed:', { context });
+  console.error('[DashboardContainer] Clipboard copy failed:', { message, context });
 }
 
 export interface DashboardContainerProps {
