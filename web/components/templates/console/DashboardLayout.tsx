@@ -33,11 +33,11 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   // Shared drawer chrome: off-canvas + slide on mobile, static grid column on lg+.
   const drawerBase =
     'overflow-y-auto flex flex-col rounded-xl border border-[var(--line)] ' +
-    'fixed inset-y-2 z-50 w-[300px] max-w-[86vw] shadow-2xl transition-transform duration-300 ease-out ' +
+    'fixed inset-y-1 z-50 w-[300px] max-w-[86vw] shadow-2xl transition-transform duration-300 ease-out ' +
     'xl:static xl:inset-auto xl:z-auto xl:w-full xl:max-w-none xl:h-full xl:shadow-none xl:translate-x-0 xl:transition-none';
 
   return (
-    <div className={`grid min-h-[100dvh] xl:h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden xl:overflow-hidden gap-2 p-2 sm:p-3 grid-cols-1 ${
+    <div className={`grid min-h-[100dvh] xl:h-screen w-full max-w-full bg-[var(--void)] text-[var(--ink)] overflow-x-hidden xl:overflow-hidden gap-1 p-1 sm:p-1.5 grid-cols-1 ${
       rightPanel ? "xl:grid-cols-[260px_1fr_390px]" : "xl:grid-cols-[260px_1fr]"
     }`}>
       {/* Mobile drawer backdrop */}
@@ -52,7 +52,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
       {/* Left sidebar — hamburger drawer on mobile, static column on desktop */}
       <aside
         inert={isAnyOverlayOpen ? true : undefined}
-        className={`${drawerBase} left-2 bg-[var(--void)] xl:left-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-[calc(100%+1rem)]'}`}
+        className={`${drawerBase} left-1 bg-[var(--void)] xl:left-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-[calc(100%+0.5rem)]'}`}
       >
         {sidebar}
       </aside>
@@ -65,7 +65,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           {topbar}
         </header>
 
-        <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 xl:px-5 xl:py-4 scroll-smooth">
+        <div className="flex-1 overflow-y-auto px-1.5 py-1.5 sm:px-2 sm:py-2 xl:px-2.5 xl:py-2 scroll-smooth">
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1 min-w-0">
               {children}
@@ -79,7 +79,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
       {rightPanel && (
         <aside
           inert={isAnyOverlayOpen ? true : undefined}
-          className={`${drawerBase} right-2 bg-[var(--surface)] p-3 px-4 xl:right-auto ${mobileRightOpen ? 'translate-x-0' : 'translate-x-[calc(100%+1rem)]'}`}
+          className={`${drawerBase} right-1 bg-[var(--surface)] p-1.5 px-2 xl:right-auto ${mobileRightOpen ? 'translate-x-0' : 'translate-x-[calc(100%+0.5rem)]'}`}
         >
           {rightPanel}
         </aside>
