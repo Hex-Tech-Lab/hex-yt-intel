@@ -323,18 +323,19 @@ export async function POST(request: NextRequest) {
 
           // CONTRACT VALIDATION: Verify all chunks have required payload structure
           // Note: Empty dimensions arrays are acceptable (a stream may generate no content for its slice)
+          // Also accept chunks with missing dimensions field — they may only have other payload data (persona, classification, etc.)
           const invalidChunks = [];
           for (let i = 1; i <= resolvedTotal; i++) {
             const chunkPayload = chunkMap.get(i);
-            // Fail only if chunk is missing entirely or missing the dimensions field/type
-            if (!chunkPayload || typeof chunkPayload.dimensions === 'undefined' || !Array.isArray(chunkPayload.dimensions)) {
+            // Fail only if chunk is completely missing
+            if (!chunkPayload) {
               invalidChunks.push(i);
             }
           }
 
           // If any chunks missing or malformed, fail loudly
           if (invalidChunks.length > 0) {
-            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing or have invalid dimensions field', {
+            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing entirely', {
               analysisId,
               videoId,
               invalidChunks,
@@ -363,7 +364,7 @@ export async function POST(request: NextRequest) {
                 2
               );
             }
-            const errorMsg = `Chunk assembly failed: ${invalidChunks.length} chunks missing or invalid dimensions field`;
+            const errorMsg = `Chunk assembly failed: ${invalidChunks.length} chunks missing`;
             return { type: 'error' as const, error: errorMsg, status: 400 };
           }
 
