@@ -324,7 +324,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         />
       ) : (
         <div className="flex h-full items-center justify-center text-[var(--ink-muted)] font-mono text-xs italic">
-          No cloud structure yet.
+          No cloud structure yet
         </div>
       )}
     </div>

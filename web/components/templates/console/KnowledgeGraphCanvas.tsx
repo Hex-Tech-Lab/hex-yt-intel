@@ -141,6 +141,31 @@ export function KnowledgeGraphCanvas({
   );
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
+  if (!graph.nodes || graph.nodes.length === 0) {
+    return (
+      <div
+        ref={containerRef}
+        className="js-knowledge-graph-container"
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: height ?? (compact ? 280 : 520),
+          borderRadius: 8,
+          overflow: 'hidden',
+          border: '1px solid var(--line)',
+          background: 'radial-gradient(circle at 50% 40%, rgb(15 23 42 / 0.6), rgb(8 11 17 / 0.95))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+          No knowledge graph data
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
