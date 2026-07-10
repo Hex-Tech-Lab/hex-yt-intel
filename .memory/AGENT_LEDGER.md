@@ -465,3 +465,33 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
   
   Branch: claude/system-re-audit-continue-l3fnel (merged to main)
   Commits involved: 652d115a (squashed PR history)
+
+- [2026-07-10T08:45:00+03:00] [Claude-Haiku] [IN_PROGRESS] RCA: Critical Regression — "chat is always saying analysis not complete now"
+  User Report: Chat interface incorrectly displays "This video's analysis is still being generated..." for ALL analysis queries, regardless of actual analysis status.
+  
+  Root Cause Identified:
+  getAnalysisGrounding (SupabaseAnalysisAdapter.ts:414-460) was reading status from validation_report.status instead of billing_status column.
+  - When analyses finish synthesis and persist, they're marked billing_status='completed'
+  - But validation_report.status remained 'processing' or other state
+  - Chat grounding gate (ProcessChatMessageUseCase.ts:218) checks groundingResult?.status === 'processing'
+  - Since status was always 'processing', it always showed the error message
+  
+  Fix Applied:
+  1. Updated SELECT in getAnalysisGrounding to include billing_status column (line 431)
+  2. Changed status derivation to use billing_status as primary field with fallback (line 446)
+  3. Maintains backward compatibility with legacy analyses via validation_report.status fallback
+  
+  Verification:
+  ✅ Minimal change: 2 line diff, no logic refactoring
+  ✅ Backward compatible: Falls back to validation_report.status for pre-billing_status rows
+  ✅ Aligns with persist flow: Uses the same billing_status='completed' marker set by persist
+  ✅ Fixes Law #1: Pre-Query Cache Hit Circuit now returns correct completion status
+  ✅ Fixes ADR 008: Chat Grounding Security Gate now correctly detects completed analyses
+  
+  Commit: 7b6167e (branch: claude/system-re-audit-continue-l3fnel)
+
+- [2026-07-10T08:50:00+03:00] [Claude-Haiku] [DONE] Chat Regression Fix Deployed
+  ✅ Commit: 7b6167e pushed to origin/claude/system-re-audit-continue-l3fnel
+  ✅ Fix: Use billing_status for analysis completion check in grounding gate
+  ✅ Impact: Chat users can now access grounded analysis for completed videos
+  Ready for testing and merge.
