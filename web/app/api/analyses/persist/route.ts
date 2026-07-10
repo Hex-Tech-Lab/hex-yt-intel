@@ -323,10 +323,10 @@ export async function POST(request: NextRequest) {
           const missingChunks = [];
           const incompleteDimensions: { chunk: number; count: number }[] = [];
           for (let i = 1; i <= resolvedTotal; i++) {
-            const p = chunkMap.get(i);
-            if (!p || !p.dimensions || !Array.isArray(p.dimensions)) {
+            const chunkPayload = chunkMap.get(i);
+            if (!chunkPayload || !chunkPayload.dimensions || !Array.isArray(chunkPayload.dimensions)) {
               missingChunks.push(i);
-            } else if (p.dimensions.length === 0) {
+            } else if (chunkPayload.dimensions.length === 0) {
               // Chunk present but dimensions array is empty
               incompleteDimensions.push({ chunk: i, count: 0 });
             }
@@ -373,24 +373,26 @@ export async function POST(request: NextRequest) {
           const stitchedEdges: any[] = [];
 
           for (let i = 1; i <= resolvedTotal; i++) {
-            const p = chunkMap.get(i)!; // Guaranteed non-null by validation above
-            if (p.dimensions && Array.isArray(p.dimensions)) {
-              stitchedDimensions.push(...p.dimensions);
+            const chunkPayload = chunkMap.get(i);
+            // skipcq: TS-A1004 Contract validation above guarantees all chunks exist and have dimensions
+            if (!chunkPayload) continue;
+            if (chunkPayload.dimensions && Array.isArray(chunkPayload.dimensions)) {
+              stitchedDimensions.push(...chunkPayload.dimensions);
             }
-            if (p.persona && !stitchedPersona) {
-              stitchedPersona = p.persona;
+            if (chunkPayload.persona && !stitchedPersona) {
+              stitchedPersona = chunkPayload.persona;
             }
-            if (p.classification && !stitchedClassification) {
-              stitchedClassification = p.classification;
+            if (chunkPayload.classification && !stitchedClassification) {
+              stitchedClassification = chunkPayload.classification;
             }
-            if (p.monetizationVerdict && !stitchedMonetization) {
-              stitchedMonetization = p.monetizationVerdict;
+            if (chunkPayload.monetizationVerdict && !stitchedMonetization) {
+              stitchedMonetization = chunkPayload.monetizationVerdict;
             }
-            if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.nodes)) {
-              stitchedNodes.push(...p.knowledgeGraph.nodes);
+            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.nodes)) {
+              stitchedNodes.push(...chunkPayload.knowledgeGraph.nodes);
             }
-            if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.edges)) {
-              stitchedEdges.push(...p.knowledgeGraph.edges);
+            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.edges)) {
+              stitchedEdges.push(...chunkPayload.knowledgeGraph.edges);
             }
           }
 
