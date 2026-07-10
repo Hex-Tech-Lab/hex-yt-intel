@@ -2,7 +2,9 @@ version = 1
 
 [analyzers.javascript]
 environment = ["nodejs"]
-disabled_rules = ["JS-0857", "JS-0827", "JS-0838"]
+
+[analyzers.javascript.issues]
+disabled = ["JS-0857", "JS-0827", "JS-0838"]
 
 [analyzers.meta]
 skip_doc_coverage = ["function-declaration"]
