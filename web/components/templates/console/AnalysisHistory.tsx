@@ -310,7 +310,15 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       {item.views} views
                     </MetricChip>
                     <MetricChip icon="solar:calendar-minimalistic-linear" title="Last analyzed">
-                      {new Date(item.lastAnalyzedAt).toLocaleDateString()}
+                      {new Date(item.lastAnalyzedAt).toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true,
+                      })}
                     </MetricChip>
                     <span className="ml-auto inline-flex items-center text-[var(--ink-muted)]">
                       <Icon icon={busy ? 'solar:refresh-linear' : 'solar:alt-arrow-right-linear'} size={16} className={busy ? 'hx-anispin text-[var(--accent)]' : ''} />
