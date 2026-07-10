@@ -75,6 +75,7 @@ export interface AnalysisPersistencePort {
     videoId: string;
     userId: string;
     title: string;
+    transcriptHash?: string;
     validationReport: ValidationReportInput;
   }): Promise<AnalysisStub>;
 
@@ -134,6 +135,7 @@ export interface AnalysisPersistencePort {
     id: string;
     userId: string;
     title: string;
+    transcriptHash?: string | null;
     validationReport: unknown;
     createdAt: string;
     channelTitle?: string | null;

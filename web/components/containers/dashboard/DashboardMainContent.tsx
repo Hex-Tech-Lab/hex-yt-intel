@@ -27,6 +27,17 @@ export interface DashboardMainContentProps {
   onFocusNode: (id: string | null) => void;
 }
 
+/**
+ * DashboardMainContent
+ * Renders the main synthesis console with:
+ * - Tab switcher (synthesis vs graph)
+ * - Executive digest card (Dimension 0)
+ * - Partial analysis warning
+ * - PersonaSelector
+ * - DimensionAccordion or VisualizationPanel based on active tab
+ *
+ * Memoizes expensive renders to prevent unnecessary re-renders from parent state changes.
+ */
 export function DashboardMainContent({
   status,
   consoleTab,
@@ -42,6 +53,7 @@ export function DashboardMainContent({
   onSelectNode,
   onFocusNode,
 }: DashboardMainContentProps) {
+  // Memoize partial info rendering
   const partialInfoContent = useMemo(() => {
     if (!partialInfo) return null;
     return (
@@ -57,6 +69,7 @@ export function DashboardMainContent({
     );
   }, [partialInfo]);
 
+  // Memoize tab switcher
   const tabSwitcher = useMemo(() => {
     return (
       <ConsoleTabSwitcher
@@ -67,16 +80,19 @@ export function DashboardMainContent({
     );
   }, [consoleTab, graph.nodes.length, onTabChange]);
 
+  // Memoize digest card
   const digestCard = useMemo(() => {
     if (status !== 'complete' || (!digest && !digestLoading)) return null;
     return <ExecutiveDigestCard digest={digest} loading={digestLoading} />;
   }, [status, digest, digestLoading]);
 
+  // Memoize persona selector
   const personaSection = useMemo(() => {
     if (status !== 'complete' || dimensions.length === 0) return null;
     return <PersonaSelector />;
   }, [status, dimensions.length]);
 
+  // Memoize dimension accordion
   const dimensionAccordion = useMemo(
     () => (
       <DimensionAccordion
@@ -89,6 +105,7 @@ export function DashboardMainContent({
     [dimensions, selectedDimensionKey, onSelectDimension, status]
   );
 
+  // Memoize visualization panel
   const visualizationPanel = useMemo(
     () => (
       <VisualizationPanel
@@ -104,7 +121,7 @@ export function DashboardMainContent({
   if (status === 'idle') return null;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {tabSwitcher}
       {consoleTab === 'synthesis' ? (
         <>

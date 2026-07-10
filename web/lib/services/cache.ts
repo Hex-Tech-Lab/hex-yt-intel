@@ -11,7 +11,6 @@
  */
 
 import { Redis } from '@upstash/redis';
-import crypto from 'crypto';
 
 // Lazy-loaded Redis client (prevents build-time instantiation crash)
 let redisInstance: Redis | null = null;
@@ -55,19 +54,16 @@ export interface CachedAnalysisResult {
 /**
  * Generate cache key from analysis parameters
  * Format: ci:{modelUsed}:{transcriptHash}:{schemaVersion}
+ *
+ * ADR 006: Cache key based on input (transcript) hash for consistency.
+ * Prevents cache miss when output markdown formatting varies but analysis is identical.
  */
 export function generateCacheKey(
   modelUsed: string,
-  transcript: string,
+  inputHash: string,
   schemaVersion: string = '5.1'
 ): string {
-  const transcriptHash = crypto
-    .createHash('sha256')
-    .update(transcript || '')
-    .digest('hex')
-    .substring(0, 16); // Use first 16 chars for brevity
-
-  return `ci:${modelUsed}:${transcriptHash}:${schemaVersion}`;
+  return `ci:${modelUsed}:${inputHash.substring(0, 16)}:${schemaVersion}`;
 }
 
 /**
