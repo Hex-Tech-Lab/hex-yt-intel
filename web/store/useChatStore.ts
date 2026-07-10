@@ -214,6 +214,7 @@ export const useChatStore = create<ChatState>((set, get) => {
           appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
           requestId: clientMsgId,
         }),
+        signal: AbortSignal.timeout(50000),
       });
       if (!streamRes.ok) throw new Error(`worker ${streamRes.status}`);
 

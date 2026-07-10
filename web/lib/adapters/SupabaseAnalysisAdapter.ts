@@ -367,6 +367,7 @@ export class SupabaseAnalysisAdapter {
   static async findAnalysisForPersist(params: {
     analysisId: string;
     videoId: string;
+    includeTranscript?: boolean;
   }): Promise<{
     id: string;
     userId: string;
@@ -379,9 +380,12 @@ export class SupabaseAnalysisAdapter {
   } | null> {
     try {
       const service = getSupabaseServiceClient();
+      const columns = params.includeTranscript
+        ? 'id, user_id, title, transcript_hash, transcript, validation_report, created_at, channel_title'
+        : 'id, user_id, title, transcript_hash, validation_report, created_at, channel_title';
       const { data, error } = await service
         .from('analyses')
-        .select('id, user_id, title, transcript_hash, transcript, validation_report, created_at, channel_title')
+        .select(columns)
         .eq('id', params.analysisId)
         .eq('video_id', params.videoId)
         .maybeSingle();
@@ -428,7 +432,7 @@ export class SupabaseAnalysisAdapter {
       // grounding from an analysis its owner doesn't hold (even legacy rows).
       let query = service
         .from('analyses')
-        .select('title, channel_title, analysis_markdown, validation_report')
+        .select('title, channel_title, analysis_markdown, validation_report, billing_status')
         .eq('id', params.analysisId);
       if (params.userId) {
         query = query.eq('user_id', params.userId);
@@ -439,11 +443,11 @@ export class SupabaseAnalysisAdapter {
         ERROR: () => { throw error; },
         NO_DATA: () => null as null,
         SUCCESS: () => ({
-          title: data!.title || '',
-          channelTitle: data!.channel_title || null,
-          description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null,
-          analysisMarkdown: data!.analysis_markdown || null,
-          status: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.status || 'incomplete' : 'incomplete',
+          title: data!.title || '', // skipcq: JS-0857
+          channelTitle: data!.channel_title || null, // skipcq: JS-0857
+          description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null, // skipcq: JS-0857
+          analysisMarkdown: data!.analysis_markdown || null, // skipcq: JS-0857
+          status: data!.billing_status || (isPersistedValidationReport(data!.validation_report) ? data!.validation_report.status || 'incomplete' : 'incomplete'), // skipcq: JS-0857
         }),
       } as const;
 

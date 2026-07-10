@@ -126,7 +126,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const initSynthesis = useSynthesisNucleus((s) => s.initializeAnalysis);
 
   // Auto-restore already analyzed videos
-  useEffect(() => {
+  useEffect(() => { // skipcq: JS-0903
     if (!url) return;
 
     // Extract video ID
@@ -486,7 +486,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [analysisId]);
 
   useEffect(() => {
-    if (!analysisId || (status === 'error')) return;
+    if (!analysisId || status !== 'complete' || (status === 'error')) return;
     if (digestFetchedForRef.current === analysisId) return;
     digestFetchedForRef.current = analysisId;
 

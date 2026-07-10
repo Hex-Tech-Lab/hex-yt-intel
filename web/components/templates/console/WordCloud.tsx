@@ -265,8 +265,9 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     });
   }, [selectedId, size]);
 
-  // Redraw when layout or selection changes
-  useEffect(() => { drawCanvas(); }, [drawCanvas]);
+  // Redraw when layout changes, selection changes, or dimensions are built.
+  // Include wordsLayout in dependencies to trigger redraw when layout is computed.
+  useEffect(() => { drawCanvas(); }, [drawCanvas, wordsLayout]);
 
   // Click & hover mouse coordinate tracking
   const getWordAtCoords = useCallback((clientX: number, clientY: number): PlacedWord | null => {

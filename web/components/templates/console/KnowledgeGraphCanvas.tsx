@@ -66,13 +66,24 @@ export function KnowledgeGraphCanvas({
     return () => ro.disconnect();
   }, [height, compact]);
 
-  // Map domain graph → force-graph shape. Stable identity per graph so physics settles.
+  // Map domain graph → force-graph shape. Create stable identity keyed by actual node/edge content,
+  // not graph reference, to prevent physics engine restart during dimension building.
+  // This allows smooth animation with 1-2 second intervals as dimensions accumulate.
+  const dataKey = useMemo(
+    () => {
+      const nodeIds = graph.nodes.map((n) => n.id).join('|');
+      const edgeIds = graph.edges.map((e) => `${e.source}-${e.target}`).join('|');
+      return `${nodeIds}:${edgeIds}`;
+    },
+    [graph.nodes, graph.edges]
+  );
+
   const data = useMemo(
     () => ({
       nodes: graph.nodes.map((n) => ({ ...n })) as FGNode[],
       links: graph.edges.map((e) => ({ source: e.source, target: e.target, strength: e.strength, kind: e.kind })),
     }),
-    [graph]
+    [dataKey]
   );
 
   // Configure custom D3 forces on the engine to resolve isolated islands

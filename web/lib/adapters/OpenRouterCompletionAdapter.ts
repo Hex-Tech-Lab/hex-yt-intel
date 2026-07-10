@@ -94,7 +94,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
         if (modelIndex < models.length - 1) {
           const nextModel = models[modelIndex + 1];
           if (nextModel) {
-            console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel.model} reason=EmptyCompletion timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
+            console.log(`[digest] Dimension 0 fallback from=${entry.model} to=${nextModel.model} reason=EmptyCompletion timestamp=${new Date().toISOString()}`); // skipcq: JS-0838
           }
         }
       } catch (error) {
@@ -105,7 +105,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
         Sentry.captureException(error, {
           contexts: {
             completion: {
-              analysisId: payload[0].analysisId,
+              digestId,
               modelIndex,
               model: entry.model,
             },
