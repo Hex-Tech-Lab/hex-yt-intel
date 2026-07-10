@@ -683,7 +683,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
-        <div className="flex flex-col gap-4 pb-4">
+        <div className="flex flex-col gap-3 pb-3">
           <AnalysisHero
             url={mounted ? url : ''}
             status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
@@ -696,7 +696,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           />
 
           {(hasHadVideoRef.current || videoMetadata || nucleus.analysis?.videoId) && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <VideoPlayerCard />
               {videoMetadata && (
                 <BentoMetadata
@@ -712,7 +712,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           )}
 
           {status !== 'idle' && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <ConsoleTabSwitcher activeTab={consoleTab} hasGraph={graph.nodes.length > 0} onTabChange={setConsoleTab} />
 
               {consoleTab === 'synthesis' ? (
@@ -754,7 +754,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       ) : (activeNav as string) === 'history' ? (
         <AnalysisHistory onSelectAnalysis={() => setActiveNav('console')} />
       ) : (
-        <div className="p-12 text-center text-[var(--ink-secondary)]">
+        <div className="p-6 text-center text-[var(--ink-secondary)]">
           Settings coming soon...
         </div>
       )}

@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/home/kellyb_dev/projects/hex-yt-intel/web/playwright.config.ts",
-    "rootDir": "/home/kellyb_dev/projects/hex-yt-intel/web/tests",
+    "configFile": "/home/user/hex-yt-intel/web/playwright.config.ts",
+    "rootDir": "/home/user/hex-yt-intel/web/tests",
     "forbidOnly": false,
     "fullyParallel": true,
     "globalSetup": null,
@@ -14,13 +14,13 @@
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results",
+        "outputDir": "/home/user/hex-yt-intel/web/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {},
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/home/kellyb_dev/projects/hex-yt-intel/web/tests",
+        "testDir": "/home/user/hex-yt-intel/web/tests",
         "testIgnore": [
           "**/pairwise_matrix/**"
         ],
@@ -84,328 +84,18 @@
       "timeout": 180000
     }
   },
-  "suites": [
+  "suites": [],
+  "errors": [
     {
-      "title": "decodo-repro.spec.ts",
-      "file": "decodo-repro.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [
-        {
-          "title": "Transcript should fallback correctly when primary fails",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 60000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "chromium",
-              "projectName": "chromium",
-              "results": [],
-              "status": "skipped"
-            }
-          ],
-          "id": "73f477932e1f0466752b-947ef7896cf16e018ae5",
-          "file": "decodo-repro.spec.ts",
-          "line": 3,
-          "column": 5
-        }
-      ]
-    },
-    {
-      "title": "production-verification.spec.ts",
-      "file": "production-verification.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Production Verification Suite",
-          "file": "production-verification.spec.ts",
-          "line": 6,
-          "column": 6,
-          "specs": [],
-          "suites": [
-            {
-              "title": "Frontend Rendering",
-              "file": "production-verification.spec.ts",
-              "line": 17,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "home page renders without hydration errors",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-f9a2b3b3a5acd820c21d",
-                  "file": "production-verification.spec.ts",
-                  "line": 18,
-                  "column": 9
-                },
-                {
-                  "title": "home page client environment strings are materialized",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-c29996f02a305ab3a4ea",
-                  "file": "production-verification.spec.ts",
-                  "line": 65,
-                  "column": 9
-                }
-              ]
-            },
-            {
-              "title": "Auth Routes",
-              "file": "production-verification.spec.ts",
-              "line": 93,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "auth signin page renders securely",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-ba728ace986dfd194b52",
-                  "file": "production-verification.spec.ts",
-                  "line": 94,
-                  "column": 9
-                },
-                {
-                  "title": "auth callback page handles redirects gracefully",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-1f4c30ffc39db23b4809",
-                  "file": "production-verification.spec.ts",
-                  "line": 124,
-                  "column": 9
-                }
-              ]
-            },
-            {
-              "title": "API Endpoints",
-              "file": "production-verification.spec.ts",
-              "line": 134,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "health endpoint returns structured response",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-24d07e7160ba5d390f0e",
-                  "file": "production-verification.spec.ts",
-                  "line": 135,
-                  "column": 9
-                },
-                {
-                  "title": "metadata endpoint is accessible",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-835005daca9b806dbc42",
-                  "file": "production-verification.spec.ts",
-                  "line": 149,
-                  "column": 9
-                }
-              ]
-            },
-            {
-              "title": "Client Environment Validation",
-              "file": "production-verification.spec.ts",
-              "line": 159,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "clientEnv exports are present and non-empty",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-e397c1e10a2abde86979",
-                  "file": "production-verification.spec.ts",
-                  "line": 160,
-                  "column": 9
-                },
-                {
-                  "title": "no uninitialized environment references in HTML",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-5810a864b4db4840b248",
-                  "file": "production-verification.spec.ts",
-                  "line": 182,
-                  "column": 9
-                }
-              ]
-            },
-            {
-              "title": "Navigation & Routing",
-              "file": "production-verification.spec.ts",
-              "line": 205,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "home page navigation is functional",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-738877f8588c2d4b2578",
-                  "file": "production-verification.spec.ts",
-                  "line": 206,
-                  "column": 9
-                }
-              ]
-            },
-            {
-              "title": "Performance & Accessibility",
-              "file": "production-verification.spec.ts",
-              "line": 223,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "page load completes within reasonable time",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-8676582dd055d6716060",
-                  "file": "production-verification.spec.ts",
-                  "line": 224,
-                  "column": 9
-                },
-                {
-                  "title": "page is not blank",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [],
-                      "status": "skipped"
-                    }
-                  ],
-                  "id": "a6fb233cbe174ccae771-dc283d27f6cf5b7415ea",
-                  "file": "production-verification.spec.ts",
-                  "line": 237,
-                  "column": 9
-                }
-              ]
-            }
-          ]
-        }
-      ]
+      "message": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.",
+      "stack": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments."
     }
   ],
-  "errors": [],
   "stats": {
-    "startTime": "2026-06-22T22:08:48.103Z",
-    "duration": 25.101,
+    "startTime": "2026-07-08T15:52:31.906Z",
+    "duration": 18505.870000000003,
     "expected": 0,
-    "skipped": 12,
+    "skipped": 0,
     "unexpected": 0,
     "flaky": 0
   }

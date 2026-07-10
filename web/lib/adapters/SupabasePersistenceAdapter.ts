@@ -14,13 +14,14 @@ import type {
 import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
 import type { GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
+import type { KnowledgeWikiPort } from '@/lib/services/KnowledgeHistoryService';
 
 import { SupabaseAnalysisAdapter } from './SupabaseAnalysisAdapter';
 import { SupabaseChatAdapter } from './SupabaseChatAdapter';
 import { SupabaseGraphAdapter } from './SupabaseGraphAdapter';
 import { SupabaseBillingAdapter } from './SupabaseBillingAdapter';
 
-export class SupabasePersistenceAdapter implements AnalysisPersistencePort, GraphPersistencePort, BillingPersistencePort, ChatPersistencePort, SettingsPersistencePort {
+export class SupabasePersistenceAdapter implements AnalysisPersistencePort, GraphPersistencePort, BillingPersistencePort, ChatPersistencePort, SettingsPersistencePort, KnowledgeWikiPort {
   findCachedAnalysis(params: { userId: string; videoId: string }): Promise<CachedAnalysis | null> {
     return SupabaseAnalysisAdapter.findCachedAnalysis(params);
   }
@@ -363,6 +364,50 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         extra: { key },
       });
       return null;
+    }
+  }
+
+  /**
+   * KnowledgeWikiPort implementation: Load user's knowledge wiki rows.
+   * Queries public.user_knowledge_wiki table for all topics belonging to userId.
+   * Returns empty array if user has no wiki history.
+   *
+   * Return type matches WikiRow interface:
+   * - id: wiki record ID (UUID)
+   * - user_id: user identifier
+   * - topic: wiki topic name (e.g., "may-2026-digest")
+   * - wiki_markdown: aggregated wiki content from questions
+   * - question_count: number of questions in this wiki
+   * - theme_count: number of themes aggregated
+   * - created_at: ISO timestamp when wiki was first created
+   * - updated_at: ISO timestamp when wiki was last updated
+   */
+  async getUserWiki(userId: string): Promise<Array<{ id: string; user_id: string; topic: string; wiki_markdown: string; question_count: number; theme_count: number; created_at: string; updated_at: string }>> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('user_knowledge_wiki')
+        .select('id, user_id, topic, wiki_markdown, question_count, theme_count, created_at, updated_at')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('[SupabasePersistenceAdapter] getUserWiki failed:', error.message);
+        Sentry.captureException(error, {
+          tags: { method: 'getUserWiki' },
+          extra: { userId },
+        });
+        return [];
+      }
+
+      return data || [];
+    } catch (error: unknown) {
+      console.error('[SupabasePersistenceAdapter] getUserWiki error:', error);
+      Sentry.captureException(error, {
+        tags: { method: 'getUserWiki' },
+        extra: { userId },
+      });
+      return [];
     }
   }
 }
