@@ -176,9 +176,9 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   return (
     <div
       className="relative w-full overflow-auto hx-custom-scrollbar border border-[var(--line-faint)] bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg js-mind-map-container"
-      style={{ maxHeight: '420px' }}
+      style={{ maxHeight: '420px', padding: '16px' }}
     >
-      <div style={{ padding: '16px', width: '100%', height: '100%', position: 'relative', overflow: 'auto' }}>
+      <div className="relative w-full h-full">
         <svg
           width={layout.w}
           height={layout.h}
@@ -201,7 +201,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
           })}
         </svg>
 
-        <div style={{ width: layout.w, height: layout.h, position: 'relative' }}>
+        <div style={{ width: layout.w, height: layout.h, position: 'relative' }} className="relative">
         {layout.nodes.map(({ node, x, y }) => {
           const isSelected = selectedId === node.id;
           const isCollapsed = collapsedNodes[node.id];
