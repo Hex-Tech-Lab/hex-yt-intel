@@ -372,6 +372,7 @@ export class SupabaseAnalysisAdapter {
     userId: string;
     title: string;
     transcriptHash?: string | null;
+    transcript?: string | null;
     validationReport: ValidationReportInput | unknown;
     createdAt: string;
     channelTitle?: string | null;
@@ -380,7 +381,7 @@ export class SupabaseAnalysisAdapter {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analyses')
-        .select('id, user_id, title, transcript_hash, validation_report, created_at, channel_title')
+        .select('id, user_id, title, transcript_hash, transcript, validation_report, created_at, channel_title')
         .eq('id', params.analysisId)
         .eq('video_id', params.videoId)
         .maybeSingle();
@@ -396,6 +397,7 @@ export class SupabaseAnalysisAdapter {
         userId: data.user_id,
         title: data.title,
         transcriptHash: data.transcript_hash,
+        transcript: data.transcript,
         validationReport: data.validation_report,
         createdAt: data.created_at,
         channelTitle: data.channel_title,
