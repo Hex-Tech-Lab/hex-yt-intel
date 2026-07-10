@@ -99,20 +99,14 @@ export function useSearch(options: UseSearchOptions = {}) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        const response = await fetch('/api/analyses/search', {
+        const response = await fetch('/api/search', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             query: searchQuery,
-            limit: maxResults,
-            threshold,
-            dateFrom: filters.dateFrom,
-            dateTo: filters.dateTo,
-            channels: filters.channels?.length ? filters.channels : undefined,
-            minEngagement: filters.minEngagement,
-            page,
+            topK: maxResults,
           }),
         });
 
@@ -125,10 +119,10 @@ export function useSearch(options: UseSearchOptions = {}) {
         setState((prev) => ({
           ...prev,
           results: data.results || [],
-          totalResults: data.resultsCount || 0,
-          queryTime: data.queryTime || 0,
-          currentPage: page,
-          hasNextPage: data.hasMore || false,
+          totalResults: data.count || 0,
+          queryTime: 0,
+          currentPage: 1,
+          hasNextPage: false,
           isLoading: false,
         }));
       } catch (err) {
