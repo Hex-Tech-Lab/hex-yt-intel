@@ -105,7 +105,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
         Sentry.captureException(error, {
           contexts: {
             completion: {
-              analysisId: payload[0].analysisId,
+              digestId,
               modelIndex,
               model: entry.model,
             },
