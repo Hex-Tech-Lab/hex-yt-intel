@@ -186,8 +186,23 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             return;
           }
 
-          const dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
-          
+          let dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
+
+          // Fallback: if markdown parsing returned no dimensions but analysis_payload exists,
+          // extract dimensions directly from the payload (handles cases where markdown
+          // reconstruction failed due to payload size limits)
+          if (Object.keys(dimensions).length === 0 && restoreData.analysis_payload?.dimensions) {
+            const payloadDims = restoreData.analysis_payload.dimensions;
+            if (Array.isArray(payloadDims)) {
+              dimensions = payloadDims.reduce((acc: any, d: any) => {
+                if (d && typeof d.number === 'number') {
+                  acc[d.number] = { number: d.number, name: d.name || `Dimension ${d.number}`, content: d.content || '' };
+                }
+                return acc;
+              }, {});
+            }
+          }
+
           startTransition(() => {
             initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown);
             setVideoMetadata({

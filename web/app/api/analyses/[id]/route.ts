@@ -69,6 +69,8 @@ export async function GET(
         ? 'error'
         : 'incomplete';
 
+    // Always include analysis_payload to ensure the frontend can reconstruct dimensions
+    // if markdown reconstruction fails or markdown is missing
     return NextResponse.json({
       id: analysis.id,
       videoId: analysis.video_id,
