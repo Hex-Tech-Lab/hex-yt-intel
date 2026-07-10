@@ -107,6 +107,7 @@ async function streamChatCascade(
     let full = "";
     try {
       const translatedModel = translateModelId(model);
+      // skipcq: JS-0827
       console.log(`[chat-cascade] Attempting model=${translatedModel} with providers=${providerOrder?.join(',') || 'default'}`);
       const res = await fetch(OPENROUTER_URL, {
         method: "POST",
@@ -131,10 +132,12 @@ async function streamChatCascade(
         signal: AbortSignal.timeout(50000),
       });
       if (!res.ok) {
+        // skipcq: JS-0827
         console.warn(`[chat-cascade] Model ${translatedModel} returned ${res.status} ${res.statusText}`);
         continue; // try next model
       }
       if (!res.body) {
+        // skipcq: JS-0827
         console.warn(`[chat-cascade] Model ${translatedModel} returned empty body`);
         continue;
       }
@@ -161,22 +164,27 @@ async function streamChatCascade(
             }
           } catch (e) {
             /* keep-alive / partial frame */
+            // skipcq: JS-0827
             console.warn("[chat-stream] JSON parse delta skipped", e instanceof Error ? e.message : String(e));
           }
         }
       }
       if (full) {
+        // skipcq: JS-0827
         console.log(`[chat-cascade] Model ${translateModelId(model)} succeeded with ${full.length} chars`);
         return full; // committed to this model
       }
+      // skipcq: JS-0827
       console.warn(`[chat-cascade] Model ${translateModelId(model)} produced empty response`);
     } catch (e) {
       /* timeout / network — fall through to next model */
       const msg = e instanceof Error ? e.message : String(e);
       const isTimeout = e instanceof DOMException && e.name === 'AbortError';
+      // skipcq: JS-0827
       console.warn(`[chat-cascade] Model ${translateModelId(model)} failed: ${isTimeout ? 'timeout (50s)' : msg}`);
     }
   }
+  // skipcq: JS-0827
   console.error('[chat-cascade] All models in cascade exhausted, returning empty response');
   return "";
 }
@@ -193,10 +201,12 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     return c.json({ error: "Missing requestId — client cannot correlate SSE events" }, 400);
   }
   if (!isValidAppUrl(req.appUrl, c.env.APP_URL, c.env.ALLOWED_APP_ORIGINS, isProductionEnv(c.env))) {
+    // skipcq: JS-0827
     console.warn("[chat-stream] Blocked untrusted appUrl callback redirect:", req.appUrl);
     return c.json({ error: "Invalid appUrl callback destination" }, 400);
   }
   if (!secret || !apiKey) {
+    // skipcq: JS-0827
     console.error("[chat-stream] Server misconfigured: missing signing key or model-router credentials");
     return c.json({ error: "Server misconfigured" }, 500);
   }
@@ -238,6 +248,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
     // signature mismatch.)
     const keyFpPrimary = await secretFingerprint(secret);
     const keyFpFallback = await secretFingerprint(c.env.DEV_HMAC_SECRET);
+    // skipcq: JS-0827
     console.warn("[chat-stream] stream signature rejected", {
       reason: "invalid_signature",
       conversationId: req.conversationId,
@@ -272,6 +283,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
         } catch (e) {
           /* client gone */
+          // skipcq: JS-0827
           console.warn("[chat-stream] client disconnected during stream send", e instanceof Error ? e.message : String(e));
         }
       };
@@ -297,6 +309,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         // On error, always send static fallback to ensure OPTIONS are sent
         const msg = err instanceof Error ? err.message : String(err);
         Sentry.captureException(err, { contexts: { chat: { conversationId: req.conversationId, requestId: req.requestId, action: 'buildAdaptiveOptions' } } });
+        // skipcq: JS-0827
         console.warn("[chat-stream] OPTIONS generation failed, sending static fallback", {
           conversationId: req.conversationId,
           error: msg,
@@ -319,6 +332,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         Sentry.captureException(err, { contexts: { chat: { conversationId: req.conversationId, requestId: req.requestId, action: 'streamChatCascade' } } });
+        // skipcq: JS-0827
         console.error("[chat-stream] streamChatCascade failed:", msg);
         full = "The model request failed. Your message is saved — please try again.";
         send({ type: "delta", content: full, requestId: req.requestId });
@@ -365,6 +379,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
             const isTimeout = e instanceof DOMException && (e.name === "AbortError" || e.name === "TimeoutError");
             const reason = isTimeout ? "persist_timeout" : "persist_error";
             const message = e instanceof Error ? e.message : String(e);
+            // skipcq: JS-0827
             console.error("[chat-stream]", { reason, message, conversationId: req.conversationId });
             return false;
           }
