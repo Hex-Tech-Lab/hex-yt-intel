@@ -319,6 +319,53 @@ export async function POST(request: NextRequest) {
             chunkMap.set(c.chunk_index, c.payload);
           });
 
+          // CONTRACT VALIDATION: Verify all chunks have required payload structure with non-empty dimensions
+          const missingChunks = [];
+          const incompleteDimensions: { chunk: number; count: number }[] = [];
+          for (let i = 1; i <= resolvedTotal; i++) {
+            const chunkPayload = chunkMap.get(i);
+            if (!chunkPayload || !chunkPayload.dimensions || !Array.isArray(chunkPayload.dimensions)) {
+              missingChunks.push(i);
+            } else if (chunkPayload.dimensions.length === 0) {
+              // Chunk present but dimensions array is empty
+              incompleteDimensions.push({ chunk: i, count: 0 });
+            }
+          }
+
+          // If any chunks missing critical dimensions field or have empty dimensions, fail loudly
+          if (missingChunks.length > 0 || incompleteDimensions.length > 0) {
+            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing or incomplete dimensions', {
+              analysisId,
+              videoId,
+              missingChunks,
+              incompleteDimensions,
+              totalExpected: resolvedTotal,
+              totalReceived: finalChunks.length,
+              receivedIndices: Array.from(chunkMap.keys()).sort()
+            });
+            const failureReport: PersistedValidationReport = {
+              ...priorReport,
+              status: 'failed',
+              model_used: model || null,
+              valid: false,
+            };
+            await retryWithBackoff(
+              () => persistenceAdapter.updateAnalysisResult({
+                analysisId,
+                markdown: '',
+                payload: null,
+                model: model || null,
+                validationPassed: false,
+                validationReport: failureReport,
+              }),
+              2
+            );
+            const errorMsg = missingChunks.length > 0
+              ? `Chunk assembly failed: ${missingChunks.length} chunks missing dimensions`
+              : `Chunk assembly failed: ${incompleteDimensions.length} chunks have empty dimensions`;
+            return { type: 'error' as const, error: errorMsg, status: 400 };
+          }
+
           const stitchedDimensions: any[] = [];
           let stitchedPersona: any = null;
           let stitchedClassification: any = null;
@@ -327,24 +374,26 @@ export async function POST(request: NextRequest) {
           const stitchedEdges: any[] = [];
 
           for (let i = 1; i <= resolvedTotal; i++) {
-            const p = chunkMap.get(i) || {};
-            if (p.dimensions && Array.isArray(p.dimensions)) {
-              stitchedDimensions.push(...p.dimensions);
+            const chunkPayload = chunkMap.get(i);
+            // skipcq: TS-A1004 Contract validation above guarantees all chunks exist and have dimensions
+            if (!chunkPayload) continue;
+            if (chunkPayload.dimensions && Array.isArray(chunkPayload.dimensions)) {
+              stitchedDimensions.push(...chunkPayload.dimensions);
             }
-            if (p.persona && !stitchedPersona) {
-              stitchedPersona = p.persona;
+            if (chunkPayload.persona && !stitchedPersona) {
+              stitchedPersona = chunkPayload.persona;
             }
-            if (p.classification && !stitchedClassification) {
-              stitchedClassification = p.classification;
+            if (chunkPayload.classification && !stitchedClassification) {
+              stitchedClassification = chunkPayload.classification;
             }
-            if (p.monetizationVerdict && !stitchedMonetization) {
-              stitchedMonetization = p.monetizationVerdict;
+            if (chunkPayload.monetizationVerdict && !stitchedMonetization) {
+              stitchedMonetization = chunkPayload.monetizationVerdict;
             }
-            if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.nodes)) {
-              stitchedNodes.push(...p.knowledgeGraph.nodes);
+            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.nodes)) {
+              stitchedNodes.push(...chunkPayload.knowledgeGraph.nodes);
             }
-            if (p.knowledgeGraph && Array.isArray(p.knowledgeGraph.edges)) {
-              stitchedEdges.push(...p.knowledgeGraph.edges);
+            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.edges)) {
+              stitchedEdges.push(...chunkPayload.knowledgeGraph.edges);
             }
           }
 

@@ -57,8 +57,9 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
 }
 
 function reportClipboardError(error: unknown, context: string) {
+  const message = error instanceof Error ? error.message : String(error);
   Sentry.captureException(error, { contexts: { clipboard: { context } } });
-  console.error('[DashboardContainer] Clipboard copy failed:', { context });
+  console.error('[DashboardContainer] Clipboard copy failed:', { message, context });
 }
 
 export interface DashboardContainerProps {
@@ -186,8 +187,23 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             return;
           }
 
-          const dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
-          
+          let dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
+
+          // Fallback: if markdown parsing returned no dimensions but analysis_payload exists,
+          // extract dimensions directly from the payload (handles cases where markdown
+          // reconstruction failed due to payload size limits)
+          if (Object.keys(dimensions).length === 0 && restoreData.analysis_payload?.dimensions) {
+            const payloadDims = restoreData.analysis_payload.dimensions;
+            if (Array.isArray(payloadDims)) {
+              dimensions = payloadDims.reduce((acc: Record<number, typeof dimensions[1]>, d: { number?: number; name?: string; content?: string }) => {
+                if (d && typeof d.number === 'number') {
+                  acc[d.number] = { number: d.number, name: d.name || `Dimension ${d.number}`, content: d.content || '' };
+                }
+                return acc;
+              }, {} as Record<number, typeof dimensions[1]>);
+            }
+          }
+
           startTransition(() => {
             initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown);
             setVideoMetadata({
@@ -455,8 +471,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   // Dimension 0 — executive digest. Generated once (the cheap "#12 call") the
   // first time a completed, full analysis is viewed, then cached server-side, so
-  // re-opening it returns the stored digest without re-spending. Skipped for
-  // partial analyses (a re-run makes a fresh analysis id with its own digest).
+  // re-opening it returns the stored digest without re-spending. Also generated for
+  // partial analyses so Synthesis Console is accessible for re-analysis.
   const analysisId = nucleus.analysis?.id ?? null;
   const [digest, setDigest] = useState<StoredExecutiveDigest | null>(null);
   const [digestLoading, setDigestLoading] = useState(false);
@@ -470,7 +486,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [analysisId]);
 
   useEffect(() => {
-    if (status !== 'complete' || !analysisId || partialInfo) return;
+    if (!analysisId || (status === 'error')) return;
     if (digestFetchedForRef.current === analysisId) return;
     digestFetchedForRef.current = analysisId;
 
