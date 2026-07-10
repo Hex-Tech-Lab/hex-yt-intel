@@ -19,11 +19,7 @@ export class PromptBuilder implements PromptBuilderPort {
         publishedAt: context.metadata.publishedAt,
       },
       transcript: context.transcript || '',
-<<<<<<< HEAD
-      persona: (context.persona as any) || 'creator',
-=======
       persona: validPersona,
->>>>>>> origin/main
       timezone: context.timezone || 'UTC',
       duration: context.metadata.duration || 0,
       skipAllDimensionsInstruction: true,
