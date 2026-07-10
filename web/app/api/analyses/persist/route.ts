@@ -204,8 +204,10 @@ export async function POST(request: NextRequest) {
       }
 
       const persistenceAdapter = new SupabasePersistenceAdapter();
+      // Defer transcript fetch to non-chunk paths only (chunk requests don't need it)
+      const isChunkRequest = chunkIndex !== undefined && validPayload && 'dimensions' in validPayload;
       const row = await retryWithBackoff(
-        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId }),
+        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId, includeTranscript: !isChunkRequest }),
         2
       );
 
@@ -340,23 +342,27 @@ export async function POST(request: NextRequest) {
               totalReceived: finalChunks.length,
               receivedIndices: Array.from(chunkMap.keys()).sort()
             });
-            const failureReport: PersistedValidationReport = {
-              ...priorReport,
-              status: 'failed',
-              model_used: model || null,
-              valid: false,
-            };
-            await retryWithBackoff(
-              () => persistenceAdapter.updateAnalysisResult({
-                analysisId,
-                markdown: '',
-                payload: null,
-                model: model || null,
-                validationPassed: false,
-                validationReport: failureReport,
-              }),
-              2
-            );
+            // Preserve existing valid completed results; only fail incomplete analyses
+            const isAlreadyValid = priorReport.status === 'done' && priorReport.valid === true;
+            if (!isAlreadyValid) {
+              const failureReport: PersistedValidationReport = {
+                ...priorReport,
+                status: 'failed',
+                model_used: model || null,
+                valid: false,
+              };
+              await retryWithBackoff(
+                () => persistenceAdapter.updateAnalysisResult({
+                  analysisId,
+                  markdown: '',
+                  payload: null,
+                  model: model || null,
+                  validationPassed: false,
+                  validationReport: failureReport,
+                }),
+                2
+              );
+            }
             const errorMsg = `Chunk assembly failed: ${invalidChunks.length} chunks missing or invalid dimensions field`;
             return { type: 'error' as const, error: errorMsg, status: 400 };
           }
