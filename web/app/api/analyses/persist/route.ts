@@ -319,6 +319,44 @@ export async function POST(request: NextRequest) {
             chunkMap.set(c.chunk_index, c.payload);
           });
 
+          // CONTRACT VALIDATION: Verify all chunks have required payload structure
+          const missingChunks = [];
+          for (let i = 1; i <= resolvedTotal; i++) {
+            const p = chunkMap.get(i);
+            if (!p || !p.dimensions || !Array.isArray(p.dimensions)) {
+              missingChunks.push(i);
+            }
+          }
+
+          // If any chunks missing critical dimensions field, fail loudly instead of silently stitching empty payload
+          if (missingChunks.length > 0) {
+            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing dimensions field', {
+              analysisId,
+              videoId,
+              missingChunks,
+              totalExpected: resolvedTotal,
+              totalReceived: finalChunks.length,
+              receivedIndices: Array.from(chunkMap.keys()).sort()
+            });
+            const failureReport: PersistedValidationReport = {
+              status: 'failed',
+              model_used: model || null,
+              valid: false,
+            };
+            await retryWithBackoff(
+              () => persistenceAdapter.updateAnalysisResult({
+                analysisId,
+                markdown: '',
+                payload: null,
+                model: model || null,
+                validationPassed: false,
+                validationReport: failureReport,
+              }),
+              2
+            );
+            return { type: 'error' as const, error: 'Chunk assembly failed: missing dimensions', status: 400 };
+          }
+
           const stitchedDimensions: any[] = [];
           let stitchedPersona: any = null;
           let stitchedClassification: any = null;
@@ -327,7 +365,7 @@ export async function POST(request: NextRequest) {
           const stitchedEdges: any[] = [];
 
           for (let i = 1; i <= resolvedTotal; i++) {
-            const p = chunkMap.get(i) || {};
+            const p = chunkMap.get(i)!; // Guaranteed non-null by validation above
             if (p.dimensions && Array.isArray(p.dimensions)) {
               stitchedDimensions.push(...p.dimensions);
             }
