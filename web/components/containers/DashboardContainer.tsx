@@ -195,12 +195,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           if (Object.keys(dimensions).length === 0 && restoreData.analysis_payload?.dimensions) {
             const payloadDims = restoreData.analysis_payload.dimensions;
             if (Array.isArray(payloadDims)) {
-              dimensions = payloadDims.reduce((acc: any, d: any) => {
+              dimensions = payloadDims.reduce((acc: Record<number, typeof dimensions[1]>, d: { number?: number; name?: string; content?: string }) => {
                 if (d && typeof d.number === 'number') {
                   acc[d.number] = { number: d.number, name: d.name || `Dimension ${d.number}`, content: d.content || '' };
                 }
                 return acc;
-              }, {});
+              }, {} as Record<number, typeof dimensions[1]>);
             }
           }
 

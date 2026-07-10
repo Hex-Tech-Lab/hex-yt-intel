@@ -1,5 +1,6 @@
 import { env } from '@/lib/env';
 import type { TextCompletionPort, CompletionModel } from '@/lib/ports/ExecutiveDigestPorts';
+import * as Sentry from '@sentry/nextjs';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const HTTP_REFERER = 'https://yt-intel.getmytestdrive.com';
@@ -99,6 +100,17 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         const errorMsg = lastError.message;
+
+        // Capture completion failure in Sentry
+        Sentry.captureException(error, {
+          contexts: {
+            completion: {
+              analysisId: payload[0].analysisId,
+              modelIndex,
+              model: entry.model,
+            },
+          },
+        });
 
         // Log fallback if there's a next model
         if (modelIndex < models.length - 1) {

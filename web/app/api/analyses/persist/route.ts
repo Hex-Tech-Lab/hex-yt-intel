@@ -344,6 +344,7 @@ export async function POST(request: NextRequest) {
               receivedIndices: Array.from(chunkMap.keys()).sort()
             });
             const failureReport: PersistedValidationReport = {
+              ...priorReport,
               status: 'failed',
               model_used: model || null,
               valid: false,
