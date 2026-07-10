@@ -55,11 +55,6 @@ export function validateEdges(edges: GraphEdge[], nodeMap: Map<string, GraphNode
   });
 }
 
-/**
- * Aggregates knowledge graph nodes and edges from multiple analyses.
- * Merges duplicate nodes by ID, deduplicates edges by (source, target, kind) triplet,
- * and validates edges to drop orphan references.
- */
 export class AggregateGlobalGraphUseCase {
   /**
    * Execute the aggregation use case.
