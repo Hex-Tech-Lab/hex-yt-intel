@@ -55,28 +55,33 @@ export interface CachedAnalysisResult {
  * Generate cache key from analysis parameters
  * Format: ci:{modelUsed}:{transcriptHash}:{schemaVersion}
  *
- * CONTRACT: Caller MUST pass a SHA256 hash of the original transcript (first 16 chars),
+ * CONTRACT: Caller MUST pass a SHA256 hash of the original transcript (first 16+ chars),
  * NOT the raw transcript or markdown output.
  * This ensures cache keys are stable and based on INPUT per ADR 006.
  *
+ * STRICT: throws if hash is empty or falsy. No fallback to empty string.
+ * Callers must compute transcript hash explicitly or use '' fallback upstream.
+ *
  * @param modelUsed - Model identifier (e.g., 'edge-stream', 'claude-3.5-sonnet')
- * @param transcriptHash - Pre-computed SHA256 transcript hash (first 16+ chars), NOT raw transcript
+ * @param transcriptHash - Pre-computed SHA256 transcript hash (first 16+ chars), must be non-empty
  * @param schemaVersion - Schema version (default: '5.1')
  * @returns Cache key in format ci:{modelUsed}:{transcriptHash}:{schemaVersion}
+ * @throws Error if transcriptHash is falsy (empty string, null, undefined)
  */
 export function generateCacheKey(
   modelUsed: string,
   transcriptHash: string,
   schemaVersion: string = '5.1'
 ): string {
-  // Use hash as-is (assume caller has passed a pre-computed hash)
-  // Take first 16 chars for brevity
-  const cacheHash = (transcriptHash || '').substring(0, 16);
-
-  if (!cacheHash) {
-    console.warn('[cache] generateCacheKey called with empty transcriptHash; cache behavior may be undefined');
+  if (!transcriptHash || typeof transcriptHash !== 'string' || transcriptHash.trim() === '') {
+    throw new Error(
+      `[cache] generateCacheKey: transcriptHash is required and must be non-empty. ` +
+      `Got: ${typeof transcriptHash} "${transcriptHash}". ` +
+      `Per ADR 006, cache keys must be based on INPUT (transcript hash), not output.`
+    );
   }
 
+  const cacheHash = transcriptHash.substring(0, 16);
   return `ci:${modelUsed}:${cacheHash}:${schemaVersion}`;
 }
 

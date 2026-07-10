@@ -452,10 +452,11 @@ export async function POST(request: NextRequest) {
           };
           // ADR 006: Cache key based on input (transcript) hash, not output (markdown) hash
           // Ensures cache hit detection on identical inputs despite markdown formatting changes
-          if (!row.transcriptHash) {
-            console.warn('[analyses/persist] Missing transcriptHash for cache key', { analysisId, videoId });
-          }
-          const cacheKey = generateCacheKey('edge-stream', row.transcriptHash || '', '5.1');
+          const hash = row.transcriptHash || (() => {
+            console.warn('[analyses/persist] Missing transcriptHash; computing from transcript', { analysisId, videoId });
+            return createHash('sha256').update(row.transcript || '').digest('hex');
+          })();
+          const cacheKey = generateCacheKey('edge-stream', hash, '5.1');
           await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
             Sentry.captureException(e, { contexts: { persist: { phase: 'cache_stitched_result', analysisId } } });
             console.warn('[analyses/persist] Failed to cache stitched result', { analysisId, error: String(e) });

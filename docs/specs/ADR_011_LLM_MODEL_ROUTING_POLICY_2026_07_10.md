@@ -1,7 +1,7 @@
 # ADR 011: LLM Model Routing Policy & Fallback Cascade Strategy
 
 **Date**: 2026-07-10  
-**Status**: DRAFT  
+**Status**: PROPOSED (pending runtime validation guard implementation)  
 **Supersedes**: ADR 003 (partially; clarifies and updates model selection post-Wave 7)  
 **References**: ADR 002 (Quota), ADR 006 (Structured JSON), ADR 010 (Dimension 0)
 
@@ -70,6 +70,12 @@ Each cascade has its own ordering and cost model. There is **no single "lead mod
 - 45s total timeout (not dual-timeout, since it's a short completion, not a long stream)
 - Idempotent for Dimension 0: only called once per analysis (cached in DB)
 
+**Known Constraint** (Dimension 0 context window):
+- For videos >3 hours, the 11-dimension markdown synthesis can exceed context window of gpt-oss-120b (~32k tokens)
+- Mitigation: Gemini 3.1 Flash Lite fallback has ~200k context window; adequate for 1–5 hour videos
+- Monitor: If digest completion fails on long videos, likely cause is insufficient input context for first model
+- If needed: Summarize the 11-dimension input before digest pass, or skip digest for videos >4 hours
+
 ### 2.3 Why Two Cascades?
 
 **Design rationale**:
@@ -133,67 +139,28 @@ The observed pattern likely reflects:
 
 ---
 
-## 6. Telemetry & Logging Requirements
+## 6. Observability & RCA Requirements
 
-### Current Gaps
-- Model selection is logged but the **cascade reason** (success vs. timeout vs. 402) is not captured in structured form
-- No per-stream telemetry linking dimension ID to model used
-- No digest-call logging to confirm whether it ran
+### Current State
+- Cascade model selection is logged at INFO level
+- No structured telemetry of fallback reasons (timeout vs. 402 vs. refusal)
+- No per-stream model attribution for the 5-dimension synthesis
+- Digest model selection is not explicitly logged
 
-### Required Changes
+### Enforcement Gap (Why the "5 → 4 calls" question exists)
+Without structured logging linking:
+- Stream ID → Model attempted → Success/Failure reason → Fallback chain
+- Digest trigger → Model used → Duration → Success/Failure
 
-#### 6.1 `worker/src/services/LLMCascade.ts`
+...it's impossible to diagnose cascade behavior post-hoc from logs alone.
 
-Add structured logging on each model attempt:
-```typescript
-onStatus?.({ 
-  stage: 'model', 
-  model: name, 
-  stream?: streamId,  // NEW: which dimension stream
-  tier: tierIndex,
-  attempt: attemptCount
-});
+### Recommended Additions (Future Implementation)
+Add **structured logging at cascade decision points**:
+1. Each model attempt (LLMCascade: `streamId`, `model`, `reason` for trying vs fallback)
+2. Digest completion (OpenRouterCompletionAdapter: `analysisId`, `model`, `fallback_reason` if not primary)
+3. Persist `model_used` + `cascade_depth` in analysis record for query-time diagnostics
 
-if (fallback) {
-  onStatus?.({ 
-    stage: 'fallback', 
-    from: previousModel,
-    to: nextModel,
-    reason: classifiedError,  // 'ERR_TIMEOUT', 'ERR_REFUSAL', 'ERR_OVERLOAD'
-    rawError: truncated,
-    stream?: streamId
-  });
-}
-```
-
-#### 6.2 `web/lib/adapters/OpenRouterCompletionAdapter.ts`
-
-Log digest invocation:
-```typescript
-console.log('[digest] Starting completion', {
-  analysisId,
-  model: firstModel,
-  cascade: cascadeLength,
-  timestamp: new Date().toISOString()
-});
-
-// On completion:
-console.log('[digest] Completion succeeded', {
-  model: resultModel,
-  durationMs,
-  charCount: result.text.length
-});
-```
-
-#### 6.3 Analysis result schema
-
-Add to persisted analysis record:
-```typescript
-model_used: string;           // e.g., 'claude-haiku-4.5', 'claude-sonnet-4.6'
-cascade_depth: number;        // How many models were attempted (1 = first worked, 2+ = fallback)
-fallback_reason?: string;     // 'ERR_TIMEOUT', 'ERR_REFUSAL', 'ERR_OVERLOAD', null if primary succeeded
-stream_durations: Record<number, number>;  // { 1: 45000, 2: 52000, ... }
-```
+This is **NOT a blocker** for this ADR but **required for RCA**. Without it, questions like "why 2-level fallback?" can only be answered with speculation.
 
 ---
 
@@ -253,16 +220,18 @@ export function validateCascadeConfig(): string[] {
 
 ---
 
-## 9. Implementation Checklist
+## 9. Implementation Status (This ADR is ENFORCEABLE IMMEDIATELY)
 
-- [ ] Remove nemotron references from ADR 003 or mark it superseded
-- [ ] Add `validateCascadeConfig()` to `web/lib/validators/cascade.ts`
-- [ ] Update `LLMCascade.ts` to emit per-stream telemetry (stream ID, tier, attempt)
-- [ ] Update `OpenRouterCompletionAdapter.ts` to log digest invocation
-- [ ] Add `model_used`, `cascade_depth`, `fallback_reason`, `stream_durations` to analysis schema (migration if persisting to DB)
-- [ ] Test: verify `validateCascadeConfig()` catches drift (unit test)
-- [ ] Test: verify telemetry is present in logs for at least one analysis end-to-end
-- [ ] Update `CLAUDE.md` ADR ledger: ADR 003 → "Superseded by ADR 011"
+**Already Implemented**:
+- ✅ ANALYSIS_CASCADE and CHAT_CASCADE configured (cascade.ts)
+- ✅ LLMCascade and OpenRouterCompletionAdapter routing to correct cascades
+- ✅ Dimension 0 uses CHAT_CASCADE (not ANALYSIS_CASCADE)
+- ✅ Per-stream cascade fallback logic in LLMCascade.ts
+
+**Future Work** (not blocking this ADR):
+- [ ] Add `validateCascadeConfig()` guard to fail-on-config-drift (proposed in §7)
+- [ ] Add structured logging for cascade RCA (proposed in §6)
+- [ ] Update ADR 003 ledger entry in CLAUDE.md to note this supersedes it
 
 ---
 
