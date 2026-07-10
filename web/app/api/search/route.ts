@@ -19,6 +19,25 @@ if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL
   throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
 }
 
+/**
+ * POST /api/search — Semantic search over analyzed content
+ *
+ * Request Schema:
+ *   - query (string, required): Search query, 3–1000 characters
+ *   - topK (integer, optional): Result limit, 1–50 (default: 5)
+ *
+ * Response (200):
+ *   - results: Array of enriched analysis matches (analysisId, title, videoId, excerpt, score, createdAt)
+ *   - count: Number of results returned
+ *   - query: Echo of the search query
+ *   - tier: User's subscription tier
+ *
+ * Errors:
+ *   - 400: Invalid request schema (missing/invalid query, topK out of bounds)
+ *   - 401: Unauthorized (authentication failed)
+ *   - 429: Rate limited
+ *   - 500: Embedding generation failed or database error
+ */
 export async function POST(request: NextRequest) {
   try {
     // 1. Parse and validate request
@@ -53,6 +72,19 @@ export async function POST(request: NextRequest) {
     if (query.length < 3 || query.length > 1000) {
       return NextResponse.json(
         { error: 'Query must be between 3 and 1000 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Validate topK bounds: must be integer between 1 and 50
+    if (!Number.isInteger(topK) || topK < 1 || topK > 50) {
+      Sentry.captureMessage('Search: Invalid topK parameter', {
+        level: 'warning',
+        tags: { code: ERROR_CODES.INVALID_REQUEST_SCHEMA },
+        contexts: { search: { topK, min: 1, max: 50 } }
+      });
+      return NextResponse.json(
+        { error: 'topK must be an integer between 1 and 50', topK, valid_range: { min: 1, max: 50 } },
         { status: 400 }
       );
     }
@@ -99,7 +131,7 @@ export async function POST(request: NextRequest) {
     const queryEmbedding = await generateQueryEmbedding(query);
 
     if (!queryEmbedding || queryEmbedding.length === 0) {
-      const errorCode = ERROR_CODES.INVALID_REQUEST_SCHEMA;
+      const errorCode = ERROR_CODES.SEARCH_VECTOR_FAILED;
       Sentry.captureMessage('Failed to generate query embedding', {
         level: 'error',
         tags: { code: errorCode }
@@ -112,10 +144,10 @@ export async function POST(request: NextRequest) {
 
     console.log('[search] 3. Querying vector index', { topK, queryDim: queryEmbedding.length });
 
-    // 5. Query vector index with COSINE similarity
+    // 5. Query vector index with COSINE similarity (topK already validated to be 1–50)
     const searchResults = await vectorIndex.query<{ analysisId: string }>({
       vector: queryEmbedding,
-      topK: Math.min(topK, 50), // Cap at 50 results
+      topK,
       includeMetadata: true,
     });
 
@@ -188,7 +220,14 @@ export async function POST(request: NextRequest) {
 
 /**
  * Generate embedding for search query via OpenRouter
- * Uses text-embedding-3-small model for 1536-dimensional vectors
+ *
+ * @param query - Search query string
+ * @returns Array of floats (1536-dimensional vector) on success, empty array on failure
+ *
+ * Failures (query too short, embedding service unavailable, rate limited, etc.)
+ * return empty array and log to Sentry. Caller must check array length.
+ *
+ * Contract: Never throws; always returns array.
  */
 async function generateQueryEmbedding(query: string): Promise<number[]> {
   try {
@@ -197,7 +236,7 @@ async function generateQueryEmbedding(query: string): Promise<number[]> {
   } catch (error) {
     console.error('[search] Failed to generate embedding:', error);
     Sentry.captureException(error, {
-      tags: { operation: 'embedding-generation' }
+      tags: { operation: 'embedding-generation', code: ERROR_CODES.SEARCH_VECTOR_FAILED }
     });
     return [];
   }
