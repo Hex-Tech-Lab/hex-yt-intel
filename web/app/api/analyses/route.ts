@@ -7,6 +7,7 @@ export const maxDuration = 30;
 
 import { NextRequest, NextResponse } from 'next/server';
 import { AnalysisCreateSchema } from '@/lib/types/contracts';
+import type { PersonaId } from '@/lib/prompts';
 import { extractVideoId } from '@/lib/youtube';
 import * as Sentry from '@sentry/nextjs';
 import {
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
       tier: identity.tier,
       email: identity.email,
       timezone: validation.data.timezone,
-      persona: validation.data.persona,
+      persona: validation.data.persona as PersonaId | undefined,
       forceRefresh: validation.data.forceRefresh,
     });
 

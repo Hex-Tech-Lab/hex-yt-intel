@@ -15,40 +15,42 @@ export interface WebhookValidationResult {
   valid: boolean;
   event?: Stripe.Event;
   error?: string;
+  code?: 'MISSING_SECRET' | 'INVALID_SIGNATURE' | 'MALFORMED_EVENT' | 'UNKNOWN_ERROR';
 }
 
-/**
- * Verify webhook signature and construct Stripe event
- * Throws on invalid signature; returns event on success
- */
-export function verifyWebhookSignature(
+const verifyWebhookSignature = (
   body: string,
   signature: string,
   secret: string
-): Stripe.Event {
+): Stripe.Event => {
   if (!secret) {
-    throw new Error('STRIPE_WEBHOOK_SECRET not configured');
+    const err = new Error('STRIPE_WEBHOOK_SECRET not configured');
+    (err as any).code = 'MISSING_SECRET';
+    throw err;
   }
 
   try {
     return stripe.webhooks.constructEvent(body, signature, secret);
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Invalid webhook signature: ${error.message}`);
-    }
-    throw new Error('Invalid webhook signature');
+    const err = new Error(error instanceof Error ? error.message : 'Invalid webhook signature');
+    // Stripe throws "No matching key version" for signature mismatch
+    (err as any).code = (error instanceof Error && error.message.includes('key version'))
+      ? 'INVALID_SIGNATURE'
+      : 'MALFORMED_EVENT';
+    console.error('[Stripe] Webhook signature verification failed:', error);
+    throw err;
   }
-}
+};
 
 /**
- * Validate webhook event structure
- * Returns validation result with parsed event or error details
+ * Validate webhook event structure and signature
+ * Returns validation result with parsed event or granular error classification
  */
-export function validateWebhookEvent(
+export const validateWebhookEvent = (
   body: string,
   signature: string,
   secret: string
-): WebhookValidationResult {
+): WebhookValidationResult => {
   try {
     const event = verifyWebhookSignature(body, signature, secret);
     return {
@@ -56,34 +58,32 @@ export function validateWebhookEvent(
       event,
     };
   } catch (error) {
+    const code = (error as any)?.code || 'UNKNOWN_ERROR';
+    const message = error instanceof Error ? error.message : 'Webhook validation failed';
+    console.error(`[Stripe] Webhook validation failed (${code}):`, message);
     return {
       valid: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
+      code,
     };
   }
-}
+};
 
 /**
  * Extract customer ID from Stripe event
  * Works for most webhook event types that include a customer reference
  */
-export function extractCustomerIdFromEvent(event: Stripe.Event): string | null {
+export const extractCustomerIdFromEvent = (event: Stripe.Event): string | null => {
   try {
     const obj = event.data.object as any;
     return obj?.customer || null;
   } catch {
     return null;
   }
-}
+};
 
 /**
  * Validate event has required data structure
  */
-export function isValidEventStructure(event: Stripe.Event): boolean {
-  return !!(
-    event.id &&
-    event.type &&
-    event.data &&
-    typeof event.data === 'object'
-  );
-}
+export const isValidEventStructure = (event: Stripe.Event): boolean =>
+  Boolean(event.id && event.type && event.data && typeof event.data === 'object');
