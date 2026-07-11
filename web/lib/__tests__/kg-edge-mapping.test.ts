@@ -13,7 +13,7 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
       useCase = new AggregateGlobalGraphUseCase();
     });
 
-    it('TC-1: Should merge nodes by label across analyses', () => {
+    it('TC-1: Should merge nodes by label+dimension across analyses', () => {
       const node1: GraphNode = {
         id: 'node-1',
         label: 'climate change',
@@ -28,25 +28,45 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
       const node2: GraphNode = {
         id: 'node-2',
         label: 'climate change',
-        dimension: 1,
-        content: 'discusses weather patterns',
+        dimension: 0,
+        content: 'discusses climate impacts',
         weight: 2,
         polarity: 0,
-        keyTerms: ['weather', 'precipitation'],
+        keyTerms: ['warming', 'carbon-accounting'],
+        inPersona: false
+      };
+
+      const node3: GraphNode = {
+        id: 'node-3',
+        label: 'climate change',
+        dimension: 1,
+        content: 'discusses economic effects',
+        weight: 1.5,
+        polarity: 0,
+        keyTerms: ['economic', 'impact'],
         inPersona: false
       };
 
       const graph = useCase.execute([
         { id: 'analysis-1', nodes: [node1], edges: [] },
-        { id: 'analysis-2', nodes: [node2], edges: [] }
+        { id: 'analysis-2', nodes: [node2, node3], edges: [] }
       ]);
 
-      // Should merge by label, resulting in 1 node
-      expect(graph.nodes).toHaveLength(1);
-      expect(graph.nodes[0].label).toBe('climate change');
-      expect(graph.nodes[0].weight).toBe(3); // 1 + 2
-      expect(graph.nodes[0].keyTerms).toContain('warming');
-      expect(graph.nodes[0].keyTerms).toContain('weather');
+      // Should merge by label+dimension: dim-0 nodes merge, dim-1 stays separate
+      expect(graph.nodes).toHaveLength(2);
+      const dim0Node = graph.nodes.find(n => n.dimension === 0);
+      const dim1Node = graph.nodes.find(n => n.dimension === 1);
+
+      expect(dim0Node).toBeDefined();
+      expect(dim0Node!.label).toBe('climate change');
+      expect(dim0Node!.weight).toBe(3); // 1 + 2
+      expect(dim0Node!.keyTerms).toContain('warming');
+      expect(dim0Node!.keyTerms).toContain('carbon');
+
+      expect(dim1Node).toBeDefined();
+      expect(dim1Node!.label).toBe('climate change');
+      expect(dim1Node!.weight).toBe(1.5);
+      expect(dim1Node!.keyTerms).toContain('economic');
     });
 
     it('TC-2: Should deduplicate nodes with same ID across analyses', () => {
