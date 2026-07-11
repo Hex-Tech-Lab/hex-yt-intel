@@ -19,45 +19,50 @@ import type { DimensionStatus, BillingStatus } from '@/lib/types/validation-repo
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
 /**
+ * Extract dimensions from stitched payload and build status array.
+ * Only uses dimensions that actually made it into the stitched content.
+ * @param stitchedPayload - The unified stitched payload
+ * @returns Dimension status array reflecting only what was successfully stitched
+ */
+function extractDimensionStatus(
+  stitchedPayload: UCISPayloadV2 | null | undefined
+): DimensionStatus[] {
+  const dimensionStatus: DimensionStatus[] = [];
+  const stitchedDimensions = stitchedPayload?.dimensions || [];
+  const stitchedSet = new Set(stitchedDimensions.map(d => d.number));
+
+  for (let i = 1; i <= TOTAL_DIMENSIONS; i++) {
+    if (stitchedSet.has(i)) {
+      dimensionStatus.push({
+        dimension: i,
+        status: 'done',
+        completedAt: new Date().toISOString(),
+      });
+    } else {
+      dimensionStatus.push({
+        dimension: i,
+        status: 'timeout',
+        error: 'Dimension not available in analysis',
+      });
+    }
+  }
+
+  return dimensionStatus;
+}
+
+/**
  * Build dimension status array comparing received dimensions to expected total.
  * Determines validation and billing status based on dimension completeness.
  */
 function buildDimensionStatus(
-  receivedDimensions: Array<{ number: number }>,
-  failedDimensions?: number[]
+  stitchedPayload: UCISPayloadV2 | null | undefined
 ): {
   dimensionStatus: DimensionStatus[];
   validationStatus: ValidationReportStatus;
   billingStatus: BillingStatus;
   completeness: number;
 } {
-  const receivedSet = new Set(receivedDimensions.map(d => d.number));
-  const failedSet = new Set(failedDimensions || []);
-  const dimensionStatus: DimensionStatus[] = [];
-
-  // Build status for each expected dimension
-  for (let i = 1; i <= TOTAL_DIMENSIONS; i++) {
-    if (receivedSet.has(i)) {
-      dimensionStatus.push({
-        dimension: i,
-        status: 'done',
-        completedAt: new Date().toISOString(),
-      });
-    } else if (failedSet.has(i)) {
-      dimensionStatus.push({
-        dimension: i,
-        status: 'failed',
-        error: 'Failed to generate dimension',
-      });
-    } else {
-      dimensionStatus.push({
-        dimension: i,
-        status: 'timeout',
-        error: 'Timeout waiting for dimension',
-      });
-    }
-  }
-
+  const dimensionStatus = extractDimensionStatus(stitchedPayload);
   const completedCount = dimensionStatus.filter(d => d.status === 'done').length;
   const completeness = completedCount / TOTAL_DIMENSIONS;
 
@@ -111,6 +116,87 @@ const toError = (value: unknown): Error =>
 /** Sleep for the jittered backoff delay corresponding to the given attempt. */
 const backoffDelay = (attempt: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, calculateBackoffDelay(attempt)));
+
+/**
+ * Unified stitching logic: merge chunk payloads into a single analysis payload.
+ * Used by both chunk-receipt and finalization paths to ensure consistency.
+ */
+function stitchChunksIntoPayload(
+  chunkMap: Map<number, any>,
+  resolvedTotal: number
+): { payload: UCISPayloadV2 | undefined; markdown: string } {
+  const stitchedDimensions: any[] = [];
+  let stitchedPersona: any = null;
+  let stitchedClassification: any = null;
+  let stitchedMonetization: any = null;
+  const stitchedNodes: any[] = [];
+  const stitchedEdges: any[] = [];
+
+  for (let i = 1; i <= resolvedTotal; i++) {
+    const chunkPayload = chunkMap.get(i);
+    if (!chunkPayload) continue;
+    if (chunkPayload.dimensions && Array.isArray(chunkPayload.dimensions)) {
+      stitchedDimensions.push(...chunkPayload.dimensions);
+    }
+    if (chunkPayload.persona && !stitchedPersona) {
+      stitchedPersona = chunkPayload.persona;
+    }
+    if (chunkPayload.classification && !stitchedClassification) {
+      stitchedClassification = chunkPayload.classification;
+    }
+    if (chunkPayload.monetizationVerdict && !stitchedMonetization) {
+      stitchedMonetization = chunkPayload.monetizationVerdict;
+    }
+    if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.nodes)) {
+      stitchedNodes.push(...chunkPayload.knowledgeGraph.nodes);
+    }
+    if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.edges)) {
+      stitchedEdges.push(...chunkPayload.knowledgeGraph.edges);
+    }
+  }
+
+  // Only stitch if we have dimensions to work with
+  if (stitchedDimensions.length === 0) {
+    return { payload: undefined, markdown: '' };
+  }
+
+  const cleanDimensions = stitchedDimensions
+    .filter(d => d && typeof d.number === 'number' && !isNaN(d.number))
+    .sort((a, b) => a.number - b.number);
+
+  const stitchedPayload: UCISPayloadV2 = {
+    schemaVersion: '2.0',
+    persona: stitchedPersona || {
+      primary: { id: 'consultant', label: 'Consultant', weight: 1.0 },
+      cognitiveLenses: [],
+      selectionRationale: ''
+    },
+    dimensions: cleanDimensions,
+    knowledgeGraph: {
+      nodes: stitchedNodes,
+      edges: stitchedEdges,
+      rootId: stitchedNodes[0]?.id || null
+    },
+    classification: stitchedClassification || {
+      authoritative: false,
+      practicallyActionable: false,
+      knowledgeGraphReady: false,
+      safe: true,
+      personaOptimised: false,
+      recommendation: 'conditional'
+    },
+    monetizationVerdict: stitchedMonetization
+  };
+
+  // Validate stitched payload
+  const parseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
+  if (!parseResult.success) {
+    return { payload: undefined, markdown: '' };
+  }
+
+  const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+  return { payload: stitchedPayload, markdown: stitchedMarkdown };
+}
 
 /** Retry async operation with exponential backoff and jitter; logs to Sentry on failure. */
 const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> => {
@@ -421,37 +507,6 @@ export async function POST(request: NextRequest) {
             return { type: 'error' as const, error: errorMsg, status: 400 };
           }
 
-          const stitchedDimensions: any[] = [];
-          let stitchedPersona: any = null;
-          let stitchedClassification: any = null;
-          let stitchedMonetization: any = null;
-          const stitchedNodes: any[] = [];
-          const stitchedEdges: any[] = [];
-
-          for (let i = 1; i <= resolvedTotal; i++) {
-            const chunkPayload = chunkMap.get(i);
-            // skipcq: TS-A1004 Contract validation above guarantees all chunks exist and have dimensions
-            if (!chunkPayload) continue;
-            if (chunkPayload.dimensions && Array.isArray(chunkPayload.dimensions)) {
-              stitchedDimensions.push(...chunkPayload.dimensions);
-            }
-            if (chunkPayload.persona && !stitchedPersona) {
-              stitchedPersona = chunkPayload.persona;
-            }
-            if (chunkPayload.classification && !stitchedClassification) {
-              stitchedClassification = chunkPayload.classification;
-            }
-            if (chunkPayload.monetizationVerdict && !stitchedMonetization) {
-              stitchedMonetization = chunkPayload.monetizationVerdict;
-            }
-            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.nodes)) {
-              stitchedNodes.push(...chunkPayload.knowledgeGraph.nodes);
-            }
-            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.edges)) {
-              stitchedEdges.push(...chunkPayload.knowledgeGraph.edges);
-            }
-          }
-
           // CRITICAL SAFETY CHECK: Verify all expected chunks are present before stitching
           if (finalChunks.length !== resolvedTotal) {
             console.error('[analyses/persist] Safety halt: incomplete chunk set detected before stitching', {
@@ -480,59 +535,36 @@ export async function POST(request: NextRequest) {
             return { type: 'partial_timeout' as const, analysisId, missingChunks: unreceived };
           }
 
-          const cleanDimensions = stitchedDimensions
-            .filter(d => d && typeof d.number === 'number' && !isNaN(d.number))
-            .sort((a, b) => a.number - b.number);
-
-          const stitchedPayload: UCISPayloadV2 = {
-            schemaVersion: '2.0',
-            persona: stitchedPersona || {
-              primary: { id: 'consultant', label: 'Consultant', weight: 1.0 },
-              cognitiveLenses: [],
-              selectionRationale: ''
-            },
-            dimensions: cleanDimensions,
-            knowledgeGraph: {
-              nodes: stitchedNodes,
-              edges: stitchedEdges,
-              rootId: stitchedNodes[0]?.id || null
-            },
-            classification: stitchedClassification || {
-              authoritative: false,
-              practicallyActionable: false,
-              knowledgeGraphReady: false,
-              safe: true,
-              personaOptimised: false,
-              recommendation: 'conditional'
-            },
-            monetizationVerdict: stitchedMonetization
-          };
-
-          const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
-          const fullParseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
-          const isStitchedValid = fullParseResult.success;
+          const stitchResult = stitchChunksIntoPayload(chunkMap, resolvedTotal);
+          const stitchedPayload = stitchResult.payload;
+          const stitchedMarkdown = stitchResult.markdown;
+          const isStitchedValid = stitchResult.payload !== undefined;
 
           if (!isStitchedValid) {
-            console.warn('[analyses/persist] Stitched payload failed schema validation', {
+            console.warn('[analyses/persist] Stitched payload failed or has no dimensions', {
               analysisId,
               videoId,
-              errors: fullParseResult.error.flatten()
+              chunkCount: finalChunks.length
             });
           }
 
-          const finalStatus = isStitchedValid ? 'done' : 'failed';
+          const { dimensionStatus, validationStatus: computedValidationStatus, billingStatus } = buildDimensionStatus(stitchedPayload);
+          const finalStatus = computedValidationStatus;
           const newReport: PersistedValidationReport = {
             ...priorReport,
+            validation_status: finalStatus,
             status: finalStatus,
+            billing_status: billingStatus,
+            dimension_status: dimensionStatus,
             model_used: model || null,
-            valid: isStitchedValid,
+            valid: finalStatus === 'done' && isStitchedValid,
           };
 
           await retryWithBackoff(
             () => persistenceAdapter.updateAnalysisResult({
               analysisId,
               markdown: stitchedMarkdown,
-              payload: stitchedPayload,
+              payload: stitchedPayload ?? null,
               model: model || null,
               validationPassed: isStitchedValid,
               validationReport: newReport,
@@ -754,9 +786,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Build dimension status for billing and validation decisions
-      const receivedDimensions = stitchedPayload?.dimensions || validPayload?.dimensions || [];
       const { dimensionStatus, validationStatus: computedValidationStatus, billingStatus } = buildDimensionStatus(
-        receivedDimensions
+        stitchedPayload ?? validPayload
       );
 
       // Use computed validation status if available, fall back to finalStatus
