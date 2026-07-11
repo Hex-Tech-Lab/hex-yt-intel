@@ -742,9 +742,7 @@ export async function POST(request: NextRequest) {
               });
             } else {
               // Reconstruct markdown from validated stitched payload
-              if (stitchedPayload) {
-                stitchedMarkdown = reconstructMarkdown(stitchedPayload);
-              }
+              stitchedMarkdown = reconstructMarkdown(stitchedPayload);
             }
           }
         } catch (stitchErr) {
