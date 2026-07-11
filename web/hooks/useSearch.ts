@@ -69,7 +69,6 @@ const INITIAL_STATE: SearchState = {
 export function useSearch(options: UseSearchOptions = {}) {
   const {
     maxResults = 10,
-    threshold = 0.75,
     debounceMs = 500,
   } = options;
 
