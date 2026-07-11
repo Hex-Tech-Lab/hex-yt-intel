@@ -136,22 +136,19 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     sortedTokens.forEach((token) => {
       const weight = token.weight;
-      // Use logarithmic scaling to preserve frequency ratios in font size.
-      // This ensures that if frequency_a/frequency_b = 1.43, the font size
-      // ratio is also approximately 1.43, making the cloud proportional.
       const logMin = Math.log(Math.max(minTokenWeight, 1));
       const logMax = Math.log(Math.max(maxTokenWeight, 1));
       let normalizedWeight: number;
-      if (logMax > logMin) {
-        // Logarithmic normalization
+      const minSpread = 0.1;
+      if ((logMax - logMin) > minSpread) {
         normalizedWeight = (Math.log(Math.max(weight, 1)) - logMin) / (logMax - logMin);
       } else {
-        // Fallback to linear normalization when all weights are identical
         const linearMin = Math.max(minTokenWeight, 1);
         const linearMax = Math.max(maxTokenWeight, 1);
         normalizedWeight = linearMax > linearMin ? (Math.max(weight, 1) - linearMin) / (linearMax - linearMin) : 0.5;
       }
-      const fontSize = Math.max(11, Math.min(26, 11 + normalizedWeight * 15));
+      normalizedWeight = Math.max(0.2, Math.min(1, normalizedWeight));
+      const fontSize = Math.max(11, Math.min(24, 11 + normalizedWeight * 13));
       const text = token.label;
 
       let maxTextWidth = 0;
@@ -310,7 +307,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     <div
       ref={containerRef}
       className="w-full relative bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg border border-[var(--line-faint)] overflow-hidden"
-      style={{ height: 220 }}
+      style={{ height: 220, minHeight: 220, maxHeight: 220 }}
     >
       {graph.nodes.length > 0 ? (
         <canvas
