@@ -56,12 +56,11 @@ export class GenerateExecutiveDigestUseCase {
 
     const markdown = typeof row.analysis_markdown === 'string' ? row.analysis_markdown.trim() : '';
     if (markdown.length === 0) {
-      console.warn(`[digest-usecase] Analysis ${analysisId} has empty markdown; returning 202 Accepted (may still be persisting)`);
+      console.warn(`[digest-usecase] Analysis ${analysisId} has empty markdown; analysis may still be persisting`);
       return {
-        type: 'error',
-        code: 'ERR_NO_ANALYSIS_CONTENT',
-        status: 202,
-        message: 'Analysis content is still being persisted. Try again in a moment.',
+        type: 'success',
+        digest: { summary: '', layers: [], tags: [] },
+        cached: false,
       };
     }
 

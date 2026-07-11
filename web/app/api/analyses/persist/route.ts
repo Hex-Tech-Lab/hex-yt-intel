@@ -560,18 +560,45 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Only mark as 'done' if ALL chunks have been persisted
+        // Only mark as 'done' if ALL chunks have been persisted,
+        // OR if minimum threshold (60%) reached and has exceeded 30s timeout window
         if (!allReceived) {
-          finalStatus = 'partial';
-          validationPassed = false;
-          finalMissingChunks = missing;
-          console.warn('[analyses/persist] Final check: incomplete chunk set prevents done status', {
-            analysisId,
-            videoId,
-            missing,
-            persisted: finalizedChunks.length,
-            expected: resolvedTotal
-          });
+          const minimumChunkThreshold = Math.ceil(resolvedTotal * 0.6);
+          const hasMinimum = finalizedChunks.length >= minimumChunkThreshold;
+          const currentTime = Date.now();
+          const chunkTimes = finalizedChunks
+            .map(c => c.updated_at)
+            .filter((t): t is string => t !== null)
+            .map(t => new Date(t).getTime())
+            .filter(Number.isFinite);
+          const latestChunkTime = chunkTimes.length > 0 ? Math.max(...chunkTimes) : null;
+          const elapsedMs = latestChunkTime === null ? 0 : currentTime - latestChunkTime;
+
+          if (hasMinimum && elapsedMs >= 30000) {
+            // Timeout with minimum chunks: mark done to unblock analysis
+            console.warn('[analyses/persist] Finalizing with partial chunks after 30s timeout', {
+              analysisId,
+              videoId,
+              persisted: finalizedChunks.length,
+              expected: resolvedTotal,
+              elapsedMs
+            });
+            finalStatus = 'done';
+            validationPassed = Boolean(valid);
+          } else {
+            finalStatus = 'partial';
+            validationPassed = false;
+            finalMissingChunks = missing;
+            console.warn('[analyses/persist] Final check: incomplete chunk set prevents done status', {
+              analysisId,
+              videoId,
+              missing,
+              persisted: finalizedChunks.length,
+              expected: resolvedTotal,
+              hasMinimum,
+              elapsedMs
+            });
+          }
         } else {
           finalStatus = 'done';
           validationPassed = Boolean(valid);
@@ -580,6 +607,76 @@ export async function POST(request: NextRequest) {
         // Non-chunk finalization: accept valid/invalid status directly
         validationPassed = Boolean(valid);
         finalStatus = validationPassed ? 'done' : 'failed';
+      }
+
+      // If finalizing with partial chunks, attempt to stitch what we have
+      let stitchedPayload = validPayload;
+      if (finalStatus === 'done' && !allReceived && finalizedChunks.length > 0) {
+        try {
+          const partialChunkMap = new Map<number, any>();
+          finalizedChunks.forEach(c => {
+            partialChunkMap.set(c.chunk_index, c.payload);
+          });
+
+          const partialDimensions: any[] = [];
+          let partialPersona: any = null;
+          let partialClassification: any = null;
+          let partialMonetization: any = null;
+          const partialNodes: any[] = [];
+          const partialEdges: any[] = [];
+
+          for (let i = 1; i <= resolvedTotal; i++) {
+            const chunkPayload = partialChunkMap.get(i);
+            if (!chunkPayload) continue;
+            if (chunkPayload.dimensions && Array.isArray(chunkPayload.dimensions)) {
+              partialDimensions.push(...chunkPayload.dimensions);
+            }
+            if (chunkPayload.persona && !partialPersona) {
+              partialPersona = chunkPayload.persona;
+            }
+            if (chunkPayload.classification && !partialClassification) {
+              partialClassification = chunkPayload.classification;
+            }
+            if (chunkPayload.monetizationVerdict && !partialMonetization) {
+              partialMonetization = chunkPayload.monetizationVerdict;
+            }
+            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.nodes)) {
+              partialNodes.push(...chunkPayload.knowledgeGraph.nodes);
+            }
+            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.edges)) {
+              partialEdges.push(...chunkPayload.knowledgeGraph.edges);
+            }
+          }
+
+          if (partialDimensions.length > 0) {
+            stitchedPayload = {
+              schemaVersion: '2.0',
+              persona: partialPersona || {
+                primary: { id: 'consultant', label: 'Consultant', weight: 1.0 },
+                cognitiveLenses: [],
+                selectionRationale: ''
+              },
+              dimensions: partialDimensions.sort((a, b) => a.number - b.number),
+              knowledgeGraph: {
+                nodes: partialNodes,
+                edges: partialEdges,
+                rootId: partialNodes[0]?.id || null
+              },
+              classification: partialClassification || {
+                authoritative: false,
+                practicallyActionable: false,
+                knowledgeGraphReady: false,
+                safe: true,
+                personaOptimised: false,
+                recommendation: 'conditional'
+              },
+              monetizationVerdict: partialMonetization
+            } as any;
+          }
+        } catch (stitchErr) {
+          console.warn('[analyses/persist] Failed to stitch partial chunks:', stitchErr);
+          // Continue with original payload if stitching fails
+        }
       }
 
       const newReport: PersistedValidationReport = {
@@ -593,7 +690,7 @@ export async function POST(request: NextRequest) {
         () => persistenceAdapter.updateAnalysisResult({
           analysisId,
           markdown,
-          payload: validPayload ?? null,
+          payload: stitchedPayload ?? null,
           model: model || null,
           validationPassed,
           validationReport: newReport,

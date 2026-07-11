@@ -320,7 +320,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           className="block w-full h-full js-word-cloud-canvas"
         />
       ) : (
-        <div className="flex h-full items-center justify-center text-[var(--ink-muted)] font-mono text-xs italic">
+        <div className="flex h-full items-center justify-center text-[var(--ink-muted)] font-mono text-xs">
           No cloud structure yet
         </div>
       )}
