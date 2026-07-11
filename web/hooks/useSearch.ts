@@ -81,10 +81,10 @@ export function useSearch(options: UseSearchOptions = {}) {
 
   /**
    * Execute search query
-   * Sends to /api/analyses/search with current query and filters
+   * Sends to /api/search with current query
    */
   const performSearch = useCallback(
-    async (searchQuery: string, page: number = 1) => {
+    async (searchQuery: string) => {
       if (!searchQuery.trim()) {
         setState((prev) => ({
           ...prev,
@@ -135,7 +135,7 @@ export function useSearch(options: UseSearchOptions = {}) {
         }));
       }
     },
-    [maxResults, threshold, filters]
+    [maxResults]
   );
 
   /**
@@ -158,7 +158,7 @@ export function useSearch(options: UseSearchOptions = {}) {
     }
 
     debounceTimer.current = setTimeout(() => {
-      performSearch(query, 1);
+      performSearch(query);
     }, debounceMs);
 
     return () => {
@@ -169,20 +169,18 @@ export function useSearch(options: UseSearchOptions = {}) {
   }, [query, debounceMs, performSearch]);
 
   /**
-   * Pagination: move to next page
+   * Pagination: move to next page (no-op; endpoint returns single page only)
    */
   const nextPage = useCallback(() => {
-    const nextPageNum = state.currentPage + 1;
-    performSearch(query, nextPageNum);
-  }, [query, state.currentPage, performSearch]);
+    // /api/search returns single page results; pagination not supported
+  }, []);
 
   /**
-   * Pagination: move to previous page
+   * Pagination: move to previous page (no-op; endpoint returns single page only)
    */
   const prevPage = useCallback(() => {
-    const prevPageNum = Math.max(1, state.currentPage - 1);
-    performSearch(query, prevPageNum);
-  }, [query, state.currentPage, performSearch]);
+    // /api/search returns single page results; pagination not supported
+  }, []);
 
   /**
    * Clear search and results
@@ -201,22 +199,18 @@ export function useSearch(options: UseSearchOptions = {}) {
   }, []);
 
   /**
-   * Update filters and trigger new search
+   * Update filters (no-op; endpoint does not support filtering)
    */
   const updateFilters = useCallback((newFilters: Partial<SearchFilters>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
-    // Search will be triggered by the effect watching filters
   }, []);
 
   /**
-   * Clear all filters and re-search
+   * Clear all filters
    */
   const clearFilters = useCallback(() => {
     setFilters({});
-    if (query.trim()) {
-      setQuery(query);
-    }
-  }, [query]);
+  }, []);
 
   return {
     // Query state
