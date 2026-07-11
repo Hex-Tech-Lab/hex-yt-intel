@@ -33,12 +33,16 @@ export class DeduplicateGraphUseCase {
     if (result.deletedNodeIds && result.deletedNodeIds.length > 0) {
       const deletedSet = new Set(result.deletedNodeIds);
       const cleanedEdges = graph.relations.filter(edge => {
-        const sourceDeleted = deletedSet.has(edge.source_entity_id ?? edge.source ?? '');
-        const targetDeleted = deletedSet.has(edge.target_entity_id ?? edge.target ?? '');
+        // Normalize edge endpoints: handle both string IDs and possible object references
+        const source = typeof edge.source === 'string' ? edge.source : edge.source?.id ?? '';
+        const target = typeof edge.target === 'string' ? edge.target : edge.target?.id ?? '';
+
+        const sourceDeleted = deletedSet.has(source);
+        const targetDeleted = deletedSet.has(target);
         if (sourceDeleted || targetDeleted) {
           console.log(`[DeduplicateGraphUseCase] Cascading edge deletion for removed node`, {
-            source: edge.source_entity_id ?? edge.source,
-            target: edge.target_entity_id ?? edge.target,
+            source,
+            target,
             reason: `${sourceDeleted ? 'source' : 'target'} node was deduplicated`,
           });
         }
