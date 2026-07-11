@@ -538,6 +538,9 @@ export async function POST(request: NextRequest) {
       let finalMissingChunks: number[] = [];
       const expectsChunkSet = totalChunks !== undefined;
 
+      let finalizedChunks: any[] = [];
+      let allReceived = true;
+
       if (isInterrupted) {
         finalStatus = 'interrupted';
         validationPassed = false;
@@ -548,10 +551,10 @@ export async function POST(request: NextRequest) {
           2
         );
         const FINAL_STATUS = 'completed';
-        const finalizedChunks = storedChunks ? storedChunks.filter(c => c.status === FINAL_STATUS) : [];
+        finalizedChunks = storedChunks ? storedChunks.filter(c => c.status === FINAL_STATUS) : [];
         const receivedIndices = new Set(finalizedChunks.map(c => c.chunk_index));
 
-        let allReceived = true;
+        allReceived = true;
         const missing: number[] = [];
         for (let i = 1; i <= resolvedTotal; i++) {
           if (!receivedIndices.has(i)) {
@@ -650,6 +653,9 @@ export async function POST(request: NextRequest) {
           }
 
           if (partialDimensions.length > 0) {
+            const validDimensions = partialDimensions.filter(
+              d => d && typeof d.number === 'number' && !isNaN(d.number)
+            );
             stitchedPayload = {
               schemaVersion: '2.0',
               persona: partialPersona || {
@@ -657,7 +663,7 @@ export async function POST(request: NextRequest) {
                 cognitiveLenses: [],
                 selectionRationale: ''
               },
-              dimensions: partialDimensions.sort((a, b) => a.number - b.number),
+              dimensions: validDimensions.sort((a, b) => a.number - b.number),
               knowledgeGraph: {
                 nodes: partialNodes,
                 edges: partialEdges,
@@ -673,11 +679,24 @@ export async function POST(request: NextRequest) {
               },
               monetizationVerdict: partialMonetization
             } as any;
-            // Reconstruct markdown from stitched payload
-            stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+            // Validate stitched payload before using it
+            const parseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
+            if (!parseResult.success) {
+              // Validation failed; continue with original payload
+              console.warn('[analyses/persist] Stitched payload failed schema validation', {
+                analysisId,
+                videoId,
+                errors: parseResult.error.issues.map(i => i.message)
+              });
+            } else {
+              // Reconstruct markdown from validated stitched payload
+              stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+            }
           }
         } catch (stitchErr) {
-          console.warn('[analyses/persist] Failed to stitch partial chunks:', stitchErr);
+          const message = stitchErr instanceof Error ? stitchErr.message : String(stitchErr);
+          Sentry.captureException(stitchErr, { contexts: { persist: { phase: 'stitch_partial_chunks', analysisId } } });
+          console.error('[analyses/persist]', { message, phase: 'stitch_partial_chunks' });
           // Continue with original payload if stitching fails
         }
       }
