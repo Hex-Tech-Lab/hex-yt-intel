@@ -628,3 +628,31 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
   
   **Commit**: 261b990 (latest on main after merge)
   **Status**: ✅ COMPLETE
+
+- [2026-07-11T03:40:00+03:00] [Claude-Haiku] [IN_PROGRESS] Task #14: Security Audit — IDOR & Access Control Sweep
+  **Audit Scope**: Comprehensive review of all API routes for IDOR vulnerabilities and access control enforcement
+  
+  **Routes Audited**:
+  ✅ /api/analyses/[id] — uses verifyResourceOwnership (secure)
+  ✅ /api/analyses/[id]/graph — uses verifyResourceOwnership (secure)
+  ✅ /api/analyses/[id]/export — checks user_id ownership (secure)
+  ✅ /api/analyses/[id]/share — checks user_id ownership (secure)
+  ✅ /api/chat/conversations — checks analysisId ownership with 404 response (secure)
+  ✅ /api/chat/conversations/[id]/messages — uses verifyChatOwnership (secure)
+  ✅ /api/search — checks userId scoping, filters results to user's own analyses (secure)
+  ✅ /api/billing/checkout — checks userId throughout (secure)
+  
+  **Vulnerabilities Found**: 1 low-risk finding
+  - Chat conversation PATCH/DELETE lacked explicit ownership checks (relied on RLS only)
+  
+  **Fixes Applied**:
+  1. Commit 9b863d9: Added explicit user_id ownership verification to PATCH and DELETE operations
+     on /api/chat/conversations/[id] for defense-in-depth before RLS layer
+  
+  **Database Security Verified**:
+  ✅ RLS policies in place for kg_entities, kg_relations, analysis_chunks
+  ✅ Service-role functions (reserve_analysis_quota) properly restricted
+  ✅ Responses return 404 (not 403) when access denied, preventing existence leakage
+  
+  **Status**: Audit complete, all findings remediated
+  **Recommendation**: Continue with next security item (mobile nav / performance optimizations)
