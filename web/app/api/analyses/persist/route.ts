@@ -539,7 +539,7 @@ export async function POST(request: NextRequest) {
       const expectsChunkSet = totalChunks !== undefined;
 
       let finalizedChunks: any[] = [];
-      let allReceived = true;
+      let allReceived: boolean;
 
       if (isInterrupted) {
         finalStatus = 'interrupted';
