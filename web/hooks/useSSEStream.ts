@@ -58,7 +58,7 @@ export function useSSEStream() {
     const videoId = extractTelemetryId(url);
     // Merge with existing metadata (preserves eagerly-fetched data from useEagerVideoMetadata)
     const prev = useAnalysisStore.getState().videoMetadata;
-    setVideoMetadata({
+    const preservedMetadata = {
       videoId,
       title: prev?.videoId === videoId ? (prev.title || '') : '',
       channelTitle: prev?.videoId === videoId ? (prev.channelTitle || '') : '',
@@ -69,7 +69,7 @@ export function useSSEStream() {
       likeCount: prev?.videoId === videoId ? (prev.likeCount || '') : '',
       commentCount: prev?.videoId === videoId ? (prev.commentCount || '') : '',
       thumbnailUrl: prev?.videoId === videoId ? prev.thumbnailUrl : null,
-    });
+    };
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
 
     const myController = new AbortController();
@@ -77,7 +77,9 @@ export function useSSEStream() {
     const currentSignal = myController.signal;
 
     // Set immediate status to update UI instantly without frame delays
+    // Clear analysis but preserve video metadata to prevent player unmount
     clearAnalysis();
+    setVideoMetadata(preservedMetadata);
     resetSynthesis();
     useChatStore.setState({ activeId: null });
     setIsLoading(true);
