@@ -54,7 +54,7 @@ export function KnowledgeGraphCanvas({
   const fgRef = useRef<any>(null);
   const [size, setSize] = useState({ w: 600, h: height ?? (compact ? 280 : 520) });
   const hoverIdRef = useRef<string | null>(null);
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Measure container to size the canvas responsively with debounced ResizeObserver
   // to avoid excessive re-renders during window resize.
@@ -329,7 +329,7 @@ export function KnowledgeGraphCanvas({
 
             const label = node.label;
             const maxWidth = (compact ? 50 : 70) / scale;
-            const lineHeight = (compact ? 9 : 11) / scale;
+            const lineHeight = clampedFontSize * 1.2;
 
             // Improved text wrapping with better measurement
             const words = label.split(' ').filter((w) => w.length > 0);
