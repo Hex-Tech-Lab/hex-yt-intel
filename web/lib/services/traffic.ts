@@ -30,13 +30,13 @@ export async function getUserTier(userId: string): Promise<Tier> {
     const profile = await persistence.getUserProfile(userId);
 
     if (!profile) {
-      console.warn(`[traffic] Failed to get tier for user ${userId}: profile not found`);
+      console.warn(`[traffic] Failed to get tier: profile not found`);
       return 'free';
     }
 
     const tier = profile.tier as Tier;
     if (!RATE_LIMITS[tier]) {
-      console.warn(`[traffic] Unknown tier for user ${userId}: ${tier}, defaulting to free`);
+      console.warn(`[traffic] Unknown tier: ${tier}, defaulting to free`);
       return 'free';
     }
     return tier;

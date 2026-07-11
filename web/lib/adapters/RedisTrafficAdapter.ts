@@ -157,7 +157,7 @@ export class RedisTrafficAdapter implements TrafficGuardPort {
 
       return { allowed, status };
     } catch (error) {
-      console.error(`[RedisTrafficAdapter] Sliding window check failed for user ${userId}:`, error);
+      console.error(`[RedisTrafficAdapter] Sliding window check failed:`, error);
       Sentry.captureException(error, {
         level: 'error',
         contexts: { rateLimit: { userId, endpoint, tier, algorithm: 'sliding-window', window: '60s' } },
@@ -200,7 +200,7 @@ export class RedisTrafficAdapter implements TrafficGuardPort {
         requestTime: count,
       };
     } catch (error) {
-      console.error(`[RedisTrafficAdapter] getRateLimitStatus failed for user ${userId}:`, error);
+      console.error(`[RedisTrafficAdapter] getRateLimitStatus failed:`, error);
       Sentry.captureException(error, {
         contexts: { rateLimitStatus: { userId, endpoint, tier } },
         tags: { component: 'rate-limiter-status', severity: 'medium' },
