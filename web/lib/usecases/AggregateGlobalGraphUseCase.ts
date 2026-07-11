@@ -57,7 +57,7 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
   }
 
   // Enhance merged nodes with dimensional provenance (Recall pattern)
-  for (const [label, node] of nodeMapByLabel) {
+  for (const node of nodeMapByLabel.values()) {
     const mergedId = node.id;
     (node as any).originDimensions = originTracking.get(mergedId) || [];
     (node as any).sourceAnalysisIds = Array.from(sourceTracking.get(mergedId) || []);
