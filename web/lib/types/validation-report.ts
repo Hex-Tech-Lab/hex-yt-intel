@@ -1,4 +1,4 @@
-export type ValidationReportStatus = 'done' | 'partial' | 'failed' | 'processing';
+export type ValidationReportStatus = 'done' | 'partial' | 'failed' | 'error' | 'processing';
 
 export interface PersistedValidationReport {
   status?: ValidationReportStatus;
