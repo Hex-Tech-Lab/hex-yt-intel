@@ -63,7 +63,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Idempotency: check if this exact assistant message already exists in this conversation.
-    // Use content + signature hash as idempotent key to prevent duplicate messages on worker retry.
+    // Compares content exactly to prevent duplicate messages on worker retry.
+    // Note: This catches exact duplicates only; semantically equivalent text with different
+    // formatting will create separate messages (acceptable trade-off for simplicity).
     const messages = await persistenceAdapter.getMessages({ conversationId });
     const assistantMessages = messages.filter((m) => m.role === 'assistant');
     const existingReply = assistantMessages.find((m) => m.content === content);
