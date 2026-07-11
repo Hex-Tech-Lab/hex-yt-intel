@@ -22,7 +22,7 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
     for (const node of analysis.nodes) {
       const existing = nodeMapByLabel.get(node.label);
       if (existing) {
-        // Node with same label exists, merge it and track origin
+        // Node with same label exists, merge it and map to existing node's ID
         mergeNode(existing, node);
         idMapping.set(node.id, existing.id);
         // Track dimensional origin
@@ -40,9 +40,9 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
         }
         sourceTracking.get(mergedId)!.add(analysis.id);
       } else {
-        // First time seeing this label, create merged node with stable ID
-        const mergedId = `merged-node-${nextMergedId++}`;
-        const mergedNode = { ...node, id: mergedId };
+        // First time seeing this label, use original node ID as merged ID
+        const mergedId = node.id;
+        const mergedNode = { ...node };
         nodeMapByLabel.set(node.label, mergedNode);
         idMapping.set(node.id, mergedId);
         // Initialize origin tracking
