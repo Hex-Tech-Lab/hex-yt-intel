@@ -16,13 +16,14 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
   const idMapping = new Map<string, string>();
   const originTracking = new Map<string, { analysisId: string; dimension: number; weight: number }[]>();
   const sourceTracking = new Map<string, Set<string>>();
-  let nextMergedId = 0;
 
   for (const analysis of analyses) {
     for (const node of analysis.nodes) {
-      const existing = nodeMapByLabel.get(node.label);
+      // Merge key includes both label and dimension to prevent collapsing unrelated concepts
+      const mergeKey = `${node.label}__dim${node.dimension}`;
+      const existing = nodeMapByLabel.get(mergeKey);
       if (existing) {
-        // Node with same label exists, merge it and map to existing node's ID
+        // Node with same label and dimension exists, merge it and map to existing node's ID
         mergeNode(existing, node);
         idMapping.set(node.id, existing.id);
         // Track dimensional origin
@@ -40,10 +41,10 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
         }
         sourceTracking.get(mergedId)!.add(analysis.id);
       } else {
-        // First time seeing this label, use original node ID as merged ID
+        // First time seeing this label+dimension combination, use original node ID as merged ID
         const mergedId = node.id;
         const mergedNode = { ...node };
-        nodeMapByLabel.set(node.label, mergedNode);
+        nodeMapByLabel.set(mergeKey, mergedNode);
         idMapping.set(node.id, mergedId);
         // Initialize origin tracking
         originTracking.set(mergedId, [{
