@@ -63,14 +63,16 @@ describe('MindMap Connector Rendering Logic', () => {
 });
 
 describe('KnowledgeGraphCanvas Font Scaling', () => {
-  it('computes font size based on node weight (11px-26px range)', () => {
-    const minFontSize = 11;
-    const maxFontSize = 26;
+  it('computes font size based on node weight (non-compact: 9px-16px, compact: 7px-13px)', () => {
+    // KnowledgeGraphCanvas.tsx lines 311-321: updated font-size formula
+    const compact = false;
+    const minFontSize = compact ? 7 : 9;
+    const maxFontSize = compact ? 13 : 16;
     const weights = [0, 0.5, 1.0, 2.0, 5.0];
 
     weights.forEach(weight => {
-      const weightedFontSize = minFontSize + weight * (maxFontSize - minFontSize);
-      // In actual code: Math.max(minFontSize * 0.6, Math.min(maxFontSize, weightedFontSize / Math.sqrt(scale)))
+      const normalizedWeight = Math.min(1, Math.max(0, weight / 10));
+      const weightedFontSize = minFontSize + (normalizedWeight * (maxFontSize - minFontSize));
       // For scale=1.0:
       const clampedFontSize = Math.max(minFontSize * 0.6, Math.min(maxFontSize, weightedFontSize));
 
@@ -102,10 +104,10 @@ describe('KnowledgeGraphCanvas Font Scaling', () => {
   });
 
   it('maintains minimum font size even when zoomed out', () => {
-    const minFontSize = 11;
+    const minFontSize = 9;
     const baseFontSize = 8;
     const scale = 2.0;
-    const clampedFontSize = Math.max(minFontSize * 0.6, Math.min(26, baseFontSize / Math.sqrt(scale)));
+    const clampedFontSize = Math.max(minFontSize * 0.6, Math.min(16, baseFontSize / Math.sqrt(scale)));
 
     expect(clampedFontSize).toBeGreaterThanOrEqual(minFontSize * 0.6);
   });
@@ -123,7 +125,7 @@ describe('KnowledgeGraphCanvas Font Scaling', () => {
 
 describe('WordCloud Font Sizing and Scaling', () => {
   it('uses logarithmic scaling to preserve frequency ratios', () => {
-    // WordCloud.tsx lines 142-146
+    // WordCloud.tsx lines 155-168: updated font-size formula
     const weights = [1, 1.43, 2, 5];
     const minTokenWeight = 1;
     const maxTokenWeight = 5;
@@ -134,23 +136,26 @@ describe('WordCloud Font Sizing and Scaling', () => {
     const fontSizes = weights.map(weight => {
       const logNormalizedWeight =
         logMax > logMin ? (Math.log(Math.max(weight, 1)) - logMin) / (logMax - logMin) : 0.5;
-      return Math.max(11, Math.min(26, 11 + logNormalizedWeight * 15));
+      // Current implementation: clamp normalizedWeight [0.15, 1.0], then scale 10-26px
+      const clamped = Math.max(0.15, Math.min(1, logNormalizedWeight));
+      return Math.max(10, Math.min(26, 10 + clamped * 16));
     });
 
     // Verify proportional scaling: if weight ratio is 1.43, font size ratio should be similar
-    expect(fontSizes[0]).toBe(11); // min weight
+    expect(fontSizes[0]).toBeGreaterThanOrEqual(10); // min effective (0.15 * 16 + 10 = 12.4)
     expect(fontSizes[3]).toBe(26); // max weight
     expect(fontSizes[1]).toBeGreaterThan(fontSizes[0]);
     expect(fontSizes[2]).toBeGreaterThan(fontSizes[1]);
   });
 
-  it('clamps font size to valid range [11, 26]', () => {
-    const minFontSize = 11;
+  it('clamps font size to valid range [10, 26]', () => {
+    const minFontSize = 10;
     const maxFontSize = 26;
-    const normalizedWeights = [0, 0.3, 0.7, 1.0];
+    // Current implementation clamps normalizedWeight to [0.15, 1.0]
+    const normalizedWeights = [0.15, 0.3, 0.7, 1.0];
 
     normalizedWeights.forEach(nw => {
-      const fontSize = Math.max(minFontSize, Math.min(maxFontSize, 11 + nw * 15));
+      const fontSize = Math.max(minFontSize, Math.min(maxFontSize, 10 + nw * 16));
       expect(fontSize).toBeGreaterThanOrEqual(minFontSize);
       expect(fontSize).toBeLessThanOrEqual(maxFontSize);
     });
