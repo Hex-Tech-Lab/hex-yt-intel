@@ -14,8 +14,62 @@ import * as Sentry from '@sentry/nextjs';
 import { PersistedValidationReport, ValidationReportStatus, isPersistedValidationReport } from '@/lib/types/validation-report';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { z } from 'zod';
-import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
+import { TOTAL_DIMENSIONS, TOTAL_STREAMS, DIMENSION_CONFIGS } from '@/lib/config/synthesis';
+import type { DimensionStatus, BillingStatus } from '@/lib/types/validation-report';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
+
+/**
+ * Build dimension status array comparing received dimensions to expected total.
+ * Determines validation and billing status based on dimension completeness.
+ */
+function buildDimensionStatus(
+  receivedDimensions: Array<{ number: number }>,
+  failedDimensions?: number[]
+): {
+  dimensionStatus: DimensionStatus[];
+  validationStatus: ValidationReportStatus;
+  billingStatus: BillingStatus;
+  completeness: number;
+} {
+  const receivedSet = new Set(receivedDimensions.map(d => d.number));
+  const failedSet = new Set(failedDimensions || []);
+  const dimensionStatus: DimensionStatus[] = [];
+
+  // Build status for each expected dimension
+  for (let i = 1; i <= TOTAL_DIMENSIONS; i++) {
+    if (receivedSet.has(i)) {
+      dimensionStatus.push({
+        dimension: i,
+        status: 'done',
+        completedAt: new Date().toISOString(),
+      });
+    } else if (failedSet.has(i)) {
+      dimensionStatus.push({
+        dimension: i,
+        status: 'failed',
+        error: 'Failed to generate dimension',
+      });
+    } else {
+      dimensionStatus.push({
+        dimension: i,
+        status: 'timeout',
+        error: 'Timeout waiting for dimension',
+      });
+    }
+  }
+
+  const completedCount = dimensionStatus.filter(d => d.status === 'done').length;
+  const completeness = completedCount / TOTAL_DIMENSIONS;
+
+  // Billing rule: ONLY chargeable if 100% complete
+  const billingStatus: BillingStatus = completedCount === TOTAL_DIMENSIONS ? 'chargeable' : 'failed';
+
+  // Validation status reflects actual completeness
+  const validationStatus: ValidationReportStatus =
+    completedCount === TOTAL_DIMENSIONS ? 'done' : completedCount > 0 ? 'partial' : 'failed';
+
+  return { dimensionStatus, validationStatus, billingStatus, completeness };
+}
 
 /** Calculate exponential backoff delay with jitter to prevent thundering herd on retry. */
 const calculateBackoffDelay = (attempt: number): number => {
@@ -701,11 +755,23 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Build dimension status for billing and validation decisions
+      const receivedDimensions = stitchedPayload?.dimensions || validPayload?.dimensions || [];
+      const { dimensionStatus, validationStatus: computedValidationStatus, billingStatus } = buildDimensionStatus(
+        receivedDimensions
+      );
+
+      // Use computed validation status if available, fall back to finalStatus
+      const reportValidationStatus = computedValidationStatus || finalStatus;
+
       const newReport: PersistedValidationReport = {
         ...priorReport,
-        status: finalStatus,
+        validation_status: reportValidationStatus,
+        status: reportValidationStatus, // Legacy field for backward compat
+        billing_status: billingStatus,
+        dimension_status: dimensionStatus,
         model_used: model || null,
-        valid: finalStatus === 'done' && validationPassed,
+        valid: reportValidationStatus === 'done' && validationPassed,
       };
 
       await retryWithBackoff(
