@@ -712,3 +712,39 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 #### Timestamp
 - [2026-07-11T22:10:00+00:00] [System Completion] Task #16 merged to main, production live, all gates passed
 
+---
+
+## CRITICAL INCIDENT: Production Stream Authentication Failure (2026-07-11T22:15:00Z)
+
+- [2026-07-11T22:15:00+00:00] [Claude-Haiku] [IN_PROGRESS] P0 Incident: Worker Stream Auth Failure
+  **Issue**: All analysis synthesis failing with `401 invalid_signature` on Cloudflare worker
+  **Impact**: Production outage — no new analyses can be generated
+  **Root Cause**: HMAC secret mismatch between Vercel (signer) and Cloudflare Worker (verifier)
+  **Database Issue**: `transcript_hash` column migration missing from production
+  
+  **Fixes Applied**:
+  1. ✅ Applied transcript_hash column migration via Supabase MCP (was missing)
+  2. ⏳ Documented comprehensive RCA with resolution steps (docs/incidents/INCIDENT_2026-07-11_WORKER_AUTH_FAILURE.md)
+  3. ⏳ PENDING: Secret sync between Vercel and Cloudflare (manual deployment step required)
+  
+  **Resolution Path**:
+  - Verify STREAM_HMAC_SECRET is set identically on both Vercel prod and Cloudflare worker
+  - Use secretFingerprint comparison (logged on verification failure) to validate sync
+  - Redeploy both services with matching secrets
+  
+  **Verification Commands**:
+  ```bash
+  # Check Vercel
+  vercel env ls --environment production | grep STREAM_HMAC_SECRET
+  
+  # Check Cloudflare (in logs)
+  # Search Vercel logs for: "stream signature rejected" → keyFpPrimary value
+  # Verify keyFpPrimary on worker matches keyFpPrimary on Vercel
+  
+  # Sync secrets
+  wrangler secret put STREAM_HMAC_SECRET --env production
+  # (Use exact same value from Vercel environment)
+  ```
+  
+  **Status**: Documented with clear next steps; awaiting manual deployment verification
+
