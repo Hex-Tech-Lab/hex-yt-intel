@@ -5,6 +5,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 
+// Database row schema for validation before persisting
+const ChatConversationUpdateSchema = z.object({
+  title: z.string().max(120).optional(),
+  analysis_id: z.string().uuid().nullable().optional(),
+}).strict();
+
 /** PATCH /api/chat/conversations/[id] — rename a thread. */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -44,7 +50,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Payload must contain title or analysisId' }, { status: 400 });
     }
 
-    const { error } = await supabase.from('chat_conversations').update(updates).eq('id', id).eq('user_id', user.id);
+    // Validate database row before persisting
+    const validated = ChatConversationUpdateSchema.parse(updates);
+
+    const { error } = await supabase.from('chat_conversations').update(validated).eq('id', id).eq('user_id', user.id);
     if (error) {
       console.error('[chat] update conversation failed:', error.message);
       return NextResponse.json({ error: 'Failed to update conversation' }, { status: 500 });
@@ -75,7 +84,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
-    const { error } = await supabase.from('chat_conversations').delete().eq('id', id).eq('user_id', user.id);
+    // Validate ID format before database operation
+    const idSchema = z.string().uuid();
+    const validatedId = idSchema.parse(id);
+
+    const { error } = await supabase.from('chat_conversations').delete().eq('id', validatedId).eq('user_id', user.id);
     if (error) {
       console.error('[chat] delete conversation failed:', error.message);
       return NextResponse.json({ error: 'Failed to delete conversation' }, { status: 500 });

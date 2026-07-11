@@ -37,3 +37,4 @@ docs/for_sharing/
 
 # Dataset assets (local-only calibration — never commit large CSV corpora)
 scripts/quality-engine/calibration/data/
+.qa-intel/baseline.json

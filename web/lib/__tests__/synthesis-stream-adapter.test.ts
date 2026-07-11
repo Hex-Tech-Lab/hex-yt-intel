@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SynthesisStreamAdapter } from '@lib/adapters/synthesis-stream-adapter';
+import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 

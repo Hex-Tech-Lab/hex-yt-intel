@@ -116,7 +116,7 @@ describe('Path A — Single-Video Universe', () => {
         tier: 'pro',
         timezone: 'UTC',
         email: 'user@example.com',
-        persona: 'p3',
+        persona: 'consultant',
         forceRefresh: true,
       });
       expect(result.success).toBe(true);
@@ -249,7 +249,7 @@ describe('Path A — Single-Video Universe', () => {
       userId: 'user-3',
       tier: 'enterprise',
       timezone: 'Europe/London',
-      persona: 'p1' as const,
+      persona: 'creator' as const,
       forceRefresh: true,
     };
 

@@ -74,10 +74,9 @@ export async function GET(request: NextRequest) {
       const metadataPayload = validationReport.metadata || (existingAnalysis as any).metadata || {};
 
       // NOTE: `analyses` has no `status` column — completeness lives in
-      // `billing_status`. Selecting the phantom `status` previously errored the
-      // whole query (swallowed by the catch → null), so the pre-flight always
-      // reported "none" and auto-restore never fired: every refresh lost the dims.
-      if (existingAnalysis.billing_status === 'completed') {
+      // `billing_status`. Analysis is complete when billing_status is 'chargeable' (full)
+      // or 'charged' (already billed). See ADR 006 for billing status semantics.
+      if (existingAnalysis.billing_status === 'chargeable' || existingAnalysis.billing_status === 'charged') {
         return NextResponse.json({
           exists: true,
           status: 'complete',
