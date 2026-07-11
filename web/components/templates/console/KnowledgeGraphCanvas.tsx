@@ -159,7 +159,7 @@ export function KnowledgeGraphCanvas({
           justifyContent: 'center',
         }}
       >
-        <div style={{ textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+        <div style={{ textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: '12px', fontStyle: 'italic' }}>
           No knowledge graph data
         </div>
       </div>
