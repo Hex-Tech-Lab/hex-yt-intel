@@ -364,6 +364,12 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
+  /**
+   * Fetch analysis metadata for persistence operations.
+   * Used by persist endpoint to verify analysis ownership and retrieve report.
+   * @param params - Query parameters: analysisId, videoId, and optional transcript inclusion
+   * @returns Analysis metadata or null if not found
+   */
   static async findAnalysisForPersist(params: {
     analysisId: string;
     videoId: string;
