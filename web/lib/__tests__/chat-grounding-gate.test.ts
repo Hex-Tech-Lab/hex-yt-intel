@@ -30,8 +30,9 @@ const makeDeps = (opts: { analysisId: string | null; grounding: Grounding }) => 
   } as never;
   const modelResolution = { resolveModels: () => Promise.resolve(['model-a']) } as never;
   const tokenCrypto = { signChatToken: () => Promise.resolve({ sig: 'deadbeef', exp: Date.now() + 60_000 }) } as never;
+  const knowledgeHistory = { loadUserKnowledgeContext: () => Promise.resolve([]) } as never;
   return {
-    useCase: new ProcessChatMessageUseCase(chatPersistence, modelResolution, tokenCrypto),
+    useCase: new ProcessChatMessageUseCase(chatPersistence, modelResolution, tokenCrypto, knowledgeHistory),
     getAssistant: () => assistantContent,
     getGroundingArgs: () => groundingArgs,
   };
