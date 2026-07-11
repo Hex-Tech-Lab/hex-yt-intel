@@ -130,6 +130,11 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     }
 
     // 3️⃣ Update the primary analysis row
+    // billing_status should come from validationReport if available (set by persist route),
+    // fallback to 'chargeable' if validation passes, otherwise 'failed'
+    const billingStatus = (params.validationReport as any)?.billing_status ||
+      (params.validationPassed ? 'chargeable' : 'failed');
+
     const { error: analysisError } = await service
       .from('analyses')
       .update({
@@ -138,7 +143,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         model_used: params.model || 'edge-stream',
         validation_passed: params.validationPassed,
         validation_report: params.validationReport,
-        billing_status: 'completed',
+        billing_status: billingStatus,
         updated_at: new Date().toISOString(),
       })
       .eq('id', params.analysisId);

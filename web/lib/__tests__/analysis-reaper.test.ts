@@ -1,7 +1,8 @@
 /**
  * Analysis Reaper — salvage-vs-fail decision.
  * The reaper settles stuck `processing` rows: rows with enough generated
- * dimensions are salvaged to `completed`, the rest are `failed`.
+ * dimensions are salvaged to `chargeable`, the rest are `failed`.
+ * (billing_status enum: pending | chargeable | charged | failed)
  */
 import { describe, it, expect } from 'vitest';
 import { decideReapOutcome, buildSettlePatch, MIN_SALVAGEABLE_DIMENSIONS } from '@/lib/services/analysis-reaper';
@@ -30,13 +31,13 @@ describe('decideReapOutcome', () => {
     const md = markdownWithDimensions(MIN_SALVAGEABLE_DIMENSIONS);
     const { outcome, dimensionCount } = decideReapOutcome(md);
     expect(dimensionCount).toBe(MIN_SALVAGEABLE_DIMENSIONS);
-    expect(outcome).toBe('completed');
+    expect(outcome).toBe('chargeable');
   });
 
   it('salvages a full 11-dimension analysis', () => {
     const { outcome, dimensionCount } = decideReapOutcome(markdownWithDimensions(11));
     expect(dimensionCount).toBe(11);
-    expect(outcome).toBe('completed');
+    expect(outcome).toBe('chargeable');
   });
 });
 
@@ -54,15 +55,16 @@ describe('buildSettlePatch', () => {
   it('marks a full analysis complete + validation_passed', () => {
     const md = Array.from({ length: 11 }, (_, i) => `### DIMENSION ${i + 1}: X\n\nbody`).join('\n\n');
     const { outcome, patch } = buildSettlePatch(md, null, nowIso);
-    expect(outcome).toBe('completed');
+    expect(outcome).toBe('chargeable');
+    expect(patch.billing_status).toBe('chargeable');
     expect(patch.validation_passed).toBe(true);
-    expect(patch.validation_report.status).toBe('complete');
+    expect(patch.validation_report.status).toBe('done');
   });
 
-  it('marks a usable partial completed-but-not-passed (status partial)', () => {
+  it('marks a usable partial chargeable-but-not-passed (status partial)', () => {
     const md = Array.from({ length: MIN_SALVAGEABLE_DIMENSIONS }, (_, i) => `### DIMENSION ${i + 1}: X\n\nbody`).join('\n\n');
     const { patch } = buildSettlePatch(md, null, nowIso);
-    expect(patch.billing_status).toBe('completed');
+    expect(patch.billing_status).toBe('chargeable');
     expect(patch.validation_passed).toBe(false);
     expect(patch.validation_report.status).toBe('partial');
   });

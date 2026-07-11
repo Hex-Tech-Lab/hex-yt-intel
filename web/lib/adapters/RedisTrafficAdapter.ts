@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 import { executeRedisScript } from '@/lib/redis';
 import type { QuotaGateResult, TrafficGuardPort, RateLimitStatus } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
-import { RATE_LIMITS } from '@lib/constants/rate-limits';
+import { RATE_LIMITS } from '@/lib/constants/rate-limits';
 import { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
 
 /**
@@ -157,7 +157,7 @@ export class RedisTrafficAdapter implements TrafficGuardPort {
 
       return { allowed, status };
     } catch (error) {
-      console.error(`[RedisTrafficAdapter] Sliding window check failed for user ${userId}:`, error);
+      console.error(`[RedisTrafficAdapter] Sliding window check failed:`, error);
       Sentry.captureException(error, {
         level: 'error',
         contexts: { rateLimit: { userId, endpoint, tier, algorithm: 'sliding-window', window: '60s' } },
@@ -200,7 +200,7 @@ export class RedisTrafficAdapter implements TrafficGuardPort {
         requestTime: count,
       };
     } catch (error) {
-      console.error(`[RedisTrafficAdapter] getRateLimitStatus failed for user ${userId}:`, error);
+      console.error(`[RedisTrafficAdapter] getRateLimitStatus failed:`, error);
       Sentry.captureException(error, {
         contexts: { rateLimitStatus: { userId, endpoint, tier } },
         tags: { component: 'rate-limiter-status', severity: 'medium' },

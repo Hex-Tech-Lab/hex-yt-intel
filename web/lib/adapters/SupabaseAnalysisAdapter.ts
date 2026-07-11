@@ -222,13 +222,16 @@ export class SupabaseAnalysisAdapter {
     validationPassed: boolean;
   }): Promise<void> {
     const service = getSupabaseServiceClient();
+    // Set billing_status based on validation result
+    // 'chargeable' if valid analysis, 'failed' otherwise
+    const billingStatus = params.validationPassed ? 'chargeable' : 'failed';
     const { error } = await service
       .from('analyses')
       .update({
         analysis_payload: params.analysisPayload as Record<string, unknown> | null,
         analysis_markdown: params.analysisMarkdown,
         validation_passed: params.validationPassed,
-        billing_status: 'completed',
+        billing_status: billingStatus,
       })
       .eq('id', params.analysisId);
 
@@ -275,13 +278,22 @@ export class SupabaseAnalysisAdapter {
         title: analysis.title || 'Untitled Analysis',
         createdAt: analysis.created_at,
         status: (() => {
-          const statusMap: Record<string, 'completed' | 'processing' | 'incomplete'> = {
-            completed: 'completed',
-            done: 'completed',
-            processing: 'processing',
-          };
-          if (analysis.billing_status === 'completed' || analysis.validation_passed) return 'completed';
-          return statusMap[analysis.validation_report?.status] ?? 'incomplete';
+          // Check if analysis is complete based on billing_status
+          // Valid billing_status values: pending | chargeable | charged | failed
+          if (analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged') {
+            return 'completed';
+          }
+          if (analysis.billing_status === 'processing') {
+            return 'processing';
+          }
+          if (analysis.billing_status === 'failed') {
+            return 'incomplete';
+          }
+          // Fallback to validation_report status for backward compatibility
+          if (analysis.validation_report?.status === 'done') {
+            return 'completed';
+          }
+          return 'incomplete';
         })(),
       }));
     } catch (error: any) {
