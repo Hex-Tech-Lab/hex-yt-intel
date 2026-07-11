@@ -1,5 +1,7 @@
+export type ValidationReportStatus = 'done' | 'partial' | 'failed' | 'processing';
+
 export interface PersistedValidationReport {
-  status?: string;
+  status?: ValidationReportStatus;
   transcript_available?: boolean;
   analysis_type?: string;
   stale_after?: string;
@@ -11,5 +13,17 @@ export interface PersistedValidationReport {
 }
 
 export function isPersistedValidationReport(obj: unknown): obj is PersistedValidationReport {
-  return typeof obj === 'object' && obj !== null && typeof (obj as any).status === 'string';
+  if (typeof obj !== 'object' || obj === null) {
+    return false;
+  }
+
+  const status = (obj as any).status;
+  if (status !== undefined && status !== null) {
+    const validStatuses: ValidationReportStatus[] = ['done', 'partial', 'failed', 'processing'];
+    if (!validStatuses.includes(status)) {
+      return false;
+    }
+  }
+
+  return true;
 }
