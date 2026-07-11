@@ -578,7 +578,7 @@ export async function POST(request: NextRequest) {
           const elapsedMs = latestChunkTime === null ? 0 : currentTime - latestChunkTime;
 
           if (hasMinimum && elapsedMs >= 30000) {
-            // Timeout with minimum chunks: mark done to unblock analysis
+            // Timeout with minimum chunks: finalize as partial (not done) to reflect incomplete analysis
             console.warn('[analyses/persist] Finalizing with partial chunks after 30s timeout', {
               analysisId,
               videoId,
@@ -586,8 +586,8 @@ export async function POST(request: NextRequest) {
               expected: resolvedTotal,
               elapsedMs
             });
-            finalStatus = 'done';
-            validationPassed = Boolean(valid);
+            finalStatus = 'partial';
+            validationPassed = false;
           } else {
             finalStatus = 'partial';
             validationPassed = false;
@@ -612,10 +612,10 @@ export async function POST(request: NextRequest) {
         finalStatus = validationPassed ? 'done' : 'failed';
       }
 
-      // If finalizing with partial chunks, attempt to stitch what we have
+      // If status is partial and we have chunks, attempt to stitch what we have
       let stitchedPayload = validPayload;
       let stitchedMarkdown = markdown;
-      if (finalStatus === 'done' && !allReceived && finalizedChunks.length > 0) {
+      if (finalStatus === 'partial' && finalizedChunks.length > 0) {
         try {
           const partialChunkMap = new Map<number, any>();
           finalizedChunks.forEach(c => {
