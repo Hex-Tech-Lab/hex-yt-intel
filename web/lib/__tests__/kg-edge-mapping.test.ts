@@ -238,7 +238,6 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
         getAnalysesByTenant: vi.fn(),
         persistGraph: vi.fn(),
         getGraph: vi.fn(),
-        cascadeDeleteEdges: vi.fn().mockResolvedValue(0)
       };
 
       mockVectorPort = {
@@ -267,14 +266,18 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
       };
 
       vi.mocked(mockVectorPort.deduplicateNodes).mockResolvedValueOnce(dedupResult);
-      vi.mocked(mockGraphPort.cascadeDeleteEdges).mockResolvedValueOnce(1);
 
       await useCase.execute('tenant-1', 'analysis-1');
 
-      expect(mockGraphPort.cascadeDeleteEdges).toHaveBeenCalledWith('analysis-1', ['n2']);
+      // Should persist the cleaned graph with n1 only (n2 deleted) and no edges
+      expect(mockGraphPort.persistGraph).toHaveBeenCalledWith({
+        analysisId: 'analysis-1',
+        nodes: [nodes[0]], // Only n1 remains
+        relations: [] // Edge referencing deleted n2 is removed
+      });
     });
 
-    it('TC-10: Should NOT call cascade delete if no nodes deleted', async () => {
+    it('TC-10: Should NOT call persistGraph if no nodes deleted', async () => {
       const nodes: GraphNode[] = [
         { id: 'n1', label: 'l1', dimension: 0, content: 'c1', weight: 1, polarity: 0, keyTerms: [], inPersona: false }
       ];
@@ -294,7 +297,8 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
 
       await useCase.execute('tenant-1', 'analysis-1');
 
-      expect(mockGraphPort.cascadeDeleteEdges).not.toHaveBeenCalled();
+      // No nodes deleted, so persistGraph should not be called
+      expect(mockGraphPort.persistGraph).not.toHaveBeenCalled();
     });
 
     it('TC-11: Should handle multiple deleted nodes', async () => {
@@ -316,11 +320,15 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
       };
 
       vi.mocked(mockVectorPort.deduplicateNodes).mockResolvedValueOnce(dedupResult);
-      vi.mocked(mockGraphPort.cascadeDeleteEdges).mockResolvedValueOnce(5);
 
       await useCase.execute('tenant-1', 'analysis-1');
 
-      expect(mockGraphPort.cascadeDeleteEdges).toHaveBeenCalledWith('analysis-1', ['n2', 'n3']);
+      // Should persist the cleaned graph with only n1 (n2 and n3 deleted)
+      expect(mockGraphPort.persistGraph).toHaveBeenCalledWith({
+        analysisId: 'analysis-1',
+        nodes: [nodes[0]], // Only n1 remains
+        relations: [] // No edges
+      });
     });
 
     it('TC-12: Should handle deduplication failure gracefully', async () => {
@@ -344,7 +352,8 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
 
       await useCase.execute('tenant-1', 'analysis-1');
 
-      expect(mockGraphPort.cascadeDeleteEdges).not.toHaveBeenCalled();
+      // Deduplication failed, so persistGraph should not be called
+      expect(mockGraphPort.persistGraph).not.toHaveBeenCalled();
     });
 
     it('TC-13: Should handle empty graph gracefully', async () => {
@@ -354,7 +363,7 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
 
       expect(mockVectorPort.markStale).not.toHaveBeenCalled();
       expect(mockVectorPort.deduplicateNodes).not.toHaveBeenCalled();
-      expect(mockGraphPort.cascadeDeleteEdges).not.toHaveBeenCalled();
+      expect(mockGraphPort.persistGraph).not.toHaveBeenCalled();
     });
 
     it('TC-14: Should handle graph with no nodes gracefully', async () => {
@@ -367,7 +376,7 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
 
       expect(mockVectorPort.markStale).not.toHaveBeenCalled();
       expect(mockVectorPort.deduplicateNodes).not.toHaveBeenCalled();
-      expect(mockGraphPort.cascadeDeleteEdges).not.toHaveBeenCalled();
+      expect(mockGraphPort.persistGraph).not.toHaveBeenCalled();
     });
   });
 
