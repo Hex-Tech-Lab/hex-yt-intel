@@ -35,10 +35,12 @@ function computeTermOverlap(termsA: string[], termsB: string[]): number {
  * Determine if two same-label nodes should merge across dimensions.
  * Implements Recall pattern: same dimension always merges; different dimensions merge if >70% keyTerm overlap.
  * Prevents cross-dimensional concept collapse while allowing legitimate semantic merges.
+ * Reserved for future cross-dimension collision detection enhancement.
  * @param existingNode - Node already in the aggregate graph
  * @param incomingNode - Node being considered for merge
  * @returns True if nodes should be merged, false to keep separate
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function shouldMergeNodes(existingNode: GraphNode, incomingNode: GraphNode): boolean {
   if (existingNode.dimension === incomingNode.dimension) return true;
   const overlap = computeTermOverlap(existingNode.keyTerms, incomingNode.keyTerms);
