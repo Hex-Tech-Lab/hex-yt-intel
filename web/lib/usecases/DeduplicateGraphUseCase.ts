@@ -14,7 +14,7 @@ export class DeduplicateGraphUseCase {
 
     // 2. Identify stale/duplicate nodes (placeholder logic)
     const nodeIds = graph.nodes.map(n => n.id);
-    
+
     // 3. Mark stale in Upstash
     await this.vectorDedupPort.markStale(tenantId, nodeIds);
 
@@ -23,9 +23,43 @@ export class DeduplicateGraphUseCase {
       similarityThreshold: 0.95,
       maxDeletes: 50
     });
-    
+
     if (!result.success) {
       console.error(`[DeduplicateGraphUseCase] Deduplication failed for tenant: ${tenantId}, analysis: ${analysisId}, error: ${result.error}`);
+      return;
+    }
+
+    // 5. Cascade-delete edges that reference deleted nodes
+    if (result.deletedNodeIds && result.deletedNodeIds.length > 0) {
+      const deletedSet = new Set(result.deletedNodeIds);
+      const cleanedEdges = graph.relations.filter(edge => {
+        const sourceDeleted = deletedSet.has(edge.source_entity_id ?? edge.source ?? '');
+        const targetDeleted = deletedSet.has(edge.target_entity_id ?? edge.target ?? '');
+        if (sourceDeleted || targetDeleted) {
+          console.log(`[DeduplicateGraphUseCase] Cascading edge deletion for removed node`, {
+            source: edge.source_entity_id ?? edge.source,
+            target: edge.target_entity_id ?? edge.target,
+            reason: `${sourceDeleted ? 'source' : 'target'} node was deduplicated`,
+          });
+        }
+        return !sourceDeleted && !targetDeleted;
+      });
+
+      const cleanedNodes = graph.nodes.filter(n => !deletedSet.has(n.id));
+
+      // Persist cleaned graph (nodes + edges without orphans)
+      await this.graphPort.persistGraph({
+        analysisId,
+        nodes: cleanedNodes,
+        relations: cleanedEdges,
+      });
+
+      console.log(`[DeduplicateGraphUseCase] Edge cleanup completed`, {
+        tenant: tenantId,
+        analysis: analysisId,
+        deletedNodes: result.deletedCount,
+        deletedEdges: graph.relations.length - cleanedEdges.length,
+      });
     } else {
       console.log(`[DeduplicateGraphUseCase] Deduplication completed for tenant: ${tenantId}, analysis: ${analysisId}, deleted: ${result.deletedCount}`);
     }
