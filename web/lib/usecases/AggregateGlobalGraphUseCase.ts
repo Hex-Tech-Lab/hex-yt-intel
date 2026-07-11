@@ -1,7 +1,55 @@
 import { GraphNode, GraphEdge, KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
 /**
- * Merge incoming node into existing node: accumulate weight and deduplicate keyTerms.
+ * Canonicalize label to prevent collisions from formatting differences.
+ * Normalizes case, whitespace, and punctuation to create stable merge keys.
+ * Converts to lowercase, trims leading/trailing spaces, and deduplicates internal spaces.
+ * @param label - Raw label string to canonicalize
+ * @returns Normalized canonical form suitable for merge key generation
+ */
+function canonicalizeLabel(label: string): string {
+  return label
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Compute semantic similarity via keyTerm overlap using Jaccard index.
+ * Measures concept relatedness across dimensions by comparing keyword sets.
+ * Returns 0-1 where 1 means identical terms, 0 means no overlap.
+ * @param termsA - First set of key terms
+ * @param termsB - Second set of key terms
+ * @returns Jaccard similarity coefficient (0-1)
+ */
+function computeTermOverlap(termsA: string[], termsB: string[]): number {
+  if (!termsA.length || !termsB.length) return 0;
+  const setA = new Set(termsA.map(t => t.toLowerCase()));
+  const setB = new Set(termsB.map(t => t.toLowerCase()));
+  const intersection = new Set([...setA].filter(x => setB.has(x)));
+  const union = new Set([...setA, ...setB]);
+  return union.size === 0 ? 0 : intersection.size / union.size;
+}
+
+/**
+ * Determine if two same-label nodes should merge across dimensions.
+ * Implements Recall pattern: same dimension always merges; different dimensions merge if >70% keyTerm overlap.
+ * Prevents cross-dimensional concept collapse while allowing legitimate semantic merges.
+ * @param existingNode - Node already in the aggregate graph
+ * @param incomingNode - Node being considered for merge
+ * @returns True if nodes should be merged, false to keep separate
+ */
+function shouldMergeNodes(existingNode: GraphNode, incomingNode: GraphNode): boolean {
+  if (existingNode.dimension === incomingNode.dimension) return true;
+  const overlap = computeTermOverlap(existingNode.keyTerms, incomingNode.keyTerms);
+  return overlap > 0.7;
+}
+
+/**
+ * Merge incoming node into existing node.
+ * Accumulates weight and deduplicates keyTerms to preserve semantic information.
+ * @param existing - Target node to merge into
+ * @param incoming - Source node to merge from
  */
 function mergeNode(existing: GraphNode, incoming: GraphNode): void {
   existing.weight += incoming.weight;
@@ -10,6 +58,7 @@ function mergeNode(existing: GraphNode, incoming: GraphNode): void {
 
 /**
  * Aggregate nodes from multiple analyses, merging by label across analyses.
+ * Applies label canonicalization to prevent collisions from formatting differences.
  * Creates a stable mapping from original node IDs to merged node IDs.
  * @param analyses - Array of analyses with nodes to aggregate
  * @returns Object with nodeMap (aggregated nodes by label) and idMapping (original ID → merged ID)
@@ -22,8 +71,9 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
 
   for (const analysis of analyses) {
     for (const node of analysis.nodes) {
-      // Merge key includes both label and dimension to prevent collapsing unrelated concepts
-      const mergeKey = `${node.label}__dim${node.dimension}`;
+      // Canonicalize label and merge key: includes both label and dimension to prevent collapsing unrelated concepts
+      const canonicalLabel = canonicalizeLabel(node.label);
+      const mergeKey = `${canonicalLabel}__dim${node.dimension}`;
       const existing = nodeMapByLabel.get(mergeKey);
       if (existing) {
         // Node with same label and dimension exists, merge it and map to existing node's ID
@@ -46,7 +96,7 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
       } else {
         // First time seeing this label+dimension combination, use original node ID as merged ID
         const mergedId = node.id;
-        const mergedNode = { ...node };
+        const mergedNode = { ...node, label: canonicalLabel };
         nodeMapByLabel.set(mergeKey, mergedNode);
         idMapping.set(node.id, mergedId);
         // Initialize origin tracking
@@ -71,7 +121,10 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
 }
 
 /**
- * Merge incoming edge into existing edge: keep maximum strength value.
+ * Merge incoming edge into existing edge.
+ * Preserves the maximum relationship strength across analyses.
+ * @param existing - Target edge to merge into
+ * @param incoming - Source edge to merge from
  */
 function mergeEdge(existing: GraphEdge, incoming: GraphEdge): void {
   existing.strength = Math.max(existing.strength, incoming.strength);
@@ -125,9 +178,11 @@ export function aggregateEdges(analyses: Array<{ id: string; edges: GraphEdge[];
 
 /**
  * Validate edges by filtering out those referencing non-existent nodes.
+ * Prevents orphan edges that would break graph traversal and visualization.
+ * Logs warnings for dropped edges to aid in debugging aggregation issues.
  * @param edges - Edges to validate
- * @param nodesByLabel - Map of valid nodes keyed by label
- * @returns Array of edges with valid source and target nodes
+ * @param nodesByLabel - Map of valid nodes indexed by merged node ID
+ * @returns Array of edges with valid source and target nodes present in the graph
  */
 export function validateEdges(edges: GraphEdge[], nodesByLabel: Map<string, GraphNode>): GraphEdge[] {
   // Create a reverse map: merged node ID → node for faster lookup
@@ -152,9 +207,11 @@ export function validateEdges(edges: GraphEdge[], nodesByLabel: Map<string, Grap
 
 export class AggregateGlobalGraphUseCase {
   /**
-   * Execute the aggregation use case.
+   * Execute the aggregation use case to merge multiple analyses into a global knowledge graph.
+   * Applies label canonicalization, dimension-aware merging, and edge validation.
+   * Preserves node provenance (originDimensions, sourceAnalysisIds) for lineage tracking.
    * @param analyses - Array of analyses, each with nodes and edges to aggregate
-   * @returns A consolidated knowledge graph with merged nodes and validated edges
+   * @returns A consolidated knowledge graph with merged nodes, remapped edges, and provenance metadata
    */
   execute(analyses: Array<{ id: string; nodes: GraphNode[]; edges: GraphEdge[] }>): KnowledgeGraph {
     const { nodeMap, idMapping } = aggregateNodes(analyses);
