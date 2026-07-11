@@ -1,5 +1,18 @@
+/**
+ * Analysis completion status values.
+ * - 'done': Analysis complete with all dimensions
+ * - 'partial': Incomplete analysis with some dimensions available
+ * - 'failed': Analysis ran but validation failed
+ * - 'error': Analysis crashed or encountered an error
+ * - 'interrupted': Analysis was explicitly interrupted
+ * - 'processing': Analysis still running
+ */
 export type ValidationReportStatus = 'done' | 'partial' | 'failed' | 'error' | 'interrupted' | 'processing';
 
+/**
+ * Persisted validation report metadata for an analysis.
+ * Tracks analysis completion status, metadata, and execution details.
+ */
 export interface PersistedValidationReport {
   status?: ValidationReportStatus;
   transcript_available?: boolean;
@@ -12,6 +25,12 @@ export interface PersistedValidationReport {
   valid?: boolean;
 }
 
+/**
+ * Type guard: verify object is a valid PersistedValidationReport.
+ * Validates status enum values and structure.
+ * @param obj - Object to validate
+ * @returns True if object matches PersistedValidationReport shape
+ */
 export function isPersistedValidationReport(obj: unknown): obj is PersistedValidationReport {
   if (typeof obj !== 'object' || obj === null) {
     return false;
