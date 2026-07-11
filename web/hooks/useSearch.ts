@@ -50,20 +50,23 @@ const INITIAL_STATE: SearchState = {
 /**
  * useSearch Hook
  *
- * Handles semantic search with debouncing, pagination, and filtering
- * Integrates with /api/analyses/search endpoint
+ * Handles semantic search with debouncing and result management.
+ * Integrates with /api/search endpoint for vector-based and keyword search.
  *
  * Features:
  * - Debounced search (500ms default)
- * - Pagination support
- * - Filter support (date range, channels, engagement)
- * - Error handling
+ * - Error handling and loading state
+ * - Clear search results and query
  * - Performance metrics (queryTime)
  *
+ * @param options - Configuration for search behavior
+ * @param options.maxResults - Maximum results per query (default: 10)
+ * @param options.debounceMs - Debounce delay in milliseconds (default: 500)
+ * @returns Hook providing query state, results, loading state, and actions
+ *
  * @example
- * const { query, setQuery, results, isLoading, filters, setFilters } = useSearch({
+ * const { query, setQuery, results, isLoading, clearSearch } = useSearch({
  *   maxResults: 20,
- *   threshold: 0.75,
  * });
  */
 export function useSearch(options: UseSearchOptions = {}) {
@@ -74,8 +77,6 @@ export function useSearch(options: UseSearchOptions = {}) {
 
   const [query, setQuery] = useState('');
   const [state, setState] = useState<SearchState>(INITIAL_STATE);
-
-  const [filters, setFilters] = useState<SearchFilters>({});
   const debounceTimer = useRef<NodeJS.Timeout | undefined>(undefined);
 
   /**
@@ -168,20 +169,6 @@ export function useSearch(options: UseSearchOptions = {}) {
   }, [query, debounceMs, performSearch]);
 
   /**
-   * Pagination: move to next page (no-op; endpoint returns single page only)
-   */
-  const nextPage = useCallback(() => {
-    // /api/search returns single page results; pagination not supported
-  }, []);
-
-  /**
-   * Pagination: move to previous page (no-op; endpoint returns single page only)
-   */
-  const prevPage = useCallback(() => {
-    // /api/search returns single page results; pagination not supported
-  }, []);
-
-  /**
    * Clear search and results
    */
   const clearSearch = useCallback(() => {
@@ -197,20 +184,6 @@ export function useSearch(options: UseSearchOptions = {}) {
     }));
   }, []);
 
-  /**
-   * Update filters (no-op; endpoint does not support filtering)
-   */
-  const updateFilters = useCallback((newFilters: Partial<SearchFilters>) => {
-    setFilters((prev) => ({ ...prev, ...newFilters }));
-  }, []);
-
-  /**
-   * Clear all filters
-   */
-  const clearFilters = useCallback(() => {
-    setFilters({});
-  }, []);
-
   return {
     // Query state
     query,
@@ -222,17 +195,6 @@ export function useSearch(options: UseSearchOptions = {}) {
     error: state.error,
     queryTime: state.queryTime,
     totalResults: state.totalResults,
-
-    // Pagination
-    currentPage: state.currentPage,
-    hasNextPage: state.hasNextPage,
-    nextPage,
-    prevPage,
-
-    // Filters
-    filters,
-    setFilters: updateFilters,
-    clearFilters,
 
     // Actions
     clearSearch,
