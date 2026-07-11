@@ -37,7 +37,6 @@ export default function SearchPage() {
     results,
     isLoading,
     error,
-    queryTime,
     totalResults,
     clearSearch,
   } = useSearch({
@@ -178,11 +177,6 @@ export default function SearchPage() {
                   </h2>
                   <span className="text-sm text-ink-muted">
                     {totalResults} found
-                    {queryTime > 0 && (
-                      <span className="ml-2 text-ink-muted/60">
-                        ({queryTime}ms)
-                      </span>
-                    )}
                   </span>
                 </div>
               </div>
