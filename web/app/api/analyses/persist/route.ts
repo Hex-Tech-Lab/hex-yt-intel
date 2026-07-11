@@ -611,6 +611,7 @@ export async function POST(request: NextRequest) {
 
       // If finalizing with partial chunks, attempt to stitch what we have
       let stitchedPayload = validPayload;
+      let stitchedMarkdown = markdown;
       if (finalStatus === 'done' && !allReceived && finalizedChunks.length > 0) {
         try {
           const partialChunkMap = new Map<number, any>();
@@ -672,6 +673,8 @@ export async function POST(request: NextRequest) {
               },
               monetizationVerdict: partialMonetization
             } as any;
+            // Reconstruct markdown from stitched payload
+            stitchedMarkdown = reconstructMarkdown(stitchedPayload);
           }
         } catch (stitchErr) {
           console.warn('[analyses/persist] Failed to stitch partial chunks:', stitchErr);
@@ -689,7 +692,7 @@ export async function POST(request: NextRequest) {
       await retryWithBackoff(
         () => persistenceAdapter.updateAnalysisResult({
           analysisId,
-          markdown,
+          markdown: stitchedMarkdown,
           payload: stitchedPayload ?? null,
           model: model || null,
           validationPassed,
@@ -711,8 +714,8 @@ export async function POST(request: NextRequest) {
         id: analysisId,
         video_id: videoId,
         title: row.title,
-        analysis_markdown: markdown,
-        analysis_payload: (validPayload ?? null) as Record<string, unknown> | null,
+        analysis_markdown: stitchedMarkdown,
+        analysis_payload: (stitchedPayload ?? null) as Record<string, unknown> | null,
         validation_report: {
           transcript_available: !!priorReport.transcript_available,
           analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
@@ -734,10 +737,10 @@ export async function POST(request: NextRequest) {
         modelUsed: model,
         validationPassed,
         finalStatus,
-        hasMarkdown: !!markdown,
-        hasPayload: !!validPayload,
-        hasDimensions: validPayload && 'dimensions' in validPayload ? (validPayload.dimensions?.length ?? 0) : 0,
-        hasKG: validPayload?.knowledgeGraph ? (validPayload.knowledgeGraph.nodes?.length ?? 0) + ' nodes' : 'none',
+        hasMarkdown: !!stitchedMarkdown,
+        hasPayload: !!stitchedPayload,
+        hasDimensions: stitchedPayload && 'dimensions' in stitchedPayload ? (stitchedPayload.dimensions?.length ?? 0) : 0,
+        hasKG: stitchedPayload?.knowledgeGraph ? (stitchedPayload.knowledgeGraph.nodes?.length ?? 0) + ' nodes' : 'none',
         cacheKey,
       });
 
@@ -749,7 +752,7 @@ export async function POST(request: NextRequest) {
       if (transcriptAvailable) {
         await publishValidationTask({
           videoId,
-          markdown,
+          markdown: stitchedMarkdown,
           filename: buildValidationFilename(row.title, row.channelTitle),
           userId: row.userId,
           analysisId,
