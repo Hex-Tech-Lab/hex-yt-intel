@@ -49,7 +49,7 @@ export class DeduplicateGraphUseCase {
         const sourceDeleted = deletedSet.has(source);
         const targetDeleted = deletedSet.has(target);
         if (sourceDeleted || targetDeleted) {
-          console.log(`[DeduplicateGraphUseCase] Cascading edge deletion for removed node`, {
+          console.warn('[DeduplicateGraphUseCase] Cascading edge deletion for removed node', {
             source,
             target,
             reason: `${sourceDeleted ? 'source' : 'target'} node was deduplicated`,
@@ -67,14 +67,18 @@ export class DeduplicateGraphUseCase {
         relations: cleanedEdges,
       });
 
-      console.log(`[DeduplicateGraphUseCase] Edge cleanup completed`, {
+      console.info('[DeduplicateGraphUseCase] Edge cleanup completed', {
         tenant: tenantId,
         analysis: analysisId,
         deletedNodes: result.deletedCount,
-        deletedEdges: graph.relations.length - cleanedEdges.length,
+        deletedEdges: relations.length - cleanedEdges.length,
       });
     } else {
-      console.log(`[DeduplicateGraphUseCase] Deduplication completed for tenant: ${tenantId}, analysis: ${analysisId}, deleted: ${result.deletedCount}`);
+      console.info('[DeduplicateGraphUseCase] Deduplication completed', {
+        tenant: tenantId,
+        analysis: analysisId,
+        deleted: result.deletedCount,
+      });
     }
   }
 }
