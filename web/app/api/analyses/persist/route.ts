@@ -14,7 +14,7 @@ import * as Sentry from '@sentry/nextjs';
 import { PersistedValidationReport, ValidationReportStatus, isPersistedValidationReport } from '@/lib/types/validation-report';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { z } from 'zod';
-import { TOTAL_DIMENSIONS, TOTAL_STREAMS, DIMENSION_CONFIGS } from '@/lib/config/synthesis';
+import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import type { DimensionStatus, BillingStatus } from '@/lib/types/validation-report';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 
