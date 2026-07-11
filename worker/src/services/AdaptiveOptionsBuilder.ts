@@ -136,14 +136,17 @@ function generateThemeOption(themes: string[] | undefined, currentConversation: 
  */
 function generateTopicFollowUpOption(currentConversation: string): string | null {
   // Extract a key word from conversation (simple heuristic)
+  // Exclude common verbs and stop words to prefer nouns and domain terms
+  const stopWords = ["video", "about", "would", "could", "discusses", "explains", "describes", "shows", "tells"];
   const words = currentConversation
     .toLowerCase()
     .split(/\s+/)
-    .filter((w) => w.length > 5 && !["video", "about", "would", "could"].includes(w));
+    .filter((w) => w.length > 5 && !stopWords.includes(w));
 
   if (words.length === 0) return null;
 
-  const keyword = words[0];
+  // Pick the longest word (most likely to be semantically significant like "authentication" over "and")
+  const keyword = words.reduce((a, b) => (a.length >= b.length ? a : b));
   if (!keyword) return null;
 
   const templates = [
