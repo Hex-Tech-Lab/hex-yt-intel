@@ -5,7 +5,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useSearch } from '@/hooks/useSearch';
-import SearchFilters from '@/components/search/filters';
 import ResultCard from '@/components/search/result-card';
 
 function showToast(message: string, type: 'success' | 'error' = 'success') {
@@ -25,9 +24,7 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
  *
  * Features:
  * - Semantic search input with debouncing
- * - Advanced filters (date, channel, engagement)
- * - Results grid with pagination
- * - Save searches (saved searches UI)
+ * - Results grid display
  * - Performance metrics
  */
 export default function SearchPage() {
@@ -42,22 +39,13 @@ export default function SearchPage() {
     error,
     queryTime,
     totalResults,
-    currentPage,
-    hasNextPage,
-    filters,
-    setFilters,
-    clearFilters,
     clearSearch,
-    nextPage,
-    prevPage,
   } = useSearch({
     maxResults: 20,
-    threshold: 0.7,
     debounceMs: 500,
   });
 
   const [savedSearches, setSavedSearches] = useState<Set<string>>(new Set());
-  const [allChannels, setAllChannels] = useState<string[]>([]);
 
   // Seed the query from a `?q=` param on mount (e.g. arriving from the console
   // TopBar search box). Read from location directly to avoid a useSearchParams
@@ -73,17 +61,6 @@ export default function SearchPage() {
       router.push('/auth/signin');
     }
   }, [isAuthenticated, authLoading, router]);
-
-  // Load unique channels from results for filter dropdown
-  useEffect(() => {
-    const channels = new Set<string>();
-    results.forEach((result) => {
-      if (result.channelTitle) {
-        channels.add(result.channelTitle);
-      }
-    });
-    setAllChannels(Array.from(channels).sort());
-  }, [results]);
 
   const handleSaveSearch = async (resultId: string) => {
     const newSaved = new Set(savedSearches);
@@ -107,11 +84,6 @@ export default function SearchPage() {
 
   const handleViewAnalysis = (resultId: string) => {
     router.push(`/analyses/${resultId}`);
-  };
-
-  const handleClearAll = () => {
-    clearFilters();
-    clearSearch();
   };
 
   if (authLoading) {
@@ -194,21 +166,9 @@ export default function SearchPage() {
         )}
 
         {/* Main Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Filters Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-6">
-              <SearchFilters
-                filters={filters}
-                onFilterChange={setFilters}
-                onClear={handleClearAll}
-                allChannels={allChannels}
-              />
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 gap-6">
           {/* Results Section */}
-          <div className="lg:col-span-3">
+          <div>
             {/* Results Header */}
             {query && (
               <div className="mb-6 flex items-center justify-between">
@@ -256,13 +216,13 @@ export default function SearchPage() {
                     No Results Found
                   </h3>
                   <p className="text-ink-muted mb-4">
-                    Try adjusting your search query or filters
+                    Try adjusting your search query
                   </p>
                   <button
-                    onClick={handleClearAll}
+                    onClick={clearSearch}
                     className="text-accent hover:text-accent-ink font-medium"
                   >
-                    Clear all filters
+                    Clear search
                   </button>
                 </div>
               )}
@@ -280,34 +240,6 @@ export default function SearchPage() {
                     isSaved={savedSearches.has(result.id)}
                   />
                 ))}
-              </div>
-            )}
-
-            {/* Pagination Controls */}
-            {results.length > 0 && (
-              <div className="mt-8 flex items-center justify-between">
-                <button
-                  onClick={prevPage}
-                  disabled={currentPage === 1}
-                  className="flex items-center gap-2 px-4 py-2 bg-surface border border-line rounded-lg hover:bg-surface-raised disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-ink-secondary"
-                >
-                  <Icon icon="solar:alt-arrow-left-linear" size={18} />
-                  Previous
-                </button>
-
-                <div className="text-sm text-ink-muted">
-                  Page {currentPage}
-                  {hasNextPage && ' (more results available)'}
-                </div>
-
-                <button
-                  onClick={nextPage}
-                  disabled={!hasNextPage}
-                  className="flex items-center gap-2 px-4 py-2 bg-accent text-void rounded-lg hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
-                >
-                  Next
-                  <Icon icon="solar:alt-arrow-right-linear" size={18} />
-                </button>
               </div>
             )}
 

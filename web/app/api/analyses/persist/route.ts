@@ -742,7 +742,7 @@ export async function POST(request: NextRequest) {
               });
             } else {
               // Reconstruct markdown from validated stitched payload
-              stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+              stitchedMarkdown = reconstructMarkdown(stitchedPayload as UCISPayloadV2);
             }
           }
         } catch (stitchErr) {
