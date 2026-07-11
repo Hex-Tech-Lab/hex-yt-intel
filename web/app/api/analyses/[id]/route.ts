@@ -61,9 +61,12 @@ export async function GET(
     const payload = (analysis.analysis_payload || {}) as { persona?: { primary?: { id?: string; label?: string } } };
     const primaryPersona = payload.persona?.primary;
 
-    // Compute frontend-visible status: only 'complete' if billing_status='completed' AND validation_passed=true
+    // Compute frontend-visible status:
+    // - 'complete' if billing_status='completed' (partial or full)
+    // - 'error' if failed or error status
+    // - 'incomplete' otherwise
     const analysisStatus: 'complete' | 'incomplete' | 'error' =
-      analysis.billing_status === 'completed' && analysis.validation_passed
+      analysis.billing_status === 'completed'
         ? 'complete'
         : analysis.billing_status === 'failed' || (report as any).status === 'error'
         ? 'error'
