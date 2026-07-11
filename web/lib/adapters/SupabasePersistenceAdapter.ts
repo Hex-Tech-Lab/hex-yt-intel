@@ -245,16 +245,29 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseGraphAdapter.persistKnowledgeGraph(params);
   }
 
-  getKnowledgeGraph(analysisId: string): Promise<{ entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>; relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }> } | null> {
-    return SupabaseGraphAdapter.getKnowledgeGraph(analysisId);
-  }
+  async getKnowledgeGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
+    const data = await SupabaseGraphAdapter.getKnowledgeGraph(analysisId);
+    if (!data || data.entities.length === 0) return null;
 
-  persistGraph(params: { analysisId: string; nodes: GraphNode[]; relations: GraphEdge[] }): Promise<void> {
-    return SupabaseGraphAdapter.persistGraph(params);
-  }
-
-  getGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
-    return SupabaseGraphAdapter.getGraph(analysisId);
+    return {
+      nodes: data.entities.map(e => ({
+        id: e.id,
+        label: e.label,
+        dimension: 0,
+        content: '',
+        polarity: 0,
+        keyTerms: [],
+        inPersona: false,
+        entityType: e.type,
+        weight: e.weight
+      })),
+      relations: data.relations.filter(r => r.source_entity_id && r.target_entity_id).map(r => ({
+        source: r.source_entity_id,
+        target: r.target_entity_id,
+        kind: r.relation_label as any,
+        strength: r.strength
+      }))
+    };
   }
 
   // --- Billing Adapter Delegation ---
