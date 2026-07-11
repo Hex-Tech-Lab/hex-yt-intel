@@ -286,7 +286,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{item.title || 'Untitled Analysis'}</h3>
                         {item.status === 'partial' && (
-                          <span title="Partial analysis: some streams did not complete" className="flex-shrink-0 w-2 h-2 rounded-full bg-[var(--warn)] animate-pulse" />
+                          <span title="Partial analysis: incomplete data from timeout" className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-[var(--warn)] animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
                         )}
                       </div>
                       {item.channelTitle && (
