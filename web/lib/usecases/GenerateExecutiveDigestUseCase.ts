@@ -57,12 +57,7 @@ export class GenerateExecutiveDigestUseCase {
     const markdown = typeof row.analysis_markdown === 'string' ? row.analysis_markdown.trim() : '';
     if (markdown.length === 0) {
       console.warn(`[digest-usecase] Analysis ${analysisId} has empty markdown; analysis may still be persisting`);
-      const now = new Date().toISOString();
-      return {
-        type: 'success',
-        digest: { snapshot: '', takeaways: [], overview: '', model: '', generatedAt: now },
-        cached: false,
-      };
+      return { type: 'error', code: 'ERR_NO_ANALYSIS_CONTENT', status: 409, message: 'No analysis content to summarize' };
     }
 
     let text: string;
