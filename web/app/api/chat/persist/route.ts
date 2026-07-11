@@ -62,8 +62,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
-    // Fetch conversation messages to associate this assistant reply with the corresponding user message.
+    // Idempotency: check if this exact assistant message already exists in this conversation.
+    // Use content + signature hash as idempotent key to prevent duplicate messages on worker retry.
     const messages = await persistenceAdapter.getMessages({ conversationId });
+    const assistantMessages = messages.filter((m) => m.role === 'assistant');
+    const existingReply = assistantMessages.find((m) => m.content === content);
+    if (existingReply) {
+      // Message already persisted; return success to allow retry idempotency
+      return NextResponse.json({ ok: true, message: existingReply, idempotent: true });
+    }
+
+    // Fetch conversation messages to associate this assistant reply with the corresponding user message.
     const userMessages = messages.filter((m) => m.role === 'user');
     const latestUserMessage = userMessages.length > 0
       ? userMessages.reduce((latest, current) =>
