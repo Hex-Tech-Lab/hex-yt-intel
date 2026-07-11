@@ -11,7 +11,7 @@ import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@
 import { publishValidationTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
-import { PersistedValidationReport, isPersistedValidationReport } from '@/lib/types/validation-report';
+import { PersistedValidationReport, ValidationReportStatus, isPersistedValidationReport } from '@/lib/types/validation-report';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
@@ -533,7 +533,7 @@ export async function POST(request: NextRequest) {
       }
 
       // For chunked requests, verify all chunks have been persisted before deciding final status
-      let finalStatus: string;
+      let finalStatus: ValidationReportStatus;
       let validationPassed: boolean;
       let finalMissingChunks: number[] = [];
       const expectsChunkSet = totalChunks !== undefined;
