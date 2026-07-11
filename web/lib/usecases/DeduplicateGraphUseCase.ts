@@ -41,8 +41,8 @@ export class DeduplicateGraphUseCase {
     // 5. Cascade-delete edges that reference deleted nodes
     if (result.deletedNodeIds && result.deletedNodeIds.length > 0) {
       const deletedSet = new Set(result.deletedNodeIds);
-      const cleanedEdges = graph.relations.filter(edge => {
-        // Normalize edge endpoints: handle both string IDs and possible object references
+      const relations = (graph as any).relations || [];
+      const cleanedEdges = relations.filter((edge: any) => {
         const source = typeof edge.source === 'string' ? edge.source : edge.source?.id ?? '';
         const target = typeof edge.target === 'string' ? edge.target : edge.target?.id ?? '';
 

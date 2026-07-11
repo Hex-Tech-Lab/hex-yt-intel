@@ -486,7 +486,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [analysisId]);
 
   useEffect(() => {
-    if (!analysisId || status !== 'complete' || (status === 'error')) return;
+    if (!analysisId || status !== 'complete') return;
     if (digestFetchedForRef.current === analysisId) return;
     digestFetchedForRef.current = analysisId;
 

@@ -41,6 +41,7 @@ function computeTermOverlap(termsA: string[], termsB: string[]): number {
  * @returns True if nodes should be merged, false to keep separate
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
+// @ts-ignore - Reserved for future enhancement
 function shouldMergeNodes(existingNode: GraphNode, incomingNode: GraphNode): boolean {
   if (existingNode.dimension === incomingNode.dimension) return true;
   const overlap = computeTermOverlap(existingNode.keyTerms, incomingNode.keyTerms);

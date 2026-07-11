@@ -396,15 +396,16 @@ export class SupabaseAnalysisAdapter {
       }
       if (!data) return null;
 
+      const row = data as any;
       return {
-        id: data.id,
-        userId: data.user_id,
-        title: data.title,
-        transcriptHash: data.transcript_hash,
-        transcript: data.transcript,
-        validationReport: data.validation_report,
-        createdAt: data.created_at,
-        channelTitle: data.channel_title,
+        id: row.id,
+        userId: row.user_id,
+        title: row.title,
+        transcriptHash: row.transcript_hash,
+        transcript: row.transcript,
+        validationReport: row.validation_report,
+        createdAt: row.created_at,
+        channelTitle: row.channel_title,
       };
     } catch (error: any) {
       Sentry.captureException(error, {
