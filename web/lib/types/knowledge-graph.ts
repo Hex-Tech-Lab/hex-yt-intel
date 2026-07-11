@@ -19,6 +19,19 @@ export interface GraphEdge {
   target: string;
   strength: number;
   kind: RelationKind;
+  sourceLabel?: string; // optional label fallback for edge safety
+  targetLabel?: string;
+}
+
+export interface MergedGraphNode extends GraphNode {
+  // Track which dimensions/analyses contributed to this merged node (Recall pattern)
+  originDimensions?: Array<{
+    analysisId: string;
+    dimension: number;
+    weight: number;
+  }>;
+  // Track which source analyses contributed to this node
+  sourceAnalysisIds?: string[];
 }
 
 export type RelationKind = 'similar' | 'related' | 'tangent' | 'contrarian';
