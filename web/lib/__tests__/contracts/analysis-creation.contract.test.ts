@@ -222,7 +222,7 @@ describe('Contract Audit: Analysis Creation → Streaming Flow', () => {
       const payload = {
         url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         timezone: 'America/New_York',
-        persona: 'p1',
+        persona: 'creator',
         forceRefresh: false,
       };
 
