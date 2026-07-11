@@ -336,7 +336,7 @@ export async function POST(request: NextRequest) {
 
           // If any chunks missing or malformed, fail loudly
           if (invalidChunks.length > 0) {
-            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing entirely', {
+            console.error('[analyses/persist] CONTRACT VIOLATION: Chunks missing or have invalid dimensions field', {
               analysisId,
               videoId,
               invalidChunks,
