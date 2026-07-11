@@ -258,10 +258,8 @@ export async function POST(request: NextRequest) {
       }
 
       const persistenceAdapter = new SupabasePersistenceAdapter();
-      // Defer transcript fetch to non-chunk paths only (chunk requests don't need it)
-      const isChunkRequest = chunkIndex !== undefined && validPayload && 'dimensions' in validPayload;
       const row = await retryWithBackoff(
-        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId, includeTranscript: !isChunkRequest }),
+        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId }),
         2
       );
 
@@ -744,7 +742,9 @@ export async function POST(request: NextRequest) {
               });
             } else {
               // Reconstruct markdown from validated stitched payload
-              stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+              if (stitchedPayload) {
+                stitchedMarkdown = reconstructMarkdown(stitchedPayload);
+              }
             }
           }
         } catch (stitchErr) {
