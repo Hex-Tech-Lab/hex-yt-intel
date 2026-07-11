@@ -324,7 +324,7 @@ export async function POST(request: NextRequest) {
           ? z.object({
               schemaVersion: z.literal('2.0'),
               dimensions: z.array(z.object({
-                number: z.number().int().min(1).max(TOTAL_DIMENSIONS),
+                number: z.number().int().min(0).max(TOTAL_DIMENSIONS),
                 name: z.string(),
                 content: z.string()
               }))

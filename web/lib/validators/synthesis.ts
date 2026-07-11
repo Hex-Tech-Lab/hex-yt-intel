@@ -23,9 +23,10 @@ const DimensionMetadataSchema = z.object({
 
 /**
  * Validate a complete dimension
+ * Dimension 0 is the Executive Digest (ADR 010), dimensions 1-11 are main analysis.
  */
 export const UCISDimensionSchema = z.object({
-  number: z.number().int().min(1).max(TOTAL_DIMENSIONS),
+  number: z.number().int().min(0).max(TOTAL_DIMENSIONS),
   name: z.string().min(1).max(100),
   content: z.string().min(10),
   metadata: DimensionMetadataSchema.optional(),
@@ -66,10 +67,11 @@ export const UCISPayloadSchema = z.object({
  * CRITICAL: The prompt instructs the LLM to extract ONLY domain-specific
  * semantic entities (People, Concepts, Frameworks, Tools) — never structural
  * document headers like "Apex Intelligence" or "Semantic Foundation".
+ * Dimension 0 is the Executive Digest (ADR 010), dimensions 1-11 are main analysis.
  */
 export const KGNodeSchema = z.object({
   id: z.string().min(1).max(100),
-  dimension: z.number().int().min(1).max(TOTAL_DIMENSIONS),
+  dimension: z.number().int().min(0).max(TOTAL_DIMENSIONS),
   label: z.string().min(1).max(200),
   content: z.string().min(10),
   weight: z.number().min(0).max(1),
@@ -118,9 +120,10 @@ export const PersonaConfigSchema = z.object({
 /**
  * Single dimension in the JSON payload (v2.0).
  * Content is markdown (same richness as before) but properly JSON-escaped.
+ * Dimension 0 is the Executive Digest (ADR 010), dimensions 1-11 are main analysis.
  */
 export const UCISDimensionV2Schema = z.object({
-  number: z.number().int().min(1).max(TOTAL_DIMENSIONS),
+  number: z.number().int().min(0).max(TOTAL_DIMENSIONS),
   name: z.string().min(1).max(100),
   content: z.string().min(10),
   metadata: z.object({
@@ -203,7 +206,7 @@ export const UCISStreamFragmentSchema = z.discriminatedUnion('type', [
 
   z.object({
     type: z.literal('dimension'),
-    dimension: z.number().int().min(1).max(TOTAL_DIMENSIONS),
+    dimension: z.number().int().min(0).max(TOTAL_DIMENSIONS),
     name: z.string().min(1),
     content: z.string().min(10),
     metadata: DimensionMetadataSchema.optional(),
