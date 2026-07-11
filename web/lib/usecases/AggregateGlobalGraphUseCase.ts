@@ -1,5 +1,8 @@
 import { GraphNode, GraphEdge, KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
+/**
+ * Merge incoming node into existing node: accumulate weight and deduplicate keyTerms.
+ */
 function mergeNode(existing: GraphNode, incoming: GraphNode): void {
   existing.weight += incoming.weight;
   existing.keyTerms = [...new Set([...existing.keyTerms, ...incoming.keyTerms])];
@@ -67,6 +70,9 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
   return { nodeMap: nodeMapByLabel, idMapping };
 }
 
+/**
+ * Merge incoming edge into existing edge: keep maximum strength value.
+ */
 function mergeEdge(existing: GraphEdge, incoming: GraphEdge): void {
   existing.strength = Math.max(existing.strength, incoming.strength);
 }

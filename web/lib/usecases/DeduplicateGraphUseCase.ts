@@ -1,12 +1,21 @@
 import { GraphPersistencePort } from '@/lib/ports';
 import { VectorDedupPort } from '@/lib/ports/VectorDedupPort';
 
+/**
+ * Deduplicates knowledge graph nodes and cascades deletion to related edges.
+ * Removes similar nodes above threshold and persists cleaned graph.
+ */
 export class DeduplicateGraphUseCase {
   constructor(
     private graphPort: GraphPersistencePort,
     private vectorDedupPort: VectorDedupPort
   ) {}
 
+  /**
+   * Execute deduplication: identify duplicate nodes, remove them, and cascade-delete orphaned edges.
+   * @param tenantId - Tenant identifier for vector store operations
+   * @param analysisId - Analysis containing the graph to deduplicate
+   */
   async execute(tenantId: string, analysisId: string): Promise<void> {
     // 1. Fetch graph
     const graph = await this.graphPort.getGraph(analysisId);
