@@ -279,13 +279,11 @@ export function KnowledgeGraphCanvas({
           const showLabel = isActive || isNeighbor || node.weight >= 1.5 || scale > (compact ? 1.2 : 0.8);
 
           if (showLabel && !dim) {
-            // Font size scales with node weight (frequency): 11px-26px range
-            // Normalize weight to 0-1 range (assume max weight ~10 for common distributions)
-            const minFontSize = 11;
-            const maxFontSize = 26;
+            const minFontSize = 9;
+            const maxFontSize = 15;
             const normalizedWeight = Math.min(1, Math.max(0, node.weight / 10));
             const weightedFontSize = minFontSize + (normalizedWeight * (maxFontSize - minFontSize));
-            const clampedFontSize = Math.max(minFontSize * 0.6, Math.min(maxFontSize, weightedFontSize / Math.sqrt(scale)));
+            const clampedFontSize = Math.max(minFontSize * 0.7, Math.min(maxFontSize, weightedFontSize / Math.sqrt(scale)));
 
             // Font weight: bold (700) for selected nodes, regular (400) otherwise
             const fontWeight = node.id === selectedId ? 700 : 400;
