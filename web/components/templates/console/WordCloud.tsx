@@ -42,7 +42,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   }, []);
 
   // Resize handling with debouncing to avoid excessive re-renders
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!containerRef.current) return;
     const el = containerRef.current;
@@ -133,7 +133,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       const padding = Math.min(maxPadding, basePadding + avgSize * 0.05);
       return (
         Math.abs(a.x - b.x) * 2 < a.w + b.w + padding &&
-        Math.abs(a.y - b.y) * 2 < a.h + b.h + padding
+        Math.abs(a.y - b.y) * 2 < a.h + b.h + padding + 2
       );
     };
 
@@ -143,7 +143,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     const wordCount = Math.max(1, sortedTokens.length);
     const spiralDensity = Math.max(0.25, Math.min(0.5, 20 / wordCount));
     const angleStep = 0.35 + spiralDensity * 0.1;
-    const radiusStep = maxRadius / (220 - wordCount * 0.5);
+    const radiusStep = maxRadius / (size.h - wordCount * 0.5);
     const yScale = 0.62; // squash vertically to the canvas' wide aspect
 
     sortedTokens.forEach((token) => {
