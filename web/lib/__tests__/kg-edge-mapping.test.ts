@@ -13,7 +13,7 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
       useCase = new AggregateGlobalGraphUseCase();
     });
 
-    it('TC-1: Should key nodes by ID, not by label', () => {
+    it('TC-1: Should merge nodes by label across analyses', () => {
       const node1: GraphNode = {
         id: 'node-1',
         label: 'climate change',
@@ -41,8 +41,12 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
         { id: 'analysis-2', nodes: [node2], edges: [] }
       ]);
 
-      expect(graph.nodes).toHaveLength(2);
-      expect(graph.nodes.map(n => n.id).sort()).toEqual(['node-1', 'node-2']);
+      // Should merge by label, resulting in 1 node
+      expect(graph.nodes).toHaveLength(1);
+      expect(graph.nodes[0].label).toBe('climate change');
+      expect(graph.nodes[0].weight).toBe(3); // 1 + 2
+      expect(graph.nodes[0].keyTerms).toContain('warming');
+      expect(graph.nodes[0].keyTerms).toContain('weather');
     });
 
     it('TC-2: Should deduplicate nodes with same ID across analyses', () => {
