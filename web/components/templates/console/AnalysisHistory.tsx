@@ -283,7 +283,12 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   {/* Title row */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{item.title || 'Untitled Analysis'}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{item.title || 'Untitled Analysis'}</h3>
+                        {item.status === 'partial' && (
+                          <span title="Partial analysis: some streams did not complete" className="flex-shrink-0 w-2 h-2 rounded-full bg-[var(--warn)] animate-pulse" />
+                        )}
+                      </div>
                       {item.channelTitle && (
                         <p className="text-[12px] text-[var(--ink-muted)] truncate mt-0.5">{item.channelTitle}</p>
                       )}
@@ -298,6 +303,11 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                     <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions produced">
                       <span className="text-[var(--ink)] font-semibold">{item.bestDimensions}</span>/{TOTAL_DIMENSIONS} dims
                     </MetricChip>
+                    {item.status === 'partial' && (
+                      <MetricChip icon="solar:alert-circle-linear" title="Partial analysis with incomplete data">
+                        <span className="text-[var(--warn)]">Incomplete</span>
+                      </MetricChip>
+                    )}
                     {item.status === 'complete' && (
                       <MetricChip icon="solar:star-linear" title="Executive digest (Dimension 0)">
                         Dim.0
