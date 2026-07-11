@@ -65,7 +65,7 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
       } else {
         // First time seeing this label+dimension combination, use original node ID as merged ID
         const mergedId = node.id;
-        const mergedNode = { ...node, label: canonicalLabel };
+        const mergedNode = { ...node };
         nodeMapByLabel.set(mergeKey, mergedNode);
         idMapping.set(node.id, mergedId);
         // Initialize origin tracking
@@ -123,15 +123,10 @@ export function aggregateEdges(analyses: Array<{ id: string; edges: GraphEdge[];
       const mergedTarget = idMapping.get(edge.target) ?? edge.target;
       const edgeKey = `${mergedSource}-${mergedTarget}-${edge.kind}`;
 
-      // Include label fallback for edge safety (allows recovery if ID resolution fails)
-      const sourceNode = nodesById.get(edge.source);
-      const targetNode = nodesById.get(edge.target);
       const remappedEdge: GraphEdge = {
         ...edge,
         source: mergedSource,
         target: mergedTarget,
-        sourceLabel: sourceNode?.label,
-        targetLabel: targetNode?.label,
       };
 
       const existing = edgeMap.get(edgeKey);
