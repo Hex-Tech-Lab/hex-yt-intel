@@ -212,7 +212,13 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
 
   try {
     const bounds = locateJsonBounds(finalText);
-    if (!bounds) return null;
+    if (!bounds) {
+      console.debug('[extractJsonPayload] No JSON bounds found', {
+        finalTextLength: finalText.length,
+        textPreview: finalText.slice(0, 200)
+      });
+      return null;
+    }
 
     const { start, end } = bounds;
     let cleanText = finalText;
@@ -223,12 +229,29 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
     }
 
     const { parsed } = safeParse(cleanText, 'initial_parse');
-    if (!parsed) return null;
+    if (!parsed) {
+      console.debug('[extractJsonPayload] Parse failed for extracted JSON', {
+        extractedLength: cleanText.length,
+        extractedPreview: cleanText.slice(0, 300)
+      });
+      return null;
+    }
 
     if (parsed.schemaVersion === '2.0' && Array.isArray(parsed.dimensions)) {
       sanitizePersona(parsed);
+      console.debug('[extractJsonPayload] Successfully extracted v2.0 payload with dimensions', {
+        dimensionCount: parsed.dimensions.length,
+        schemaVersion: parsed.schemaVersion
+      });
       return parsed;
     }
+
+    console.debug('[extractJsonPayload] Parsed JSON but missing v2.0 structure', {
+      hasSchemaVersion: 'schemaVersion' in parsed,
+      schemaVersion: parsed.schemaVersion,
+      isDimensionsArray: Array.isArray(parsed.dimensions),
+      hasDimensions: 'dimensions' in parsed
+    });
   } catch (error: unknown) {
     Sentry.captureException(error, { contexts: { extractJsonPayload: { finalTextLength: finalText.length } } });
     const message = error instanceof Error ? error.message : String(error);
