@@ -14,25 +14,55 @@ function mergeNode(existing: GraphNode, incoming: GraphNode): void {
 export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] }>): { nodeMap: Map<string, GraphNode>; idMapping: Map<string, string> } {
   const nodeMapByLabel = new Map<string, GraphNode>();
   const idMapping = new Map<string, string>();
+  const originTracking = new Map<string, { analysisId: string; dimension: number; weight: number }[]>();
+  const sourceTracking = new Map<string, Set<string>>();
   let nextMergedId = 0;
 
   for (const analysis of analyses) {
     for (const node of analysis.nodes) {
       const existing = nodeMapByLabel.get(node.label);
       if (existing) {
-        // Node with same label exists, merge it
+        // Node with same label exists, merge it and track origin
         mergeNode(existing, node);
-        // Map original ID to the merged node's ID
         idMapping.set(node.id, existing.id);
+        // Track dimensional origin
+        const mergedId = existing.id;
+        if (!originTracking.has(mergedId)) {
+          originTracking.set(mergedId, []);
+        }
+        originTracking.get(mergedId)!.push({
+          analysisId: analysis.id,
+          dimension: node.dimension,
+          weight: node.weight,
+        });
+        if (!sourceTracking.has(mergedId)) {
+          sourceTracking.set(mergedId, new Set());
+        }
+        sourceTracking.get(mergedId)!.add(analysis.id);
       } else {
         // First time seeing this label, create merged node with stable ID
         const mergedId = `merged-node-${nextMergedId++}`;
         const mergedNode = { ...node, id: mergedId };
         nodeMapByLabel.set(node.label, mergedNode);
         idMapping.set(node.id, mergedId);
+        // Initialize origin tracking
+        originTracking.set(mergedId, [{
+          analysisId: analysis.id,
+          dimension: node.dimension,
+          weight: node.weight,
+        }]);
+        sourceTracking.set(mergedId, new Set([analysis.id]));
       }
     }
   }
+
+  // Enhance merged nodes with dimensional provenance (Recall pattern)
+  for (const [label, node] of nodeMapByLabel) {
+    const mergedId = node.id;
+    (node as any).originDimensions = originTracking.get(mergedId) || [];
+    (node as any).sourceAnalysisIds = Array.from(sourceTracking.get(mergedId) || []);
+  }
+
   return { nodeMap: nodeMapByLabel, idMapping };
 }
 
@@ -46,15 +76,35 @@ function mergeEdge(existing: GraphEdge, incoming: GraphEdge): void {
  * @param idMapping - Map from original node IDs to merged node IDs
  * @returns Map of aggregated edges indexed by kind-aware key
  */
-export function aggregateEdges(analyses: Array<{ id: string; edges: GraphEdge[] }>, idMapping: Map<string, string>): Map<string, GraphEdge> {
+export function aggregateEdges(analyses: Array<{ id: string; edges: GraphEdge[]; nodes: GraphNode[] }>, idMapping: Map<string, string>): Map<string, GraphEdge> {
   const edgeMap = new Map<string, GraphEdge>();
+
+  // Build label lookup for fallback edge resolution (Recall pattern)
+  const nodesById = new Map<string, GraphNode>();
+  for (const analysis of analyses) {
+    for (const node of analysis.nodes) {
+      nodesById.set(node.id, node);
+    }
+  }
+
   for (const analysis of analyses) {
     for (const edge of analysis.edges) {
       // Remap edge endpoints to merged node IDs
       const mergedSource = idMapping.get(edge.source) ?? edge.source;
       const mergedTarget = idMapping.get(edge.target) ?? edge.target;
       const edgeKey = `${mergedSource}-${mergedTarget}-${edge.kind}`;
-      const remappedEdge = { ...edge, source: mergedSource, target: mergedTarget };
+
+      // Include label fallback for edge safety (allows recovery if ID resolution fails)
+      const sourceNode = nodesById.get(edge.source);
+      const targetNode = nodesById.get(edge.target);
+      const remappedEdge: GraphEdge = {
+        ...edge,
+        source: mergedSource,
+        target: mergedTarget,
+        sourceLabel: sourceNode?.label,
+        targetLabel: targetNode?.label,
+      };
+
       const existing = edgeMap.get(edgeKey);
       if (existing) {
         mergeEdge(existing, remappedEdge);
