@@ -54,16 +54,25 @@ export function KnowledgeGraphCanvas({
   const fgRef = useRef<any>(null);
   const [size, setSize] = useState({ w: 600, h: height ?? (compact ? 280 : 520) });
   const hoverIdRef = useRef<string | null>(null);
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Measure container to size the canvas responsively.
+  // Measure container to size the canvas responsively with debounced ResizeObserver
+  // to avoid excessive re-renders during window resize.
   useEffect(() => {
     if (!containerRef.current) return;
     const el = containerRef.current;
     const ro = new ResizeObserver(() => {
-      setSize({ w: el.clientWidth, h: height ?? (compact ? 280 : el.clientHeight || 520) });
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+      resizeTimeoutRef.current = setTimeout(() => {
+        const newHeight = height ?? (compact ? 280 : Math.max(280, el.clientHeight || 520));
+        setSize({ w: el.clientWidth || 600, h: newHeight });
+      }, 50);
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+    };
   }, [height, compact]);
 
   // Map domain graph → force-graph shape. Create stable identity keyed by actual node/edge content,
@@ -78,6 +87,9 @@ export function KnowledgeGraphCanvas({
     [graph.nodes, graph.edges]
   );
 
+  // Use dataKey as stable dependency to prevent physics engine restart during dimension building.
+  // dataKey encodes both graph.nodes and graph.edges content, so it's a complete dependency.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const data = useMemo(
     () => ({
       nodes: graph.nodes.map((n) => ({ ...n })) as FGNode[],
@@ -86,25 +98,33 @@ export function KnowledgeGraphCanvas({
     [dataKey]
   );
 
-  // Configure custom D3 forces on the engine to resolve isolated islands
+  // Configure custom D3 forces on the engine to resolve isolated islands.
+  // Scaling formulas improve with dataset size for better performance on larger graphs.
   useEffect(() => {
     if (fgRef.current) {
-      // 1. Repulsion force
-      fgRef.current.d3Force('charge', forceManyBody().strength(compact ? -60 : -140));
+      const nodeCount = graph.nodes.length;
+      const repulsionStrength = compact ? -60 : Math.max(-200, -140 - Math.log(Math.max(1, nodeCount - 10)) * 5);
+
+      // 1. Repulsion force (scaled by node count to prevent overcrowding)
+      fgRef.current.d3Force('charge', forceManyBody().strength(repulsionStrength));
 
       // 2. Center gravity force (Black hole centering pulling disconnected nodes)
       fgRef.current.d3Force('center', forceCenter(size.w / 2, size.h / 2));
 
-      // 3. Collision force to prevent overlapping nodes
+      // 3. Collision force with improved scaling for varying dataset sizes
       fgRef.current.d3Force(
         'collide',
         forceCollide().radius((node: any) => {
-          const r = (compact ? 3 : 4) + (node.weight || 0) * (compact ? 3.5 : 5);
-          return r + (compact ? 4 : 8);
+          const baseRadius = compact ? 3 : 4;
+          const weightFactor = compact ? 3.5 : 5;
+          const collisionPadding = compact ? 4 : 8;
+          const r = baseRadius + (node.weight || 0) * weightFactor;
+          const padding = collisionPadding * (1 + Math.log(Math.max(1, nodeCount / 20)) * 0.1);
+          return r + padding;
         })
       );
     }
-  }, [size, compact, data]);
+  }, [size, compact, data, graph.nodes.length]);
 
   // Neighborhood of the selected node — drives highlight/dim on selection.
   // Hover dimming is handled imperatively via the force-graph's own repaint cycle.
@@ -159,8 +179,17 @@ export function KnowledgeGraphCanvas({
           justifyContent: 'center',
         }}
       >
-        <div style={{ textAlign: 'center', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: '12px', fontStyle: 'italic' }}>
-          No knowledge graph data
+        <div
+          style={{
+            textAlign: 'center',
+            color: 'var(--ink-muted)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: compact ? '11px' : '12px',
+            fontStyle: 'italic',
+            opacity: 0.7,
+          }}
+        >
+          {compact ? 'No graph data' : 'No knowledge graph data available'}
         </div>
       </div>
     );
@@ -279,11 +308,17 @@ export function KnowledgeGraphCanvas({
           const showLabel = isActive || isNeighbor || node.weight >= 1.5 || scale > (compact ? 1.2 : 0.8);
 
           if (showLabel && !dim) {
-            const minFontSize = 9;
-            const maxFontSize = 15;
+            // Improved font sizing with better scale responsiveness.
+            // Uses logarithmic scaling for smoother size transitions across zoom levels.
+            const minFontSize = compact ? 7 : 9;
+            const maxFontSize = compact ? 13 : 16;
             const normalizedWeight = Math.min(1, Math.max(0, node.weight / 10));
             const weightedFontSize = minFontSize + (normalizedWeight * (maxFontSize - minFontSize));
-            const clampedFontSize = Math.max(minFontSize * 0.7, Math.min(maxFontSize, weightedFontSize / Math.sqrt(scale)));
+            const scaleAdjustment = Math.sqrt(scale);
+            const clampedFontSize = Math.max(
+              minFontSize * 0.6,
+              Math.min(maxFontSize, weightedFontSize / scaleAdjustment)
+            );
 
             // Font weight: bold (700) for selected nodes, regular (400) otherwise
             const fontWeight = node.id === selectedId ? 700 : 400;
@@ -293,27 +328,29 @@ export function KnowledgeGraphCanvas({
             ctx.fillStyle = `rgb(${COL.ink} / ${isActive ? 1 : 0.8})`;
 
             const label = node.label;
-            const maxWidth = (compact ? 60 : 80) / scale;
-            const lineHeight = (compact ? 10 : 12) / scale;
-            
-            // Simple text wrapping
-            const words = label.split(' ');
+            const maxWidth = (compact ? 50 : 70) / scale;
+            const lineHeight = (compact ? 9 : 11) / scale;
+
+            // Improved text wrapping with better measurement
+            const words = label.split(' ').filter((w) => w.length > 0);
             let line = '';
-            const lines = [];
-            
+            const lines: string[] = [];
+
             for (let n = 0; n < words.length; n++) {
-              const testLine = line + words[n] + ' ';
+              const word = words[n];
+              if (!word) continue;
+              const testLine = line ? line + ' ' + word : word;
               const metrics = ctx.measureText(testLine);
               if (metrics.width > maxWidth && line !== '') {
-                lines.push(line.trim());
-                line = words[n] + ' ';
+                lines.push(line);
+                line = word;
               } else {
                 line = testLine;
               }
             }
-            lines.push(line.trim());
+            if (line) lines.push(line);
 
-            const startY = node.y! + r + 4 / scale;
+            const startY = node.y! + r + 3 / scale;
             lines.forEach((l, i) => {
               ctx.fillText(l, node.x!, startY + i * lineHeight);
             });

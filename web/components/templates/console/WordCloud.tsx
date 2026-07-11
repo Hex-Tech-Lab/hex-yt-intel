@@ -41,15 +41,22 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     if (ink) inkRef.current = ink;
   }, []);
 
-  // Resize handling
+  // Resize handling with debouncing to avoid excessive re-renders
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (!containerRef.current) return;
     const el = containerRef.current;
     const ro = new ResizeObserver(() => {
-      setSize({ w: el.clientWidth, h: 220 });
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+      resizeTimeoutRef.current = setTimeout(() => {
+        setSize({ w: Math.max(50, el.clientWidth), h: 220 });
+      }, 50);
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+    };
   }, []);
 
   // Compute collision-free layout
@@ -119,19 +126,24 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     const testCtx = testCanvas ? testCanvas.getContext('2d') : null;
 
     const checkOverlap = (a: PlacedWord, b: PlacedWord) => {
-      const padding = 8;
+      // Adaptive padding based on word size for better collision detection
+      const basePadding = 6;
+      const maxPadding = 8;
+      const avgSize = (a.w + a.h + b.w + b.h) / 4;
+      const padding = Math.min(maxPadding, basePadding + avgSize * 0.05);
       return (
         Math.abs(a.x - b.x) * 2 < a.w + b.w + padding &&
         Math.abs(a.y - b.y) * 2 < a.h + b.h + padding
       );
     };
 
-    // Archimedean spiral tuned to actually span the canvas: the radius grows
-    // from the center out to (and past) the edge across the iteration budget,
-    // so words after the first find open space instead of piling on the center.
+    // Archimedean spiral tuned to span the canvas efficiently with adaptive parameters
+    // based on available space and number of words
     const maxRadius = Math.max(size.w, size.h) / 2;
-    const angleStep = 0.35;
-    const radiusStep = maxRadius / 220;
+    const wordCount = Math.max(1, sortedTokens.length);
+    const spiralDensity = Math.max(0.25, Math.min(0.5, 20 / wordCount));
+    const angleStep = 0.35 + spiralDensity * 0.1;
+    const radiusStep = maxRadius / (220 - wordCount * 0.5);
     const yScale = 0.62; // squash vertically to the canvas' wide aspect
 
     sortedTokens.forEach((token) => {
@@ -140,6 +152,9 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       const logMax = Math.log(Math.max(maxTokenWeight, 1));
       let normalizedWeight: number;
       const minSpread = 0.1;
+
+      // Improved weight normalization: use logarithmic scale for better distribution
+      // when dataset has wide weight variance, linear scale for tight distributions
       if ((logMax - logMin) > minSpread) {
         normalizedWeight = (Math.log(Math.max(weight, 1)) - logMin) / (logMax - logMin);
       } else {
@@ -147,8 +162,10 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         const linearMax = Math.max(maxTokenWeight, 1);
         normalizedWeight = linearMax > linearMin ? (Math.max(weight, 1) - linearMin) / (linearMax - linearMin) : 0.5;
       }
-      normalizedWeight = Math.max(0.2, Math.min(1, normalizedWeight));
-      const fontSize = Math.max(11, Math.min(24, 11 + normalizedWeight * 13));
+
+      // Smooth clamping with better distribution across the font size range
+      normalizedWeight = Math.max(0.15, Math.min(1, normalizedWeight));
+      const fontSize = Math.max(10, Math.min(26, 10 + normalizedWeight * 16));
       const text = token.label;
 
       let maxTextWidth = 0;
@@ -166,8 +183,11 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
       // Chip dimensions (slightly-rounded rectangle, not a pill)
       // Add extra padding to ensure bold text fits within collision box
-      const collisionBoxWidth = maxTextWidth + 24;
-      const collisionBoxHeight = fontSize + 12;
+      // Scale padding relative to font size for consistent visual spacing
+      const horizontalPadding = Math.max(20, fontSize * 1.8);
+      const verticalPadding = Math.max(10, fontSize * 0.8);
+      const collisionBoxWidth = maxTextWidth + horizontalPadding;
+      const collisionBoxHeight = fontSize + verticalPadding;
 
       let placedWord: PlacedWord | null = null;
       let angle = Math.random() * Math.PI * 2;
