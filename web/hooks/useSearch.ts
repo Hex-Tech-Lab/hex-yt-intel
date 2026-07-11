@@ -31,20 +31,14 @@ interface SearchState {
   results: SearchResult[];
   isLoading: boolean;
   error: string | null;
-  queryTime: number;
   totalResults: number;
-  currentPage: number;
-  hasNextPage: boolean;
 }
 
 const INITIAL_STATE: SearchState = {
   results: [],
   isLoading: false,
   error: null,
-  queryTime: 0,
   totalResults: 0,
-  currentPage: 1,
-  hasNextPage: false,
 };
 
 /**
@@ -90,8 +84,6 @@ export function useSearch(options: UseSearchOptions = {}) {
           ...prev,
           results: [],
           totalResults: 0,
-          currentPage: 1,
-          hasNextPage: false,
         }));
         return;
       }
@@ -120,9 +112,6 @@ export function useSearch(options: UseSearchOptions = {}) {
           ...prev,
           results: data.results || [],
           totalResults: data.count || 0,
-          queryTime: 0,
-          currentPage: 1,
-          hasNextPage: false,
           isLoading: false,
         }));
       } catch (err) {
@@ -152,7 +141,6 @@ export function useSearch(options: UseSearchOptions = {}) {
         ...prev,
         results: [],
         totalResults: 0,
-        currentPage: 1,
       }));
       return;
     }
@@ -178,8 +166,6 @@ export function useSearch(options: UseSearchOptions = {}) {
       results: [],
       error: null,
       totalResults: 0,
-      currentPage: 1,
-      hasNextPage: false,
       isLoading: false,
     }));
   }, []);
@@ -193,7 +179,6 @@ export function useSearch(options: UseSearchOptions = {}) {
     results: state.results,
     isLoading: state.isLoading,
     error: state.error,
-    queryTime: state.queryTime,
     totalResults: state.totalResults,
 
     // Actions
