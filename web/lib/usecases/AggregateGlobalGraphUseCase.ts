@@ -15,23 +15,6 @@ function canonicalizeLabel(label: string): string {
 }
 
 /**
- * Compute semantic similarity via keyTerm overlap using Jaccard index.
- * Measures concept relatedness across dimensions by comparing keyword sets.
- * Returns 0-1 where 1 means identical terms, 0 means no overlap.
- * @param termsA - First set of key terms
- * @param termsB - Second set of key terms
- * @returns Jaccard similarity coefficient (0-1)
- */
-function computeTermOverlap(termsA: string[], termsB: string[]): number {
-  if (!termsA.length || !termsB.length) return 0;
-  const setA = new Set(termsA.map(t => t.toLowerCase()));
-  const setB = new Set(termsB.map(t => t.toLowerCase()));
-  const intersection = new Set([...setA].filter(x => setB.has(x)));
-  const union = new Set([...setA, ...setB]);
-  return union.size === 0 ? 0 : intersection.size / union.size;
-}
-
-/**
  * Merge incoming node into existing node.
  * Accumulates weight and deduplicates keyTerms to preserve semantic information.
  * @param existing - Target node to merge into
