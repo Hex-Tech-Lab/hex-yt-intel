@@ -1,11 +1,11 @@
+import * as Sentry from '@sentry/nextjs';
+import Stripe from 'stripe';
+import { z } from 'zod';
 import { stripe } from '@/lib/stripe';
 import { getSupabaseServiceClient } from '@/lib/supabase';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import Stripe from 'stripe';
-import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
-import { z } from 'zod';
 import { USAGE_LOG_SCHEMA } from '@/lib/usage/usage-log-schema';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Centralized helper to validate and insert usage logs with consistent error handling.
@@ -103,13 +103,11 @@ export async function handleSubscriptionCreatedUpdated(
 
   const existingCustomerId = (users as any).stripe_customer_id;
   if (existingCustomerId && existingCustomerId !== customerId) {
-    console.error('[handleSubscriptionCreatedUpdated] Customer ID mismatch for user:', userId, {
-      event: customerId,
-      stored: existingCustomerId,
-    });
+    console.error('[handleSubscriptionCreatedUpdated] Customer ID mismatch detected');
     Sentry.captureMessage('Stripe customer ID mismatch detected', {
       level: 'error',
       tags: { security: 'customer_ownership' },
+      contexts: { user: { id: userId }, stripe: { event: customerId, stored: existingCustomerId } },
     });
     return;
   }
@@ -130,7 +128,7 @@ export async function handleSubscriptionCreatedUpdated(
     return;
   }
 
-  console.log(`[handleSubscriptionCreatedUpdated] User ${userId} upgraded to Pro`);
+  console.log('[handleSubscriptionCreatedUpdated] Subscription created/updated successfully');
 
   const logData = {
     user_id: userId,
@@ -175,13 +173,11 @@ export async function handleSubscriptionCanceled(
 
   const existingCustomerId = (users as any).stripe_customer_id;
   if (existingCustomerId && existingCustomerId !== customerId) {
-    console.error('[handleSubscriptionCanceled] Customer ID mismatch for user:', userId, {
-      event: customerId,
-      stored: existingCustomerId,
-    });
+    console.error('[handleSubscriptionCanceled] Customer ID mismatch detected');
     Sentry.captureMessage('Stripe customer ID mismatch on cancellation', {
       level: 'error',
       tags: { security: 'customer_ownership' },
+      contexts: { user: { id: userId }, stripe: { event: customerId, stored: existingCustomerId } },
     });
     return;
   }
@@ -201,7 +197,7 @@ export async function handleSubscriptionCanceled(
     return;
   }
 
-  console.log(`[handleSubscriptionCanceled] User ${userId} downgraded to Free`);
+  console.log('[handleSubscriptionCanceled] Subscription canceled successfully');
 
   const cancelData = {
     user_id: userId,
@@ -241,13 +237,11 @@ export async function handleInvoicePaid(
 
     const existingCustomerId = (users as any).stripe_customer_id;
     if (existingCustomerId && existingCustomerId !== customerId) {
-      console.error('[handleInvoicePaid] Customer ID mismatch for user:', userId, {
-        event: customerId,
-        stored: existingCustomerId,
-      });
+      console.error('[handleInvoicePaid] Customer ID mismatch detected');
       Sentry.captureMessage('Stripe customer ID mismatch on invoice payment', {
         level: 'error',
         tags: { security: 'customer_ownership' },
+        contexts: { user: { id: userId }, stripe: { event: customerId, stored: existingCustomerId } },
       });
       return;
     }
@@ -264,7 +258,7 @@ export async function handleInvoicePaid(
     };
     await insertUsageLog(supabase, paymentData, 'handleInvoicePaid');
 
-    console.log(`[handleInvoicePaid] Invoice ${invoice.id} paid for user ${userId}`);
+    console.log(`[handleInvoicePaid] Invoice ${invoice.id} paid successfully`);
   }
 }
 
@@ -295,13 +289,11 @@ export async function handleInvoiceFailed(
 
     const existingCustomerId = (users as any).stripe_customer_id;
     if (existingCustomerId && existingCustomerId !== customerId) {
-      console.error('[handleInvoiceFailed] Customer ID mismatch for user:', userId, {
-        event: customerId,
-        stored: existingCustomerId,
-      });
+      console.error('[handleInvoiceFailed] Customer ID mismatch detected');
       Sentry.captureMessage('Stripe customer ID mismatch on invoice failure', {
         level: 'error',
         tags: { security: 'customer_ownership' },
+        contexts: { user: { id: userId }, stripe: { event: customerId, stored: existingCustomerId } },
       });
       return;
     }
@@ -318,7 +310,7 @@ export async function handleInvoiceFailed(
     };
     await insertUsageLog(supabase, failureData, 'handleInvoiceFailed');
 
-    console.log(`[handleInvoiceFailed] Invoice ${invoice.id} failed for user ${userId}`);
+    console.log(`[handleInvoiceFailed] Invoice ${invoice.id} failed to process`);
   }
 }
 
