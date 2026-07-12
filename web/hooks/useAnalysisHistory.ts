@@ -14,6 +14,11 @@ interface HistoryState {
   error: string | null;
 }
 
+/**
+ * Fetch and manage the user's analysis history from the server.
+ * Automatically loads on mount and handles loading/error states.
+ * @returns Object with items (analysis history), isLoading, and error state
+ */
 export function useAnalysisHistory() {
   const [state, setState] = useState<HistoryState>({
     items: [],

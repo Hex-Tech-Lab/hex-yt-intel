@@ -12,7 +12,16 @@ interface MessageRow {
   client_msg_id: string | null;
 }
 
+/**
+ * Manage chat conversations and messages in Supabase.
+ * Provides methods to fetch/create conversations and retrieve message history.
+ */
 export class SupabaseChatAdapter {
+  /**
+   * Fetch all chat conversations for a user, ordered by most recent.
+   * @param userId User ID to fetch conversations for
+   * @returns Array of chat conversations with metadata
+   */
   static async getConversations(userId: string): Promise<ChatConversation[]> {
     if (!userId) return [];
     try {
@@ -48,6 +57,11 @@ export class SupabaseChatAdapter {
     }
   }
 
+  /**
+   * Create a new chat conversation for a user.
+   * @param params User ID, optional analysis ID, and conversation title
+   * @returns New conversation object
+   */
   static async createConversation(params: {
     userId: string;
     analysisId: string | null;
@@ -85,6 +99,11 @@ export class SupabaseChatAdapter {
     }
   }
 
+  /**
+   * Fetch a single conversation by ID.
+   * @param params Conversation ID
+   * @returns Conversation object or null if not found
+   */
   static async getConversation(params: {
     conversationId: string;
   }): Promise<ChatConversation | null> {
@@ -120,6 +139,10 @@ export class SupabaseChatAdapter {
     }
   }
 
+  /**
+   * Update the title of a conversation.
+   * @param params Conversation ID and new title
+   */
   static async updateConversationTitle(params: {
     conversationId: string;
     title: string;
@@ -144,6 +167,11 @@ export class SupabaseChatAdapter {
     }
   }
 
+  /**
+   * Fetch all messages in a conversation, ordered chronologically.
+   * @param params Conversation ID
+   * @returns Array of chat messages
+   */
   static async getMessages(params: {
     conversationId: string;
   }): Promise<ChatMessage[]> {

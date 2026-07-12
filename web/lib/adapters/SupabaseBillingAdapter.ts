@@ -1,7 +1,16 @@
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 
+/**
+ * Manage user subscriptions and analysis billing status in Supabase.
+ * Uses service-role client for authorized updates.
+ */
 export class SupabaseBillingAdapter {
+  /**
+   * Update a user's subscription tier (pro/free).
+   * @param params User ID and new tier
+   * @throws Error if user not found or update fails
+   */
   static async updateUserTier(params: {
     userId: string;
     tier: 'pro' | 'free';
@@ -30,6 +39,11 @@ export class SupabaseBillingAdapter {
     }
   }
 
+  /**
+   * Update an analysis billing status (processing/completed/failed).
+   * @param params Analysis ID and new billing status
+   * @throws Error if update fails
+   */
   static async updateBillingStatus(params: {
     analysisId: string;
     status: 'processing' | 'completed' | 'failed';
@@ -57,6 +71,11 @@ export class SupabaseBillingAdapter {
     }
   }
 
+  /**
+   * Fetch user profile including tier, email, and quota usage.
+   * @param userId User ID to fetch
+   * @returns User profile with tier, email, quota, or null if not found
+   */
   static async getUserProfile(userId: string): Promise<{
     email: string | null;
     name: string | null;
