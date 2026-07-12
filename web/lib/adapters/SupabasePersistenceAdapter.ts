@@ -387,6 +387,39 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     }
   }
 
+  /**
+   * Check if a chunk has already been persisted (idempotency check).
+   * Returns true if the chunk exists with status='completed' or 'failed'.
+   * @param analysisId - Analysis ID to check
+   * @param chunkIndex - Chunk index to check
+   * @returns true if chunk has been persisted, false otherwise
+   */
+  async isChunkAlreadyPersisted(analysisId: string, chunkIndex: number): Promise<boolean> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analysis_chunks')
+        .select('chunk_index, status')
+        .eq('analysis_id', analysisId)
+        .eq('chunk_index', chunkIndex)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 = no rows returned (expected if chunk doesn't exist)
+        console.error('[SupabasePersistenceAdapter] isChunkAlreadyPersisted failed:', error.message);
+        throw error;
+      }
+      // Return true if chunk exists
+      return !!data;
+    } catch (error: unknown) {
+      Sentry.captureException(error, {
+        tags: { method: 'isChunkAlreadyPersisted' },
+        extra: { analysisId, chunkIndex },
+      });
+      throw error;
+    }
+  }
+
   async getAppSetting(key: string): Promise<any | null> {
     try {
       const service = getSupabaseServiceClient();
