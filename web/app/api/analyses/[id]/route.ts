@@ -65,15 +65,27 @@ export async function GET(
     const primaryPersona = payload.persona?.primary;
 
     // Compute frontend-visible status:
-    // - 'complete' if billing_status='chargeable' or 'charged' (analysis ready/paid)
-    // - 'error' if billing_status='failed' or validation_status='error'
+    // - 'complete' if validation_status='done' OR billing_status='chargeable'/'charged'
+    // - 'error' if validation_status='error' OR billing_status='failed'
+    // - 'partial' if validation_status='partial'
     // - 'incomplete' otherwise (pending or other states)
-    const analysisStatus: 'complete' | 'incomplete' | 'error' =
-      analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged'
-        ? 'complete'
-        : analysis.billing_status === 'failed' || (report as any).status === 'error'
-        ? 'error'
-        : 'incomplete';
+    const validationStatus = (report as any).validation_status || (report as any).status || 'processing';
+    let analysisStatus: 'complete' | 'incomplete' | 'error' | 'partial' = 'incomplete';
+    if (validationStatus === 'done' || analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged') {
+      analysisStatus = 'complete';
+    } else if (validationStatus === 'error' || validationStatus === 'failed' || analysis.billing_status === 'failed') {
+      analysisStatus = 'error';
+    } else if (validationStatus === 'partial') {
+      analysisStatus = 'partial';
+    }
+
+    // Populate dimensionsReceived from validation_report.dimension_status
+    const dimensionStatus = (report as any).dimension_status;
+    const dimensionsReceived: number[] = Array.isArray(dimensionStatus)
+      ? dimensionStatus
+          .filter((d: any) => d.status === 'done' || d.status === 'partial')
+          .map((d: any) => d.dimension)
+      : [];
 
     // Always include analysis_payload to ensure the frontend can reconstruct dimensions
     // if markdown reconstruction fails or markdown is missing
@@ -93,7 +105,7 @@ export async function GET(
       streaming: {
         started: analysis.created_at,
         interrupted: false,
-        dimensionsReceived: []
+        dimensionsReceived
       },
     });
   } catch (err) {
