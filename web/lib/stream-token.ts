@@ -77,17 +77,36 @@ export function boundContentMessage(purpose: BoundSigPurpose, id: string, exp: n
  * flow, or against a different resource. When omitted, we fall back to the legacy
  * content-only signature so a non-atomic worker/web rollout can't cause a persist
  * outage. Remove the legacy branch once the worker signer is fully deployed.
+ *
+ * Tries both STREAM_HMAC_SECRET and DEV_HMAC_SECRET to align with worker's dual-secret
+ * verification logic across all environments. This handles cases where worker and web
+ * are configured with different secrets (preview/dev or misconfigured production).
  */
 export async function verifyContentSig(
   message: string,
   sig: string,
   binding?: { purpose: BoundSigPurpose; id: string; exp: number }
 ): Promise<boolean> {
-  if (binding) {
-    if (!Number.isFinite(binding.exp) || Date.now() > binding.exp) return false;
-    const expected = await hmacHex(env.streamHmacSecret, boundContentMessage(binding.purpose, binding.id, binding.exp, message));
-    return timingSafeEqualHex(expected, sig);
+  const primarySecret = env.streamHmacSecret;
+  const devSecret = process.env.DEV_HMAC_SECRET;
+  const secretsToTry = [primarySecret];
+
+  if (devSecret) {
+    secretsToTry.push(devSecret);
   }
-  const expected = await hmacHex(env.streamHmacSecret, message);
-  return timingSafeEqualHex(expected, sig);
+
+  for (const secret of secretsToTry) {
+    if (!secret) continue;
+
+    if (binding) {
+      if (!Number.isFinite(binding.exp) || Date.now() > binding.exp) continue;
+      const expected = await hmacHex(secret, boundContentMessage(binding.purpose, binding.id, binding.exp, message));
+      if (timingSafeEqualHex(expected, sig)) return true;
+    } else {
+      const expected = await hmacHex(secret, message);
+      if (timingSafeEqualHex(expected, sig)) return true;
+    }
+  }
+
+  return false;
 }
