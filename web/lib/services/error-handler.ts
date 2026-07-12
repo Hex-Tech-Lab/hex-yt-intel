@@ -3,9 +3,13 @@
  *
  * Provides consistent error categorization, retry eligibility assessment,
  * and structured logging across all API routes.
+ *
+ * IMPORTANT: Use ERROR_PHASES typed constants instead of free-form strings.
+ * This ensures type safety and prevents runtime phase drift from typos.
  */
 
 import * as Sentry from '@sentry/nextjs';
+import { ERROR_PHASES, type ErrorPhase } from '@/lib/error-codes';
 
 export type ErrorCategory =
   | 'request_validation'
@@ -32,14 +36,25 @@ export interface CategorizedError {
  * Determines retry eligibility and appropriate HTTP status code.
  *
  * @param error - The error to categorize
- * @param phase - The processing phase where error occurred
+ * @param phase - The processing phase where error occurred (use ERROR_PHASES constants)
  * @returns Categorized error with retry flag and status code
+ *
+ * @example
+ * // GOOD: Type-safe, compile-checked
+ * const err = categorizeError(error, ERROR_PHASES.DATABASE_FETCH);
+ *
+ * // BAD: Runtime risk, typos not caught
+ * const err = categorizeError(error, 'database_fetch');
  */
-export function categorizeError(error: unknown, phase: string): CategorizedError {
+export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedError {
   const message = error instanceof Error ? error.message : String(error);
 
-  // Request validation phase
-  if (phase === 'request_validation' || phase === 'json_parse' || phase === 'schema_validation') {
+  // Request validation phase (including JSON parse and schema validation)
+  if (
+    phase === ERROR_PHASES.REQUEST_VALIDATION ||
+    phase === ERROR_PHASES.JSON_PARSE ||
+    phase === ERROR_PHASES.SCHEMA_VALIDATION
+  ) {
     return {
       category: 'request_validation',
       code: 'INVALID_REQUEST',
@@ -50,7 +65,7 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
   }
 
   // Authentication phase
-  if (phase === 'authentication' || phase === 'auth') {
+  if (phase === ERROR_PHASES.AUTHENTICATION) {
     return {
       category: 'authentication',
       code: 'UNAUTHORIZED',
@@ -61,7 +76,7 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
   }
 
   // Authorization phase
-  if (phase === 'authorization' || phase === 'permission_check') {
+  if (phase === ERROR_PHASES.AUTHORIZATION) {
     return {
       category: 'authorization',
       code: 'FORBIDDEN',
@@ -71,8 +86,8 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
     };
   }
 
-  // Rate limiting phase
-  if (phase === 'rate_limit' || phase === 'quota_check') {
+  // Rate limiting phase (including quota checks)
+  if (phase === ERROR_PHASES.RATE_LIMIT || phase === ERROR_PHASES.QUOTA_CHECK) {
     return {
       category: 'rate_limit',
       code: 'RATE_LIMITED',
@@ -82,8 +97,12 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
     };
   }
 
-  // Database fetch operations
-  if (phase === 'database_fetch' || phase === 'db_read' || phase === 'cache_lookup') {
+  // Database fetch operations (including cache lookups and idempotency checks)
+  if (
+    phase === ERROR_PHASES.DATABASE_FETCH ||
+    phase === ERROR_PHASES.CACHE_LOOKUP ||
+    phase === ERROR_PHASES.IDEMPOTENCY_CHECK
+  ) {
     const isTimeout = message.includes('timeout') || message.includes('ECONNRESET') || message.includes('ETIMEDOUT');
     return {
       category: 'database_fetch',
@@ -95,7 +114,7 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
   }
 
   // Database write operations
-  if (phase === 'database_write' || phase === 'db_insert' || phase === 'db_update') {
+  if (phase === ERROR_PHASES.DATABASE_WRITE) {
     const isTransient = message.includes('timeout') || message.includes('connection') || message.includes('ECONNRESET');
     return {
       category: 'database_write',
@@ -106,8 +125,35 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
     };
   }
 
-  // External service calls
-  if (phase === 'external_service' || phase === 'embedding_generation' || phase === 'vector_search' || phase === 'llm_call') {
+  // Signature verification (chat-specific, retryable on timeout)
+  if (phase === ERROR_PHASES.SIGNATURE_VERIFICATION) {
+    const isTimeout = message.includes('timeout') || message.includes('AbortError');
+    return {
+      category: 'authentication',
+      code: 'INVALID_SIGNATURE',
+      message,
+      retryable: isTimeout,
+      statusCode: isTimeout ? 503 : 401,
+    };
+  }
+
+  // Ownership check (authorization-like, not retryable)
+  if (phase === ERROR_PHASES.OWNERSHIP_CHECK) {
+    return {
+      category: 'authorization',
+      code: 'UNAUTHORIZED',
+      message,
+      retryable: false,
+      statusCode: 404,
+    };
+  }
+
+  // External service calls (embeddings, vector search, LLM calls)
+  if (
+    phase === ERROR_PHASES.EXTERNAL_SERVICE ||
+    phase === ERROR_PHASES.EMBEDDING_GENERATION ||
+    phase === ERROR_PHASES.VECTOR_SEARCH
+  ) {
     const isTimeout = message.includes('timeout') || message.includes('ECONNRESET') || message.includes('AbortError');
     const isRateLimit = message.includes('rate limit') || message.includes('quota') || message.includes('429');
 
@@ -140,8 +186,24 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
     };
   }
 
-  // Business logic phase
-  if (phase === 'business_logic' || phase === 'validation' || phase === 'constraint_check') {
+  // Result enrichment (can fail per-result without failing whole batch)
+  if (phase === ERROR_PHASES.RESULT_ENRICHMENT) {
+    const isTimeout = message.includes('timeout') || message.includes('ECONNRESET');
+    return {
+      category: 'database_fetch',
+      code: 'ENRICHMENT_FAILED',
+      message,
+      retryable: isTimeout,
+      statusCode: isTimeout ? 503 : 500,
+    };
+  }
+
+  // Business logic phase (validation, constraints)
+  if (
+    phase === ERROR_PHASES.BUSINESS_LOGIC ||
+    phase === ERROR_PHASES.VALIDATION ||
+    phase === ERROR_PHASES.CONSTRAINT_CHECK
+  ) {
     return {
       category: 'business_logic',
       code: 'BUSINESS_LOGIC_ERROR',
@@ -152,7 +214,7 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
   }
 
   // Network timeout (generic)
-  if (phase === 'network_timeout') {
+  if (phase === ERROR_PHASES.NETWORK_TIMEOUT) {
     return {
       category: 'network_timeout',
       code: 'TIMEOUT',
@@ -162,7 +224,7 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
     };
   }
 
-  // Default: unknown error
+  // Default: unknown error (type safety ensures we only reach this for UNKNOWN phase)
   return {
     category: 'unknown',
     code: 'INTERNAL_ERROR',
@@ -178,17 +240,20 @@ export function categorizeError(error: unknown, phase: string): CategorizedError
  * @param error - The error to capture
  * @param operation - The operation name (e.g., 'search-query', 'analysis-create')
  * @param categorized - The categorized error from categorizeError()
+ * @param phase - The error phase (used for Sentry tag)
  * @param context - Additional context (userId, videoId, duration, etc.)
  */
 export function captureErrorToSentry(
   error: unknown,
   operation: string,
   categorized: CategorizedError,
+  phase?: ErrorPhase,
   context: Record<string, unknown> = {}
 ): void {
   Sentry.captureException(error, {
     tags: {
       operation,
+      phase: phase || 'unknown',
       category: categorized.category,
       code: categorized.code,
       retryable: String(categorized.retryable),

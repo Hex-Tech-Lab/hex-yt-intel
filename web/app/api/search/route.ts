@@ -7,66 +7,9 @@ import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters'
 import { guardTraffic } from '@/lib/services/traffic';
 import { generateEmbedding } from '@/lib/embeddings';
 import * as Sentry from '@sentry/nextjs';
+import { ERROR_PHASES } from '@/lib/error-codes';
+import { categorizeError } from '@/lib/services/error-handler';
 
-type SearchErrorCategory =
-  | 'request_validation'
-  | 'authentication'
-  | 'rate_limit'
-  | 'embedding_generation'
-  | 'vector_search'
-  | 'database_fetch'
-  | 'unknown';
-
-interface SearchError {
-  category: SearchErrorCategory;
-  code: string;
-  message: string;
-  retryable: boolean;
-  statusCode: number;
-}
-
-// Initialize Upstash Vector Index for semantic search
-const vectorIndex = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL || 'https://placeholder-vector.upstash.io',
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
-});
-
-// Production guard: Ensure real credentials are configured
-if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL?.includes('placeholder')) {
-  throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
-}
-
-const SearchRequestSchema = z.object({
-  query: z.string().min(3).max(1000),
-  topK: z.number().int().min(1).max(50).default(5),
-});
-
-function categorizeSearchError(error: unknown, phase: string): SearchError {
-  const message = error instanceof Error ? error.message : String(error);
-
-  if (phase === 'request_validation') {
-    return { category: 'request_validation', code: 'INVALID_REQUEST', message, retryable: false, statusCode: 400 };
-  }
-  if (phase === 'authentication') {
-    return { category: 'authentication', code: 'UNAUTHORIZED', message, retryable: false, statusCode: 401 };
-  }
-  if (phase === 'rate_limit') {
-    return { category: 'rate_limit', code: 'RATE_LIMITED', message, retryable: true, statusCode: 429 };
-  }
-  if (phase === 'embedding_generation') {
-    const isTimeout = message.includes('timeout') || message.includes('ECONNRESET');
-    return { category: 'embedding_generation', code: 'EMBEDDING_FAILED', message, retryable: isTimeout, statusCode: isTimeout ? 503 : 500 };
-  }
-  if (phase === 'vector_search') {
-    const isTimeout = message.includes('timeout') || message.includes('connection');
-    return { category: 'vector_search', code: 'VECTOR_SEARCH_FAILED', message, retryable: isTimeout, statusCode: isTimeout ? 503 : 500 };
-  }
-  if (phase === 'database_fetch') {
-    const isTimeout = message.includes('timeout') || message.includes('ECONNRESET');
-    return { category: 'database_fetch', code: 'DB_FETCH_ERROR', message, retryable: isTimeout, statusCode: isTimeout ? 503 : 500 };
-  }
-  return { category: 'unknown', code: 'INTERNAL_ERROR', message, retryable: true, statusCode: 500 };
-}
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -78,7 +21,7 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
     } catch (parseErr) {
-      const err = categorizeSearchError(parseErr, 'request_validation');
+      const err = categorizeError(parseErr, ERROR_PHASES.REQUEST_VALIDATION);
       Sentry.captureException(parseErr, {
         tags: { operation: 'search', phase: 'json_parse', retryable: String(err.retryable) },
         contexts: { api: { requestId, endpoint: '/api/search' } }
@@ -90,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Validate request schema with Zod
     const parsed = SearchRequestSchema.safeParse(body);
     if (!parsed.success) {
-      const err = categorizeSearchError(parsed.error, 'request_validation');
+      const err = categorizeError(parsed.error, ERROR_PHASES.REQUEST_VALIDATION);
       console.warn('[search] Invalid payload schema', { requestId, issues: parsed.error.issues.length });
       Sentry.captureMessage('Search: Invalid request schema', {
         level: 'warning',
@@ -107,7 +50,7 @@ export async function POST(request: NextRequest) {
     const identity = await authAdapter.authenticate();
 
     if (!identity) {
-      const err = categorizeSearchError(new Error('No identity'), 'authentication');
+      const err = categorizeError(new Error('No identity'), ERROR_PHASES.AUTHENTICATION);
       console.warn('[search] Authentication failed', { requestId, query: query.substring(0, 50) });
       Sentry.captureMessage('Search: Authentication check failed', {
         level: 'warning',
@@ -147,7 +90,7 @@ export async function POST(request: NextRequest) {
         throw new Error('Empty embedding result');
       }
     } catch (error) {
-      const err = categorizeSearchError(error, 'embedding_generation');
+      const err = categorizeError(error, ERROR_PHASES.EMBEDDING_GENERATION);
       Sentry.captureException(error, {
         tags: { operation: 'search', phase: 'embedding_generation', retryable: String(err.retryable) },
         contexts: { api: { requestId, userId, endpoint: '/api/search' } }
@@ -165,7 +108,7 @@ export async function POST(request: NextRequest) {
         includeMetadata: true,
       });
     } catch (error) {
-      const err = categorizeSearchError(error, 'vector_search');
+      const err = categorizeError(error, ERROR_PHASES.VECTOR_SEARCH);
       Sentry.captureException(error, {
         tags: { operation: 'search', phase: 'vector_search', retryable: String(err.retryable) },
         contexts: { api: { requestId, userId, endpoint: '/api/search' } }
@@ -198,7 +141,7 @@ export async function POST(request: NextRequest) {
             createdAt: data.createdAt,
           };
         } catch (err) {
-          const error = categorizeSearchError(err, 'database_fetch');
+          const error = categorizeError(err, ERROR_PHASES.RESULT_ENRICHMENT);
           Sentry.captureException(err, {
             tags: { operation: 'search', phase: 'result_enrichment', retryable: String(error.retryable) },
             contexts: { api: { requestId, userId, analysisId: result.metadata?.analysisId } }

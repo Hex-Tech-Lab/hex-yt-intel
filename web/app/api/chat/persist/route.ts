@@ -7,54 +7,8 @@ import { z } from 'zod';
 import { verifyContentSig } from '@/lib/stream-token';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
-
-/**
- * Error categorization for network resilience and observability.
- */
-type ErrorCategory =
-  | 'signature_verification'
-  | 'ownership_check'
-  | 'database_fetch'
-  | 'database_write'
-  | 'network_timeout'
-  | 'request_validation'
-  | 'unknown';
-
-interface PersistError {
-  category: ErrorCategory;
-  code: string;
-  message: string;
-  retryable: boolean;
-  statusCode: number;
-}
-
-/**
- * Categorize database and network errors for proper retry logic and observability.
- */
-function categorizePersistError(error: unknown, phase: string): PersistError {
-  const message = error instanceof Error ? error.message : String(error);
-
-  if (phase === 'request_validation') {
-    return { category: 'request_validation', code: 'INVALID_REQUEST', message, retryable: false, statusCode: 400 };
-  }
-  if (phase === 'signature_verification') {
-    return { category: 'signature_verification', code: 'INVALID_SIGNATURE', message, retryable: true, statusCode: 401 };
-  }
-  if (phase === 'ownership_check') {
-    return { category: 'ownership_check', code: 'UNAUTHORIZED', message, retryable: false, statusCode: 404 };
-  }
-  if (phase === 'database_fetch' || phase === 'idempotency_check') {
-    // Network timeouts during fetch are retryable, other DB errors are not
-    const isTimeout = message.includes('timeout') || message.includes('ECONNRESET') || message.includes('ETIMEDOUT');
-    return { category: 'database_fetch', code: 'DB_FETCH_ERROR', message, retryable: isTimeout, statusCode: isTimeout ? 503 : 500 };
-  }
-  if (phase === 'database_write') {
-    // Constraint violations are not retryable; transient errors are
-    const isTransient = message.includes('timeout') || message.includes('connection') || message.includes('ECONNRESET');
-    return { category: 'database_write', code: 'DB_WRITE_ERROR', message, retryable: isTransient, statusCode: isTransient ? 503 : 500 };
-  }
-  return { category: 'unknown', code: 'INTERNAL_ERROR', message, retryable: true, statusCode: 500 };
-}
+import { ERROR_PHASES } from '@/lib/error-codes';
+import { categorizeError } from '@/lib/services/error-handler';
 
 /**
  * Server-to-server persistence for the edge chat stream. The Cloudflare Worker calls
@@ -78,7 +32,7 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
     } catch (error) {
-      const err = categorizePersistError(error, 'request_validation');
+      const err = categorizeError(error, ERROR_PHASES.REQUEST_VALIDATION);
       Sentry.captureException(error, {
         tags: { operation: 'chat-persist', phase: 'json_parse', retryable: String(err.retryable) },
         contexts: { api: { requestId, endpoint: '/api/chat/persist' } }
@@ -97,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     const parsed = payloadSchema.safeParse(body);
     if (!parsed.success) {
-      const err = categorizePersistError(parsed.error, 'request_validation');
+      const err = categorizeError(parsed.error, ERROR_PHASES.REQUEST_VALIDATION);
       console.warn('[chat/persist] Invalid payload schema', { requestId, issues: parsed.error.issues.length });
       return NextResponse.json({ error: err.message }, { status: err.statusCode });
     }
@@ -114,7 +68,7 @@ export async function POST(request: NextRequest) {
         new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('Signature verification timeout')), 5000))
       ]);
     } catch (error) {
-      const err = categorizePersistError(error, 'signature_verification');
+      const err = categorizeError(error, ERROR_PHASES.SIGNATURE_VERIFICATION);
       const isTimeout = (error instanceof Error) && (error.message.includes('timeout') || error.message.includes('AbortError'));
 
       Sentry.captureException(error, {
@@ -146,7 +100,7 @@ export async function POST(request: NextRequest) {
     try {
       conv = await persistenceAdapter.getConversation({ conversationId });
     } catch (error) {
-      const err = categorizePersistError(error, 'database_fetch');
+      const err = categorizeError(error, ERROR_PHASES.DATABASE_FETCH);
       Sentry.captureException(error, {
         tags: { operation: 'chat-persist', phase: 'ownership_fetch', retryable: String(err.retryable) },
         contexts: { api: { requestId, conversationId, endpoint: '/api/chat/persist' } }
@@ -165,7 +119,7 @@ export async function POST(request: NextRequest) {
     try {
       messages = await persistenceAdapter.getMessages({ conversationId });
     } catch (error) {
-      const err = categorizePersistError(error, 'database_fetch');
+      const err = categorizeError(error, ERROR_PHASES.DATABASE_FETCH);
       Sentry.captureException(error, {
         tags: { operation: 'chat-persist', phase: 'idempotency_check', retryable: String(err.retryable) },
         contexts: { api: { requestId, conversationId } }
@@ -199,7 +153,7 @@ export async function POST(request: NextRequest) {
         parentMessageId: latestUserMessage?.id || null,
       });
     } catch (error) {
-      const err = categorizePersistError(error, 'database_write');
+      const err = categorizeError(error, ERROR_PHASES.DATABASE_WRITE);
       Sentry.captureException(error, {
         tags: { operation: 'chat-persist', phase: 'message_create', retryable: String(err.retryable) },
         contexts: { api: { requestId, conversationId, userId } }

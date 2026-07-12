@@ -100,3 +100,90 @@ export function createErrorContext(
     ...context,
   };
 }
+
+/**
+ * ============================================================================
+ * ERROR PHASES - Processing Lifecycle Stages
+ * ============================================================================
+ *
+ * Single source of truth for all API error phases across the codebase.
+ * Using a const object with `as const` ensures TypeScript type safety
+ * and prevents runtime drift from typos or unregistered phase strings.
+ *
+ * Phases represent the lifecycle stage where an error occurred, enabling
+ * consistent retry logic and Sentry categorization.
+ */
+
+export const ERROR_PHASES = {
+  // Request handling
+  REQUEST_VALIDATION: 'request_validation',
+  JSON_PARSE: 'json_parse',
+  SCHEMA_VALIDATION: 'schema_validation',
+
+  // Authentication & Authorization
+  AUTHENTICATION: 'authentication',
+  AUTHORIZATION: 'authorization',
+
+  // Rate limiting & Quota
+  RATE_LIMIT: 'rate_limit',
+  QUOTA_CHECK: 'quota_check',
+
+  // Embedding & Vector operations
+  EMBEDDING_GENERATION: 'embedding_generation',
+  VECTOR_SEARCH: 'vector_search',
+
+  // Database operations
+  DATABASE_FETCH: 'database_fetch',
+  DATABASE_WRITE: 'database_write',
+  IDEMPOTENCY_CHECK: 'idempotency_check',
+  CACHE_LOOKUP: 'cache_lookup',
+
+  // Chat-specific operations
+  SIGNATURE_VERIFICATION: 'signature_verification',
+  OWNERSHIP_CHECK: 'ownership_check',
+
+  // Business logic
+  BUSINESS_LOGIC: 'business_logic',
+  VALIDATION: 'validation',
+  CONSTRAINT_CHECK: 'constraint_check',
+
+  // Network operations
+  EXTERNAL_SERVICE: 'external_service',
+  NETWORK_TIMEOUT: 'network_timeout',
+
+  // Result enrichment
+  RESULT_ENRICHMENT: 'result_enrichment',
+
+  // Fallback
+  UNKNOWN: 'unknown',
+} as const;
+
+/**
+ * Typed phase union: Only registered phase constants are allowed
+ */
+export type ErrorPhase = (typeof ERROR_PHASES)[keyof typeof ERROR_PHASES];
+
+/**
+ * Type guard: Validate that a string is a registered error phase
+ *
+ * @param phase - String to validate
+ * @returns true if phase is a valid ERROR_PHASES value
+ */
+export function isValidErrorPhase(phase: unknown): phase is ErrorPhase {
+  if (typeof phase !== 'string') return false;
+  return Object.values(ERROR_PHASES).includes(phase as ErrorPhase);
+}
+
+/**
+ * Parse and validate a phase string with fallback
+ *
+ * @param phase - Phase string to parse
+ * @returns Valid ErrorPhase or UNKNOWN as fallback
+ */
+export function parseErrorPhase(phase: unknown): ErrorPhase {
+  if (isValidErrorPhase(phase)) {
+    return phase;
+  }
+  // Fallback to UNKNOWN for unregistered phases (typos, legacy strings)
+  return ERROR_PHASES.UNKNOWN;
+}
