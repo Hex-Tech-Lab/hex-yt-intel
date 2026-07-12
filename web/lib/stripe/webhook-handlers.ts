@@ -5,7 +5,7 @@ import Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
 import { z } from 'zod';
-import { UsageLogSchema } from '@/lib/usage/usage-log-schema';
+import { USAGE_LOG_SCHEMA } from '@/lib/usage/usage-log-schema';
 
 /**
  * Centralized helper to validate and insert usage logs with consistent error handling.
@@ -16,13 +16,15 @@ async function insertUsageLog(
   contextLabel: string
 ): Promise<void> {
   try {
-    const validatedLog = UsageLogSchema.parse(logData);
+    const validatedLog = USAGE_LOG_SCHEMA.parse(logData);
     await supabase.from('usage_logs').insert(validatedLog);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error(`[${contextLabel}] Schema validation failed:`, error.issues);
+      console.error(`[${contextLabel}]`, { message: 'Schema validation failed', issues: error.issues });
+      Sentry.captureException(error, { contexts: { handler: contextLabel, layer: 'usage_log_validation' } });
     } else {
-      console.error(`[${contextLabel}] Failed to insert usage log:`, error);
+      console.error(`[${contextLabel}]`, { message: 'Failed to insert usage log', error: error instanceof Error ? error.message : String(error) });
+      Sentry.captureException(error, { contexts: { handler: contextLabel, layer: 'usage_log_insert' } });
     }
   }
 }
