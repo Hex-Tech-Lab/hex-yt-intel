@@ -101,6 +101,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
           }
           await selectConversation(existing.id);
         } else if (analysisId) {
+          // Clear any previous conversation first to prevent stale chat from loading
+          useChatStore.setState({ activeId: null });
           await newConversation({ analysisId });
         }
       } else {
