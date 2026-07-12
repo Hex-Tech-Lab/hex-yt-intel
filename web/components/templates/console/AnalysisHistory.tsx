@@ -174,9 +174,18 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     }
   };
 
+  // Separate processing/WIP from completed items
+  const wipItems = useMemo(() => {
+    return items.filter((item) => item.status === 'processing' || item.status === 'downloading' || item.status === 'parsing');
+  }, [items]);
+
   const filteredAndSorted = useMemo(() => {
     let result = [...items];
     if (filterStatus !== 'all') result = result.filter((item) => item.status === filterStatus);
+
+    // Separate WIP items from completed
+    result = result.filter((item) => item.status !== 'processing' && item.status !== 'downloading' && item.status !== 'parsing');
+
     result.sort((a, b) => {
       if (sortBy === 'most-analyzed') return b.timesAnalyzed - a.timesAnalyzed;
       const aTime = new Date(a.lastAnalyzedAt).getTime();
@@ -306,6 +315,64 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         </select>
       </div>
 
+      {/* Work-in-Progress Section */}
+      {wipItems.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Icon icon="solar:refresh-linear" size={18} className="hx-anispin text-[var(--accent)]" />
+            <h2 className="text-lg font-semibold text-[var(--ink)]">
+              In Progress <span className="text-[var(--ink-muted)] font-normal">({wipItems.length})</span>
+            </h2>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {wipItems.map((item) => {
+              const status = STATUS_STYLE[item.status];
+              return (
+                <div
+                  key={item.baseVideoId}
+                  className="rounded-xl border-2 border-[var(--accent)] bg-[var(--accent)]/5 p-4"
+                >
+                  {/* Title row */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{item.title || 'Untitled Analysis'}</h3>
+                        <span className="flex-shrink-0 inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--accent)]/10 text-[var(--accent)]">
+                          <Icon icon="solar:refresh-linear" size={12} className="hx-anispin" />
+                          {status.label}
+                        </span>
+                      </div>
+                      {item.channelTitle && (
+                        <p className="text-[12px] text-[var(--ink-muted)] truncate mt-0.5">{item.channelTitle}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Metrics row */}
+                  <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
+                    <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions produced so far">
+                      <span className="text-[var(--ink)] font-semibold">{item.bestDimensions}</span>/{TOTAL_DIMENSIONS} dims
+                    </MetricChip>
+                    <MetricChip icon="solar:calendar-minimalistic-linear" title="Started analyzing">
+                      {new Date(item.lastAnalyzedAt).toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true,
+                      })}
+                    </MetricChip>
+                    <Icon icon="solar:refresh-linear" size={16} className="hx-anispin text-[var(--accent)] ml-auto" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {filteredAndSorted.length === 0 ? (
         <div className="p-6 text-center text-[var(--ink-secondary)] rounded-lg border border-[var(--line)]">
           <p>No analyses match the selected filter.</p>
@@ -333,9 +400,6 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-muted)]/15 text-[9px] font-bold tabular-nums text-[var(--ink-muted)]">
-                          {itemNumber}
-                        </span>
                         <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-muted)]/15 text-[9px] font-bold tabular-nums text-[var(--ink-muted)]">
                           {itemNumber}
                         </span>
