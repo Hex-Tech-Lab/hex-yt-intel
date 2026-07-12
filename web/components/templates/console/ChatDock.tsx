@@ -282,10 +282,12 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       {/* Thread switcher */}
       {showThreads && (
         <div className="max-h-[200px] overflow-y-auto border-b border-[var(--line)] bg-[rgb(8_11_17_/_0.8)]">
-          {conversations.length === 0 && <div className="p-3 text-[var(--ink-muted)] font-mono text-[11px]">No conversations yet</div>}
-          {conversations
-            .filter((c) => !videoId || c.videoId === videoId)
-            .map((c) => (
+          {(() => {
+            const filteredConversations = conversations.filter((c) => !videoId || c.videoId === videoId || c.id === activeId);
+            return (
+              <>
+                {filteredConversations.length === 0 && <div className="p-3 text-[var(--ink-muted)] font-mono text-[11px]">No conversations yet</div>}
+                {filteredConversations.map((c) => (
             <div key={c.id} className="flex items-center gap-1.5 py-0.5 px-2">
               <button
                 onClick={() => { void selectConversation(c.id); setShowThreads(false); }}
@@ -296,7 +298,10 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
               </button>
               <button onClick={() => void deleteConversation(c.id)} title="Delete" className="grid place-items-center w-[22px] h-[22px] rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:trash-bin-minimalistic-linear" size={12} /></button>
             </div>
-          ))}
+                ))}
+              </>
+            );
+          })()}
         </div>
       )}
 
