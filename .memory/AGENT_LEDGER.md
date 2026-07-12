@@ -790,3 +790,37 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
   5. Create PR #147
   6. Complete review cycles
 
+
+---
+
+## Wave 2: Docstring Coverage Improvement (2026-07-12)
+
+- [2026-07-12T00:54:26+00:00] [Claude Agent] [IN_PROGRESS] Executing Wave 2 to improve docstring coverage from 50% to 80%.
+
+### Commits Completed
+1. **Initial Analysis**: Identified 76 exports requiring docstrings across 20+ files
+2. **Type Documentation**: Added comprehensive JSDoc to workflow.ts, knowledge-graph.ts, and contracts.ts (3 exports)
+3. **Port/Adapter Index Documentation**: Updated ports/index.ts and adapters/index.ts with 15 port interface docstrings and 15 adapter docstrings
+4. **Cascade Configuration**: Documented cascade.ts with 5 model cascade exports including usage context
+
+### Coverage Progression
+- **Before**: ~50% estimated coverage (based on low docstring count in identified files)
+- **After First Batch**: Added docstrings to 38 exports across 4 files
+- **Remaining**: ~40 exports across 16+ files (usecases, services, stores, types)
+
+### High-Priority Remaining Files
+1. web/lib/usecases/CreateAnalysisUseCase.ts (4 exports)
+2. web/lib/usecases/ProcessChatMessageUseCase.ts (4 exports)
+3. web/lib/stores/synthesis-nucleus-store.ts (5 exports)
+4. web/lib/services/traffic.ts (3+ exports)
+5. worker/src/services/ZodSchemas.ts (5+ exports)
+
+### Approach
+- Systematically adding comprehensive JSDoc comments to all public exports
+- Including parameter types, return values, property descriptions, and usage context
+- Batch committing by category (ports, adapters, configs, usecases, stores, services)
+- Aiming to reach 80%+ coverage by end of wave
+
+### Branch Status
+Work in progress on various feature branches. Will consolidate into wave-2-docstring-coverage PR.
+
