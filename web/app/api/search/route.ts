@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { Index } from '@upstash/vector';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
 import { guardTraffic } from '@/lib/services/traffic';
-import { ERROR_CODES } from '@/lib/error-codes';
 import { generateEmbedding } from '@/lib/embeddings';
 import * as Sentry from '@sentry/nextjs';
 

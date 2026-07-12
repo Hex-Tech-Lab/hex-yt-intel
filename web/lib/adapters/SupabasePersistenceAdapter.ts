@@ -136,10 +136,6 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     }
 
     // 3️⃣ Extract billing_status from validation report (contract fix: use actual value, not override)
-    const reportObj = params.validationReport as any;
-    const billingStatus = reportObj?.billing_status ?? 'pending';
-
-    // 3️⃣ Update the primary analysis row
     // billing_status should come from validationReport if available (set by persist route),
     // fallback to 'chargeable' if validation passes, otherwise 'failed'
     const billingStatus = (params.validationReport as any)?.billing_status ||
@@ -255,9 +251,31 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseGraphAdapter.persistKnowledgeGraph(params);
   }
 
-  async getKnowledgeGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
-    const data = await SupabaseGraphAdapter.getKnowledgeGraph(analysisId);
-    if (!data || data.entities.length === 0) return null;
+  async getKnowledgeGraph(analysisId: string): Promise<{ entities: Array<{ id: string; label: string; type: string; weight: number; raw_node?: any }>; relations: Array<{ source_entity_id: string; target_entity_id: string; relation_label: string; strength: number; raw_edge?: any }> } | null> {
+    return SupabaseGraphAdapter.getKnowledgeGraph(analysisId);
+  }
+
+  async persistGraph(params: { analysisId: string; nodes: GraphNode[]; relations: GraphEdge[] }): Promise<void> {
+    // Transform GraphNode[] to entity format for persistence
+    const entities = params.nodes.map(n => ({
+      label: n.label,
+      type: n.entityType || '',
+      weight: n.weight,
+      rawNode: n
+    }));
+    const relations = params.relations.map(r => ({
+      source: r.source,
+      target: r.target,
+      relation: r.kind,
+      strength: r.strength,
+      rawEdge: r
+    }));
+    return this.persistKnowledgeGraph({ analysisId: params.analysisId, entities, relations });
+  }
+
+  async getGraph(analysisId: string): Promise<{ nodes: GraphNode[]; relations: GraphEdge[] } | null> {
+    const data = await this.getKnowledgeGraph(analysisId);
+    if (!data) return null;
 
     return {
       nodes: data.entities.map(e => ({
@@ -271,7 +289,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         entityType: e.type,
         weight: e.weight
       })),
-      relations: data.relations.filter(r => r.source_entity_id && r.target_entity_id).map(r => ({
+      relations: data.relations.map(r => ({
         source: r.source_entity_id,
         target: r.target_entity_id,
         kind: r.relation_label as any,
