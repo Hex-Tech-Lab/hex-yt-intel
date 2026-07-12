@@ -1,84 +1,84 @@
 /**
  * Decodo transcript extraction adapter.
- * Fetches and parses video transcripts from the Decodo API service.
+ * Provides methods for fetching and parsing video transcripts from Decodo.
  */
 export { DecodoAdapter } from './DecodoAdapter';
 
 /**
  * Supabase authentication adapter.
- * Authenticates users and retrieves subscription tier information.
+ * Implements AuthPort to authenticate users and retrieve their tier/permissions.
  */
 export { SupabaseAuthAdapter } from './SupabaseAuthAdapter';
 
 /**
- * Redis-backed traffic rate limiting adapter.
- * Tracks API calls and enforces per-user rate limits using Upstash Redis.
+ * Redis-backed traffic/rate limiting adapter.
+ * Tracks API usage and enforces rate limits using Upstash Redis.
  */
 export { RedisTrafficAdapter } from './RedisTrafficAdapter';
 
 /**
  * PostgreSQL billing data adapter.
- * Manages subscription invoices, payments, and usage billing through Postgres.
+ * Manages subscription, invoice, and usage billing information in Postgres.
  */
 export { PostgresBillingAdapter } from './PostgresBillingAdapter';
 
 /**
  * Worker ingestion adapter.
- * Handles analysis job ingestion from the Cloudflare Worker streaming pipeline.
+ * Handles video analysis request ingestion from the Cloudflare Worker.
  */
 export { WorkerIngestionAdapter } from './WorkerIngestionAdapter';
 
 /**
- * LLM model settings adapter.
- * Manages model routing configurations, fallback cascades, and token limits.
+ * Settings model configuration adapter.
+ * Manages LLM model routing, fallback cascades, and configuration parameters.
  */
 export { SettingsModelAdapter } from './SettingsModelAdapter';
 
 /**
  * Upstash Vector Store adapter.
- * Provides vector embeddings storage and similarity search for knowledge graph.
+ * Provides vector embedding storage and similarity search for knowledge graph entities.
  */
 export { UpstashVectorAdapter } from './UpstashVectorAdapter';
 
 /**
  * Stream token management adapter.
- * Handles token counting and rate limiting for streaming API responses.
+ * Handles token counting and rate limiting for streaming responses.
  */
 export { StreamTokenAdapter } from './StreamTokenAdapter';
 
 /**
  * Supabase persistence adapter.
- * Implements core data persistence for analyses, dimensions, and metadata.
+ * Implements PersistencePort for storing analyses, dimensions, and chat data in Supabase.
  */
 export { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
 
 /**
  * Supabase analysis query adapter.
- * Queries and retrieves stored analysis results and history.
+ * Provides methods for retrieving and querying analysis data.
  */
 export { SupabaseAnalysisAdapter } from './SupabaseAnalysisAdapter';
 
 /**
  * Supabase chat message adapter.
- * Manages chat conversation storage, retrieval, and message history.
+ * Manages chat conversation storage and retrieval.
  */
 export { SupabaseChatAdapter } from './SupabaseChatAdapter';
 
 /**
  * Supabase knowledge graph adapter.
- * Stores and retrieves graph entities, relationships, and topology data.
+ * Handles storage and retrieval of graph entities and relationships.
  */
 export { SupabaseGraphAdapter } from './SupabaseGraphAdapter';
 
 /**
  * Supabase billing adapter.
- * Handles billing-related database operations and transaction records.
+ * Manages billing-related database operations and subscription tracking.
  */
 export { SupabaseBillingAdapter } from './SupabaseBillingAdapter';
 
 /**
  * YouTube IFrame Player adapter.
- * Integrates YouTube player controls, seeking, and playback management.
+ * Integrates YouTube player controls and playback seeking functionality.
  */
 export { YouTubePlayerAdapter } from './YouTubePlayerAdapter';
 

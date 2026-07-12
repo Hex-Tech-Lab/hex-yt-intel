@@ -2,11 +2,20 @@ import { z } from 'zod';
 import { VALID_PERSONAS } from './persona';
 
 // ─── Video Validation ───────────────────────────────────────────────────────
+/**
+ * Zod schema for YouTube video IDs.
+ * Validates 11-character alphanumeric IDs (letters, digits, hyphens, underscores).
+ */
 export const VideoIdSchema = z.string().regex(
   /^[a-zA-Z0-9_-]{11}$/,
   'Invalid video ID format'
 );
 
+/**
+ * Zod schema for YouTube video URLs.
+ * Normalizes URLs to standard format and validates they point to YouTube.
+ * Handles shorts, live streams, and embed URLs by extracting video ID.
+ */
 export const VideoUrlSchema = z.string()
   .transform((val) => {
     // Normalize URLs: add https:// if missing, handle all YouTube formats
@@ -57,6 +66,10 @@ export const VideoUrlSchema = z.string()
   });
 
 // ─── Analysis ────────────────────────────────────────────────────────────────
+/**
+ * Zod schema for analysis creation requests.
+ * Validates YouTube URL, timezone, persona, and refresh preferences.
+ */
 export const AnalysisCreateSchema = z.object({
   url: VideoUrlSchema,
   timezone: z
@@ -80,6 +93,10 @@ export const AnalysisCreateSchema = z.object({
 });
 
 // ─── Checkout ────────────────────────────────────────────────────────────────
+/**
+ * Zod schema for checkout session creation.
+ * Validates success and cancel URLs are on the same domain as the app.
+ */
 export const CheckoutSchema = z.object({
   successUrl: z.string().url('Invalid success URL'),
   cancelUrl: z.string().url('Invalid cancel URL'),
@@ -100,11 +117,11 @@ export const CheckoutSchema = z.object({
 );
 
 // ─── Analysis Job Contract (bouncer → client → worker) ────────────────────────
-// The bouncer (/api/analyses) returns this shape; the client (useSSEStream) forwards
-// the `metadata`/`transcript`/`stream` fields to the Cloudflare Worker. Both the
-// cache-hit (200) and fresh-job (202) paths MUST satisfy this so the client can treat
-// them interchangeably. viewCount/likeCount/commentCount are strings to match the
-// worker's StreamRequest contract (YouTube returns them as numeric strings).
+/**
+ * Zod schema for analysis job metadata.
+ * Contains YouTube video metadata returned by bouncer and forwarded to worker.
+ * Used as a contract between /api/analyses, client useSSEStream, and Cloudflare Worker.
+ */
 export const AnalysisJobMetadataSchema = z.object({
   videoId: z.string(),
   title: z.string(),
@@ -116,11 +133,39 @@ export const AnalysisJobMetadataSchema = z.object({
   commentCount: z.string(),
   description: z.string().optional(),
 });
+
+/**
+ * Type for analysis job metadata extracted from YouTube API.
+ * @property videoId - YouTube video ID
+ * @property title - Video title
+ * @property channelTitle - Channel/creator name
+ * @property publishedAt - Publication date
+ * @property duration - Video duration in seconds
+ * @property viewCount - View count (as string for compatibility)
+ * @property likeCount - Like count (as string for compatibility)
+ * @property commentCount - Comment count (as string for compatibility)
+ * @property description - Optional video description
+ */
 export type AnalysisJobMetadata = z.infer<typeof AnalysisJobMetadataSchema>;
 
-// The exact payload the client POSTs to the worker's /analyze-llm-stream. Kept in
-// lockstep with the worker's StreamRequest interface (worker/src/worker.ts) so a
-// missing/loose field is a compile error rather than a runtime stream failure.
+/**
+ * Contract payload for streaming analysis requests to Cloudflare Worker.
+ * Synchronizes with worker/src/worker.ts StreamRequest interface.
+ * Missing or incorrectly typed fields cause compile errors, preventing runtime failures.
+ * @property videoId - YouTube video ID
+ * @property analysisId - Unique analysis request ID
+ * @property transcript - Full video transcript
+ * @property metadata - YouTube video metadata
+ * @property persona - Selected analysis persona
+ * @property timezone - User's timezone
+ * @property models - Optional model cascade override
+ * @property sig - HMAC signature for token validation
+ * @property exp - Token expiration timestamp
+ * @property appUrl - Optional app URL for streaming origin
+ * @property dimensions - Optional dimension indices to process
+ * @property chunkIndex - Current chunk index in multi-chunk analysis
+ * @property totalChunks - Total number of chunks for this analysis
+ */
 export interface WorkerStreamRequest {
   videoId: string;
   analysisId: string;
@@ -139,5 +184,14 @@ export interface WorkerStreamRequest {
 }
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────
+/**
+ * Analysis creation input type inferred from AnalysisCreateSchema.
+ * Contains validated URL, timezone, persona, and refresh preferences.
+ */
 export type AnalysisCreateInput = z.infer<typeof AnalysisCreateSchema>;
+
+/**
+ * Checkout input type inferred from CheckoutSchema.
+ * Contains validated success and cancel URLs on app domain.
+ */
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
