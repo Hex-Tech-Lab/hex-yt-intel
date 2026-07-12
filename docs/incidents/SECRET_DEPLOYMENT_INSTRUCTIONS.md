@@ -42,6 +42,7 @@ vercel env add STREAM_HMAC_SECRET --environment preview
 
 ```bash
 # Deploy the secret to Cloudflare worker
+cd worker
 wrangler secret put STREAM_HMAC_SECRET --env production
 
 # When prompted, paste:
@@ -101,6 +102,7 @@ vercel env add STREAM_HMAC_SECRET --environment production
 vercel deploy --prod
 
 # Revert Cloudflare worker
+cd worker
 wrangler secret put STREAM_HMAC_SECRET --env production
 # (Use previous secret value)
 wrangler deploy --env production
