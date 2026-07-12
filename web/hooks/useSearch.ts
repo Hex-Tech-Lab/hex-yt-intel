@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 export interface SearchResult {
   id: string;
@@ -25,6 +26,25 @@ export interface UseSearchOptions {
   maxResults?: number;
   threshold?: number;
   debounceMs?: number;
+}
+
+interface RawSearchResult {
+  analysisId?: string;
+  id?: string;
+  title?: string;
+  excerpt?: string;
+  snippet?: string;
+  score?: number;
+  similarity?: number;
+  createdAt?: string;
+  matchType?: 'semantic' | 'keyword';
+  channelTitle?: string;
+  viewCount?: number;
+}
+
+interface SearchApiResponse {
+  results: RawSearchResult[];
+  count?: number;
 }
 
 interface SearchState {
@@ -74,8 +94,10 @@ export function useSearch(options: UseSearchOptions = {}) {
   const debounceTimer = useRef<NodeJS.Timeout | undefined>(undefined);
 
   /**
-   * Execute search query
-   * Sends to /api/search with current query
+   * Execute search query against the vector database.
+   * Sends POST to /api/search with query and topK parameters.
+   * Updates loading state, handles errors, and updates results on success.
+   * Clears results if query is empty after trimming.
    */
   const performSearch = useCallback(
     async (searchQuery: string) => {
@@ -103,19 +125,37 @@ export function useSearch(options: UseSearchOptions = {}) {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Search failed');
+          let errorMsg = 'Search failed';
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorMsg;
+          } catch {
+            // Response body is not JSON (e.g., gateway error page)
+          }
+          throw new Error(errorMsg);
         }
 
-        const data = await response.json();
+        const data: SearchApiResponse = await response.json();
+        const normalizedResults = (data.results || []).map((result) => ({
+          id: result.analysisId || result.id,
+          title: result.title || '',
+          snippet: result.excerpt || result.snippet || '',
+          similarity: result.score ?? result.similarity ?? 0,
+          createdAt: result.createdAt || new Date().toISOString(),
+          matchType: result.matchType || 'semantic',
+          channelTitle: result.channelTitle,
+          viewCount: result.viewCount,
+        }));
         setState((prev) => ({
           ...prev,
-          results: data.results || [],
+          results: normalizedResults,
           totalResults: data.count || 0,
           isLoading: false,
         }));
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Search failed';
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('[useSearch]', { message, url: '/api/search' });
+        Sentry.captureException(err, { contexts: { search: { query: searchQuery } } });
         setState((prev) => ({
           ...prev,
           error: message,
@@ -128,8 +168,9 @@ export function useSearch(options: UseSearchOptions = {}) {
   );
 
   /**
-   * Debounced query handler
-   * Waits for user to stop typing before searching
+   * Debounced query effect handler.
+   * Waits for user to stop typing (debounceMs delay) before executing search.
+   * Clears results for empty queries; clears/cancels previous timers on unmount.
    */
   useEffect(() => {
     if (debounceTimer.current) {
@@ -157,7 +198,8 @@ export function useSearch(options: UseSearchOptions = {}) {
   }, [query, debounceMs, performSearch]);
 
   /**
-   * Clear search and results
+   * Clear search query and reset all results, errors, and loading state.
+   * Resets state to INITIAL_STATE with empty results and cleared error.
    */
   const clearSearch = useCallback(() => {
     setQuery('');

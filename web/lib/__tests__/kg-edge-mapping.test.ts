@@ -120,7 +120,11 @@ describe('Knowledge Graph Edge Mapping Bug Fix', () => {
       ]);
 
       expect(graph.edges).toHaveLength(1);
-      expect(graph.edges[0]).toEqual(validEdge);
+      expect(graph.edges[0]).toEqual({
+        ...validEdge,
+        sourceLabel: 'label1',
+        targetLabel: 'label2'
+      });
     });
 
     it('TC-4: Should filter out edges with missing source node', () => {

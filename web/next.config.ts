@@ -9,10 +9,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   distDir: '.next',
   output: 'standalone',
+  productionBrowserSourceMaps: false,
   turbopack: {
     root: path.resolve(__dirname, '..'),
   },
-  typescript: { 
+  typescript: {
     tsconfigPath: "./tsconfig.json",
     ignoreBuildErrors: !!process.env.CI,
   },
@@ -26,10 +27,12 @@ const nextConfig: NextConfig = {
       "@sentry/nextjs",
       "d3",
       "d3-force",
+      "three",
       "framer-motion",
       "react-markdown",
       "remark",
       "remark-gfm",
+      "rehype-sanitize",
     ],
   },
 

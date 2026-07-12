@@ -1,7 +1,11 @@
 'use client';
 
-import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
+import dynamic from 'next/dynamic';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
+
+const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(m => ({ default: m.KnowledgeGraphCanvas })), {
+  loading: () => <div className="p-4 text-center text-[var(--ink-secondary)]">Loading graph...</div>
+});
 
 interface VisualizationPanelProps {
   graph: KnowledgeGraph;
@@ -10,6 +14,7 @@ interface VisualizationPanelProps {
   onFocusNode: (id: string) => void;
 }
 
+/** Interactive knowledge graph visualization with node selection and focus controls. */
 export function VisualizationPanel({
   graph,
   selectedNodeId,

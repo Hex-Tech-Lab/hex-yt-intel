@@ -103,7 +103,8 @@ function diagnoseIncident(record: AnalysisRecord): CascadeIncident {
   if (!record.validation_passed) {
     incident.evidence.push('validation_passed=false');
   }
-  if (record.billing_status !== 'completed') {
+  // Analysis is complete when billing_status is 'chargeable' or 'charged'
+  if (record.billing_status !== 'chargeable' && record.billing_status !== 'charged') {
     incident.evidence.push(`billing_status=${record.billing_status || 'null'}`);
   }
   if (record.status !== 'complete') {

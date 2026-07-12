@@ -1,27 +1,33 @@
 'use client';
 
 import { useMemo, useState, useCallback, useEffect, useRef, startTransition } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
 import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
-import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
-import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import type { Dimension } from '@/components/templates/console/DimensionAccordion';
-import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
-import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
-import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
-import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
-import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
-import { ChatDock } from '@/components/templates/console/ChatDock';
-import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
-import { ExecutiveDigestCard } from '@/components/dashboard/ExecutiveDigestCard';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
-import { WordCloud } from '@/components/templates/console/WordCloud';
-import { MindMap } from '@/components/templates/console/MindMap';
+
+// Dynamically import heavy visualization and panel components for code splitting
+const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(m => ({ default: m.KnowledgeGraphCanvas })), { loading: () => <VisualizationLoadingFallback /> });
+const WordCloud = dynamic(() => import('@/components/templates/console/WordCloud').then(m => ({ default: m.WordCloud })), { loading: () => <VisualizationLoadingFallback /> });
+const MindMap = dynamic(() => import('@/components/templates/console/MindMap').then(m => ({ default: m.MindMap })), { loading: () => <VisualizationLoadingFallback /> });
+const VisualizationPanel = dynamic(() => import('@/components/dashboard/VisualizationPanel').then(m => ({ default: m.VisualizationPanel })));
+const AnalysisHistory = dynamic(() => import('@/components/templates/console/AnalysisHistory').then(m => ({ default: m.AnalysisHistory })), { loading: () => <div className="p-4 text-center text-[var(--ink-secondary)]">Loading history...</div> });
+const ChatDock = dynamic(() => import('@/components/templates/console/ChatDock').then(m => ({ default: m.ChatDock })), { ssr: false });
+const VideoPlayerCard = dynamic(() => import('@/components/templates/console/VideoPlayerCard').then(m => ({ default: m.VideoPlayerCard })), { loading: () => <div className="p-4 text-center text-[var(--ink-secondary)]">Loading player...</div> });
+const ProcessingLog = dynamic(() => import('@/components/templates/console/ProcessingLog').then(m => ({ default: m.ProcessingLog })));
+const DimensionDrawer = dynamic(() => import('@/components/templates/console/DimensionDrawer').then(m => ({ default: m.DimensionDrawer })));
+const ExecutiveDigestCard = dynamic(() => import('@/components/dashboard/ExecutiveDigestCard').then(m => ({ default: m.ExecutiveDigestCard })));
+const DimensionAccordion = dynamic(() => import('@/components/dashboard/DimensionAccordion').then(m => ({ default: m.DimensionAccordion })));
+const PersonaSelector = dynamic(() => import('@/components/templates/console/PersonaSelector').then(m => ({ default: m.PersonaSelector })));
+const AnalysisHero = dynamic(() => import('@/components/templates/console/AnalysisHero').then(m => ({ default: m.AnalysisHero })), { loading: () => <div className="p-4 text-center text-[var(--ink-secondary)]">Loading analysis...</div> });
+const BentoMetadata = dynamic(() => import('@/components/templates/console/BentoMetadata').then(m => ({ default: m.BentoMetadata })), { loading: () => <div className="p-4 text-center text-[var(--ink-secondary)]">Loading metadata...</div> });
+const RightPanelAccordion = dynamic(() => import('@/components/dashboard/RightPanelAccordion').then(m => ({ default: m.RightPanelAccordion })));
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useInputStore } from '@/store/useInputStore';
@@ -33,17 +39,20 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
-import { VideoPlayerCard } from '@/components/templates/console/VideoPlayerCard';
-import { ProcessingLog } from '@/components/templates/console/ProcessingLog';
-import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer';
 import { ConsoleTabSwitcher } from './dashboard/ConsoleTabSwitcher';
 import { SidebarFooter } from './dashboard/SidebarFooter';
 import { ExpandedPanelOverlay } from './dashboard/ExpandedPanelOverlay';
-
 import * as Sentry from '@sentry/nextjs';
 
 // See /docs/ui/dashboard-container.md
 
+/**
+ * Display a transient toast notification with auto-dismiss.
+ * Creates a fixed-position toast with color coding (green success, red error).
+ * Auto-hides after 2 seconds with fade-out animation.
+ * @param message - Text content to display
+ * @param type - 'success' (cyan) or 'error' (red); defaults to success
+ */
 function showToast(message: string, type: 'success' | 'error' = 'success') {
   if (typeof document === 'undefined') return;
   const el = document.createElement('div');
@@ -56,20 +65,45 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
 }
 
+/**
+ * Report clipboard operation errors to Sentry and log to console.
+ * Captures error context for debugging copy/paste failures.
+ * @param error - The error thrown by clipboard operation
+ * @param context - Descriptive context for debugging (e.g., "copy-analysis-id")
+ */
 function reportClipboardError(error: unknown, context: string) {
   const message = error instanceof Error ? error.message : String(error);
   Sentry.captureException(error, { contexts: { clipboard: { context } } });
   console.error('[DashboardContainer] Clipboard copy failed:', { message, context });
 }
 
+/** Fallback UI shown while dynamic visualization components are loading. */
+function VisualizationLoadingFallback() {
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-[var(--void)] rounded-lg">
+      <div className="text-center space-y-2">
+        <div className="animate-spin w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full mx-auto" />
+        <p className="text-xs text-[var(--ink-secondary)]">Loading visualization...</p>
+      </div>
+    </div>
+  );
+}
+
 export interface DashboardContainerProps {
   profile: ConsoleProfile;
 }
 
+/**
+ * Strip markdown code fences and dimension headers from raw dimension content.
+ * Removes leading ``` blocks and "### DIMENSION N" headers that wrap analysis dimension text.
+ * Preserves internal formatting and returns trimmed result.
+ * @param raw - Raw dimension content from analysis payload
+ * @returns Cleaned content with markdown wrappers removed
+ */
 function cleanDimensionContent(raw: string): string {
   if (!raw) return '';
   let content = raw.trim();
-  
+
   // Strip markdown code fences without regex
   if (content.startsWith('```')) {
     const lines = content.split(/\r?\n/);
@@ -79,7 +113,7 @@ function cleanDimensionContent(raw: string): string {
     }
     content = lines.join('\n').trim();
   }
-  
+
   // Strip leading dimension headers (e.g., "### DIMENSION 1") with explicit pattern
   const lines = content.split(/\r?\n/);
   if (lines[0]) {
@@ -89,10 +123,11 @@ function cleanDimensionContent(raw: string): string {
       content = lines.join('\n');
     }
   }
-  
+
   return content.trim();
 }
 
+/** Main dashboard component that manages analysis workflow, visualizations, and video playback. */
 export function DashboardContainer({ profile }: DashboardContainerProps) {
   const setUserRole = useAnalysisStore((s) => s.setUserRole);
   const status = useAnalysisStore((s) => s.status);

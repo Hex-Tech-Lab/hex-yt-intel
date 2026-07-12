@@ -52,6 +52,8 @@ describe('buildSettlePatch', () => {
     expect(patch.validation_report).toMatchObject({ persona: 'p1', status: 'failed', reaped: true, reaped_dimensions: 0 });
   });
 
+  // Note: outcome='completed' maps to billing_status='chargeable' (analysis ready to charge)
+
   it('marks a full analysis complete + validation_passed', () => {
     const md = Array.from({ length: 11 }, (_, i) => `### DIMENSION ${i + 1}: X\n\nbody`).join('\n\n');
     const { outcome, patch } = buildSettlePatch(md, null, nowIso);

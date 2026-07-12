@@ -13,7 +13,24 @@ import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { isPersistedValidationReport } from '@/lib/types/validation-report';
 import { mapHistoryOverviewRow, type RawHistoryOverviewRow } from '@/lib/utils/history-overview';
 
+interface AnalysisRecord {
+  id: string;
+  video_id: string;
+  title: string | null;
+  created_at: string;
+  validation_passed: boolean | null;
+  validation_report: { status?: string } | null;
+  billing_status: string | null;
+}
+
+/**
+ * Supabase-backed analysis storage adapter implementing AnalysisPersistencePort.
+ * Provides cache lookups, stub creation/updates, result persistence, history retrieval,
+ * ownership verification, digest management, and analysis reaping operations.
+ * All operations include Sentry error tracking and console logging for debugging.
+ */
 export class SupabaseAnalysisAdapter {
+  /** Retrieve cached analysis for user/video, extracting dimensions from markdown or payload. */
   static async findCachedAnalysis(params: {
     userId: string;
     videoId: string;
@@ -95,6 +112,7 @@ export class SupabaseAnalysisAdapter {
     };
   }
 
+  /** Create or reuse a processing stub for an in-flight analysis, idempotent within 15 minutes. */
   static async upsertProcessingStub(params: {
     videoId: string;
     userId: string;
@@ -215,6 +233,11 @@ export class SupabaseAnalysisAdapter {
   // failure-state settling are owned by the caller layer — the persist route's
   // `retryWithBackoff` and the Worker's atomic-persist — so the responsibility
   // lives once, at the right seam (SoC), not duplicated in every adapter.
+  //
+  /** DEPRECATED: Use updateAnalysisResult instead. Persists analysis markdown and payload (legacy). */
+  // DEPRECATED: This method is superseded by updateAnalysisResult which properly
+  // handles billing_status from the validation report. This method is kept for
+  // backward compatibility but should NOT be used for new code paths.
   static async persistAnalysis(params: {
     analysisId: string;
     analysisPayload: UCISPayloadV2 | null;
@@ -222,16 +245,14 @@ export class SupabaseAnalysisAdapter {
     validationPassed: boolean;
   }): Promise<void> {
     const service = getSupabaseServiceClient();
-    // Set billing_status based on validation result
-    // 'chargeable' if valid analysis, 'failed' otherwise
-    const billingStatus = params.validationPassed ? 'chargeable' : 'failed';
     const { error } = await service
       .from('analyses')
       .update({
         analysis_payload: params.analysisPayload as Record<string, unknown> | null,
         analysis_markdown: params.analysisMarkdown,
         validation_passed: params.validationPassed,
-        billing_status: billingStatus,
+        // NOTE: Do NOT override billing_status here; it should be set via updateAnalysisResult
+        // with proper validation report data. Legacy method kept for backward compat only.
       })
       .eq('id', params.analysisId);
 
@@ -251,6 +272,7 @@ export class SupabaseAnalysisAdapter {
     });
   }
 
+  /** Fetch full user analysis history with complete metadata and validation details. */
   static async getUserHistory(params: { userId: string }): Promise<Array<{
     id: string;
     videoId: string;
@@ -272,28 +294,24 @@ export class SupabaseAnalysisAdapter {
         throw error;
       }
 
-      return (analyses || []).map((analysis: any) => ({
+      return (analyses || []).map((analysis: AnalysisRecord) => ({
         id: analysis.id,
         videoId: analysis.video_id,
         title: analysis.title || 'Untitled Analysis',
         createdAt: analysis.created_at,
         status: (() => {
-          // Check if analysis is complete based on billing_status
-          // Valid billing_status values: pending | chargeable | charged | failed
-          if (analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged') {
-            return 'completed';
-          }
-          if (analysis.billing_status === 'processing') {
-            return 'processing';
-          }
-          if (analysis.billing_status === 'failed') {
-            return 'incomplete';
-          }
-          // Fallback to validation_report status for backward compatibility
-          if (analysis.validation_report?.status === 'done') {
-            return 'completed';
-          }
-          return 'incomplete';
+          const statusMap: Record<string, 'completed' | 'processing' | 'incomplete'> = {
+            completed: 'completed',
+            done: 'completed',
+            processing: 'processing',
+          };
+          // Analysis is complete when billing_status is 'chargeable' (ready to charge) or 'charged' (paid)
+          if (analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged') return 'completed';
+          // Legacy fallback: support legacy 'completed' billing_status and validation_passed flag
+          if (analysis.billing_status === 'completed' || !!analysis.validation_passed) return 'completed';
+          const reportStatus = analysis.validation_report?.status;
+          if (!reportStatus) return 'incomplete';
+          return statusMap[reportStatus] ?? 'incomplete';
         })(),
       }));
     } catch (error: any) {
