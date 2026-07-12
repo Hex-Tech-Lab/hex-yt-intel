@@ -268,6 +268,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             {paginatedItems.map((item, idx) => {
               const busy = loadingId === item.analysisId;
               const status = STATUS_STYLE[item.status];
+              const itemNumber = currentPage * ITEMS_PER_PAGE + idx + 1;
               return (
                 <div
                   key={item.baseVideoId}
@@ -284,6 +285,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
+                        <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-muted)]/15 text-[9px] font-bold tabular-nums text-[var(--ink-muted)]">
+                          {itemNumber}
+                        </span>
                         <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{item.title || 'Untitled Analysis'}</h3>
                         {item.status === 'partial' && (
                           <span title="Partial analysis: incomplete data from timeout" className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-[var(--warn)] animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
