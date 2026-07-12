@@ -1,7 +1,16 @@
 import { signStreamToken, signChatToken } from '@/lib/stream-token';
 import type { StreamToken, CryptographicTokenPort } from '@/lib/ports';
 
+/**
+ * Sign HMAC tokens for authenticated streaming between Vercel and Cloudflare Worker.
+ * Wraps low-level signing functions with port interface.
+ */
 export class StreamTokenAdapter implements CryptographicTokenPort {
+  /**
+   * Sign an analysis stream token bound to videoId, analysisId, and models.
+   * @param params Video and analysis IDs, plus model list
+   * @returns Stream token with signature and expiry
+   */
   async signAnalysisToken(params: {
     videoId: string;
     analysisId: string;
@@ -10,6 +19,11 @@ export class StreamTokenAdapter implements CryptographicTokenPort {
     return signStreamToken(params.videoId, params.analysisId, params.models);
   }
 
+  /**
+   * Sign a chat stream token bound to conversationId, userId, and models.
+   * @param params Conversation and user IDs, plus model list
+   * @returns Stream token with signature and expiry
+   */
   async signChatToken(params: {
     conversationId: string;
     userId: string;

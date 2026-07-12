@@ -61,6 +61,11 @@ async function readModelConfig(persistence: SupabasePersistenceAdapter): Promise
    }
 }
 
+/**
+ * Resolve LLM models from settings with tier-based and test override support.
+ * Reads model configuration from Supabase or returns fallback cascades.
+ * Supports commercial trial mode to enable all models for testing.
+ */
 export class SettingsModelAdapter implements ModelResolutionPort {
   private readonly commercialTrialMode: boolean;
   private persistence = new SupabasePersistenceAdapter();
@@ -70,6 +75,13 @@ export class SettingsModelAdapter implements ModelResolutionPort {
     this.commercialTrialMode = config?.commercialTrialMode ?? (envFlag !== undefined ? envFlag === 'true' : true);
   }
 
+  /**
+   * Get available models for a given user tier and kind (analysis/chat/reasoning).
+   * Applies commercial trial mode, Supabase overrides, and tier-specific settings.
+   * @param tier User subscription tier
+   * @param kind Model kind (analysis, chat, or reasoning)
+   * @returns Array of available model IDs
+   */
   async resolveModels(tier: UserTier, kind: 'analysis' | 'chat' | 'reasoning'): Promise<string[]> {
     if (kind === 'reasoning') {
       const cascade = REASONING_CASCADE[tier] || REASONING_CASCADE.free || [];
@@ -104,6 +116,11 @@ export class SettingsModelAdapter implements ModelResolutionPort {
     );
   }
 }
+
+/**
+ * Clear the cached model configuration to force refresh on next resolution.
+ * Useful after Supabase settings are updated.
+ */
 export function invalidateSettingsModelCache(): void {
   configCache = null;
   void setRedisValue('config:model_config', null as unknown as string, 0);

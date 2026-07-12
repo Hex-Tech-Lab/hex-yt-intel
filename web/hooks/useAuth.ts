@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
+/**
+ * Manage Supabase authentication state. Automatically syncs with auth provider on mount
+ * and subscribes to auth state changes.
+ * @returns Auth state (user, session, loading, isAuthenticated) and signOut function
+ */
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);

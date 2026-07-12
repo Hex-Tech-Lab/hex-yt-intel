@@ -14,6 +14,14 @@ const relationsCache = new Map<string, RelationInsight[]>();
 // Module-level in-flight requests mapping analysisId -> Promise of insights
 const inFlightRequests = new Map<string, Promise<RelationInsight[]>>();
 
+/**
+ * Fetch relation insights for an analysis with streaming support and deduplication.
+ * Caches results and deduplicates in-flight requests for the same analysisId.
+ * Supports both JSON responses and Server-Sent Events streaming.
+ * @param analysisId The analysis ID to fetch relations for, or null to disable
+ * @param enabled Whether to fetch (allows conditional disabling)
+ * @returns State object with insights array, loading flag, and error string
+ */
 export function useRelations(analysisId: string | null, enabled: boolean): RelationsState {
   const [state, setState] = useState<RelationsState>(() => {
     if (analysisId && relationsCache.has(analysisId)) {

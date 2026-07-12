@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
+/**
+ * Fetch the global knowledge graph from the Atlas service.
+ * Loads on mount and provides loading and error states.
+ * @returns Global knowledge graph, loading state, and any error
+ */
 export function useGlobalGraph() {
   const [graph, setGraph] = useState<KnowledgeGraph | null>(null);
   const [loading, setLoading] = useState(true);
