@@ -18,6 +18,7 @@ import { useUIStore } from '@/store/useUIStore';
  */
 export function ResponsiveHeader({ user }: { user?: User | null }) {
   const setMobileNav = useUIStore((s) => s.setMobileNav);
+  const mobileNavOpen = useUIStore((s) => s.mobileNavOpen);
   const safeUser = user ?? null;
 
   const handleMobileMenuOpen = () => {
@@ -98,9 +99,9 @@ export function ResponsiveHeader({ user }: { user?: User | null }) {
           {/* Mobile Menu Button - Visible on mobile only */}
           <button
             onClick={handleMobileMenuOpen}
-            aria-label="Open navigation menu"
-            className="lg:hidden grid place-items-center w-10 h-10 sm:w-11 sm:h-11 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--line-faint)] transition-colors flex-shrink-0"
-            aria-expanded="false"
+            aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+            className="lg:hidden grid place-items-center w-12 h-12 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--line-faint)] transition-colors flex-shrink-0"
+            aria-expanded={mobileNavOpen}
             aria-controls="mobile-menu"
           >
             <Icon icon="solar:hamburger-menu-linear" size={20} />

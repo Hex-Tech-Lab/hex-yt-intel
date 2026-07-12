@@ -78,7 +78,8 @@ export function MobileBreadcrumb({
           <button
             onClick={handleBack}
             aria-label="Go back to previous page"
-            className="grid place-items-center w-10 h-10 flex-shrink-0 rounded-lg border border-[var(--line)] bg-[var(--void)] text-[var(--ink-secondary)] hover:bg-[var(--surface)] transition-colors active:scale-95"
+            className="grid place-items-center w-12 h-12 flex-shrink-0 rounded-lg border border-[var(--line)] bg-[var(--void)] text-[var(--ink-secondary)] hover:bg-[var(--surface)] transition-colors active:scale-95"
+            aria-expanded="false"
           >
             <Icon icon="solar:arrow-left-linear" size={20} />
           </button>
