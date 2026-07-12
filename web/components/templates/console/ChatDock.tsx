@@ -283,7 +283,9 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       {showThreads && (
         <div className="max-h-[200px] overflow-y-auto border-b border-[var(--line)] bg-[rgb(8_11_17_/_0.8)]">
           {conversations.length === 0 && <div className="p-3 text-[var(--ink-muted)] font-mono text-[11px]">No conversations yet</div>}
-          {conversations.map((c) => (
+          {conversations
+            .filter((c) => !videoId || c.videoId === videoId)
+            .map((c) => (
             <div key={c.id} className="flex items-center gap-1.5 py-0.5 px-2">
               <button
                 onClick={() => { void selectConversation(c.id); setShowThreads(false); }}
