@@ -327,19 +327,19 @@ export function KnowledgeGraphCanvas({
       {/* Floating Legend */}
       <div style={{
         position: 'absolute',
-        top: 10,
-        left: 10,
+        top: 8,
+        left: 8,
         background: 'rgba(15, 23, 42, 0.85)',
         border: '1px solid var(--line)',
-        padding: '8px 10px',
-        borderRadius: 8,
+        padding: '4px 5px',
+        borderRadius: 6,
         display: 'flex',
         flexDirection: 'column',
-        gap: 4,
+        gap: 2,
         pointerEvents: 'none',
         zIndex: 10,
         fontFamily: 'var(--font-mono)',
-        fontSize: compact ? 9 : 10,
+        fontSize: compact ? 8 : 9,
       }}>
         {Object.entries(ENTITY_RGB).map(([type, colorRgb]) => (
           <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -361,16 +361,16 @@ export function KnowledgeGraphCanvas({
         title="Fit to view"
         style={{
           position: 'absolute',
-          bottom: 10,
-          right: 10,
-          width: 30,
-          height: 30,
-          borderRadius: 8,
+          bottom: 8,
+          right: 8,
+          width: 28,
+          height: 28,
+          borderRadius: 4,
           border: '1px solid var(--line)',
           background: 'rgb(26 31 43 / 0.8)',
           color: 'var(--ink-secondary)',
           cursor: 'pointer',
-          fontSize: 14,
+          fontSize: 13,
           display: 'grid',
           placeItems: 'center',
           zIndex: 10
