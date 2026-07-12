@@ -176,7 +176,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   // Separate processing/WIP from completed items
   const wipItems = useMemo(() => {
-    return items.filter((item) => item.status === 'processing' || item.status === 'downloading' || item.status === 'parsing');
+    return items.filter((item) => item.status === 'processing');
   }, [items]);
 
   const filteredAndSorted = useMemo(() => {
@@ -184,7 +184,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     if (filterStatus !== 'all') result = result.filter((item) => item.status === filterStatus);
 
     // Separate WIP items from completed
-    result = result.filter((item) => item.status !== 'processing' && item.status !== 'downloading' && item.status !== 'parsing');
+    result = result.filter((item) => item.status !== 'processing');
 
     result.sort((a, b) => {
       if (sortBy === 'most-analyzed') return b.timesAnalyzed - a.timesAnalyzed;
