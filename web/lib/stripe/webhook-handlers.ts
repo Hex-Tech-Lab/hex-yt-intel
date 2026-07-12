@@ -5,13 +5,27 @@ import Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
 import { z } from 'zod';
+import { UsageLogSchema } from '@/lib/usage/usage-log-schema';
 
-const UsageLogSchema = z.object({
-  user_id: z.string(),
-  action: z.string().min(1, 'Action cannot be empty'),
-  metadata: z.any().optional(),
-  created_at: z.string(),
-});
+/**
+ * Centralized helper to validate and insert usage logs with consistent error handling.
+ */
+async function insertUsageLog(
+  supabase: SupabaseClient,
+  logData: unknown,
+  contextLabel: string
+): Promise<void> {
+  try {
+    const validatedLog = UsageLogSchema.parse(logData);
+    await supabase.from('usage_logs').insert(validatedLog);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error(`[${contextLabel}] Schema validation failed:`, error.issues);
+    } else {
+      console.error(`[${contextLabel}] Failed to insert usage log:`, error);
+    }
+  }
+}
 
 /**
  * Extract user ID from Stripe event
@@ -117,16 +131,7 @@ export async function handleSubscriptionCreatedUpdated(
     },
     created_at: new Date().toISOString(),
   };
-  try {
-    const validatedLog = UsageLogSchema.parse(logData);
-    await supabase.from('usage_logs').insert(validatedLog);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('[handleSubscriptionCreatedUpdated] Schema validation failed:', error.issues);
-    } else {
-      console.error('[handleSubscriptionCreatedUpdated] Failed to insert usage log:', error);
-    }
-  }
+  await insertUsageLog(supabase, logData, 'handleSubscriptionCreatedUpdated');
 }
 
 /**
@@ -196,16 +201,7 @@ export async function handleSubscriptionCanceled(
     },
     created_at: new Date().toISOString(),
   };
-  try {
-    const validatedLog = UsageLogSchema.parse(cancelData);
-    await supabase.from('usage_logs').insert(validatedLog);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('[handleSubscriptionCanceled] Schema validation failed:', error.issues);
-    } else {
-      console.error('[handleSubscriptionCanceled] Failed to insert usage log:', error);
-    }
-  }
+  await insertUsageLog(supabase, cancelData, 'handleSubscriptionCanceled');
 }
 
 /**
@@ -255,16 +251,7 @@ export async function handleInvoicePaid(
       },
       created_at: new Date().toISOString(),
     };
-    try {
-      const validatedLog = UsageLogSchema.parse(paymentData);
-      await supabase.from('usage_logs').insert(validatedLog);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        console.error('[handleInvoicePaid] Schema validation failed:', error.issues);
-      } else {
-        console.error('[handleInvoicePaid] Failed to insert usage log:', error);
-      }
-    }
+    await insertUsageLog(supabase, paymentData, 'handleInvoicePaid');
 
     console.log(`[handleInvoicePaid] Invoice ${invoice.id} paid for user ${userId}`);
   }
@@ -318,16 +305,7 @@ export async function handleInvoiceFailed(
       },
       created_at: new Date().toISOString(),
     };
-    try {
-      const validatedLog = UsageLogSchema.parse(failureData);
-      await supabase.from('usage_logs').insert(validatedLog);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        console.error('[handleInvoiceFailed] Schema validation failed:', error.issues);
-      } else {
-        console.error('[handleInvoiceFailed] Failed to insert usage log:', error);
-      }
-    }
+    await insertUsageLog(supabase, failureData, 'handleInvoiceFailed');
 
     console.log(`[handleInvoiceFailed] Invoice ${invoice.id} failed for user ${userId}`);
   }
