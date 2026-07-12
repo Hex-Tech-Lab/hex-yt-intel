@@ -168,6 +168,38 @@ export async function POST(request: NextRequest) {
     const validResults = enrichedResults.filter((r): r is Exclude<typeof r, null> => r !== null);
     const duration = Date.now() - startTime;
 
+    // Track enrichment success/failure ratio for observability
+    const successCount = validResults.length;
+    const failureCount = enrichedResults.length - successCount;
+    const successRatio = enrichedResults.length > 0 ? (successCount / enrichedResults.length) * 100 : 100;
+
+    if (failureCount > 0) {
+      Sentry.captureMessage('Search: Partial enrichment failure', {
+        level: 'warning',
+        tags: {
+          operation: 'search-enrichment',
+          successCount: String(successCount),
+          failureCount: String(failureCount),
+          successRatio: String(Math.round(successRatio)),
+        },
+        contexts: {
+          search: {
+            query: query.substring(0, 100),
+            topK,
+            totalAttempted: enrichedResults.length,
+            successCount,
+            failureCount,
+            successRatio: Math.round(successRatio * 100) / 100,
+          },
+          api: {
+            requestId,
+            userId,
+            endpoint: '/api/search',
+          },
+        },
+      });
+    }
+
     console.info('[search] Query completed successfully', { requestId, userId, resultCount: validResults.length, duration });
 
     // 7. Return results with proper headers
