@@ -65,7 +65,7 @@ Sentry.init({
   ],
 
   // Server-side filtering
-  beforeSend(event, hint) {
+  beforeSend(event, _hint) {
     // Remove sensitive API paths from URLs
     if (event.request) {
       const url = event.request.url || '';

@@ -10,7 +10,6 @@ import {
   captureErrorToSentry,
   logError,
   createErrorResponse,
-  type ErrorCategory,
   type CategorizedError,
 } from '@/lib/services/error-handler';
 import { ERROR_PHASES } from '@/lib/error-codes';

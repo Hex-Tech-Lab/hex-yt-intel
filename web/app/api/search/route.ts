@@ -10,6 +10,19 @@ import * as Sentry from '@sentry/nextjs';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError } from '@/lib/services/error-handler';
 
+const vectorIndex = new Index({
+  url: process.env.UPSTASH_VECTOR_REST_URL || 'https://placeholder-vector.upstash.io',
+  token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
+});
+
+if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL?.includes('placeholder')) {
+  throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
+}
+
+const SearchRequestSchema = z.object({
+  query: z.string().min(3).max(1000),
+  topK: z.number().int().min(1).max(50).default(5),
+});
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -120,7 +133,7 @@ export async function POST(request: NextRequest) {
     // 6. Fetch full analysis data from Supabase for each result
     const persistenceAdapter = new SupabasePersistenceAdapter();
     const enrichedResults = await Promise.all(
-      searchResults.map(async (result) => {
+      searchResults.map(async (result: { metadata?: { analysisId?: string }; score?: number }) => {
         try {
           const analysisId = result.metadata?.analysisId as string | undefined;
           if (!analysisId) return null;
@@ -152,7 +165,7 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    const validResults = enrichedResults.filter(r => r !== null);
+    const validResults = enrichedResults.filter((r): r is Exclude<typeof r, null> => r !== null);
     const duration = Date.now() - startTime;
 
     console.info('[search] Query completed successfully', { requestId, userId, resultCount: validResults.length, duration });
