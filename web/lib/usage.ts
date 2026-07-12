@@ -1,6 +1,7 @@
 import { getSupabaseServiceClient } from './supabase';
 import { z } from 'zod';
-import { UsageLogSchema } from './usage/usage-log-schema';
+import * as Sentry from '@sentry/nextjs';
+import { USAGE_LOG_SCHEMA } from './usage/usage-log-schema';
 
 export interface LogUsageParams {
   userId: string;
@@ -20,14 +21,16 @@ export async function logUsage(params: LogUsageParams): Promise<void> {
     };
 
     // Validate schema before insert
-    const validated = UsageLogSchema.parse(logEntry);
+    const validated = USAGE_LOG_SCHEMA.parse(logEntry);
 
     await supabase.from('usage_logs').insert(validated);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error('[logUsage] Schema validation failed:', error.issues);
+      console.error('[logUsage]', { message: 'Schema validation failed', issues: error.issues });
+      Sentry.captureException(error, { contexts: { layer: 'usage_log_validation' } });
     } else {
-      console.error('[logUsage] Failed to log usage:', error);
+      console.error('[logUsage]', { message: 'Failed to log usage', error: error instanceof Error ? error.message : String(error) });
+      Sentry.captureException(error, { contexts: { layer: 'usage_log_insert' } });
     }
   }
 }
