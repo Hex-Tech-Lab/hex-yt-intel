@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
 
       const persistenceAdapter = new SupabasePersistenceAdapter();
       const row = await retryWithBackoff(
-        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId, includeTranscript: true }),
+        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId }),
         2
       );
 

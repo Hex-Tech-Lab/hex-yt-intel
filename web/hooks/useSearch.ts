@@ -136,16 +136,18 @@ export function useSearch(options: UseSearchOptions = {}) {
         }
 
         const data: SearchApiResponse = await response.json();
-        const normalizedResults = (data.results || []).map((result) => ({
-          id: result.analysisId || result.id,
-          title: result.title || '',
-          snippet: result.excerpt || result.snippet || '',
-          similarity: result.score ?? result.similarity ?? 0,
-          createdAt: result.createdAt || new Date().toISOString(),
-          matchType: result.matchType || 'semantic',
-          channelTitle: result.channelTitle,
-          viewCount: result.viewCount,
-        }));
+        const normalizedResults = (data.results || [])
+          .filter((result) => result.analysisId || result.id)
+          .map((result) => ({
+            id: (result.analysisId || result.id) as string,
+            title: result.title || '',
+            snippet: result.excerpt || result.snippet || '',
+            similarity: result.score ?? result.similarity ?? 0,
+            createdAt: result.createdAt || new Date().toISOString(),
+            matchType: result.matchType || 'semantic',
+            channelTitle: result.channelTitle,
+            viewCount: result.viewCount,
+          }));
         setState((prev) => ({
           ...prev,
           results: normalizedResults,
