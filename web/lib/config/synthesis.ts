@@ -5,8 +5,9 @@
 /**
  * The total number of dimensions (chunks) expected in a full UCIS v2.0 synthesis.
  * This matches the prompt structure in ucis-v5.1.ts.
+ * Includes Dimension 0 (Executive Digest, synthetic) + 11 core dimensions + Dimension 12 (Synthesis Digest).
  */
-export const TOTAL_DIMENSIONS = 11;
+export const TOTAL_DIMENSIONS = 12;
 export const TOTAL_STREAMS = 5;
 
 /**
@@ -38,6 +39,7 @@ export interface DimensionConfig {
 }
 
 export const DIMENSION_CONFIGS: Record<number, DimensionConfig> = {
+  0: { number: 0, name: 'EXECUTIVE DIGEST' },
   1: { number: 1, name: 'APEX INTELLIGENCE', extraFields: ['persona'] },
   2: { number: 2, name: 'PROVENANCE, METADATA & VIRALITY PROFILE' },
   3: { number: 3, name: 'CONTENT ARCHITECTURE & FIRST PRINCIPLES' },
@@ -49,5 +51,6 @@ export const DIMENSION_CONFIGS: Record<number, DimensionConfig> = {
   9: { number: 9, name: 'FORWARD INTELLIGENCE & STRATEGIC FORESIGHT' },
   10: { number: 10, name: 'CREDIBILITY, RISK & META-ASSESSMENT' },
   11: { number: 11, name: 'COMMERCIAL YIELD & MONETIZATION PROFILING', extraFields: ['classification', 'monetizationVerdict'] },
+  12: { number: 12, name: 'SYNTHESIS DIGEST & STRATEGIC SUMMARY' },
 };
 
