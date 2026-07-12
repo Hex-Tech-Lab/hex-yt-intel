@@ -29,7 +29,13 @@ export class PromptBuilder implements PromptBuilderPort {
       const dims = context.dimensions
         .filter(d => Number.isInteger(d) && d >= 1 && d <= TOTAL_DIMENSIONS)
         .filter((d, i, arr) => arr.indexOf(d) === i);
-      if (dims.length === 0) return basePrompt;
+      if (dims.length === 0) {
+        console.warn('[PromptBuilder] No valid dimensions after filtering', {
+          received: context.dimensions,
+          filtered: dims
+        });
+        return basePrompt;
+      }
       const allExtraFields = new Set<string>();
       const extraInstrParts: string[] = [];
       for (const d of dims) {
@@ -59,6 +65,12 @@ export class PromptBuilder implements PromptBuilderPort {
         ? `DIMENSION ${dims[0]}`
         : `DIMENSIONS ${dims.join(', ')}`;
 
+      const extraFieldsInstruction = extraInstrParts.length > 0
+        ? `You must also ${extraInstr}.`
+        : `Additionally, ${extraInstr}.`;
+
+      const fallbackInstructions = `If insufficient data exists for any dimension, invoke the Insufficient Data Protocol (section 0.6) and provide a brief explanation in the content field rather than leaving it empty. Never output empty dimensions arrays; always include dimension objects with at least a summary note.`;
+
       return `${basePrompt}
 
 ---
@@ -66,8 +78,9 @@ CRITICAL INSTRUCTION FOR THIS SEGMENT ANALYSIS (${label}):
 You are performing a segmented analysis of the content. For this request, you must ONLY generate the following dimension(s):
 ${dimLabels}
 
-Your output JSON object must ONLY include these dimension(s) inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". You must also ${extraInstr}.
+Your output JSON object must ONLY include these dimension(s) inside the "dimensions" array. Start the JSON envelope structure with "schemaVersion": "2.0". ${extraFieldsInstruction}
 Your response must enforce a strict maximum output restriction of 400 analytical words per dimension.
+${fallbackInstructions}
 Do NOT output any other dimensions. Do NOT include any other JSON root fields. Your response must be strict, raw JSON without markdown formatting. Ensure that your output strictly matches this layout.`;
     }
 

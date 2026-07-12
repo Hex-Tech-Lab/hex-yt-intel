@@ -17,6 +17,21 @@ vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "producti
 # RESIDENTIAL_PROXY_URL set via `wrangler secret put RESIDENTIAL_PROXY_URL --env production`
 # Format: brd-customer-<CUSTOMER_ID>-zone-<ZONE>:<PASSWORD>@brd.superproxy.io:33335
 
+[env.production.observability]
+enabled = false
+head_sampling_rate = 1
+
+[env.production.observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[env.production.observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
+
 [build]
 command = "pnpm run build"
 

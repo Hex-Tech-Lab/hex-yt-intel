@@ -62,11 +62,12 @@ export async function GET(
     const primaryPersona = payload.persona?.primary;
 
     // Compute frontend-visible status:
-    // - 'complete' if billing_status='completed' (partial or full)
-    // - 'error' if failed or error status
-    // - 'incomplete' otherwise
+    // - 'complete' if billing_status='chargeable' or 'charged' (analysis complete and billable/billed)
+    // - 'error' if billing_status='failed' or validation status is error
+    // - 'incomplete' otherwise (still processing or pending)
+    // See validation-report.ts for billing_status enum: pending | chargeable | charged | failed
     const analysisStatus: 'complete' | 'incomplete' | 'error' =
-      analysis.billing_status === 'completed'
+      analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged'
         ? 'complete'
         : analysis.billing_status === 'failed' || (report as any).status === 'error'
         ? 'error'

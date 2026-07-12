@@ -370,6 +370,30 @@ export async function POST(request: NextRequest) {
           ? (validPayload.dimensions as any[]).map((d: any) => d.number)
           : [];
 
+        // Diagnostic logging for empty or sparse dimensions
+        const dimensionDetails = (validPayload.dimensions as any[]).map(d => ({
+          number: d.number,
+          hasContent: typeof d.content === 'string' && d.content.trim().length > 0,
+          contentLength: typeof d.content === 'string' ? d.content.length : 0
+        }));
+
+        if (dimensionsCovered.length === 0) {
+          console.warn('[analyses/persist] Chunk arrived with empty dimensions array', {
+            analysisId,
+            videoId,
+            chunkIndex,
+            status
+          });
+        } else if (dimensionDetails.some(d => !d.hasContent)) {
+          console.warn('[analyses/persist] Chunk has dimensions with empty content', {
+            analysisId,
+            videoId,
+            chunkIndex,
+            status,
+            dimensionDetails
+          });
+        }
+
         await retryWithBackoff(
           () => persistenceAdapter.persistAnalysisChunk({
             analysisId,
