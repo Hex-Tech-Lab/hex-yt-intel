@@ -176,7 +176,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   return (
     <div
       className="relative w-full overflow-auto hx-custom-scrollbar border border-[var(--line-faint)] bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg js-mind-map-container"
-      style={{ maxHeight: '420px', padding: '16px' }}
+      style={{ maxHeight: '420px', padding: '8px' }}
     >
       <div className="relative w-full h-full">
         <svg
