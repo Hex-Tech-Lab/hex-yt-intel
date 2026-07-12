@@ -1,12 +1,6 @@
 import { getSupabaseServiceClient } from './supabase';
 import { z } from 'zod';
-
-const UsageLogSchema = z.object({
-  user_id: z.string(),
-  action: z.string().min(1, 'Action cannot be empty'),
-  metadata: z.any().optional(),
-  created_at: z.string(),
-});
+import { UsageLogSchema } from './usage/usage-log-schema';
 
 export interface LogUsageParams {
   userId: string;
