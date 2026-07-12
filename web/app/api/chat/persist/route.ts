@@ -104,8 +104,9 @@ export async function POST(request: NextRequest) {
 
     const { conversationId, userId, content, contentSig, exp } = parsed.data;
 
-    // Tamper check with graceful degradation: signature verification failures log but allow continuation
-    // if from trusted worker IP (configured in environment)
+    // Strict tamper check: signature verification is non-negotiable. No fallback based on
+    // request headers (x-forwarded-for is spoofable). Timeout is retryable, other failures
+    // indicate a real security issue or environment misconfiguration.
     let isSigValid = false;
     try {
       isSigValid = await Promise.race([
@@ -114,25 +115,27 @@ export async function POST(request: NextRequest) {
       ]);
     } catch (error) {
       const err = categorizePersistError(error, 'signature_verification');
+      const isTimeout = (error instanceof Error) && (error.message.includes('timeout') || error.message.includes('AbortError'));
 
-      // Log signature verification failure but allow fallback if from trusted source
       Sentry.captureException(error, {
-        tags: { operation: 'chat-persist', phase: 'signature_verify', retryable: String(err.retryable) },
-        level: 'warning',
-        contexts: { persist: { phase: 'chat-verifyContentSig', conversationId, requestId } }
+        tags: { operation: 'chat-persist', phase: 'signature_verify', retryable: String(isTimeout), isTimeout: String(isTimeout) },
+        level: isTimeout ? 'warning' : 'error',
+        contexts: { persist: { phase: 'chat-verifyContentSig', conversationId, requestId, isTimeout } }
       });
-      console.warn('[chat/persist] Signature verification failed (may retry)', { requestId, conversationId, error: err.message });
 
-      // Check if caller is from trusted worker IP (future: implement IP whitelist)
-      const callerIP = request.headers.get('x-forwarded-for') || 'unknown';
-      if (process.env.CHAT_WORKER_IP && callerIP === process.env.CHAT_WORKER_IP) {
-        console.info('[chat/persist] Trusting caller IP, proceeding without verification', { requestId, callerIP });
-        isSigValid = true; // Fallback: trust the caller
+      if (isTimeout) {
+        // Timeout during verification is retryable; worker will retry
+        console.warn('[chat/persist] Signature verification timeout (retryable)', { requestId, conversationId });
+        return NextResponse.json({ error: 'Signature verification timeout' }, { status: 503 });
       }
+
+      // Non-timeout signature verification failure: fail closed (no fallback)
+      console.error('[chat/persist] Signature verification failed (non-timeout)', { requestId, conversationId, error: err.message });
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     if (!isSigValid) {
-      console.warn('[chat/persist] Untrusted caller: signature invalid', { requestId, conversationId });
+      console.error('[chat/persist] Signature verification returned false', { requestId, conversationId });
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
