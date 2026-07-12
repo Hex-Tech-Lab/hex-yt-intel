@@ -69,6 +69,7 @@ function DimensionDots({ present }: { present: number[] }) {
 
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const { items, isLoading, error } = useHistoryOverview();
+  const { analysis: currentAnalysis, status: currentStatus, videoMetadata: currentVideoMetadata } = useAnalysisStore();
   const { initializeAnalysis, setIsLoading, setStatus, setVideoMetadata } = useAnalysisStore();
   const { initializeAnalysis: initSynthesis } = useSynthesisNucleus();
   const [sortBy, setSortBy] = useState<SortOrder>('recent');
@@ -222,6 +223,53 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   return (
     <div className="flex flex-col gap-4 pb-20">
       <div className="flex items-center justify-between mb-1">
+      {/* Current Analysis Section — shows actively-loaded analysis at top */}
+      {currentAnalysis && currentAnalysis.id && (
+        <div className="flex flex-col gap-2 mb-2">
+          <h2 className="text-lg font-semibold text-[var(--ink)]">Current Analysis</h2>
+          <div
+            className={`rounded-xl border-2 bg-[var(--surface)] p-4 transition-all ${
+              currentStatus === 'analyzing' || currentStatus === 'downloading' || currentStatus === 'parsing'
+                ? 'border-[var(--accent)] bg-[var(--accent)]/5'
+                : 'border-[var(--ok)]/40 bg-[var(--ok)]/5'
+            }`}
+          >
+            {/* Title row */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{currentAnalysis.title || 'Untitled Analysis'}</h3>
+                  {(currentStatus === 'analyzing' || currentStatus === 'downloading' || currentStatus === 'parsing') && (
+                    <span className="flex-shrink-0 inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--accent)]/10 text-[var(--accent)]">
+                      <Icon icon="solar:refresh-linear" size={12} className="hx-anispin" />
+                      Active
+                    </span>
+                  )}
+                  {currentStatus === 'complete' && (
+                    <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--ok)]/10 text-[var(--ok)]">
+                      Complete
+                    </span>
+                  )}
+                </div>
+                {currentVideoMetadata?.channelTitle && (
+                  <p className="text-[12px] text-[var(--ink-muted)] truncate mt-0.5">{currentVideoMetadata.channelTitle}</p>
+                )}
+              </div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] bg-[var(--ink-muted)]/5 px-2 py-1 rounded">
+                In Synthesis Console
+              </span>
+            </div>
+
+            {/* Metadata row */}
+            {currentAnalysis.analysis_markdown && (
+              <div className="mt-3 text-[12px] text-[var(--ink-secondary)]">
+                <p className="line-clamp-1">{currentAnalysis.analysis_markdown.slice(0, 100)}…</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
         <h2 className="text-lg font-semibold text-[var(--ink)]">
           Analysis History <span className="text-[var(--ink-muted)] font-normal">({filteredAndSorted.length})</span>
         </h2>
@@ -285,6 +333,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
+                        <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-muted)]/15 text-[9px] font-bold tabular-nums text-[var(--ink-muted)]">
+                          {itemNumber}
+                        </span>
                         <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-muted)]/15 text-[9px] font-bold tabular-nums text-[var(--ink-muted)]">
                           {itemNumber}
                         </span>
