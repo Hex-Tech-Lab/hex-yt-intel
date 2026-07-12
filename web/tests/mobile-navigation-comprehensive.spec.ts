@@ -33,7 +33,7 @@ test.describe('Mobile Navigation - Responsive Breakpoints', () => {
 
     // Desktop nav should be hidden
     const desktopNav = page.locator('nav:has-text("Dashboard")');
-    // May not exist or be hidden
+    await expect(desktopNav).not.toBeVisible();
   });
 
   test('should show full desktop navigation on large screens', async ({ page }) => {
@@ -60,7 +60,7 @@ test.describe('Mobile Navigation - Responsive Breakpoints', () => {
 });
 
 test.describe('Mobile Navigation - Touch Targets', () => {
-  test('hamburger button should be at least 40x40px', async ({ page }) => {
+  test(`hamburger button should be at least ${MIN_TOUCH_TARGET}x${MIN_TOUCH_TARGET}px (WCAG 2.1 AA)`, async ({ page }) => {
     await page.setViewportSize({ width: MOBILE_WIDTH, height: MOBILE_HEIGHT });
     await page.goto('/');
 
@@ -68,8 +68,8 @@ test.describe('Mobile Navigation - Touch Targets', () => {
     const boundingBox = await hamburgerButton.boundingBox();
 
     if (boundingBox) {
-      expect(boundingBox.width).toBeGreaterThanOrEqual(40);
-      expect(boundingBox.height).toBeGreaterThanOrEqual(40);
+      expect(boundingBox.width).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+      expect(boundingBox.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     }
   });
 
