@@ -10,21 +10,8 @@ import { AnalysisCreateSchema } from '@/lib/types/contracts';
 import type { PersonaId } from '@/lib/prompts';
 import { extractVideoId } from '@/lib/youtube';
 import * as Sentry from '@sentry/nextjs';
-
-type AnalysisErrorCategory =
-  | 'request_validation'
-  | 'authentication'
-  | 'business_logic'
-  | 'database_fetch'
-  | 'unknown';
-
-interface AnalysisError {
-  category: AnalysisErrorCategory;
-  code: string;
-  message: string;
-  retryable: boolean;
-  statusCode: number;
-}
+import { ERROR_PHASES } from '@/lib/error-codes';
+import { categorizeError } from '@/lib/services/error-handler';
 import {
   SupabaseAuthAdapter,
   WorkerIngestionAdapter,
@@ -52,24 +39,6 @@ const createAnalysisUseCase = new CreateAnalysisUseCase(
   tokenAdapter
 );
 
-function categorizeAnalysisError(error: unknown, phase: string): AnalysisError {
-  const message = error instanceof Error ? error.message : String(error);
-
-  if (phase === 'request_validation') {
-    return { category: 'request_validation', code: 'INVALID_REQUEST', message, retryable: false, statusCode: 400 };
-  }
-  if (phase === 'authentication') {
-    return { category: 'authentication', code: 'UNAUTHORIZED', message, retryable: false, statusCode: 401 };
-  }
-  if (phase === 'business_logic') {
-    return { category: 'business_logic', code: 'BUSINESS_LOGIC_ERROR', message, retryable: false, statusCode: 400 };
-  }
-  if (phase === 'database_fetch') {
-    const isTimeout = message.includes('timeout') || message.includes('ECONNRESET');
-    return { category: 'database_fetch', code: 'DB_FETCH_ERROR', message, retryable: isTimeout, statusCode: isTimeout ? 503 : 500 };
-  }
-  return { category: 'unknown', code: 'INTERNAL_ERROR', message, retryable: true, statusCode: 500 };
-}
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -81,7 +50,7 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
     } catch (parseErr) {
-      const err = categorizeAnalysisError(parseErr, 'request_validation');
+      const err = categorizeError(parseErr, ERROR_PHASES.REQUEST_VALIDATION);
       Sentry.captureException(parseErr, {
         tags: { operation: 'analysis-create', phase: 'json_parse', retryable: String(err.retryable) },
         contexts: { api: { requestId, endpoint: '/api/analyses' } }
@@ -92,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     const validation = AnalysisCreateSchema.safeParse(body);
     if (!validation.success) {
-      const err = categorizeAnalysisError(validation.error, 'request_validation');
+      const err = categorizeError(validation.error, ERROR_PHASES.REQUEST_VALIDATION);
       console.warn('[analyses] Invalid payload schema', { requestId, issues: validation.error.issues.length });
       Sentry.captureMessage('Analysis: Invalid request schema', {
         level: 'warning',
@@ -106,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Supabase session; there is no static/bearer test bypass on this route.
     const identity = await authAdapter.authenticate();
     if (!identity) {
-      const err = categorizeAnalysisError(new Error('No identity'), 'authentication');
+      const err = categorizeError(new Error('No identity'), ERROR_PHASES.AUTHENTICATION);
       console.warn('[analyses] Authentication failed', { requestId });
       Sentry.captureMessage('Analysis: Authentication failed', {
         level: 'warning',
@@ -177,7 +146,7 @@ export async function GET() {
   try {
     const identity = await authAdapter.authenticate();
     if (!identity) {
-      const err = categorizeAnalysisError(new Error('No identity'), 'authentication');
+      const err = categorizeError(new Error('No identity'), ERROR_PHASES.AUTHENTICATION);
       console.warn('[analyses GET] Authentication failed', { requestId });
       Sentry.captureMessage('Analysis: GET authentication failed', {
         level: 'warning',
@@ -192,7 +161,7 @@ export async function GET() {
     try {
       historyItems = await persistenceAdapter.getUserHistory({ userId });
     } catch (error) {
-      const err = categorizeAnalysisError(error, 'database_fetch');
+      const err = categorizeError(error, ERROR_PHASES.DATABASE_FETCH);
       Sentry.captureException(error, {
         tags: { operation: 'analysis-list', phase: 'database_fetch', retryable: String(err.retryable) },
         contexts: { api: { requestId, userId, endpoint: '/api/analyses (GET)' } }
