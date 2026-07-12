@@ -284,7 +284,22 @@ export const useChatStore = create<ChatState>((set, get) => {
       // Delivered + persisted → clear the outbox entry.
       outbox.remove(clientMsgId);
     } finally {
-      // release sending state or resource cleanup
+      // Clear pending assistant message if stream ended without content (error case)
+      // or leave it intact if it has accumulated content from successful stream
+      set((s) => {
+        const messages = s.messagesByConv[convId] || [];
+        const pendingMsg = messages.find((m) => m.id === pendingAssistantId);
+        // Only filter out if empty (stream had error and never started)
+        if (pendingMsg && !pendingMsg.content) {
+          return {
+            messagesByConv: {
+              ...s.messagesByConv,
+              [convId]: messages.filter((m) => m.id !== pendingAssistantId),
+            },
+          };
+        }
+        return s;
+      });
     }
   }
 
@@ -320,6 +335,16 @@ export const useChatStore = create<ChatState>((set, get) => {
             set({ persistState: 'idle', activePersistRequestId: null });
           }
         }, 5000);
+      } else if (persistState === 'saving') {
+        // Add timeout for 'saving' state to prevent it from getting stuck (e.g., if persist event never arrives)
+        // After 8s, if still in 'saving' state, clear to idle to unblock UI
+        const capturedRequestId = requestId || get().activePersistRequestId;
+        setTimeout(() => {
+          if (get().persistState === 'saving' && get().activePersistRequestId === capturedRequestId) {
+            console.warn('[ChatStore] Persist state stuck at "saving" for 8s, clearing to idle');
+            set({ persistState: 'idle', activePersistRequestId: null });
+          }
+        }, 8000);
       }
     },
 
