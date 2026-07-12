@@ -73,21 +73,19 @@ export async function GET(
     let analysisStatus: 'complete' | 'incomplete' | 'error' | 'partial' = 'incomplete';
     if (validationStatus === 'done' || analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged') {
       analysisStatus = 'complete';
-    } else if (validationStatus === 'error' || analysis.billing_status === 'failed') {
+    } else if (validationStatus === 'error' || validationStatus === 'failed' || analysis.billing_status === 'failed') {
       analysisStatus = 'error';
     } else if (validationStatus === 'partial') {
       analysisStatus = 'partial';
     }
 
     // Populate dimensionsReceived from validation_report.dimension_status
-    const dimensionsReceived: number[] = [];
-    if ((report as any).dimension_status && Array.isArray((report as any).dimension_status)) {
-      for (const dimStatus of (report as any).dimension_status) {
-        if (dimStatus.status === 'done' || dimStatus.status === 'partial') {
-          dimensionsReceived.push(dimStatus.dimension);
-        }
-      }
-    }
+    const dimensionStatus = (report as any).dimension_status;
+    const dimensionsReceived: number[] = Array.isArray(dimensionStatus)
+      ? dimensionStatus
+          .filter((d: any) => d.status === 'done' || d.status === 'partial')
+          .map((d: any) => d.dimension)
+      : [];
 
     // Always include analysis_payload to ensure the frontend can reconstruct dimensions
     // if markdown reconstruction fails or markdown is missing
