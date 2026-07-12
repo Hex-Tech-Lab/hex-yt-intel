@@ -6,14 +6,14 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { fetchAdminSettings, fetchUserSettings } from '@/lib/adapters/settings-adapter';
 import type { AdminSettings, UserSettings, SettingsContextValue } from '@/lib/types/settings';
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const { data: session } = useSession();
+  const { user, isLoading: authLoading } = useAuth();
   const [adminSettings, setAdminSettings] = useState<AdminSettings | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,9 +30,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAdminSettings(admin);
 
         // User settings only if logged in
-        if (session?.user?.id) {
-          const user = await fetchUserSettings(session.user.id);
-          setUserSettings(user);
+        if (user?.id) {
+          const userSettings = await fetchUserSettings(user.id);
+          setUserSettings(userSettings);
         }
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to load settings'));
@@ -41,8 +41,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    loadSettings();
-  }, [session?.user?.id]);
+    // Only load after auth is done loading
+    if (!authLoading) {
+      loadSettings();
+    }
+  }, [user?.id, authLoading]);
 
   const value: SettingsContextValue = {
     adminSettings,
