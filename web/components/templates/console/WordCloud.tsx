@@ -149,7 +149,10 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         normalizedWeight = linearMax > linearMin ? (Math.max(weight, 1) - linearMin) / (linearMax - linearMin) : 0.5;
       }
       normalizedWeight = Math.max(0.2, Math.min(1, normalizedWeight));
-      const fontSize = Math.max(11, Math.min(24, 11 + normalizedWeight * 13));
+      // Apply power-based scaling (exponent 2.2) to create SUBSTANTIAL visual differentiation
+      // between high-weight and low-weight words. E.g.: 0.2 → 0.04, 1.0 → 1.0
+      const scaledWeight = Math.pow(normalizedWeight, 2.2);
+      const fontSize = Math.max(10, Math.min(32, 10 + scaledWeight * 22));
       const text = token.label;
 
       let maxTextWidth = 0;
