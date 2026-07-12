@@ -9,15 +9,23 @@ import { USAGE_LOG_SCHEMA } from '@/lib/usage/usage-log-schema';
 
 /**
  * Centralized helper to validate and insert usage logs with consistent error handling.
+ * Returns success/failure status to allow callers to decide on retry/alert strategy.
+ * Logs and captures all errors in Sentry while remaining non-blocking.
  */
 async function insertUsageLog(
   supabase: SupabaseClient,
   logData: unknown,
   contextLabel: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     const validatedLog = USAGE_LOG_SCHEMA.parse(logData);
-    await supabase.from('usage_logs').insert(validatedLog);
+    const { error: insertError } = await supabase.from('usage_logs').insert(validatedLog);
+    if (insertError) {
+      console.error(`[${contextLabel}]`, { message: 'Failed to insert usage log', error: insertError.message });
+      Sentry.captureException(new Error(insertError.message), { contexts: { handler: contextLabel, layer: 'usage_log_insert' } });
+      return false;
+    }
+    return true;
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error(`[${contextLabel}]`, { message: 'Schema validation failed', issues: error.issues });
@@ -26,6 +34,7 @@ async function insertUsageLog(
       console.error(`[${contextLabel}]`, { message: 'Failed to insert usage log', error: error instanceof Error ? error.message : String(error) });
       Sentry.captureException(error, { contexts: { handler: contextLabel, layer: 'usage_log_insert' } });
     }
+    return false;
   }
 }
 
