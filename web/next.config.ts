@@ -24,7 +24,12 @@ const nextConfig: NextConfig = {
       "@supabase/supabase-js",
       "@supabase/auth-helpers-nextjs",
       "@sentry/nextjs",
+      "d3",
       "d3-force",
+      "framer-motion",
+      "react-markdown",
+      "remark",
+      "remark-gfm",
     ],
   },
 

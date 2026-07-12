@@ -1,3 +1,10 @@
+/**
+ * A single model in a fallback cascade.
+ * @property model - OpenRouter model ID (e.g., 'anthropic/claude-haiku-4.5')
+ * @property name - Human-readable display name
+ * @property cost - Optional cost per 1K tokens
+ * @property providerOrder - Optional list of providers to try in order (e.g., ['groq', 'google-vertex'])
+ */
 export interface CascadeItem {
   model: string;
   name: string;
@@ -5,6 +12,15 @@ export interface CascadeItem {
   providerOrder?: string[];
 }
 
+/**
+ * LLM cascade for chat operations.
+ * Prioritizes fast, cheap models for conversational AI:
+ * - Groq GPT-OSS-120B (fastest free option)
+ * - Google Vertex (fallback)
+ * - Cerebras (third fallback)
+ * - Gemini 3.1 Flash Lite
+ * - Gemini 2.0 Flash (safety net)
+ */
 export const CHAT_CASCADE: readonly CascadeItem[] = [
   {
     model: 'openai/gpt-oss-120b',
@@ -37,6 +53,13 @@ export const CHAT_CASCADE: readonly CascadeItem[] = [
   },
 ] as const;
 
+/**
+ * LLM cascade for video analysis operations.
+ * Uses Claude models with high output limits for comprehensive analysis:
+ * - Claude Haiku 4.5 (primary, cost-effective)
+ * - Claude Haiku 4.5 via alternate providers (Vertex/Bedrock as failover)
+ * - Claude Sonnet 4.6 Nitro (premium fallback)
+ */
 export const ANALYSIS_CASCADE: readonly CascadeItem[] = [
   {
     model: 'anthropic/claude-haiku-4.5',
@@ -56,8 +79,19 @@ export const ANALYSIS_CASCADE: readonly CascadeItem[] = [
   },
 ] as const;
 
+/**
+ * LLM cascade for stance/perspective analysis.
+ * Aliases to ANALYSIS_CASCADE since the same model requirements apply.
+ */
 export const STANCE_CASCADE: readonly CascadeItem[] = ANALYSIS_CASCADE;
 
+/**
+ * Premium reasoning model cascade for deep analysis.
+ * Used when user tier allows reasoning-enhanced synthesis.
+ * - o3-mini (OpenAI, training-exempt)
+ * - Gemini 1.5 Pro (multimodal capable)
+ * - Claude 3.5 Sonnet (fallback)
+ */
 const PRO_REASONING_CASCADE: readonly CascadeItem[] = [
   {
     model: 'openai/o3-mini',
@@ -73,6 +107,13 @@ const PRO_REASONING_CASCADE: readonly CascadeItem[] = [
   },
 ];
 
+/**
+ * Tier-based reasoning model cascades.
+ * Determines available reasoning models based on user subscription tier:
+ * - free: Gemini 2.0 Flash (basic reasoning)
+ * - pro: Full PRO_REASONING_CASCADE
+ * - enterprise: Full PRO_REASONING_CASCADE
+ */
 export const REASONING_CASCADE: Record<string, readonly CascadeItem[]> = {
   free: [
     {
@@ -83,4 +124,3 @@ export const REASONING_CASCADE: Record<string, readonly CascadeItem[]> = {
   pro: PRO_REASONING_CASCADE,
   enterprise: PRO_REASONING_CASCADE,
 };
-
