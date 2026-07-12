@@ -47,13 +47,13 @@ export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadout
               },
               pre: ({ children }) => <pre className="bg-[var(--surface)] border border-[var(--line-faint)] rounded-md p-3 font-mono text-[12px] leading-relaxed overflow-x-auto my-3">{children}</pre>,
               table: ({ children }) => (
-                <div className="my-4 rounded-md border border-[var(--line-faint)] overflow-x-auto hx-custom-scrollbar">
-                  <table className="min-w-full text-[12px] border-collapse">{children}</table>
+                <div className="my-4 rounded-md border border-[var(--line)] overflow-x-auto hx-custom-scrollbar bg-[var(--surface)]/50">
+                  <table className="w-full text-[12px] border-collapse">{children}</table>
                 </div>
               ),
-              thead: ({ children }) => <thead className="bg-[var(--surface)] border-b border-[var(--line-faint)]">{children}</thead>,
-              th: ({ children }) => <th className="px-3 py-2 text-left font-mono font-bold text-[var(--ink)] text-[11px] uppercase tracking-wider">{children}</th>,
-              td: ({ children }) => <td className="px-3 py-2 border-b border-[var(--line-faint)] last:border-b-0">{children}</td>,
+              thead: ({ children }) => <thead className="bg-[var(--surface-raised)] border-b-2 border-[var(--line)]">{children}</thead>,
+              th: ({ children }) => <th className="px-4 py-3 text-left font-mono font-bold text-[var(--ink)] text-[11px] uppercase tracking-wider border-r border-[var(--line-faint)] last:border-r-0">{children}</th>,
+              td: ({ children }) => <td className="px-4 py-2.5 border-r border-[var(--line-faint)] border-b border-[var(--line-faint)] last:border-r-0">{children}</td>,
               blockquote: ({ children }) => (
                 <blockquote className="border-l-2 border-[var(--accent)] pl-3 my-3 text-[var(--ink-secondary)] italic">
                   {children}
