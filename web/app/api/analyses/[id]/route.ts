@@ -9,8 +9,10 @@ export const runtime = 'edge';
 
 const MAX_EDGE_PAYLOAD_BYTES = 100_000;
 
+/** Safely reconstruct markdown with graceful fallback to empty string on error. */
 function safeReconstructMarkdown(analysis: { analysis_markdown?: string | null; analysis_payload?: Partial<UCISPayloadV2> | null }): string { try { return getAnalysisMarkdown(analysis); } catch { console.warn('[analyses] markdown reconstruction failed, returning empty'); return ''; } }
 
+/** Prefer stored markdown over payload reconstruction; check payload size before reconstruction. */
 function getAnalysisMarkdown(analysis: { analysis_markdown?: string | null; analysis_payload?: Partial<UCISPayloadV2> | null }): string {
   if (analysis.analysis_markdown) return analysis.analysis_markdown;
   if (!analysis.analysis_payload) return '';
@@ -22,6 +24,7 @@ function getAnalysisMarkdown(analysis: { analysis_markdown?: string | null; anal
   return reconstructMarkdown(analysis.analysis_payload);
 }
 
+/** GET /api/analyses/[id] — Retrieve analysis data with ownership verification and markdown reconstruction. */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -62,10 +65,9 @@ export async function GET(
     const primaryPersona = payload.persona?.primary;
 
     // Compute frontend-visible status:
-    // - 'complete' if billing_status='chargeable' or 'charged' (analysis complete and billable/billed)
-    // - 'error' if billing_status='failed' or validation status is error
-    // - 'incomplete' otherwise (still processing or pending)
-    // See validation-report.ts for billing_status enum: pending | chargeable | charged | failed
+    // - 'complete' if billing_status='chargeable' or 'charged' (analysis ready/paid)
+    // - 'error' if billing_status='failed' or validation_status='error'
+    // - 'incomplete' otherwise (pending or other states)
     const analysisStatus: 'complete' | 'incomplete' | 'error' =
       analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged'
         ? 'complete'

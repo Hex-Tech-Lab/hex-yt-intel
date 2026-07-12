@@ -21,6 +21,12 @@ import { SupabaseChatAdapter } from './SupabaseChatAdapter';
 import { SupabaseGraphAdapter } from './SupabaseGraphAdapter';
 import { SupabaseBillingAdapter } from './SupabaseBillingAdapter';
 
+/**
+ * Unified persistence adapter aggregating analysis, graph, billing, chat, settings, and knowledge-wiki operations.
+ * Delegates to specialized adapters (SupabaseAnalysisAdapter, SupabaseChatAdapter, etc.) implementing the port contracts.
+ * Centralizes Supabase interactions and provides single-point access to all persistence operations.
+ * Note: Retry and error settling are owned by route/use-case layers; this adapter throws on failure.
+ */
 export class SupabasePersistenceAdapter implements AnalysisPersistencePort, GraphPersistencePort, BillingPersistencePort, ChatPersistencePort, SettingsPersistencePort, KnowledgeWikiPort {
   findCachedAnalysis(params: { userId: string; videoId: string }): Promise<CachedAnalysis | null> {
     return SupabaseAnalysisAdapter.findCachedAnalysis(params);
@@ -128,6 +134,10 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         console.warn('[SupabasePersistenceAdapter] video upsert skipped:', e);
       }
     }
+
+    // 3️⃣ Extract billing_status from validation report (contract fix: use actual value, not override)
+    const reportObj = params.validationReport as any;
+    const billingStatus = reportObj?.billing_status ?? 'pending';
 
     // 3️⃣ Update the primary analysis row
     // billing_status should come from validationReport if available (set by persist route),

@@ -1,5 +1,7 @@
+import * as Sentry from '@sentry/nextjs';
 import { GraphPersistencePort } from '@/lib/ports';
 import { VectorDedupPort } from '@/lib/ports/VectorDedupPort';
+import type { GraphEdge } from '@/lib/types/knowledge-graph';
 
 /**
  * Deduplicates knowledge graph nodes and cascades deletion to related edges.
@@ -34,24 +36,26 @@ export class DeduplicateGraphUseCase {
     });
 
     if (!result.success) {
-      console.error(`[DeduplicateGraphUseCase] Deduplication failed for tenant: ${tenantId}, analysis: ${analysisId}, error: ${result.error}`);
+      console.error('[DeduplicateGraphUseCase]', {
+        message: 'Deduplication failed',
+        tenantId,
+        analysisId,
+        error: result.error,
+      });
       return;
     }
 
     // 5. Cascade-delete edges that reference deleted nodes
     if (result.deletedNodeIds && result.deletedNodeIds.length > 0) {
       const deletedSet = new Set(result.deletedNodeIds);
-      const relations = (graph as any).relations || [];
-      const cleanedEdges = relations.filter((edge: any) => {
-        const source = typeof edge.source === 'string' ? edge.source : edge.source?.id ?? '';
-        const target = typeof edge.target === 'string' ? edge.target : edge.target?.id ?? '';
-
-        const sourceDeleted = deletedSet.has(source);
-        const targetDeleted = deletedSet.has(target);
+      const relations = graph.relations || [];
+      const cleanedEdges = relations.filter((edge: GraphEdge) => {
+        const sourceDeleted = deletedSet.has(edge.source);
+        const targetDeleted = deletedSet.has(edge.target);
         if (sourceDeleted || targetDeleted) {
           console.warn('[DeduplicateGraphUseCase] Cascading edge deletion for removed node', {
-            source,
-            target,
+            source: edge.source,
+            target: edge.target,
             reason: `${sourceDeleted ? 'source' : 'target'} node was deduplicated`,
           });
         }
@@ -61,18 +65,38 @@ export class DeduplicateGraphUseCase {
       const cleanedNodes = graph.nodes.filter(n => !deletedSet.has(n.id));
 
       // Persist cleaned graph (nodes + edges without orphans)
-      await this.graphPort.persistGraph({
-        analysisId,
-        nodes: cleanedNodes,
-        relations: cleanedEdges,
-      });
+      try {
+        await this.graphPort.persistGraph({
+          analysisId,
+          nodes: cleanedNodes,
+          relations: cleanedEdges,
+        });
 
-      console.info('[DeduplicateGraphUseCase] Edge cleanup completed', {
-        tenant: tenantId,
-        analysis: analysisId,
-        deletedNodes: result.deletedCount,
-        deletedEdges: relations.length - cleanedEdges.length,
-      });
+        console.info('[DeduplicateGraphUseCase] Edge cleanup completed', {
+          tenant: tenantId,
+          analysis: analysisId,
+          deletedNodes: result.deletedCount,
+          deletedEdges: relations.length - cleanedEdges.length,
+        });
+      } catch (error) {
+        Sentry.captureException(error, {
+          contexts: {
+            deduplicateGraph: {
+              tenantId,
+              analysisId,
+              deletedNodeIds: result.deletedNodeIds,
+            },
+          },
+        });
+        console.error('[DeduplicateGraphUseCase]', {
+          message: 'Failed to persist cleaned graph after deduplication',
+          tenantId,
+          analysisId,
+          deletedNodeIds: result.deletedNodeIds,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     } else {
       console.info('[DeduplicateGraphUseCase] Deduplication completed', {
         tenant: tenantId,

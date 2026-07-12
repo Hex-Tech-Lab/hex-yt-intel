@@ -8,9 +8,10 @@ import type { WorkerStreamRequest } from '@/lib/types/contracts';
 import { STREAM_BUNDLES, TOTAL_STREAMS, ABORT_ON_PARTIAL_FAILURE } from '@/lib/config/synthesis';
 
 /**
- * Manage Server-Sent Event streaming for video analysis synthesis.
- * Handles stream initialization, error handling, and synthesis state management.
- * @returns Object with startAnalysis and stopAnalysis functions
+ * Hook managing Server-Sent Event streaming for analysis generation.
+ * Orchestrates stream initiation, chunk collection, polling, and result assembly.
+ * Handles interruption recovery, stream backpressure, and error propagation.
+ * @returns Object with startAnalysis and stopAnalysis functions for stream control
  */
 export function useSSEStream() {
 

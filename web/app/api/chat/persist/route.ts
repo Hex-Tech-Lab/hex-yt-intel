@@ -9,179 +9,61 @@ import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
 
 /**
- * Error categorization for network resilience and observability.
- */
-type ErrorCategory =
-  | 'signature_verification'
-  | 'ownership_check'
-  | 'database_fetch'
-  | 'database_write'
-  | 'network_timeout'
-  | 'request_validation'
-  | 'unknown';
-
-interface PersistError {
-  category: ErrorCategory;
-  code: string;
-  message: string;
-  retryable: boolean;
-  statusCode: number;
-}
-
-/**
- * Categorize database and network errors for proper retry logic and observability.
- */
-function categorizePersistError(error: unknown, phase: string): PersistError {
-  const message = error instanceof Error ? error.message : String(error);
-
-  if (phase === 'request_validation') {
-    return { category: 'request_validation', code: 'INVALID_REQUEST', message, retryable: false, statusCode: 400 };
-  }
-  if (phase === 'signature_verification') {
-    return { category: 'signature_verification', code: 'INVALID_SIGNATURE', message, retryable: true, statusCode: 401 };
-  }
-  if (phase === 'ownership_check') {
-    return { category: 'ownership_check', code: 'UNAUTHORIZED', message, retryable: false, statusCode: 404 };
-  }
-  if (phase === 'database_fetch' || phase === 'idempotency_check') {
-    // Network timeouts during fetch are retryable, other DB errors are not
-    const isTimeout = message.includes('timeout') || message.includes('ECONNRESET') || message.includes('ETIMEDOUT');
-    return { category: 'database_fetch', code: 'DB_FETCH_ERROR', message, retryable: isTimeout, statusCode: isTimeout ? 503 : 500 };
-  }
-  if (phase === 'database_write') {
-    // Constraint violations are not retryable; transient errors are
-    const isTransient = message.includes('timeout') || message.includes('connection') || message.includes('ECONNRESET');
-    return { category: 'database_write', code: 'DB_WRITE_ERROR', message, retryable: isTransient, statusCode: isTransient ? 503 : 500 };
-  }
-  return { category: 'unknown', code: 'INTERNAL_ERROR', message, retryable: true, statusCode: 500 };
-}
-
-/**
  * Server-to-server persistence for the edge chat stream. The Cloudflare Worker calls
  * this (from waitUntil, after /chat-stream finishes) with the assistant reply and an
  * HMAC content signature. We verify the signature (proves it came from the worker, not
  * a forged caller), confirm the conversation belongs to the claimed user, then insert
  * the assistant turn with the service role — keeping Postgres the durable source of
  * truth while the tokens themselves streamed browser<->worker.
- *
- * Network Resilience:
- * - Signature verification failures trigger graceful degradation (log warning, continue if from trusted source)
- * - Database timeouts are retryable with exponential backoff
- * - Request validation failures fail-fast (no retry)
  */
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-  const requestId = crypto.randomUUID();
-
   try {
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch (error) {
-      const err = categorizePersistError(error, 'request_validation');
-      Sentry.captureException(error, {
-        tags: { operation: 'chat-persist', phase: 'json_parse', retryable: String(err.retryable) },
-        contexts: { api: { requestId, endpoint: '/api/chat/persist' } }
-      });
-      console.error('[chat/persist] JSON parse error', { requestId, message: err.message });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
-    }
-
+    const body: unknown = await request.json();
     const payloadSchema = z.object({
       conversationId: z.string(),
       userId: z.string(),
       content: z.string(),
       contentSig: z.string(),
+      // Expiry for the bound content signature (see verifyContentSig). Optional
+      // for backward compat with a worker that hasn't shipped the bound signer yet.
       exp: z.number().int().optional(),
     });
 
     const parsed = payloadSchema.safeParse(body);
     if (!parsed.success) {
-      const err = categorizePersistError(parsed.error, 'request_validation');
-      console.warn('[chat/persist] Invalid payload schema', { requestId, issues: parsed.error.issues.length });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const { conversationId, userId, content, contentSig, exp } = parsed.data;
 
-    // Strict tamper check: signature verification is non-negotiable. No fallback based on
-    // request headers (x-forwarded-for is spoofable). Timeout is retryable, other failures
-    // indicate a real security issue or environment misconfiguration.
+    // Tamper check: the worker signed the exact reply text with the shared secret,
+    // bound to this conversation + an expiry so it can't be replayed or reused.
     let isSigValid = false;
     try {
-      isSigValid = await Promise.race([
-        verifyContentSig(content, contentSig, exp !== undefined ? { purpose: 'chat-persist', id: conversationId, exp } : undefined),
-        new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('Signature verification timeout')), 5000))
-      ]);
+      isSigValid = await verifyContentSig(content, contentSig, exp !== undefined ? { purpose: 'chat-persist', id: conversationId, exp } : undefined);
     } catch (error) {
-      const err = categorizePersistError(error, 'signature_verification');
-      const isTimeout = (error instanceof Error) && (error.message.includes('timeout') || error.message.includes('AbortError'));
-
-      Sentry.captureException(error, {
-        tags: { operation: 'chat-persist', phase: 'signature_verify', retryable: String(isTimeout), isTimeout: String(isTimeout) },
-        level: isTimeout ? 'warning' : 'error',
-        contexts: { persist: { phase: 'chat-verifyContentSig', conversationId, requestId, isTimeout } }
-      });
-
-      if (isTimeout) {
-        // Timeout during verification is retryable; worker will retry
-        console.warn('[chat/persist] Signature verification timeout (retryable)', { requestId, conversationId });
-        return NextResponse.json({ error: 'Signature verification timeout' }, { status: 503 });
-      }
-
-      // Non-timeout signature verification failure: fail closed (no fallback)
-      console.error('[chat/persist] Signature verification failed (non-timeout)', { requestId, conversationId, error: err.message });
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      const msg = error instanceof Error ? error.message : String(error);
+      Sentry.captureException(error, { contexts: { persist: { phase: 'chat-verifyContentSig', conversationId } } });
+      console.error('[chat/persist]', { message: msg, conversationId });
+      return NextResponse.json({ error: 'Security configuration error' }, { status: 500 });
     }
 
     if (!isSigValid) {
-      console.error('[chat/persist] Signature verification returned false', { requestId, conversationId });
+      console.warn('[chat/persist] Invalid content signature', { conversationId });
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     const persistenceAdapter = new SupabasePersistenceAdapter();
 
     // Ownership: the conversation must belong to the user the token was bound to.
-    let conv;
-    try {
-      conv = await persistenceAdapter.getConversation({ conversationId });
-    } catch (error) {
-      const err = categorizePersistError(error, 'database_fetch');
-      Sentry.captureException(error, {
-        tags: { operation: 'chat-persist', phase: 'ownership_fetch', retryable: String(err.retryable) },
-        contexts: { api: { requestId, conversationId, endpoint: '/api/chat/persist' } }
-      });
-      console.error('[chat/persist] Database fetch failed during ownership check', { requestId, conversationId, error: err.message, retryable: err.retryable });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
-    }
-
+    const conv = await persistenceAdapter.getConversation({ conversationId });
     if (!conv || conv.userId !== userId) {
-      console.warn('[chat/persist] Conversation/owner mismatch or not found', { requestId, conversationId, userId });
+      console.warn('[chat/persist] Conversation/owner mismatch or not found', { conversationId });
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
-    // Idempotency: check if this exact assistant message already exists in this conversation.
-    let messages;
-    try {
-      messages = await persistenceAdapter.getMessages({ conversationId });
-    } catch (error) {
-      const err = categorizePersistError(error, 'database_fetch');
-      Sentry.captureException(error, {
-        tags: { operation: 'chat-persist', phase: 'idempotency_check', retryable: String(err.retryable) },
-        contexts: { api: { requestId, conversationId } }
-      });
-      console.error('[chat/persist] Database fetch failed during idempotency check', { requestId, conversationId, error: err.message });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
-    }
-
-    const assistantMessages = messages.filter((m) => m.role === 'assistant');
-    const existingReply = assistantMessages.find((m) => m.content === content);
-    if (existingReply) {
-      console.info('[chat/persist] Message already persisted (idempotent return)', { requestId, conversationId, messageId: existingReply.id });
-      return NextResponse.json({ ok: true, message: existingReply, idempotent: true });
-    }
-
-    // Find the latest user message to associate this assistant reply with.
+    // Fetch conversation messages to associate this assistant reply with the corresponding user message.
+    const messages = await persistenceAdapter.getMessages({ conversationId });
     const userMessages = messages.filter((m) => m.role === 'user');
     const latestUserMessage = userMessages.length > 0
       ? userMessages.reduce((latest, current) =>
@@ -189,36 +71,60 @@ export async function POST(request: NextRequest) {
         )
       : undefined;
 
-    let aRow;
+    // Turn-scoped idempotency (ADR 146): check if this assistant message already exists
+    // for this specific user turn (parent message). This prevents suppressing valid repeated
+    // assistant replies on later turns and eliminates race conditions under concurrent retries.
+    if (latestUserMessage) {
+      const existingReply = await persistenceAdapter.findAssistantByParentId({
+        conversationId,
+        parentId: latestUserMessage.id,
+      });
+      if (existingReply) {
+        // Assistant reply already exists for this turn; return success to allow retry idempotency
+        return NextResponse.json({ ok: true, message: existingReply, idempotent: true });
+      }
+    }
+
+    // Attempt to create the assistant message with turn-scoped idempotency.
+    // If concurrent request already created it for this parent_message_id, the unique
+    // constraint violation is caught and handled gracefully.
     try {
-      aRow = await persistenceAdapter.createMessage({
+      const aRow = await persistenceAdapter.createMessage({
         conversationId,
         userId,
         role: 'assistant',
         content,
         parentMessageId: latestUserMessage?.id || null,
       });
-    } catch (error) {
-      const err = categorizePersistError(error, 'database_write');
-      Sentry.captureException(error, {
-        tags: { operation: 'chat-persist', phase: 'message_create', retryable: String(err.retryable) },
-        contexts: { api: { requestId, conversationId, userId } }
-      });
-      console.error('[chat/persist] Database write failed', { requestId, conversationId, error: err.message, retryable: err.retryable });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
-    }
 
-    const duration = Date.now() - startTime;
-    console.info('[chat/persist] Message persisted successfully', { requestId, conversationId, messageId: aRow.id, duration });
-    return NextResponse.json({ ok: true, message: aRow });
+      return NextResponse.json({ ok: true, message: aRow });
+    } catch (createError: unknown) {
+      // Handle unique constraint violation (concurrent retry created the message).
+      // Re-fetch and return the existing message for idempotency.
+      const errorCode = (createError as { code?: string })?.code;
+      if (errorCode === '23505') {
+        if (latestUserMessage) {
+          const existingReply = await persistenceAdapter.findAssistantByParentId({
+            conversationId,
+            parentId: latestUserMessage.id,
+          });
+          if (existingReply) {
+            console.info('[chat/persist] Idempotent retry detected (concurrent create)', {
+              conversationId,
+              parentMessageId: latestUserMessage.id,
+            });
+            return NextResponse.json({ ok: true, message: existingReply, idempotent: true });
+          }
+        }
+      }
+
+      // Not a constraint violation or re-fetch failed; bubble up the error
+      throw createError;
+    }
   } catch (error) {
-    const duration = Date.now() - startTime;
     const message = error instanceof Error ? error.message : String(error);
-    Sentry.captureException(error, {
-      tags: { operation: 'chat-persist', phase: 'unknown' },
-      contexts: { api: { requestId, endpoint: '/api/chat/persist', duration } }
-    });
-    console.error('[chat/persist] Unexpected error', { requestId, message, duration });
+    Sentry.captureException(error, { tags: { operation: 'chat-persist' }, contexts: { api: { endpoint: '/api/chat/persist' } } });
+    console.error('[chat/persist] Failed:', message);
     return NextResponse.json({ error: 'Failed to persist message' }, { status: 500 });
   }
 }

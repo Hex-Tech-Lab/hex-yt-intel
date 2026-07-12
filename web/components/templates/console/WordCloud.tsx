@@ -22,6 +22,7 @@ interface PlacedWord {
   fontSize: number;
 }
 
+/** Canvas-based word cloud visualization of knowledge graph entities with collision-free layout. */
 export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -309,7 +310,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       className="w-full relative bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg border border-[var(--line-faint)] overflow-hidden"
       style={{ height: 220, minHeight: 220, maxHeight: 220 }}
     >
-      {graph.nodes.length > 0 ? (
+      {(graph.nodes ?? []).length > 0 ? (
         <canvas
           ref={canvasRef}
           width={size.w}

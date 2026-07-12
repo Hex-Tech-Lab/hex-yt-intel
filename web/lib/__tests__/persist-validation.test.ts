@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
+import { TOTAL_STREAMS } from '@/lib/config/synthesis';
 
 /**
  * Persist API Validation Tests

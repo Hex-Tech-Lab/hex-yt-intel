@@ -1,4 +1,4 @@
-import { GraphNode, GraphEdge, KnowledgeGraph } from '@/lib/types/knowledge-graph';
+import { GraphNode, GraphEdge, KnowledgeGraph, MergedGraphNode } from '@/lib/types/knowledge-graph';
 
 /**
  * Canonicalize label to prevent collisions from formatting differences.
@@ -32,8 +32,8 @@ function mergeNode(existing: GraphNode, incoming: GraphNode): void {
  * @param analyses - Array of analyses with nodes to aggregate
  * @returns Object with nodeMap (aggregated nodes by label) and idMapping (original ID → merged ID)
  */
-export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] }>): { nodeMap: Map<string, GraphNode>; idMapping: Map<string, string> } {
-  const nodeMapByLabel = new Map<string, GraphNode>();
+export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] }>): { nodeMap: Map<string, MergedGraphNode>; idMapping: Map<string, string> } {
+  const nodeMapByLabel = new Map<string, MergedGraphNode>();
   const idMapping = new Map<string, string>();
   const originTracking = new Map<string, { analysisId: string; dimension: number; weight: number }[]>();
   const sourceTracking = new Map<string, Set<string>>();
@@ -65,7 +65,7 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
       } else {
         // First time seeing this label+dimension combination, use original node ID as merged ID
         const mergedId = node.id;
-        const mergedNode = { ...node };
+        const mergedNode: MergedGraphNode = { ...node, label: canonicalLabel };
         nodeMapByLabel.set(mergeKey, mergedNode);
         idMapping.set(node.id, mergedId);
         // Initialize origin tracking
@@ -82,8 +82,8 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
   // Enhance merged nodes with dimensional provenance (Recall pattern)
   for (const node of nodeMapByLabel.values()) {
     const mergedId = node.id;
-    (node as any).originDimensions = originTracking.get(mergedId) || [];
-    (node as any).sourceAnalysisIds = Array.from(sourceTracking.get(mergedId) || []);
+    node.originDimensions = originTracking.get(mergedId) || [];
+    node.sourceAnalysisIds = Array.from(sourceTracking.get(mergedId) || []);
   }
 
   return { nodeMap: nodeMapByLabel, idMapping };
@@ -123,10 +123,15 @@ export function aggregateEdges(analyses: Array<{ id: string; edges: GraphEdge[];
       const mergedTarget = idMapping.get(edge.target) ?? edge.target;
       const edgeKey = `${mergedSource}-${mergedTarget}-${edge.kind}`;
 
+      // Include label fallback for edge safety (allows recovery if ID resolution fails)
+      const sourceNode = nodesById.get(edge.source);
+      const targetNode = nodesById.get(edge.target);
       const remappedEdge: GraphEdge = {
         ...edge,
         source: mergedSource,
         target: mergedTarget,
+        sourceLabel: sourceNode?.label,
+        targetLabel: targetNode?.label,
       };
 
       const existing = edgeMap.get(edgeKey);
@@ -169,6 +174,12 @@ export function validateEdges(edges: GraphEdge[], nodesByLabel: Map<string, Grap
   });
 }
 
+/**
+ * Aggregates knowledge graphs from multiple analyses into a single global graph.
+ * Merges nodes by canonical label within each dimension, remaps edges to merged nodes,
+ * validates edges against the merged graph, and preserves dimensional origin metadata.
+ * Prevents node/edge duplication through label canonicalization and dimension-aware keying.
+ */
 export class AggregateGlobalGraphUseCase {
   /**
    * Execute the aggregation use case to merge multiple analyses into a global knowledge graph.

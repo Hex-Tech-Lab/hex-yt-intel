@@ -9,6 +9,7 @@ import { VideoIdSchema } from '@/lib/types/contracts';
 
 export const runtime = 'edge';
 
+/** GET /api/analyses/check — Poll for cached analysis or in-progress status by video ID. */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -74,8 +75,8 @@ export async function GET(request: NextRequest) {
       const metadataPayload = validationReport.metadata || (existingAnalysis as any).metadata || {};
 
       // NOTE: `analyses` has no `status` column — completeness lives in
-      // `billing_status`. Analysis is complete when billing_status is 'chargeable' (full)
-      // or 'charged' (already billed). See ADR 006 for billing status semantics.
+      // `billing_status`. Analysis is complete when billing_status='chargeable'
+      // (ready to charge) or 'charged' (payment processed).
       if (existingAnalysis.billing_status === 'chargeable' || existingAnalysis.billing_status === 'charged') {
         return NextResponse.json({
           exists: true,

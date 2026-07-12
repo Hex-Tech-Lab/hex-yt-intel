@@ -39,8 +39,15 @@ export interface KnowledgeGraphCanvasProps {
   compact?: boolean;
 }
 
+/** Force-graph node type with D3 physics coordinates and fixed positions. */
 type FGNode = KnowledgeGraph['nodes'][number] & { x?: number; y?: number; fx?: number; fy?: number };
 
+/**
+ * Force-directed knowledge graph visualization with interactive node selection and physics simulation.
+ * Renders an interactive 2D canvas-based graph using react-force-graph-2d with D3 force layout.
+ * Features: node drag, right-click focus (pin), hover/select highlight, dynamic label display.
+ * @see KnowledgeGraphCanvasProps for prop documentation
+ */
 export function KnowledgeGraphCanvas({
   graph,
   selectedId,
@@ -66,24 +73,12 @@ export function KnowledgeGraphCanvas({
     return () => ro.disconnect();
   }, [height, compact]);
 
-  // Map domain graph → force-graph shape. Create stable identity keyed by actual node/edge content,
-  // not graph reference, to prevent physics engine restart during dimension building.
-  // This allows smooth animation with 1-2 second intervals as dimensions accumulate.
-  const dataKey = useMemo(
-    () => {
-      const nodeIds = graph.nodes.map((n) => n.id).join('|');
-      const edgeIds = graph.edges.map((e) => `${e.source}-${e.target}`).join('|');
-      return `${nodeIds}:${edgeIds}`;
-    },
-    [graph.nodes, graph.edges]
-  );
-
   const data = useMemo(
     () => ({
-      nodes: graph.nodes.map((n) => ({ ...n })) as FGNode[],
-      links: graph.edges.map((e) => ({ source: e.source, target: e.target, strength: e.strength, kind: e.kind })),
+      nodes: (graph.nodes ?? []).map((n) => ({ ...n })) as FGNode[],
+      links: (graph.edges ?? []).map((e) => ({ source: e.source, target: e.target, strength: e.strength, kind: e.kind })),
     }),
-    [dataKey]
+    [graph.nodes, graph.edges]
   );
 
   // Configure custom D3 forces on the engine to resolve isolated islands
@@ -112,7 +107,7 @@ export function KnowledgeGraphCanvas({
     if (!selectedId) return null;
     const nodes = new Set<string>([selectedId]);
     const links = new Set<string>();
-    graph.edges.forEach((e, i) => {
+    (graph.edges ?? []).forEach((e, i) => {
       if (e.source === selectedId || e.target === selectedId) {
         nodes.add(e.source);
         nodes.add(e.target);

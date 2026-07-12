@@ -109,11 +109,11 @@ const logRetryFailure = (error: Error, attempt: number, maxAttempts: number, isF
   }
 };
 
-/** Coerce an unknown thrown value into an Error instance. */
+/** Coerce an unknown thrown value into an Error instance. Ensures consistent error handling. */
 const toError = (value: unknown): Error =>
   value instanceof Error ? value : new Error(String(value));
 
-/** Sleep for the jittered backoff delay corresponding to the given attempt. */
+/** Sleep for the jittered backoff delay corresponding to the given attempt. Jitter prevents thundering herd. */
 const backoffDelay = (attempt: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, calculateBackoffDelay(attempt)));
 
@@ -185,7 +185,7 @@ function stitchChunksIntoPayload(
       personaOptimised: false,
       recommendation: 'conditional'
     },
-    monetizationVerdict: stitchedMonetization
+    ...(stitchedMonetization ? { monetizationVerdict: stitchedMonetization } : {})
   };
 
   // Validate stitched payload
@@ -198,7 +198,14 @@ function stitchChunksIntoPayload(
   return { payload: stitchedPayload, markdown: stitchedMarkdown };
 }
 
-/** Retry async operation with exponential backoff and jitter; logs to Sentry on failure. */
+/**
+ * Retry async operation with exponential backoff and jitter.
+ * Logs failures to Sentry and console; throws final error if all attempts exhausted.
+ * @template T - Return type of the async function
+ * @param fn - Async function to retry
+ * @param maxAttempts - Maximum number of retry attempts (default: 2)
+ * @returns Result of successful function invocation or throws final error
+ */
 const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> => {
   let lastError = new Error('Retry failed');
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -214,9 +221,18 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
   throw lastError;
 };
 
-/** Build sanitized validation report filename from title, channel, and timestamp. */
+/**
+ * Build sanitized validation report filename from title, channel, and timestamp.
+ * Produces URL-safe filename like "video-title-channel-2026-07-11_14-30-45.md".
+ * @param title - Video or analysis title to include in filename
+ * @param channelTitle - Optional creator/channel name
+ * @returns Sanitized markdown filename with timestamp
+ */
 function buildValidationFilename(title: string, channelTitle?: string | null): string {
-  /** Convert text to URL-safe slug by removing special characters. */
+  /**
+   * Convert text to URL-safe slug by removing special characters.
+   * Replaces non-alphanumeric with hyphens, collapses multiple hyphens, strips leading/trailing.
+   */
   const cleanSlug = (text: string): string => {
     return text
       .replace(/[^a-zA-Z0-9]/g, '-')
@@ -224,7 +240,8 @@ function buildValidationFilename(title: string, channelTitle?: string | null): s
       .replace(/^-|-$/g, '')
       || 'unknown';
   };
-  /** Format current timestamp as YYYY-MM-DD_HH-MM-SS string. */
+
+  /** Format current timestamp as YYYY-MM-DD_HH-MM-SS string for consistent file ordering. */
   const getFormattedTimestamp = (): string => {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -235,6 +252,7 @@ function buildValidationFilename(title: string, channelTitle?: string | null): s
     const ss = String(now.getSeconds()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
   };
+
   const titleSlug = cleanSlug(title || 'analysis');
   const creatorSlug = cleanSlug(channelTitle || 'creator');
   const timestamp = getFormattedTimestamp();
@@ -345,7 +363,7 @@ export async function POST(request: NextRequest) {
 
       const persistenceAdapter = new SupabasePersistenceAdapter();
       const row = await retryWithBackoff(
-        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId }),
+        () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId, includeTranscript: true }),
         2
       );
 
@@ -696,6 +714,7 @@ export async function POST(request: NextRequest) {
             });
             finalStatus = 'partial';
             validationPassed = false;
+            finalMissingChunks = missing;
           } else {
             finalStatus = 'partial';
             validationPassed = false;
@@ -730,76 +749,17 @@ export async function POST(request: NextRequest) {
             partialChunkMap.set(c.chunk_index, c.payload);
           });
 
-          const partialDimensions: any[] = [];
-          let partialPersona: any = null;
-          let partialClassification: any = null;
-          let partialMonetization: any = null;
-          const partialNodes: any[] = [];
-          const partialEdges: any[] = [];
-
-          for (let i = 1; i <= resolvedTotal; i++) {
-            const chunkPayload = partialChunkMap.get(i);
-            if (!chunkPayload) continue;
-            if (chunkPayload.dimensions && Array.isArray(chunkPayload.dimensions)) {
-              partialDimensions.push(...chunkPayload.dimensions);
-            }
-            if (chunkPayload.persona && !partialPersona) {
-              partialPersona = chunkPayload.persona;
-            }
-            if (chunkPayload.classification && !partialClassification) {
-              partialClassification = chunkPayload.classification;
-            }
-            if (chunkPayload.monetizationVerdict && !partialMonetization) {
-              partialMonetization = chunkPayload.monetizationVerdict;
-            }
-            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.nodes)) {
-              partialNodes.push(...chunkPayload.knowledgeGraph.nodes);
-            }
-            if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.edges)) {
-              partialEdges.push(...chunkPayload.knowledgeGraph.edges);
-            }
-          }
-
-          if (partialDimensions.length > 0) {
-            const validDimensions = partialDimensions.filter(
-              d => d && typeof d.number === 'number' && !isNaN(d.number)
-            );
-            stitchedPayload = {
-              schemaVersion: '2.0',
-              persona: partialPersona || {
-                primary: { id: 'consultant', label: 'Consultant', weight: 1.0 },
-                cognitiveLenses: [],
-                selectionRationale: ''
-              },
-              dimensions: validDimensions.sort((a, b) => a.number - b.number),
-              knowledgeGraph: {
-                nodes: partialNodes,
-                edges: partialEdges,
-                rootId: partialNodes[0]?.id || null
-              },
-              classification: partialClassification || {
-                authoritative: false,
-                practicallyActionable: false,
-                knowledgeGraphReady: false,
-                safe: true,
-                personaOptimised: false,
-                recommendation: 'conditional'
-              },
-              monetizationVerdict: partialMonetization
-            } as any;
-            // Validate stitched payload before using it
-            const parseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
-            if (!parseResult.success) {
-              // Validation failed; continue with original payload
-              console.warn('[analyses/persist] Stitched payload failed schema validation', {
-                analysisId,
-                videoId,
-                errors: parseResult.error.issues.map(i => i.message)
-              });
-            } else {
-              // Reconstruct markdown from validated stitched payload
-              stitchedMarkdown = reconstructMarkdown(stitchedPayload as UCISPayloadV2);
-            }
+          // Reuse stitchChunksIntoPayload for consistency
+          const stitchResult = stitchChunksIntoPayload(partialChunkMap, resolvedTotal);
+          if (stitchResult.payload !== undefined) {
+            stitchedPayload = stitchResult.payload;
+            stitchedMarkdown = stitchResult.markdown;
+          } else {
+            console.warn('[analyses/persist] Stitched partial payload failed validation or has no dimensions', {
+              analysisId,
+              videoId,
+              chunkCount: finalizedChunks.length
+            });
           }
         } catch (stitchErr) {
           const message = stitchErr instanceof Error ? stitchErr.message : String(stitchErr);
@@ -810,19 +770,19 @@ export async function POST(request: NextRequest) {
       }
 
       // Build dimension status for billing and validation decisions
-      const { dimensionStatus, validationStatus: computedValidationStatus, billingStatus } = buildDimensionStatus(
-        stitchedPayload ?? validPayload
-      );
+      // Preserve chunk-derived finalStatus when payload is absent
+      const payloadToEvaluate = stitchedPayload ?? validPayload;
+      const { dimensionStatus, validationStatus: computedValidationStatus, billingStatus } = buildDimensionStatus(payloadToEvaluate);
 
-      // Use computed validation status if available, fall back to finalStatus
-      const reportValidationStatus = computedValidationStatus || finalStatus;
+      // Use computed validation status only if we have a payload to evaluate; otherwise preserve finalStatus
+      const reportValidationStatus = payloadToEvaluate !== undefined && computedValidationStatus ? computedValidationStatus : finalStatus;
 
       const newReport: PersistedValidationReport = {
         ...priorReport,
         validation_status: reportValidationStatus,
         status: reportValidationStatus, // Legacy field for backward compat
-        billing_status: billingStatus,
-        dimension_status: dimensionStatus,
+        billing_status: payloadToEvaluate !== undefined ? billingStatus : priorReport.billing_status,
+        dimension_status: payloadToEvaluate !== undefined ? dimensionStatus : priorReport.dimension_status,
         model_used: model || null,
         valid: reportValidationStatus === 'done' && validationPassed,
       };

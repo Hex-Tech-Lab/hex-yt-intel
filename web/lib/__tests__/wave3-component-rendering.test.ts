@@ -63,20 +63,19 @@ describe('MindMap Connector Rendering Logic', () => {
 });
 
 describe('KnowledgeGraphCanvas Font Scaling', () => {
-  it('computes font size based on node weight (non-compact: 9px-16px, compact: 7px-13px)', () => {
-    // KnowledgeGraphCanvas.tsx lines 311-321: updated font-size formula
-    const compact = false;
-    const minFontSize = compact ? 7 : 9;
-    const maxFontSize = compact ? 13 : 16;
+  it('computes font size based on node weight (9px-15px range)', () => {
+    const minFontSize = 9;
+    const maxFontSize = 15;
     const weights = [0, 0.5, 1.0, 2.0, 5.0];
 
     weights.forEach(weight => {
       const normalizedWeight = Math.min(1, Math.max(0, weight / 10));
       const weightedFontSize = minFontSize + (normalizedWeight * (maxFontSize - minFontSize));
+      // In actual code: Math.max(minFontSize * 0.7, Math.min(maxFontSize, weightedFontSize / Math.sqrt(scale)))
       // For scale=1.0:
-      const clampedFontSize = Math.max(minFontSize * 0.6, Math.min(maxFontSize, weightedFontSize));
+      const clampedFontSize = Math.max(minFontSize * 0.7, Math.min(maxFontSize, weightedFontSize));
 
-      expect(clampedFontSize).toBeGreaterThanOrEqual(minFontSize * 0.6);
+      expect(clampedFontSize).toBeGreaterThanOrEqual(minFontSize * 0.7);
       expect(clampedFontSize).toBeLessThanOrEqual(maxFontSize);
     });
   });
@@ -105,11 +104,12 @@ describe('KnowledgeGraphCanvas Font Scaling', () => {
 
   it('maintains minimum font size even when zoomed out', () => {
     const minFontSize = 9;
+    const maxFontSize = 15;
     const baseFontSize = 8;
     const scale = 2.0;
-    const clampedFontSize = Math.max(minFontSize * 0.6, Math.min(16, baseFontSize / Math.sqrt(scale)));
+    const clampedFontSize = Math.max(minFontSize * 0.7, Math.min(maxFontSize, baseFontSize / Math.sqrt(scale)));
 
-    expect(clampedFontSize).toBeGreaterThanOrEqual(minFontSize * 0.6);
+    expect(clampedFontSize).toBeGreaterThanOrEqual(minFontSize * 0.7);
   });
 
   it('uses consistent text color with opacity variation', () => {
@@ -124,38 +124,44 @@ describe('KnowledgeGraphCanvas Font Scaling', () => {
 });
 
 describe('WordCloud Font Sizing and Scaling', () => {
-  it('uses logarithmic scaling to preserve frequency ratios', () => {
-    // WordCloud.tsx lines 155-168: updated font-size formula
+  it('uses logarithmic scaling with minSpread threshold', () => {
+    // WordCloud.tsx lines 140-152: logarithmic scaling when spread > minSpread
     const weights = [1, 1.43, 2, 5];
     const minTokenWeight = 1;
     const maxTokenWeight = 5;
+    const minSpread = 0.1;
 
     const logMin = Math.log(Math.max(minTokenWeight, 1));
     const logMax = Math.log(Math.max(maxTokenWeight, 1));
 
     const fontSizes = weights.map(weight => {
-      const logNormalizedWeight =
-        logMax > logMin ? (Math.log(Math.max(weight, 1)) - logMin) / (logMax - logMin) : 0.5;
-      // Current implementation: clamp normalizedWeight [0.15, 1.0], then scale 10-26px
-      const clamped = Math.max(0.15, Math.min(1, logNormalizedWeight));
-      return Math.max(10, Math.min(26, 10 + clamped * 16));
+      let normalizedWeight: number;
+      if ((logMax - logMin) > minSpread) {
+        normalizedWeight = (Math.log(Math.max(weight, 1)) - logMin) / (logMax - logMin);
+      } else {
+        const linearMin = Math.max(minTokenWeight, 1);
+        const linearMax = Math.max(maxTokenWeight, 1);
+        normalizedWeight = linearMax > linearMin ? (Math.max(weight, 1) - linearMin) / (linearMax - linearMin) : 0.5;
+      }
+      normalizedWeight = Math.max(0.2, Math.min(1, normalizedWeight));
+      return Math.max(11, Math.min(24, 11 + normalizedWeight * 13));
     });
 
     // Verify proportional scaling: if weight ratio is 1.43, font size ratio should be similar
-    expect(fontSizes[0]).toBeGreaterThanOrEqual(10); // min effective (0.15 * 16 + 10 = 12.4)
-    expect(fontSizes[3]).toBe(26); // max weight
+    expect(fontSizes[0]).toBe(13.6); // min weight clamped to 0.2 range
+    expect(fontSizes[3]).toBe(24); // max weight at 1.0 range
     expect(fontSizes[1]).toBeGreaterThan(fontSizes[0]);
     expect(fontSizes[2]).toBeGreaterThan(fontSizes[1]);
   });
 
-  it('clamps font size to valid range [10, 26]', () => {
-    const minFontSize = 10;
-    const maxFontSize = 26;
-    // Current implementation clamps normalizedWeight to [0.15, 1.0]
-    const normalizedWeights = [0.15, 0.3, 0.7, 1.0];
+  it('clamps font size to valid range [11, 24] and normalizedWeight to [0.2, 1]', () => {
+    const minFontSize = 11;
+    const maxFontSize = 24;
+    const normalizedWeights = [0, 0.2, 0.5, 1.0];
 
     normalizedWeights.forEach(nw => {
-      const fontSize = Math.max(minFontSize, Math.min(maxFontSize, 10 + nw * 16));
+      const clampedNW = Math.max(0.2, Math.min(1, nw));
+      const fontSize = Math.max(minFontSize, Math.min(maxFontSize, 11 + clampedNW * 13));
       expect(fontSize).toBeGreaterThanOrEqual(minFontSize);
       expect(fontSize).toBeLessThanOrEqual(maxFontSize);
     });
@@ -207,12 +213,14 @@ describe('WordCloud Font Sizing and Scaling', () => {
     expect(textColor).toBe(inkColor);
   });
 
-  it('uses proportional font sizing formula: 11 + normalizedWeight * 15', () => {
+  it('uses proportional font sizing formula: 11 + normalizedWeight * 13, clamped to [0.2, 1]', () => {
     const normalizedWeights = [0, 0.25, 0.5, 0.75, 1.0];
-    const expected = [11, 14.75, 18.5, 22.25, 26];
+    // After clamping to [0.2, 1]: 0->0.2, 0.25->0.25, 0.5->0.5, 0.75->0.75, 1->1
+    const expected = [13.6, 14.25, 17.5, 20.75, 24];
 
     normalizedWeights.forEach((nw, i) => {
-      const fontSize = 11 + nw * 15;
+      const clampedNW = Math.max(0.2, Math.min(1, nw));
+      const fontSize = Math.max(11, Math.min(24, 11 + clampedNW * 13));
       expect(fontSize).toBeCloseTo(expected[i], 2);
     });
   });

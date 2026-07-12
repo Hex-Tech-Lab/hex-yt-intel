@@ -2,9 +2,9 @@
  * Analysis Reaper (ADR 007 — Persistence lifecycle recovery)
  *
  * A YouTube analysis streams browser ↔ Cloudflare Worker; the Worker persists
- * the final row with appropriate billing_status ('chargeable' or 'charged') via
- * `waitUntil` when the stream settles. If the Worker times out, the client disconnects,
- * or the process is reclaimed before that settle runs, the row is orphaned in
+ * the final row with `billing_status = 'completed'` via `waitUntil` when the
+ * stream settles. If the Worker times out, the client disconnects, or the
+ * process is reclaimed before that settle runs, the row is orphaned in
  * `billing_status = 'processing'` forever — it then shows up in history as a
  * permanent "processing" ghost with no output.
  *
@@ -17,6 +17,7 @@
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
 import { TOTAL_DIMENSIONS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
+import type { BillingStatus } from '@/lib/types/validation-report';
 import * as Sentry from '@sentry/nextjs';
 
 /**
@@ -34,8 +35,7 @@ export const MIN_SALVAGEABLE_DIMENSIONS = MIN_USABLE_DIMENSIONS;
  */
 export const REAP_GRACE_MINUTES = 30;
 
-// Outcome of reaper decision; maps to billing_status enum
-export type ReapOutcome = 'chargeable' | 'failed';
+export type ReapOutcome = 'completed' | 'failed';
 
 /**
  * Pure decision — given a stuck row's markdown, decide salvage-vs-fail and
@@ -50,7 +50,7 @@ export function decideReapOutcome(analysisMarkdown: string | null | undefined): 
   // rows, which failed salvageable analyses.
   const dimensionCount = countUcisDimensions(analysisMarkdown);
   return {
-    outcome: dimensionCount >= MIN_SALVAGEABLE_DIMENSIONS ? 'chargeable' : 'failed',
+    outcome: dimensionCount >= MIN_SALVAGEABLE_DIMENSIONS ? 'completed' : 'failed',
     dimensionCount,
   };
 }
@@ -69,7 +69,7 @@ interface StuckRow {
 }
 
 export interface SettlePatch {
-  billing_status: ReapOutcome;
+  billing_status: BillingStatus;
   validation_passed: boolean;
   validation_report: Record<string, unknown>;
   updated_at: string;
@@ -77,9 +77,13 @@ export interface SettlePatch {
 
 /**
  * Build the terminal-state row patch for a stuck analysis (pure — no I/O).
- * Salvages a full analysis as chargeable, a usable partial as chargeable (but partial validation),
- * and anything below the threshold as failed; preserves the prior report fields.
+ * Salvages a full analysis as complete, a usable partial as partial, and
+ * anything below the threshold as failed; preserves the prior report fields.
  * Exported for unit testing.
+ *
+ * Maps ReapOutcome to BillingStatus:
+ * - 'completed' (enough dimensions salvaged) → 'chargeable' (ready to charge)
+ * - 'failed' (below minimum) → 'failed' (no charge)
  */
 export function buildSettlePatch(
   analysisMarkdown: string | null | undefined,
@@ -87,8 +91,14 @@ export function buildSettlePatch(
   nowIso: string = new Date().toISOString(),
 ): { outcome: ReapOutcome; patch: SettlePatch } {
   const { outcome, dimensionCount } = decideReapOutcome(analysisMarkdown);
-  const isComplete = outcome === 'chargeable' && dimensionCount >= TOTAL_DIMENSIONS;
-  const reportStatus = outcome === 'failed' ? 'failed' : isComplete ? 'done' : 'partial';
+  const isComplete = outcome === 'completed' && dimensionCount >= TOTAL_DIMENSIONS;
+  const reportStatus = outcome === 'failed' ? 'failed' : isComplete ? 'complete' : 'partial';
+
+  // Map ReapOutcome to valid BillingStatus enum values
+  // 'completed' (salvageable) → 'chargeable' (ready to charge)
+  // 'failed' (below threshold) → 'failed' (no charge)
+  const billingStatus = outcome === 'completed' ? 'chargeable' : 'failed';
+
   // jsonb can decode to an array/scalar too; only spread a plain object so the
   // report shape stays consistent.
   const baseReport =
@@ -98,7 +108,7 @@ export function buildSettlePatch(
   return {
     outcome,
     patch: {
-      billing_status: outcome,
+      billing_status: billingStatus,
       validation_passed: isComplete,
       validation_report: { ...baseReport, status: reportStatus, reaped: true, reaped_at: nowIso, reaped_dimensions: dimensionCount },
       updated_at: nowIso,
@@ -146,7 +156,7 @@ export async function sweepStuckAnalyses(opts?: { graceMinutes?: number; limit?:
       result.raced++;
       continue;
     }
-    if (outcome === 'chargeable') result.completed++;
+    if (outcome === 'completed') result.completed++;
     else result.failed++;
   }
 
