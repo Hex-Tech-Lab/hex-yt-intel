@@ -10,6 +10,21 @@ import { AnalysisCreateSchema } from '@/lib/types/contracts';
 import type { PersonaId } from '@/lib/prompts';
 import { extractVideoId } from '@/lib/youtube';
 import * as Sentry from '@sentry/nextjs';
+
+type AnalysisErrorCategory =
+  | 'request_validation'
+  | 'authentication'
+  | 'business_logic'
+  | 'database_fetch'
+  | 'unknown';
+
+interface AnalysisError {
+  category: AnalysisErrorCategory;
+  code: string;
+  message: string;
+  retryable: boolean;
+  statusCode: number;
+}
 import {
   SupabaseAuthAdapter,
   WorkerIngestionAdapter,
@@ -37,23 +52,71 @@ const createAnalysisUseCase = new CreateAnalysisUseCase(
   tokenAdapter
 );
 
+function categorizeAnalysisError(error: unknown, phase: string): AnalysisError {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (phase === 'request_validation') {
+    return { category: 'request_validation', code: 'INVALID_REQUEST', message, retryable: false, statusCode: 400 };
+  }
+  if (phase === 'authentication') {
+    return { category: 'authentication', code: 'UNAUTHORIZED', message, retryable: false, statusCode: 401 };
+  }
+  if (phase === 'business_logic') {
+    return { category: 'business_logic', code: 'BUSINESS_LOGIC_ERROR', message, retryable: false, statusCode: 400 };
+  }
+  if (phase === 'database_fetch') {
+    const isTimeout = message.includes('timeout') || message.includes('ECONNRESET');
+    return { category: 'database_fetch', code: 'DB_FETCH_ERROR', message, retryable: isTimeout, statusCode: isTimeout ? 503 : 500 };
+  }
+  return { category: 'unknown', code: 'INTERNAL_ERROR', message, retryable: true, statusCode: 500 };
+}
+
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const requestId = crypto.randomUUID();
   let body: { url?: string; timezone?: string; persona?: string; forceRefresh?: boolean } | undefined;
+
   try {
-    body = await request.json();
-    const validation = AnalysisCreateSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json({ error: 'Invalid request', details: validation.error.flatten() }, { status: 400 });
+    // 1. Parse and validate request
+    try {
+      body = await request.json();
+    } catch (parseErr) {
+      const err = categorizeAnalysisError(parseErr, 'request_validation');
+      Sentry.captureException(parseErr, {
+        tags: { operation: 'analysis-create', phase: 'json_parse', retryable: String(err.retryable) },
+        contexts: { api: { requestId, endpoint: '/api/analyses' } }
+      });
+      console.error('[analyses] JSON parse error', { requestId, message: err.message });
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
     }
 
-    // 1. Auth — STRICT tenant isolation. Identity is derived ONLY from the verified
+    const validation = AnalysisCreateSchema.safeParse(body);
+    if (!validation.success) {
+      const err = categorizeAnalysisError(validation.error, 'request_validation');
+      console.warn('[analyses] Invalid payload schema', { requestId, issues: validation.error.issues.length });
+      Sentry.captureMessage('Analysis: Invalid request schema', {
+        level: 'warning',
+        tags: { operation: 'analysis-create', phase: 'schema_validation', retryable: String(err.retryable) },
+        contexts: { api: { requestId, endpoint: '/api/analyses' }, validation: { issues: validation.error.issues } }
+      });
+      return NextResponse.json({ error: err.message, details: validation.error.flatten() }, { status: err.statusCode });
+    }
+
+    // 2. Auth — STRICT tenant isolation. Identity is derived ONLY from the verified
     // Supabase session; there is no static/bearer test bypass on this route.
     const identity = await authAdapter.authenticate();
     if (!identity) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const err = categorizeAnalysisError(new Error('No identity'), 'authentication');
+      console.warn('[analyses] Authentication failed', { requestId });
+      Sentry.captureMessage('Analysis: Authentication failed', {
+        level: 'warning',
+        tags: { operation: 'analysis-create', phase: 'authentication', retryable: String(err.retryable) },
+        contexts: { api: { requestId, endpoint: '/api/analyses' } }
+      });
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
     }
 
-    // 2. Delegate business logic to the UseCase
+    // 3. Delegate business logic to the UseCase
     const useCaseResult = await createAnalysisUseCase.execute({
       url: validation.data.url,
       userId: identity.userId,
@@ -65,6 +128,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (useCaseResult.type === 'error') {
+      const duration = Date.now() - startTime;
+      console.warn('[analyses] Business logic error', { requestId, code: useCaseResult.code, duration });
+      Sentry.captureMessage('Analysis: Business logic error', {
+        level: 'warning',
+        tags: { operation: 'analysis-create', phase: 'business_logic', code: useCaseResult.code },
+        contexts: { api: { requestId, userId: identity.userId, endpoint: '/api/analyses', duration } }
+      });
       return NextResponse.json(
         { error: useCaseResult.message, code: useCaseResult.code },
         { status: useCaseResult.status }
@@ -76,6 +146,10 @@ export async function POST(request: NextRequest) {
       Object.entries(useCaseResult.headers).forEach(([k, v]) => responseHeaders.set(k, String(v)));
     }
 
+    const duration = Date.now() - startTime;
+    const cacheHit = useCaseResult.type === 'cache_hit';
+    console.info('[analyses] Request completed', { requestId, userId: identity.userId, cacheHit, duration });
+
     if (useCaseResult.type === 'cache_hit') {
       return NextResponse.json(useCaseResult.data, { headers: responseHeaders });
     }
@@ -83,30 +157,61 @@ export async function POST(request: NextRequest) {
     // processing
     return NextResponse.json(useCaseResult.data, { status: 202, headers: responseHeaders });
   } catch (error) {
+    const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const videoId = extractVideoId((body?.url as string) || '');
+
     Sentry.captureException(error, {
-      contexts: { api: { videoId: extractVideoId((body?.url as string) || ''), endpoint: '/api/analyses' } },
+      tags: { operation: 'analysis-create', phase: 'unknown' },
+      contexts: { api: { requestId, videoId, endpoint: '/api/analyses', duration } },
     });
-    console.error('[analyses] Prepare failed:', { message: errorMessage, url: body?.url });
+    console.error('[analyses] Unexpected error', { requestId, message: errorMessage, videoId, duration });
     return NextResponse.json({ error: errorMessage, code: 'ERR_ANALYSIS_PREPARE_FAILED' }, { status: 500 });
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const requestId = crypto.randomUUID();
+
   try {
     const identity = await authAdapter.authenticate();
     if (!identity) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const err = categorizeAnalysisError(new Error('No identity'), 'authentication');
+      console.warn('[analyses GET] Authentication failed', { requestId });
+      Sentry.captureMessage('Analysis: GET authentication failed', {
+        level: 'warning',
+        tags: { operation: 'analysis-list', phase: 'authentication', retryable: String(err.retryable) },
+        contexts: { api: { requestId, endpoint: '/api/analyses (GET)' } }
+      });
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
     }
     const { userId } = identity;
 
-    const historyItems = await persistenceAdapter.getUserHistory({ userId });
+    let historyItems;
+    try {
+      historyItems = await persistenceAdapter.getUserHistory({ userId });
+    } catch (error) {
+      const err = categorizeAnalysisError(error, 'database_fetch');
+      Sentry.captureException(error, {
+        tags: { operation: 'analysis-list', phase: 'database_fetch', retryable: String(err.retryable) },
+        contexts: { api: { requestId, userId, endpoint: '/api/analyses (GET)' } }
+      });
+      console.error('[analyses GET] Database fetch failed', { requestId, userId, error: err.message, retryable: err.retryable });
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+    }
 
+    const duration = Date.now() - startTime;
+    console.info('[analyses GET] History retrieved successfully', { requestId, userId, count: historyItems.length, duration });
     return NextResponse.json({ analyses: historyItems }, { status: 200 });
   } catch (error) {
+    const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[analyses GET] Exception:', { message: errorMessage });
-    Sentry.captureException(error, { contexts: { api: { endpoint: '/api/analyses (GET)' } } });
+    console.error('[analyses GET] Unexpected error', { requestId, message: errorMessage, duration });
+    Sentry.captureException(error, {
+      tags: { operation: 'analysis-list', phase: 'unknown' },
+      contexts: { api: { requestId, endpoint: '/api/analyses (GET)', duration } }
+    });
     return NextResponse.json({ error: errorMessage, code: 'ERR_ANALYSIS_FETCH_FAILED' }, { status: 500 });
   }
 }

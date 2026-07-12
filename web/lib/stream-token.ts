@@ -78,9 +78,9 @@ export function boundContentMessage(purpose: BoundSigPurpose, id: string, exp: n
  * content-only signature so a non-atomic worker/web rollout can't cause a persist
  * outage. Remove the legacy branch once the worker signer is fully deployed.
  *
- * Tries both STREAM_HMAC_SECRET and DEV_HMAC_SECRET to align with worker's dual-secret
- * verification logic across all environments. This handles cases where worker and web
- * are configured with different secrets (preview/dev or misconfigured production).
+ * Dual-secret support (STREAM_HMAC_SECRET + DEV_HMAC_SECRET) is only enabled in
+ * non-production environments to ease rollout. In production, only STREAM_HMAC_SECRET
+ * is accepted to prevent accidental secret widening.
  */
 export async function verifyContentSig(
   message: string,
@@ -91,7 +91,9 @@ export async function verifyContentSig(
   const devSecret = process.env.DEV_HMAC_SECRET;
   const secretsToTry = [primarySecret];
 
-  if (devSecret) {
+  // Only accept DEV_HMAC_SECRET fallback in non-production environments
+  const isProduction = env.isProduction;
+  if (!isProduction && devSecret) {
     secretsToTry.push(devSecret);
   }
 
