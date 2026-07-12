@@ -4,6 +4,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
 import { addBreadcrumb } from '@/lib/monitoring/sentry-utils';
+import { z } from 'zod';
+
+const UsageLogSchema = z.object({
+  user_id: z.string(),
+  action: z.string().min(1, 'Action cannot be empty'),
+  metadata: z.any().optional(),
+  created_at: z.string(),
+});
 
 /**
  * Extract user ID from Stripe event
@@ -99,7 +107,7 @@ export async function handleSubscriptionCreatedUpdated(
 
   console.log(`[handleSubscriptionCreatedUpdated] User ${userId} upgraded to Pro`);
 
-  const logData: Record<string, any> = {
+  const logData = {
     user_id: userId,
     action: 'subscription_created',
     metadata: {
@@ -109,7 +117,16 @@ export async function handleSubscriptionCreatedUpdated(
     },
     created_at: new Date().toISOString(),
   };
-  await supabase.from('usage_logs').insert(logData);
+  try {
+    const validatedLog = UsageLogSchema.parse(logData);
+    await supabase.from('usage_logs').insert(validatedLog);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('[handleSubscriptionCreatedUpdated] Schema validation failed:', error.issues);
+    } else {
+      console.error('[handleSubscriptionCreatedUpdated] Failed to insert usage log:', error);
+    }
+  }
 }
 
 /**
@@ -170,7 +187,7 @@ export async function handleSubscriptionCanceled(
 
   console.log(`[handleSubscriptionCanceled] User ${userId} downgraded to Free`);
 
-  const cancelData: Record<string, any> = {
+  const cancelData = {
     user_id: userId,
     action: 'subscription_canceled',
     metadata: {
@@ -179,7 +196,16 @@ export async function handleSubscriptionCanceled(
     },
     created_at: new Date().toISOString(),
   };
-  await supabase.from('usage_logs').insert(cancelData);
+  try {
+    const validatedLog = UsageLogSchema.parse(cancelData);
+    await supabase.from('usage_logs').insert(validatedLog);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('[handleSubscriptionCanceled] Schema validation failed:', error.issues);
+    } else {
+      console.error('[handleSubscriptionCanceled] Failed to insert usage log:', error);
+    }
+  }
 }
 
 /**
@@ -219,7 +245,7 @@ export async function handleInvoicePaid(
       return;
     }
 
-    const paymentData: Record<string, any> = {
+    const paymentData = {
       user_id: userId,
       action: 'invoice_paid',
       metadata: {
@@ -229,7 +255,16 @@ export async function handleInvoicePaid(
       },
       created_at: new Date().toISOString(),
     };
-    await supabase.from('usage_logs').insert(paymentData);
+    try {
+      const validatedLog = UsageLogSchema.parse(paymentData);
+      await supabase.from('usage_logs').insert(validatedLog);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[handleInvoicePaid] Schema validation failed:', error.issues);
+      } else {
+        console.error('[handleInvoicePaid] Failed to insert usage log:', error);
+      }
+    }
 
     console.log(`[handleInvoicePaid] Invoice ${invoice.id} paid for user ${userId}`);
   }
@@ -273,7 +308,7 @@ export async function handleInvoiceFailed(
       return;
     }
 
-    const failureData: Record<string, any> = {
+    const failureData = {
       user_id: userId,
       action: 'invoice_failed',
       metadata: {
@@ -283,7 +318,16 @@ export async function handleInvoiceFailed(
       },
       created_at: new Date().toISOString(),
     };
-    await supabase.from('usage_logs').insert(failureData);
+    try {
+      const validatedLog = UsageLogSchema.parse(failureData);
+      await supabase.from('usage_logs').insert(validatedLog);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[handleInvoiceFailed] Schema validation failed:', error.issues);
+      } else {
+        console.error('[handleInvoiceFailed] Failed to insert usage log:', error);
+      }
+    }
 
     console.log(`[handleInvoiceFailed] Invoice ${invoice.id} failed for user ${userId}`);
   }
