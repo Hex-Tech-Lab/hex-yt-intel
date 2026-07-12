@@ -13,7 +13,6 @@ export interface UCISSections {
   credibility: string;
   monetization: string;
   risk: string; // Alias for credibility (Dimension 10)
-  digest: string; // Synthesis Digest (Dimension 12)
 }
 
 /**
@@ -34,7 +33,7 @@ export function parseToUCISDimensions(
   let match;
   while ((match = headerRegex.exec(markdown)) !== null) {
     const number = parseInt(match[1] || '', 10);
-    if (number >= 1 && number <= 12) {
+    if (number >= 0 && number <= 11) {
       // Clean up the dimension name by removing the prefix and separators
       const name = match[0]
         .replace(/^###\s+DIMENSION\s+\d+\b/i, '')
@@ -99,7 +98,6 @@ export function parseUCISSections(markdown: string | null | undefined): UCISSect
       credibility: placeholder,
       monetization: placeholder,
       risk: placeholder,
-      digest: placeholder,
     };
   }
 
@@ -117,6 +115,5 @@ export function parseUCISSections(markdown: string | null | undefined): UCISSect
     credibility: cred,
     monetization: extractSection(markdown, 11),
     risk: cred,
-    digest: extractSection(markdown, 12),
   };
 }
