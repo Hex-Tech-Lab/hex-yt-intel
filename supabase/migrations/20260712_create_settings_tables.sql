@@ -39,7 +39,7 @@ alter table public.user_settings enable row level security;
 create policy "Allow public read of admin settings"
   on public.admin_settings
   for select
-  using (true);
+  using (auth.role() = 'authenticated');
 
 create policy "Only service role can update admin settings"
   on public.admin_settings
