@@ -29,10 +29,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         const admin = await fetchAdminSettings();
         setAdminSettings(admin);
 
-        // User settings only if logged in
+        // User settings only if logged in; clear when logged out
         if (user?.id) {
           const userSettings = await fetchUserSettings(user.id);
           setUserSettings(userSettings);
+        } else {
+          setUserSettings(null);
         }
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to load settings'));
