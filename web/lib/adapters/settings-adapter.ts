@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@/utils/supabase/client';
+import * as Sentry from '@sentry/nextjs';
 import type { AdminSettings, UserSettings } from '@/lib/types/settings';
 
 /**
@@ -31,9 +32,15 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
     }
 
     // Return hardcoded defaults if no settings in DB yet
+    console.debug('[fetchAdminSettings] No admin_settings in database, using defaults');
     return getDefaultAdminSettings();
   } catch (error) {
-    console.error('[fetchAdminSettings]', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, {
+      contexts: { adapter: { operation: 'fetchAdminSettings' } },
+      tags: { type: 'settings-adapter' },
+    });
+    console.error('[fetchAdminSettings] Failed to fetch admin settings, using defaults', { error: msg });
     return getDefaultAdminSettings();
   }
 }
@@ -56,9 +63,17 @@ export async function fetchUserSettings(userId: string): Promise<UserSettings | 
       throw error;
     }
 
+    if (!data) {
+      console.debug('[fetchUserSettings] No user_settings found for user', { userId });
+    }
     return data as UserSettings | null;
   } catch (error) {
-    console.error('[fetchUserSettings]', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, {
+      contexts: { adapter: { operation: 'fetchUserSettings', userId } },
+      tags: { type: 'settings-adapter' },
+    });
+    console.error('[fetchUserSettings] Failed to fetch user settings', { userId, error: msg });
     return null;
   }
 }
@@ -86,9 +101,15 @@ export async function upsertUserSettings(userId: string, settings: Partial<UserS
       .single();
 
     if (error) throw error;
+    console.debug('[upsertUserSettings] User settings updated successfully', { userId });
     return data as UserSettings;
   } catch (error) {
-    console.error('[upsertUserSettings]', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, {
+      contexts: { adapter: { operation: 'upsertUserSettings', userId, settingsKeys: Object.keys(settings) } },
+      tags: { type: 'settings-adapter' },
+    });
+    console.error('[upsertUserSettings] Failed to upsert user settings', { userId, error: msg });
     return null;
   }
 }
