@@ -25,10 +25,18 @@ interface EmbeddingPayload {
   userId: string;
 }
 
-const vectorIndex = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL || 'https://placeholder-vector.upstash.io',
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
-});
+function initializeVectorIndex() {
+  const url = process.env.UPSTASH_VECTOR_REST_URL;
+  const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
+
+  if (!url || !token) {
+    return null;
+  }
+
+  return new Index({ url, token });
+}
+
+const vectorIndex = initializeVectorIndex();
 
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
@@ -149,18 +157,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Upsert embedding to Upstash Vector Index (with sparse vector for hybrid query capabilities)
-    const sparse = generateSparseVector(markdown);
-    await vectorIndex.upsert({
-      id: analysisId,
-      vector: embeddingResult.embedding as unknown as number[],
-      sparseVector: sparse,
-      metadata: {
-        title: analysis.title,
-        videoId: analysis.video_id,
-        userId,
-        analysisId,
-      },
-    });
+    if (!vectorIndex) {
+      console.warn('[embed-webhook] Vector index not configured, skipping upsert');
+    } else {
+      const sparse = generateSparseVector(markdown);
+      await vectorIndex.upsert({
+        id: analysisId,
+        vector: embeddingResult.embedding as unknown as number[],
+        sparseVector: sparse,
+        metadata: {
+          title: analysis.title,
+          videoId: analysis.video_id,
+          userId,
+          analysisId,
+        },
+      });
+    }
 
 
     // 8. Log usage cost

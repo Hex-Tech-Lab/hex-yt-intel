@@ -43,8 +43,8 @@ function initializeRedis(): Redis | null {
 
   try {
     redisInstance = new Redis({
-      url: redisUrl || 'https://placeholder-redis.upstash.io',
-      token: redisToken || 'placeholder-token',
+      url: redisUrl as string,
+      token: redisToken as string,
     });
     redisAvailable = true;
     console.log('[redis.ts] Redis client initialized');
