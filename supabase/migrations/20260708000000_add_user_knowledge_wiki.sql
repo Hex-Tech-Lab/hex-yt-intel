@@ -1,4 +1,4 @@
-/**
+/*
  * User Knowledge Wiki Table (WAVE 4.2)
  * Stores aggregated wiki articles built from captured user questions.
  * Monthly QStash cron builds these from `/raw/{userId}/questions/*.md` files.
