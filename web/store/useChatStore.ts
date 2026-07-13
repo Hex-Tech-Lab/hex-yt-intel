@@ -14,6 +14,8 @@ declare global {
   }
 }
 
+const isDebugEnabled = () => typeof window !== 'undefined' && window.__CHAT_DEBUG;
+
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
 import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
@@ -222,7 +224,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       //    (/api/chat/persist), so the optimistic bubble below just holds the streamed
       //    text and reconciles against Postgres on the next thread load.
       const streamUrl = job.stream.url;
-      if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+      if (isDebugEnabled()) {
         console.log('[ChatStore] Initiating stream fetch', { streamUrl, clientMsgId, conversationId: convId });
       }
 
@@ -239,17 +241,17 @@ export const useChatStore = create<ChatState>((set, get) => {
         signal: AbortSignal.timeout(50000),
       });
 
-      if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+      if (isDebugEnabled()) {
         console.log('[ChatStore] Stream fetch responded', { status: streamRes.status, ok: streamRes.ok, clientMsgId });
       }
       if (!streamRes.ok) throw new Error(`worker ${streamRes.status}`);
 
       await readSSE(streamRes, (e: Record<string, unknown>) => {
-        if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+        if (isDebugEnabled()) {
           console.log('[ChatStore] SSE event received', { type: e.type, requestId: e.requestId, clientMsgId });
         }
         if (e.requestId && e.requestId !== clientMsgId) {
-          if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+          if (isDebugEnabled()) {
             console.log('[ChatStore] Ignoring stale event', { eventRequestId: e.requestId, clientMsgId });
           }
           return; // ignore stale/old request events
