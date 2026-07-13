@@ -74,6 +74,19 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
 
   const isConfirmed = (itemId: AccordionItemId) => copyConfirmation.itemId === itemId;
 
+  const items: Array<{
+    id: AccordionItemId;
+    label: string;
+    content: string;
+    type: 'text' | 'bullets' | 'paragraphs';
+    maxLines: number;
+  }> = [
+    { id: 'overview', label: 'Overview', content: data?.overview ?? '', type: 'text', maxLines: 3 },
+    { id: 'snapshot', label: 'Snapshot', content: data?.snapshot ?? '', type: 'text', maxLines: 5 },
+    { id: 'takeaways', label: 'Key Takeaways', content: data?.keyTakeaways.join('\n') ?? '', type: 'bullets', maxLines: 10 },
+    { id: 'detailed', label: 'Detailed Summary', content: data?.detailedSummary ?? '', type: 'paragraphs', maxLines: 5 },
+  ];
+
   return (
     <section
       aria-label="Executive summary"
@@ -95,69 +108,24 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
         <SummarySkeletons />
       ) : data ? (
         <div className="flex flex-col gap-2">
-          <AccordionItem
-            id="overview"
-            label="Overview"
-            isOpen={openItemId === 'overview'}
-            onToggle={handleAccordionToggle}
-            onCopy={handleCopyToClipboard}
-            isConfirmed={isConfirmed('overview')}
-            copyText={data.overview}
-          >
-            <SummaryContent
-              content={data.overview}
-              type="text"
-              maxLines={3}
-            />
-          </AccordionItem>
-
-          <AccordionItem
-            id="snapshot"
-            label="Snapshot"
-            isOpen={openItemId === 'snapshot'}
-            onToggle={handleAccordionToggle}
-            onCopy={handleCopyToClipboard}
-            isConfirmed={isConfirmed('snapshot')}
-            copyText={data.snapshot}
-          >
-            <SummaryContent
-              content={data.snapshot}
-              type="text"
-              maxLines={5}
-            />
-          </AccordionItem>
-
-          <AccordionItem
-            id="takeaways"
-            label="Key Takeaways"
-            isOpen={openItemId === 'takeaways'}
-            onToggle={handleAccordionToggle}
-            onCopy={handleCopyToClipboard}
-            isConfirmed={isConfirmed('takeaways')}
-            copyText={data.keyTakeaways.join('\n')}
-          >
-            <SummaryContent
-              content={data.keyTakeaways.join('\n')}
-              type="bullets"
-              maxLines={10}
-            />
-          </AccordionItem>
-
-          <AccordionItem
-            id="detailed"
-            label="Detailed Summary"
-            isOpen={openItemId === 'detailed'}
-            onToggle={handleAccordionToggle}
-            onCopy={handleCopyToClipboard}
-            isConfirmed={isConfirmed('detailed')}
-            copyText={data.detailedSummary}
-          >
-            <SummaryContent
-              content={data.detailedSummary}
-              type="paragraphs"
-              maxLines={5}
-            />
-          </AccordionItem>
+          {items.map((item) => (
+            <AccordionItem
+              key={item.id}
+              id={item.id}
+              label={item.label}
+              isOpen={openItemId === item.id}
+              onToggle={handleAccordionToggle}
+              onCopy={handleCopyToClipboard}
+              isConfirmed={isConfirmed(item.id)}
+              copyText={item.content}
+            >
+              <SummaryContent
+                content={item.content}
+                type={item.type}
+                maxLines={item.maxLines}
+              />
+            </AccordionItem>
+          ))}
         </div>
       ) : null}
     </section>
