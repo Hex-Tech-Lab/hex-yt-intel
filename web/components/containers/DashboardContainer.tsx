@@ -471,7 +471,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     if (presentCount === 0 || presentCount >= TOTAL_DIMENSIONS) return null;
     const missing = Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => i + 1).filter((n) => !present.includes(n));
     return { presentCount, missing };
-  }, [nucleus.analysis?.dimensions, status]);
+  }, [nucleus.analysis?.dimensions, status, TOTAL_DIMENSIONS]);
 
   // Dimension 0 — executive digest. Generated once (the cheap "#12 call") the
   // first time a completed, full analysis is viewed, then cached server-side, so
