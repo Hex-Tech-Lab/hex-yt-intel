@@ -102,6 +102,21 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   // Show WIP section when: URL exists in box AND analysis exists AND (actively analyzing OR analysis complete)
   const showWIPSection = url && currentAnalysis && currentAnalysis.id && (isActivelyAnalyzing || currentStatus === 'complete');
 
+  // Debug: Log showWIPSection condition to diagnose rendering issues
+  if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+    console.debug('[AnalysisHistory] WIP section condition', {
+      hasUrl: !!url,
+      hasCurrentAnalysis: !!currentAnalysis,
+      hasAnalysisId: !!currentAnalysis?.id,
+      isActivelyAnalyzing,
+      isComplete: currentStatus === 'complete',
+      showWIPSection,
+      currentStatus,
+      analysisTitle: currentAnalysis?.title,
+      analysisHasMarkdown: !!currentAnalysis?.analysis_markdown,
+    });
+  }
+
   const restoreAnalysis = async (analysisId: string) => {
     setLoadingId(analysisId);
     setRestoreError(null);
