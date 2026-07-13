@@ -63,7 +63,8 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
 
         setCopyConfirmation({ itemId, timeoutId });
       } catch (err) {
-        console.error('Failed to copy to clipboard:', err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('[ExecutiveSummary] Clipboard copy failed', { message: msg });
       }
     },
     [copyConfirmation.timeoutId]
@@ -101,6 +102,7 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
             onToggle={handleAccordionToggle}
             onCopy={handleCopyToClipboard}
             isConfirmed={isConfirmed('overview')}
+            copyText={data.overview}
           >
             <SummaryContent
               content={data.overview}
@@ -116,6 +118,7 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
             onToggle={handleAccordionToggle}
             onCopy={handleCopyToClipboard}
             isConfirmed={isConfirmed('snapshot')}
+            copyText={data.snapshot}
           >
             <SummaryContent
               content={data.snapshot}
@@ -131,6 +134,7 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
             onToggle={handleAccordionToggle}
             onCopy={handleCopyToClipboard}
             isConfirmed={isConfirmed('takeaways')}
+            copyText={data.keyTakeaways.join('\n')}
           >
             <SummaryContent
               content={data.keyTakeaways.join('\n')}
@@ -146,6 +150,7 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
             onToggle={handleAccordionToggle}
             onCopy={handleCopyToClipboard}
             isConfirmed={isConfirmed('detailed')}
+            copyText={data.detailedSummary}
           >
             <SummaryContent
               content={data.detailedSummary}
@@ -166,6 +171,7 @@ interface AccordionItemProps {
   onToggle: (id: AccordionItemId) => void;
   onCopy: (id: AccordionItemId, content: string) => Promise<void>;
   isConfirmed: boolean;
+  copyText: string;
   children: React.ReactNode;
 }
 
@@ -176,31 +182,33 @@ function AccordionItem({
   onToggle,
   onCopy,
   isConfirmed,
+  copyText,
   children,
 }: AccordionItemProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-
   const handleCopy = useCallback(async () => {
-    if (contentRef.current) {
-      const text = contentRef.current.innerText;
-      await onCopy(id, text);
-    }
-  }, [id, onCopy]);
+    await onCopy(id, copyText);
+  }, [id, copyText, onCopy]);
 
   return (
     <div className="border border-[var(--line)] rounded-lg bg-[var(--surface)] overflow-hidden transition-all duration-200">
-      <div
+      <button
+        type="button"
         onClick={() => onToggle(id)}
+        aria-expanded={isOpen}
+        aria-controls={`${id}-content`}
         className="w-full px-4 py-3 flex items-center justify-between bg-[var(--bg)] border-0 border-b border-[var(--line-faint)] cursor-pointer select-none hover:bg-[var(--surface)]/50 transition-colors duration-150"
       >
-        <span className="text-[13px] font-semibold text-[var(--ink)] pl-1">
+        <span className="text-[13px] font-semibold text-[var(--ink)] pl-1 text-left">
           {label}
         </span>
 
-        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleCopy}
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleCopy();
+            }}
             title="Copy to clipboard"
             className={`p-1.5 rounded transition-all duration-200 ${
               isConfirmed
@@ -214,30 +222,23 @@ function AccordionItem({
             />
           </button>
 
-          <button
-            type="button"
-            onClick={() => onToggle(id)}
-            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer flex items-center justify-center transition-transform duration-300"
-          >
-            <Icon
-              icon={isOpen ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
-              size={16}
-              className={`transition-transform duration-300 ${isOpen ? 'transform rotate-180' : ''}`}
-            />
-          </button>
+          <Icon
+            icon={isOpen ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
+            size={16}
+            className="transition-transform duration-300 pointer-events-none flex-shrink-0"
+            aria-hidden
+          />
         </div>
-      </div>
+      </button>
 
       {/* Accordion content with smooth transition */}
       <div
+        id={`${id}-content`}
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? 'max-h-96' : 'max-h-0'
+          isOpen ? 'max-h-[600px]' : 'max-h-0'
         }`}
       >
-        <div
-          ref={contentRef}
-          className="p-4 pl-5 pr-3 text-[13px] text-[var(--ink-secondary)]"
-        >
+        <div className="p-4 pl-5 pr-3 text-[13px] text-[var(--ink-secondary)] overflow-y-auto max-h-[600px]">
           {children}
         </div>
       </div>
@@ -296,7 +297,8 @@ function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
   }
 
   // type === 'text'
-  return <p className="leading-relaxed">{content}</p>;
+  const lines = content.split('\n').slice(0, maxLines).join('\n');
+  return <p className="leading-relaxed whitespace-pre-wrap">{lines}</p>;
 }
 
 function SummarySkeletons() {
