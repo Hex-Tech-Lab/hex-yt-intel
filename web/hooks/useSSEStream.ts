@@ -73,17 +73,18 @@ export function useSSEStream() {
     const videoId = extractTelemetryId(url);
     // Merge with existing metadata (preserves eagerly-fetched data from useEagerVideoMetadata)
     const prev = useAnalysisStore.getState().videoMetadata;
+    const isSameVideo = prev?.videoId === videoId;
     const preservedMetadata = {
       videoId,
-      title: prev?.videoId === videoId ? (prev.title || '') : '',
-      channelTitle: prev?.videoId === videoId ? (prev.channelTitle || '') : '',
-      channelId: prev?.videoId === videoId ? (prev.channelId || '') : '',
-      publishedAt: prev?.videoId === videoId ? (prev.publishedAt || '') : '',
-      duration: prev?.videoId === videoId ? prev.duration : null,
-      viewCount: prev?.videoId === videoId ? (prev.viewCount || '') : '',
-      likeCount: prev?.videoId === videoId ? (prev.likeCount || '') : '',
-      commentCount: prev?.videoId === videoId ? (prev.commentCount || '') : '',
-      thumbnailUrl: prev?.videoId === videoId ? prev.thumbnailUrl : null,
+      title: isSameVideo ? (prev?.title || '') : '',
+      channelTitle: isSameVideo ? (prev?.channelTitle || '') : '',
+      channelId: isSameVideo ? (prev?.channelId || '') : '',
+      publishedAt: isSameVideo ? (prev?.publishedAt || '') : '',
+      duration: isSameVideo ? prev?.duration : null,
+      viewCount: isSameVideo ? (prev?.viewCount || '') : '',
+      likeCount: isSameVideo ? (prev?.likeCount || '') : '',
+      commentCount: isSameVideo ? (prev?.commentCount || '') : '',
+      thumbnailUrl: isSameVideo ? prev?.thumbnailUrl : null,
     };
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
 
