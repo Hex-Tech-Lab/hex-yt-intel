@@ -216,7 +216,9 @@ export const useChatStore = create<ChatState>((set, get) => {
       //    (/api/chat/persist), so the optimistic bubble below just holds the streamed
       //    text and reconciles against Postgres on the next thread load.
       const streamUrl = job.stream.url;
-      console.log('[ChatStore] Initiating stream fetch', { streamUrl, clientMsgId, conversationId: convId });
+      if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+        console.log('[ChatStore] Initiating stream fetch', { streamUrl, clientMsgId, conversationId: convId });
+      }
 
       const streamRes = await fetch(streamUrl, {
         method: 'POST',
@@ -231,13 +233,19 @@ export const useChatStore = create<ChatState>((set, get) => {
         signal: AbortSignal.timeout(50000),
       });
 
-      console.log('[ChatStore] Stream fetch responded', { status: streamRes.status, ok: streamRes.ok, clientMsgId });
+      if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+        console.log('[ChatStore] Stream fetch responded', { status: streamRes.status, ok: streamRes.ok, clientMsgId });
+      }
       if (!streamRes.ok) throw new Error(`worker ${streamRes.status}`);
 
       await readSSE(streamRes, (e: Record<string, unknown>) => {
-        console.log('[ChatStore] SSE event received', { type: e.type, requestId: e.requestId, clientMsgId });
+        if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+          console.log('[ChatStore] SSE event received', { type: e.type, requestId: e.requestId, clientMsgId });
+        }
         if (e.requestId && e.requestId !== clientMsgId) {
-          console.log('[ChatStore] Ignoring stale event', { eventRequestId: e.requestId, clientMsgId });
+          if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+            console.log('[ChatStore] Ignoring stale event', { eventRequestId: e.requestId, clientMsgId });
+          }
           return; // ignore stale/old request events
         }
 
@@ -245,11 +253,9 @@ export const useChatStore = create<ChatState>((set, get) => {
           [K in ChatSSEEvent['type']]: (evt: Extract<ChatSSEEvent, { type: K }>) => void;
         } = {
           delta: (evt) => {
-            console.log('[ChatStore] Processing delta event', { contentLength: evt.content?.length, pendingAssistantId });
             set((s) => {
               const messages = s.messagesByConv[convId] || [];
               const updated = messages.map((m) => (m.id === pendingAssistantId ? { ...m, content: m.content + evt.content } : m));
-              console.log('[ChatStore] Updated assistant message', { messageCount: updated.length, assistantContent: updated.find(m => m.id === pendingAssistantId)?.content?.slice(0, 50) });
               return {
                 messagesByConv: {
                   ...s.messagesByConv,
@@ -259,7 +265,6 @@ export const useChatStore = create<ChatState>((set, get) => {
             });
           },
           done: () => {
-            console.log('[ChatStore] Processing done event', { pendingAssistantId });
             set((s) => ({
               messagesByConv: {
                 ...s.messagesByConv,
@@ -268,13 +273,11 @@ export const useChatStore = create<ChatState>((set, get) => {
             }));
           },
           persist: (evt) => {
-            console.log('[ChatStore] Processing persist event', { status: evt.status });
             if (VALID_PERSIST_STATUSES.has(evt.status)) {
               get().setPersistState(evt.status, clientMsgId);
             }
           },
           error: (evt) => {
-            console.error('[ChatStore] Processing error event', { error: evt.error });
             set({ error: String(evt.error || 'reply failed') });
             get().setPersistState('failed', clientMsgId);
           }
