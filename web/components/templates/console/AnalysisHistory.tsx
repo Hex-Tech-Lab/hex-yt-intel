@@ -8,7 +8,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
-import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import type { HistoryOverviewItem } from '@/lib/ports';
 
 type SortOrder = 'recent' | 'oldest' | 'most-analyzed';
@@ -42,12 +42,12 @@ function MetricChip({ icon, children, title }: { icon: string; children: ReactNo
  * insufficient-data" amber tier needs a per-dimension substantive signal from
  * the history-overview function — tracked separately.)
  */
-function DimensionDots({ present }: { present: number[] }) {
+function DimensionDots({ present, totalDimensions }: { present: number[]; totalDimensions: number }) {
   const presentSet = new Set(present);
   return (
     <div className="flex items-center gap-1 flex-wrap mt-3 pt-3 border-t border-[var(--line-faint)]">
       <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Dimensions</span>
-      {Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => i + 1).map((n) => {
+      {Array.from({ length: totalDimensions }, (_, i) => i + 1).map((n) => {
         const isPresent = presentSet.has(n);
         return (
           <span
@@ -68,16 +68,24 @@ function DimensionDots({ present }: { present: number[] }) {
 }
 
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
+  const TOTAL_DIMENSIONS = useTotalDimensions();
   const { items, isLoading, error } = useHistoryOverview();
   const { analysis: currentAnalysis, status: currentStatus, videoMetadata: currentVideoMetadata } = useAnalysisStore();
   const { initializeAnalysis, setIsLoading, setStatus, setVideoMetadata } = useAnalysisStore();
   const { initializeAnalysis: initSynthesis } = useSynthesisNucleus();
+  const { url } = useInputStore();
   const [sortBy, setSortBy] = useState<SortOrder>('recent');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [currentPage, setCurrentPage] = useState(0);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 10;
+
+  // Determine if actively analyzing (as opposed to complete analysis in window)
+  const isActivelyAnalyzing = currentStatus === 'analyzing' || currentStatus === 'downloading' || currentStatus === 'parsing';
+
+  // Show WIP section when: URL exists in box AND analysis exists AND (actively analyzing OR analysis complete)
+  const showWIPSection = url && currentAnalysis && currentAnalysis.id && (isActivelyAnalyzing || currentStatus === 'complete');
 
   const restoreAnalysis = async (analysisId: string) => {
     setLoadingId(analysisId);
@@ -307,26 +315,44 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         </select>
       </div>
 
-      {/* Work-in-Progress Section — shows only the currently analyzed video from Synth console */}
-      {currentAnalysis && currentAnalysis.id && (currentStatus === 'analyzing' || currentStatus === 'downloading' || currentStatus === 'parsing') && (
+      {/* Work-in-Progress Section — shows video in window that is either actively analyzing or has completed analysis */}
+      {showWIPSection && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 mb-1">
-            <Icon icon="solar:refresh-linear" size={18} className="hx-anispin text-[var(--accent)]" />
-            <h2 className="text-lg font-semibold text-[var(--ink)]">
-              Currently in Synthesis <span className="text-[var(--ink-muted)] font-normal">(1)</span>
-            </h2>
-            <span className="text-[10px] font-mono text-[var(--ink-muted)]">Analyzing in real-time</span>
+            {isActivelyAnalyzing ? (
+              <>
+                <Icon icon="solar:refresh-linear" size={18} className="hx-anispin text-[var(--accent)]" />
+                <h2 className="text-lg font-semibold text-[var(--ink)]">
+                  Currently in Synthesis <span className="text-[var(--ink-muted)] font-normal">(1)</span>
+                </h2>
+                <span className="text-[10px] font-mono text-[var(--ink-muted)]">Analyzing in real-time</span>
+              </>
+            ) : (
+              <>
+                <Icon icon="solar:check-circle-linear" size={18} className="text-[var(--ok)]" />
+                <h2 className="text-lg font-semibold text-[var(--ink)]">
+                  Last Analyzed <span className="text-[var(--ink-muted)] font-normal">(1)</span>
+                </h2>
+                <span className="text-[10px] font-mono text-[var(--ink-muted)]">Analysis complete</span>
+              </>
+            )}
           </div>
-          <div className="rounded-xl border-2 border-[var(--accent)] bg-[var(--accent)]/5 p-4">
+          <div className={`rounded-xl border-2 p-4 ${isActivelyAnalyzing ? 'border-[var(--accent)] bg-[var(--accent)]/5' : 'border-[var(--ok)]/40 bg-[var(--ok)]/5'}`}>
             {/* Title row */}
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{currentAnalysis.title || 'Untitled Analysis'}</h3>
-                  <span className="flex-shrink-0 inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--accent)]/10 text-[var(--accent)]">
-                    <Icon icon="solar:refresh-linear" size={12} className="hx-anispin" />
-                    Analyzing
-                  </span>
+                  {isActivelyAnalyzing ? (
+                    <span className="flex-shrink-0 inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--accent)]/10 text-[var(--accent)]">
+                      <Icon icon="solar:refresh-linear" size={12} className="hx-anispin" />
+                      Analyzing
+                    </span>
+                  ) : (
+                    <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--ok)]/10 text-[var(--ok)]">
+                      Complete
+                    </span>
+                  )}
                 </div>
                 {currentVideoMetadata?.channelTitle && (
                   <p className="text-[12px] text-[var(--ink-muted)] truncate mt-0.5">{currentVideoMetadata.channelTitle}</p>
@@ -335,13 +361,22 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             </div>
 
             {/* Metrics row */}
-            <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
-              <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions received so far">
-                <span className="text-[var(--ink)] font-semibold">?</span>/{TOTAL_DIMENSIONS} dims
-              </MetricChip>
-              <span className="text-[11px] text-[var(--ink-muted)]">Streaming updates…</span>
-              <Icon icon="solar:refresh-linear" size={16} className="hx-anispin text-[var(--accent)] ml-auto" />
-            </div>
+            {isActivelyAnalyzing ? (
+              <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
+                <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions received so far">
+                  <span className="text-[var(--ink)] font-semibold">?</span>/{TOTAL_DIMENSIONS} dims
+                </MetricChip>
+                <span className="text-[11px] text-[var(--ink-muted)]">Streaming updates…</span>
+                <Icon icon="solar:refresh-linear" size={16} className="hx-anispin text-[var(--accent)] ml-auto" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
+                <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions generated">
+                  <span className="text-[var(--ink)] font-semibold">?</span>/{TOTAL_DIMENSIONS} dims
+                </MetricChip>
+                <span className="text-[11px] text-[var(--ink-muted)]">Ready to view</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -429,7 +464,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
                   {/* Per-dimension completeness map (green = generated, hollow = missing) */}
                   {item.status !== 'processing' && (item.presentDimensions.length > 0 || item.missingDimensions.length > 0) && (
-                    <DimensionDots present={item.presentDimensions} />
+                    <DimensionDots present={item.presentDimensions} totalDimensions={TOTAL_DIMENSIONS} />
                   )}
                 </div>
               );
