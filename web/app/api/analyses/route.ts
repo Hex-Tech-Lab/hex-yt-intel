@@ -11,7 +11,7 @@ import type { PersonaId } from '@/lib/prompts';
 import { extractVideoId } from '@/lib/youtube';
 import * as Sentry from '@sentry/nextjs';
 import { ERROR_PHASES } from '@/lib/error-codes';
-import { categorizeError } from '@/lib/services/error-handler';
+import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 import {
   SupabaseAuthAdapter,
   WorkerIngestionAdapter,
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         contexts: { api: { requestId, endpoint: '/api/analyses' } }
       });
       console.error('[analyses] JSON parse error', { requestId, message: err.message });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     const validation = AnalysisCreateSchema.safeParse(body);
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
         tags: { operation: 'analysis-create', phase: 'schema_validation', retryable: String(err.retryable) },
         contexts: { api: { requestId, endpoint: '/api/analyses' }, validation: { issues: validation.error.issues } }
       });
-      return NextResponse.json({ error: err.message, details: validation.error.flatten() }, { status: err.statusCode });
+      return NextResponse.json({ ...createErrorResponse(err), details: validation.error.flatten() }, { status: err.statusCode });
     }
 
     // 2. Auth — STRICT tenant isolation. Identity is derived ONLY from the verified
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         tags: { operation: 'analysis-create', phase: 'authentication', retryable: String(err.retryable) },
         contexts: { api: { requestId, endpoint: '/api/analyses' } }
       });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     // 3. Delegate business logic to the UseCase
@@ -135,7 +135,8 @@ export async function POST(request: NextRequest) {
       contexts: { api: { requestId, videoId, endpoint: '/api/analyses', duration } },
     });
     console.error('[analyses] Unexpected error', { requestId, message: errorMessage, videoId, duration });
-    return NextResponse.json({ error: errorMessage, code: 'ERR_ANALYSIS_PREPARE_FAILED' }, { status: 500 });
+    const err = categorizeError(error, ERROR_PHASES.BUSINESS_LOGIC);
+    return NextResponse.json(createErrorResponse(err), { status: 500 });
   }
 }
 
@@ -153,7 +154,7 @@ export async function GET() {
         tags: { operation: 'analysis-list', phase: 'authentication', retryable: String(err.retryable) },
         contexts: { api: { requestId, endpoint: '/api/analyses (GET)' } }
       });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
     const { userId } = identity;
 
@@ -167,7 +168,7 @@ export async function GET() {
         contexts: { api: { requestId, userId, endpoint: '/api/analyses (GET)' } }
       });
       console.error('[analyses GET] Database fetch failed', { requestId, userId, error: err.message, retryable: err.retryable });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     const duration = Date.now() - startTime;
@@ -181,6 +182,7 @@ export async function GET() {
       tags: { operation: 'analysis-list', phase: 'unknown' },
       contexts: { api: { requestId, endpoint: '/api/analyses (GET)', duration } }
     });
-    return NextResponse.json({ error: errorMessage, code: 'ERR_ANALYSIS_FETCH_FAILED' }, { status: 500 });
+    const err = categorizeError(error, ERROR_PHASES.BUSINESS_LOGIC);
+    return NextResponse.json(createErrorResponse(err), { status: 500 });
   }
 }
