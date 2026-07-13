@@ -1,0 +1,317 @@
+'use client';
+
+import { useState, useCallback, useRef } from 'react';
+import { Icon } from '@/components/templates/_shared/primitives';
+
+export interface ExecutiveSummaryData {
+  /** Overview tier: max 3 lines */
+  overview: string;
+  /** Snapshot tier: max 5 lines */
+  snapshot: string;
+  /** Key takeaways: up to 10 bullets */
+  keyTakeaways: string[];
+  /** Detailed summary: up to 5 paragraphs */
+  detailedSummary: string;
+}
+
+export interface ExecutiveSummaryProps {
+  data: ExecutiveSummaryData | null;
+  loading?: boolean;
+}
+
+type AccordionItemId = 'overview' | 'snapshot' | 'takeaways' | 'detailed';
+
+interface ConfirmationState {
+  itemId: AccordionItemId | null;
+  timeoutId: NodeJS.Timeout | null;
+}
+
+/**
+ * Dimension 0 — the executive summary accordion component. Four multivariant
+ * summaries (Overview, Snapshot, Key Takeaways, Detailed Summary) presented as
+ * a mutually exclusive accordion. First item opens by default. Smooth transitions
+ * with copy-to-clipboard feature on each summary.
+ */
+export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProps) {
+  const [openItemId, setOpenItemId] = useState<AccordionItemId>('overview');
+  const [copyConfirmation, setCopyConfirmation] = useState<ConfirmationState>({
+    itemId: null,
+    timeoutId: null,
+  });
+
+  const handleAccordionToggle = useCallback((itemId: AccordionItemId) => {
+    setOpenItemId((prev) => (prev === itemId ? itemId : itemId));
+  }, []);
+
+  const handleCopyToClipboard = useCallback(
+    async (itemId: AccordionItemId, content: string) => {
+      try {
+        await navigator.clipboard.writeText(content);
+
+        // Clear any existing timeout
+        if (copyConfirmation.timeoutId) {
+          clearTimeout(copyConfirmation.timeoutId);
+        }
+
+        // Show confirmation
+        setCopyConfirmation({ itemId, timeoutId: null });
+
+        // Auto-hide after 2 seconds
+        const timeoutId = setTimeout(() => {
+          setCopyConfirmation({ itemId: null, timeoutId: null });
+        }, 2000);
+
+        setCopyConfirmation({ itemId, timeoutId });
+      } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+      }
+    },
+    [copyConfirmation.timeoutId]
+  );
+
+  if (!data && !loading) return null;
+
+  const isConfirmed = (itemId: AccordionItemId) => copyConfirmation.itemId === itemId;
+
+  return (
+    <section
+      aria-label="Executive summary"
+      className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/[0.06] p-2 sm:p-3"
+    >
+      <header className="mb-4 flex items-center gap-2">
+        <span className="grid h-6 w-6 place-items-center rounded-md bg-[var(--accent)]/20 font-mono text-[11px] font-bold text-[var(--accent-ink)]">
+          0
+        </span>
+        <h2 className="font-mono text-sm font-semibold tracking-tight text-[var(--ink)]">
+          Executive Summary
+        </h2>
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">
+          Synthesis · uncounted
+        </span>
+      </header>
+
+      {loading && !data ? (
+        <SummarySkeletons />
+      ) : data ? (
+        <div className="flex flex-col gap-2">
+          <AccordionItem
+            id="overview"
+            label="Overview"
+            isOpen={openItemId === 'overview'}
+            onToggle={handleAccordionToggle}
+            onCopy={handleCopyToClipboard}
+            isConfirmed={isConfirmed('overview')}
+          >
+            <SummaryContent
+              content={data.overview}
+              type="text"
+              maxLines={3}
+            />
+          </AccordionItem>
+
+          <AccordionItem
+            id="snapshot"
+            label="Snapshot"
+            isOpen={openItemId === 'snapshot'}
+            onToggle={handleAccordionToggle}
+            onCopy={handleCopyToClipboard}
+            isConfirmed={isConfirmed('snapshot')}
+          >
+            <SummaryContent
+              content={data.snapshot}
+              type="text"
+              maxLines={5}
+            />
+          </AccordionItem>
+
+          <AccordionItem
+            id="takeaways"
+            label="Key Takeaways"
+            isOpen={openItemId === 'takeaways'}
+            onToggle={handleAccordionToggle}
+            onCopy={handleCopyToClipboard}
+            isConfirmed={isConfirmed('takeaways')}
+          >
+            <SummaryContent
+              content={data.keyTakeaways.join('\n')}
+              type="bullets"
+              maxLines={10}
+            />
+          </AccordionItem>
+
+          <AccordionItem
+            id="detailed"
+            label="Detailed Summary"
+            isOpen={openItemId === 'detailed'}
+            onToggle={handleAccordionToggle}
+            onCopy={handleCopyToClipboard}
+            isConfirmed={isConfirmed('detailed')}
+          >
+            <SummaryContent
+              content={data.detailedSummary}
+              type="paragraphs"
+              maxLines={5}
+            />
+          </AccordionItem>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+interface AccordionItemProps {
+  id: AccordionItemId;
+  label: string;
+  isOpen: boolean;
+  onToggle: (id: AccordionItemId) => void;
+  onCopy: (id: AccordionItemId, content: string) => Promise<void>;
+  isConfirmed: boolean;
+  children: React.ReactNode;
+}
+
+function AccordionItem({
+  id,
+  label,
+  isOpen,
+  onToggle,
+  onCopy,
+  isConfirmed,
+  children,
+}: AccordionItemProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleCopy = useCallback(async () => {
+    if (contentRef.current) {
+      const text = contentRef.current.innerText;
+      await onCopy(id, text);
+    }
+  }, [id, onCopy]);
+
+  return (
+    <div className="border border-[var(--line)] rounded-lg bg-[var(--surface)] overflow-hidden transition-all duration-200">
+      <div
+        onClick={() => onToggle(id)}
+        className="w-full px-4 py-3 flex items-center justify-between bg-[var(--bg)] border-0 border-b border-[var(--line-faint)] cursor-pointer select-none hover:bg-[var(--surface)]/50 transition-colors duration-150"
+      >
+        <span className="text-[13px] font-semibold text-[var(--ink)] pl-1">
+          {label}
+        </span>
+
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={handleCopy}
+            title="Copy to clipboard"
+            className={`p-1.5 rounded transition-all duration-200 ${
+              isConfirmed
+                ? 'bg-[var(--ok)]/20 text-[var(--ok)]'
+                : 'bg-transparent text-[var(--ink-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10'
+            }`}
+          >
+            <Icon
+              icon={isConfirmed ? 'solar:check-circle-linear' : 'solar:copy-linear'}
+              size={14}
+            />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onToggle(id)}
+            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer flex items-center justify-center transition-transform duration-300"
+          >
+            <Icon
+              icon={isOpen ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
+              size={16}
+              className={`transition-transform duration-300 ${isOpen ? 'transform rotate-180' : ''}`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Accordion content with smooth transition */}
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          isOpen ? 'max-h-96' : 'max-h-0'
+        }`}
+      >
+        <div
+          ref={contentRef}
+          className="p-4 pl-5 pr-3 text-[13px] text-[var(--ink-secondary)]"
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface SummaryContentProps {
+  content: string;
+  type: 'text' | 'bullets' | 'paragraphs';
+  maxLines?: number;
+}
+
+function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
+  if (!content) {
+    return <p className="text-[var(--ink-muted)] italic">No content available</p>;
+  }
+
+  if (type === 'bullets') {
+    const bulletItems = content
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
+      .slice(0, maxLines);
+
+    return (
+      <ul className="flex flex-col gap-2">
+        {bulletItems.map((item, idx) => (
+          <li key={idx} className="flex gap-2.5">
+            <span
+              aria-hidden
+              className="mt-[0.35em] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]"
+            />
+            <span className="leading-relaxed">{item.trim()}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (type === 'paragraphs') {
+    const paragraphs = content
+      .split(/\n{2,}/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .slice(0, maxLines);
+
+    return (
+      <div className="flex flex-col gap-3">
+        {paragraphs.map((para, idx) => (
+          <p key={idx} className="leading-relaxed">
+            {para}
+          </p>
+        ))}
+      </div>
+    );
+  }
+
+  // type === 'text'
+  return <p className="leading-relaxed">{content}</p>;
+}
+
+function SummarySkeletons() {
+  return (
+    <div className="flex flex-col gap-2" aria-hidden>
+      {[1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          className="border border-[var(--line)] rounded-lg bg-[var(--surface)] overflow-hidden"
+        >
+          <div className="px-4 py-3 bg-[var(--bg)] border-0 border-b border-[var(--line-faint)]">
+            <div className="h-3 w-1/4 rounded bg-[var(--ink)]/10" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
