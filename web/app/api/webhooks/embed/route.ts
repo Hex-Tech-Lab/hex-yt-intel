@@ -7,11 +7,11 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Index } from '@upstash/vector';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { generateEmbedding, generateSparseVector } from '@/lib/embeddings';
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { logUsage } from '@/lib/usage';
+import { initializeVectorIndex } from '@/lib/upstash-vector';
 import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
@@ -23,17 +23,6 @@ interface EmbeddingPayload {
   analysisId: string;
   markdown: string;
   userId: string;
-}
-
-function initializeVectorIndex() {
-  const url = process.env.UPSTASH_VECTOR_REST_URL;
-  const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
-
-  if (!url || !token) {
-    return null;
-  }
-
-  return new Index({ url, token });
 }
 
 const vectorIndex = initializeVectorIndex();

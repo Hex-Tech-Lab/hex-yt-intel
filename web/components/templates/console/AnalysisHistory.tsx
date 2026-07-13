@@ -8,6 +8,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
+import { parseExecutiveDigest } from '@/lib/prompts/executive-digest';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 import type { HistoryOverviewItem } from '@/lib/ports';
@@ -68,9 +69,17 @@ function DimensionDots({ present, totalDimensions }: { present: number[]; totalD
   );
 }
 
-function extractExecutiveSummary(markdown: string | undefined): ExecutiveSummaryData | null {
-  if (!markdown) return null;
+function extractExecutiveSummary(markdown: string | undefined, digest?: Record<string, any> | null): ExecutiveSummaryData | null {
+  if (digest && typeof digest === 'object' && ('snapshot' in digest || 'overview' in digest)) {
+    return {
+      overview: (digest.overview ?? '').substring(0, 300),
+      snapshot: (digest.snapshot ?? '').substring(0, 250),
+      keyTakeaways: Array.isArray(digest.takeaways) ? digest.takeaways.slice(0, 10) : [],
+      detailedSummary: (digest.overview ?? ''),
+    };
+  }
 
+  if (!markdown) return null;
   const lines = markdown.split('\n').filter(l => l.trim());
   if (lines.length < 4) return null;
 
@@ -100,6 +109,8 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const isActivelyAnalyzing = currentStatus === 'analyzing' || currentStatus === 'downloading' || currentStatus === 'parsing';
 
   // Show WIP section when: URL exists in box AND analysis exists AND (actively analyzing OR analysis complete)
+  // Also check for executiveDigest for zero-dimensional analyses
+  const hasAnalysisData = (currentAnalysis?.analysis_markdown) || (currentAnalysis as any)?.executiveDigest;
   const showWIPSection = url && currentAnalysis && currentAnalysis.id && (isActivelyAnalyzing || currentStatus === 'complete');
 
   // Debug: Log showWIPSection condition to diagnose rendering issues
@@ -360,10 +371,10 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             )}
 
             {/* Dimension 0: Executive Summary */}
-            {currentStatus === 'complete' && currentAnalysis?.analysis_markdown && (
+            {currentStatus === 'complete' && (currentAnalysis?.analysis_markdown || (currentAnalysis as any)?.executiveDigest) && (
               <div className="mt-6 pt-6 border-t border-[var(--line-faint)]">
                 <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Dimension 0 — Executive Summary</h3>
-                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis.analysis_markdown)} />
+                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis.analysis_markdown, (currentAnalysis as any)?.executiveDigest)} />
               </div>
             )}
           </div>

@@ -11,7 +11,7 @@ import type { AdminSettings, UserSettings } from '@/lib/types/settings';
 /**
  * Fetch admin settings (singleton - only one exists).
  * Returns default settings if none exist in the database.
- * Uses client-side Supabase (admin_settings is publicly readable per RLS policy).
+ * Uses client-side Supabase (admin_settings is readable by authenticated users per RLS policy).
  */
 export async function fetchAdminSettings(): Promise<AdminSettings> {
   try {
@@ -28,7 +28,21 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
     }
 
     if (data) {
-      return data as AdminSettings;
+      return {
+        id: data.id,
+        totalDimensions: data.total_dimensions,
+        minUsableDimensions: data.min_usable_dimensions,
+        streamBundles: data.stream_bundles,
+        dimensionConfigs: data.dimension_configs,
+        modelCascade: data.model_cascade,
+        connectionHandshakeTimeoutMs: data.connection_handshake_timeout_ms,
+        tokenStreamingWindowMs: data.token_streaming_window_ms,
+        maxRetries: data.max_retries,
+        retryBackoffMs: data.retry_backoff_ms,
+        abortOnPartialFailure: data.abort_on_partial_failure,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      } as AdminSettings;
     }
 
     // Return hardcoded defaults if no settings in DB yet
@@ -65,8 +79,19 @@ export async function fetchUserSettings(userId: string): Promise<UserSettings | 
 
     if (!data) {
       console.debug('[fetchUserSettings] No user_settings found for user', { userId });
+      return null;
     }
-    return data as UserSettings | null;
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      preferredModel: data.preferred_model,
+      analysisDetailLevel: data.analysis_detail_level,
+      autoSaveAnalyses: data.auto_save_analyses,
+      notificationsEnabled: data.notifications_enabled,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    } as UserSettings;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, {
@@ -87,22 +112,36 @@ export async function upsertUserSettings(userId: string, settings: Partial<UserS
     const supabase = createClient();
     const now = new Date().toISOString();
 
+    const mappedSettings: Record<string, any> = {
+      user_id: userId,
+      updated_at: now,
+    };
+
+    // Map camelCase UserSettings fields to snake_case DB columns
+    if ('preferredModel' in settings) mappedSettings.preferred_model = settings.preferredModel;
+    if ('analysisDetailLevel' in settings) mappedSettings.analysis_detail_level = settings.analysisDetailLevel;
+    if ('autoSaveAnalyses' in settings) mappedSettings.auto_save_analyses = settings.autoSaveAnalyses;
+    if ('notificationsEnabled' in settings) mappedSettings.notifications_enabled = settings.notificationsEnabled;
+
     const { data, error } = await supabase
       .from('user_settings')
-      .upsert(
-        {
-          user_id: userId,
-          ...settings,
-          updated_at: now,
-        },
-        { onConflict: 'user_id' }
-      )
+      .upsert(mappedSettings, { onConflict: 'user_id' })
       .select()
       .single();
 
     if (error) throw error;
     console.debug('[upsertUserSettings] User settings updated successfully', { userId });
-    return data as UserSettings;
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      preferredModel: data.preferred_model,
+      analysisDetailLevel: data.analysis_detail_level,
+      autoSaveAnalyses: data.auto_save_analyses,
+      notificationsEnabled: data.notifications_enabled,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    } as UserSettings;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, {

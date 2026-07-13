@@ -310,7 +310,7 @@ const CLIENT_ERROR_MESSAGES: Record<ErrorCategory, string> = {
   'database_fetch': 'Service temporarily unavailable',
   'database_write': 'Service temporarily unavailable',
   'external_service': 'External service error',
-  'business_logic': 'Invalid request',
+  'business_logic': 'Request could not be processed',
   'unknown': 'An error occurred',
 };
 
