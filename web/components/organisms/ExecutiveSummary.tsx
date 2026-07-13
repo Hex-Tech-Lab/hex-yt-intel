@@ -40,7 +40,7 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
   });
 
   const handleAccordionToggle = useCallback((itemId: AccordionItemId) => {
-    setOpenItemId((prev) => (prev === itemId ? itemId : itemId));
+    setOpenItemId(itemId);
   }, []);
 
   const handleCopyToClipboard = useCallback(
@@ -264,8 +264,8 @@ function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
 
     return (
       <ul className="flex flex-col gap-2">
-        {bulletItems.map((item, idx) => (
-          <li key={idx} className="flex gap-2.5">
+        {bulletItems.map((item) => (
+          <li key={item} className="flex gap-2.5">
             <span
               aria-hidden
               className="mt-[0.35em] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]"
@@ -286,8 +286,8 @@ function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
 
     return (
       <div className="flex flex-col gap-3">
-        {paragraphs.map((para, idx) => (
-          <p key={idx} className="leading-relaxed">
+        {paragraphs.map((para) => (
+          <p key={para} className="leading-relaxed">
             {para}
           </p>
         ))}
@@ -300,11 +300,12 @@ function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
 }
 
 function SummarySkeletons() {
+  const skeletonCount = 4;
   return (
     <div className="flex flex-col gap-2" aria-hidden>
-      {[1, 2, 3, 4].map((i) => (
+      {Array.from({ length: skeletonCount }).map((_, i) => (
         <div
-          key={i}
+          key={`skeleton-${i}`}
           className="border border-[var(--line)] rounded-lg bg-[var(--surface)] overflow-hidden"
         >
           <div className="px-4 py-3 bg-[var(--bg)] border-0 border-b border-[var(--line-faint)]">
