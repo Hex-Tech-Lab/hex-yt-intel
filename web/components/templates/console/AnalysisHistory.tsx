@@ -8,7 +8,6 @@ import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
-import { parseExecutiveDigest } from '@/lib/prompts/executive-digest';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 import type { HistoryOverviewItem } from '@/lib/ports';
@@ -108,10 +107,10 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   // Determine if actively analyzing (as opposed to complete analysis in window)
   const isActivelyAnalyzing = currentStatus === 'analyzing' || currentStatus === 'downloading' || currentStatus === 'parsing';
 
-  // Show WIP section when: URL exists in box AND analysis exists AND (actively analyzing OR analysis complete)
-  // Also check for executiveDigest for zero-dimensional analyses
+  // Show WIP section when: URL exists in box AND analysis exists AND has data AND (actively analyzing OR analysis complete)
+  // Check for executiveDigest for zero-dimensional analyses
   const hasAnalysisData = (currentAnalysis?.analysis_markdown) || (currentAnalysis as any)?.executiveDigest;
-  const showWIPSection = url && currentAnalysis && currentAnalysis.id && (isActivelyAnalyzing || currentStatus === 'complete');
+  const showWIPSection = url && currentAnalysis && currentAnalysis.id && hasAnalysisData && (isActivelyAnalyzing || currentStatus === 'complete');
 
   // Debug: Log showWIPSection condition to diagnose rendering issues
   if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
