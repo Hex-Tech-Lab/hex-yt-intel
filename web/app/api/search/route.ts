@@ -10,14 +10,18 @@ import * as Sentry from '@sentry/nextjs';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 
-const vectorIndex = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL || 'https://placeholder-vector.upstash.io',
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
-});
+function initializeVectorIndex() {
+  const url = process.env.UPSTASH_VECTOR_REST_URL;
+  const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
 
-if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL?.includes('placeholder')) {
-  throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
+  if (!url || !token) {
+    return null;
+  }
+
+  return new Index({ url, token });
 }
+
+const vectorIndex = initializeVectorIndex();
 
 const SearchRequestSchema = z.object({
   query: z.string().min(3).max(1000),
@@ -29,6 +33,13 @@ export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
 
   try {
+    // 0. Check if vector search is configured
+    if (!vectorIndex) {
+      const err = categorizeError(new Error('Vector search not configured'), ERROR_PHASES.EXTERNAL_SERVICE);
+      console.error('[search] Vector index not initialized', { requestId });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
+    }
+
     // 1. Parse and validate request
     let body: unknown;
     try {
