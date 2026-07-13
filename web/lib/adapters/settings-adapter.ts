@@ -65,10 +65,11 @@ export async function fetchUserSettings(userId: string): Promise<UserSettings | 
 
 /**
  * Create or update user settings.
+ * Uses client-side Supabase (user can only write their own settings per RLS policy).
  */
 export async function upsertUserSettings(userId: string, settings: Partial<UserSettings>): Promise<UserSettings | null> {
   try {
-    const supabase = getSupabaseServiceClient();
+    const supabase = createClient();
     const now = new Date().toISOString();
 
     const { data, error } = await supabase
