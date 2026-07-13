@@ -11,7 +11,7 @@ import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import type { Dimension } from '@/components/templates/console/DimensionAccordion';
 import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
-import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
@@ -104,6 +104,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const error = useAnalysisStore((s) => s.error);
   const terminalLines = useAnalysisStore((s) => s.terminalLines);
+  const TOTAL_DIMENSIONS = useTotalDimensions();
 
   const showLog = status !== 'idle' && terminalLines.length > 0;
 

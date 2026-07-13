@@ -5,7 +5,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
-import { STREAM_BUNDLES, TOTAL_STREAMS, ABORT_ON_PARTIAL_FAILURE } from '@/lib/config/synthesis';
+import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
 
 /**
  * Hook managing Server-Sent Event streaming for analysis generation.
@@ -14,6 +14,10 @@ import { STREAM_BUNDLES, TOTAL_STREAMS, ABORT_ON_PARTIAL_FAILURE } from '@/lib/c
  * @returns Object with startAnalysis and stopAnalysis functions for stream control
  */
 export function useSSEStream() {
+  const config = useSynthesisConfig();
+  const TOTAL_STREAMS = config.totalStreams;
+  const STREAM_BUNDLES = config.streamBundles;
+  const ABORT_ON_PARTIAL_FAILURE = config.abortOnPartialFailure;
 
   const {
     setIsLoading,
