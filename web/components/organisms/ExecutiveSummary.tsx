@@ -70,7 +70,16 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
     [copyConfirmation.timeoutId]
   );
 
-  if (!data && !loading) return null;
+  if (!data && !loading) {
+    if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+      console.debug('[ExecutiveSummary] Returning null: no data and not loading');
+    }
+    return null;
+  }
+
+  if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+    console.debug('[ExecutiveSummary] Rendering with data', { hasData: !!data, loading, dataKeys: data ? Object.keys(data) : null });
+  }
 
   const isConfirmed = (itemId: AccordionItemId) => copyConfirmation.itemId === itemId;
 
