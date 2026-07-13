@@ -83,8 +83,9 @@ function extractSection(
 }
 
 export function parseUCISSections(markdown: string | null | undefined): UCISSections {
+  const placeholder = 'Parsing...';
+
   if (!markdown || typeof markdown !== 'string') {
-    const placeholder = 'Parsing...';
     return {
       apex: placeholder,
       provenance: placeholder,
