@@ -8,6 +8,12 @@
  * Replies STREAM over SSE. Mounted once (dock at layout level) → survives all nav.
  */
 
+declare global {
+  interface Window {
+    __CHAT_DEBUG?: boolean;
+  }
+}
+
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
 import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
