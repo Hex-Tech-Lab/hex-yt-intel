@@ -106,11 +106,11 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
   }, 25000);
 
   try {
-    console.log('[ChatStore] SSE stream reading started');
+    if (isDebugEnabled()) console.log('[ChatStore] SSE stream reading started');
     for (;;) {
       const { done, value } = await reader.read();
       if (done) {
-        console.log('[ChatStore] SSE stream complete', { frameCount, eventCount });
+        if (isDebugEnabled()) console.log('[ChatStore] SSE stream complete', { frameCount, eventCount });
         if (timedOut) {
           throw new DOMException('Stream timed out after 25s', 'AbortError');
         }
@@ -123,13 +123,13 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
         frameCount++;
         const line = frame.split(/\r?\n/).find((l) => l.startsWith('data:'));
         if (!line) {
-          console.debug('[ChatStore] Frame without data line', { frameCount });
+          if (isDebugEnabled()) console.debug('[ChatStore] Frame without data line', { frameCount });
           continue;
         }
         try {
           const parsed = JSON.parse(line.slice(5).trim());
           eventCount++;
-          console.log('[ChatStore] Parsed SSE event', { eventCount, type: parsed.type, frameCount });
+          if (isDebugEnabled()) console.log('[ChatStore] Parsed SSE event', { eventCount, type: parsed.type, frameCount });
           onEvent(parsed);
         } catch (e) {
           console.debug('[ChatStore] Skipped parsing partial JSON frame:', e);

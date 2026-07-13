@@ -2,24 +2,13 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { Index } from '@upstash/vector';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
 import { guardTraffic } from '@/lib/services/traffic';
 import { generateEmbedding } from '@/lib/embeddings';
+import { initializeVectorIndex } from '@/lib/upstash-vector';
 import * as Sentry from '@sentry/nextjs';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
-
-function initializeVectorIndex() {
-  const url = process.env.UPSTASH_VECTOR_REST_URL;
-  const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
-
-  if (!url || !token) {
-    return null;
-  }
-
-  return new Index({ url, token });
-}
 
 const vectorIndex = initializeVectorIndex();
 

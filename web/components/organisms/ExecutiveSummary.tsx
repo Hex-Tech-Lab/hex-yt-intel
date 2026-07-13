@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 export interface ExecutiveSummaryData {
@@ -65,6 +66,7 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('[ExecutiveSummary] Clipboard copy failed', { message: msg });
+        Sentry.captureException(err, { contexts: { executiveSummary: { itemId } } });
       }
     },
     [copyConfirmation.timeoutId]
@@ -168,36 +170,17 @@ function AccordionItem({
 
   return (
     <div className="border border-[var(--line)] rounded-lg bg-[var(--surface)] overflow-hidden transition-all duration-200">
-      <button
-        type="button"
-        onClick={() => onToggle(id)}
-        aria-expanded={isOpen}
-        aria-controls={`${id}-content`}
-        className="w-full px-4 py-3 flex items-center justify-between bg-[var(--bg)] border-0 border-b border-[var(--line-faint)] cursor-pointer select-none hover:bg-[var(--surface)]/50 transition-colors duration-150"
-      >
-        <span className="text-[13px] font-semibold text-[var(--ink)] pl-1 text-left">
-          {label}
-        </span>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              void handleCopy();
-            }}
-            title="Copy to clipboard"
-            className={`p-1.5 rounded transition-all duration-200 ${
-              isConfirmed
-                ? 'bg-[var(--ok)]/20 text-[var(--ok)]'
-                : 'bg-transparent text-[var(--ink-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10'
-            }`}
-          >
-            <Icon
-              icon={isConfirmed ? 'solar:check-circle-linear' : 'solar:copy-linear'}
-              size={14}
-            />
-          </button>
+      <div className="flex items-center justify-between bg-[var(--bg)] border-0 border-b border-[var(--line-faint)]">
+        <button
+          type="button"
+          onClick={() => onToggle(id)}
+          aria-expanded={isOpen}
+          aria-controls={`${id}-content`}
+          className="flex-1 px-4 py-3 flex items-center justify-between cursor-pointer select-none hover:bg-[var(--surface)]/50 transition-colors duration-150"
+        >
+          <span className="text-[13px] font-semibold text-[var(--ink)] pl-1 text-left">
+            {label}
+          </span>
 
           <Icon
             icon={isOpen ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
@@ -205,8 +188,27 @@ function AccordionItem({
             className="transition-transform duration-300 pointer-events-none flex-shrink-0"
             aria-hidden
           />
-        </div>
-      </button>
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            void handleCopy();
+          }}
+          title="Copy to clipboard"
+          className={`p-1.5 rounded transition-all duration-200 mr-2 ${
+            isConfirmed
+              ? 'bg-[var(--ok)]/20 text-[var(--ok)]'
+              : 'bg-transparent text-[var(--ink-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10'
+          }`}
+        >
+          <Icon
+            icon={isConfirmed ? 'solar:check-circle-linear' : 'solar:copy-linear'}
+            size={14}
+          />
+        </button>
+      </div>
 
       {/* Accordion content with smooth transition */}
       <div

@@ -598,9 +598,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       1: 3, 5: 2, 11: 2
     };
 
-    // If projection isn't ready but we're analyzing, show all 11 as idle/streaming skeletons
+    // If projection isn't ready but we're analyzing, show all dimensions as idle/streaming skeletons
     if (!nucleus.projection && (status === 'analyzing' || status === 'downloading')) {
-      return Array.from({ length: 11 }, (_, i) => ({
+      return Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => ({
         key: `dim-skeleton-${i + 1}`,
         label: DIMENSION_LABELS[i + 1] || `Dimension ${i + 1}`,
         icon: DIMENSION_ICONS[i + 1] || "solar:bolt-linear",

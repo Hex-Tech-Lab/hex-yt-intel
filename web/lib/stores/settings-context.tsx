@@ -6,6 +6,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchAdminSettings, fetchUserSettings } from '@/lib/adapters/settings-adapter';
 import type { AdminSettings, UserSettings, SettingsContextValue } from '@/lib/types/settings';
@@ -37,6 +38,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setUserSettings(null);
         }
       } catch (err) {
+        Sentry.captureException(err, {
+          contexts: { module: 'settings-context', function: 'loadSettings' },
+        });
         setError(err instanceof Error ? err : new Error('Failed to load settings'));
       } finally {
         setIsLoading(false);

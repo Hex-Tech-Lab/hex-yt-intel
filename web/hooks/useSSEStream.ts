@@ -20,7 +20,7 @@ export function useSSEStream() {
   const ABORT_ON_PARTIAL_FAILURE = config.abortOnPartialFailure;
 
   // Validate that stream config is properly loaded (prevents timing mismatches)
-  if (!STREAM_BUNDLES || STREAM_BUNDLES.length === 0) {
+  if ((!STREAM_BUNDLES || STREAM_BUNDLES.length === 0) && typeof window !== 'undefined' && window.__CHAT_DEBUG) {
     console.warn('[useSSEStream] Stream config not initialized, check settings load timing');
   }
 
@@ -178,12 +178,14 @@ export function useSSEStream() {
               }
 
               // Log stream config to detect timing mismatches between client/server expectations
-              console.debug('[useSSEStream] Analysis stream config', {
-                totalStreams: TOTAL_STREAMS,
-                bundleCount: STREAM_BUNDLES?.length,
-                abortOnPartialFailure: ABORT_ON_PARTIAL_FAILURE,
-                workerUrl: job.stream.url.substring(0, 50),
-              });
+              if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+                console.debug('[useSSEStream] Analysis stream config', {
+                  totalStreams: TOTAL_STREAMS,
+                  bundleCount: STREAM_BUNDLES?.length,
+                  abortOnPartialFailure: ABORT_ON_PARTIAL_FAILURE,
+                  workerUrl: job.stream.url.substring(0, 50),
+                });
+              }
 
               store.logInfo(`Connecting to Cloudflare edge worker for unified intelligence synthesis...`);
               initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result');
@@ -306,12 +308,14 @@ export function useSSEStream() {
                 const checkSettleState = () => {
                   if (hasSettled) return;
                   const totalSettled = completedIndexes.size + failedIndexes.size;
-                  console.debug('[useSSEStream] Stream state check', {
-                    completed: completedIndexes.size,
-                    failed: failedIndexes.size,
-                    expected: TOTAL_STREAMS,
-                    settled: totalSettled === TOTAL_STREAMS,
-                  });
+                  if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+                    console.debug('[useSSEStream] Stream state check', {
+                      completed: completedIndexes.size,
+                      failed: failedIndexes.size,
+                      expected: TOTAL_STREAMS,
+                      settled: totalSettled === TOTAL_STREAMS,
+                    });
+                  }
                   if (totalSettled === TOTAL_STREAMS) {
                     if (completedIndexes.size > 0) {
                       store.logOk(`${completedIndexes.size}/${TOTAL_STREAMS} streams completed.`);

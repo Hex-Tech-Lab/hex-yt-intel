@@ -90,6 +90,11 @@ export async function POST(request: NextRequest) {
 
     if (!isSigValid) {
       console.error('[chat/persist] Signature verification returned false', { requestId, conversationId });
+      Sentry.captureMessage('Chat persist: Signature verification returned false', {
+        level: 'error',
+        tags: { operation: 'chat-persist', phase: 'signature_verify', isTimeout: 'false' },
+        contexts: { persist: { conversationId, requestId } },
+      });
       const err = categorizeError(new Error('Invalid signature'), ERROR_PHASES.SIGNATURE_VERIFICATION);
       return NextResponse.json(createErrorResponse(err), { status: 401 });
     }
