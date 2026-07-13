@@ -4,16 +4,17 @@
  * Settings are cached in context to avoid repeated database hits.
  */
 
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { createClient } from '@/utils/supabase/client';
 import type { AdminSettings, UserSettings } from '@/lib/types/settings';
 
 /**
  * Fetch admin settings (singleton - only one exists).
  * Returns default settings if none exist in the database.
+ * Uses client-side Supabase (admin_settings is publicly readable per RLS policy).
  */
 export async function fetchAdminSettings(): Promise<AdminSettings> {
   try {
-    const supabase = getSupabaseServiceClient();
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('admin_settings')
       .select('*')
@@ -40,10 +41,11 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
 /**
  * Fetch user settings for a specific user.
  * Returns default/empty settings if none exist.
+ * Uses client-side Supabase (user can only read their own settings per RLS policy).
  */
 export async function fetchUserSettings(userId: string): Promise<UserSettings | null> {
   try {
-    const supabase = getSupabaseServiceClient();
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('user_settings')
       .select('*')
