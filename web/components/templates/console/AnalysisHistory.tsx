@@ -9,6 +9,7 @@ import { useInputStore } from '@/store/useInputStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
+import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 import type { HistoryOverviewItem } from '@/lib/ports';
 
 type SortOrder = 'recent' | 'oldest' | 'most-analyzed';
@@ -65,6 +66,20 @@ function DimensionDots({ present, totalDimensions }: { present: number[]; totalD
       })}
     </div>
   );
+}
+
+function extractExecutiveSummary(markdown: string | undefined): ExecutiveSummaryData | null {
+  if (!markdown) return null;
+
+  const lines = markdown.split('\n').filter(l => l.trim());
+  if (lines.length < 4) return null;
+
+  return {
+    overview: lines.slice(0, 3).join('\n').substring(0, 150),
+    snapshot: lines.slice(3, 8).join('\n').substring(0, 250),
+    keyTakeaways: lines.slice(8, 18).filter(l => l.trim().length > 0).slice(0, 10),
+    detailedSummary: lines.slice(18, 23).join('\n\n'),
+  };
 }
 
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
@@ -375,6 +390,14 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   <span className="text-[var(--ink)] font-semibold">?</span>/{TOTAL_DIMENSIONS} dims
                 </MetricChip>
                 <span className="text-[11px] text-[var(--ink-muted)]">Ready to view</span>
+              </div>
+            )}
+
+            {/* Dimension 0: Executive Summary */}
+            {currentStatus === 'complete' && currentAnalysis?.analysis_markdown && (
+              <div className="mt-6 pt-6 border-t border-[var(--line-faint)]">
+                <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Dimension 0 — Executive Summary</h3>
+                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis.analysis_markdown)} />
               </div>
             )}
           </div>
