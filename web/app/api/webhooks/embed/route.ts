@@ -57,18 +57,9 @@ export async function POST(request: NextRequest) {
     userId = payload.userId;
     const { markdown } = payload;
 
-    // Check if Upstash Vector credentials are placeholder/missing (e.g. in preview/dev)
-    const vectorUrl = process.env.UPSTASH_VECTOR_REST_URL || '';
-    const vectorToken = process.env.UPSTASH_VECTOR_REST_TOKEN || '';
-    const isPlaceholder = 
-      !vectorUrl || 
-      vectorUrl.includes('placeholder') || 
-      vectorUrl.includes('mock') ||
-      !vectorToken || 
-      vectorToken.includes('placeholder') ||
-      vectorToken.includes('mock');
-
-    if (isPlaceholder) {
+    // Check if Upstash Vector credentials are placeholder/missing (e.g. in preview/dev).
+    // initializeVectorIndex centralizes the missing/placeholder credential validation.
+    if (!vectorIndex) {
       const isProduction =
         process.env.VERCEL_ENV === 'production' ||
         process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
