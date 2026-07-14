@@ -88,7 +88,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.findAnalysisByShareToken(token);
   }
 
-  updateValidationReport(params: { analysisId: string; report: any; passed: boolean }): Promise<void> {
+  updateValidationReport(params: { analysisId: string; report: any; passed?: boolean; preserveValidationPassed?: boolean }): Promise<void> {
     return SupabaseAnalysisAdapter.updateValidationReport(params);
   }
 

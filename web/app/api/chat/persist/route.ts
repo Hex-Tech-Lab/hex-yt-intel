@@ -8,7 +8,7 @@ import { verifyContentSig } from '@/lib/stream-token';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import * as Sentry from '@sentry/nextjs';
 import { ERROR_PHASES } from '@/lib/error-codes';
-import { categorizeError } from '@/lib/services/error-handler';
+import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 
 /**
  * Server-to-server persistence for the edge chat stream. The Cloudflare Worker calls
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         contexts: { api: { requestId, endpoint: '/api/chat/persist' } }
       });
       console.error('[chat/persist] JSON parse error', { requestId, message: err.message });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     const payloadSchema = z.object({
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       const err = categorizeError(parsed.error, ERROR_PHASES.REQUEST_VALIDATION);
       console.warn('[chat/persist] Invalid payload schema', { requestId, issues: parsed.error.issues.length });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     const { conversationId, userId, content, contentSig, exp } = parsed.data;
@@ -80,17 +80,23 @@ export async function POST(request: NextRequest) {
       if (isTimeout) {
         // Timeout during verification is retryable; worker will retry
         console.warn('[chat/persist] Signature verification timeout (retryable)', { requestId, conversationId });
-        return NextResponse.json({ error: 'Signature verification timeout' }, { status: 503 });
+        return NextResponse.json(createErrorResponse(err), { status: 503 });
       }
 
       // Non-timeout signature verification failure: fail closed (no fallback)
       console.error('[chat/persist] Signature verification failed (non-timeout)', { requestId, conversationId, error: err.message });
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      return NextResponse.json(createErrorResponse(err), { status: 401 });
     }
 
     if (!isSigValid) {
       console.error('[chat/persist] Signature verification returned false', { requestId, conversationId });
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      Sentry.captureMessage('Chat persist: Signature verification returned false', {
+        level: 'error',
+        tags: { operation: 'chat-persist', phase: 'signature_verify', isTimeout: 'false' },
+        contexts: { persist: { conversationId, requestId } },
+      });
+      const err = categorizeError(new Error('Invalid signature'), ERROR_PHASES.SIGNATURE_VERIFICATION);
+      return NextResponse.json(createErrorResponse(err), { status: 401 });
     }
 
     const persistenceAdapter = new SupabasePersistenceAdapter();
@@ -106,7 +112,7 @@ export async function POST(request: NextRequest) {
         contexts: { api: { requestId, conversationId, endpoint: '/api/chat/persist' } }
       });
       console.error('[chat/persist] Database fetch failed during ownership check', { requestId, conversationId, error: err.message, retryable: err.retryable });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     if (!conv || conv.userId !== userId) {
@@ -125,7 +131,7 @@ export async function POST(request: NextRequest) {
         contexts: { api: { requestId, conversationId } }
       });
       console.error('[chat/persist] Database fetch failed during idempotency check', { requestId, conversationId, error: err.message });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     const assistantMessages = messages.filter((m) => m.role === 'assistant');
@@ -159,7 +165,7 @@ export async function POST(request: NextRequest) {
         contexts: { api: { requestId, conversationId, userId } }
       });
       console.error('[chat/persist] Database write failed', { requestId, conversationId, error: err.message, retryable: err.retryable });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     const duration = Date.now() - startTime;

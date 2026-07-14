@@ -7,11 +7,11 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Index } from '@upstash/vector';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { generateEmbedding, generateSparseVector } from '@/lib/embeddings';
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { logUsage } from '@/lib/usage';
+import { initializeVectorIndex } from '@/lib/upstash-vector';
 import * as Sentry from '@sentry/nextjs';
 import {
   trackExternalCall,
@@ -25,10 +25,7 @@ interface EmbeddingPayload {
   userId: string;
 }
 
-const vectorIndex = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL || 'https://placeholder-vector.upstash.io',
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
-});
+const vectorIndex = initializeVectorIndex();
 
 export async function POST(request: NextRequest) {
   const startTime = performance.now();
@@ -60,18 +57,9 @@ export async function POST(request: NextRequest) {
     userId = payload.userId;
     const { markdown } = payload;
 
-    // Check if Upstash Vector credentials are placeholder/missing (e.g. in preview/dev)
-    const vectorUrl = process.env.UPSTASH_VECTOR_REST_URL || '';
-    const vectorToken = process.env.UPSTASH_VECTOR_REST_TOKEN || '';
-    const isPlaceholder = 
-      !vectorUrl || 
-      vectorUrl.includes('placeholder') || 
-      vectorUrl.includes('mock') ||
-      !vectorToken || 
-      vectorToken.includes('placeholder') ||
-      vectorToken.includes('mock');
-
-    if (isPlaceholder) {
+    // Check if Upstash Vector credentials are placeholder/missing (e.g. in preview/dev).
+    // initializeVectorIndex centralizes the missing/placeholder credential validation.
+    if (!vectorIndex) {
       const isProduction =
         process.env.VERCEL_ENV === 'production' ||
         process.env.NEXT_PUBLIC_VERCEL_ENV === 'production' ||
@@ -149,18 +137,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Upsert embedding to Upstash Vector Index (with sparse vector for hybrid query capabilities)
-    const sparse = generateSparseVector(markdown);
-    await vectorIndex.upsert({
-      id: analysisId,
-      vector: embeddingResult.embedding as unknown as number[],
-      sparseVector: sparse,
-      metadata: {
-        title: analysis.title,
-        videoId: analysis.video_id,
-        userId,
-        analysisId,
-      },
-    });
+    if (!vectorIndex) {
+      console.warn('[embed-webhook] Vector index not configured, skipping upsert');
+    } else {
+      const sparse = generateSparseVector(markdown);
+      await vectorIndex.upsert({
+        id: analysisId,
+        vector: embeddingResult.embedding as unknown as number[],
+        sparseVector: sparse,
+        metadata: {
+          title: analysis.title,
+          videoId: analysis.video_id,
+          userId,
+          analysisId,
+        },
+      });
+    }
 
 
     // 8. Log usage cost

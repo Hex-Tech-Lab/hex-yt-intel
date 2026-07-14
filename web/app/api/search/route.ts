@@ -2,22 +2,15 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { Index } from '@upstash/vector';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
 import { guardTraffic } from '@/lib/services/traffic';
 import { generateEmbedding } from '@/lib/embeddings';
+import { initializeVectorIndex } from '@/lib/upstash-vector';
 import * as Sentry from '@sentry/nextjs';
 import { ERROR_PHASES } from '@/lib/error-codes';
-import { categorizeError } from '@/lib/services/error-handler';
+import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 
-const vectorIndex = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL || 'https://placeholder-vector.upstash.io',
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN || 'placeholder-token-string',
-});
-
-if (process.env.NODE_ENV === 'production' && process.env.UPSTASH_VECTOR_REST_URL?.includes('placeholder')) {
-  throw new Error('CRITICAL: Production execution cannot utilize Upstash environment placeholders. Vector search is unavailable.');
-}
+const vectorIndex = initializeVectorIndex();
 
 const SearchRequestSchema = z.object({
   query: z.string().min(3).max(1000),
@@ -29,6 +22,13 @@ export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
 
   try {
+    // 0. Check if vector search is configured
+    if (!vectorIndex) {
+      const err = categorizeError(new Error('Vector search not configured'), ERROR_PHASES.EXTERNAL_SERVICE);
+      console.error('[search] Vector index not initialized', { requestId });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
+    }
+
     // 1. Parse and validate request
     let body: unknown;
     try {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         contexts: { api: { requestId, endpoint: '/api/search' } }
       });
       console.error('[search] JSON parse error', { requestId, message: err.message });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     // Validate request schema with Zod
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         tags: { operation: 'search', phase: 'schema_validation', retryable: String(err.retryable) },
         contexts: { api: { requestId, endpoint: '/api/search' }, validation: { issues: parsed.error.issues } }
       });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     const { query, topK } = parsed.data;
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         tags: { operation: 'search', phase: 'authentication', retryable: String(err.retryable) },
         contexts: { api: { requestId, endpoint: '/api/search' } }
       });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
     const { userId, email: userEmail, tier: userTier } = identity;
 
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
         contexts: { api: { requestId, userId, endpoint: '/api/search' } }
       });
       console.error('[search] Embedding generation failed', { requestId, userId, error: err.message, retryable: err.retryable });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     // 5. Query vector index
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         contexts: { api: { requestId, userId, endpoint: '/api/search' } }
       });
       console.error('[search] Vector search failed', { requestId, userId, error: err.message, retryable: err.retryable });
-      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
 
     // 6. Fetch full analysis data from Supabase for each result

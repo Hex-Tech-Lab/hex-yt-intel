@@ -11,7 +11,7 @@ import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import type { Dimension } from '@/components/templates/console/DimensionAccordion';
 import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
-import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
@@ -104,6 +104,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const error = useAnalysisStore((s) => s.error);
   const terminalLines = useAnalysisStore((s) => s.terminalLines);
+  const TOTAL_DIMENSIONS = useTotalDimensions();
 
   const showLog = status !== 'idle' && terminalLines.length > 0;
 
@@ -470,7 +471,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     if (presentCount === 0 || presentCount >= TOTAL_DIMENSIONS) return null;
     const missing = Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => i + 1).filter((n) => !present.includes(n));
     return { presentCount, missing };
-  }, [nucleus.analysis?.dimensions, status]);
+  }, [nucleus.analysis?.dimensions, status, TOTAL_DIMENSIONS]);
 
   // Dimension 0 — executive digest. Generated once (the cheap "#12 call") the
   // first time a completed, full analysis is viewed, then cached server-side, so
@@ -597,9 +598,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       1: 3, 5: 2, 11: 2
     };
 
-    // If projection isn't ready but we're analyzing, show all 11 as idle/streaming skeletons
+    // If projection isn't ready but we're analyzing, show all dimensions as idle/streaming skeletons
     if (!nucleus.projection && (status === 'analyzing' || status === 'downloading')) {
-      return Array.from({ length: 11 }, (_, i) => ({
+      return Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => ({
         key: `dim-skeleton-${i + 1}`,
         label: DIMENSION_LABELS[i + 1] || `Dimension ${i + 1}`,
         icon: DIMENSION_ICONS[i + 1] || "solar:bolt-linear",

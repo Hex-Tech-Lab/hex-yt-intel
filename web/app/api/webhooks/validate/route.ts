@@ -66,7 +66,11 @@ export async function POST(request: NextRequest) {
       checks: `${report.passedChecks}/${report.totalChecks}`,
     }, 'validation');
 
-    // Save validation report to database via Persistence Adapter
+    // Save validation report to database via Persistence Adapter.
+    // IMPORTANT: this legacy 22-check markdown validator predates the v2.0
+    // structured-JSON pipeline and fails all v2 analyses on formatting checks.
+    // It must NOT downgrade validation_passed that the persist route already
+    // set from the authoritative stitched-payload validation — report only.
     const persistence = new SupabasePersistenceAdapter();
     await trackDatabaseQuery(
       'update',
@@ -75,7 +79,7 @@ export async function POST(request: NextRequest) {
         await persistence.updateValidationReport({
           analysisId,
           report,
-          passed: report.passed,
+          preserveValidationPassed: true,
         });
       },
       { analysisId, videoId }

@@ -6,7 +6,7 @@ import { ExecutiveDigestCard } from '@/components/dashboard/ExecutiveDigestCard'
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
 import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
-import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import type { Dimension } from '@/components/templates/console/DimensionAccordion';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
@@ -53,6 +53,8 @@ export function DashboardMainContent({
   onSelectNode,
   onFocusNode,
 }: DashboardMainContentProps) {
+  const TOTAL_DIMENSIONS = useTotalDimensions();
+
   // Memoize partial info rendering
   const partialInfoContent = useMemo(() => {
     if (!partialInfo) return null;
@@ -67,7 +69,7 @@ export function DashboardMainContent({
         {' Use Re-analyze to attempt the rest.'}
       </div>
     );
-  }, [partialInfo]);
+  }, [partialInfo, TOTAL_DIMENSIONS]);
 
   // Memoize tab switcher
   const tabSwitcher = useMemo(() => {

@@ -298,7 +298,25 @@ export function logError(
 }
 
 /**
- * Create a standardized error response
+ * Client-safe error message mappings (redacts internal details).
+ * Maps error categories to user-friendly messages suitable for API responses.
+ */
+const CLIENT_ERROR_MESSAGES: Record<ErrorCategory, string> = {
+  'request_validation': 'Invalid request',
+  'authentication': 'Authentication failed',
+  'authorization': 'Access denied',
+  'rate_limit': 'Rate limit exceeded',
+  'network_timeout': 'Request timed out',
+  'database_fetch': 'Service temporarily unavailable',
+  'database_write': 'Service temporarily unavailable',
+  'external_service': 'External service error',
+  'business_logic': 'Request could not be processed',
+  'unknown': 'An error occurred',
+};
+
+/**
+ * Create a standardized error response with safe client-facing messages.
+ * Sanitizes internal error details to prevent information leakage.
  *
  * @param categorized - The categorized error
  * @returns Response object for NextResponse.json()
@@ -307,7 +325,7 @@ export function createErrorResponse(
   categorized: CategorizedError
 ): { error: string; code: string; retryable?: boolean } {
   return {
-    error: categorized.message,
+    error: CLIENT_ERROR_MESSAGES[categorized.category],
     code: categorized.code,
     ...(categorized.retryable ? { retryable: true } : {}),
   };

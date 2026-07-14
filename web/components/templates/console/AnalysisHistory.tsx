@@ -8,7 +8,8 @@ import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
-import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
+import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 import type { HistoryOverviewItem } from '@/lib/ports';
 
 type SortOrder = 'recent' | 'oldest' | 'most-analyzed';
@@ -42,12 +43,12 @@ function MetricChip({ icon, children, title }: { icon: string; children: ReactNo
  * insufficient-data" amber tier needs a per-dimension substantive signal from
  * the history-overview function — tracked separately.)
  */
-function DimensionDots({ present }: { present: number[] }) {
+function DimensionDots({ present, totalDimensions }: { present: number[]; totalDimensions: number }) {
   const presentSet = new Set(present);
   return (
     <div className="flex items-center gap-1 flex-wrap mt-3 pt-3 border-t border-[var(--line-faint)]">
       <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Dimensions</span>
-      {Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => i + 1).map((n) => {
+      {Array.from({ length: totalDimensions }, (_, i) => i + 1).map((n) => {
         const isPresent = presentSet.has(n);
         return (
           <span
@@ -67,17 +68,70 @@ function DimensionDots({ present }: { present: number[] }) {
   );
 }
 
+function extractExecutiveSummary(markdown: string | undefined, digest?: Record<string, any> | null): ExecutiveSummaryData | null {
+  if (digest && typeof digest === 'object' && ('snapshot' in digest || 'overview' in digest)) {
+    return {
+      overview: (digest.overview ?? '').substring(0, 300),
+      snapshot: (digest.snapshot ?? '').substring(0, 250),
+      keyTakeaways: Array.isArray(digest.takeaways) ? digest.takeaways.slice(0, 10) : [],
+      detailedSummary: (digest.overview ?? ''),
+    };
+  }
+
+  if (!markdown) return null;
+  const lines = markdown.split('\n').filter(l => l.trim());
+  if (lines.length < 4) return null;
+
+  return {
+    overview: lines.slice(0, 3).join('\n').substring(0, 150),
+    snapshot: lines.slice(3, 8).join('\n').substring(0, 250),
+    keyTakeaways: lines.slice(8, 18).filter(l => l.trim().length > 0).slice(0, 10),
+    detailedSummary: lines.slice(18, 23).join('\n\n'),
+  };
+}
+
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
+  const TOTAL_DIMENSIONS = useTotalDimensions();
   const { items, isLoading, error } = useHistoryOverview();
   const { analysis: currentAnalysis, status: currentStatus, videoMetadata: currentVideoMetadata } = useAnalysisStore();
   const { initializeAnalysis, setIsLoading, setStatus, setVideoMetadata } = useAnalysisStore();
   const { initializeAnalysis: initSynthesis } = useSynthesisNucleus();
+  const { url } = useInputStore();
   const [sortBy, setSortBy] = useState<SortOrder>('recent');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [currentPage, setCurrentPage] = useState(0);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 10;
+
+  // Determine if actively analyzing (as opposed to complete analysis in window)
+  const isActivelyAnalyzing = currentStatus === 'analyzing' || currentStatus === 'downloading' || currentStatus === 'parsing';
+
+  // Show WIP section when: URL exists in box AND analysis exists AND has data AND (actively analyzing OR analysis complete)
+  // Check for executiveDigest for zero-dimensional analyses
+  const hasAnalysisData = Boolean(currentAnalysis?.analysis_markdown || currentAnalysis?.executiveDigest);
+
+  // Real dimension count for the analysis currently in the window
+  const wipDimCount = useMemo(
+    () => Object.keys(parseToUCISDimensions(currentAnalysis?.analysis_markdown)).length,
+    [currentAnalysis?.analysis_markdown]
+  );
+  const showWIPSection = url && currentAnalysis && currentAnalysis.id && hasAnalysisData && (isActivelyAnalyzing || currentStatus === 'complete');
+
+  // Debug: Log showWIPSection condition to diagnose rendering issues
+  if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+    console.debug('[AnalysisHistory] WIP section condition', {
+      hasUrl: !!url,
+      hasCurrentAnalysis: !!currentAnalysis,
+      hasAnalysisId: !!currentAnalysis?.id,
+      isActivelyAnalyzing,
+      isComplete: currentStatus === 'complete',
+      showWIPSection,
+      currentStatus,
+      analysisTitle: currentAnalysis?.title,
+      analysisHasMarkdown: !!currentAnalysis?.analysis_markdown,
+    });
+  }
 
   const restoreAnalysis = async (analysisId: string) => {
     setLoadingId(analysisId);
@@ -109,7 +163,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       }
 
       startTransition(() => {
-        initializeAnalysis(data.id, data.title, data.analysis_markdown);
+        initializeAnalysis(data.id, data.title, data.analysis_markdown, data.executiveDigest ?? null);
         setVideoMetadata({
           videoId: data.videoId,
           title: data.title,
@@ -177,6 +231,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const filteredAndSorted = useMemo(() => {
     let result = [...items];
     if (filterStatus !== 'all') result = result.filter((item) => item.status === filterStatus);
+
     result.sort((a, b) => {
       if (sortBy === 'most-analyzed') return b.timesAnalyzed - a.timesAnalyzed;
       const aTime = new Date(a.lastAnalyzedAt).getTime();
@@ -222,58 +277,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   return (
     <div className="flex flex-col gap-4 pb-20">
-      <div className="flex items-center justify-between mb-1">
-      {/* Current Analysis Section — shows actively-loaded analysis at top */}
-      {currentAnalysis && currentAnalysis.id && (
-        <div className="flex flex-col gap-2 mb-2">
-          <h2 className="text-lg font-semibold text-[var(--ink)]">Current Analysis</h2>
-          <div
-            className={`rounded-xl border-2 bg-[var(--surface)] p-4 transition-all ${
-              currentStatus === 'analyzing' || currentStatus === 'downloading' || currentStatus === 'parsing'
-                ? 'border-[var(--accent)] bg-[var(--accent)]/5'
-                : 'border-[var(--ok)]/40 bg-[var(--ok)]/5'
-            }`}
-          >
-            {/* Title row */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{currentAnalysis.title || 'Untitled Analysis'}</h3>
-                  {(currentStatus === 'analyzing' || currentStatus === 'downloading' || currentStatus === 'parsing') && (
-                    <span className="flex-shrink-0 inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--accent)]/10 text-[var(--accent)]">
-                      <Icon icon="solar:refresh-linear" size={12} className="hx-anispin" />
-                      Active
-                    </span>
-                  )}
-                  {currentStatus === 'complete' && (
-                    <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--ok)]/10 text-[var(--ok)]">
-                      Complete
-                    </span>
-                  )}
-                </div>
-                {currentVideoMetadata?.channelTitle && (
-                  <p className="text-[12px] text-[var(--ink-muted)] truncate mt-0.5">{currentVideoMetadata.channelTitle}</p>
-                )}
-              </div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] bg-[var(--ink-muted)]/5 px-2 py-1 rounded">
-                In Synthesis Console
-              </span>
-            </div>
-
-            {/* Metadata row */}
-            {currentAnalysis.analysis_markdown && (
-              <div className="mt-3 text-[12px] text-[var(--ink-secondary)]">
-                <p className="line-clamp-1">{currentAnalysis.analysis_markdown.slice(0, 100)}…</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-        <h2 className="text-lg font-semibold text-[var(--ink)]">
-          Analysis History <span className="text-[var(--ink-muted)] font-normal">({filteredAndSorted.length})</span>
-        </h2>
-      </div>
+      <h2 className="text-lg font-semibold text-[var(--ink)]">
+        Analysis History <span className="text-[var(--ink-muted)] font-normal">({filteredAndSorted.length})</span>
+      </h2>
 
       {restoreError && (
         <div className="p-3 rounded-lg border border-[var(--err)]/20 bg-[var(--err)]/5 text-[var(--err)] text-sm flex items-center gap-2">
@@ -306,6 +312,80 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         </select>
       </div>
 
+      {/* Work-in-Progress Section — shows video in window that is either actively analyzing or has completed analysis */}
+      {showWIPSection && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 mb-1">
+            {isActivelyAnalyzing ? (
+              <>
+                <Icon icon="solar:refresh-linear" size={18} className="hx-anispin text-[var(--accent)]" />
+                <h2 className="text-lg font-semibold text-[var(--ink)]">
+                  Currently in Synthesis <span className="text-[var(--ink-muted)] font-normal">(1)</span>
+                </h2>
+                <span className="text-[10px] font-mono text-[var(--ink-muted)]">Analyzing in real-time</span>
+              </>
+            ) : (
+              <>
+                <Icon icon="solar:check-circle-linear" size={18} className="text-[var(--ok)]" />
+                <h2 className="text-lg font-semibold text-[var(--ink)]">
+                  Last Analyzed <span className="text-[var(--ink-muted)] font-normal">(1)</span>
+                </h2>
+                <span className="text-[10px] font-mono text-[var(--ink-muted)]">Analysis complete</span>
+              </>
+            )}
+          </div>
+          <div className={`rounded-xl border-2 p-4 ${isActivelyAnalyzing ? 'border-[var(--accent)] bg-[var(--accent)]/5' : 'border-[var(--ok)]/40 bg-[var(--ok)]/5'}`}>
+            {/* Title row */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{currentAnalysis?.title || 'Untitled Analysis'}</h3>
+                  {isActivelyAnalyzing ? (
+                    <span className="flex-shrink-0 inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--accent)]/10 text-[var(--accent)]">
+                      <Icon icon="solar:refresh-linear" size={12} className="hx-anispin" />
+                      Analyzing
+                    </span>
+                  ) : (
+                    <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--ok)]/10 text-[var(--ok)]">
+                      Complete
+                    </span>
+                  )}
+                </div>
+                {currentVideoMetadata?.channelTitle && (
+                  <p className="text-[12px] text-[var(--ink-muted)] truncate mt-0.5">{currentVideoMetadata.channelTitle}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Metrics row */}
+            {isActivelyAnalyzing ? (
+              <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
+                <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions received so far">
+                  <span className="text-[var(--ink)] font-semibold">{wipDimCount}</span>/{TOTAL_DIMENSIONS} dims
+                </MetricChip>
+                <span className="text-[11px] text-[var(--ink-muted)]">Streaming updates…</span>
+                <Icon icon="solar:refresh-linear" size={16} className="hx-anispin text-[var(--accent)] ml-auto" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
+                <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions generated">
+                  <span className="text-[var(--ink)] font-semibold">{wipDimCount}</span>/{TOTAL_DIMENSIONS} dims
+                </MetricChip>
+                <span className="text-[11px] text-[var(--ink-muted)]">Ready to view</span>
+              </div>
+            )}
+
+            {/* Dimension 0: Executive Summary */}
+            {currentStatus === 'complete' && hasAnalysisData && (
+              <div className="mt-6 pt-6 border-t border-[var(--line-faint)]">
+                <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Dimension 0 — Executive Summary</h3>
+                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis?.analysis_markdown, currentAnalysis?.executiveDigest)} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {filteredAndSorted.length === 0 ? (
         <div className="p-6 text-center text-[var(--ink-secondary)] rounded-lg border border-[var(--line)]">
           <p>No analyses match the selected filter.</p>
@@ -333,9 +413,6 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-muted)]/15 text-[9px] font-bold tabular-nums text-[var(--ink-muted)]">
-                          {itemNumber}
-                        </span>
                         <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-muted)]/15 text-[9px] font-bold tabular-nums text-[var(--ink-muted)]">
                           {itemNumber}
                         </span>
@@ -392,7 +469,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
                   {/* Per-dimension completeness map (green = generated, hollow = missing) */}
                   {item.status !== 'processing' && (item.presentDimensions.length > 0 || item.missingDimensions.length > 0) && (
-                    <DimensionDots present={item.presentDimensions} />
+                    <DimensionDots present={item.presentDimensions} totalDimensions={TOTAL_DIMENSIONS} />
                   )}
                 </div>
               );

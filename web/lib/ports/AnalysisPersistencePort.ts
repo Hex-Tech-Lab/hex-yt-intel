@@ -183,7 +183,9 @@ export interface AnalysisPersistencePort {
   updateValidationReport(params: {
     analysisId: string;
     report: any;
-    passed: boolean;
+    passed?: boolean;
+    /** When true, only the report is written — validation_passed is left intact. */
+    preserveValidationPassed?: boolean;
   }): Promise<void>;
 
   /**

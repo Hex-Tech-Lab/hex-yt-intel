@@ -34,7 +34,7 @@ export interface AnalysisState extends UseAnalysisStreamState {
   logOk: (message: string) => void;
   logError: (message: string) => void;
   clearTerminal: () => void;
-  initializeAnalysis: (id: string, title: string, initialMarkdown?: string) => void;
+  initializeAnalysis: (id: string, title: string, initialMarkdown?: string, executiveDigest?: Record<string, unknown> | null) => void;
 }
 
 function sanitizeLogMessage(message: string, role: string | null): string {
@@ -216,15 +216,16 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
       ],
     })),
 
-  initializeAnalysis: (id, title, initialMarkdown = '') =>
+  initializeAnalysis: (id, title, initialMarkdown = '', executiveDigest = null) =>
     set(() => ({
-      analysis: { 
-        id, 
-        title, 
-        analysis_markdown: initialMarkdown
+      analysis: {
+        id,
+        title,
+        analysis_markdown: initialMarkdown,
+        executiveDigest,
       },
       terminalLines: [],
-      status: initialMarkdown ? 'complete' : 'idle',
+      status: initialMarkdown || executiveDigest ? 'complete' : 'idle',
       error: null,
       isLoading: false,
     })),

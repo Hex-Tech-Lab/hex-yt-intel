@@ -447,6 +447,31 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
   4. ✅ Improved PromptBuilder persona validation (worker/src/services/PromptBuilder.ts): Added isValidPersona check for safe fallback
   5. ✅ Fixed PersonaId type assertion (web/app/api/analyses/route.ts): Added explicit type cast after validation
   6. ✅ Verified persona-unification tests correctly reject p1-p5 (legacy values)
+
+- [2026-07-13T14:30:00+03:00] [Claude Code] [DONE] Implement Phase 2 of settings system integration. Wrapperd app with SettingsProvider and replaced hard-coded synthesis values.
+  
+  **Completed tasks:**
+  1. ✅ Wrapped App with SettingsProvider (web/app/providers.tsx) - integrated into provider hierarchy at highest level
+  2. ✅ Created synthesis-with-settings.ts hooks (web/lib/config/synthesis-with-settings.ts) - useSynthesisConfig, useTotalDimensions, useStreamBundles, etc.
+  3. ✅ Updated client components to use settings hooks:
+     - web/components/containers/DashboardContainer.tsx: useTotalDimensions()
+     - web/components/containers/dashboard/DashboardMainContent.tsx: useTotalDimensions() with memo deps
+     - web/components/templates/console/AnalysisHistory.tsx: useTotalDimensions() + prop passing to DimensionDots
+     - web/hooks/useSSEStream.ts: useSynthesisConfig() for STREAM_BUNDLES, TOTAL_STREAMS, ABORT_ON_PARTIAL_FAILURE
+  4. ✅ Maintained backward compatibility - synthesis.ts hard-coded values as fallback defaults
+  5. ✅ Type-check: 0 errors, all client components compile cleanly
+  
+  **Architecture:**
+  - Settings context provides single source of truth for admin_settings table values
+  - Admin users can now dynamically adjust synthesis config via settings UI
+  - All client components automatically use latest settings when loaded
+  - Server-side code (API routes, utilities) unaffected - continues using synthesis.ts
+  - Graceful degradation: hard-coded defaults work if settings table not populated
+  
+  **Branch:** claude/system-re-audit-continue-l3fnel
+  **Commit:** d2298b1
+  **Files changed:** 6 modified, 1 created (synthesis-with-settings.ts)
+  **Status:** Ready for review and merge
   7. ✅ Verified PromptBuilder.ts already defaults to 'creator' (correct)
   8. ✅ Verified workflow.ts already uses z.enum(VALID_PERSONAS) (no manual duplication)
   
@@ -823,4 +848,10 @@ Protocol: [IN_PROGRESS] when starting any item, [DONE] with commit hash when fin
 
 ### Branch Status
 Work in progress on various feature branches. Will consolidate into wave-2-docstring-coverage PR.
+
+---
+
+## Task: Dimension 0 Synthesis Executive Digest Accordion Component (2026-07-13)
+
+- [2026-07-13T00:00:00+00:00] [Claude (Agent)] [DONE] Designed and implemented ExecutiveSummary.tsx (Dimension 0 accordion component) with 4 multivariant summaries. Location: web/components/organisms/ExecutiveSummary.tsx. Branch: claude/system-re-audit-continue-l3fnel. Commit: 3591fc5. Verification: type-check PASS, build clean, linting N/A (pre-existing config issue). Features: mutually exclusive accordion, first item open by default, smooth CSS transitions, copy-to-clipboard with 2s confirmation highlight, responsive design with Tailwind + design tokens. Component exports ExecutiveSummaryData interface (overview, snapshot, keyTakeaways[], detailedSummary) and ExecutiveSummary component. Pushed to origin.
 
