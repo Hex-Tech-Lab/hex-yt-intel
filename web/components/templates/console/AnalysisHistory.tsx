@@ -339,7 +339,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{currentAnalysis.title || 'Untitled Analysis'}</h3>
+                  <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{currentAnalysis?.title || 'Untitled Analysis'}</h3>
                   {isActivelyAnalyzing ? (
                     <span className="flex-shrink-0 inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--accent)]/10 text-[var(--accent)]">
                       <Icon icon="solar:refresh-linear" size={12} className="hx-anispin" />
@@ -379,7 +379,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             {currentStatus === 'complete' && hasAnalysisData && (
               <div className="mt-6 pt-6 border-t border-[var(--line-faint)]">
                 <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Dimension 0 — Executive Summary</h3>
-                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis.analysis_markdown, currentAnalysis.executiveDigest)} />
+                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis?.analysis_markdown, currentAnalysis?.executiveDigest)} />
               </div>
             )}
           </div>

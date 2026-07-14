@@ -127,10 +127,16 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
           continue;
         }
         try {
-          const parsed = JSON.parse(line.slice(5).trim());
+          const parsed: unknown = JSON.parse(line.slice(5).trim());
+          // Only dispatch non-null object payloads — a `data: null` or primitive
+          // frame would otherwise throw in onEvent and kill the stream.
+          if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            if (isDebugEnabled()) console.debug('[ChatStore] Skipped non-object SSE frame', { frameCount });
+            continue;
+          }
           eventCount++;
-          if (isDebugEnabled()) console.log('[ChatStore] Parsed SSE event', { eventCount, type: parsed.type, frameCount });
-          onEvent(parsed);
+          if (isDebugEnabled()) console.log('[ChatStore] Parsed SSE event', { eventCount, type: (parsed as Record<string, unknown>).type, frameCount });
+          onEvent(parsed as Record<string, unknown>);
         } catch (e) {
           console.debug('[ChatStore] Skipped parsing partial JSON frame:', e);
         }

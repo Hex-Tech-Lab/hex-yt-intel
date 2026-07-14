@@ -195,14 +195,18 @@ function stitchChunksIntoPayload(
   for (let pass = 0; !parseResult.success && pass < 3; pass++) {
     const unrecognized = parseResult.error.issues.filter(i => i.code === 'unrecognized_keys');
     if (unrecognized.length === 0) break;
+    const FORBIDDEN_KEYS = ['__proto__', 'constructor', 'prototype'];
     for (const issue of unrecognized) {
       let target: any = stitchedPayload;
       for (const seg of issue.path) {
+        if (FORBIDDEN_KEYS.includes(String(seg))) { target = undefined; break; }
         target = target?.[seg as any];
         if (!target) break;
       }
       if (target && typeof target === 'object') {
-        for (const key of (issue as any).keys as string[]) delete target[key];
+        for (const key of (issue as any).keys as string[]) {
+          if (!FORBIDDEN_KEYS.includes(key)) delete target[key];
+        }
       }
     }
     parseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
