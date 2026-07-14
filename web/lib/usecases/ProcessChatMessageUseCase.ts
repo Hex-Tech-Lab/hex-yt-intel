@@ -241,7 +241,13 @@ export class ProcessChatMessageUseCase {
       ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
       : '';
     const channelSuffix = groundingResult.channelTitle ? ` by ${groundingResult.channelTitle}` : '';
-    let grounding = `You are the analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Answer the user's questions using the structured analysis and the description below; be concise, accurate, and cite dimension names where relevant. Do not ask which video — you have it.${descriptionSection}--- ANALYSIS ---\n${groundedMarkdown.slice(0, 12000)}`;
+    // Grounding constrains the SOURCE, never the APPLICATION. The universe of
+    // facts is this one video's analysis — but the user (our primary persona is
+    // a content-repurposing creator) may transform those facts into any format:
+    // podcast scripts, blog/Medium posts, social threads, bullet lists, shopping
+    // lists, action plans. Refuse only when asked for facts outside the source,
+    // not when asked to reshape what the source contains.
+    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis and video description below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it.${descriptionSection}--- ANALYSIS ---\n${groundedMarkdown.slice(0, 12000)}`;
 
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);

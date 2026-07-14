@@ -22,7 +22,7 @@ async function insertUsageLog(
     const { error: insertError } = await supabase.from('usage_logs').insert(validatedLog);
     if (insertError) {
       console.error(`[${contextLabel}]`, { message: 'Failed to insert usage log', error: insertError.message });
-      Sentry.captureException(new Error(insertError.message), { contexts: { handler: contextLabel, layer: 'usage_log_insert' } });
+      Sentry.captureException(new Error(insertError.message), { contexts: { stripe: { handler: contextLabel, layer: 'usage_log_insert' } } });
       return false;
     }
     return true;
