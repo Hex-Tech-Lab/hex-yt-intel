@@ -542,17 +542,22 @@ export class SupabaseAnalysisAdapter {
   static async updateValidationReport(params: {
     analysisId: string;
     report: any;
-    passed: boolean;
+    passed?: boolean;
+    /** When true, only the report is written — validation_passed set by the persist route is left intact. */
+    preserveValidationPassed?: boolean;
   }): Promise<void> {
     try {
       const service = getSupabaseServiceClient();
+      const updatePayload: Record<string, unknown> = {
+        validation_report: params.report,
+        updated_at: new Date().toISOString(),
+      };
+      if (!params.preserveValidationPassed) {
+        updatePayload.validation_passed = params.passed ?? false;
+      }
       const { error } = await service
         .from('analyses')
-        .update({
-          validation_report: params.report,
-          validation_passed: params.passed,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', params.analysisId);
 
       if (error) {

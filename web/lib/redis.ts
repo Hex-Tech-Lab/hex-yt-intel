@@ -36,15 +36,16 @@ function initializeRedis(): Redis | null {
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  if (!redisUrl || !redisToken) {
+  // Type guard: ensure both credentials are present before proceeding
+  if (typeof redisUrl !== 'string' || typeof redisToken !== 'string') {
     console.warn('[redis.ts] Redis credentials not configured, using in-memory cache');
     return null;
   }
 
   try {
     redisInstance = new Redis({
-      url: redisUrl || 'https://placeholder-redis.upstash.io',
-      token: redisToken || 'placeholder-token',
+      url: redisUrl,
+      token: redisToken,
     });
     redisAvailable = true;
     console.log('[redis.ts] Redis client initialized');

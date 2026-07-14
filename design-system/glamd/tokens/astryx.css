@@ -1,0 +1,77 @@
+/* Astryx design tokens (facebook/astryx packages/core/src/theme/tokens.stylex.ts) ported verbatim to CSS custom properties, with GlamD theme overrides at the end. */
+:root{
+color-scheme:light;
+/* Core semantic (Astryx defaults) */
+--color-accent:light-dark(#0064E0,#2694FE);
+--color-accent-muted:light-dark(#0082FB33,#0082FB3F);
+--color-on-accent:#FFFFFF;
+--color-neutral:light-dark(rgba(5,54,89,.1),rgba(223,226,229,.2));
+--color-background-surface:light-dark(#FFFFFF,#1F1F22);
+--color-background-body:light-dark(#F1F4F7,#111112);
+--color-overlay:light-dark(#01122866,#11111299);
+--color-overlay-hover:light-dark(#0536590C,#FFFFFF0C);
+--color-overlay-pressed:light-dark(#05365919,#FFFFFF19);
+--color-background-muted:light-dark(#0536590C,#1111127F);
+--color-text-primary:light-dark(#0A1317,#DFE2E5);
+--color-text-secondary:light-dark(#4E606F,#AAAFB5);
+--color-text-disabled:light-dark(#A4B0BC,#6F747C);
+--color-text-accent:light-dark(#0064E0,#3E9EFB);
+--color-on-dark:#FFFFFF;--color-on-light:#000000;
+--color-icon-primary:light-dark(#0A1317,#DFE2E5);
+--color-icon-secondary:light-dark(#4E606F,#AAAFB5);
+--color-background-card:light-dark(#FFFFFF,#1F1F22);
+--color-background-popover:light-dark(#FFFFFF,#28292C);
+--color-background-inverted:light-dark(#0A1317,#FFFFFF);
+--color-success:#0D8626;--color-on-success:#FFFFFF;
+--color-error:light-dark(#E3193B,#F5394F);--color-on-error:#FFFFFF;
+--color-warning:light-dark(#E9AF08,#F2C00B);--color-on-warning:#0A1317;
+--color-border:light-dark(#05365919,#F2F4F619);
+--color-border-emphasized:light-dark(#CCD3DB,#494D53);
+--color-skeleton:light-dark(#CCD3DB,#5A5E66);
+--color-track:light-dark(#CCD3DB,#5A5E66);
+--color-shadow:light-dark(rgba(5,54,89,.1),rgba(0,0,0,.3));
+--color-tint-hover:light-dark(black,white);
+/* Spacing (8px base per GlamD, Astryx scale) */
+--spacing-0:0px;--spacing-0-5:2px;--spacing-1:4px;--spacing-1-5:6px;--spacing-2:8px;--spacing-3:12px;--spacing-4:16px;--spacing-5:20px;--spacing-6:24px;--spacing-7:28px;--spacing-8:32px;--spacing-9:36px;--spacing-10:40px;--spacing-11:44px;--spacing-12:48px;
+/* Sizes */
+--size-element-sm:28px;--size-element-md:32px;--size-element-lg:36px;
+/* Border + radius */
+--border-width:1px;
+--radius-none:0px;--radius-inner:4px;--radius-element:8px;--radius-container:12px;--radius-page:28px;--radius-full:9999px;
+/* Shadows */
+--shadow-low:0px 1px 1px light-dark(rgba(0,0,0,.1),rgba(0,0,0,.2)),0px 2px 8px light-dark(rgba(0,0,0,.1),rgba(0,0,0,.2));
+--shadow-med:0px 1px 2px light-dark(rgba(0,0,0,.1),rgba(0,0,0,.2)),0px 2px 12px light-dark(rgba(0,0,0,.1),rgba(0,0,0,.2));
+--shadow-high:0px 2px 2px light-dark(rgba(0,0,0,.1),rgba(0,0,0,.2)),0px 8px 24px light-dark(rgba(0,0,0,.1),rgba(0,0,0,.3));
+/* Motion */
+--duration-fast-min:130ms; /* @kind other */ --duration-fast:175ms;--duration-fast-max:230ms; /* @kind other */
+--duration-medium-min:310ms; /* @kind other */ --duration-medium:410ms; /* @kind other */ --duration-medium-max:550ms; /* @kind other */
+--duration-slow-min:730ms; /* @kind other */ --duration-slow:975ms;--duration-slow-max:1300ms; /* @kind other */
+--ease-standard:cubic-bezier(0.24,1,0.4,1); /* @kind other */
+/* Type */
+--font-weight-normal:400;--font-weight-medium:500;--font-weight-semibold:600;--font-weight-bold:700;
+--text-label-size:0.875rem;--text-label-leading:1.4286;
+--text-body-size:0.875rem;--text-body-leading:1.4286;
+}
+/* ===== GlamD theme overrides (Astryx defineTheme equivalent) ===== */
+:root{
+--color-accent:#D4AF37;
+--color-accent-muted:#D4AF3733;
+--color-on-accent:#1A1611;
+--color-text-accent:#B08D26;
+--color-background-body:light-dark(#F7F3EC,#141311);
+--color-background-surface:light-dark(#FBF8F2,#1E1C18);
+--color-background-card:light-dark(#F2ECDF,#1E1C18);
+--color-text-primary:light-dark(#1A1611,#EAE4D8);
+--color-text-secondary:light-dark(#5C554A,#A79F8F);
+--color-border:light-dark(#B4923E4D,#B4923E40);
+--color-border-emphasized:light-dark(#B4923E,#B4923E);
+--radius-element:8px;
+--font-family-heading:'Playfair Display',Georgia,serif;
+--font-family-body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+/* GlamD brand aliases */
+--gold:#D4AF37;--gold-deep:#B4923E;--gold-line:#C9A961;
+--cream:#F7F3EC;--cream-2:#F2ECDF;--charcoal:#1A1611;--ink:#141311;
+--duration-brand:200ms; /* @kind other */
+}
+[data-theme="dark"]{color-scheme:dark}
+[data-theme="light"]{color-scheme:light}

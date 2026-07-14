@@ -7,6 +7,8 @@ export interface AnalysisResult {
   id: string;
   title: string;
   analysis_markdown: string;
+  /** Dimension 0 executive digest (zero-dimensional analyses may have only this) */
+  executiveDigest?: Record<string, unknown> | null;
 }
 
 export interface AnalysisMetadata {

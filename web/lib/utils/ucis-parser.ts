@@ -33,7 +33,7 @@ export function parseToUCISDimensions(
   let match;
   while ((match = headerRegex.exec(markdown)) !== null) {
     const number = parseInt(match[1] || '', 10);
-    if (number >= 1 && number <= 11) {
+    if (number >= 0 && number <= 11) {
       // Clean up the dimension name by removing the prefix and separators
       const name = match[0]
         .replace(/^###\s+DIMENSION\s+\d+\b/i, '')
@@ -83,8 +83,9 @@ function extractSection(
 }
 
 export function parseUCISSections(markdown: string | null | undefined): UCISSections {
+  const placeholder = 'Parsing...';
+
   if (!markdown || typeof markdown !== 'string') {
-    const placeholder = 'Parsing...';
     return {
       apex: placeholder,
       provenance: placeholder,

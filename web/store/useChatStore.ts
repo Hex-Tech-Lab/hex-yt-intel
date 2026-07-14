@@ -8,6 +8,14 @@
  * Replies STREAM over SSE. Mounted once (dock at layout level) → survives all nav.
  */
 
+declare global {
+  interface Window {
+    __CHAT_DEBUG?: boolean;
+  }
+}
+
+const isDebugEnabled = () => typeof window !== 'undefined' && window.__CHAT_DEBUG;
+
 import { create } from 'zustand';
 import * as Sentry from '@sentry/nextjs';
 import type { ChatConversation, ChatMessage, ChatSSEEvent } from '@/lib/types/chat';
@@ -86,6 +94,8 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let frameCount = 0;
+  let eventCount = 0;
 
   // 25s maximum streaming read per Law #2 in GEMINI.md
   // qa-intel compliance key: setError (handled in sendMessage/setPersistState)
@@ -96,9 +106,11 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
   }, 25000);
 
   try {
+    if (isDebugEnabled()) console.log('[ChatStore] SSE stream reading started');
     for (;;) {
       const { done, value } = await reader.read();
       if (done) {
+        if (isDebugEnabled()) console.log('[ChatStore] SSE stream complete', { frameCount, eventCount });
         if (timedOut) {
           throw new DOMException('Stream timed out after 25s', 'AbortError');
         }
@@ -108,10 +120,23 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
       const frames = buffer.replace(/\r/g, '').split('\n\n');
       buffer = frames.pop() || '';
       for (const frame of frames) {
+        frameCount++;
         const line = frame.split(/\r?\n/).find((l) => l.startsWith('data:'));
-        if (!line) continue;
+        if (!line) {
+          if (isDebugEnabled()) console.debug('[ChatStore] Frame without data line', { frameCount });
+          continue;
+        }
         try {
-          onEvent(JSON.parse(line.slice(5).trim()));
+          const parsed: unknown = JSON.parse(line.slice(5).trim());
+          // Only dispatch non-null object payloads — a `data: null` or primitive
+          // frame would otherwise throw in onEvent and kill the stream.
+          if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            if (isDebugEnabled()) console.debug('[ChatStore] Skipped non-object SSE frame', { frameCount });
+            continue;
+          }
+          eventCount++;
+          if (isDebugEnabled()) console.log('[ChatStore] Parsed SSE event', { eventCount, type: (parsed as Record<string, unknown>).type, frameCount });
+          onEvent(parsed as Record<string, unknown>);
         } catch (e) {
           console.debug('[ChatStore] Skipped parsing partial JSON frame:', e);
         }
@@ -204,7 +229,12 @@ export const useChatStore = create<ChatState>((set, get) => {
       // 2. Stream the reply directly from the worker. It persists the assistant turn S2S
       //    (/api/chat/persist), so the optimistic bubble below just holds the streamed
       //    text and reconciles against Postgres on the next thread load.
-      const streamRes = await fetch(job.stream.url, {
+      const streamUrl = job.stream.url;
+      if (isDebugEnabled()) {
+        console.log('[ChatStore] Initiating stream fetch', { streamUrl, clientMsgId, conversationId: convId });
+      }
+
+      const streamRes = await fetch(streamUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -216,10 +246,20 @@ export const useChatStore = create<ChatState>((set, get) => {
         }),
         signal: AbortSignal.timeout(50000),
       });
+
+      if (isDebugEnabled()) {
+        console.log('[ChatStore] Stream fetch responded', { status: streamRes.status, ok: streamRes.ok, clientMsgId });
+      }
       if (!streamRes.ok) throw new Error(`worker ${streamRes.status}`);
 
       await readSSE(streamRes, (e: Record<string, unknown>) => {
+        if (isDebugEnabled()) {
+          console.log('[ChatStore] SSE event received', { type: e.type, requestId: e.requestId, clientMsgId });
+        }
         if (e.requestId && e.requestId !== clientMsgId) {
+          if (isDebugEnabled()) {
+            console.log('[ChatStore] Ignoring stale event', { eventRequestId: e.requestId, clientMsgId });
+          }
           return; // ignore stale/old request events
         }
 
@@ -227,12 +267,16 @@ export const useChatStore = create<ChatState>((set, get) => {
           [K in ChatSSEEvent['type']]: (evt: Extract<ChatSSEEvent, { type: K }>) => void;
         } = {
           delta: (evt) => {
-            set((s) => ({
-              messagesByConv: {
-                ...s.messagesByConv,
-                [convId]: (s.messagesByConv[convId] || []).map((m) => (m.id === pendingAssistantId ? { ...m, content: m.content + evt.content } : m)),
-              },
-            }));
+            set((s) => {
+              const messages = s.messagesByConv[convId] || [];
+              const updated = messages.map((m) => (m.id === pendingAssistantId ? { ...m, content: m.content + evt.content } : m));
+              return {
+                messagesByConv: {
+                  ...s.messagesByConv,
+                  [convId]: updated,
+                },
+              };
+            });
           },
           done: () => {
             set((s) => ({

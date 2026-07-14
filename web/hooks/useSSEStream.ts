@@ -5,7 +5,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
-import { STREAM_BUNDLES, TOTAL_STREAMS, ABORT_ON_PARTIAL_FAILURE } from '@/lib/config/synthesis';
+import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
 
 /**
  * Hook managing Server-Sent Event streaming for analysis generation.
@@ -14,6 +14,15 @@ import { STREAM_BUNDLES, TOTAL_STREAMS, ABORT_ON_PARTIAL_FAILURE } from '@/lib/c
  * @returns Object with startAnalysis and stopAnalysis functions for stream control
  */
 export function useSSEStream() {
+  const config = useSynthesisConfig();
+  const TOTAL_STREAMS = config.totalStreams;
+  const STREAM_BUNDLES = config.streamBundles;
+  const ABORT_ON_PARTIAL_FAILURE = config.abortOnPartialFailure;
+
+  // Validate that stream config is properly loaded (prevents timing mismatches)
+  if ((!STREAM_BUNDLES || STREAM_BUNDLES.length === 0) && typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+    console.warn('[useSSEStream] Stream config not initialized, check settings load timing');
+  }
 
   const {
     setIsLoading,
@@ -64,17 +73,18 @@ export function useSSEStream() {
     const videoId = extractTelemetryId(url);
     // Merge with existing metadata (preserves eagerly-fetched data from useEagerVideoMetadata)
     const prev = useAnalysisStore.getState().videoMetadata;
+    const isSameVideo = prev?.videoId === videoId;
     const preservedMetadata = {
       videoId,
-      title: prev?.videoId === videoId ? (prev.title || '') : '',
-      channelTitle: prev?.videoId === videoId ? (prev.channelTitle || '') : '',
-      channelId: prev?.videoId === videoId ? (prev.channelId || '') : '',
-      publishedAt: prev?.videoId === videoId ? (prev.publishedAt || '') : '',
-      duration: prev?.videoId === videoId ? prev.duration : null,
-      viewCount: prev?.videoId === videoId ? (prev.viewCount || '') : '',
-      likeCount: prev?.videoId === videoId ? (prev.likeCount || '') : '',
-      commentCount: prev?.videoId === videoId ? (prev.commentCount || '') : '',
-      thumbnailUrl: prev?.videoId === videoId ? prev.thumbnailUrl : null,
+      title: isSameVideo ? (prev?.title || '') : '',
+      channelTitle: isSameVideo ? (prev?.channelTitle || '') : '',
+      channelId: isSameVideo ? (prev?.channelId || '') : '',
+      publishedAt: isSameVideo ? (prev?.publishedAt || '') : '',
+      duration: isSameVideo ? prev?.duration : null,
+      viewCount: isSameVideo ? (prev?.viewCount || '') : '',
+      likeCount: isSameVideo ? (prev?.likeCount || '') : '',
+      commentCount: isSameVideo ? (prev?.commentCount || '') : '',
+      thumbnailUrl: isSameVideo ? prev?.thumbnailUrl : null,
     };
     const safeTimezone = /^[a-zA-Z0-9_/-]+$/.test(timezone) ? timezone : 'UTC';
 
@@ -165,6 +175,16 @@ export function useSSEStream() {
                 setStatus('error');
                 setIsLoading(false);
                 return;
+              }
+
+              // Log stream config to detect timing mismatches between client/server expectations
+              if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+                console.debug('[useSSEStream] Analysis stream config', {
+                  totalStreams: TOTAL_STREAMS,
+                  bundleCount: STREAM_BUNDLES?.length,
+                  abortOnPartialFailure: ABORT_ON_PARTIAL_FAILURE,
+                  workerUrl: job.stream.url.substring(0, 50),
+                });
               }
 
               store.logInfo(`Connecting to Cloudflare edge worker for unified intelligence synthesis...`);
@@ -288,6 +308,14 @@ export function useSSEStream() {
                 const checkSettleState = () => {
                   if (hasSettled) return;
                   const totalSettled = completedIndexes.size + failedIndexes.size;
+                  if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+                    console.debug('[useSSEStream] Stream state check', {
+                      completed: completedIndexes.size,
+                      failed: failedIndexes.size,
+                      expected: TOTAL_STREAMS,
+                      settled: totalSettled === TOTAL_STREAMS,
+                    });
+                  }
                   if (totalSettled === TOTAL_STREAMS) {
                     if (completedIndexes.size > 0) {
                       store.logOk(`${completedIndexes.size}/${TOTAL_STREAMS} streams completed.`);
