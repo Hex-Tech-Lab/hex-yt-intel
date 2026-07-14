@@ -39,7 +39,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         Sentry.captureException(err, {
-          contexts: { module: 'settings-context', function: 'loadSettings' },
+          contexts: { settings: { module: 'settings-context', function: 'loadSettings' } },
         });
         setError(err instanceof Error ? err : new Error('Failed to load settings'));
       } finally {

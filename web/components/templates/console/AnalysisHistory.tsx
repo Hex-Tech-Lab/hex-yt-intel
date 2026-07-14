@@ -109,7 +109,13 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   // Show WIP section when: URL exists in box AND analysis exists AND has data AND (actively analyzing OR analysis complete)
   // Check for executiveDigest for zero-dimensional analyses
-  const hasAnalysisData = (currentAnalysis?.analysis_markdown) || (currentAnalysis as any)?.executiveDigest;
+  const hasAnalysisData = Boolean(currentAnalysis?.analysis_markdown || currentAnalysis?.executiveDigest);
+
+  // Real dimension count for the analysis currently in the window
+  const wipDimCount = useMemo(
+    () => Object.keys(parseToUCISDimensions(currentAnalysis?.analysis_markdown)).length,
+    [currentAnalysis?.analysis_markdown]
+  );
   const showWIPSection = url && currentAnalysis && currentAnalysis.id && hasAnalysisData && (isActivelyAnalyzing || currentStatus === 'complete');
 
   // Debug: Log showWIPSection condition to diagnose rendering issues
@@ -157,7 +163,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       }
 
       startTransition(() => {
-        initializeAnalysis(data.id, data.title, data.analysis_markdown);
+        initializeAnalysis(data.id, data.title, data.analysis_markdown, data.executiveDigest ?? null);
         setVideoMetadata({
           videoId: data.videoId,
           title: data.title,
@@ -355,7 +361,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             {isActivelyAnalyzing ? (
               <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
                 <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions received so far">
-                  <span className="text-[var(--ink)] font-semibold">?</span>/{TOTAL_DIMENSIONS} dims
+                  <span className="text-[var(--ink)] font-semibold">{wipDimCount}</span>/{TOTAL_DIMENSIONS} dims
                 </MetricChip>
                 <span className="text-[11px] text-[var(--ink-muted)]">Streaming updates…</span>
                 <Icon icon="solar:refresh-linear" size={16} className="hx-anispin text-[var(--accent)] ml-auto" />
@@ -363,17 +369,17 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             ) : (
               <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap mt-3">
                 <MetricChip icon="solar:layers-minimalistic-linear" title="Dimensions generated">
-                  <span className="text-[var(--ink)] font-semibold">?</span>/{TOTAL_DIMENSIONS} dims
+                  <span className="text-[var(--ink)] font-semibold">{wipDimCount}</span>/{TOTAL_DIMENSIONS} dims
                 </MetricChip>
                 <span className="text-[11px] text-[var(--ink-muted)]">Ready to view</span>
               </div>
             )}
 
             {/* Dimension 0: Executive Summary */}
-            {currentStatus === 'complete' && (currentAnalysis?.analysis_markdown || (currentAnalysis as any)?.executiveDigest) && (
+            {currentStatus === 'complete' && hasAnalysisData && (
               <div className="mt-6 pt-6 border-t border-[var(--line-faint)]">
                 <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Dimension 0 — Executive Summary</h3>
-                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis.analysis_markdown, (currentAnalysis as any)?.executiveDigest)} />
+                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis.analysis_markdown, currentAnalysis.executiveDigest)} />
               </div>
             )}
           </div>
