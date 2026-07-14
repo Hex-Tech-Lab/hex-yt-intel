@@ -188,9 +188,37 @@ function stitchChunksIntoPayload(
     ...(stitchedMonetization ? { monetizationVerdict: stitchedMonetization } : {})
   };
 
-  // Validate stitched payload
-  const parseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
+  // Validate stitched payload. The schema is .strict(), but LLMs routinely emit
+  // benign extra keys (e.g. persona.tier2A, edges[].relation) — strip those and
+  // retry rather than throwing away an otherwise-complete analysis.
+  let parseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
+  for (let pass = 0; !parseResult.success && pass < 3; pass++) {
+    const unrecognized = parseResult.error.issues.filter(i => i.code === 'unrecognized_keys');
+    if (unrecognized.length === 0) break;
+    for (const issue of unrecognized) {
+      let target: any = stitchedPayload;
+      for (const seg of issue.path) {
+        target = target?.[seg as any];
+        if (!target) break;
+      }
+      if (target && typeof target === 'object') {
+        for (const key of (issue as any).keys as string[]) delete target[key];
+      }
+    }
+    parseResult = UCISPayloadV2Schema.safeParse(stitchedPayload);
+  }
+
   if (!parseResult.success) {
+    // Fail LOUDLY — a silent empty return here previously wiped completed analyses.
+    console.error('[analyses/persist] Stitched payload failed schema validation', {
+      dimNumbers: cleanDimensions.map(d => d.number),
+      issues: parseResult.error.issues.slice(0, 10),
+    });
+    Sentry.captureMessage('analysis-persist: stitched payload failed schema validation', {
+      level: 'error',
+      tags: { operation: 'analysis-persist', phase: 'stitch_validation' },
+      extra: { issues: parseResult.error.issues.slice(0, 20) },
+    });
     return { payload: undefined, markdown: '' };
   }
 
