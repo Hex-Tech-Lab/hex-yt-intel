@@ -413,5 +413,8 @@ function classifyError(errorMsg: string): string {
   return 'ERR_INTERNAL_PROVIDER_FAULT';
 }
 
+// qa-intel: no stream state here to call settleAnalysis or setError
+
+
 
 
