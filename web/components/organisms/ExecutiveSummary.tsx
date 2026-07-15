@@ -90,12 +90,12 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
     label: string;
     content: string;
     type: 'text' | 'bullets' | 'paragraphs';
-    maxLines: number;
+    maxLines?: number;
   }> = [
-    { id: 'overview', label: 'Overview', content: data?.overview ?? '', type: 'text', maxLines: 3 },
-    { id: 'snapshot', label: 'Snapshot', content: data?.snapshot ?? '', type: 'text', maxLines: 5 },
-    { id: 'takeaways', label: 'Key Takeaways', content: data?.keyTakeaways.join('\n') ?? '', type: 'bullets', maxLines: 10 },
-    { id: 'detailed', label: 'Detailed Summary', content: data?.detailedSummary ?? '', type: 'paragraphs', maxLines: 5 },
+    { id: 'overview', label: 'Overview', content: data?.overview ?? '', type: 'paragraphs' },
+    { id: 'snapshot', label: 'Snapshot', content: data?.snapshot ?? '', type: 'text' },
+    { id: 'takeaways', label: 'Key Takeaways', content: data?.keyTakeaways.join('\n') ?? '', type: 'bullets' },
+    { id: 'detailed', label: 'Detailed Summary', content: data?.detailedSummary ?? '', type: 'paragraphs' },
   ];
 
   return (
@@ -237,10 +237,10 @@ function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
   }
 
   if (type === 'bullets') {
-    const bulletItems = content
+    const bulletItemsRaw = content
       .split('\n')
-      .filter((line) => line.trim().length > 0)
-      .slice(0, maxLines);
+      .filter((line) => line.trim().length > 0);
+    const bulletItems = maxLines !== undefined ? bulletItemsRaw.slice(0, maxLines) : bulletItemsRaw;
 
     return (
       <ul className="flex flex-col gap-2">
@@ -258,11 +258,11 @@ function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
   }
 
   if (type === 'paragraphs') {
-    const paragraphs = content
+    const paragraphsRaw = content
       .split(/\n{2,}/)
       .map((p) => p.trim())
-      .filter(Boolean)
-      .slice(0, maxLines);
+      .filter(Boolean);
+    const paragraphs = maxLines !== undefined ? paragraphsRaw.slice(0, maxLines) : paragraphsRaw;
 
     return (
       <div className="flex flex-col gap-3">
@@ -276,7 +276,8 @@ function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
   }
 
   // type === 'text'
-  const lines = content.split('\n').slice(0, maxLines).join('\n');
+  const linesArray = content.split('\n');
+  const lines = maxLines !== undefined ? linesArray.slice(0, maxLines).join('\n') : content;
   return <p className="leading-relaxed whitespace-pre-wrap">{lines}</p>;
 }
 

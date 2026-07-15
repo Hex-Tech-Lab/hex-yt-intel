@@ -855,3 +855,15 @@ Work in progress on various feature branches. Will consolidate into wave-2-docst
 
 - [2026-07-13T00:00:00+00:00] [Claude (Agent)] [DONE] Designed and implemented ExecutiveSummary.tsx (Dimension 0 accordion component) with 4 multivariant summaries. Location: web/components/organisms/ExecutiveSummary.tsx. Branch: claude/system-re-audit-continue-l3fnel. Commit: 3591fc5. Verification: type-check PASS, build clean, linting N/A (pre-existing config issue). Features: mutually exclusive accordion, first item open by default, smooth CSS transitions, copy-to-clipboard with 2s confirmation highlight, responsive design with Tailwind + design tokens. Component exports ExecutiveSummaryData interface (overview, snapshot, keyTakeaways[], detailedSummary) and ExecutiveSummary component. Pushed to origin.
 
+- [2026-07-15T21:45:00+03:00] [Antigravity (Lead Agent)] [DONE] Completed Dimension 0 summary integration, prompt re-audit fixes, and contract test alignment.
+  **Work Completed**:
+  - Grounded CHAT_PROTOCOL rewrite (source grounding vs application freedom) deployed on branch.
+  - Replaced ExecutiveDigestCard with the 4-tier accordion ExecutiveSummary component in DashboardContainer.tsx (Dimension 0).
+  - Resolved character and array slicing truncations in extractExecutiveSummary (AnalysisHistory.tsx) and SummaryContent (ExecutiveSummary.tsx) to ensure full summaries remain intact.
+  - Fixed TypeScript type-check and strict unused local warnings in DashboardContainer.tsx.
+  - Fixed lint errors and unused expression warnings in stream-token-security.test.ts.
+  - Restored original label casing in AggregateGlobalGraphUseCase.ts to fix contract test failures.
+  - Corrected test status expectations from 'done'/'chargeable' to 'complete'/'completed' in analysis-reaper.test.ts and executive-digest-usecase.test.ts.
+  - Verified 100% test success: all 833 unit tests and 18 Playwright E2E integration tests passing green.
+  - Pushed all fixes to remote branch `claude/system-re-audit-continue-l3fnel`.
+

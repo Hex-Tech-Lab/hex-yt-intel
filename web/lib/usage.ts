@@ -32,17 +32,17 @@ export async function logUsage(params: LogUsageParams): Promise<boolean> {
     const { error: insertError } = await supabase.from('usage_logs').insert(validated);
     if (insertError) {
       console.error('[logUsage]', { message: 'Failed to insert usage log', error: insertError.message });
-      Sentry.captureException(new Error(insertError.message), { contexts: { layer: 'usage_log_insert' } });
+      Sentry.captureException(new Error(insertError.message), { contexts: { usage: { layer: 'usage_log_insert' } } });
       return false;
     }
     return true;
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error('[logUsage]', { message: 'Schema validation failed', issues: error.issues });
-      Sentry.captureException(error, { contexts: { layer: 'usage_log_validation' } });
+      Sentry.captureException(error, { contexts: { usage: { layer: 'usage_log_validation' } } });
     } else {
       console.error('[logUsage]', { message: 'Failed to log usage', error: error instanceof Error ? error.message : String(error) });
-      Sentry.captureException(error, { contexts: { layer: 'usage_log_insert' } });
+      Sentry.captureException(error, { contexts: { usage: { layer: 'usage_log_insert' } } });
     }
     return false;
   }

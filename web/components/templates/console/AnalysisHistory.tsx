@@ -71,9 +71,9 @@ function DimensionDots({ present, totalDimensions }: { present: number[]; totalD
 function extractExecutiveSummary(markdown: string | undefined, digest?: Record<string, any> | null): ExecutiveSummaryData | null {
   if (digest && typeof digest === 'object' && ('snapshot' in digest || 'overview' in digest)) {
     return {
-      overview: (digest.overview ?? '').substring(0, 300),
-      snapshot: (digest.snapshot ?? '').substring(0, 250),
-      keyTakeaways: Array.isArray(digest.takeaways) ? digest.takeaways.slice(0, 10) : [],
+      overview: (digest.overview ?? ''),
+      snapshot: (digest.snapshot ?? ''),
+      keyTakeaways: Array.isArray(digest.takeaways) ? digest.takeaways : [],
       detailedSummary: (digest.overview ?? ''),
     };
   }
@@ -83,9 +83,9 @@ function extractExecutiveSummary(markdown: string | undefined, digest?: Record<s
   if (lines.length < 4) return null;
 
   return {
-    overview: lines.slice(0, 3).join('\n').substring(0, 150),
-    snapshot: lines.slice(3, 8).join('\n').substring(0, 250),
-    keyTakeaways: lines.slice(8, 18).filter(l => l.trim().length > 0).slice(0, 10),
+    overview: lines.slice(0, 3).join('\n'),
+    snapshot: lines.slice(3, 8).join('\n'),
+    keyTakeaways: lines.slice(8, 18).filter(l => l.trim().length > 0),
     detailedSummary: lines.slice(18, 23).join('\n\n'),
   };
 }
