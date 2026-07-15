@@ -18,8 +18,8 @@ import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory'
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
-import { ExecutiveDigestCard } from '@/components/dashboard/ExecutiveDigestCard';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
+import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 
 // Lazy load visualization components to reduce initial bundle size
 const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
@@ -482,6 +482,16 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const [digestLoading, setDigestLoading] = useState(false);
   const digestFetchedForRef = useRef<string | null>(null);
 
+  const mappedDigestData = useMemo<ExecutiveSummaryData | null>(() => {
+    if (!digest) return null;
+    return {
+      overview: digest.overview ?? '',
+      snapshot: digest.snapshot ?? '',
+      keyTakeaways: digest.takeaways ?? [],
+      detailedSummary: digest.overview ?? '',
+    };
+  }, [digest]);
+
   // Reset the card whenever we switch to a different analysis.
   useEffect(() => {
     setDigest(null);
@@ -655,7 +665,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         span: (DIMENSION_SPANS[dim.number] || 1) as 1 | 2 | 3,
       };
     });
-  }, [nucleus.projection, status, nucleus.analysis?.streaming.dimensionsReceived]);
+  }, [nucleus.projection, status, nucleus.analysis?.streaming.dimensionsReceived, TOTAL_DIMENSIONS]);
 
   const selectedDimension = useMemo(() => {
     if (!selectedDimensionKey) return null;
@@ -744,7 +754,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               {consoleTab === 'synthesis' ? (
                 <>
                   {status === 'complete' && (digest || digestLoading) && (
-                    <ExecutiveDigestCard digest={digest} loading={digestLoading} />
+                    <ExecutiveSummary data={mappedDigestData} loading={digestLoading} />
                   )}
                   {partialInfo && (
                     <div

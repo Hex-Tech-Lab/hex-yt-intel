@@ -65,7 +65,7 @@ export function aggregateNodes(analyses: Array<{ id: string; nodes: GraphNode[] 
       } else {
         // First time seeing this label+dimension combination, use original node ID as merged ID
         const mergedId = node.id;
-        const mergedNode: MergedGraphNode = { ...node, label: canonicalLabel };
+        const mergedNode: MergedGraphNode = { ...node };
         nodeMapByLabel.set(mergeKey, mergedNode);
         idMapping.set(node.id, mergedId);
         // Initialize origin tracking
