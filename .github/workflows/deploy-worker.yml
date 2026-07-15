@@ -11,6 +11,7 @@ on:
     paths:
       - 'worker/**'
       - 'web/lib/prompts/**'        # bundled into the worker (UCIS prompt IP)
+      - 'web/lib/config/prompts.ts' # CHAT_PROTOCOL/CHAT_MODELS — worker chat-stream imports these
       - 'web/lib/intelligence/**'   # worker re-exports the KG synthesizer
       - '.github/workflows/deploy-worker.yml'
   workflow_dispatch:
