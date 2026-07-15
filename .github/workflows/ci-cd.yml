@@ -271,7 +271,7 @@ jobs:
       pull-requests: write
     environment:
       name: production
-      url: ${{ env.PRODUCTION_URL }}
+      url: https://hex-yt-intel.vercel.app
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -551,22 +551,22 @@ jobs:
 
                   confidenceBody = `
 
-## 🎯 PR Confidence Score
+                  ## 🎯 PR Confidence Score
 
-**Confidence: ${confidence.confidence}%** — *${confidence.recommendation}*
+                  **Confidence: ${confidence.confidence}%** — *${confidence.recommendation}*
 
-### Scoring Breakdown
-| Tool | Score | Max |
-|---|---|---|
-| Cubic | ${breakdown.cubic} | 30 |
-| CodeRabbit | ${breakdown.coderabbit} | 20 |
-| Snyk | ${breakdown.snyk} | 15 |
-| CI/CD | ${breakdown.ci_cd} | 10 |
-| Vercel | ${breakdown.vercel} | 5 |
-| CodeQL | ${breakdown.codeql} | 5 |
-| **Total** | **${breakdown.cubic + breakdown.coderabbit + breakdown.snyk + breakdown.ci_cd + breakdown.vercel + breakdown.codeql}** | **85** |
+                  ### Scoring Breakdown
+                  | Tool | Score | Max |
+                  |---|---|---|
+                  | Cubic | ${breakdown.cubic} | 30 |
+                  | CodeRabbit | ${breakdown.coderabbit} | 20 |
+                  | Snyk | ${breakdown.snyk} | 15 |
+                  | CI/CD | ${breakdown.ci_cd} | 10 |
+                  | Vercel | ${breakdown.vercel} | 5 |
+                  | CodeQL | ${breakdown.codeql} | 5 |
+                  | **Total** | **${breakdown.cubic + breakdown.coderabbit + breakdown.snyk + breakdown.ci_cd + breakdown.vercel + breakdown.codeql}** | **85** |
 
-*Note: Confidence score is informational and does not block merging. Always conduct manual code review.*`;
+                  *Note: Confidence score is informational and does not block merging. Always conduct manual code review.*`;
                 } catch (parseErr) {
                   console.error('Failed to parse confidence JSON:', parseErr.message);
                   confidenceWarning = '\n\n⚠️ **Note**: Confidence score calculation failed. Check workflow logs for details.';

@@ -209,7 +209,7 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       const exp = Date.now() + 60_000;
       const binding = { purpose: 'persist' as const, id: 'analysis-1', exp };
 
-      const correctSig = computeHmac(PRIMARY_SECRET, boundContentMessage('persist', 'analysis-1', exp, content));
+      const _correctSig = computeHmac(PRIMARY_SECRET, boundContentMessage('persist', 'analysis-1', exp, content));
 
       // Test with completely different signature (all bits different)
       const wrongSig = '0000000000000000000000000000000000000000000000000000000000000000';
@@ -249,7 +249,7 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       setDevelopmentMode();
       process.env.STREAM_HMAC_SECRET = PRIMARY_SECRET;
 
-      const { verifyContentSig, boundContentMessage } = await import('../stream-token');
+      const { verifyContentSig } = await import('../stream-token');
 
       const content = 'test-data';
       const exp = Date.now() + 60_000;
@@ -381,8 +381,7 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
 
       const content = 'reply';
       const exp = Date.now() + 60_000;
-      const models1 = ['gemini', 'claude'];
-      const models2 = ['claude', 'gpt'];
+
 
       // Sign with models1
       const msg1 = boundContentMessage('persist', 'analysis-1', exp, content);
@@ -431,7 +430,7 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
 
       // Accessing streamHmacSecret should throw in production with missing config
       expect(() => {
-        env.streamHmacSecret;
+        const _secret = env.streamHmacSecret;
       }).toThrow(/STREAM_HMAC_SECRET.*production/);
     });
 
@@ -556,7 +555,7 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       setDevelopmentMode();
       process.env.STREAM_HMAC_SECRET = PRIMARY_SECRET;
 
-      const { signStreamToken, verifyContentSig, boundContentMessage } = await import('../stream-token');
+      const { signStreamToken } = await import('../stream-token');
 
       const videoId = 'vid-1';
       const analysisId = 'analysis-1';
@@ -620,7 +619,7 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       const { env } = await import('../env');
 
       expect(() => {
-        env.streamHmacSecret;
+        const _secret = env.streamHmacSecret;
       }).toThrow(/STREAM_HMAC_SECRET.*required in production/i);
     });
 
@@ -632,7 +631,7 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       const { env } = await import('../env');
 
       expect(() => {
-        env.streamHmacSecret;
+        const _secret = env.streamHmacSecret;
       }).toThrow(/No stream signing secret configured/i);
     });
 
@@ -645,7 +644,7 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
 
       // Empty string should be treated as missing
       expect(() => {
-        env.streamHmacSecret;
+        const _secret = env.streamHmacSecret;
       }).toThrow(/STREAM_HMAC_SECRET.*production/i);
     });
   });

@@ -22,17 +22,17 @@ async function insertUsageLog(
     const { error: insertError } = await supabase.from('usage_logs').insert(validatedLog);
     if (insertError) {
       console.error(`[${contextLabel}]`, { message: 'Failed to insert usage log', error: insertError.message });
-      Sentry.captureException(new Error(insertError.message), { contexts: { handler: contextLabel, layer: 'usage_log_insert' } });
+      Sentry.captureException(new Error(insertError.message), { contexts: { stripe: { handler: contextLabel, layer: 'usage_log_insert' } } });
       return false;
     }
     return true;
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error(`[${contextLabel}]`, { message: 'Schema validation failed', issues: error.issues });
-      Sentry.captureException(error, { contexts: { handler: contextLabel, layer: 'usage_log_validation' } });
+      Sentry.captureException(error, { contexts: { stripe: { handler: contextLabel, layer: 'usage_log_validation' } } });
     } else {
       console.error(`[${contextLabel}]`, { message: 'Failed to insert usage log', error: error instanceof Error ? error.message : String(error) });
-      Sentry.captureException(error, { contexts: { handler: contextLabel, layer: 'usage_log_insert' } });
+      Sentry.captureException(error, { contexts: { stripe: { handler: contextLabel, layer: 'usage_log_insert' } } });
     }
     return false;
   }

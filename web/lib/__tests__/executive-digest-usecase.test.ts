@@ -63,7 +63,7 @@ describe('GenerateExecutiveDigestUseCase', () => {
     const { useCase, getCompletionCalls } = makeDeps({ row: { analysis_markdown: '   ', executive_digest: null } });
     const res = await useCase.execute(baseParams);
     if (res.type !== 'error') throw new Error('expected error');
-    expect(res.code).toBe('ERR_NO_ANALYSIS_CONTENT');
+    expect(res.code).toBe('ERR_ANALYSIS_MARKDOWN_EMPTY');
     expect(getCompletionCalls()).toBe(0);
   });
 
