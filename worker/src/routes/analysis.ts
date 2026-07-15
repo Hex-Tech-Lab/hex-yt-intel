@@ -10,7 +10,11 @@ import { createAtomicPersist } from "../services/atomic-persist";
 import { hmacHex, secretFingerprint } from "../crypto";
 import { isProductionEnv } from "../env-utils";
 import { isValidAppUrl } from "../middleware/cors";
-import type { ReasoningEnginePort } from "../ports/ReasoningEnginePort";
+import type { ReasoningEnginePort, StreamStatusEvent } from "../ports/ReasoningEnginePort";
+
+declare const process: any;
+
+
 
 /** Compare two hex strings for equality using constant-time comparison to prevent timing attacks. */
 function timingSafeEqualHex(a: string, b: string): boolean {
@@ -214,7 +218,7 @@ function buildStreamResponse(
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
       }).then((result) => {
-        clearTimeout(timeoutId);
+        clearTimeout(timeoutId ?? null);
         return result;
       });
 
@@ -285,12 +289,12 @@ function buildStreamResponse(
             dimensions: req.dimensions,
           },
           {
-            onDelta: (delta) => {
+            onDelta: (delta: string) => {
               finalText += delta;
               send({ type: "delta", content: delta });
             },
-            onFragment: (fragment) => send(fragment as unknown as Record<string, unknown>),
-            onStatus: (statusEvent) => {
+            onFragment: (fragment: any) => send(fragment as unknown as Record<string, unknown>),
+            onStatus: (statusEvent: StreamStatusEvent) => {
               if (statusEvent.stage === "model" && statusEvent.model) {
                 modelUsed = statusEvent.model;
               }
