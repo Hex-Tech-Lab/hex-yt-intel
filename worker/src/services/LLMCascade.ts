@@ -67,7 +67,9 @@ export class LLMCascade implements LLMCascadePort {
     let previousModel: string | null = null;
 
     for (let tierIndex = 0; tierIndex < this.chain.length; tierIndex++) {
-      const { model, name, providerOrder } = this.chain[tierIndex];
+      const tier = this.chain[tierIndex];
+      if (!tier) continue;
+      const { model, name, providerOrder } = tier;
 
       if (signal?.aborted) {
         // skipcq: JS-0827
@@ -111,7 +113,7 @@ export class LLMCascade implements LLMCascadePort {
       }
 
       if (tierIndex < this.chain.length - 1) {
-        const nextModel = this.chain[tierIndex + 1].name;
+        const nextModel = this.chain[tierIndex + 1]?.name || 'unknown';
         // skipcq: JS-0827
         console.log(`[LLMCascade] Stream ${streamId} fallback from=${previousModel} to=${nextModel} reason=${classifiedError} timestamp=${new Date().toISOString()}`);
       }
