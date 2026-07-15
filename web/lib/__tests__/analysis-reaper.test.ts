@@ -31,13 +31,13 @@ describe('decideReapOutcome', () => {
     const md = markdownWithDimensions(MIN_SALVAGEABLE_DIMENSIONS);
     const { outcome, dimensionCount } = decideReapOutcome(md);
     expect(dimensionCount).toBe(MIN_SALVAGEABLE_DIMENSIONS);
-    expect(outcome).toBe('chargeable');
+    expect(outcome).toBe('completed');
   });
 
   it('salvages a full 11-dimension analysis', () => {
     const { outcome, dimensionCount } = decideReapOutcome(markdownWithDimensions(11));
     expect(dimensionCount).toBe(11);
-    expect(outcome).toBe('chargeable');
+    expect(outcome).toBe('completed');
   });
 });
 
@@ -57,10 +57,10 @@ describe('buildSettlePatch', () => {
   it('marks a full analysis complete + validation_passed', () => {
     const md = Array.from({ length: 11 }, (_, i) => `### DIMENSION ${i + 1}: X\n\nbody`).join('\n\n');
     const { outcome, patch } = buildSettlePatch(md, null, nowIso);
-    expect(outcome).toBe('chargeable');
+    expect(outcome).toBe('completed');
     expect(patch.billing_status).toBe('chargeable');
     expect(patch.validation_passed).toBe(true);
-    expect(patch.validation_report.status).toBe('done');
+    expect(patch.validation_report.status).toBe('complete');
   });
 
   it('marks a usable partial chargeable-but-not-passed (status partial)', () => {

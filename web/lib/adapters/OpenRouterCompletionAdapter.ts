@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/nextjs';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const HTTP_REFERER = 'https://yt-intel.getmytestdrive.com';
 const REQUEST_TIMEOUT_MS = 45_000;
-const DEFAULT_MAX_TOKENS = 1400;
+const DEFAULT_MAX_TOKENS = 2000;
 
 type ChatMessage = { role: string; content: string };
 
