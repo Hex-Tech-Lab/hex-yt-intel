@@ -15,24 +15,27 @@
  */
 
 /** Strict system prompt for the digest pass. */
-export const EXECUTIVE_DIGEST_SYSTEM = `You are a precision executive-summarizer. Your only input is a completed 11-dimension intelligence analysis of a single YouTube video. Produce a three-tier executive digest OF THAT ANALYSIS. You are compressing already-distilled material — surface the signal, invent nothing.
+export const EXECUTIVE_DIGEST_SYSTEM = `You are a precision executive-summarizer. Your only input is a completed 11-dimension intelligence analysis of a single YouTube video. Produce a four-tier executive digest OF THAT ANALYSIS. You are compressing already-distilled material — surface the signal, invent nothing.
 
 HARD RULES
 - Synthesize ONLY from the provided analysis. Introduce no facts, numbers, names, dates, or claims that are not present in it.
-- No preamble, no meta ("In this summary…"), and no headings beyond the three specified below.
+- No preamble, no meta ("In this summary…"), and no headings beyond the four specified below.
 - Neutral, information-dense, plain language. Cut hedging and filler.
 - If forced to drop something, keep the single most consequential takeaway.
 - Never mention "dimensions", "the analysis", or the pipeline — write about the VIDEO'S CONTENT.
 
-OUTPUT — emit exactly these three sections, in order, and nothing else:
+OUTPUT — emit exactly these four sections, in order, and nothing else:
 
 #### 0.1 Snapshot
 One paragraph, 3–5 lines. What the video is, its core thesis, and why it matters — for someone who will never watch it. This tier alone must convey the gist.
 
-#### 0.2 Key Takeaways
-Up to 10 bullets ("- " each), ranked most→least important. Each ≤ 20 words, one concrete idea, no sub-bullets. Prefer specifics (a tactic, a number, a claim) over generalities.
+#### 0.2 Overview
+1–2 paragraphs. A quick high-level summary of the main points. It sits between the one-liner snapshot and the key takeaways.
 
-#### 0.3 Overview
+#### 0.3 Key Takeaways
+Up to 10 bullets ("- " each), ranked most→least important. Each ≤ 20 words, one concrete idea, no sub-bullets. Prefer specifics (a tactic, a number, a claim) over generalities. Assess the content and use fewer than 10 bullets if appropriate to avoid unnecessary crowding.
+
+#### 0.4 Detailed Summary
 3–5 paragraphs. The full arc: context → main arguments & evidence → conclusions / implications. Faithful to the source's structure and emphasis; add no new interpretation.`;
 
 /**
@@ -48,8 +51,10 @@ export interface ExecutiveDigest {
   snapshot: string;
   /** Tier 2 — ranked bullets (leading "- " markers stripped). */
   takeaways: string[];
-  /** Tier 3 — multi-paragraph overview. */
+  /** Tier 3 — 1-2 paragraph overview. */
   overview: string;
+  /** Tier 4 — multi-paragraph detailed summary. */
+  detailedSummary: string;
 }
 
 interface TierLocation {
@@ -60,12 +65,13 @@ interface TierLocation {
 
 const DIGEST_HEADERS: Array<{ key: keyof ExecutiveDigest; headerRe: RegExp }> = [
   { key: 'snapshot', headerRe: /^####\s*0\.1\b[^\n]*/imu },
-  { key: 'takeaways', headerRe: /^####\s*0\.2\b[^\n]*/imu },
-  { key: 'overview', headerRe: /^####\s*0\.3\b[^\n]*/imu },
+  { key: 'overview', headerRe: /^####\s*0\.2\b[^\n]*/imu },
+  { key: 'takeaways', headerRe: /^####\s*0\.3\b[^\n]*/imu },
+  { key: 'detailedSummary', headerRe: /^####\s*0\.4\b[^\n]*/imu },
 ];
 
 /**
- * Parse the three `#### 0.x` tiers out of a digest completion. Returns null if
+ * Parse the four `#### 0.x` tiers out of a digest completion. Returns null if
  * none of the tiers are present (so callers can treat the digest as absent
  * rather than render an empty card). Tolerant of a leading ```-fence and of the
  * model omitting one tier.
@@ -108,5 +114,6 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
     snapshot: sections.snapshot ?? '',
     takeaways,
     overview: sections.overview ?? '',
+    detailedSummary: sections.detailedSummary ?? '',
   };
 }

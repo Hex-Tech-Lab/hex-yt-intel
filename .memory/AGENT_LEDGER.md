@@ -9,6 +9,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 
 ---
 ### Active Ledger
+- [2026-07-16T11:24:00+03:00] [Antigravity (Agent)] [DONE] Stabilized synthesis UI, added 4-tier Executive Summary (Overview + Detailed Summary split), reordered Snapshot to the top, resolved Dimension 11.6 table formatting, added 2-step vertical chat dock expander, and resolved Sonnet 4.6 cascade root cause by fixing provider order capitalization. (ExecutiveSummary.tsx, ChatDock.tsx, SelectedDimensionReadout.tsx, format.tsx, LLMCascade.ts, DashboardContainer.tsx, AnalysisHistory.tsx, executive-digest.ts)
 - [2026-06-20T15:05:00+03:00] [Antigravity (Agent)] [DONE] Refactored Quality Intelligence Engine (qa-intel) to a modular DDD-Lite + Hex-Lite + SoC clean architecture. Extracted domain contracts, registry service, and loaders/cache/fs adapters. Wrapped all legacy rule files dynamically. Fixed ES Module dynamic require failures and cross-platform line split warnings. Run verification ✅, type-check ✅, committed and pushed (b41b628).
 - [2026-06-10T19:10:00+03:00] [GC (Agent)] [DONE] PR #62 review attempted; CI integration authentication failure; Snyk high-severity issues identified. Matrix: /docs/testing/chunk-62-review-matrix.md.
 - [2026-06-10T19:20:00+03:00] [GC (Agent)] [DONE] Upgraded workspace dependencies and fixed PostgresBillingAdapter type error. Verified via production build.
@@ -866,4 +867,6 @@ Work in progress on various feature branches. Will consolidate into wave-2-docst
   - Corrected test status expectations from 'done'/'chargeable' to 'complete'/'completed' in analysis-reaper.test.ts and executive-digest-usecase.test.ts.
   - Verified 100% test success: all 833 unit tests and 18 Playwright E2E integration tests passing green.
   - Pushed all fixes to remote branch `claude/system-re-audit-continue-l3fnel`.
+
+- [2026-07-16T11:18:00+03:00] [Antigravity (Lead Agent)] [IN_PROGRESS] Starting Root Cause Analysis and E2E fixes for History load failures, scroll animations, layout improvements, prompt updates, timeseek feature, and Cascade logic audit. Target: web/, worker/, .memory/AGENT_LEDGER.md, .memory/ADRS.md
 

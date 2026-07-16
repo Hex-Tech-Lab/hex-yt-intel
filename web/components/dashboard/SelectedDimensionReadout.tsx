@@ -2,6 +2,7 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { preprocessMarkdown } from '@/lib/utils/format';
 
 interface SelectedDimensionReadoutProps {
   dimension: { label: string; content?: string; icon: string } | null;
@@ -63,7 +64,7 @@ export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadout
               a: ({ children, href }) => <a href={href} className="text-[var(--accent)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
             }}
           >
-            {dimension.content}
+            {preprocessMarkdown(dimension.content)}
           </ReactMarkdown>
         </div>
       ) : (

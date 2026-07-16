@@ -59,7 +59,8 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     // in the accordion closes this panel AND selects the new one in one gesture,
     // rather than requiring a throwaway first click to dismiss the backdrop.
     const handlePointerDown = (e: PointerEvent) => {
-      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
+      const target = e.target as HTMLElement;
+      if (drawerRef.current && !drawerRef.current.contains(target) && !target.closest('[data-chat-dock="true"]')) {
         onClose();
       }
     };

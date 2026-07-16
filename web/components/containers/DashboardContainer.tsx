@@ -488,7 +488,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       overview: digest.overview ?? '',
       snapshot: digest.snapshot ?? '',
       keyTakeaways: digest.takeaways ?? [],
-      detailedSummary: digest.overview ?? '',
+      detailedSummary: digest.detailedSummary ?? digest.overview ?? '',
     };
   }, [digest]);
 
