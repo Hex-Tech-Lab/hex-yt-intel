@@ -11,14 +11,17 @@ const VALID_COMPLETION = [
   '#### 0.1 Snapshot',
   'A tight overview of the video in one paragraph.',
   '',
-  '#### 0.2 Key Takeaways',
-  '- First concrete takeaway',
-  '- Second concrete takeaway',
-  '',
-  '#### 0.3 Overview',
+  '#### 0.2 Overview',
   'Paragraph one of the overview.',
   '',
   'Paragraph two of the overview.',
+  '',
+  '#### 0.3 Key Takeaways',
+  '- First concrete takeaway',
+  '- Second concrete takeaway',
+  '',
+  '#### 0.4 Detailed Summary',
+  'Detailed summary content goes here.',
 ].join('\n');
 
 type Row = { analysis_markdown?: string | null; executive_digest?: unknown } | null;
@@ -111,5 +114,21 @@ describe('GenerateExecutiveDigestUseCase', () => {
     if (res.type !== 'error') throw new Error('expected error');
     expect(res.status).toBe(502);
     expect(res.code).toBe('ERR_DIGEST_COMPLETION_FAILED');
+  });
+
+  it('refuses when analysis_markdown is null or undefined', async () => {
+    const { useCase, getCompletionCalls } = makeDeps({ row: { analysis_markdown: null, executive_digest: null } });
+    const res = await useCase.execute(baseParams);
+    if (res.type !== 'error') throw new Error('expected error');
+    expect(res.code).toBe('ERR_ANALYSIS_MARKDOWN_EMPTY');
+    expect(getCompletionCalls()).toBe(0);
+  });
+
+  it('refuses when analysis_markdown is whitespace-only', async () => {
+    const { useCase, getCompletionCalls } = makeDeps({ row: { analysis_markdown: '\r\n \t ', executive_digest: null } });
+    const res = await useCase.execute(baseParams);
+    if (res.type !== 'error') throw new Error('expected error');
+    expect(res.code).toBe('ERR_ANALYSIS_MARKDOWN_EMPTY');
+    expect(getCompletionCalls()).toBe(0);
   });
 });
