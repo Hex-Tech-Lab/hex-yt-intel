@@ -32,6 +32,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     isChatOpen: open, setChatOpen: setOpen,
   } = useChatStore();
   const [showThreads, setShowThreads] = useState(false);
+  const [heightState, setHeightState] = useState<'normal' | 'half' | 'full'>('normal');
   const videoId = useAnalysisStore((s) => s.videoMetadata?.videoId);
   const [localInput, setLocalInput] = useState('');
   const [input, setInput] = useState('');
@@ -234,7 +235,7 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   // --- Collapsed: slim bar -------------------------------------------------
   if (!open) {
     return (
-      <div className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px]">
+      <div data-chat-dock="true" className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px]">
         <button
           onClick={() => setOpen(true)}
           aria-label="Open chat"
@@ -257,9 +258,12 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
   // --- Expanded: bottom sheet growing upward -------------------------------
   return (
     <div
+      data-chat-dock="true"
       role="dialog"
       aria-label="Synthesis chat"
-      className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[min(40vh,_420px)] flex flex-col"
+      className={`flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] flex flex-col transition-all duration-300 ease-in-out ${
+        heightState === 'normal' ? 'h-[min(40vh,_420px)]' : heightState === 'half' ? 'h-[50vh]' : 'h-[calc(100vh-3.2rem)]'
+      }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between py-[9px] px-3.5 border-b border-[var(--line)] bg-[rgb(26_31_43_/_0.6)]">
@@ -277,6 +281,29 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
         </div>
         <div className="flex gap-1.5">
           <button onClick={handleNew} title="New chat" className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:pen-new-square-linear" size={14} /></button>
+          <button
+            onClick={() => {
+              setHeightState((curr) => {
+                if (curr === 'normal') return 'half';
+                if (curr === 'half') return 'full';
+                return 'normal';
+              });
+            }}
+            aria-label="Expand height"
+            title={heightState === 'normal' ? "Expand to 50%" : heightState === 'half' ? "Expand to 100%" : "Restore size"}
+            className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"
+          >
+            <Icon
+              icon={
+                heightState === 'normal'
+                  ? 'solar:maximize-square-linear'
+                  : heightState === 'half'
+                  ? 'solar:maximize-square-bold'
+                  : 'solar:minimize-square-linear'
+              }
+              size={15}
+            />
+          </button>
           <button onClick={() => setOpen(false)} aria-label="Collapse chat" title="Collapse" className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:alt-arrow-down-linear" size={16} /></button>
         </div>
       </div>

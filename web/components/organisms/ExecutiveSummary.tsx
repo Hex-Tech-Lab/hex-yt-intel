@@ -34,7 +34,7 @@ interface ConfirmationState {
  * with copy-to-clipboard feature on each summary.
  */
 export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProps) {
-  const [openItemId, setOpenItemId] = useState<AccordionItemId>('overview');
+  const [openItemId, setOpenItemId] = useState<AccordionItemId>('snapshot');
   const [copyConfirmation, setCopyConfirmation] = useState<ConfirmationState>({
     itemId: null,
     timeoutId: null,
@@ -92,8 +92,8 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
     type: 'text' | 'bullets' | 'paragraphs';
     maxLines?: number;
   }> = [
-    { id: 'overview', label: 'Overview', content: data?.overview ?? '', type: 'paragraphs' },
     { id: 'snapshot', label: 'Snapshot', content: data?.snapshot ?? '', type: 'text' },
+    { id: 'overview', label: 'Overview', content: data?.overview ?? '', type: 'paragraphs' },
     { id: 'takeaways', label: 'Key Takeaways', content: data?.keyTakeaways.join('\n') ?? '', type: 'bullets' },
     { id: 'detailed', label: 'Detailed Summary', content: data?.detailedSummary ?? '', type: 'paragraphs' },
   ];

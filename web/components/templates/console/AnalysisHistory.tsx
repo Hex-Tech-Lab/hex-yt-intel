@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, startTransition, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, startTransition, useRef, type ReactNode } from 'react';
 import { useHistoryOverview } from '@/hooks/useHistoryOverview';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -74,7 +74,7 @@ function extractExecutiveSummary(markdown: string | undefined, digest?: Record<s
       overview: (digest.overview ?? ''),
       snapshot: (digest.snapshot ?? ''),
       keyTakeaways: Array.isArray(digest.takeaways) ? digest.takeaways : [],
-      detailedSummary: (digest.overview ?? ''),
+      detailedSummary: (digest.detailedSummary ?? digest.overview ?? ''),
     };
   }
 
@@ -100,6 +100,13 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const [sortBy, setSortBy] = useState<SortOrder>('recent');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [currentPage, setCurrentPage] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [currentPage]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 10;
@@ -141,15 +148,6 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       const res = await fetch(`/api/analyses/${analysisId}`);
       if (!res.ok) throw new Error(`Restoration failed (HTTP ${res.status})`);
       const data = await res.json();
-
-      // Dashboard render gating: only restore if status is 'complete'
-      if (data.analysisStatus !== 'complete') {
-        const statusMessage =
-          data.analysisStatus === 'error'
-            ? 'This analysis failed to generate. Please try re-analyzing.'
-            : 'This analysis is still processing or incomplete. Please wait or re-analyze.';
-        throw new Error(statusMessage);
-      }
 
       const dimensions = parseToUCISDimensions(data.analysis_markdown || '');
 
@@ -196,7 +194,18 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           if (payload.monetizationVerdict) state.setMonetizationVerdict(payload.monetizationVerdict);
         }
 
-        setStatus('complete');
+        if (data.analysisStatus === 'error') {
+          setStatus('error');
+          useAnalysisStore.getState().setError({
+            code: 'ERR_ANALYSIS_FAILED',
+            status: 500,
+            message: 'This analysis failed to generate. Please try re-analyzing.',
+          });
+        } else if (data.analysisStatus !== 'complete') {
+          setStatus(data.analysisStatus || 'error');
+        } else {
+          setStatus('complete');
+        }
         onSelectAnalysis?.();
       });
 
@@ -276,7 +285,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-20">
+    <div ref={containerRef} className="flex flex-col gap-4 pb-20">
       <h2 className="text-lg font-semibold text-[var(--ink)]">
         Analysis History <span className="text-[var(--ink-muted)] font-normal">({filteredAndSorted.length})</span>
       </h2>
