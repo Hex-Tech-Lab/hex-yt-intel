@@ -57,9 +57,6 @@ if [ ! -d "web" ]; then
   exit 1
 fi
 
-echo -e "${YELLOW}Installing Playwright browsers if needed...${NC}"
-$PKG_RUNNER playwright install --with-deps > /dev/null 2>&1 || true
-
 echo ""
 echo -e "${YELLOW}Running production verification tests...${NC}"
 echo ""
@@ -71,6 +68,12 @@ export DEPLOYMENT_URL
 export DEV_BYPASS_TOKEN="hex-prod-verification-bypass-token-v1"
 
 cd web
+
+# Playwright is a web-workspace dependency — the install must run from web/,
+# not the repo root, or it silently no-ops and every test dies on a missing
+# chromium executable (observed as an instant 8s CI failure).
+echo -e "${YELLOW}Installing Playwright chromium if needed...${NC}"
+$PKG_RUNNER playwright install --with-deps chromium > /dev/null 2>&1 || true
 
 # Run Playwright test with bypass token injected
 $PKG_RUNNER playwright test tests/production-verification.spec.ts $HEADED_MODE --reporter=line
