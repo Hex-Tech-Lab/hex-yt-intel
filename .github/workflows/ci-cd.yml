@@ -332,7 +332,7 @@ jobs:
         uses: ./
 
       - name: Register Cron Job
-        run: pnpm setup:cron
+        run: pnpm --filter @hex-yt-intel/web setup:cron
         env:
           QSTASH_TOKEN: ${{ secrets.QSTASH_TOKEN }}
           PRODUCTION_URL: ${{ env.PRODUCTION_URL }}

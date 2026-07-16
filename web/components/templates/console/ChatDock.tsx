@@ -261,8 +261,15 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
       data-chat-dock="true"
       role="dialog"
       aria-label="Synthesis chat"
-      className={`flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] flex flex-col transition-all duration-300 ease-in-out ${
-        heightState === 'normal' ? 'h-[min(40vh,_420px)]' : heightState === 'half' ? 'h-[50vh]' : 'h-[calc(100vh-3.2rem)]'
+      className={`w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] flex flex-col transition-all duration-300 ease-in-out ${
+        // 'full' overlays the entire main column (absolute within the
+        // relative <main>) instead of using a fixed viewport calc: a flow
+        // child taller than the space under the header gets its bottom (the
+        // input row) clipped by main's overflow-hidden, and any hardcoded
+        // offset leaves a sliver of content peeking at the top.
+        heightState === 'full'
+          ? 'absolute inset-0 z-30'
+          : `flex-shrink-0 ${heightState === 'half' ? 'h-[50vh]' : 'h-[min(40vh,_420px)]'}`
       }`}
     >
       {/* Header */}

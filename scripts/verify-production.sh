@@ -303,15 +303,14 @@ check_database_connectivity() {
   log_info "Checking database connectivity..."
 
   local response=$(curl -s "$DEPLOYMENT_URL/api/health")
-  local db_status=$(echo "$response" | jq -r '.components.database.status // "unknown"' 2>/dev/null || echo "unknown")
+  # Health route emits subsystems.{persistence,...}: "healthy" | "unhealthy"
+  local db_status=$(echo "$response" | jq -r '.subsystems.persistence // .components.database.status // "unknown"' 2>/dev/null || echo "unknown")
 
-  if [ "$db_status" = "ok" ]; then
-    local db_latency=$(echo "$response" | jq -r '.components.database.latency // "unknown"' 2>/dev/null || echo "unknown")
-    log_pass "Database connected (latency: ${db_latency}ms)"
+  if [ "$db_status" = "healthy" ] || [ "$db_status" = "ok" ]; then
+    log_pass "Database connected (status: ${db_status})"
     return 0
-  elif [ "$db_status" = "error" ]; then
-    local error=$(echo "$response" | jq -r '.components.database.error // "unknown"' 2>/dev/null || echo "unknown")
-    log_fail "Database error: $error"
+  elif [ "$db_status" = "error" ] || [ "$db_status" = "unhealthy" ]; then
+    log_fail "Database unhealthy (status: ${db_status})"
     return 1
   else
     log_warn "Could not verify database status"
@@ -327,15 +326,14 @@ check_cloudflare_worker() {
   log_info "Checking Cloudflare Worker..."
 
   local response=$(curl -s "$DEPLOYMENT_URL/api/health")
-  local worker_status=$(echo "$response" | jq -r '.components.worker.status // "unknown"' 2>/dev/null || echo "unknown")
+  # Health route emits subsystems.{engine,...}: "healthy" | "unhealthy"
+  local worker_status=$(echo "$response" | jq -r '.subsystems.engine // .components.worker.status // "unknown"' 2>/dev/null || echo "unknown")
 
-  if [ "$worker_status" = "ok" ]; then
-    local worker_latency=$(echo "$response" | jq -r '.components.worker.latency // "unknown"' 2>/dev/null || echo "unknown")
-    log_pass "Cloudflare Worker connected (latency: ${worker_latency}ms)"
+  if [ "$worker_status" = "healthy" ] || [ "$worker_status" = "ok" ]; then
+    log_pass "Cloudflare Worker connected (status: ${worker_status})"
     return 0
-  elif [ "$worker_status" = "error" ]; then
-    local error=$(echo "$response" | jq -r '.components.worker.error // "unknown"' 2>/dev/null || echo "unknown")
-    log_fail "Cloudflare Worker error: $error"
+  elif [ "$worker_status" = "error" ] || [ "$worker_status" = "unhealthy" ]; then
+    log_fail "Cloudflare Worker unhealthy (status: ${worker_status})"
     return 1
   else
     log_warn "Could not verify worker status"

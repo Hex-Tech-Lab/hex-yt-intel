@@ -156,6 +156,16 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
     if (videoId === 'unknown' || videoId.length < 5) return;
 
+    // A different video URL was pasted — drop the previous video's chat thread
+    // immediately so stale conversation never lingers over the new context.
+    // The restore flow below re-selects the right thread if one exists.
+    const loadedVideoId =
+      useAnalysisStore.getState().videoMetadata?.videoId ??
+      useSynthesisNucleus.getState().analysis?.videoId;
+    if (loadedVideoId && loadedVideoId !== videoId) {
+      useChatStore.setState({ activeId: null });
+    }
+
     let cancelled = false;
 
     // Check if there's already a completed analysis for this videoId
@@ -508,26 +518,60 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     digestFetchedForRef.current = analysisId;
 
     let cancelled = false;
+    let succeeded = false;
     setDigestLoading(true);
+    // The worker persists analysis_markdown S2S *after* the client stream
+    // settles, so the first digest call can race it and get a 409
+    // (ERR_ANALYSIS_MARKDOWN_EMPTY). Retry with backoff until the markdown
+    // lands; the route is idempotent so extra calls are safe and cheap.
+    const RETRY_DELAYS_MS = [0, 3000, 5000, 8000, 13000, 21000];
     void (async () => {
       try {
-        const res = await fetch('/api/analyses/digest', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ analysisId }),
-        });
-        if (!res.ok) return; // 409 (no content) / 5xx — just show no card
-        const data = await res.json();
-        if (!cancelled && data?.digest) setDigest(data.digest as StoredExecutiveDigest);
-      } catch (err) {
-        console.debug('[digest] generation request failed:', err);
+        for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
+          const delay = RETRY_DELAYS_MS[attempt];
+          if (delay) await new Promise((r) => setTimeout(r, delay));
+          if (cancelled) return;
+          try {
+            const res = await fetch('/api/analyses/digest', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ analysisId }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (!cancelled && data?.digest) {
+                setDigest(data.digest as StoredExecutiveDigest);
+                succeeded = true;
+              }
+              return;
+            }
+            // 400/401/404 will never succeed on retry; 409 (markdown not yet
+            // persisted) and 5xx (transient cascade failure) are retriable.
+            if (res.status === 400 || res.status === 401 || res.status === 404) return;
+            console.debug(`[digest] attempt ${attempt + 1} got ${res.status}; ${attempt < RETRY_DELAYS_MS.length - 1 ? 'retrying' : 'giving up'}`);
+          } catch (err) {
+            console.debug('[digest] generation request failed:', err);
+          }
+        }
       } finally {
-        if (!cancelled) setDigestLoading(false);
+        if (!cancelled) {
+          // Exhausted or bailed without a digest — release the guard so a
+          // later re-render (or analysis switch back) can try again.
+          if (!succeeded && digestFetchedForRef.current === analysisId) {
+            digestFetchedForRef.current = null;
+          }
+          setDigestLoading(false);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
+      // Cancelled mid-flight without success (deps changed / unmount): release
+      // the guard so the next effect run can re-request the digest.
+      if (!succeeded && digestFetchedForRef.current === analysisId) {
+        digestFetchedForRef.current = null;
+      }
     };
   }, [status, analysisId, partialInfo]);
 

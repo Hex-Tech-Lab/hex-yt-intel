@@ -158,8 +158,11 @@ test.describe('Production Verification Suite', () => {
 
   test.describe('Client Environment Validation', () => {
     test('clientEnv exports are present and non-empty', async ({ page }) => {
+      // 'domcontentloaded': the landing page holds long-lived connections that
+      // can keep the 'load' event from ever firing (observed 60s timeouts /
+      // ERR_ABORTED in CI); these assertions only need the HTML.
       const response = await page.goto(`${DEPLOYMENT_URL}/`, {
-        waitUntil: 'load',
+        waitUntil: 'domcontentloaded',
       });
 
       expect(response?.status()).toBeLessThan(400);
@@ -175,8 +178,9 @@ test.describe('Production Verification Suite', () => {
     });
 
     test('no uninitialized environment references in HTML', async ({ page }) => {
+      // See above — 'load' is flaky against the live landing page.
       const response = await page.goto(`${DEPLOYMENT_URL}/`, {
-        waitUntil: 'load',
+        waitUntil: 'domcontentloaded',
       });
 
       expect(response?.status()).toBeLessThan(400);

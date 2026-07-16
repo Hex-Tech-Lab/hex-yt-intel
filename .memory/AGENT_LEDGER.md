@@ -8,6 +8,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
+- [2026-07-16T17:55:00+03:00] [Claude (CC)] [DONE] Post-#155 remediation: restored non-embed video playback (error-code-gated overlay + retry, thumbnail fallback player with timestamp handoff for 101/150), dim-0 digest client retry-with-backoff on 409 persist race, ChatDock full-height overlay fix (input clipping + top gap), chat thread clear on new URL paste, CI main fixes (cron workspace filter, health-check subsystems JSON, deflaked 2 playwright 'load' tests). (VideoPlayerCard.tsx, DashboardContainer.tsx, ChatDock.tsx, ci-cd.yml, verify-production.sh, production-verification.spec.ts)
 - [2026-07-16T16:45:00+03:00] [Antigravity (Agent)] [DONE] Merged PR #155 into main branch after successful local and remote CI checks.
 - [2026-07-16T16:25:00+03:00] [Antigravity (Agent)] [DONE] Restored Decodo primary transcript extraction pipeline; aligned missing transcript errors across all 11 dimensions; added failed/partial auto-restoration state support on URL paste retries. (CreateAnalysisUseCase.ts, VideoPlayerCard.tsx, DashboardContainer.tsx)
 - [2026-07-16T16:00:00+03:00] [Antigravity (Agent)] [DONE] Resolved ChatDock sticking state on video URL switch/reset; integrated playback restricted overlay fallback in VideoPlayerCard. (ChatDock.tsx, VideoPlayerCard.tsx)
