@@ -1,0 +1,22 @@
+scripts/run-production-verification.sh
+  s_0eded1e9d0cab6::t_7179a30fbbf5c1 72-76
+  s_0eded1e9d0cab6::t_c53c70ebdc242d 77
+web/package.json
+  s_0eded1e9d0cab6::t_1d2a248298d723 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "a0b44b9d116120e4cc7d7aceb5e50be53a625416",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
