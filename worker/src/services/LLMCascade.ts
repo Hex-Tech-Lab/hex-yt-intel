@@ -198,7 +198,7 @@ export class LLMCascade implements LLMCascadePort {
     const requestModel = translateModelId(model);
     const requestMaxTokens = isHaiku45 ? 62000 : 16000;
     const requestProvider = isHaiku45
-      ? { order: ['Amazon', 'Anthropic', 'Google'], allow_fallbacks: false }
+      ? { order: ['anthropic', 'google-vertex', 'amazon-bedrock'], allow_fallbacks: false }
       : (providerOrder ? { order: providerOrder, allow_fallbacks: true } : undefined);
 
     try {

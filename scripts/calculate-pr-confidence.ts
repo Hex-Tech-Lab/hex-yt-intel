@@ -20,6 +20,8 @@
 
 import { execFileSync } from 'child_process';
 
+const repo = process.env.GITHUB_REPOSITORY || 'Hex-Tech-Lab/hex-yt-intel';
+
 interface PRConfidenceBreakdown {
   cubic: number;
   coderabbit: number;
@@ -101,7 +103,7 @@ function queryGitHub(query: string): string {
  */
 function extractCubicScore(prNumber: number): { score: number; comment?: string } {
   try {
-    const commentsJson = queryGitHub(`issues/${prNumber}/comments --paginate --limit=100`);
+    const commentsJson = queryGitHub(`repos/${repo}/issues/${prNumber}/comments --paginate`);
     const data = JSON.parse(commentsJson || '[]');
 
     if (!Array.isArray(data)) return { score: 0 };
@@ -141,7 +143,7 @@ function extractCubicScore(prNumber: number): { score: number; comment?: string 
  */
 function extractCodeRabbitScore(prNumber: number): { score: number; comment?: string } {
   try {
-    const commentsJson = queryGitHub(`issues/${prNumber}/comments --paginate --limit=100`);
+    const commentsJson = queryGitHub(`repos/${repo}/issues/${prNumber}/comments --paginate`);
     const data = JSON.parse(commentsJson || '[]');
 
     if (!Array.isArray(data)) return { score: 0 };
@@ -180,7 +182,7 @@ function extractCodeRabbitScore(prNumber: number): { score: number; comment?: st
  */
 function extractSnykScore(prNumber: number): { score: number; comment?: string } {
   try {
-    const commentsJson = queryGitHub(`issues/${prNumber}/comments --paginate --limit=100`);
+    const commentsJson = queryGitHub(`repos/${repo}/issues/${prNumber}/comments --paginate`);
     const data = JSON.parse(commentsJson || '[]');
 
     if (!Array.isArray(data)) return { score: 0 };
@@ -219,13 +221,13 @@ function extractSnykScore(prNumber: number): { score: number; comment?: string }
  */
 function extractCICDStatus(prNumber: number): { score: number; status?: string } {
   try {
-    const repo = process.env.GITHUB_REPOSITORY || '';
-    if (!repo) {
-      console.warn('[extractCICDStatus] GITHUB_REPOSITORY not set, cannot query check runs');
-      return { score: 0, status: 'repo-unknown' };
+    const prJson = queryGitHub(`repos/${repo}/pulls/${prNumber}`);
+    const prData = JSON.parse(prJson || '{}');
+    const headSha = prData.head?.sha;
+    if (!headSha) {
+      return { score: 0, status: 'head-sha-unknown' };
     }
-    // Use GitHub API's native merge ref parameter for accurate check-run status
-    const checksJson = queryGitHub(`repos/${repo}/commits/refs/pull/${prNumber}/merge/check-runs`);
+    const checksJson = queryGitHub(`repos/${repo}/commits/${headSha}/check-runs`);
     const data = JSON.parse(checksJson || '{}');
 
     const checkRuns = data.check_runs || [];
@@ -259,7 +261,7 @@ function extractCICDStatus(prNumber: number): { score: number; status?: string }
 function extractVercelStatus(prNumber: number): { score: number; status?: string } {
   try {
     // Check PR comments for Vercel bot messages
-    const commentsJson = queryGitHub(`issues/${prNumber}/comments --paginate --limit=50`);
+    const commentsJson = queryGitHub(`repos/${repo}/issues/${prNumber}/comments --paginate`);
     const commentData = JSON.parse(commentsJson || '[]');
 
     if (Array.isArray(commentData)) {
@@ -290,14 +292,7 @@ function extractVercelStatus(prNumber: number): { score: number; status?: string
  */
 function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number } {
   try {
-    // Query for code scanning alerts on the PR, filtered by PR ref
-    // Use GITHUB_REPOSITORY env var to get owner/repo in GitHub Actions context
-    const repo = process.env.GITHUB_REPOSITORY || '';
-    if (!repo) {
-      console.warn('[extractCodeQLStatus] GITHUB_REPOSITORY not set, skipping CodeQL check');
-      return { score: 5, alerts: 0 };
-    }
-    const alertsJson = queryGitHub(`repos/${repo}/code-scanning/alerts?state=open&ref=refs/pull/${prNumber}/merge&sort=updated&direction=desc --paginate --limit=50`);
+    const alertsJson = queryGitHub(`repos/${repo}/code-scanning/alerts?state=open&ref=refs/pull/${prNumber}/merge&sort=updated&direction=desc --paginate`);
     const data = JSON.parse(alertsJson || '[]');
 
     if (!Array.isArray(data)) {

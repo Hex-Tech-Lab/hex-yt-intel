@@ -10,6 +10,26 @@ export function preprocessMarkdown(content: string): string {
 
   let processed = content;
 
+  // Normalize table delimiters if column count mismatches header
+  const rawLines = processed.split(/\r?\n/);
+  for (let i = 0; i < rawLines.length - 1; i++) {
+    const line = rawLines[i]?.trim() || '';
+    const nextLine = rawLines[i + 1]?.trim() || '';
+    
+    const isHeader = line.startsWith('|') && line.endsWith('|');
+    const isDelimiter = nextLine.startsWith('|') && nextLine.endsWith('|') && /^[ \t|:-]+$/.test(nextLine);
+
+    if (isHeader && isDelimiter) {
+      const headerCols = line.split('|').filter(c => c.trim() !== '').length;
+      const delimiterCols = nextLine.split('|').filter(c => c.trim() !== '').length;
+
+      if (headerCols !== delimiterCols && headerCols > 0) {
+        rawLines[i + 1] = '|' + Array(headerCols).fill('---').join('|') + '|';
+      }
+    }
+  }
+  processed = rawLines.join('\n');
+
   // 1. Convert unicode bullet points at the start of a line or after tab/pipe
   processed = processed.replace(/^[ \t]*[•●]\s*/gm, '- ');
   processed = processed.replace(/\t[ \t]*[•●]\s*/g, '\t- ');

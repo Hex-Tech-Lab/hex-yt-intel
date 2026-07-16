@@ -171,8 +171,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         const data = await res.json();
         if (cancelled) return;
 
-        if (data.exists && data.status === 'complete' && data.analysisId) {
-          console.log('[AutoRestore] Completed analysis detected for video, fetching details:', data.analysisId);
+        if (data.exists && data.analysisId) {
+          console.log('[AutoRestore] Existing analysis detected for video, fetching details:', data.analysisId);
 
           // Trigger the restoration flow just like history restoration
           let restoreRes;
@@ -184,12 +184,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           if (!restoreRes.ok) return;
           const restoreData = await restoreRes.json();
           if (cancelled) return;
-
-          // Dashboard render gating: re-validate status before restoring
-          if (restoreData.analysisStatus !== 'complete') {
-            console.debug('[AutoRestore] Analysis status is not complete, skipping restore:', restoreData.analysisStatus);
-            return;
-          }
 
           let dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
 
@@ -245,7 +239,16 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               if (payload.monetizationVerdict) nucleus.setMonetizationVerdict(payload.monetizationVerdict);
             }
 
-            setStatus('complete');
+            // Sync status to UI (either complete, error or partial)
+            if (restoreData.analysisStatus === 'complete') {
+              setStatus('complete');
+            } else if (restoreData.analysisStatus === 'failed') {
+              setStatus('error');
+            } else if (restoreData.analysisStatus === 'partial') {
+              setStatus('complete'); // partial displays accordion with re-analyze banner
+            } else {
+              setStatus('idle');
+            }
           });
 
           // Ground/Select the chat session in the background
@@ -488,7 +491,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       overview: digest.overview ?? '',
       snapshot: digest.snapshot ?? '',
       keyTakeaways: digest.takeaways ?? [],
-      detailedSummary: digest.overview ?? '',
+      detailedSummary: digest.detailedSummary ?? digest.overview ?? '',
     };
   }, [digest]);
 

@@ -19,6 +19,8 @@ export function VideoPlayerCard() {
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
 
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+
   const videoId = videoMetadata?.videoId || nucleusVideoId;
   isPlayingRef.current = isPlaying;
 
@@ -36,6 +38,7 @@ export function VideoPlayerCard() {
       playerRef.current = null;
     }
     setReady(false);
+    setPlaybackError(null);
     videoIdRef.current = videoId;
 
     const adapter = new YouTubePlayerAdapter();
@@ -62,7 +65,14 @@ export function VideoPlayerCard() {
         if (isPlayingRef.current) adapter.play();
       },
       onError: (err) => {
-        if (!cancelled) console.error('[VideoPlayerCard]', { message: err.message, videoId });
+        if (cancelled) return;
+        console.error('[VideoPlayerCard]', { message: err.message, videoId });
+        // Error code 150 or 101 indicates embedding is disabled by the owner.
+        if (err.message.includes('150') || err.message.includes('101')) {
+          setPlaybackError('Embedding disabled by the video owner. Click the link above to watch directly on YouTube.');
+        } else {
+          setPlaybackError(err.message);
+        }
       },
       onPlay: () => {
         if (!cancelled) setPlaying(true);
@@ -81,6 +91,7 @@ export function VideoPlayerCard() {
       }
       videoIdRef.current = null;
       setReady(false);
+      setPlaybackError(null);
     };
   }, [mounted, videoId, setPlaying]);
 
@@ -108,8 +119,19 @@ export function VideoPlayerCard() {
   if (!mounted || !videoId) return null;
 
   return (
-    <div className="w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
-      <div ref={containerRef} className="w-full h-full" />
+    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
+      {playbackError ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--bg)] p-6 text-center text-xs font-mono border border-[var(--line)]">
+          <div className="text-[var(--warn)] font-bold mb-3 uppercase tracking-wider">Embedding Restricted By Creator</div>
+          <p className="text-[var(--ink-secondary)] max-w-sm mb-2 leading-relaxed">
+            Direct video playback is restricted on external domains by the owner&apos;s embed policy.
+          </p>
+          <p className="text-[var(--ink-muted)] max-w-sm mb-4 leading-relaxed">
+            You can still interact with the full 11-dimension analysis, browse the Knowledge Graph, ask follow-up questions in the Chat, and click on any timestamps to seek content once loaded.
+          </p>
+        </div>
+      ) : null}
+      <div ref={containerRef} className={`w-full h-full ${playbackError ? 'hidden' : ''}`} />
     </div>
   );
 }
