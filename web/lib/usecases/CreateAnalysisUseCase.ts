@@ -100,7 +100,6 @@ export class CreateAnalysisUseCase {
     const [settled] = await Promise.allSettled([this.metadataIngestion.fetch(videoId)]);
     if (settled.status === 'fulfilled') {
       ingestionResult = settled.value;
-      ingestionResult.transcript = '';
     } else {
       const msg = settled.reason instanceof Error ? settled.reason.message : String(settled.reason);
       return { type: 'error', code: 'ERR_INGESTION_FAILED', status: 500, message: `Video ingestion failed: ${msg}` };
