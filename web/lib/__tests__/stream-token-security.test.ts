@@ -209,7 +209,11 @@ describe('Stream Token Security (P1 Ship Blocker)', () => {
       const exp = Date.now() + 60_000;
       const binding = { purpose: 'persist' as const, id: 'analysis-1', exp };
 
-      const _correctSig = computeHmac(PRIMARY_SECRET, boundContentMessage('persist', 'analysis-1', exp, content));
+      const correctSig = computeHmac(PRIMARY_SECRET, boundContentMessage('persist', 'analysis-1', exp, content));
+
+      // Assert positive signature first to verify it works
+      const correctResult = await verifyContentSig(content, correctSig, binding);
+      expect(correctResult).toBe(true);
 
       // Test with completely different signature (all bits different)
       const wrongSig = '0000000000000000000000000000000000000000000000000000000000000000';
