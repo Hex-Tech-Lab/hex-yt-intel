@@ -1,0 +1,43 @@
+web/tests/production-verification.spec.ts
+  s_0eded1e9d0cab6::t_d2f6de1ab5ee58 181,183
+  s_0eded1e9d0cab6::t_14e2bf8c9275e4 161-163,165
+web/components/templates/console/VideoPlayerCard.tsx
+  s_0eded1e9d0cab6::t_1c71ef6a48d530 47
+  s_0eded1e9d0cab6::t_43719dbd10ad36 76-78
+  s_0eded1e9d0cab6::t_06683ca8efb028 136-137,149,152,175-196,199
+  s_0eded1e9d0cab6::t_4cf30d52801270 133-135,138-148,153-173
+  s_0eded1e9d0cab6::t_523884b01bdbfd 22-23
+  s_0eded1e9d0cab6::t_d0c020463c8d3f 101,110-116,120
+  s_0eded1e9d0cab6::t_f8d14b121c5801 99
+  s_0eded1e9d0cab6::t_2fe8fc5708ca7e 24-27
+  s_0eded1e9d0cab6::t_7595dea02f7ee2 100
+  s_0eded1e9d0cab6::t_f6e35fd973ad88 174
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_48318c8ebe877b 11
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_3f8352008c7633 521,523-527,530-555,557-564,570-574
+  s_0eded1e9d0cab6::t_9cc843b35bc95a 159-168
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_c0dd5e489ba5b6 264-272
+scripts/verify-production.sh
+  s_0eded1e9d0cab6::t_551a5f909c524a 306-307,309-310,312-313
+  s_0eded1e9d0cab6::t_d5aac10b725dab 329-330,332-333,335-336
+.github/workflows/ci-cd.yml
+  s_0eded1e9d0cab6::t_aa984f9d162987 335
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "fb38388916b8e68ea3e12ba8895e4efa4bafb1e1",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
