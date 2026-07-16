@@ -8,7 +8,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
-### Active Ledger
+- [2026-07-16T16:45:00+03:00] [Antigravity (Agent)] [DONE] Merged PR #155 into main branch after successful local and remote CI checks.
 - [2026-07-16T16:25:00+03:00] [Antigravity (Agent)] [DONE] Restored Decodo primary transcript extraction pipeline; aligned missing transcript errors across all 11 dimensions; added failed/partial auto-restoration state support on URL paste retries. (CreateAnalysisUseCase.ts, VideoPlayerCard.tsx, DashboardContainer.tsx)
 - [2026-07-16T16:00:00+03:00] [Antigravity (Agent)] [DONE] Resolved ChatDock sticking state on video URL switch/reset; integrated playback restricted overlay fallback in VideoPlayerCard. (ChatDock.tsx, VideoPlayerCard.tsx)
 - [2026-07-16T11:24:00+03:00] [Antigravity (Agent)] [DONE] Stabilized synthesis UI, added 4-tier Executive Summary (Overview + Detailed Summary split), reordered Snapshot to the top, resolved Dimension 11.6 table formatting, added 2-step vertical chat dock expander, and resolved Sonnet 4.6 cascade root cause by fixing provider order capitalization. (ExecutiveSummary.tsx, ChatDock.tsx, SelectedDimensionReadout.tsx, format.tsx, LLMCascade.ts, DashboardContainer.tsx, AnalysisHistory.tsx, executive-digest.ts)
