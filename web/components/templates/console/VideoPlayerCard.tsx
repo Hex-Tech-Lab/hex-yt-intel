@@ -19,7 +19,12 @@ export function VideoPlayerCard() {
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
 
-  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [playbackError, setPlaybackError] = useState<{ code: number | null; message: string } | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
+  // Last timestamp clicked while the embedded player is unavailable — keeps
+  // transcript timestamps functional by feeding the fallback "Play on
+  // YouTube" action instead of a dead iframe seek.
+  const [fallbackSeek, setFallbackSeek] = useState<number | null>(null);
 
   const videoId = videoMetadata?.videoId || nucleusVideoId;
   isPlayingRef.current = isPlaying;
@@ -39,6 +44,7 @@ export function VideoPlayerCard() {
     }
     setReady(false);
     setPlaybackError(null);
+    setFallbackSeek(null);
     videoIdRef.current = videoId;
 
     const adapter = new YouTubePlayerAdapter();
@@ -67,12 +73,9 @@ export function VideoPlayerCard() {
       onError: (err) => {
         if (cancelled) return;
         console.error('[VideoPlayerCard]', { message: err.message, videoId });
-        // Error code 150 or 101 indicates embedding is disabled by the owner.
-        if (err.message.includes('150') || err.message.includes('101')) {
-          setPlaybackError('Embedding disabled by the video owner. Click the link above to watch directly on YouTube.');
-        } else {
-          setPlaybackError(err.message);
-        }
+        const parsedCode = /YouTube error: (\d+)/.exec(err.message)?.[1];
+        const code = parsedCode ? Number(parsedCode) : null;
+        setPlaybackError({ code, message: err.message });
       },
       onPlay: () => {
         if (!cancelled) setPlaying(true);
@@ -93,7 +96,9 @@ export function VideoPlayerCard() {
       setReady(false);
       setPlaybackError(null);
     };
-  }, [mounted, videoId, setPlaying]);
+  }, [mounted, videoId, setPlaying, retryNonce]);
+
+  const embedRestricted = playbackError?.code === 101 || playbackError?.code === 150;
 
   useEffect(() => {
     if (seekTo === null) return;
@@ -102,10 +107,17 @@ export function VideoPlayerCard() {
       requestAnimationFrame(() => {
         clearSeek();
       });
+    } else if (embedRestricted) {
+      // Player can never come up for this video — route the timestamp to the
+      // fallback card so the click still does something meaningful.
+      setFallbackSeek(seekTo);
+      requestAnimationFrame(() => {
+        clearSeek();
+      });
     } else {
       seekQueueRef.current = seekTo;
     }
-  }, [seekTo, ready, clearSeek]);
+  }, [seekTo, ready, clearSeek, embedRestricted]);
 
   useEffect(() => {
     if (!ready || !playerRef.current) return;
@@ -118,20 +130,73 @@ export function VideoPlayerCard() {
 
   if (!mounted || !videoId) return null;
 
+  // 101/150 = embedding disabled by the owner — the embedded player can never
+  // recover, so swap in a thumbnail-backed fallback player that keeps
+  // timestamps functional. Every other error (transient "Playback ID" faults,
+  // network hiccups, HTML5 errors) keeps the player mounted so YouTube's own
+  // UI stays visible and the user can retry.
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}${
+    fallbackSeek !== null ? `&t=${Math.floor(fallbackSeek)}s` : ''
+  }`;
+  const formatTime = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = Math.floor(s % 60);
+    return h > 0
+      ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+      : `${m}:${String(sec).padStart(2, '0')}`;
+  };
+
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
-      {playbackError ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--bg)] p-6 text-center text-xs font-mono border border-[var(--line)]">
-          <div className="text-[var(--warn)] font-bold mb-3 uppercase tracking-wider">Embedding Restricted By Creator</div>
-          <p className="text-[var(--ink-secondary)] max-w-sm mb-2 leading-relaxed">
-            Direct video playback is restricted on external domains by the owner&apos;s embed policy.
-          </p>
-          <p className="text-[var(--ink-muted)] max-w-sm mb-4 leading-relaxed">
-            You can still interact with the full 11-dimension analysis, browse the Knowledge Graph, ask follow-up questions in the Chat, and click on any timestamps to seek content once loaded.
-          </p>
+      {embedRestricted ? (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center text-xs font-mono">
+          {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */}
+          <img
+            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-30"
+          />
+          <div className="relative flex flex-col items-center">
+            <div className="text-[var(--warn)] font-bold mb-2 uppercase tracking-wider">Embedding Restricted By Creator</div>
+            <p className="text-[var(--ink-muted)] max-w-sm mb-4 leading-relaxed">
+              In-app playback is blocked by this video&apos;s embed policy. Timestamps in the analysis still work — clicking one updates the button below.
+            </p>
+            <a
+              href={watchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg border border-[var(--accent)] text-[var(--accent)] font-bold hover:bg-[rgb(26_31_43_/_0.8)] transition-colors"
+            >
+              ▶ {fallbackSeek !== null ? `Play from ${formatTime(fallbackSeek)}` : 'Play'} on YouTube ↗
+            </a>
+          </div>
+        </div>
+      ) : playbackError ? (
+        <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-between gap-3 px-3 py-2 bg-[rgb(11_14_20_/_0.92)] backdrop-blur-sm border-t border-[var(--line)] text-[11px] font-mono">
+          <span className="text-[var(--warn)] truncate">Playback error — this is usually transient.</span>
+          <span className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => {
+                setPlaybackError(null);
+                setRetryNonce((n) => n + 1);
+              }}
+              className="px-2.5 py-1 rounded-md border border-[var(--line)] text-[var(--accent)] cursor-pointer hover:bg-[rgb(26_31_43_/_0.6)] transition-colors"
+            >
+              Retry
+            </button>
+            <a
+              href={watchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 rounded-md border border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
+            >
+              YouTube ↗
+            </a>
+          </span>
         </div>
       ) : null}
-      <div ref={containerRef} className={`w-full h-full ${playbackError ? 'hidden' : ''}`} />
+      <div ref={containerRef} className={`w-full h-full ${embedRestricted ? 'hidden' : ''}`} />
     </div>
   );
 }
