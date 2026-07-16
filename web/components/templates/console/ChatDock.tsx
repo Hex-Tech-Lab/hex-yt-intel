@@ -105,13 +105,13 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
           // Clear any previous conversation first to prevent stale chat from loading
           useChatStore.setState({ activeId: null });
           await newConversation({ analysisId });
+        } else {
+          // VideoId exists but no analysisId (yet) - reset activeId
+          useChatStore.setState({ activeId: null });
         }
       } else {
         // No analysis context — clear activeId so chat starts empty until user picks a thread
-        const state2 = useChatStore.getState();
-        if (state2.activeId) {
-          useChatStore.setState({ activeId: null });
-        }
+        useChatStore.setState({ activeId: null });
       }
       
       if (cancelled) return;
