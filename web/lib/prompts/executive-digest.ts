@@ -38,12 +38,35 @@ Up to 10 bullets ("- " each), ranked most→least important. Each ≤ 20 words, 
 #### 0.4 Detailed Summary
 3–5 paragraphs. The full arc: context → main arguments & evidence → conclusions / implications. Faithful to the source's structure and emphasis; add no new interpretation.`;
 
+export function truncateForDigest(markdown: string, maxChars = 18000): string {
+  if (!markdown) return '';
+  if (markdown.length <= maxChars) return markdown.trim();
+  const dimRegex = /##+\s*Dimension\s+\d+[\s\S]*?(?=##+\s*Dimension\s+\d+|$)/gi;
+  const dims = markdown.match(dimRegex) || [];
+  const priorityNums = [1, 3, 5, 11];
+  const priority: string[] = [];
+  const rest: string[] = [];
+  for (const d of dims) {
+    const numMatch = d.match(/Dimension\s+(\d+)/i);
+    const num = numMatch ? parseInt(numMatch[1]!, 10) : -1;
+    if (priorityNums.includes(num)) priority.push(d);
+    else rest.push(d);
+  }
+  let out = (priority.length > 0 ? priority : dims.slice(0, 4)).join('\n\n').slice(0, maxChars);
+  if (out.length < 5000 && dims.length > 0) {
+    out = dims.join('\n\n').slice(0, maxChars);
+  }
+  if (out.trim().length === 0) return markdown.slice(0, maxChars).trim();
+  return out.trim();
+}
+
 /**
  * Build the user message for the digest pass from the assembled analysis
  * markdown (the stitched 11-dimension output).
  */
 export function buildExecutiveDigestUserMessage(analysisMarkdown: string): string {
-  return `Here is the completed 11-dimension analysis to digest:\n\n${analysisMarkdown.trim()}`;
+  const safe = truncateForDigest(analysisMarkdown, 18000);
+  return `Here is the completed 11-dimension analysis to digest:\n\n${safe.trim()}`;
 }
 
 export interface ExecutiveDigest {
@@ -55,6 +78,8 @@ export interface ExecutiveDigest {
   overview: string;
   /** Tier 4 — multi-paragraph detailed summary. */
   detailedSummary: string;
+  /** How the digest was parsed — headers matched or fallback heuristics. */
+  parsedVia?: 'headers' | 'fallback';
 }
 
 interface TierLocation {
@@ -64,10 +89,10 @@ interface TierLocation {
 }
 
 const DIGEST_HEADERS: Array<{ key: keyof ExecutiveDigest; headerRe: RegExp }> = [
-  { key: 'snapshot', headerRe: /^####\s*0\.1\b[^\n]*/imu },
-  { key: 'overview', headerRe: /^####\s*0\.2\b[^\n]*/imu },
-  { key: 'takeaways', headerRe: /^####\s*0\.3\b[^\n]*/imu },
-  { key: 'detailedSummary', headerRe: /^####\s*0\.4\b[^\n]*/imu },
+  { key: 'snapshot', headerRe: /(?:^|\n)\s*(?:####\s*0\.1\b[^\n]*|(?:snapshot|ملخص\s*سريع|لمحة)\s*[:\n])/imu },
+  { key: 'overview', headerRe: /(?:^|\n)\s*(?:####\s*0\.2\b[^\n]*|(?:overview|نظرة\s*عامة|ملخص\s*عام)\s*[:\n])/imu },
+  { key: 'takeaways', headerRe: /(?:^|\n)\s*(?:####\s*0\.3\b[^\n]*|(?:key\s*takeaways|takeaways|الاستنتاجات|نقاط\s*رئيسية)\s*[:\n])/imu },
+  { key: 'detailedSummary', headerRe: /(?:^|\n)\s*(?:####\s*0\.4\b[^\n]*|(?:detailed\s*summary|تفصيلي|تفاصيل|ملخص\s*مفصل)\s*[:\n])/imu },
 ];
 
 /**
@@ -95,7 +120,28 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
       located.push({ key, start: match.index, headerLen: match[0].length });
     }
   }
-  if (located.length === 0) return null;
+  if (located.length === 0) {
+    const fallback = markdown.trim();
+    if (fallback.length < 20) return null;
+
+    // Reject refusal patterns: model explicitly declined to produce content.
+    if (/^.{0,200}(?:sorry|i\s+cannot|as\s+an\s+ai|unable\s+to\s+comply)/ims.test(fallback)) {
+      return null;
+    }
+
+    // Reject near-empty content: fewer than 3 non-empty lines.
+    const nonEmptyLines = fallback.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (nonEmptyLines.length < 3) return null;
+
+    const lines = fallback.split(/\r?\n/).filter(l => l.trim().length > 0);
+    return {
+      snapshot: lines.slice(0, 2).join(' ').slice(0, 500),
+      takeaways: lines.filter(l => l.trim().startsWith('-') || l.trim().startsWith('•')).slice(0, 10).map(l => l.replace(/^\s*[-*•]\s+/u, '').trim()),
+      overview: lines.slice(0, 6).join('\n'),
+      detailedSummary: fallback.slice(0, 2000),
+      parsedVia: 'fallback',
+    };
+  }
   located.sort((a, b) => a.start - b.start);
 
   const sections: Partial<Record<keyof ExecutiveDigest, string>> = {};
@@ -111,9 +157,10 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
     .filter((line) => line.length > 0);
 
   return {
-    snapshot: sections.snapshot ?? '',
-    takeaways,
-    overview: sections.overview ?? '',
-    detailedSummary: sections.detailedSummary ?? '',
+    snapshot: sections.snapshot ?? markdown.slice(0, 500),
+    takeaways: takeaways.length > 0 ? takeaways : markdown.split('\n').filter(l => l.trim().length > 0).slice(0, 5),
+    overview: sections.overview ?? markdown.slice(0, 1000),
+    detailedSummary: sections.detailedSummary ?? markdown.slice(0, 2000),
+    parsedVia: 'headers',
   };
 }

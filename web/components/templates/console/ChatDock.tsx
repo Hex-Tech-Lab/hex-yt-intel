@@ -9,6 +9,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
+import { TimestampLink } from '@/components/TimestampLink';
 
 export interface ChatDockProps {
   /** Active analysis for grounding new threads (optional). */
@@ -365,6 +366,13 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
+                        a: ({ children, href }) => {
+                          if (href?.startsWith('#t=')) {
+                            const timestamp = href.replace('#t=', '');
+                            return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
+                          }
+                          return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+                        },
                         ul: ({ children }) => <ul className="list-disc list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ul>,
                         ol: ({ children }) => <ol className="list-decimal list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ol>,
                         li: ({ children }) => <li className="text-[12px] leading-relaxed text-[var(--ink-secondary)] pl-0.5">{renderChildren(children)}</li>,
