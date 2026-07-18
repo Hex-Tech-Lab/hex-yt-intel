@@ -461,37 +461,41 @@ export class SupabaseAnalysisAdapter {
     description: string | null;
     analysisMarkdown: string | null;
     status: string;
+    transcript?: string | null;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
-      // Defense-in-depth against cross-video grounding: when a userId is given,
-      // constrain the row to that owner so a conversation can never resolve
-      // grounding from an analysis its owner doesn't hold (even legacy rows).
       let query = service
         .from('analyses')
-        .select('title, channel_title, analysis_markdown, validation_report, billing_status, transcript')
+        .select('title, channel_title, analysis_markdown, validation_report, billing_status, transcript, video_id')
         .eq('id', params.analysisId);
       if (params.userId) {
         query = query.eq('user_id', params.userId);
       }
       const { data, error } = await query.maybeSingle();
 
-      const handlerMap = {
-        ERROR: () => { throw error; },
-        NO_DATA: () => null as null,
-        SUCCESS: () => ({
-          title: data!.title || '', // skipcq: JS-0857
-          channelTitle: data!.channel_title || null, // skipcq: JS-0857
-          description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null, // skipcq: JS-0857
-          analysisMarkdown: data!.analysis_markdown || null, // skipcq: JS-0857
-          status: data!.billing_status || (isPersistedValidationReport(data!.validation_report) ? data!.validation_report.status || 'incomplete' : 'incomplete'), // skipcq: JS-0857
-          transcript: data!.transcript || null, // skipcq: JS-0857
-        }),
-      } as const;
+      if (error) throw error;
+      if (!data) return null;
 
-      if (error) handlerMap.ERROR();
-      if (!data) return handlerMap.NO_DATA();
-      return handlerMap.SUCCESS();
+      let transcript = data.transcript || null;
+
+      if (!transcript && data.video_id) {
+        const { data: txData } = await service
+          .from('transcripts')
+          .select('content')
+          .eq('video_id', data.video_id)
+          .maybeSingle();
+        transcript = txData?.content || null;
+      }
+
+      return {
+        title: data!.title || '',
+        channelTitle: data!.channel_title || null,
+        description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null,
+        analysisMarkdown: data!.analysis_markdown || null,
+        status: data!.billing_status || (isPersistedValidationReport(data!.validation_report) ? data!.validation_report.status || 'incomplete' : 'incomplete'),
+        transcript,
+      };
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'getAnalysisGrounding' },
