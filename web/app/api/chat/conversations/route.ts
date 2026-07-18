@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     const body: unknown = await request.json().catch(() => ({}));
     const payloadSchema = z.object({
       analysisId: z.string().nullable().optional().default(null),
+      videoId: z.string().nullable().optional().default(null),
       title: z.string()
         .transform(val => val.trim())
         .transform(val => val ? val.slice(0, 120) : 'New chat')
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
-    const { analysisId, title } = parsed.data;
+    const { analysisId, videoId, title } = parsed.data;
 
     // Bind a conversation only to an analysis the caller actually owns. Without
     // this, an authenticated user could pass any analysis UUID and ground their
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
       userId: identity.userId,
       analysisId,
       title,
+      videoId,
     });
 
     return NextResponse.json({ conversation }, { status: 201 });

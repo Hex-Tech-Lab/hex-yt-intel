@@ -28,7 +28,7 @@ export class SupabaseChatAdapter {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('chat_conversations')
-        .select('id, user_id, title, analysis_id, created_at, updated_at, last_message_at, analyses(video_id)')
+        .select('id, user_id, title, analysis_id, video_id, created_at, updated_at, last_message_at, analyses(video_id)')
         .eq('user_id', userId)
         .order('last_message_at', { ascending: false })
         .limit(100);
@@ -43,7 +43,7 @@ export class SupabaseChatAdapter {
         userId: r.user_id,
         title: r.title || 'Untitled',
         analysisId: r.analysis_id,
-        videoId: r.analyses?.video_id || null,
+        videoId: r.video_id || r.analyses?.video_id || null,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
         lastMessageAt: r.last_message_at || r.created_at,
@@ -66,13 +66,14 @@ export class SupabaseChatAdapter {
     userId: string;
     analysisId: string | null;
     title: string;
+    videoId?: string | null;
   }): Promise<ChatConversation> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('chat_conversations')
-        .insert({ user_id: params.userId, analysis_id: params.analysisId, title: params.title })
-        .select('id, user_id, title, analysis_id, created_at, updated_at, last_message_at')
+        .insert({ user_id: params.userId, analysis_id: params.analysisId, title: params.title, video_id: params.videoId ?? null })
+        .select('id, user_id, title, analysis_id, video_id, created_at, updated_at, last_message_at')
         .single();
 
       if (error || !data) {
@@ -80,12 +81,13 @@ export class SupabaseChatAdapter {
         throw error || new Error('createConversation returned no row');
       }
 
-      const { id, user_id, title, analysis_id, created_at, updated_at, last_message_at } = data;
+      const { id, user_id, title, analysis_id, video_id, created_at, updated_at, last_message_at } = data;
       return {
         id,
         userId: user_id,
         title: title || 'Untitled',
         analysisId: analysis_id,
+        videoId: video_id || null,
         createdAt: created_at,
         updatedAt: updated_at,
         lastMessageAt: last_message_at || created_at,
@@ -111,7 +113,7 @@ export class SupabaseChatAdapter {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('chat_conversations')
-        .select('id, user_id, title, analysis_id, created_at, updated_at, last_message_at')
+        .select('id, user_id, title, analysis_id, video_id, created_at, updated_at, last_message_at')
         .eq('id', params.conversationId)
         .maybeSingle();
 
@@ -126,6 +128,7 @@ export class SupabaseChatAdapter {
         id: data.id,
         userId: data.user_id,
         analysisId: data.analysis_id,
+        videoId: data.video_id || null,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
       };
