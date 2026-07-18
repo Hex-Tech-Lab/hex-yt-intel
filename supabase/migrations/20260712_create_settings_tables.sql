@@ -36,28 +36,48 @@ alter table public.admin_settings enable row level security;
 alter table public.user_settings enable row level security;
 
 -- RLS Policies for admin_settings (read-only for authenticated users)
-create policy "Allow public read of admin settings"
-  on public.admin_settings
-  for select
-  using (auth.role() = 'authenticated');
+do $$
+begin
+  create policy "Allow public read of admin settings"
+    on public.admin_settings
+    for select
+    using (auth.role() = 'authenticated');
+exception when duplicate_object then null;
+end $$;
 
-create policy "Only service role can update admin settings"
-  on public.admin_settings
-  for update
-  using (auth.role() = 'service_role');
+do $$
+begin
+  create policy "Only service role can update admin settings"
+    on public.admin_settings
+    for update
+    using (auth.role() = 'service_role');
+exception when duplicate_object then null;
+end $$;
 
 -- RLS Policies for user_settings (users can only access their own)
-create policy "Users can read their own settings"
-  on public.user_settings
+do $$
+begin
+  create policy "Users can read their own settings"
+    on public.user_settings
   for select
   using (auth.uid() = user_id);
+exception when duplicate_object then null;
+end $$;
 
-create policy "Users can update their own settings"
-  on public.user_settings
+do $$
+begin
+  create policy "Users can update their own settings"
+    on public.user_settings
   for update
   using (auth.uid() = user_id);
+exception when duplicate_object then null;
+end $$;
 
-create policy "Users can insert their own settings"
-  on public.user_settings
+do $$
+begin
+  create policy "Users can insert their own settings"
+    on public.user_settings
   for insert
   with check (auth.uid() = user_id);
+exception when duplicate_object then null;
+end $$;
