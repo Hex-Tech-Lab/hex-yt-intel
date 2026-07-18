@@ -17,14 +17,43 @@ export async function POST(request: NextRequest) {
     const purged = await SupabaseTranscriptAdapter.purgeExpired();
     console.log('[transcript-purge] purged', purged.length);
 
-    // TODO: Also purge corresponding Redis L1 transcript cache keys.
-    // When a transcript is purged from Supabase, the worker's UpstashCacheAdapter
-    // may still hold a cached copy under key `transcript:${videoId}` (72h TTL).
-    // Add a `DEL transcript:${videoId}` call here via Upstash REST API to ensure
-    // the purge is fully effective across both cache layers.
-    // Example: await fetch(`${UPSTASH_REDIS_REST_URL}/del/transcript:${videoId}`, { headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` } });
+    // Purge corresponding Redis L1 transcript cache keys (72h TTL, set in worker).
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    const redisPurgeResults: { videoId: string; redisDeleted: boolean }[] = [];
 
-    return NextResponse.json({ ok: true, purgedCount: purged.length, purged });
+    if (redisUrl && redisToken) {
+      for (const { videoId } of purged) {
+        try {
+          const response = await fetch(`${redisUrl}/del/transcript:${videoId}`, {
+            headers: { Authorization: `Bearer ${redisToken}` },
+          });
+          const ok = response.ok;
+          redisPurgeResults.push({ videoId, redisDeleted: ok });
+          console.log(
+            `[transcript-purge] Redis L1 ${ok ? 'DELETED' : 'FAILED'} transcript:${videoId}`,
+          );
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          redisPurgeResults.push({ videoId, redisDeleted: false });
+          console.error(`[transcript-purge] Redis L1 DELETE error for transcript:${videoId}: ${msg}`);
+          Sentry.captureException(error, {
+            contexts: { cache: { videoId, key: `transcript:${videoId}` } },
+          });
+        }
+      }
+    } else {
+      console.warn(
+        '[transcript-purge] Skipping Redis L1 purge: UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not configured',
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      purgedCount: purged.length,
+      purged,
+      redisPurgeResults,
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, { contexts: { api: { endpoint: '/api/webhooks/transcript-purge' } } });

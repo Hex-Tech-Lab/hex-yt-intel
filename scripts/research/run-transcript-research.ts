@@ -1,9 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 
-const SERPAPI_KEY = process.env.SERPAPI_API_KEY || 'b642612e4ab181dd0ce3755d9b3a956ff0f862f763ac04626e2677cd262f6a69';
-const EXA_KEY = process.env.EXA_API_KEY || 'bb950b14-dd20-4a22-8fc4-07371edce368';
-const DECODO_USER = process.env.DECODO_FASTSEARCH_USER || 'VTAwMDA0NjA2Mjk6UFdfMTBlOWVkMjdiMzNhMDlkMDQ0YTE3NTUxMDU1YTZlYmU0';
+const SERPAPI_KEY = process.env.SERPAPI_API_KEY;
+const EXA_KEY = process.env.EXA_API_KEY;
+const DECODO_USER = process.env.DECODO_FASTSEARCH_USER;
+
+const REQUIRED_ENV_VARS = ['SERPAPI_API_KEY', 'EXA_API_KEY', 'DECODO_FASTSEARCH_USER'] as const;
 
 interface Result {
   title: string;
@@ -61,7 +63,17 @@ async function exaSearch(query: string): Promise<Result[]> {
   }));
 }
 
+function validateEnv(): void {
+  const missing = REQUIRED_ENV_VARS.filter((v) => !process.env[v]);
+  if (missing.length > 0) {
+    console.error(`Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
 async function main() {
+  validateEnv();
+
   const queries = [
     'youtube transcript timestamp markers best implementation github',
     'ffmpeg scene detection screenshot timestamp python PySceneDetect',
