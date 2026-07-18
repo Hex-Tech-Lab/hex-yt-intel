@@ -469,7 +469,7 @@ export class SupabaseAnalysisAdapter {
       // grounding from an analysis its owner doesn't hold (even legacy rows).
       let query = service
         .from('analyses')
-        .select('title, channel_title, analysis_markdown, validation_report, billing_status')
+        .select('title, channel_title, analysis_markdown, validation_report, billing_status, transcript')
         .eq('id', params.analysisId);
       if (params.userId) {
         query = query.eq('user_id', params.userId);
@@ -485,6 +485,7 @@ export class SupabaseAnalysisAdapter {
           description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null, // skipcq: JS-0857
           analysisMarkdown: data!.analysis_markdown || null, // skipcq: JS-0857
           status: data!.billing_status || (isPersistedValidationReport(data!.validation_report) ? data!.validation_report.status || 'incomplete' : 'incomplete'), // skipcq: JS-0857
+          transcript: data!.transcript || null, // skipcq: JS-0857
         }),
       } as const;
 

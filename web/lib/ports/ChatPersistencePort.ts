@@ -7,6 +7,7 @@ export interface ChatPersistencePort {
     userId: string;
     analysisId: string | null;
     title: string;
+    videoId?: string | null;
   }): Promise<ChatConversation>;
 
   getConversation(params: {
@@ -56,6 +57,7 @@ export interface ChatPersistencePort {
     description: string | null;
     analysisMarkdown: string | null;
     status: string;
+    transcript?: string | null;
   } | null>;
 
   /**

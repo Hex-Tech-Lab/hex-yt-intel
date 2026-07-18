@@ -214,7 +214,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         try {
           const chatStore = useChatStore.getState();
           await chatStore.loadConversations();
-          const existing = chatStore.conversations.find((c) => c.analysisId === data.id || c.videoId === data.videoId);
+          const existing = chatStore.conversations.find((c) => c.videoId === data.videoId);
           if (existing) {
             if (existing.analysisId !== data.id) {
               await chatStore.updateConversationAnalysisId(existing.id, data.id);

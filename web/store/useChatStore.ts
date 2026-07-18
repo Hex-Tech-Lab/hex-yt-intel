@@ -41,7 +41,7 @@ interface ChatState {
 
   loadConversations: () => Promise<void>;
   selectConversation: (id: string) => Promise<void>;
-  newConversation: (opts?: { analysisId?: string | null; title?: string }) => Promise<string | null>;
+  newConversation: (opts?: { analysisId?: string | null; videoId?: string | null; title?: string }) => Promise<string | null>;
   sendMessage: (text: string, opts?: { analysisId?: string | null }) => Promise<void>;
   renameConversation: (id: string, title: string) => Promise<void>;
   updateConversationAnalysisId: (id: string, analysisId: string) => Promise<void>;
@@ -423,7 +423,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       try {
         const { conversation } = await api<{ conversation: ChatConversation }>('/api/chat/conversations', {
           method: 'POST',
-          body: JSON.stringify({ analysisId: opts?.analysisId ?? null, title: opts?.title }),
+          body: JSON.stringify({ analysisId: opts?.analysisId ?? null, videoId: opts?.videoId ?? null, title: opts?.title }),
         });
         set((s) => ({
           conversations: [conversation, ...s.conversations],
