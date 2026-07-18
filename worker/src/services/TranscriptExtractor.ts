@@ -144,8 +144,9 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
       return { videoId, transcript, language: langCode, segments };
     } catch (e) {
-      captureException(e, { tags: { operation: 'transcript-page-html', videoId } });
-      throw e;
+      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
+      captureException(err, { tags: { operation: 'transcript-page-html', videoId } });
+      throw err;
     } finally {
       clearTimeout(timeout);
     }
@@ -176,9 +177,9 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       const data = await response.json() as { results?: Array<{ content?: unknown }> };
       return data.results?.[0]?.content as Record<string, unknown> ?? null;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn(`[transcript] Channel metadata fetch failed for ${channelId}: ${msg}`);
-      captureException(e, { tags: { operation: 'transcript-channel-metadata', channelId } });
+      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
+      console.warn(`[transcript] Channel metadata fetch failed for ${channelId}: ${err.message}`);
+      captureException(err, { tags: { operation: 'transcript-channel-metadata', channelId } });
       return null;
     } finally { clearTimeout(timeout); }
   }
@@ -242,6 +243,9 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       if (!transcript) throw new Error('Empty transcript after processing');
 
       return { videoId, transcript, language: langCode, segments };
+    } catch (e) {
+      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
+      throw err;
     } finally {
       clearTimeout(timeout);
     }
@@ -310,6 +314,9 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       if (first) return { langCode: langCode(first)! };
 
       throw new Error('No captions available for this video');
+    } catch (e) {
+      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
+      throw err;
     } finally {
       clearTimeout(timeout);
     }
@@ -345,8 +352,9 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
       return transcript;
     } catch (e) {
-      captureException(e, { tags: { operation: 'transcript-content-fetch', videoId } });
-      throw e;
+      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
+      captureException(err, { tags: { operation: 'transcript-content-fetch', videoId } });
+      throw err;
     } finally {
       clearTimeout(timeout);
     }
