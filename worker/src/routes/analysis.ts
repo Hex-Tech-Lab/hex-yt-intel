@@ -65,6 +65,7 @@ interface StreamRequest {
   videoId: string;
   analysisId: string;
   transcript: string;
+  segments?: Array<{ start: number; duration: number; text: string }>;
   metadata: {
     title: string;
     channelTitle: string;
@@ -132,17 +133,35 @@ async function verifyStreamToken(
   return { isValid: false, secret: activeSecret, msg };
 }
 
-/** Fetch video transcript if missing or invalid; attempts multiple sources before returning fallback message. */
+/** Fetch video transcript if missing or invalid; attempts cache then multiple sources before returning fallback message. */
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
   channelId?: string,
+  cache?: UpstashCacheAdapter,
 ): Promise<string | undefined> {
   const isPlaceholder = transcript?.includes("Transcript unavailable for this video");
 
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${videoId}`);
+
+    // L1 Redis transcript cache: 72h TTL (3-day compliance window)
+    const CACHE_TTL = 259200;
+    const cacheKey = `transcript:${videoId}`;
+
+    if (cache) {
+      try {
+        const cached = await cache.get(cacheKey);
+        if (cached && cached.trim().length > 0 && !cached.includes("Transcript unavailable")) {
+          console.info(`[analyze-llm-stream] Transcript cache HIT for ${videoId}`);
+          return cached;
+        }
+      } catch {
+        console.warn(`[analyze-llm-stream] Transcript cache GET failed for ${videoId}, proceeding with fetch`);
+      }
+    }
+
     try {
       const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY);
       const [result, channelMeta] = await Promise.all([
@@ -152,6 +171,13 @@ async function fetchTranscriptIfMissing(
       if (result.transcript && result.transcript.trim().length > 0 && !result.transcript.includes("Transcript unavailable")) {
         transcript = result.transcript;
         console.info(`[analyze-llm-stream] Fetch successful for ${videoId}`);
+
+        // Cache the successful transcript fetch
+        if (cache) {
+          cache.set(cacheKey, transcript, CACHE_TTL).catch(() => {
+            console.warn(`[analyze-llm-stream] Transcript cache SET failed for ${videoId}`);
+          });
+        }
       }
       if (channelMeta) {
         console.info(`[analyze-llm-stream] Channel metadata enriched for ${channelId}`);
@@ -161,8 +187,6 @@ async function fetchTranscriptIfMissing(
       if (!transcript) {
         transcript = "[Transcript unavailable for this video - content ingestion failed across all available sources]";
       }
-    } finally {
-      // Clean up any proxy connections if needed
     }
   }
 
@@ -179,6 +203,7 @@ function buildStreamResponse(
   persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
+  cache?: UpstashCacheAdapter,
 ): Response {
   const encoder = new TextEncoder();
   let finalText = "";
@@ -217,6 +242,7 @@ function buildStreamResponse(
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
+        segments: req.segments,
       }).then((result) => {
         clearTimeout(timeoutId ?? null);
         return result;
@@ -237,6 +263,7 @@ function buildStreamResponse(
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
             chunkIndex: req.chunkIndex,
             totalChunks: req.totalChunks,
+            segments: req.segments,
           }));
         }, 15000);
       });
@@ -267,6 +294,7 @@ function buildStreamResponse(
         req.videoId,
         { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY },
         (req.metadata as { channelId?: string }).channelId,
+        cache,
       )]);
 
       const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value : undefined;
@@ -444,10 +472,17 @@ analysis.post("/analyze-llm-stream", async (c) => {
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
 
+  const upstashUrl = c.env.UPSTASH_REDIS_REST_URL;
+  const upstashToken = c.env.UPSTASH_REDIS_REST_TOKEN;
+  const cache =
+    upstashUrl && upstashToken
+      ? new UpstashCacheAdapter({ url: upstashUrl, token: upstashToken })
+      : undefined;
+
   const persistController = new AbortController();
   const httpConnSignal = c.req.raw['signal'];
 
-  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env);
+  return buildStreamResponse(engine, req, signingKey, req.appUrl || c.env.APP_URL, httpConnSignal, persistController, (p) => c.executionCtx.waitUntil(p), c.env, cache);
 });
 
 export default analysis;

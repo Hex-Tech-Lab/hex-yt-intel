@@ -76,7 +76,8 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
   private async fetchFromPageHTML(videoId: string): Promise<TranscriptResult> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    let timeoutError: Error | null = null;
+    const timeout = setTimeout(() => { timeoutError = new Error('Transcript fetch timeout after 15000ms'); controller.abort(timeoutError); }, 15000);
     try {
       const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
       const response = await fetchWithProxy(pageUrl, {
@@ -101,12 +102,13 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
       if (!tracks.length) throw new Error('Empty caption tracks');
 
-      const asrEn = tracks.find(t => t.langCode === 'en' && t.kind === 'asr');
-      const en = tracks.find(t => t.langCode?.startsWith('en'));
+      const preferredLangs = ['en', 'ar', 'en-auto', 'ar-auto'];
+      const asrPref = preferredLangs.map(l => tracks.find(t => t.langCode === l && t.kind === 'asr')).find(Boolean);
+      const langPref = preferredLangs.map(l => tracks.find(t => t.langCode?.startsWith(l.split('-')[0]!))).find(Boolean);
       const asr = tracks.find(t => t.kind === 'asr' && t.langCode);
       const first = tracks[0];
 
-      const chosen = asrEn || en || asr || first;
+      const chosen = asrPref || langPref || asr || first;
       if (!chosen?.baseUrl) throw new Error('No suitable caption track');
 
       const langCode = chosen.langCode || 'en';
@@ -122,20 +124,25 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       if (!transcriptResponse.ok) throw new Error(`Transcript content fetch failed: ${transcriptResponse.status}`);
 
       const captionData = await transcriptResponse.json() as {
-        events?: Array<{ segs?: Array<{ utf8?: string }> }>;
+        events?: Array<{ segs?: Array<{ utf8?: string }>, tStartMs?: number, dDurationMs?: number }>;
       };
 
       if (!captionData.events?.length) throw new Error('Empty transcript data');
 
-      const transcript = captionData.events
-        .map(e => e.segs?.map(s => s.utf8 || '').join('') || '')
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      let cumulative = 0;
+      const segments = captionData.events.filter(e => e.segs).map(e => {
+        const text = e.segs!.map(s => s.utf8 || '').join('').replace(/\s+/g, ' ').trim();
+        const start = typeof e.tStartMs === 'number' ? e.tStartMs / 1000 : cumulative * 3;
+        const duration = typeof e.dDurationMs === 'number' ? e.dDurationMs / 1000 : 3;
+        cumulative++;
+        return { start, duration, text };
+      }).filter(s => s.text.length > 0);
+
+      const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
 
       if (!transcript) throw new Error('Empty transcript after processing');
 
-      return { videoId, transcript, language: langCode };
+      return { videoId, transcript, language: langCode, segments };
     } catch (e) {
       captureException(e, { tags: { operation: 'transcript-page-html', videoId } });
       throw e;
@@ -147,7 +154,8 @@ export class TranscriptExtractor implements TranscriptProviderPort {
   async fetchChannelMetadata(channelId: string): Promise<Record<string, unknown> | null> {
     if (!this.decodoApiKey) return null;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    let timeoutError: Error | null = null;
+    const timeout = setTimeout(() => { timeoutError = new Error('Channel metadata fetch timeout after 15000ms'); controller.abort(timeoutError); }, 15000);
     try {
       const response = await fetchWithProxy('https://scraper-api.decodo.com/v2/scrape', {
         method: 'POST',
@@ -178,7 +186,8 @@ export class TranscriptExtractor implements TranscriptProviderPort {
   private async fetchWithDecodo(videoId: string): Promise<TranscriptResult> {
     if (!this.decodoApiKey) throw new Error('Decodo API key not configured');
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    let timeoutError: Error | null = null;
+    const timeout = setTimeout(() => { timeoutError = new Error('Transcript fetch timeout after 30000ms'); controller.abort(timeoutError); }, 30000);
     try {
       const response = await fetchWithProxy('https://scraper-api.decodo.com/v2/scrape', {
         method: 'POST',
@@ -201,32 +210,38 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       if (!content) throw new Error('Decodo returned empty content');
 
       let langCode = 'en';
-      let events: Array<{ segs?: Array<{ utf8?: string }> }> | undefined;
+      let events: Array<{ segs?: Array<{ utf8?: string }>, tStartMs?: number, dDurationMs?: number, tStart?: number, dDuration?: number }> | undefined;
 
       const autoGen = content.auto_generated as Record<string, { events?: typeof events }> | undefined;
       if (autoGen && typeof autoGen === 'object') {
         const langs = Object.keys(autoGen);
-        langCode = langs.includes('en') ? 'en' : (langs[0] ?? 'en');
+        const preferred = ['en', 'ar', 'en-auto', 'a-en'];
+        langCode = preferred.find(l => langs.includes(l)) || langs[0] || 'en';
         events = autoGen[langCode]?.events;
       }
       if (!events) {
         const langs = Object.keys(content).filter(k => typeof content[k] === 'object');
-        langCode = langs.includes('en') ? 'en' : (langs[0] ?? 'en');
+        const preferred = ['en', 'ar', 'en-auto', 'a-en', 'ar-auto'];
+        langCode = preferred.find(l => langs.includes(l)) || (langs.includes('en') ? 'en' : (langs[0] ?? 'en'));
         const langData = content[langCode] as { events?: typeof events } | undefined;
         events = langData?.events;
       }
       if (!events?.length) throw new Error('No transcript events found');
 
-      const transcript = events
-        .filter(e => e.segs)
-        .map(e => e.segs!.map(s => s.utf8 || '').join(''))
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      let cumulative = 0;
+      const segments = events.filter(e => e.segs).map(e => {
+        const text = e.segs!.map(s => s.utf8 || '').join('').replace(/\s+/g, ' ').trim();
+        const start = typeof e.tStartMs === 'number' ? e.tStartMs / 1000 : typeof e.tStart === 'number' ? e.tStart : cumulative * 3;
+        const duration = typeof e.dDurationMs === 'number' ? e.dDurationMs / 1000 : typeof e.dDuration === 'number' ? e.dDuration : 3;
+        cumulative++;
+        return { start, duration, text };
+      }).filter(s => s.text.length > 0);
+
+      const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
 
       if (!transcript) throw new Error('Empty transcript after processing');
 
-      return { videoId, transcript, language: langCode };
+      return { videoId, transcript, language: langCode, segments };
     } finally {
       clearTimeout(timeout);
     }
@@ -242,7 +257,8 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
   private async fetchCaptionMetadata(videoId: string): Promise<{ langCode: string }> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    let timeoutError: Error | null = null;
+    const timeout = setTimeout(() => { timeoutError = new Error('Caption metadata fetch timeout after 10000ms'); controller.abort(timeoutError); }, 10000);
     try {
       const metadataUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&type=list`;
       const response = await fetchWithProxy(metadataUrl, {
@@ -301,7 +317,8 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
   private async fetchTranscriptContent(videoId: string, langCode: string): Promise<string> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    let timeoutError: Error | null = null;
+    const timeout = setTimeout(() => { timeoutError = new Error('Transcript content fetch timeout after 10000ms'); controller.abort(timeoutError); }, 10000);
     try {
       const transcriptUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${langCode}&fmt=json`;
       const response = await fetchWithProxy(transcriptUrl, {

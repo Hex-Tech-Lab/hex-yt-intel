@@ -21,6 +21,7 @@ export interface PersistOptions {
   validate12D: (text: string) => boolean;
   chunkIndex?: number;
   totalChunks?: number;
+  segments?: Array<{ start: number; duration: number; text: string }>;
 }
 
 const rawFetch = fetch;
@@ -101,6 +102,7 @@ export class PersistService {
     exp: number;
     chunkIndex?: number;
     totalChunks?: number;
+    segments?: Array<{ start: number; duration: number; text: string }>;
   }): Promise<boolean> {
     const maxRetries = 2;
     for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {
@@ -121,6 +123,7 @@ export class PersistService {
             status: params.status,
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,
+            segments: params.segments,
           }),
         });
         if (persistRes.ok) return true;
@@ -145,6 +148,7 @@ export class PersistService {
     appUrl: string;
     validate12D: (text: string) => boolean;
     status: 'failed' | 'interrupted';
+    segments?: Array<{ start: number; duration: number; text: string }>;
   }): Promise<void> {
     let markdown = options.finalText;
     let jsonPayload: Record<string, unknown> | null = null;
@@ -187,6 +191,7 @@ export class PersistService {
             contentSig,
             exp,
             status: options.status,
+            segments: options.segments,
           }),
         });
         return;

@@ -3,6 +3,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { preprocessMarkdown } from '@/lib/utils/format';
+import { TimestampLink } from '@/components/TimestampLink';
 
 interface SelectedDimensionReadoutProps {
   dimension: { label: string; content?: string; icon: string } | null;
@@ -61,7 +62,13 @@ export function SelectedDimensionReadout({ dimension }: SelectedDimensionReadout
                 </blockquote>
               ),
               hr: () => <hr className="my-4 border-0 border-t border-[var(--line-faint)]" />,
-              a: ({ children, href }) => <a href={href} className="text-[var(--accent)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+              a: ({ children, href }) => {
+                if (href?.startsWith('#t=')) {
+                  const timestamp = href.replace('#t=', '');
+                  return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
+                }
+                return <a href={href} className="text-[var(--accent)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>;
+              },
             }}
           >
             {preprocessMarkdown(dimension.content)}
