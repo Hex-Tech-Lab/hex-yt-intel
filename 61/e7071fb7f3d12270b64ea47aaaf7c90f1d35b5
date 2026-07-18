@@ -1,0 +1,20 @@
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_179e886c5be967::t_1f55eb217605ba 480,482
+  s_179e886c5be967::t_6108768b30a9b4 470
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "61e7071fb7f3d12270b64ea47aaaf7c90f1d35b5",
+  "prompts": {},
+  "sessions": {
+    "s_179e886c5be967": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_092b7ea68ffeTLU38o4brka0wu",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
