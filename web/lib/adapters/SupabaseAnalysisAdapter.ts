@@ -467,7 +467,7 @@ export class SupabaseAnalysisAdapter {
       const service = getSupabaseServiceClient();
       let query = service
         .from('analyses')
-        .select('title, channel_title, analysis_markdown, validation_report, billing_status, transcript, video_id')
+        .select('title, channel_title, analysis_markdown, validation_report, billing_status, video_id')
         .eq('id', params.analysisId);
       if (params.userId) {
         query = query.eq('user_id', params.userId);
@@ -477,9 +477,9 @@ export class SupabaseAnalysisAdapter {
       if (error) throw error;
       if (!data) return null;
 
-      let transcript = data.transcript || null;
+      let transcript: string | null = null;
 
-      if (!transcript && data.video_id) {
+      if (data.video_id) {
         const { data: txData } = await service
           .from('transcripts')
           .select('content')
