@@ -94,7 +94,7 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
   }> = [
     { id: 'snapshot', label: 'Snapshot', content: data?.snapshot ?? '', type: 'text' },
     { id: 'overview', label: 'Overview', content: data?.overview ?? '', type: 'paragraphs' },
-    { id: 'takeaways', label: 'Key Takeaways', content: data?.keyTakeaways.join('\n') ?? '', type: 'bullets' },
+    { id: 'takeaways', label: 'Key Takeaways', content: data?.keyTakeaways?.join('\n') ?? '', type: 'bullets' },
     { id: 'detailed', label: 'Detailed Summary', content: data?.detailedSummary ?? '', type: 'paragraphs' },
   ];
 

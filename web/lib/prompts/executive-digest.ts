@@ -162,7 +162,7 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
       snapshot: lines.slice(0, 2).join(' ').slice(0, 500),
       takeaways,
       overview: lines.slice(2, 8).join('\n'),
-      detailedSummary: '## Summary\n\n' + fallback.slice(0, 2000),
+      detailedSummary: fallback.slice(0, 2000),
       parsedVia: 'fallback',
     };
   }

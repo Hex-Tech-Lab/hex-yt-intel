@@ -493,7 +493,7 @@ export class SupabaseAnalysisAdapter {
         channelTitle: data!.channel_title || null,
         description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null,
         analysisMarkdown: data!.analysis_markdown || null,
-        status: data!.billing_status || (isPersistedValidationReport(data!.validation_report) ? data!.validation_report.status || 'incomplete' : 'incomplete'),
+        status: data!.validation_report?.validation_status || data!.billing_status || data!.validation_report?.status || 'incomplete',
         transcript,
       };
     } catch (error: any) {
