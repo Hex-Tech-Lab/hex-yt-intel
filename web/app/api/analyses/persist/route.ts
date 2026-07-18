@@ -169,8 +169,8 @@ function stitchChunksIntoPayload(
     schemaVersion: '2.0',
     persona: stitchedPersona || {
       primary: { id: 'consultant', label: 'Consultant', weight: 1.0 },
-      cognitiveLenses: [],
-      selectionRationale: ''
+      cognitiveLenses: ['default'],
+      selectionRationale: 'Fallback persona — no persona data received from analysis chunks'
     },
     dimensions: cleanDimensions,
     knowledgeGraph: {
@@ -471,6 +471,23 @@ export async function POST(request: NextRequest) {
           }),
           2
         );
+
+        // Store transcript segments as soon as the first chunk arrives.
+        // This ensures transcripts are available even for partial/timeout analyses
+        // where the non-chunk finalization path (lines 853-864) is never reached.
+        if (segments && segments.length > 0) {
+          const transcriptText = segments.map((s: any) => s.text || '').join(' ').trim();
+          await SupabaseTranscriptAdapter.upsertTranscript({
+            videoId,
+            content: transcriptText || markdown,
+            segments,
+            language: 'en',
+            hash: row.transcriptHash || undefined,
+          }).catch(e => {
+            Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_transcript_chunk', analysisId } } });
+            console.warn('[analyses/persist] Failed to upsert transcript segments in chunk path', { analysisId, error: String(e) });
+          });
+        }
 
         // Verify chunk completeness immediately after persisting chunk
         const chunks = await retryWithBackoff(

@@ -269,6 +269,25 @@ export class SupabaseChatAdapter {
         .single();
 
       if (error || !data) {
+        if (error?.code === '23505') {
+          const { data: existing } = await service
+            .from('chat_messages')
+            .select('id, conversation_id, role, content, created_at, client_msg_id, parent_message_id')
+            .eq('parent_message_id', params.parentMessageId)
+            .eq('role', 'assistant')
+            .maybeSingle();
+          if (existing) {
+            return {
+              id: existing.id,
+              conversationId: existing.conversation_id,
+              role: existing.role,
+              content: existing.content,
+              createdAt: existing.created_at,
+              clientMsgId: existing.client_msg_id ?? null,
+              parentMessageId: existing.parent_message_id ?? null,
+            };
+          }
+        }
         console.error('[SupabaseChatAdapter] createMessage failed:', error?.message);
         throw error || new Error('createMessage returned no row');
       }
