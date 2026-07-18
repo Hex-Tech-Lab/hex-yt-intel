@@ -106,7 +106,7 @@ export function calculateDynamicBudget(
   genre: string
 ): number {
   const L = durationSeconds / 60;
-  let alpha = 0.8, beta = 12, gamma = 3, delta = 2;
+  const alpha = 0.8, beta = 12, gamma = 3, delta = 2;
   let factor = 1;
   let minM = 8, maxM = 150;
 

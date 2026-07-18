@@ -153,7 +153,7 @@ export function linkifyTimestamps(markdown: string): string {
   const tsRegex = /(?:\[|\()?((?:\d{1,2}:)?\d{1,2}:\d{2})(?:\]|\))?/g;
   const isoDatePattern = /\d{4}-\d{2}-\d{2}/;
 
-  for (let line of lines) {
+  for (const line of lines) {
     if (line.trim().startsWith('```')) {
       inFence = !inFence;
       out.push(line);
