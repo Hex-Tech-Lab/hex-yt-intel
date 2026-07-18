@@ -96,6 +96,18 @@ const DIGEST_HEADERS: Array<{ key: keyof ExecutiveDigest; headerRe: RegExp }> = 
 ];
 
 /**
+ * Recursively strip leading whitespace and bullet markers (`- `, `* `, `• `).
+ * Handles sub-bullet leakage: "  - - nested item" → "nested item".
+ */
+function stripBullets(line: string): string {
+  let stripped = line.replace(/^\s+/u, '');
+  while (stripped.startsWith('- ') || stripped.startsWith('* ') || stripped.startsWith('• ')) {
+    stripped = stripped.slice(2).trimStart();
+  }
+  return stripped;
+}
+
+/**
  * Parse the four `#### 0.x` tiers out of a digest completion. Returns null if
  * none of the tiers are present (so callers can treat the digest as absent
  * rather than render an empty card). Tolerant of a leading ```-fence and of the
@@ -134,11 +146,23 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
     if (nonEmptyLines.length < 3) return null;
 
     const lines = fallback.split(/\r?\n/).filter(l => l.trim().length > 0);
+
+    const rawTakeaways = lines
+      .filter(l => {
+        const trimmed = l.replace(/^\s+/u, '');
+        return trimmed.startsWith('-') || trimmed.startsWith('•');
+      })
+      .slice(0, 10)
+      .map(stripBullets);
+
+    // Fallback: if no bullet lines found, use first 3-5 non-empty lines as takeaways
+    const takeaways = rawTakeaways.length > 0 ? rawTakeaways : lines.slice(0, 5).map(stripBullets);
+
     return {
       snapshot: lines.slice(0, 2).join(' ').slice(0, 500),
-      takeaways: lines.filter(l => l.trim().startsWith('-') || l.trim().startsWith('•')).slice(0, 10).map(l => l.replace(/^\s*[-*•]\s+/u, '').trim()),
-      overview: lines.slice(0, 6).join('\n'),
-      detailedSummary: fallback.slice(0, 2000),
+      takeaways,
+      overview: lines.slice(2, 8).join('\n'),
+      detailedSummary: '## Summary\n\n' + fallback.slice(0, 2000),
       parsedVia: 'fallback',
     };
   }
@@ -153,7 +177,7 @@ export function parseExecutiveDigest(raw: string | null | undefined): ExecutiveD
 
   const takeaways = (sections.takeaways ?? '')
     .split(/\r?\n/u)
-    .map((line) => line.replace(/^\s*[-*•]\s+/u, '').trim())
+    .map(stripBullets)
     .filter((line) => line.length > 0);
 
   return {

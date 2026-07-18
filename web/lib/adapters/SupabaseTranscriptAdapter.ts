@@ -43,8 +43,6 @@ export class SupabaseTranscriptAdapter {
         segments: params.segments,
         language: params.language,
         transcript_hash: params.hash,
-        created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
         last_accessed_at: new Date().toISOString(),
       }, { onConflict: 'video_id' });
     if (error) {

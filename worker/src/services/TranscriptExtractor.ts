@@ -76,13 +76,12 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
   private async fetchFromPageHTML(videoId: string): Promise<TranscriptResult> {
     const controller = new AbortController();
-    let timeoutError: Error | null = null;
-    const timeout = setTimeout(() => { timeoutError = new Error('Transcript fetch timeout after 15000ms'); controller.abort(timeoutError); }, 15000);
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
     try {
       const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
       const response = await fetchWithProxy(pageUrl, {
         headers: { 'User-Agent': getRandomUserAgent() },
-        signal: controller.signal,
+        signal,
       }, this.residentialProxyUrl);
       if (!response.ok) throw new Error(`Page fetch failed: ${response.status}`);
 
@@ -144,23 +143,21 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
       return { videoId, transcript, language: langCode, segments };
     } catch (e) {
-      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
-      captureException(err, { tags: { operation: 'transcript-page-html', videoId } });
-      throw err;
+      captureException(e, { tags: { operation: 'transcript-page-html', videoId } });
+      throw e;
     } finally {
-      clearTimeout(timeout);
+      controller.abort();
     }
   }
 
   async fetchChannelMetadata(channelId: string): Promise<Record<string, unknown> | null> {
     if (!this.decodoApiKey) return null;
     const controller = new AbortController();
-    let timeoutError: Error | null = null;
-    const timeout = setTimeout(() => { timeoutError = new Error('Channel metadata fetch timeout after 15000ms'); controller.abort(timeoutError); }, 15000);
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
     try {
       const response = await fetchWithProxy('https://scraper-api.decodo.com/v2/scrape', {
         method: 'POST',
-        signal: controller.signal,
+        signal,
         headers: {
           'Authorization': `Basic ${this.decodoApiKey}`,
           'Content-Type': 'application/json',
@@ -177,22 +174,21 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       const data = await response.json() as { results?: Array<{ content?: unknown }> };
       return data.results?.[0]?.content as Record<string, unknown> ?? null;
     } catch (e) {
-      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
-      console.warn(`[transcript] Channel metadata fetch failed for ${channelId}: ${err.message}`);
-      captureException(err, { tags: { operation: 'transcript-channel-metadata', channelId } });
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`[transcript] Channel metadata fetch failed for ${channelId}: ${msg}`);
+      captureException(e, { tags: { operation: 'transcript-channel-metadata', channelId } });
       return null;
-    } finally { clearTimeout(timeout); }
+    } finally { controller.abort(); }
   }
 
   private async fetchWithDecodo(videoId: string): Promise<TranscriptResult> {
     if (!this.decodoApiKey) throw new Error('Decodo API key not configured');
     const controller = new AbortController();
-    let timeoutError: Error | null = null;
-    const timeout = setTimeout(() => { timeoutError = new Error('Transcript fetch timeout after 30000ms'); controller.abort(timeoutError); }, 30000);
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]);
     try {
       const response = await fetchWithProxy('https://scraper-api.decodo.com/v2/scrape', {
         method: 'POST',
-        signal: controller.signal,
+        signal,
         headers: {
           'Authorization': `Basic ${this.decodoApiKey}`,
           'Content-Type': 'application/json',
@@ -244,10 +240,9 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
       return { videoId, transcript, language: langCode, segments };
     } catch (e) {
-      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
-      throw err;
+      throw e;
     } finally {
-      clearTimeout(timeout);
+      controller.abort();
     }
   }
 
@@ -261,13 +256,12 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
   private async fetchCaptionMetadata(videoId: string): Promise<{ langCode: string }> {
     const controller = new AbortController();
-    let timeoutError: Error | null = null;
-    const timeout = setTimeout(() => { timeoutError = new Error('Caption metadata fetch timeout after 10000ms'); controller.abort(timeoutError); }, 10000);
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]);
     try {
       const metadataUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&type=list`;
       const response = await fetchWithProxy(metadataUrl, {
         headers: { 'User-Agent': getRandomUserAgent() },
-        signal: controller.signal,
+        signal,
       }, this.residentialProxyUrl);
       if (!response.ok) throw new Error(`Caption metadata fetch failed: ${response.status}`);
       const metadataText = await response.text();
@@ -315,22 +309,20 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
       throw new Error('No captions available for this video');
     } catch (e) {
-      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
-      throw err;
+      throw e;
     } finally {
-      clearTimeout(timeout);
+      controller.abort();
     }
   }
 
   private async fetchTranscriptContent(videoId: string, langCode: string): Promise<string> {
     const controller = new AbortController();
-    let timeoutError: Error | null = null;
-    const timeout = setTimeout(() => { timeoutError = new Error('Transcript content fetch timeout after 10000ms'); controller.abort(timeoutError); }, 10000);
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]);
     try {
       const transcriptUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${langCode}&fmt=json`;
       const response = await fetchWithProxy(transcriptUrl, {
         headers: { 'User-Agent': getRandomUserAgent() },
-        signal: controller.signal,
+        signal,
       }, this.residentialProxyUrl);
       if (!response.ok) throw new Error(`Transcript content fetch failed: ${response.status}`);
 

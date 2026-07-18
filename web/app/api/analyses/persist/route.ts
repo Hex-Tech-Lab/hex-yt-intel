@@ -906,10 +906,14 @@ export async function POST(request: NextRequest) {
         cacheKey,
       });
 
-      await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
-        Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
-        console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
-      });
+      const statusStr = status as string;
+      const isNonChunkValid = valid !== false && statusStr !== 'failed' && statusStr !== 'interrupted';
+      if (isNonChunkValid) {
+        await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
+          console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
+        });
+      }
 
       if (transcriptAvailable) {
         await publishValidationTask({
