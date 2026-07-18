@@ -1,0 +1,19 @@
+web/app/api/analyses/[id]/route.ts
+  s_179e886c5be967::t_009ef544d29c3a 76,80-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "abf8c2e416d2232e2cb3d2dd6b6eb805746614e7",
+  "prompts": {},
+  "sessions": {
+    "s_179e886c5be967": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_092b7ea68ffeTLU38o4brka0wu",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
