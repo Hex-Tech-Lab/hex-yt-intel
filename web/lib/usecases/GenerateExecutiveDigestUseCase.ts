@@ -21,7 +21,7 @@ export interface GenerateExecutiveDigestParams {
 }
 
 export type GenerateExecutiveDigestResult =
-  | { type: 'success'; digest: StoredExecutiveDigest; cached: boolean }
+  | { type: 'success'; digest: StoredExecutiveDigest; cached: boolean; isTemporary?: boolean }
   | { type: 'error'; code: string; status: number; message: string };
 
 /**
@@ -86,11 +86,21 @@ export class GenerateExecutiveDigestUseCase {
       return { type: 'error', code: 'ERR_DIGEST_UNPARSEABLE', status: 502, message: 'Digest could not be parsed' };
     }
 
+    const isFallback = parsed.parsedVia === 'fallback';
+
     const digest: StoredExecutiveDigest = {
       ...parsed,
       model,
       generatedAt: new Date().toISOString(),
     };
+
+    // Fallback digests are not persisted — they are transient and returned
+    // only for client display. Refusals and near-empty text are already
+    // rejected by the parser, so reaching here means we have something
+    // worth showing but not storing.
+    if (isFallback) {
+      return { type: 'success', digest, cached: false, isTemporary: true };
+    }
 
     const saved = await this.persistence.saveExecutiveDigest({ analysisId, userId, digest });
     if (!saved) {

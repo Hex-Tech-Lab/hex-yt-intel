@@ -98,7 +98,109 @@ export function preprocessMarkdown(content: string): string {
     }
   }
 
-  return lines.join('\n');
+  let contentWithTables = lines.join('\n');
+  contentWithTables = linkifyTimestamps(contentWithTables);
+
+  return contentWithTables;
+}
+
+export function parseTimestampToSeconds(ts: string): number {
+  const parts = ts.split(':').map(p => parseInt(p, 10)).filter(n => !isNaN(n));
+  if (parts.length === 0) return 0;
+  const multipliers = [3600, 60, 1];
+  let total = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const mult = multipliers[multipliers.length - parts.length + i] || 1;
+    total += (parts[i] || 0) * mult;
+  }
+  return total;
+}
+
+function findBacktickSpans(line: string): [number, number][] {
+  const spans: [number, number][] = [];
+  let i = 0;
+  while (i < line.length) {
+    const start = line.indexOf('`', i);
+    if (start === -1) break;
+    const end = line.indexOf('`', start + 1);
+    if (end === -1) break;
+    spans.push([start, end]);
+    i = end + 1;
+  }
+  return spans;
+}
+
+function findMarkdownLinkSpans(line: string): [number, number][] {
+  const spans: [number, number][] = [];
+  const linkRegex = /\[([^\]]*)\]\(([^)]*)\)/g;
+  let m;
+  while ((m = linkRegex.exec(line)) !== null) {
+    spans.push([m.index, m.index + m[0].length - 1]);
+  }
+  return spans;
+}
+
+function isInsideSpan(offset: number, length: number, spans: [number, number][]): boolean {
+  return spans.some(([start, end]) => offset >= start && offset + length - 1 <= end);
+}
+
+export function linkifyTimestamps(markdown: string): string {
+  if (!markdown) return '';
+  const lines = markdown.split('\n');
+  let inFence = false;
+  const out: string[] = [];
+
+  const tsRegex = /(?:\[|\()?((?:\d{1,2}:)?\d{1,2}:\d{2})(?:\]|\))?/g;
+  const isoDatePattern = /\d{4}-\d{2}-\d{2}/;
+
+  for (const line of lines) {
+    if (line.trim().startsWith('```')) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+    if (inFence) {
+      out.push(line);
+      continue;
+    }
+    // skip if line contains ISO datetime pattern (e.g. 2024-01-15T16:30:00)
+    if (isoDatePattern.test(line)) {
+      out.push(line);
+      continue;
+    }
+
+    const backtickSpans = findBacktickSpans(line);
+    const linkSpans = findMarkdownLinkSpans(line);
+
+    const replaced = line.replace(tsRegex, (match, p1, offset) => {
+      if (!p1) return match;
+      const clean = p1.trim();
+      if (match.includes('](#t=')) return match;
+
+      // skip if inside backtick-delimited inline code
+      if (isInsideSpan(offset, match.length, backtickSpans)) return match;
+      // skip if inside existing markdown link [...](...)
+      if (isInsideSpan(offset, match.length, linkSpans)) return match;
+
+      // reject invalid time parts (seconds or minutes ≥ 60)
+      const parts = clean.split(':');
+      if (parts.length === 3) {
+        const mm = parseInt(parts[1]!, 10);
+        const ss = parseInt(parts[2]!, 10);
+        if (mm >= 60 || ss >= 60) return match;
+      } else if (parts.length === 2) {
+        const mm = parseInt(parts[0]!, 10);
+        const ss = parseInt(parts[1]!, 10);
+        if (mm >= 60 || ss >= 60) return match;
+      }
+
+      const seconds = parseTimestampToSeconds(clean);
+      if (seconds < 0 || seconds > 24 * 3600) return match;
+      return `[⏱ ${clean}](#t=${seconds})`;
+    });
+    out.push(replaced);
+  }
+  return out.join('\n');
 }
 
 /**

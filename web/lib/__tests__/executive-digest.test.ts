@@ -9,15 +9,15 @@ const SAMPLE = [
   '#### 0.1 Snapshot',
   'A concise recipe walkthrough for a classic vanilla cake, aimed at home bakers.',
   '',
-  '#### 0.2 Key Takeaways',
-  '- Uses 2 cups flour and 1½ cups sugar',
-  '* Cream butter before adding eggs',
-  '• Bake at 350°F for 30 minutes',
-  '',
-  '#### 0.3 Overview',
+  '#### 0.2 Overview',
   'The video opens with ingredients.',
   '',
   'It then walks through mixing and baking, closing with frosting options.',
+  '',
+  '#### 0.3 Key Takeaways',
+  '- Uses 2 cups flour and 1½ cups sugar',
+  '* Cream butter before adding eggs',
+  '• Bake at 350°F for 30 minutes',
 ].join('\n');
 
 describe('parseExecutiveDigest', () => {
@@ -58,8 +58,8 @@ describe('parseExecutiveDigest', () => {
     expect(digest).not.toBeNull();
     if (!digest) return;
     expect(digest.snapshot).toContain('Only the snapshot');
-    expect(digest.takeaways).toHaveLength(0);
-    expect(digest.overview).toBe('');
+    expect(digest.takeaways).toHaveLength(2); // fallback: first 5 non-empty lines
+    expect(digest.overview).toContain('Only the snapshot'); // fallback: raw markdown
   });
 });
 

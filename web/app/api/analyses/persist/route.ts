@@ -10,6 +10,7 @@ import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
 import { publishValidationTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { SupabaseTranscriptAdapter } from '@/lib/adapters/SupabaseTranscriptAdapter';
 import * as Sentry from '@sentry/nextjs';
 import { PersistedValidationReport, ValidationReportStatus, isPersistedValidationReport } from '@/lib/types/validation-report';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
@@ -124,7 +125,7 @@ const backoffDelay = (attempt: number): Promise<void> =>
 function stitchChunksIntoPayload(
   chunkMap: Map<number, any>,
   resolvedTotal: number
-): { payload: UCISPayloadV2 | undefined; markdown: string } {
+): { payload: UCISPayloadV2 | undefined; markdown: string; validationPassed: boolean } {
   const stitchedDimensions: any[] = [];
   let stitchedPersona: any = null;
   let stitchedClassification: any = null;
@@ -157,7 +158,7 @@ function stitchChunksIntoPayload(
 
   // Only stitch if we have dimensions to work with
   if (stitchedDimensions.length === 0) {
-    return { payload: undefined, markdown: '' };
+    return { payload: undefined, markdown: '', validationPassed: false };
   }
 
   const cleanDimensions = stitchedDimensions
@@ -213,21 +214,31 @@ function stitchChunksIntoPayload(
   }
 
   if (!parseResult.success) {
-    // Fail LOUDLY — a silent empty return here previously wiped completed analyses.
-    console.error('[analyses/persist] Stitched payload failed schema validation', {
+    console.error('[analyses/persist] Stitched payload failed schema validation — preserving partial markdown', {
       dimNumbers: cleanDimensions.map(d => d.number),
       issues: parseResult.error.issues.slice(0, 10),
     });
-    Sentry.captureMessage('analysis-persist: stitched payload failed schema validation', {
-      level: 'error',
+    Sentry.captureMessage('analysis-persist: stitched payload failed schema validation (partial preserved)', {
+      level: 'warning',
       tags: { operation: 'analysis-persist', phase: 'stitch_validation' },
       extra: { issues: parseResult.error.issues.slice(0, 20) },
     });
-    return { payload: undefined, markdown: '' };
+    try {
+      const partialMarkdown = reconstructMarkdown(stitchedPayload);
+      if (partialMarkdown && partialMarkdown.trim().length > 0) {
+        return { payload: stitchedPayload, markdown: partialMarkdown, validationPassed: false };
+      }
+    } catch (partialErr) {
+      const msg = partialErr instanceof Error ? partialErr.message : String(partialErr);
+      console.error('[analyses/persist] partial markdown reconstruction failed:', msg);
+      Sentry.captureException(partialErr, { tags: { phase: 'partial_stitch' } });
+    }
+    const fallbackMarkdown = cleanDimensions.map((d) => `## Dimension ${d.number} ${d.name || ''}\n\n${(d.content || '').trim()}`).join('\n\n---\n\n');
+    return { payload: stitchedPayload, markdown: fallbackMarkdown || `# Partial Analysis\n\n${cleanDimensions.length} dimensions recovered`, validationPassed: false };
   }
 
   const stitchedMarkdown = reconstructMarkdown(stitchedPayload);
-  return { payload: stitchedPayload, markdown: stitchedMarkdown };
+  return { payload: stitchedPayload, markdown: stitchedMarkdown, validationPassed: true };
 }
 
 /**
@@ -322,6 +333,11 @@ export async function POST(request: NextRequest) {
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
       }).optional(),
+      segments: z.array(z.object({
+        start: z.number(),
+        duration: z.number(),
+        text: z.string(),
+      })).optional(),
     });
 
     const parsedBody = bodySchema.safeParse(body);
@@ -345,7 +361,8 @@ export async function POST(request: NextRequest) {
         exp,
         status,
         chunkIndex,
-        totalChunks
+        totalChunks,
+        segments,
       } = parsedBody.data;
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
@@ -612,26 +629,18 @@ export async function POST(request: NextRequest) {
           const stitchResult = stitchChunksIntoPayload(chunkMap, resolvedTotal);
           const stitchedPayload = stitchResult.payload;
           const stitchedMarkdown = stitchResult.markdown;
-          const isStitchedValid = stitchResult.payload !== undefined;
-
-          if (!isStitchedValid) {
-            console.warn('[analyses/persist] Stitched payload failed or has no dimensions', {
-              analysisId,
-              videoId,
-              chunkCount: finalChunks.length
-            });
-          }
+          const isStitchedValid = stitchResult.validationPassed;
 
           const { dimensionStatus, validationStatus: computedValidationStatus, billingStatus } = buildDimensionStatus(stitchedPayload);
-          const finalStatus = computedValidationStatus;
+          const finalStatus = isStitchedValid ? computedValidationStatus : 'partial';
           const newReport: PersistedValidationReport = {
             ...priorReport,
             validation_status: finalStatus,
             status: finalStatus,
-            billing_status: billingStatus,
+            billing_status: isStitchedValid ? billingStatus : 'failed',
             dimension_status: dimensionStatus,
             model_used: model || null,
-            valid: finalStatus === 'done' && isStitchedValid,
+            valid: isStitchedValid && finalStatus === 'done',
           };
 
           await retryWithBackoff(
@@ -646,44 +655,47 @@ export async function POST(request: NextRequest) {
             2
           );
 
-          const cachedPayload: CachedAnalysisResult = {
-            id: analysisId,
-            video_id: videoId,
-            title: row.title,
-            analysis_markdown: stitchedMarkdown,
-            analysis_payload: stitchedPayload as any,
-            validation_report: {
-              transcript_available: !!priorReport.transcript_available,
-              analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
-            },
-            model_used: model || 'edge-stream',
-            created_at: row.createdAt,
-            cached_at: new Date().toISOString(),
-          };
-          // ADR 006: Cache key based on input (transcript) hash, not output (markdown) hash
-          // Ensures cache hit detection on identical inputs despite markdown formatting changes
-          const hash = row.transcriptHash || (() => {
-            console.warn('[analyses/persist] Missing transcriptHash; computing from transcript', { analysisId, videoId });
-            return createHash('sha256').update(row.transcript || '').digest('hex');
-          })();
-          const cacheKey = generateCacheKey('edge-stream', hash, '5.1');
-          await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
-            Sentry.captureException(e, { contexts: { persist: { phase: 'cache_stitched_result', analysisId } } });
-            console.warn('[analyses/persist] Failed to cache stitched result', { analysisId, error: String(e) });
-          });
-
-          if (!!priorReport.transcript_available) {
-            await publishValidationTask({
-              videoId,
-              markdown: stitchedMarkdown,
-              filename: buildValidationFilename(row.title, row.channelTitle),
-              userId: row.userId,
-              analysisId,
-              metadata: { title: row.title, channelTitle: row.channelTitle || '' },
-            }).catch(e => {
-              Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task_chunks', analysisId } } });
-              console.warn('[analyses/persist] Failed to publish validation task for chunks', { analysisId, error: String(e) });
+          // Only cache valid results to prevent cache poisoning (P0.2b)
+          if (isStitchedValid) {
+            const cachedPayload: CachedAnalysisResult = {
+              id: analysisId,
+              video_id: videoId,
+              title: row.title,
+              analysis_markdown: stitchedMarkdown,
+              analysis_payload: stitchedPayload as any,
+              validation_report: {
+                transcript_available: !!priorReport.transcript_available,
+                analysis_type: (priorReport.analysis_type as 'full' | 'metadata-only') || 'full',
+              },
+              model_used: model || 'edge-stream',
+              created_at: row.createdAt,
+              cached_at: new Date().toISOString(),
+            };
+            // ADR 006: Cache key based on input (transcript) hash, not output (markdown) hash
+            // Ensures cache hit detection on identical inputs despite markdown formatting changes
+            const hash = row.transcriptHash || (() => {
+              console.warn('[analyses/persist] Missing transcriptHash; computing from transcript', { analysisId, videoId });
+              return createHash('sha256').update(row.transcript || '').digest('hex');
+            })();
+            const cacheKey = generateCacheKey('edge-stream', hash, '5.1');
+            await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+              Sentry.captureException(e, { contexts: { persist: { phase: 'cache_stitched_result', analysisId } } });
+              console.warn('[analyses/persist] Failed to cache stitched result', { analysisId, error: String(e) });
             });
+
+            if (!!priorReport.transcript_available) {
+              await publishValidationTask({
+                videoId,
+                markdown: stitchedMarkdown,
+                filename: buildValidationFilename(row.title, row.channelTitle),
+                userId: row.userId,
+                analysisId,
+                metadata: { title: row.title, channelTitle: row.channelTitle || '' },
+              }).catch(e => {
+                Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task_chunks', analysisId } } });
+                console.warn('[analyses/persist] Failed to publish validation task for chunks', { analysisId, error: String(e) });
+              });
+            }
           }
         }
 
@@ -786,6 +798,13 @@ export async function POST(request: NextRequest) {
           if (stitchResult.payload !== undefined) {
             stitchedPayload = stitchResult.payload;
             stitchedMarkdown = stitchResult.markdown;
+            if (!stitchResult.validationPassed) {
+              console.warn('[analyses/persist] Stitched partial payload used but schema validation failed', {
+                analysisId,
+                videoId,
+                chunkCount: finalizedChunks.length
+              });
+            }
           } else {
             console.warn('[analyses/persist] Stitched partial payload failed validation or has no dimensions', {
               analysisId,
@@ -831,6 +850,19 @@ export async function POST(request: NextRequest) {
         2
       );
 
+      if (segments && segments.length > 0 && (finalStatus === 'done' || finalStatus === 'partial')) {
+        await SupabaseTranscriptAdapter.upsertTranscript({
+          videoId,
+          content: stitchedMarkdown || markdown,
+          segments,
+          language: 'en',
+          hash: row.transcriptHash || undefined,
+        }).catch(e => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_transcript', analysisId } } });
+          console.warn('[analyses/persist] Failed to upsert transcript segments', { analysisId, error: String(e) });
+        });
+      }
+
       if (isInterrupted) {
         return { type: 'interrupted' as const, analysisId };
       }
@@ -874,12 +906,15 @@ export async function POST(request: NextRequest) {
         cacheKey,
       });
 
-      await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
-        Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
-        console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
-      });
+      const isNonChunkValid = validationPassed && finalStatus === 'done';
+      if (isNonChunkValid) {
+        await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
+          console.warn('[analyses/persist] Failed to cache final result', { analysisId, error: String(e) });
+        });
+      }
 
-      if (transcriptAvailable) {
+      if (transcriptAvailable && validationPassed) {
         await publishValidationTask({
           videoId,
           markdown: stitchedMarkdown,

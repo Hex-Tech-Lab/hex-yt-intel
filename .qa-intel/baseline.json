@@ -455,13 +455,6 @@
     "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
   },
   {
-    "file": "worker/src/services/TranscriptExtractor.ts",
-    "severity": "high",
-    "title": "Stream: Timeout abort does not settle error state",
-    "why": "Abort timeout fires but no error/complete state is set, leaving analysis in limbo.",
-    "fix": "Call settleAnalysis('error', ...) or setStreamError() when timeout fires, not just abort()."
-  },
-  {
     "file": "worker/src/services/LLMCascade.ts",
     "severity": "high",
     "title": "Stream: Timeout abort does not settle error state",

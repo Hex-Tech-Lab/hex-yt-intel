@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/home/user/hex-yt-intel/web/playwright.config.ts",
-    "rootDir": "/home/user/hex-yt-intel/web/tests",
+    "configFile": "/home/kellyb_dev/projects/hex-yt-intel/web/playwright.config.ts",
+    "rootDir": "/home/kellyb_dev/projects/hex-yt-intel/web/tests",
     "forbidOnly": false,
     "fullyParallel": true,
     "globalSetup": null,
@@ -14,13 +14,13 @@
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/home/user/hex-yt-intel/web/test-results",
+        "outputDir": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {},
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/home/user/hex-yt-intel/web/tests",
+        "testDir": "/home/kellyb_dev/projects/hex-yt-intel/web/tests",
         "testIgnore": [
           "**/pairwise_matrix/**"
         ],
@@ -87,13 +87,13 @@
   "suites": [],
   "errors": [
     {
-      "message": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.",
-      "stack": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments."
+      "message": "Error: Timed out waiting 180000ms from config.webServer.",
+      "stack": "Error: Timed out waiting 180000ms from config.webServer."
     }
   ],
   "stats": {
-    "startTime": "2026-07-11T18:16:20.027Z",
-    "duration": 144063.78,
+    "startTime": "2026-07-16T13:24:14.773Z",
+    "duration": 19016376.694,
     "expected": 0,
     "skipped": 0,
     "unexpected": 0,
