@@ -44,6 +44,7 @@ export class SupabaseTranscriptAdapter {
         language: params.language,
         transcript_hash: params.hash,
         last_accessed_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
       }, { onConflict: 'video_id' });
     if (error) {
       Sentry.captureException(error, { tags: { method: 'upsertTranscript' }, extra: { videoId: params.videoId } });
@@ -64,12 +65,25 @@ export class SupabaseTranscriptAdapter {
   static async saveMarkers(markers: TranscriptMarker[]): Promise<void> {
     if (markers.length === 0) return;
     const service = getSupabaseServiceClient();
-    // Delete all existing markers for this video before upsert to prevent ghost rows on shrinking re-runs
-    await service.from('transcript_markers').delete().eq('video_id', markers[0]!.video_id);
-    const { error } = await service.from('transcript_markers').upsert(markers, { onConflict: 'video_id,idx' });
-    if (error) {
-      Sentry.captureException(error, { tags: { method: 'saveMarkers' } });
-      throw error;
+    const videoId = markers[0]!.video_id;
+
+    // Upsert the new markers first (safe — if this fails, nothing is lost)
+    const { error: upsertError } = await service
+      .from('transcript_markers')
+      .upsert(markers, { onConflict: 'video_id,idx' });
+    if (upsertError) {
+      Sentry.captureException(upsertError, { tags: { method: 'saveMarkers' } });
+      throw upsertError;
+    }
+
+    // Then delete any old markers with higher idx (from previous larger runs)
+    const { error: deleteError } = await service
+      .from('transcript_markers')
+      .delete()
+      .eq('video_id', videoId)
+      .gt('idx', markers.length - 1);
+    if (deleteError) {
+      Sentry.captureException(deleteError, { tags: { method: 'saveMarkers-cleanup' }, extra: { videoId } });
     }
   }
 

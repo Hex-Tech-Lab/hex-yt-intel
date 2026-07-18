@@ -135,7 +135,10 @@ export class TranscriptExtractor implements TranscriptProviderPort {
         const duration = typeof e.dDurationMs === 'number' ? e.dDurationMs / 1000 : 3;
         cumulative++;
         return { start, duration, text };
-      }).filter(s => s.text.length > 0);
+      }).filter(s => s.text.length > 0)
+        .filter(s => {
+          return !isNaN(s.start) && !isNaN(s.duration) && s.start >= 0 && s.duration > 0 && s.start < 86400;
+        });
 
       const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
 
@@ -232,7 +235,10 @@ export class TranscriptExtractor implements TranscriptProviderPort {
         const duration = typeof e.dDurationMs === 'number' ? e.dDurationMs / 1000 : typeof e.dDuration === 'number' ? e.dDuration : 3;
         cumulative++;
         return { start, duration, text };
-      }).filter(s => s.text.length > 0);
+      }).filter(s => s.text.length > 0)
+        .filter(s => {
+          return !isNaN(s.start) && !isNaN(s.duration) && s.start >= 0 && s.duration > 0 && s.start < 86400;
+        });
 
       const transcript = segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim();
 
@@ -344,11 +350,9 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
       return transcript;
     } catch (e) {
-      const err = timeoutError || (e instanceof Error ? e : new Error(String(e)));
-      captureException(err, { tags: { operation: 'transcript-content-fetch', videoId } });
-      throw err;
+      throw e;
     } finally {
-      clearTimeout(timeout);
+      controller.abort();
     }
   }
 }

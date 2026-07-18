@@ -906,8 +906,7 @@ export async function POST(request: NextRequest) {
         cacheKey,
       });
 
-      const statusStr = status as string;
-      const isNonChunkValid = valid !== false && statusStr !== 'failed' && statusStr !== 'interrupted';
+      const isNonChunkValid = validationPassed && finalStatus === 'done';
       if (isNonChunkValid) {
         await setAnalysisCache(cacheKey, cachedPayload).catch(e => {
           Sentry.captureException(e, { contexts: { persist: { phase: 'cache_final_result', analysisId } } });
@@ -915,7 +914,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      if (transcriptAvailable) {
+      if (transcriptAvailable && validationPassed) {
         await publishValidationTask({
           videoId,
           markdown: stitchedMarkdown,
