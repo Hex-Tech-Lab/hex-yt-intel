@@ -73,10 +73,12 @@ export async function GET(
     let analysisStatus: 'complete' | 'incomplete' | 'error' | 'partial' = 'incomplete';
     if (validationStatus === 'done' || analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged') {
       analysisStatus = 'complete';
-    } else if (validationStatus === 'error' || validationStatus === 'failed' || analysis.billing_status === 'failed') {
+    } else if (validationStatus === 'error') {
       analysisStatus = 'error';
     } else if (validationStatus === 'partial') {
       analysisStatus = 'partial';
+    } else if (validationStatus === 'failed') {
+      analysisStatus = 'error';
     }
 
     // Populate dimensionsReceived from validation_report.dimension_status
