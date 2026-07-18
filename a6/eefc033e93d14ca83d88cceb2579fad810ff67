@@ -1,0 +1,203 @@
+.opencode/plans/v5-fix-prompt-annotated.md
+  s_179e886c5be967::t_8ceceb5c7bdb32 6
+  s_179e886c5be967::t_6829e48da4eaaa 1-5,7-205
+docs/research/markers-benchmark.md
+  s_179e886c5be967::t_c101c7b4b35e7f 1-208
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_21a3106c90bb12::t_38834bb78eec29 135-136
+  s_179e886c5be967::t_f5d75623be3900 1-68,71-134,137-149
+  s_21a3106c90bb12::t_640e13bdce7bd1 69-70
+web/lib/prompts/executive-digest.ts
+  s_76cc08a86caeee::t_3c5bc3abcfb030 68
+  s_76cc08a86caeee::t_07bac3e0df18ae 126-135,142
+  s_179e886c5be967::t_db6c67a3db47b2 123-125,136-141,143-144,160-163
+  s_179e886c5be967::t_d9b65b6fbfd971 42-62,69
+  s_76cc08a86caeee::t_ef715ee87212cc 164
+  s_76cc08a86caeee::t_f2c2f157dbdfd2 41
+  s_76cc08a86caeee::t_6e8bd4e34d4cec 92-95
+  s_76cc08a86caeee::t_c18a0251f8cfd1 81-82
+web/app/api/webhooks/transcript-purge/route.ts
+  s_267598e3a5da29::t_2db8139f84985e 19-26
+  s_179e886c5be967::t_c50737385c4984 1-18,27-33
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_76cc08a86caeee::t_43a5e450019003 89-90,97-103
+  s_76cc08a86caeee::t_33932a4ac01971 24
+  s_76cc08a86caeee::t_ca0b4ddd32cd8d 104
+worker/src/services/PersistService.ts
+  s_9564ed6ec3827e::t_e874e97d4cd7f4 105
+  s_9564ed6ec3827e::t_4ee495c1f0cf51 126
+  s_9564ed6ec3827e::t_d3f4fd6dbcaedd 194
+  s_9564ed6ec3827e::t_b68c6532295d08 24
+  s_9564ed6ec3827e::t_b1ee2c7d94bbfa 151
+worker/src/services/TranscriptExtractor.ts
+  s_17e47ff6c5cf20::t_83f04ebfff07e9 79-80
+  s_179e886c5be967::t_c4da76b3a08145 213,218-219,224-225,231-240,244
+  s_17e47ff6c5cf20::t_14b1794096215b 260-261
+  s_17e47ff6c5cf20::t_9e731961bf2452 320-321
+  s_17e47ff6c5cf20::t_810efb0b574ce3 189-190
+  s_179e886c5be967::t_d35b770b47d22b 105-107,111,127,132-141,145
+  s_17e47ff6c5cf20::t_89c06eb4d2ba5c 157-158
+web/components/dashboard/SelectedDimensionReadout.tsx
+  s_37497a16257a71::t_3fa20e3cb3ae22 6
+  s_37497a16257a71::t_5ebfbf85cde657 65-71
+web/components/templates/console/ChatDock.tsx
+  s_37497a16257a71::t_ea87a1b38c8841 12
+  s_37497a16257a71::t_3e20d34b217613 369-375
+web/app/api/webhooks/compliance-check/route.ts
+  s_179e886c5be967::t_632565e222e4eb 1-34
+web/lib/utils/format.tsx
+  s_179e886c5be967::t_453e753b358bc3 101-118,147-153,155-165,168-170,176-178,197-203
+  s_79b248a0ceefbb::t_be2b35f61cae54 119-146,154,166-167,171-175,179-196
+web/app/api/webhooks/ffmpeg-enrich/route.ts
+  s_9598dcba1c528f::t_7f92b9f39fd3f0 56,58-60
+  s_179e886c5be967::t_4a69fb358c7df4 1-24,39-41,43-44,48-52,54,61-103
+  s_9598dcba1c528f::t_87554da6b1910c 25-38,42,45-47
+  s_179e886c5be967::t_482f25f5af30d1 53
+  s_9598dcba1c528f::t_92f2c2ecc38e6d 55,57
+worker/src/routes/analysis.ts
+  s_9564ed6ec3827e::t_a26cd21ff6dd48 266
+  s_267598e3a5da29::t_1cf9d74ffa0007 297
+  s_267598e3a5da29::t_a59ca6e2b91d94 475-481,485
+  s_9564ed6ec3827e::t_c816bc615b1c22 68
+  s_267598e3a5da29::t_62fdee7ee64a17 136,142,148-164,174-180
+  s_9564ed6ec3827e::t_13e3e1056f2cd4 245
+  s_267598e3a5da29::t_2310e0608223b7 206
+web/app/api/analyses/persist/route.ts
+  s_127aa36eece4f6::t_85d5f844ec90b0 128
+  s_127aa36eece4f6::t_9aa0af073d893b 227,229,231-237
+  s_179e886c5be967::t_3f252b026f7996 217,221-222,226,228,230
+  s_127aa36eece4f6::t_8fcf55512b33bf 241
+  s_127aa36eece4f6::t_9203b11a5a81c3 635,640,643,658-683,685-698
+  s_9564ed6ec3827e::t_150bda1689f330 853-865
+  s_9564ed6ec3827e::t_d9ae09b4373d44 336-340
+  s_127aa36eece4f6::t_b734468354a864 161
+  s_9564ed6ec3827e::t_fe15aec6fe03a2 13
+  s_127aa36eece4f6::t_de2244b0474906 632
+  s_127aa36eece4f6::t_890b3da5f82b0e 801-807
+  s_9564ed6ec3827e::t_494dc31a9a4f17 364-365
+scripts/research/run-transcript-research.ts
+  s_179e886c5be967::t_3776ec26890726 1-152
+supabase/migrations/20260718000000_add_transcripts_and_markers.sql
+  s_36582eea643447::t_75443b044120a5 19
+  s_36582eea643447::t_3a0192e344d204 42
+  s_179e886c5be967::t_a4587d2caba11e 1-18,20-41,43-67,69,71-72
+  s_36582eea643447::t_9966c7806b14cb 68,70
+web/scripts/setup-qstash-cron.ts
+  s_179e886c5be967::t_f0416f2b948f7a 27-31
+  s_0eded1e9d0cab6::t_e7a2996957ed5a 14-17,32,36-37
+  s_179e886c5be967::t_2d1f7e81e8f9c9 18-20
+worker/src/ports/TranscriptProviderPort.ts
+  s_179e886c5be967::t_1c50ad9e3cdd37 8-13,18
+.opencode/plans/transcript-72h-v5-ffmpeg-dynamic.md
+  s_179e886c5be967::t_6438bcbefaf381 1-66,76-149
+  s_179e886c5be967::t_65f8eec15665c4 67-75
+.memory/AGENT_LEDGER.md
+  s_179e886c5be967::t_594180a98b515d 879-880
+  s_179e886c5be967::t_19e0e767ea7057 878
+  s_9564ed6ec3827e::t_96bb82d4cec974 327
+  s_179e886c5be967::t_51d26f700cbd7f 877
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "a6eefc033e93d14ca83d88cceb2579fad810ff67",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_127aa36eece4f6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08b0fbd26ffe2GTyJpUhbkiRqk",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_179e886c5be967": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_092b7ea68ffeTLU38o4brka0wu",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_17e47ff6c5cf20": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08b0f13d9ffe5ASFNHg9p6FxLW",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_21a3106c90bb12": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08b0f7adfffeVOajyEWYf1mX0P",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_267598e3a5da29": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08b084ffdffeM4SHhJpriTyrlv",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_36582eea643447": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08b0f9d76ffewokZhBzOLEoekw",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_37497a16257a71": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08af7bf6dffeY28k403aeTFcRU",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_76cc08a86caeee": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08b0f3f56ffez6YdnkyPjBA9n2",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_79b248a0ceefbb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08b0f289cffeBJUfrBartvGuCN",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_9564ed6ec3827e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08b086f56ffe4NclcidQEn3blI",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_9598dcba1c528f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08b0f6555ffeGR9nXmLVcBtAWP",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
