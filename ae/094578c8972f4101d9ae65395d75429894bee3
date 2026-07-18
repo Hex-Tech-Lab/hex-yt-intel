@@ -1,0 +1,43 @@
+worker/src/services/TranscriptExtractor.ts
+  s_6ff642d62359b4::t_12715b750321c6 353,355
+  s_6ff642d62359b4::t_265e026956b443 138-141
+  s_6ff642d62359b4::t_3cedc1078ac451 238-241
+web/app/api/analyses/persist/route.ts
+  s_55bfcc7ea82451::t_cc11a5fcfa2897 909
+  s_55bfcc7ea82451::t_0572a474a4ef34 917
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_a68df6c19b7043::t_0c44fe1f13e945 47
+  s_a68df6c19b7043::t_187eafe4253840 68-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "ae094578c8972f4101d9ae65395d75429894bee3",
+  "prompts": {},
+  "sessions": {
+    "s_55bfcc7ea82451": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08acd1a38ffeGBGRFZ6wxiPOiY",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_6ff642d62359b4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08acd0887ffeB3j9G03P9MkD7J",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_a68df6c19b7043": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08acced25ffe3GqKtDSMPeePt3",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
