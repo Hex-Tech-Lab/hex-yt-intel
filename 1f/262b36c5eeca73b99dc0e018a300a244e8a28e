@@ -1,0 +1,75 @@
+scripts/research/run-transcript-research.ts
+  s_5a32a0ee4c4b2e::t_a9555f8e9ec2d9 66-73,75-76
+  s_5a32a0ee4c4b2e::t_af3104fc09c31c 4-8
+web/lib/prompts/executive-digest.ts
+  s_cd680958c2c43a::t_4265ce91da679b 180
+  s_cd680958c2c43a::t_188801b1d44f63 149-160,163-165
+  s_cd680958c2c43a::t_7b9bbb5b0bfc8f 99-109
+  s_cd680958c2c43a::t_9a976e34a160e3 98
+web/app/api/webhooks/transcript-purge/route.ts
+  s_c788dd86aeb15b::t_d804a8c847474a 20-23,25-56
+web/app/api/analyses/persist/route.ts
+  s_179e886c5be967::t_914896a5ccaab8 909-910
+  s_4302f0c8059125::t_8930cbf63453dc 911-916
+web/lib/__tests__/executive-digest.test.ts
+  s_cd680958c2c43a::t_6938c43e45db64 61-62
+  s_cd680958c2c43a::t_5328951a09a93b 12,16-20
+worker/src/services/TranscriptExtractor.ts
+  s_179e886c5be967::t_0fb2ee781d6f77 177-179,181
+  s_179e886c5be967::t_0ecce266a831af 312,314
+  s_179e886c5be967::t_f3bd377d6de11a 243,245
+  s_179e886c5be967::t_792bca30be984a 320,325
+  s_179e886c5be967::t_c4a345aa97d404 187,191
+  s_179e886c5be967::t_ddc23d3c3635d0 156,160
+  s_179e886c5be967::t_dce0b5bf8e2848 79,84
+  s_179e886c5be967::t_76011c362c188c 146-147,149
+  s_179e886c5be967::t_8bef4107dd566d 259,264
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "1f262b36c5eeca73b99dc0e018a300a244e8a28e",
+  "prompts": {},
+  "sessions": {
+    "s_179e886c5be967": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_092b7ea68ffeTLU38o4brka0wu",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_4302f0c8059125": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08adfd7b1ffe35L1E8KX47dhB3",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": null
+    },
+    "s_5a32a0ee4c4b2e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08adff37affeCZXGgS4dmjjFU1",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": null
+    },
+    "s_c788dd86aeb15b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08adfc658ffeD1Qet5eewSPSSD",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": null
+    },
+    "s_cd680958c2c43a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08adfa07affewWDl62iuGJIWmY",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
