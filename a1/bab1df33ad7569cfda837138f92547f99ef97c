@@ -1,0 +1,54 @@
+web/lib/ports/ChatPersistencePort.ts
+  s_69b6e6837a19fa::t_8f9c2d6f5f3d97 10
+  s_29cf31b5ac8abe::t_28884ec694138d 60
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_29cf31b5ac8abe::t_d87235f4f5f274 250
+web/components/templates/console/AnalysisHistory.tsx
+  s_69b6e6837a19fa::t_4b1e848af87148 217
+web/app/api/chat/conversations/route.ts
+  s_69b6e6837a19fa::t_ef6071d9867c1f 72
+  s_69b6e6837a19fa::t_6407253e3c99b6 34
+  s_69b6e6837a19fa::t_2b9d16b794fe0a 47
+supabase/migrations/20260718000001_add_video_id_to_chat_conversations.sql
+  s_69b6e6837a19fa::t_5f22f73938cd0a 1-17
+web/lib/adapters/SupabaseChatAdapter.ts
+  s_69b6e6837a19fa::t_a48beb6491a9cb 31
+  s_69b6e6837a19fa::t_35ec1028075c77 46
+  s_69b6e6837a19fa::t_f171d23226af98 69,75-76
+  s_69b6e6837a19fa::t_4f9c50768f8746 116
+  s_69b6e6837a19fa::t_cb9541db7feb3a 131
+  s_69b6e6837a19fa::t_0e2f8e3e39cc9c 84,90
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_29cf31b5ac8abe::t_fa4e4d681c2516 83
+  s_69b6e6837a19fa::t_d2bc8806e16bd1 209
+web/store/useChatStore.ts
+  s_69b6e6837a19fa::t_c7d61e274ce307 44
+  s_69b6e6837a19fa::t_2a64003353a054 426
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_29cf31b5ac8abe::t_621ffe977e62f7 488
+  s_29cf31b5ac8abe::t_a754dbae2ba320 472
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "a1bab1df33ad7569cfda837138f92547f99ef97c",
+  "prompts": {},
+  "sessions": {
+    "s_29cf31b5ac8abe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08aaa2d9bffe4dpPGb4nQAAX6W",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_69b6e6837a19fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08aaa4393ffe167P95FlQ5CdUA",
+        "model": "deepseek/deepseek-v4-pro"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
