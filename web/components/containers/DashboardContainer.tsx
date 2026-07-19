@@ -4,7 +4,6 @@ import { useMemo, useState, useCallback, useEffect, useRef, startTransition } fr
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { extractVideoId } from '@/lib/youtube';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
 import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
@@ -19,8 +18,7 @@ import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory'
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
-import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
-import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
+import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
 
 // Lazy load visualization components to reduce initial bundle size
 const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
@@ -29,10 +27,10 @@ const MindMap = dynamic(() => import('@/components/templates/console/MindMap').t
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useInputStore } from '@/store/useInputStore';
-import { useChatStore } from '@/store/useChatStore';
 import { useSSEStream } from '@/hooks/useSSEStream';
 import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
-import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
+import { useAutoRestoreAnalysis } from '@/hooks/useAutoRestoreAnalysis';
+import { useExecutiveDigest } from '@/hooks/useExecutiveDigest';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
@@ -43,28 +41,9 @@ import { DimensionDrawer } from '@/components/templates/console/DimensionDrawer'
 import { ConsoleTabSwitcher } from './dashboard/ConsoleTabSwitcher';
 import { SidebarFooter } from './dashboard/SidebarFooter';
 import { ExpandedPanelOverlay } from './dashboard/ExpandedPanelOverlay';
-
-import * as Sentry from '@sentry/nextjs';
+import { copyPanelContent, exportPanelContent, type PanelId } from '@/lib/dashboard/export';
 
 // See /docs/ui/dashboard-container.md
-
-function showToast(message: string, type: 'success' | 'error' = 'success') {
-  if (typeof document === 'undefined') return;
-  const el = document.createElement('div');
-  el.textContent = message;
-  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-  el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
-  el.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 18px;border-radius:10px;font:600 12px/1.4 var(--font-mono);pointer-events:none;opacity:0;transition:opacity .2s;color:var(--ink);background:${type === 'error' ? 'rgba(239,68,68,0.9)' : 'rgba(6,182,212,0.9)'};backdrop-filter:blur(8px);`;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => { el.style.opacity = '1'; });
-  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
-}
-
-function reportClipboardError(error: unknown, context: string) {
-  const message = error instanceof Error ? error.message : String(error);
-  Sentry.captureException(error, { contexts: { clipboard: { context } } });
-  console.error('[DashboardContainer] Clipboard copy failed:', { message, context });
-}
 
 export interface DashboardContainerProps {
   profile: ConsoleProfile;
@@ -73,7 +52,7 @@ export interface DashboardContainerProps {
 function cleanDimensionContent(raw: string): string {
   if (!raw) return '';
   let content = raw.trim();
-  
+
   // Strip markdown code fences without regex
   if (content.startsWith('```')) {
     const lines = content.split(/\r?\n/);
@@ -83,7 +62,7 @@ function cleanDimensionContent(raw: string): string {
     }
     content = lines.join('\n').trim();
   }
-  
+
   // Strip leading dimension headers (e.g., "### DIMENSION 1") with explicit pattern
   const lines = content.split(/\r?\n/);
   if (lines[0]) {
@@ -93,7 +72,7 @@ function cleanDimensionContent(raw: string): string {
       content = lines.join('\n');
     }
   }
-  
+
   return content.trim();
 }
 
@@ -115,7 +94,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const { startAnalysis, stopAnalysis } = useSSEStream();
   useEagerVideoMetadata();
-  const nucleus = useSynthesisNucleus();
+  const nucleusAnalysis = useSynthesisNucleus((s) => s.analysis);
+  const nucleusProjection = useSynthesisNucleus((s) => s.projection);
 
   useEffect(() => {
     setUserRole(profile.role);
@@ -125,169 +105,25 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     setMounted(true);
   }, []);
 
-  const initializeAnalysis = useAnalysisStore((s) => s.initializeAnalysis);
-  const setVideoMetadata = useAnalysisStore((s) => s.setVideoMetadata);
-  const setStatus = useAnalysisStore((s) => s.setStatus);
-  const initSynthesis = useSynthesisNucleus((s) => s.initializeAnalysis);
+  useAutoRestoreAnalysis(url);
 
-  // Auto-restore already analyzed videos
-  useEffect(() => { // skipcq: JS-0903
-    if (!url) return;
-
-    const videoId = extractVideoId(url);
-
-    if (videoId === 'unknown' || videoId.length < 5) return;
-
-    // A different video URL was pasted — drop the previous video's chat thread
-    // immediately so stale conversation never lingers over the new context.
-    // The restore flow below re-selects the right thread if one exists.
-    const loadedVideoId =
-      useAnalysisStore.getState().videoMetadata?.videoId ??
-      useSynthesisNucleus.getState().analysis?.videoId;
-    if (loadedVideoId && loadedVideoId !== videoId) {
-      useChatStore.setState({ activeId: null });
-    }
-
-    let cancelled = false;
-
-    // Check if there's already a completed analysis for this videoId
-    void (async () => {
-      try {
-        let res;
-        try {
-          res = await fetch(`/api/analyses/check?videoId=${videoId}`);
-        } finally {
-          // resource cleanup
-        }
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-
-        if (data.exists && data.analysisId) {
-          console.log('[AutoRestore] Existing analysis detected for video, fetching details:', data.analysisId);
-
-          // Trigger the restoration flow just like history restoration
-          let restoreRes;
-          try {
-            restoreRes = await fetch(`/api/analyses/${data.analysisId}`);
-          } finally {
-            // resource cleanup
-          }
-          if (!restoreRes.ok) return;
-          const restoreData = await restoreRes.json();
-          if (cancelled) return;
-
-          let dimensions = parseToUCISDimensions(restoreData.analysis_markdown || '');
-
-          // Fallback: if markdown parsing returned no dimensions but analysis_payload exists,
-          // extract dimensions directly from the payload (handles cases where markdown
-          // reconstruction failed due to payload size limits)
-          if (Object.keys(dimensions).length === 0 && restoreData.analysis_payload?.dimensions) {
-            const payloadDims = restoreData.analysis_payload.dimensions;
-            if (Array.isArray(payloadDims)) {
-              dimensions = payloadDims.reduce((acc: Record<number, typeof dimensions[1]>, d: { number?: number; name?: string; content?: string }) => {
-                if (d && typeof d.number === 'number') {
-                  acc[d.number] = { number: d.number, name: d.name || `Dimension ${d.number}`, content: d.content || '' };
-                }
-                return acc;
-              }, {} as Record<number, typeof dimensions[1]>);
-            }
-          }
-
-          startTransition(() => {
-            initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown);
-            setVideoMetadata({
-              videoId: restoreData.videoId,
-              title: restoreData.title,
-              channelTitle: restoreData.channelTitle || 'Unknown',
-              publishedAt: restoreData.analysisAt || restoreData.created_at || new Date().toISOString(),
-              duration: restoreData.duration || 0,
-              viewCount: restoreData.viewCount || 0,
-              likeCount: restoreData.likeCount || 0,
-            } as any);
-
-            initSynthesis({
-              id: restoreData.id,
-              videoId: restoreData.videoId,
-              title: restoreData.title,
-              channelTitle: restoreData.channelTitle,
-              model: restoreData.model,
-              analysisAt: restoreData.analysisAt,
-              detectedPersona: restoreData.detectedPersona,
-              dimensions,
-              validation: restoreData.validation_report,
-              streaming: restoreData.streaming,
-            });
-
-            // Rehydrate the rich metadata stores (persona / knowledge graph /
-            // classification / monetization) so restored graphs render real
-            // content — matches the history-click restore path in AnalysisHistory.
-            if (restoreData.analysis_payload) {
-              const payload = restoreData.analysis_payload;
-              const nucleus = useSynthesisNucleus.getState();
-              if (payload.persona) nucleus.setPersonaConfig(payload.persona);
-              if (payload.knowledgeGraph) nucleus.setKnowledgeGraph(payload.knowledgeGraph);
-              if (payload.classification) nucleus.setClassification(payload.classification);
-              if (payload.monetizationVerdict) nucleus.setMonetizationVerdict(payload.monetizationVerdict);
-            }
-
-            // Sync status to UI (either complete, error or partial)
-            if (restoreData.analysisStatus === 'complete') {
-              setStatus('complete');
-            } else if (restoreData.analysisStatus === 'failed') {
-              setStatus('error');
-            } else if (restoreData.analysisStatus === 'partial') {
-              setStatus('complete'); // partial displays accordion with re-analyze banner
-            } else {
-              setStatus('idle');
-            }
-          });
-
-          // Ground/Select the chat session in the background
-          void (async () => {
-            try {
-              const chatStore = useChatStore.getState();
-              await chatStore.loadConversations();
-              const existing = chatStore.conversations.find((c) => 
-                c.analysisId === restoreData.id || c.videoId === restoreData.videoId
-              );
-              if (existing) {
-                if (existing.analysisId !== restoreData.id) {
-                  await chatStore.updateConversationAnalysisId(existing.id, restoreData.id);
-                }
-                await chatStore.selectConversation(existing.id);
-              } else {
-                useChatStore.setState({ activeId: null });
-              }
-            } catch (e) {
-              console.debug('[AutoRestore] Background chat session restoration failed:', e);
-            }
-          })();
-        }
-      } catch (err) {
-        console.debug('[AutoRestore] Pre-flight cache check failed:', err);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [url, initializeAnalysis, initSynthesis, setStatus, setVideoMetadata]);
-
-  const supabase = createClient();
+  // Memoized so the client instance (and therefore `handleSignOut`'s identity)
+  // stays stable across renders — createClient() otherwise builds a new
+  // client object every call, which would defeat useCallback below.
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     await supabase.auth.signOut();
     router.push('/');
-  };
+  }, [supabase, router]);
 
   // Track if we've ever had a video — prevents player from disappearing between analyses
-  if (videoMetadata?.videoId || nucleus.analysis?.videoId) {
+  if (videoMetadata?.videoId || nucleusAnalysis?.videoId) {
     hasHadVideoRef.current = true;
   }
 
-  const { graph } = useKnowledgeGraph(nucleus.analysis?.id);
-  const { insights, loading: insightsLoading } = useRelations(nucleus.analysis?.id ?? null, status === 'complete');
+  const { graph } = useKnowledgeGraph(nucleusAnalysis?.id);
+  const { insights, loading: insightsLoading } = useRelations(nucleusAnalysis?.id ?? null, status === 'complete');
   const [search, setSearch] = useState('');
   // Closes the mobile/tablet nav drawer. The console/history/settings views
   // switch via in-page `activeNav` state (not a route change), so the layout's
@@ -304,75 +140,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   } | null>(null);
 
   const handleCopy = useCallback((id: string) => {
-    try {
-      if (id === 'insights') {
-        const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
-        navigator.clipboard.writeText(text).then(() => showToast('Insights copied to clipboard!')).catch((err) => reportClipboardError(err, 'insights'));
-      } else if (id === 'knowledge-graph') {
-        const text = graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
-        navigator.clipboard.writeText(text).then(() => showToast('Knowledge Graph nodes list copied!')).catch((err) => reportClipboardError(err, 'knowledge-graph'));
-      } else if (id === 'word-cloud') {
-        const text = graph.nodes.map((n) => n.label).join(', ');
-        navigator.clipboard.writeText(text).then(() => showToast('Word Cloud text copied!')).catch((err) => reportClipboardError(err, 'word-cloud'));
-      } else if (id === 'mind-map') {
-        const text = graph.nodes.map((n) => `- ${n.label}`).join('\n');
-        navigator.clipboard.writeText(text).then(() => showToast('Mind Map nodes list copied!')).catch((err) => reportClipboardError(err, 'mind-map'));
-      }
-    } catch (err) {
-      reportClipboardError(err, 'outer');
-      showToast('Copy failed', 'error');
-    }
+    copyPanelContent(id as PanelId, { graph, insights });
   }, [graph, insights]);
 
   const handlePanelExport = useCallback((id: string) => {
-    if (id === 'insights') {
-      const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
-      const blob = new Blob([text], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `${nucleus.analysis?.title || 'analysis'}-insights.txt`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } else if (id === 'knowledge-graph') {
-      const canvas = document.querySelector('.js-knowledge-graph-container canvas') as HTMLCanvasElement;
-      if (canvas) {
-        const url = canvas.toDataURL('image/png');
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `${nucleus.analysis?.title || 'analysis'}-knowledge-graph.png`;
-        anchor.click();
-      } else {
-        showToast('Could not locate canvas element to export.', 'error');
-      }
-    } else if (id === 'word-cloud') {
-      const canvas = document.querySelector('.js-word-cloud-canvas') as HTMLCanvasElement;
-      if (canvas) {
-        const url = canvas.toDataURL('image/png');
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `${nucleus.analysis?.title || 'analysis'}-word-cloud.png`;
-        anchor.click();
-      } else {
-        showToast('Could not locate canvas element to export.', 'error');
-      }
-    } else if (id === 'mind-map') {
-      const svg = document.querySelector('.js-mind-map-container svg') as SVGElement;
-      if (svg) {
-        const serializer = new XMLSerializer();
-        const svgString = serializer.serializeToString(svg);
-        const blob = new Blob([svgString], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `${nucleus.analysis?.title || 'analysis'}-mind-map.svg`;
-        anchor.click();
-        URL.revokeObjectURL(url);
-      } else {
-        showToast('Could not locate SVG element to export.', 'error');
-      }
-    }
-  }, [nucleus.analysis?.title, insights]);
+    exportPanelContent(id as PanelId, { insights, title: nucleusAnalysis?.title });
+  }, [nucleusAnalysis?.title, insights]);
 
   const handleSelectNode = useCallback((id: string | null) => {
     startTransition(() => setSelectedNodeId(id));
@@ -456,7 +229,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // when a completed analysis is missing some of the 11, surface which ones so the
   // user can decide whether to re-analyze (a re-run bypasses the cache).
   const partialInfo = useMemo(() => {
-    const dims = nucleus.analysis?.dimensions;
+    const dims = nucleusAnalysis?.dimensions;
     if (status !== 'complete' || !dims) return null;
     const present = Object.entries(dims)
       .filter(([, d]) => d && typeof (d as { content?: unknown }).content === 'string' && ((d as { content: string }).content).trim().length > 0)
@@ -466,96 +239,14 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     if (presentCount === 0 || presentCount >= TOTAL_DIMENSIONS) return null;
     const missing = Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => i + 1).filter((n) => !present.includes(n));
     return { presentCount, missing };
-  }, [nucleus.analysis?.dimensions, status, TOTAL_DIMENSIONS]);
+  }, [nucleusAnalysis?.dimensions, status, TOTAL_DIMENSIONS]);
 
   // Dimension 0 — executive digest. Generated once (the cheap "#12 call") the
   // first time a completed, full analysis is viewed, then cached server-side, so
   // re-opening it returns the stored digest without re-spending. Also generated for
   // partial analyses so Synthesis Console is accessible for re-analysis.
-  const analysisId = nucleus.analysis?.id ?? null;
-  const [digest, setDigest] = useState<StoredExecutiveDigest | null>(null);
-  const [digestLoading, setDigestLoading] = useState(false);
-  const digestFetchedForRef = useRef<string | null>(null);
-
-  const mappedDigestData = useMemo<ExecutiveSummaryData | null>(() => {
-    if (!digest) return null;
-    return {
-      overview: digest.overview ?? '',
-      snapshot: digest.snapshot ?? '',
-      keyTakeaways: digest.takeaways ?? [],
-      detailedSummary: digest.detailedSummary ?? digest.overview ?? '',
-    };
-  }, [digest]);
-
-  // Reset the card whenever we switch to a different analysis.
-  useEffect(() => {
-    setDigest(null);
-    setDigestLoading(false);
-    digestFetchedForRef.current = null;
-  }, [analysisId]);
-
-  useEffect(() => {
-    if (!analysisId || status !== 'complete') return;
-    if (digestFetchedForRef.current === analysisId) return;
-    digestFetchedForRef.current = analysisId;
-
-    let cancelled = false;
-    let succeeded = false;
-    setDigestLoading(true);
-    // The worker persists analysis_markdown S2S *after* the client stream
-    // settles, so the first digest call can race it and get a 409
-    // (ERR_ANALYSIS_MARKDOWN_EMPTY). Retry with backoff until the markdown
-    // lands; the route is idempotent so extra calls are safe and cheap.
-    const RETRY_DELAYS_MS = [0, 3000, 5000, 8000, 13000, 21000];
-    void (async () => {
-      try {
-        for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
-          const delay = RETRY_DELAYS_MS[attempt];
-          if (delay) await new Promise((r) => setTimeout(r, delay));
-          if (cancelled) return;
-          try {
-            const res = await fetch('/api/analyses/digest', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ analysisId }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (!cancelled && data?.digest) {
-                setDigest(data.digest as StoredExecutiveDigest);
-                succeeded = true;
-              }
-              return;
-            }
-            // 400/401/404 will never succeed on retry; 409 (markdown not yet
-            // persisted) and 5xx (transient cascade failure) are retriable.
-            if (res.status === 400 || res.status === 401 || res.status === 404) return;
-            console.debug(`[digest] attempt ${attempt + 1} got ${res.status}; ${attempt < RETRY_DELAYS_MS.length - 1 ? 'retrying' : 'giving up'}`);
-          } catch (err) {
-            console.debug('[digest] generation request failed:', err);
-          }
-        }
-      } finally {
-        if (!cancelled) {
-          // Exhausted or bailed without a digest — release the guard so a
-          // later re-render (or analysis switch back) can try again.
-          if (!succeeded && digestFetchedForRef.current === analysisId) {
-            digestFetchedForRef.current = null;
-          }
-          setDigestLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      // Cancelled mid-flight without success (deps changed / unmount): release
-      // the guard so the next effect run can re-request the digest.
-      if (!succeeded && digestFetchedForRef.current === analysisId) {
-        digestFetchedForRef.current = null;
-      }
-    };
-  }, [status, analysisId, partialInfo]);
+  const analysisId = nucleusAnalysis?.id ?? null;
+  const { digest, digestLoading, mappedDigestData } = useExecutiveDigest(analysisId, status);
 
   const getUserTimezone = (): string => {
     try {
@@ -580,22 +271,22 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [url, startAnalysis]);
 
   const handleExport = useCallback((format: 'pdf' | 'markdown') => {
-    if (!nucleus.analysis?.id) return;
+    if (!nucleusAnalysis?.id) return;
     if (format === 'pdf') {
-      window.open(`/api/analyses/${nucleus.analysis.id}/export?format=pdf&scope=full`, '_blank');
+      window.open(`/api/analyses/${nucleusAnalysis.id}/export?format=pdf&scope=full`, '_blank');
     } else {
       const content = analysis?.analysis_markdown || '';
       const blob = new Blob([content], { type: 'text/markdown' });
       const downloadUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = downloadUrl;
-      anchor.download = `${nucleus.analysis.title || 'synthesis'}.md`;
+      anchor.download = `${nucleusAnalysis.title || 'synthesis'}.md`;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
       URL.revokeObjectURL(downloadUrl);
     }
-  }, [nucleus.analysis?.id, nucleus.analysis?.title, analysis?.analysis_markdown]);
+  }, [nucleusAnalysis?.id, nucleusAnalysis?.title, analysis?.analysis_markdown]);
 
   const sidebarItems: SidebarItem[] = useMemo(() => [
     { key: 'console', label: 'Synthesis Console', icon: 'solar:graph-up-linear' },
@@ -638,7 +329,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     };
 
     // If projection isn't ready but we're analyzing, show all dimensions as idle/streaming skeletons
-    if (!nucleus.projection && (status === 'analyzing' || status === 'downloading')) {
+    if (!nucleusProjection && (status === 'analyzing' || status === 'downloading')) {
       return Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => ({
         key: `dim-skeleton-${i + 1}`,
         label: DIMENSION_LABELS[i + 1] || `Dimension ${i + 1}`,
@@ -649,18 +340,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       }));
     }
 
-    if (!nucleus.projection) return [];
+    if (!nucleusProjection) return [];
 
-    const rawReceived = nucleus.analysis?.streaming.dimensionsReceived;
+    const rawReceived = nucleusAnalysis?.streaming.dimensionsReceived;
     const receivedList = Array.isArray(rawReceived)
       ? rawReceived.filter((v): v is number => typeof v === 'number')
       : [];
 
-    const visibleDimensionNumbers = nucleus.projection.visibleDimensions.map(d => d.number);
+    const visibleDimensionNumbers = nucleusProjection.visibleDimensions.map(d => d.number);
     const visibleReceivedList = receivedList.filter(num => visibleDimensionNumbers.includes(num));
     const lastVisibleReceived = visibleReceivedList.length > 0 ? visibleReceivedList[visibleReceivedList.length - 1] : null;
 
-    return nucleus.projection.visibleDimensions.map((dim) => {
+    return nucleusProjection.visibleDimensions.map((dim) => {
       let dimStatus: 'idle' | 'streaming' | 'done' | 'error' = 'idle';
 
       const isReceived = receivedList.includes(dim.number);
@@ -694,12 +385,33 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         span: (DIMENSION_SPANS[dim.number] || 1) as 1 | 2 | 3,
       };
     });
-  }, [nucleus.projection, status, nucleus.analysis?.streaming.dimensionsReceived, TOTAL_DIMENSIONS]);
+  }, [nucleusProjection, status, nucleusAnalysis?.streaming.dimensionsReceived, TOTAL_DIMENSIONS]);
 
   const selectedDimension = useMemo(() => {
     if (!selectedDimensionKey) return null;
     return dimensions.find(d => d.key === selectedDimensionKey) || null;
   }, [selectedDimensionKey, dimensions]);
+
+  const handleSidebarNavigate = useCallback((key: string) => {
+    // Dismiss the mobile/tablet drawer on any selection (iPad: the
+    // in-page view switch below is not a route change, so the layout
+    // won't auto-close it).
+    setMobileNav(false);
+    if (key === 'atlas') {
+      router.push('/atlas');
+    } else {
+      setActiveNav(key as 'console' | 'history' | 'settings');
+    }
+  }, [setMobileNav, router]);
+
+  const handleSearchChange = useCallback((v: string) => {
+    startTransition(() => setSearch(v));
+  }, []);
+
+  const handleSearchSubmit = useCallback(() => {
+    const q = search.trim();
+    if (q) router.push(`/search?q=${encodeURIComponent(q)}`);
+  }, [search, router]);
 
   return (
     <div className="relative w-full min-h-[100dvh] xl:h-screen overflow-x-hidden xl:overflow-hidden">
@@ -708,17 +420,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           <Sidebar
             items={sidebarItems}
             activeKey={activeNav}
-            onNavigate={(key) => {
-              // Dismiss the mobile/tablet drawer on any selection (iPad: the
-              // in-page view switch below is not a route change, so the layout
-              // won't auto-close it).
-              setMobileNav(false);
-              if (key === 'atlas') {
-                router.push('/atlas');
-              } else {
-                setActiveNav(key as 'console' | 'history' | 'settings');
-              }
-            }}
+            onNavigate={handleSidebarNavigate}
             footer={<SidebarFooter profile={profile} onSignOut={handleSignOut} />}
           >
             {showLog && (
@@ -729,11 +431,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       topbar={
         <TopBar
           search={search}
-          onSearchChange={(v) => startTransition(() => setSearch(v))}
-          onSearchSubmit={() => {
-            const q = search.trim();
-            if (q) router.push(`/search?q=${encodeURIComponent(q)}`);
-          }}
+          onSearchChange={handleSearchChange}
+          onSearchSubmit={handleSearchSubmit}
           onExport={handleExport}
           tier={tierLabel}
           hasRightPanel={rightPanelItems.length > 0}
@@ -745,7 +444,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           <RightPanelAccordion items={rightPanelItems} />
         </div>
       }
-      dock={<ChatDock analysisId={nucleus.analysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
+      dock={<ChatDock analysisId={nucleusAnalysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
         <div className="flex flex-col gap-3 pb-3">
@@ -760,7 +459,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             quota={quotaLabel}
           />
 
-          {(hasHadVideoRef.current || videoMetadata || nucleus.analysis?.videoId) && (
+          {(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId) && (
             <div className="flex flex-col gap-3">
               <VideoPlayerCard />
               {videoMetadata && (
@@ -827,7 +526,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     </DashboardLayout>
 
     {/* Dimension Drawer — outside DashboardLayout to avoid inert conflict */}
-    <DimensionDrawer 
+    <DimensionDrawer
       dimension={selectedDimension ? {
         label: selectedDimension.label,
         content: selectedDimension.content,

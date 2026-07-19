@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, startTransition, useTransition } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, startTransition, useTransition } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -26,7 +26,7 @@ const OPEN_KEY = 'hx-chatdock-open';
  * grows UPWARD. Durable threads via useChatStore → /api/chat → Postgres; survives all
  * navigation because the layout (and this dock) stay mounted.
  */
-export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
+function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   const {
     conversations, activeId, messagesByConv, sending, persistState,
     loadConversations, selectConversation, newConversation, sendMessage, deleteConversation, bindNetwork,
@@ -473,6 +473,8 @@ export function ChatDock({ analysisId, analysisTitle }: ChatDockProps) {
     </div>
   );
 }
+
+export const ChatDock = memo(ChatDockImpl);
 
 /** Split an assistant reply into its body and the trailing OPTIONS chips. */
 function parseAssistant(content: string): { body: string; options: string[] } {
