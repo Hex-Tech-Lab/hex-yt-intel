@@ -181,6 +181,7 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 - [2026-06-19T12:30:00+03:00] [OCT2] [IN_PROGRESS] PR #91 post-mortem: extract all review tool findings, create generic detection rules, update qa-intel ruleset. Then start W5 quick wins (W5-3, W5-4, W5-5). Will spawn parallel agents for quick wins. Targets: PR comments, scripts/quality-engine/rules.ts, web/components/templates/console/KnowledgeGraphCanvas.tsx, web/components/templates/console/WordCloud.tsx, web/components/templates/console/AnalysisHistory.tsx.
 - [2026-06-19T12:45:00+03:00] [GCT2] [DONE] W5-4: Word Cloud multi-word extraction. Added bigram generation (two-word phrases) and increased token limit from 35 to 50. Verified via type-check.
 - [2026-06-19T18:20:00+03:00] [W6-PersistenceRules] [DONE] Wave 6 rules.ts decomposition: extracted 5 persistence-focused rules into scripts/quality-engine/rules/persistence.ts (120 LOC). Exports: PersistResilienceRule, PersistAbortScopeRule, RetryFlagInterferenceRule, QuorumTimeoutCompletionRule, StaleStateResetRule. Exact copies, no logic changes.
+- [2026-07-19T11:30:00+03:00] [Claude] [SINK: V5 Transcript Workflow] RETROACTIVE CLOSEOUT: PR #156 (2026-07-18, V5 transcript-72h pipeline) never received a SINK per protocol — backfilling now. A subsequent re-audit (2026-07-19) found and fixed: retention-reset bug, timeout-error-propagation regression, empty-catch gaps, PR-confidence calculator fail-open flaw. Proper SINK review might have caught these earlier. Documented in ADR 012. (PR #156, ADR 012)
 
 ---
 
