@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback, useEffect, useRef, startTransition } fr
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { DashboardErrorBoundary } from '@/components/common/DashboardErrorBoundary';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
 import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
@@ -270,7 +271,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           })();
         }
       } catch (err) {
-        console.debug('[AutoRestore] Pre-flight cache check failed:', err);
+        if (!cancelled) {
+          console.error('[AutoRestore] Cache restore failed:', err);
+          Sentry.captureException(err, {
+            tags: { component: 'DashboardContainer', operation: 'autoRestore' },
+          });
+        }
       }
     })();
 
@@ -505,26 +511,73 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     digestFetchedForRef.current = analysisId;
 
     let cancelled = false;
+    let succeeded = false;
     setDigestLoading(true);
+
+    const RETRY_DELAYS_MS = [0, 3000, 5000, 8000, 13000, 21000];
+    const MAX_RETRY_TIME = 60000; // 60s total timeout
+    const startTime = Date.now();
+
     void (async () => {
       try {
-        const res = await fetch('/api/analyses/digest', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ analysisId }),
-        });
-        if (!res.ok) return; // 409 (no content) / 5xx — just show no card
-        const data = await res.json();
-        if (!cancelled && data?.digest) setDigest(data.digest as StoredExecutiveDigest);
-      } catch (err) {
-        console.debug('[digest] generation request failed:', err);
+        for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
+          const delay = RETRY_DELAYS_MS[attempt];
+
+          // Timeout protection
+          if (Date.now() - startTime > MAX_RETRY_TIME) {
+            console.warn('[digest] Timeout after retries');
+            break;
+          }
+
+          if (delay) await new Promise((r) => setTimeout(r, delay));
+          if (cancelled) return;
+
+          try {
+            const res = await fetch('/api/analyses/digest', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ analysisId }),
+            });
+
+            if (!res.ok) {
+              // 500s and transients retry; others fail fast
+              if (res.status >= 500 || res.status === 408 || res.status === 429) {
+                console.debug(`[digest] Retry ${attempt + 1} — ${res.status}, will retry`);
+                continue;
+              }
+              // 4xx errors (400, 409) — don't retry, just fail
+              console.debug(`[digest] ${res.status} error, not retrying`);
+              break;
+            }
+
+            const data = await res.json();
+            if (cancelled) return;
+
+            if (data?.digest) {
+              setDigest(data.digest as StoredExecutiveDigest);
+              succeeded = true;
+            }
+            break;
+          } catch (error) {
+            console.error(`[digest] Retry ${attempt + 1} failed:`, error);
+            if (attempt === RETRY_DELAYS_MS.length - 1) {
+              console.error('[digest] Exhausted all retries');
+            }
+            // Continue to next retry
+          }
+        }
       } finally {
-        if (!cancelled) setDigestLoading(false);
+        if (!cancelled) {
+          setDigestLoading(false);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
+      if (!succeeded && digestFetchedForRef.current === analysisId) {
+        digestFetchedForRef.current = null;
+      }
     };
   }, [status, analysisId, partialInfo]);
 
@@ -673,6 +726,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [selectedDimensionKey, dimensions]);
 
   return (
+    <DashboardErrorBoundary>
     <div className="relative w-full min-h-[100dvh] xl:h-screen overflow-x-hidden xl:overflow-hidden">
       <DashboardLayout
         sidebar={
@@ -829,5 +883,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       );
     })()}
     </div>
+    </DashboardErrorBoundary>
   );
 }
