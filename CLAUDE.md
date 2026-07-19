@@ -48,6 +48,11 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 | 009 | 2026-07-07 | Chat Conversation↔Analysis Ownership Binding — owner-verified at creation + userId-scoped grounding read (PR #126) | ✅ |
 | 010 | 2026-07-07 | Dimension-0 Executive Digest — single idempotent cheap-cascade completion, uncounted (PR #127) | ✅ |
 | 011 | 2026-07-10 | LLM Model Routing Policy & Fallback Cascade Strategy (Wave 7 clarification; Haiku 4.5 primary, separate CHAT_CASCADE for digest) | ✅ |
+| 012 | 2026-07-19 | Ephemeral Transcript Storage & 72h Compliance Retention Pipeline — new transcripts/transcript_markers tier + retention enforcement | ✅ |
+| 013 | 2026-07-19 | CI-Automated Production Schema Migration via `supabase db push` — ci-cd.yml runs on migrations/ with no manual gate | ✅ |
+| 014 | 2026-07-19 | Video-ID-Scoped Chat Grounding Fallback — chat_conversations.video_id column alongside ADR 009 analysis-scoped ownership binding | ✅ |
+| 015 | 2026-07-19 | PR Confidence Calculator Fail-Closed Semantics — tool-query failures score 0 (not 100 false-confidence) as of 2026-07-19 re-audit fix | ✅ |
+| 016 | 2026-07-19 | External Research-Harness API Key Boundary & Rotation Policy — SerpAPI/Exa/Decodo keys in scripts/research/; rotation tracked as ops task | ✅ |
 
 Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-AND-DIM0.md` §2 and `.memory/ADRS.md`.
 
