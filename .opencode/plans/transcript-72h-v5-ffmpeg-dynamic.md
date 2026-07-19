@@ -2,7 +2,7 @@
 
 **Model:** Muse Spark 1.1 (plan) → execution same model per user request  
 **Date:** 2026-07-18  
-**Keys used:** SerpAPI `b6426...`, Decodo FastSearch `VTAwMDA0NjA2Mjk6...`, Exa `bb950b...`, Brave `BSAa...`, GH PAT (public fallback)
+**Keys used:** SerpAPI, Decodo FastSearch, Exa, Brave, GH PAT (public fallback) — see `.env`/secrets manager; scrubbed from this doc 2026-07-19 per re-audit finding (prior revision leaked key-prefix fragments here; provider-side rotation tracked separately, not a repo change)
 
 ## 0. DB RCA — Where we stand (live query 2026-07-17)
 
