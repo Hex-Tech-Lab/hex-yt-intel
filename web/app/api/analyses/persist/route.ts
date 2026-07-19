@@ -18,6 +18,8 @@ import { z } from 'zod';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import type { DimensionStatus, BillingStatus } from '@/lib/types/validation-report';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
+import { ERROR_PHASES } from '@/lib/error-codes';
+import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 
 /**
  * Extract dimensions from stitched payload and build status array.
@@ -969,12 +971,12 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: 'Unknown result type' }, { status: 500 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    Sentry.captureException(error, { 
-      tags: { operation: 'analysis-persist' }, 
-      contexts: { api: { endpoint: '/api/analyses/persist' } } 
+    const err = categorizeError(error, ERROR_PHASES.DATABASE_WRITE);
+    Sentry.captureException(error, {
+      tags: { operation: 'analysis-persist', phase: err.phase, retryable: String(err.retryable) },
+      contexts: { api: { endpoint: '/api/analyses/persist', category: err.category, code: err.code } }
     });
-    console.error('[analyses/persist] Failed:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('[analyses/persist] Failed:', { message: err.message, retryable: err.retryable });
+    return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
   }
 }

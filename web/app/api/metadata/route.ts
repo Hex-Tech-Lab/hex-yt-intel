@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId } from '@/lib/youtube';
 import { WorkerIngestionAdapter } from '@/lib/adapters/WorkerIngestionAdapter';
 import { AnalysisCreateSchema } from '@/lib/types/contracts';
+import { ERROR_PHASES } from '@/lib/error-codes';
+import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 
 interface MetadataResponse {
   videoId: string;
@@ -62,12 +64,14 @@ export async function GET(request: NextRequest) {
       const result = await resolveMetadata(videoId);
       return NextResponse.json(result, { status: 200 });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return NextResponse.json({ error: message }, { status: 500 });
+      const err = categorizeError(error, ERROR_PHASES.EXTERNAL_SERVICE);
+      console.error('[/api/metadata] GET metadata fetch failed', { videoId, message: err.message });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
   } catch (error) {
-    console.error('[/api/metadata] GET Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const err = categorizeError(error, ERROR_PHASES.REQUEST_VALIDATION);
+    console.error('[/api/metadata] GET outer error', { message: err.message, phase: err.phase });
+    return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
   }
 }
 
@@ -95,17 +99,13 @@ export async function POST(request: NextRequest) {
       const result = await resolveMetadata(videoId);
       return NextResponse.json(result, { status: 200 });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return NextResponse.json(
-        { error: message },
-        { status: 500 }
-      );
+      const err = categorizeError(error, ERROR_PHASES.EXTERNAL_SERVICE);
+      console.error('[/api/metadata] POST metadata fetch failed', { videoId, message: err.message });
+      return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
   } catch (error) {
-    console.error('[/api/metadata] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    const err = categorizeError(error, ERROR_PHASES.REQUEST_VALIDATION);
+    console.error('[/api/metadata] POST outer error', { message: err.message, phase: err.phase });
+    return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
   }
 }
