@@ -392,6 +392,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     return dimensions.find(d => d.key === selectedDimensionKey) || null;
   }, [selectedDimensionKey, dimensions]);
 
+  const drawerDimensionData = useMemo(() => {
+    if (!selectedDimension) return null;
+    return {
+      label: selectedDimension.label,
+      content: selectedDimension.content,
+      icon: selectedDimension.icon
+    };
+  }, [selectedDimension]);
+
   const handleSidebarNavigate = useCallback((key: string) => {
     // Dismiss the mobile/tablet drawer on any selection (iPad: the
     // in-page view switch below is not a route change, so the layout
@@ -403,6 +412,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       setActiveNav(key as 'console' | 'history' | 'settings');
     }
   }, [setMobileNav, router]);
+
+  const handleCloseDimensionDrawer = useCallback(() => {
+    setSelectedDimensionKey(null);
+  }, []);
 
   const handleSearchChange = useCallback((v: string) => {
     startTransition(() => setSearch(v));
@@ -527,12 +540,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
     {/* Dimension Drawer — outside DashboardLayout to avoid inert conflict */}
     <DimensionDrawer
-      dimension={selectedDimension ? {
-        label: selectedDimension.label,
-        content: selectedDimension.content,
-        icon: selectedDimension.icon
-      } : null}
-      onClose={() => setSelectedDimensionKey(null)}
+      dimension={drawerDimensionData}
+      onClose={handleCloseDimensionDrawer}
     />
 
     {expandedPanel && (() => {
