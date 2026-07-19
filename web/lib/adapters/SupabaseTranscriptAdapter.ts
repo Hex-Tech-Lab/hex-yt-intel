@@ -35,17 +35,41 @@ export class SupabaseTranscriptAdapter {
     hash?: string;
   }): Promise<void> {
     const service = getSupabaseServiceClient();
+
+    // Check if row already exists to preserve retention timestamps on update
+    const { data: existing } = await service
+      .from('transcripts')
+      .select('video_id')
+      .eq('video_id', params.videoId)
+      .maybeSingle();
+
+    // Build upsert payload, conditionally including timestamp fields
+    // 72h compliance retention must anchor to the row's true first-seen time — do not reset on update
+    const upsertPayload: any = {
+      video_id: params.videoId,
+      content: params.content,
+      segments: params.segments,
+      language: params.language,
+      transcript_hash: params.hash,
+      last_accessed_at: new Date().toISOString(),
+    };
+
+    // Only set creation and expiration timestamps on first insert, not on subsequent updates.
+    // Known limitation: this is check-then-upsert, not atomic — two concurrent first-ever
+    // calls for the same video_id (e.g. chunk-path + finalize-path racing close together)
+    // could both see "doesn't exist" and both set these fields, which is harmless (same
+    // ~72h window, off by a few ms). The narrower real risk is if a genuine update lands
+    // between this SELECT and the UPSERT below; that window is small and the fields would
+    // only be wrongly reset once, not on every call as before. A raw SQL upsert with an
+    // explicit ON CONFLICT DO UPDATE column list would close this fully if it recurs.
+    if (!existing) {
+      upsertPayload.created_at = new Date().toISOString();
+      upsertPayload.expires_at = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+    }
+
     const { error } = await service
       .from('transcripts')
-      .upsert({
-        video_id: params.videoId,
-        content: params.content,
-        segments: params.segments,
-        language: params.language,
-        transcript_hash: params.hash,
-        last_accessed_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
-      }, { onConflict: 'video_id' });
+      .upsert(upsertPayload, { onConflict: 'video_id' });
     if (error) {
       Sentry.captureException(error, { tags: { method: 'upsertTranscript' }, extra: { videoId: params.videoId } });
       throw error;
