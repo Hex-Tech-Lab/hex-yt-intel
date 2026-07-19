@@ -36,6 +36,8 @@ interface PRConfidenceResult {
   confidence: number;
   breakdown: PRConfidenceBreakdown;
   recommendation: string;
+  unverifiedDimensions: string[];
+  hasUnverifiedDimensions: boolean;
   details: {
     cubic_comment?: string;
     coderabbit_comment?: string;
@@ -247,8 +249,10 @@ function extractCICDStatus(prNumber: number): { score: number; status?: string }
     const score = Math.floor((passedCount / checkRuns.length) * 10);
     return { score, status: `${passedCount}/${checkRuns.length}-passed` };
   } catch (error) {
-    // Default to partial score if unable to query
-    return { score: 5, status: 'unknown' };
+    // Fail closed: unable to verify CI/CD status, award zero points
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[pr-confidence] Failed to extract CI/CD status:', msg);
+    return { score: 0, status: 'unverified' };
   }
 }
 
@@ -288,7 +292,7 @@ function extractVercelStatus(prNumber: number): { score: number; status?: string
  * Extract CodeQL security analysis alerts from PR code scanning.
  * Counts critical and high-severity blocking alerts, loses 1 point per alert.
  * @param prNumber - Pull request number to analyze
- * @returns Object with score (0-5) and count of blocking alerts
+ * @returns Object with score (0-5), count of blocking alerts, and verification status
  */
 function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number } {
   try {
@@ -312,8 +316,11 @@ function extractCodeQLStatus(prNumber: number): { score: number; alerts?: number
     const score = Math.max(0, 5 - blockingAlerts.length);
     return { score, alerts: blockingAlerts.length };
   } catch (error) {
-    // CodeQL might not be configured — default to full score
-    return { score: 5, alerts: 0 };
+    // Fail closed: unable to verify CodeQL status, award zero points
+    // Use alerts: -1 as a sentinel value to indicate verification failure
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[pr-confidence] Failed to extract CodeQL status:', msg);
+    return { score: 0, alerts: -1 };
   }
 }
 
@@ -355,6 +362,15 @@ async function main(): Promise<void> {
   const vercelResult = extractVercelStatus(prNumber);
   const codeqlResult = extractCodeQLStatus(prNumber);
 
+  // Track which dimensions could not be verified (query failed or data unavailable)
+  const unverifiedDimensions: string[] = [];
+  if (cicdResult.status === 'unverified') {
+    unverifiedDimensions.push('CI/CD');
+  }
+  if (codeqlResult.alerts === -1) {
+    unverifiedDimensions.push('CodeQL');
+  }
+
   const breakdown: PRConfidenceBreakdown = {
     cubic: cubicResult.score,
     coderabbit: coderabbitResult.score,
@@ -373,6 +389,8 @@ async function main(): Promise<void> {
     confidence,
     breakdown,
     recommendation,
+    unverifiedDimensions,
+    hasUnverifiedDimensions: unverifiedDimensions.length > 0,
     details: {
       cubic_comment: cubicResult.comment,
       coderabbit_comment: coderabbitResult.comment,
@@ -394,7 +412,11 @@ async function main(): Promise<void> {
   console.error(`  CodeQL:      ${breakdown.codeql}/5`);
   console.error(`  ─────────────────────`);
   console.error(`  Total:       ${totalPoints}/85`);
-  console.error(`\n🎯 Confidence: ${confidence}% (${recommendation})\n`);
+  console.error(`\n🎯 Confidence: ${confidence}% (${recommendation})`);
+  if (unverifiedDimensions.length > 0) {
+    console.error(`⚠️  Unverified Dimensions: ${unverifiedDimensions.join(', ')}`);
+  }
+  console.error('');
 
   // Output single-line JSON to stdout (last line, for CI extraction)
   console.log(JSON.stringify(result));
