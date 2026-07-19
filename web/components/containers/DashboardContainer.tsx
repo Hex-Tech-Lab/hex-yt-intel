@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback, useEffect, useRef, startTransition } fr
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { extractVideoId } from '@/lib/youtube';
 import { DashboardLayout } from '@/components/templates/console/DashboardLayout';
 import { Sidebar, SidebarItem } from '@/components/templates/console/Sidebar';
 import { TopBar } from '@/components/templates/console/TopBar';
@@ -133,26 +134,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   useEffect(() => { // skipcq: JS-0903
     if (!url) return;
 
-    // Extract video ID
-    let videoId = 'unknown';
-    try {
-      const normalized = url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`;
-      const parsed = new URL(normalized);
-      if (parsed.hostname?.includes('youtu.be')) {
-        videoId = parsed.pathname.slice(1);
-      } else if (parsed.pathname.includes('/shorts/')) {
-        videoId = parsed.pathname.split('/')[2] || 'unknown';
-      } else if (parsed.pathname.includes('/live/')) {
-        videoId = parsed.pathname.split('/')[2] || 'unknown';
-      } else if (parsed.pathname.includes('/embed/') || parsed.pathname.includes('/v/')) {
-        videoId = parsed.pathname.split('/')[2] || 'unknown';
-      } else {
-        videoId = parsed.searchParams.get('v') || 'unknown';
-      }
-    } catch (e) {
-      console.debug('[AutoRestore] URL parsing exception:', e);
-      videoId = 'unknown';
-    }
+    const videoId = extractVideoId(url);
 
     if (videoId === 'unknown' || videoId.length < 5) return;
 
