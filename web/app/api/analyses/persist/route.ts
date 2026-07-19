@@ -973,7 +973,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const err = categorizeError(error, ERROR_PHASES.DATABASE_WRITE);
     Sentry.captureException(error, {
-      tags: { operation: 'analysis-persist', phase: 'unknown', retryable: String(err.retryable) },
+      tags: { operation: 'analysis-persist', phase: err.phase, retryable: String(err.retryable) },
       contexts: { api: { endpoint: '/api/analyses/persist', category: err.category, code: err.code } }
     });
     console.error('[analyses/persist] Failed:', { message: err.message, retryable: err.retryable });

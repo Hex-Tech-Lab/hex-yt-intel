@@ -69,8 +69,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
   } catch (error) {
-    console.error('[/api/metadata] GET Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const err = categorizeError(error, ERROR_PHASES.API_REQUEST);
+    console.error('[/api/metadata] GET outer error', { message: err.message, phase: err.phase });
+    return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
   }
 }
 
@@ -103,10 +104,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
   } catch (error) {
-    console.error('[/api/metadata] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    const err = categorizeError(error, ERROR_PHASES.API_REQUEST);
+    console.error('[/api/metadata] POST outer error', { message: err.message, phase: err.phase });
+    return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
   }
 }
