@@ -548,12 +548,16 @@ jobs:
                 try {
                   const confidence = JSON.parse(confidenceJson);
                   const breakdown = confidence.breakdown;
+                  const unverifiedLine = confidence.hasUnverifiedDimensions
+                    ? `\n\n                  ⚠️ **Unverified dimensions (scored 0, not skipped): ${confidence.unverifiedDimensions.join(', ')}** — the calculator could not query these; treat the total below as a floor, not a confirmed score, and check workflow logs before trusting "${confidence.recommendation}".`
+                    : '';
 
                   confidenceBody = `
 
                   ## 🎯 PR Confidence Score
 
                   **Confidence: ${confidence.confidence}%** — *${confidence.recommendation}*
+                  ${unverifiedLine}
 
                   ### Scoring Breakdown
                   | Tool | Score | Max |
