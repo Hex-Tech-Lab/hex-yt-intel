@@ -69,25 +69,18 @@ function DimensionDots({ present, totalDimensions }: { present: number[]; totalD
 }
 
 function extractExecutiveSummary(markdown: string | undefined, digest?: Record<string, any> | null): ExecutiveSummaryData | null {
+  // Prefer stored digest (3-tier structure)
   if (digest && typeof digest === 'object' && ('snapshot' in digest || 'overview' in digest)) {
     return {
-      overview: (digest.overview ?? ''),
       snapshot: (digest.snapshot ?? ''),
       keyTakeaways: Array.isArray(digest.takeaways) ? digest.takeaways : [],
-      detailedSummary: (digest.detailedSummary ?? digest.overview ?? ''),
+      overview: (digest.overview ?? ''),
     };
   }
 
-  if (!markdown) return null;
-  const lines = markdown.split('\n').filter(l => l.trim());
-  if (lines.length < 4) return null;
-
-  return {
-    overview: lines.slice(0, 3).join('\n'),
-    snapshot: lines.slice(3, 8).join('\n'),
-    keyTakeaways: lines.slice(8, 18).filter(l => l.trim().length > 0),
-    detailedSummary: lines.slice(18, 23).join('\n\n'),
-  };
+  // Fallback: if no digest, don't try to parse full markdown
+  // (it contains all 11 dimensions, not just the 3-tier digest)
+  return null;
 }
 
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
