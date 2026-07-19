@@ -180,7 +180,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           return;
         }
 
-        if (data.status !== 'complete') {
+        if (data.status !== 'complete' && data.status !== 'partial') {
           console.debug('[AutoRestore] Analysis status is', data.status, '— not restoring');
           return;
         }

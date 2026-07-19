@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
       // NOTE: `analyses` has no `status` column — completeness lives in
       // `billing_status`. Analysis is complete when billing_status='chargeable'
       // (ready to charge) or 'charged' (payment processed).
+      // Also restore partial analyses (billing_status='failed' but has dimensions).
       if (existingAnalysis.billing_status === 'chargeable' || existingAnalysis.billing_status === 'charged') {
         return NextResponse.json({
           exists: true,
@@ -93,12 +94,24 @@ export async function GET(request: NextRequest) {
       const PROCESSING_STALE_MS = 120_000;
       const ageMs = Date.now() - new Date(existingAnalysis.created_at).getTime();
 
-      if (validationReport.status === 'error' || existingAnalysis.billing_status === 'failed') {
+      if (validationReport.status === 'error') {
         return NextResponse.json({
           status: 'error',
           exists: true,
           analysisId: existingAnalysis.id,
           error: validationReport.error || 'Analysis generation failed',
+        }, { status: 200 });
+      }
+
+      // Restore partial analyses (billing_status='failed' but has validation data)
+      if (existingAnalysis.billing_status === 'failed' && validationReport.status !== 'failed') {
+        return NextResponse.json({
+          exists: true,
+          status: 'complete',  // Treat partial as restoreable
+          analysisId: existingAnalysis.id,
+          title: existingAnalysis.title,
+          channelTitle: existingAnalysis.channel_title,
+          metadata: metadataPayload
         }, { status: 200 });
       }
 
