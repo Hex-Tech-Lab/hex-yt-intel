@@ -29,6 +29,7 @@ export interface CategorizedError {
   message: string;
   retryable: boolean;
   statusCode: number;
+  phase: ErrorPhase;
 }
 
 /**
@@ -61,6 +62,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: false,
       statusCode: 400,
+      phase,
     };
   }
 
@@ -72,6 +74,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: false,
       statusCode: 401,
+      phase,
     };
   }
 
@@ -83,6 +86,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: false,
       statusCode: 403,
+      phase,
     };
   }
 
@@ -94,6 +98,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: true,
       statusCode: 429,
+      phase,
     };
   }
 
@@ -110,6 +115,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: isTimeout,
       statusCode: isTimeout ? 503 : 500,
+      phase,
     };
   }
 
@@ -122,6 +128,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: isTransient,
       statusCode: isTransient ? 503 : 500,
+      phase,
     };
   }
 
@@ -134,6 +141,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: isTimeout,
       statusCode: isTimeout ? 503 : 401,
+      phase,
     };
   }
 
@@ -145,6 +153,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: false,
       statusCode: 404,
+      phase,
     };
   }
 
@@ -164,6 +173,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
         message,
         retryable: true,
         statusCode: 503,
+        phase,
       };
     }
 
@@ -174,6 +184,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
         message,
         retryable: true,
         statusCode: 503,
+        phase,
       };
     }
 
@@ -183,6 +194,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: false,
       statusCode: 502,
+      phase,
     };
   }
 
@@ -195,6 +207,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: isTimeout,
       statusCode: isTimeout ? 503 : 500,
+      phase,
     };
   }
 
@@ -210,6 +223,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: false,
       statusCode: 400,
+      phase,
     };
   }
 
@@ -221,6 +235,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
       message,
       retryable: true,
       statusCode: 504,
+      phase,
     };
   }
 
@@ -231,6 +246,7 @@ export function categorizeError(error: unknown, phase: ErrorPhase): CategorizedE
     message,
     retryable: true,
     statusCode: 500,
+    phase,
   };
 }
 
@@ -258,6 +274,7 @@ export function captureErrorToSentry(
       code: categorized.code,
       retryable: String(categorized.retryable),
       statusCode: String(categorized.statusCode),
+      phase,
     },
     contexts: {
       error: {
@@ -293,6 +310,7 @@ export function logError(
     message: categorized.message,
     retryable: categorized.retryable,
     statusCode: categorized.statusCode,
+      phase,
     ...context,
   });
 }
