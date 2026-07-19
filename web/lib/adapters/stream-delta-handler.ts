@@ -113,7 +113,13 @@ export class StreamDeltaHandler {
           try {
             JSON.parse(cleanSink);
             isRawComplete = true;
-          } catch {}
+          } catch (err) {
+            // Speculative parse probe: check if raw sink is already complete
+            // Expected to fail during stream accumulation; log unexpected errors only
+            if (err instanceof Error && !err.message.includes('Unexpected end of JSON')) {
+              console.warn('[Adapter] Unexpected error parsing raw sink for completion check:', err.message);
+            }
+          }
 
           // 1. Validate and set Persona
           if (obj.persona && typeof obj.persona === 'object') {
