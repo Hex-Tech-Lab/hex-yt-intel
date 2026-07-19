@@ -474,9 +474,20 @@ export async function POST(request: NextRequest) {
           2
         );
 
-        // Store transcript segments as soon as the first chunk arrives.
-        // This ensures transcripts are available even for partial/timeout analyses
-        // where the non-chunk finalization path (lines 853-864) is never reached.
+        // SAFETY-NET WRITE, not the authoritative one — re-audit finding P1.2.
+        // This upsert stores whatever segments THIS chunk carries, so a transcript
+        // row exists even if the analysis is interrupted/times out before the
+        // finalize-path call below ever runs. It intentionally re-fires per chunk;
+        // each call's content reflects only that chunk, so intermediate rows are
+        // partial by design. If finalize-path DOES run afterward for this video_id,
+        // its call happens later in the same request lifecycle and its full-content
+        // upsert is the one that should be trusted — upsertTranscript's own
+        // check-then-upsert (see SupabaseTranscriptAdapter.ts) makes repeat calls for
+        // the same video_id safe (no duplicate rows, no retention-timestamp reset on
+        // update), and SupabaseTranscriptAdapter.test.ts asserts the last call's
+        // content is what's actually persisted. Do not remove this call to "avoid
+        // duplication" — partial/interrupted analyses would silently stop getting a
+        // transcript row at all, regressing the original P3 fix this exists for.
         if (segments && segments.length > 0) {
           const transcriptText = segments.map((s: any) => s.text || '').join(' ').trim();
           await SupabaseTranscriptAdapter.upsertTranscript({
@@ -869,6 +880,12 @@ export async function POST(request: NextRequest) {
         2
       );
 
+      // AUTHORITATIVE WRITE — re-audit finding P1.2. When this runs, it's the
+      // full stitched content across every chunk, and it runs after any
+      // chunk-path upsert above for this same request/video_id, so it correctly
+      // overwrites whatever partial content the safety-net write left behind.
+      // See the comment at the chunk-path call site (~line 475) for the full
+      // relationship — the two calls are deliberately not consolidated into one.
       if (segments && segments.length > 0 && (finalStatus === 'done' || finalStatus === 'partial')) {
         await SupabaseTranscriptAdapter.upsertTranscript({
           videoId,

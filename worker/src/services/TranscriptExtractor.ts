@@ -332,10 +332,10 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       }, this.residentialProxyUrl);
       if (!response.ok) throw new Error(`Transcript content fetch failed: ${response.status}`);
 
-      const captionData = (await response.json()) as { 
-        events?: Array<{ 
-          segs?: Array<{ utf8?: string }> 
-        }> 
+      const captionData = (await response.json()) as {
+        events?: Array<{
+          segs?: Array<{ utf8?: string }>
+        }>
       };
 
       if (!captionData.events || captionData.events.length === 0) {
@@ -350,6 +350,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
 
       return transcript;
     } catch (e) {
+      captureException(e, { tags: { operation: 'transcript-content-fetch', videoId } });
       throw e;
     } finally {
       controller.abort();
