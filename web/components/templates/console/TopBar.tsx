@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { memo, ReactNode, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useUIStore } from '@/store/useUIStore';
 
@@ -14,7 +14,7 @@ export interface TopBarProps {
   hasRightPanel?: boolean;
 }
 
-export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier, account, hasRightPanel }: TopBarProps) {
+function TopBarImpl({ search, onSearchChange, onSearchSubmit, onExport, tier, account, hasRightPanel }: TopBarProps) {
   const [exportOpen, setExportOpen] = useState(false);
   const setMobileNav = useUIStore((s) => s.setMobileNav);
   const setMobileRight = useUIStore((s) => s.setMobileRight);
@@ -119,3 +119,5 @@ export function TopBar({ search, onSearchChange, onSearchSubmit, onExport, tier,
     </div>
   );
 }
+
+export const TopBar = memo(TopBarImpl);

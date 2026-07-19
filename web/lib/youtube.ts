@@ -37,6 +37,7 @@ function extractIdFromUrl(parsed: URL): string | null {
   if (['youtube.com', 'www.youtube.com', 'youtu.be', 'm.youtube.com', 'music.youtube.com'].includes(parsed.hostname)) {
     if (parsed.hostname === 'youtu.be') return parsed.pathname.slice(1);
     if (parsed.pathname.startsWith('/shorts/')) return parsed.pathname.split('/')[2] ?? null;
+    if (parsed.pathname.startsWith('/live/')) return parsed.pathname.split('/')[2] ?? null;
     if (parsed.pathname.startsWith('/embed/')) return parsed.pathname.split('/')[2] ?? null;
     if (parsed.pathname.startsWith('/v/')) return parsed.pathname.split('/')[2] ?? null;
     return parsed.searchParams.get('v');
