@@ -488,12 +488,27 @@ export class SupabaseAnalysisAdapter {
         transcript = txData?.content || null;
       }
 
+      // Compute frontend-visible status (matches analysis endpoint logic)
+      const report = (data!.validation_report as any) || {};
+      const validationStatus = report.validation_status || report.status || 'processing';
+      const dimensionStatus = report.dimension_status;
+      const hasDimensions = Array.isArray(dimensionStatus) && dimensionStatus.some((d: any) => d?.status === 'done');
+
+      let computedStatus = 'incomplete';
+      if (validationStatus === 'done' || data!.billing_status === 'chargeable' || data!.billing_status === 'charged') {
+        computedStatus = 'complete';
+      } else if (validationStatus === 'error' || validationStatus === 'failed') {
+        computedStatus = 'error';
+      } else if (validationStatus === 'partial' || hasDimensions) {
+        computedStatus = 'partial';
+      }
+
       return {
         title: data!.title || '',
         channelTitle: data!.channel_title || null,
         description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null,
         analysisMarkdown: data!.analysis_markdown || null,
-        status: data!.validation_report?.validation_status || data!.billing_status || data!.validation_report?.status || 'incomplete',
+        status: computedStatus,
         transcript,
       };
     } catch (error: any) {
