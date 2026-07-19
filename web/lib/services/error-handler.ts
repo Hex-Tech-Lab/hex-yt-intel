@@ -269,12 +269,11 @@ export function captureErrorToSentry(
   Sentry.captureException(error, {
     tags: {
       operation,
-      phase: phase || 'unknown',
+      phase: phase || categorized.phase || 'unknown',
       category: categorized.category,
       code: categorized.code,
       retryable: String(categorized.retryable),
       statusCode: String(categorized.statusCode),
-      phase,
     },
     contexts: {
       error: {
@@ -310,7 +309,7 @@ export function logError(
     message: categorized.message,
     retryable: categorized.retryable,
     statusCode: categorized.statusCode,
-      phase,
+    phase: categorized.phase,
     ...context,
   });
 }
