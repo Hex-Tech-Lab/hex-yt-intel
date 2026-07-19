@@ -30,30 +30,50 @@ export function reportClipboardError(error: unknown, context: string) {
 
 /**
  * Copies the given right-panel's content to the clipboard as plain text and
- * surfaces a success/error toast. Mirrors the panel-specific text formats
- * previously inlined in DashboardContainer's `handleCopy`.
+ * surfaces a success/error toast. Falls back to download if clipboard API unavailable.
+ * Mirrors the panel-specific text formats previously inlined in DashboardContainer's `handleCopy`.
  */
 export function copyPanelContent(
   id: PanelId,
   { graph, insights }: { graph: KnowledgeGraph; insights: RelationInsight[] },
 ) {
   try {
-    if (id === 'insights') {
-      const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
-      navigator.clipboard.writeText(text).then(() => showToast('Insights copied to clipboard!')).catch((err) => reportClipboardError(err, 'insights'));
-    } else if (id === 'knowledge-graph') {
-      const text = graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
-      navigator.clipboard.writeText(text).then(() => showToast('Knowledge Graph nodes list copied!')).catch((err) => reportClipboardError(err, 'knowledge-graph'));
-    } else if (id === 'word-cloud') {
-      const text = graph.nodes.map((n) => n.label).join(', ');
-      navigator.clipboard.writeText(text).then(() => showToast('Word Cloud text copied!')).catch((err) => reportClipboardError(err, 'word-cloud'));
-    } else if (id === 'mind-map') {
-      const text = graph.nodes.map((n) => `- ${n.label}`).join('\n');
-      navigator.clipboard.writeText(text).then(() => showToast('Mind Map nodes list copied!')).catch((err) => reportClipboardError(err, 'mind-map'));
+    const getTextForPanel = () => {
+      switch (id) {
+        case 'insights':
+          return insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
+        case 'knowledge-graph':
+          return graph.nodes.map((n) => `${n.label} (${n.entityType || 'concept'})`).join('\n');
+        case 'word-cloud':
+          return graph.nodes.map((n) => n.label).join(', ');
+        case 'mind-map':
+          return graph.nodes.map((n) => `- ${n.label}`).join('\n');
+        default:
+          return '';
+      }
+    };
+
+    const text = getTextForPanel();
+    const successMessage = {
+      'insights': 'Insights copied to clipboard!',
+      'knowledge-graph': 'Knowledge Graph nodes list copied!',
+      'word-cloud': 'Word Cloud text copied!',
+      'mind-map': 'Mind Map nodes list copied!',
+    }[id];
+
+    if (!navigator.clipboard?.writeText) {
+      throw new Error('Clipboard API unavailable in this browser');
     }
+
+    navigator.clipboard.writeText(text)
+      .then(() => showToast(successMessage || 'Copied to clipboard!'))
+      .catch((err) => {
+        reportClipboardError(err, id);
+        showToast('Failed to copy. Try downloading instead.', 'error');
+      });
   } catch (err) {
     reportClipboardError(err, 'outer');
-    showToast('Copy failed', 'error');
+    showToast('Copy failed. Try downloading instead.', 'error');
   }
 }
 
@@ -66,51 +86,65 @@ export function exportPanelContent(
   id: PanelId,
   { insights, title }: { insights: RelationInsight[]; title?: string | null },
 ) {
-  if (id === 'insights') {
-    const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${title || 'analysis'}-insights.txt`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  } else if (id === 'knowledge-graph') {
-    const canvas = document.querySelector('.js-knowledge-graph-container canvas') as HTMLCanvasElement;
-    if (canvas) {
+  try {
+    if (id === 'insights') {
+      const text = insights.map((ins) => `${ins.sourceLabel} -[${ins.kind}]-> ${ins.targetLabel}: ${ins.rationale || ''}`).join('\n');
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      try {
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${title || 'analysis'}-insights.txt`;
+        anchor.click();
+        showToast('Insights exported successfully');
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    } else if (id === 'knowledge-graph') {
+      const canvas = document.querySelector('.js-knowledge-graph-container canvas') as HTMLCanvasElement | null;
+      if (!canvas) {
+        throw new Error('Knowledge graph canvas element not found');
+      }
       const url = canvas.toDataURL('image/png');
       const anchor = document.createElement('a');
       anchor.href = url;
       anchor.download = `${title || 'analysis'}-knowledge-graph.png`;
       anchor.click();
-    } else {
-      showToast('Could not locate canvas element to export.', 'error');
-    }
-  } else if (id === 'word-cloud') {
-    const canvas = document.querySelector('.js-word-cloud-canvas') as HTMLCanvasElement;
-    if (canvas) {
+      showToast('Knowledge graph exported successfully');
+    } else if (id === 'word-cloud') {
+      const canvas = document.querySelector('.js-word-cloud-canvas') as HTMLCanvasElement | null;
+      if (!canvas) {
+        throw new Error('Word cloud canvas element not found');
+      }
       const url = canvas.toDataURL('image/png');
       const anchor = document.createElement('a');
       anchor.href = url;
       anchor.download = `${title || 'analysis'}-word-cloud.png`;
       anchor.click();
-    } else {
-      showToast('Could not locate canvas element to export.', 'error');
-    }
-  } else if (id === 'mind-map') {
-    const svg = document.querySelector('.js-mind-map-container svg') as SVGElement;
-    if (svg) {
+      showToast('Word cloud exported successfully');
+    } else if (id === 'mind-map') {
+      const svg = document.querySelector('.js-mind-map-container svg') as SVGElement | null;
+      if (!svg) {
+        throw new Error('Mind map SVG element not found');
+      }
       const serializer = new XMLSerializer();
       const svgString = serializer.serializeToString(svg);
       const blob = new Blob([svgString], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `${title || 'analysis'}-mind-map.svg`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } else {
-      showToast('Could not locate SVG element to export.', 'error');
+      try {
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${title || 'analysis'}-mind-map.svg`;
+        anchor.click();
+        showToast('Mind map exported successfully');
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error during export';
+    Sentry.captureException(err, { contexts: { export: { panelId: id, title } } });
+    console.error('[export] Panel export failed:', { panelId: id, message });
+    showToast('Export failed: ' + message, 'error');
   }
 }
