@@ -544,6 +544,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           // Timeout protection
           if (Date.now() - startTime > MAX_RETRY_TIME) {
             console.warn('[digest] Timeout after retries');
+            Sentry.captureMessage('Digest fetch: timeout after retries', {
+              level: 'warning',
+              tags: { operation: 'digest-fetch', analysisId },
+            });
             break;
           }
 
@@ -565,6 +569,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               }
               // 4xx errors (400, 409) — don't retry, just fail
               console.debug(`[digest] ${res.status} error, not retrying`);
+              Sentry.captureMessage('Digest fetch: permanent error', {
+                level: 'warning',
+                tags: { operation: 'digest-fetch', status: res.status, analysisId },
+              });
               break;
             }
 
@@ -572,14 +580,25 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             if (cancelled) return;
 
             if (data?.digest) {
+              console.debug('[digest] Successfully fetched digest', { analysisId, cached: data.cached });
               setDigest(data.digest as StoredExecutiveDigest);
               succeeded = true;
+            } else {
+              console.warn('[digest] Endpoint returned success but no digest data', { analysisId, data });
+              Sentry.captureMessage('Digest fetch: empty response', {
+                level: 'warning',
+                tags: { operation: 'digest-fetch', analysisId },
+                contexts: { response: { data } }
+              });
             }
             break;
           } catch (error) {
             console.error(`[digest] Retry ${attempt + 1} failed:`, error);
             if (attempt === RETRY_DELAYS_MS.length - 1) {
               console.error('[digest] Exhausted all retries');
+              Sentry.captureException(error, {
+                tags: { operation: 'digest-fetch', analysisId, finalAttempt: true },
+              });
             }
             // Continue to next retry
           }
