@@ -6,6 +6,7 @@ import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter'
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
 import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
+import { extractVideoId } from '@/lib/youtube';
 
 /**
  * Hook managing Server-Sent Event streaming for analysis generation.
@@ -46,21 +47,6 @@ export function useSSEStream() {
     };
   }, []);
 
-  const extractTelemetryId = (urlStr: string) => {
-    try {
-      const normalized = urlStr.trim().startsWith('http') ? urlStr.trim() : `https://${urlStr.trim()}`;
-      const parsed = new URL(normalized);
-      if (parsed.hostname?.includes('youtu.be')) return parsed.pathname.slice(1);
-      if (parsed.pathname.includes('/shorts/')) return parsed.pathname.split('/')[2] || 'unknown';
-      if (parsed.pathname.includes('/live/')) return parsed.pathname.split('/')[2] || 'unknown';
-      if (parsed.pathname.includes('/embed/') || parsed.pathname.includes('/v/')) return parsed.pathname.split('/')[2] || 'unknown';
-      return parsed.searchParams.get('v') || 'unknown';
-    } catch (e) {
-      console.debug('[useSSEStream] Failed to parse YouTube URL:', e);
-      return 'unknown';
-    }
-  };
-
   const startAnalysis = async (url: string, timezone: string, forceRefresh: boolean = false) => {
     if (processingRef.current) return;
     processingRef.current = true;
@@ -69,8 +55,8 @@ export function useSSEStream() {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    
-    const videoId = extractTelemetryId(url);
+
+    const videoId = extractVideoId(url);
     // Merge with existing metadata (preserves eagerly-fetched data from useEagerVideoMetadata)
     const prev = useAnalysisStore.getState().videoMetadata;
     const isSameVideo = prev?.videoId === videoId;

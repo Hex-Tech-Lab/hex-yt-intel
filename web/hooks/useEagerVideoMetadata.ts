@@ -52,8 +52,11 @@ export function useEagerVideoMetadata() {
             thumbnailUrl: data.thumbnailUrl,
           });
         }
-      } catch {
-        // AbortError is expected; other errors are non-fatal
+      } catch (err) {
+        // AbortError is expected (user navigated away); other errors should still be logged
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.warn('[Video Metadata] Failed to eagerly fetch metadata:', err.message);
+        }
       }
     }, 500);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 export interface AccordionItem {
@@ -15,7 +15,7 @@ interface RightPanelAccordionProps {
   items: AccordionItem[];
 }
 
-export function RightPanelAccordion({ items }: RightPanelAccordionProps) {
+function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
   const [openStates, setOpenStates] = useState<Record<string, boolean>>(
     Object.fromEntries(items.map((item) => [item.id, item.defaultOpen || false]))
   );
@@ -105,3 +105,5 @@ export function RightPanelAccordion({ items }: RightPanelAccordionProps) {
     </div>
   );
 }
+
+export const RightPanelAccordion = memo(RightPanelAccordionImpl);

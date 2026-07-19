@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import Link from 'next/link';
 
@@ -24,7 +25,7 @@ export interface SidebarProps {
   footer?: React.ReactNode;
 }
 
-export function Sidebar({ items, activeKey, onNavigate, repoScope, children, footer }: SidebarProps) {
+function SidebarImpl({ items, activeKey, onNavigate, repoScope, children, footer }: SidebarProps) {
   return (
     <div className="flex flex-col h-full py-6 px-3.5">
       {/* brand */}
@@ -89,3 +90,5 @@ export function Sidebar({ items, activeKey, onNavigate, repoScope, children, foo
     </div>
   );
 }
+
+export const Sidebar = memo(SidebarImpl);
