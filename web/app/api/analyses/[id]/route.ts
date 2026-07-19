@@ -66,23 +66,23 @@ export async function GET(
 
     // Compute frontend-visible status:
     // - 'complete' if validation_status='done' OR billing_status='chargeable'/'charged'
-    // - 'error' if validation_status='error' OR billing_status='failed'
-    // - 'partial' if validation_status='partial'
-    // - 'incomplete' otherwise (pending or other states)
+    // - 'partial' if has any dimensions (restorable partial analyses)
+    // - 'error' if validation_status='error' or no dimensions + billing_status='failed'
+    // - 'incomplete' otherwise (pending/processing)
     const validationStatus = (report as any).validation_status || (report as any).status || 'processing';
+    const dimensionStatus = (report as any).dimension_status;
+    const hasDimensions = Array.isArray(dimensionStatus) && dimensionStatus.some((d: any) => d?.status === 'done');
+
     let analysisStatus: 'complete' | 'incomplete' | 'error' | 'partial' = 'incomplete';
     if (validationStatus === 'done' || analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged') {
       analysisStatus = 'complete';
-    } else if (validationStatus === 'error') {
+    } else if (validationStatus === 'error' || validationStatus === 'failed') {
       analysisStatus = 'error';
-    } else if (validationStatus === 'partial') {
+    } else if (validationStatus === 'partial' || hasDimensions) {
       analysisStatus = 'partial';
-    } else if (validationStatus === 'failed') {
-      analysisStatus = 'error';
     }
 
     // Populate dimensionsReceived from validation_report.dimension_status
-    const dimensionStatus = (report as any).dimension_status;
     const dimensionsReceived: number[] = Array.isArray(dimensionStatus)
       ? dimensionStatus
           .filter((d: any) => d.status === 'done' || d.status === 'partial')
