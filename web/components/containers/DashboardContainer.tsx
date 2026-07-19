@@ -510,10 +510,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const mappedDigestData = useMemo<ExecutiveSummaryData | null>(() => {
     if (!digest) return null;
     return {
-      overview: digest.overview ?? '',
       snapshot: digest.snapshot ?? '',
       keyTakeaways: digest.takeaways ?? [],
-      detailedSummary: digest.overview ?? '',
+      overview: digest.overview ?? '',
     };
   }, [digest]);
 

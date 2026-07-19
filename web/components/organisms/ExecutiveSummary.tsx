@@ -5,14 +5,12 @@ import * as Sentry from '@sentry/nextjs';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 export interface ExecutiveSummaryData {
-  /** Overview tier: max 3 lines */
-  overview: string;
-  /** Snapshot tier: max 5 lines */
+  /** Snapshot tier: 3–5 lines. What the video is, core thesis, why it matters. */
   snapshot: string;
-  /** Key takeaways: up to 10 bullets */
+  /** Key takeaways: up to 10 bullets, ranked most→least important. */
   keyTakeaways: string[];
-  /** Detailed summary: up to 5 paragraphs */
-  detailedSummary: string;
+  /** Overview tier: 3–5 paragraphs. Full arc: context → arguments → conclusions. */
+  overview: string;
 }
 
 export interface ExecutiveSummaryProps {
@@ -20,7 +18,7 @@ export interface ExecutiveSummaryProps {
   loading?: boolean;
 }
 
-type AccordionItemId = 'overview' | 'snapshot' | 'takeaways' | 'detailed';
+type AccordionItemId = 'snapshot' | 'takeaways' | 'overview';
 
 interface ConfirmationState {
   itemId: AccordionItemId | null;
@@ -28,13 +26,13 @@ interface ConfirmationState {
 }
 
 /**
- * Dimension 0 — the executive summary accordion component. Four multivariant
- * summaries (Overview, Snapshot, Key Takeaways, Detailed Summary) presented as
- * a mutually exclusive accordion. First item opens by default. Smooth transitions
- * with copy-to-clipboard feature on each summary.
+ * Dimension 0 — the executive summary accordion component. Three-tier digest
+ * (Snapshot, Key Takeaways, Overview) presented as a mutually exclusive accordion.
+ * First item (Snapshot) opens by default. Smooth transitions with copy-to-clipboard
+ * feature on each tier.
  */
 export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProps) {
-  const [openItemId, setOpenItemId] = useState<AccordionItemId>('overview');
+  const [openItemId, setOpenItemId] = useState<AccordionItemId>('snapshot');
   const [copyConfirmation, setCopyConfirmation] = useState<ConfirmationState>({
     itemId: null,
     timeoutId: null,
@@ -92,10 +90,9 @@ export function ExecutiveSummary({ data, loading = false }: ExecutiveSummaryProp
     type: 'text' | 'bullets' | 'paragraphs';
     maxLines?: number;
   }> = [
-    { id: 'overview', label: 'Overview', content: data?.overview ?? '', type: 'paragraphs' },
     { id: 'snapshot', label: 'Snapshot', content: data?.snapshot ?? '', type: 'text' },
     { id: 'takeaways', label: 'Key Takeaways', content: data?.keyTakeaways.join('\n') ?? '', type: 'bullets' },
-    { id: 'detailed', label: 'Detailed Summary', content: data?.detailedSummary ?? '', type: 'paragraphs' },
+    { id: 'overview', label: 'Overview', content: data?.overview ?? '', type: 'paragraphs' },
   ];
 
   return (
