@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
   } catch (error) {
-    const err = categorizeError(error, ERROR_PHASES.API_REQUEST);
+    const err = categorizeError(error, ERROR_PHASES.REQUEST_VALIDATION);
     console.error('[/api/metadata] GET outer error', { message: err.message, phase: err.phase });
     return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
   }
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
     }
   } catch (error) {
-    const err = categorizeError(error, ERROR_PHASES.API_REQUEST);
+    const err = categorizeError(error, ERROR_PHASES.REQUEST_VALIDATION);
     console.error('[/api/metadata] POST outer error', { message: err.message, phase: err.phase });
     return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
   }
