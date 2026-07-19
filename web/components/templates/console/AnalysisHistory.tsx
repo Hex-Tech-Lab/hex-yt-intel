@@ -71,22 +71,20 @@ function DimensionDots({ present, totalDimensions }: { present: number[]; totalD
 function extractExecutiveSummary(markdown: string | undefined, digest?: Record<string, any> | null): ExecutiveSummaryData | null {
   if (digest && typeof digest === 'object' && ('snapshot' in digest || 'overview' in digest)) {
     return {
-      overview: (digest.overview ?? ''),
       snapshot: (digest.snapshot ?? ''),
       keyTakeaways: Array.isArray(digest.takeaways) ? digest.takeaways : [],
-      detailedSummary: (digest.overview ?? ''),
+      overview: (digest.overview ?? ''),
     };
   }
 
   if (!markdown) return null;
   const lines = markdown.split('\n').filter(l => l.trim());
-  if (lines.length < 4) return null;
+  if (lines.length < 3) return null;
 
   return {
-    overview: lines.slice(0, 3).join('\n'),
-    snapshot: lines.slice(3, 8).join('\n'),
-    keyTakeaways: lines.slice(8, 18).filter(l => l.trim().length > 0),
-    detailedSummary: lines.slice(18, 23).join('\n\n'),
+    snapshot: lines.slice(0, 3).join('\n'),
+    keyTakeaways: lines.slice(3, 13).filter(l => l.trim().length > 0),
+    overview: lines.slice(13).join('\n'),
   };
 }
 
@@ -142,12 +140,12 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       if (!res.ok) throw new Error(`Restoration failed (HTTP ${res.status})`);
       const data = await res.json();
 
-      // Dashboard render gating: only restore if status is 'complete'
-      if (data.analysisStatus !== 'complete') {
+      // Dashboard render gating: restore if 'complete' or 'partial' (incomplete analyses are viewable for re-analysis)
+      if (data.analysisStatus !== 'complete' && data.analysisStatus !== 'partial') {
         const statusMessage =
           data.analysisStatus === 'error'
             ? 'This analysis failed to generate. Please try re-analyzing.'
-            : 'This analysis is still processing or incomplete. Please wait or re-analyze.';
+            : 'This analysis is still processing. Please wait and refresh.';
         throw new Error(statusMessage);
       }
 
