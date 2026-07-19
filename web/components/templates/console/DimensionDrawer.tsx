@@ -2,6 +2,7 @@
 
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useEffect, useRef, useCallback } from 'react';
+import { useUIStore } from '@/store/useUIStore';
 import { SelectedDimensionReadout } from '@/components/dashboard/SelectedDimensionReadout';
 
 export interface DimensionDrawerProps {
@@ -13,6 +14,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const setOverlayOpen = useUIStore((s) => s.setOverlayOpen);
 
   const handleClose = useCallback(() => {
     onClose();
@@ -26,6 +28,9 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     previousFocusRef.current = document.activeElement as HTMLElement;
 
     requestAnimationFrame(() => closeBtnRef.current?.focus());
+
+    // Set overlay open after mount to avoid inert double-click trap
+    setOverlayOpen(true, 'dimension-drawer');
 
     const keyHandlers: Record<string, () => void> = {
       Escape: () => onClose(),
@@ -70,10 +75,11 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('pointerdown', handlePointerDown);
+      setOverlayOpen(false);
       const prev = previousFocusRef.current;
       requestAnimationFrame(() => prev?.focus());
     };
-  }, [dimension, onClose]);
+  }, [dimension, onClose, setOverlayOpen]);
 
   if (!dimension) return null;
 
@@ -100,6 +106,7 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
           <button
             ref={closeBtnRef}
             onClick={handleClose}
+            aria-label="Close dimension details"
             title="Close"
             className="grid place-items-center w-7 h-7 rounded-md border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >

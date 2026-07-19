@@ -1,8 +1,9 @@
 'use client';
 
-import { startTransition } from 'react';
+import { startTransition, useEffect, useRef, useCallback } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
+import { useUIStore } from '@/store/useUIStore';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 
 export type ExpandedPanelMode = 'vertical' | 'left' | 'diagonal';
@@ -46,8 +47,73 @@ export function ExpandedPanelOverlay({
   onClose,
   content,
 }: ExpandedPanelOverlayProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const setOverlayOpen = useUIStore((s) => s.setOverlayOpen);
+
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement;
+
+    requestAnimationFrame(() => closeBtnRef.current?.focus());
+
+    // Set overlay open after mount to avoid inert double-click trap
+    setOverlayOpen(true, panelId);
+
+    const keyHandlers: Record<string, () => void> = {
+      Escape: () => handleClose(),
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const handler = keyHandlers[e.key];
+      if (handler) {
+        e.stopPropagation();
+        handler();
+        return;
+      }
+      if (e.key === 'Tab' && panelRef.current) {
+        const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0]!;
+        const last = focusable[focusable.length - 1]!;
+        if (e.shiftKey) {
+          if (document.activeElement === first) { last.focus(); e.preventDefault(); }
+        } else {
+          if (document.activeElement === last) { first.focus(); e.preventDefault(); }
+        }
+      }
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (panelRef.current && !panelRef.current.contains(target) && !target.closest('[data-chat-dock="true"]')) {
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      setOverlayOpen(false);
+      const prev = previousFocusRef.current;
+      requestAnimationFrame(() => prev?.focus());
+    };
+  }, [handleClose, panelId, setOverlayOpen]);
+
   return (
     <div
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${title} expanded panel`}
       style={getPositioning(mode)}
       className="border border-[var(--line-strong)] bg-[rgba(15,20,30,0.95)] backdrop-blur-xl rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_1px_rgba(0,242,254,0.15)] flex flex-col min-h-0 overflow-hidden"
     >
@@ -63,8 +129,9 @@ export function ExpandedPanelOverlay({
           <button
             type="button"
             onClick={() => onCopy(panelId)}
+            aria-label="Copy panel content"
             title="Copy"
-            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
+            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >
             <Icon icon="solar:copy-linear" size={14} />
           </button>
@@ -72,8 +139,9 @@ export function ExpandedPanelOverlay({
           <button
             type="button"
             onClick={() => onExport(panelId)}
+            aria-label="Export panel content"
             title="Export"
-            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
+            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >
             <Icon icon="solar:download-linear" size={14} />
           </button>
@@ -85,8 +153,9 @@ export function ExpandedPanelOverlay({
               key={m}
               type="button"
               onClick={() => startTransition(() => onModeChange(panelId, m))}
+              aria-label={`${m.charAt(0).toUpperCase() + m.slice(1)} mode`}
               title={`${m.charAt(0).toUpperCase() + m.slice(1)} Mode`}
-              className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
+              className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
                 mode === m ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
               }`}
             >
@@ -97,10 +166,12 @@ export function ExpandedPanelOverlay({
           <div className="w-[1px] h-3 bg-[var(--line)] mx-1" />
 
           <button
+            ref={closeBtnRef}
             type="button"
-            onClick={() => startTransition(() => onClose())}
+            onClick={() => startTransition(() => handleClose())}
+            aria-label="Close panel"
             title="Close overlay"
-            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--err)] cursor-pointer flex items-center justify-center transition-colors"
+            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--err)] cursor-pointer flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >
             <Icon icon="solar:close-circle-linear" size={16} />
           </button>
