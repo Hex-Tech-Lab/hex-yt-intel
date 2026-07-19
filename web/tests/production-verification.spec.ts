@@ -33,7 +33,7 @@ test.describe('Production Verification Suite', () => {
       });
 
       const response = await page.goto(`${DEPLOYMENT_URL}/`, {
-        waitUntil: 'load',
+        waitUntil: 'domcontentloaded',
       });
 
       expect(response?.status()).toBeLessThan(400);
@@ -64,7 +64,7 @@ test.describe('Production Verification Suite', () => {
 
     test('home page client environment strings are materialized', async ({ page }) => {
       const response = await page.goto(`${DEPLOYMENT_URL}/`, {
-        waitUntil: 'load',
+        waitUntil: 'domcontentloaded',
       });
 
       expect(response?.status()).toBeLessThan(400);
@@ -199,7 +199,7 @@ test.describe('Production Verification Suite', () => {
   test.describe('Navigation & Routing', () => {
     test('home page navigation is functional', async ({ page }) => {
       await page.goto(`${DEPLOYMENT_URL}/`, {
-        waitUntil: 'load',
+        waitUntil: 'domcontentloaded',
       });
 
       // Try to find navigation links
@@ -219,7 +219,7 @@ test.describe('Production Verification Suite', () => {
       const startTime = Date.now();
 
       const response = await page.goto(`${DEPLOYMENT_URL}/`, {
-        waitUntil: 'load',
+        waitUntil: 'domcontentloaded',
       });
 
       const loadTime = Date.now() - startTime;
@@ -230,7 +230,7 @@ test.describe('Production Verification Suite', () => {
 
     test('page is not blank', async ({ page }) => {
       await page.goto(`${DEPLOYMENT_URL}/`, {
-        waitUntil: 'load',
+        waitUntil: 'domcontentloaded',
       });
 
       const hasContent = await page.evaluate(() => {
