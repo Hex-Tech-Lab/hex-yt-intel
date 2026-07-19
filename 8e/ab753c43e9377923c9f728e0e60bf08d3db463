@@ -1,0 +1,19 @@
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_cd8c10957ebd37::t_899c42153e9476 491-505,511
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "8eab753c43e9377923c9f728e0e60bf08d3db463",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-haiku-4-5-20251001"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
