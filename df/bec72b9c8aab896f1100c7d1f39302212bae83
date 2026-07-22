@@ -1,0 +1,42 @@
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_cd8c10957ebd37::t_629339528c2fc6 38-67
+  s_cd8c10957ebd37::t_b7963247fb9d27 517-518,544,547-548,583-584
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_cd8c10957ebd37::t_868fbf6703fb5b 244-253
+  s_cd8c10957ebd37::t_83d184991ccf9a 260
+worker/src/routes/analysis.ts
+  s_cd8c10957ebd37::t_803ac93d7a13d2 265-268
+  s_cd8c10957ebd37::t_02da4cfe468d77 140
+  s_cd8c10957ebd37::t_5d58fcdd8539d1 302
+  s_cd8c10957ebd37::t_5e3732871d2279 379-381
+  s_cd8c10957ebd37::t_840ed69b4f13b0 168-175,188,194,199,208,231-235
+worker/src/services/PersistService.ts
+  s_cd8c10957ebd37::t_08ef5f3cb1e8a4 26
+  s_cd8c10957ebd37::t_24538a6e539d9a 159
+  s_cd8c10957ebd37::t_7c032473e0a00d 109
+  s_cd8c10957ebd37::t_3c4aa092e2485b 132
+  s_cd8c10957ebd37::t_8f4c41249d1160 204
+web/app/api/analyses/persist/route.ts
+  s_cd8c10957ebd37::t_fecedb055cbd2e 347-349
+  s_cd8c10957ebd37::t_6ba73e33a5183d 685
+  s_cd8c10957ebd37::t_1e1968bf227f79 881
+  s_cd8c10957ebd37::t_e40bba70726e26 376
+web/lib/types/validation-report.ts
+  s_cd8c10957ebd37::t_ee3d9c7799fbd8 48-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "dfbec72b9c8aab896f1100c7d1f39302212bae83",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
