@@ -340,6 +340,10 @@ export async function POST(request: NextRequest) {
         duration: z.number(),
         text: z.string(),
       })).optional(),
+      // Flat transcript text carried alongside segments so a `transcripts` row
+      // can still be written when the video's transcript arrived pre-fetched
+      // (no timing) via initial ingestion rather than the worker's own fetch.
+      transcript: z.string().optional(),
     });
 
     const parsedBody = bodySchema.safeParse(body);
@@ -365,6 +369,7 @@ export async function POST(request: NextRequest) {
         chunkIndex,
         totalChunks,
         segments,
+        transcript,
       } = parsedBody.data;
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
@@ -488,12 +493,14 @@ export async function POST(request: NextRequest) {
         // content is what's actually persisted. Do not remove this call to "avoid
         // duplication" — partial/interrupted analyses would silently stop getting a
         // transcript row at all, regressing the original P3 fix this exists for.
-        if (segments && segments.length > 0) {
-          const transcriptText = segments.map((s: any) => s.text || '').join(' ').trim();
+        const hasSegments = segments && segments.length > 0;
+        const hasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable');
+        if (hasSegments || hasFlatTranscript) {
+          const segmentsText = hasSegments ? segments!.map((s: any) => s.text || '').join(' ').trim() : '';
           await SupabaseTranscriptAdapter.upsertTranscript({
             videoId,
-            content: transcriptText || markdown,
-            segments,
+            content: segmentsText || transcript || markdown,
+            segments: segments || [],
             language: 'en',
             hash: row.transcriptHash || undefined,
           }).catch(e => {
@@ -886,11 +893,13 @@ export async function POST(request: NextRequest) {
       // overwrites whatever partial content the safety-net write left behind.
       // See the comment at the chunk-path call site (~line 475) for the full
       // relationship — the two calls are deliberately not consolidated into one.
-      if (segments && segments.length > 0 && (finalStatus === 'done' || finalStatus === 'partial')) {
+      const finalHasSegments = segments && segments.length > 0;
+      const finalHasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable');
+      if ((finalHasSegments || finalHasFlatTranscript) && (finalStatus === 'done' || finalStatus === 'partial')) {
         await SupabaseTranscriptAdapter.upsertTranscript({
           videoId,
-          content: stitchedMarkdown || markdown,
-          segments,
+          content: transcript || stitchedMarkdown || markdown,
+          segments: segments || [],
           language: 'en',
           hash: row.transcriptHash || undefined,
         }).catch(e => {
