@@ -1,0 +1,20 @@
+worker/src/routes/analysis.ts
+  s_cd8c10957ebd37::t_7441d58387c3ca 271,282-302,315
+  s_cd8c10957ebd37::t_283f8db40b57d9 309-313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "446ce6ce3731f39deb604e417407efecbdfc4932",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
