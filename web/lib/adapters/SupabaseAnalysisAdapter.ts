@@ -501,11 +501,16 @@ export class SupabaseAnalysisAdapter {
 
       let transcript: string | null = null;
 
-      if (data.video_id) {
+      // Strip the reaper's '_archived_<ts>' suffix before the transcripts lookup --
+      // transcripts are stored under the clean video_id (see upsertTranscript /
+      // web/app/api/analyses/persist/route.ts), so an archived analysis row would
+      // otherwise silently miss its own transcript on every grounding fetch.
+      const cleanVideoId = data.video_id ? data.video_id.replace(/_archived_.*$/, '') : null;
+      if (cleanVideoId) {
         const { data: txData } = await service
           .from('transcripts')
           .select('content')
-          .eq('video_id', data.video_id)
+          .eq('video_id', cleanVideoId)
           .maybeSingle();
         transcript = txData?.content || null;
       }
