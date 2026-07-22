@@ -147,55 +147,65 @@ export function VideoPlayerCard() {
       : `${m}:${String(sec).padStart(2, '0')}`;
   };
 
+  // RCA (2026-07-22): this used to conditionally render the two overlay
+  // branches with JSX ternaries (embedRestricted ? <A/> : playbackError ?
+  // <B/> : null), which adds/removes real sibling DOM nodes around
+  // `containerRef` whenever the error state toggles. That div's contents are
+  // owned by the YouTube IFrame API once mounted (it replaces them with a
+  // real <iframe>, invisible to React's virtual DOM) -- so the moment a
+  // playback error fires and React tries to insert/remove a sibling overlay
+  // node using that div as an anchor, the DOM no longer matches what React's
+  // reconciler expects, throwing "Failed to execute 'insertBefore' ...: not
+  // a child of this node" (observed live: YouTube error 150 -> immediate
+  // NotFoundError crash). Both overlay slots are now ALWAYS rendered with a
+  // stable DOM node count/order; only CSS visibility toggles, so React never
+  // needs to insert/remove nodes around the third-party-mutated container.
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-[var(--line)] shadow-lg">
-      {embedRestricted ? (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center text-xs font-mono">
-          {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */}
-          <img
-            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-30"
-          />
-          <div className="relative flex flex-col items-center">
-            <div className="text-[var(--warn)] font-bold mb-2 uppercase tracking-wider">Embedding Restricted By Creator</div>
-            <p className="text-[var(--ink-muted)] max-w-sm mb-4 leading-relaxed">
-              In-app playback is blocked by this video&apos;s embed policy. Timestamps in the analysis still work — clicking one updates the button below.
-            </p>
-            <a
-              href={watchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-lg border border-[var(--accent)] text-[var(--accent)] font-bold hover:bg-[rgb(26_31_43_/_0.8)] transition-colors"
-            >
-              ▶ {fallbackSeek !== null ? `Play from ${formatTime(fallbackSeek)}` : 'Play'} on YouTube ↗
-            </a>
-          </div>
+      <div className={`absolute inset-0 z-10 flex-col items-center justify-center p-6 text-center text-xs font-mono ${embedRestricted ? 'flex' : 'hidden'}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */}
+        <img
+          src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+        />
+        <div className="relative flex flex-col items-center">
+          <div className="text-[var(--warn)] font-bold mb-2 uppercase tracking-wider">Embedding Restricted By Creator</div>
+          <p className="text-[var(--ink-muted)] max-w-sm mb-4 leading-relaxed">
+            In-app playback is blocked by this video&apos;s embed policy. Timestamps in the analysis still work — clicking one updates the button below.
+          </p>
+          <a
+            href={watchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 rounded-lg border border-[var(--accent)] text-[var(--accent)] font-bold hover:bg-[rgb(26_31_43_/_0.8)] transition-colors"
+          >
+            ▶ {fallbackSeek !== null ? `Play from ${formatTime(fallbackSeek)}` : 'Play'} on YouTube ↗
+          </a>
         </div>
-      ) : playbackError ? (
-        <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-between gap-3 px-3 py-2 bg-[rgb(11_14_20_/_0.92)] backdrop-blur-sm border-t border-[var(--line)] text-[11px] font-mono">
-          <span className="text-[var(--warn)] truncate">Playback error — this is usually transient.</span>
-          <span className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={() => {
-                setPlaybackError(null);
-                setRetryNonce((n) => n + 1);
-              }}
-              className="px-2.5 py-1 rounded-md border border-[var(--line)] text-[var(--accent)] cursor-pointer hover:bg-[rgb(26_31_43_/_0.6)] transition-colors"
-            >
-              Retry
-            </button>
-            <a
-              href={watchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-2.5 py-1 rounded-md border border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
-            >
-              YouTube ↗
-            </a>
-          </span>
-        </div>
-      ) : null}
+      </div>
+      <div className={`absolute inset-x-0 bottom-0 z-10 items-center justify-between gap-3 px-3 py-2 bg-[rgb(11_14_20_/_0.92)] backdrop-blur-sm border-t border-[var(--line)] text-[11px] font-mono ${!embedRestricted && playbackError ? 'flex' : 'hidden'}`}>
+        <span className="text-[var(--warn)] truncate">Playback error — this is usually transient.</span>
+        <span className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => {
+              setPlaybackError(null);
+              setRetryNonce((n) => n + 1);
+            }}
+            className="px-2.5 py-1 rounded-md border border-[var(--line)] text-[var(--accent)] cursor-pointer hover:bg-[rgb(26_31_43_/_0.6)] transition-colors"
+          >
+            Retry
+          </button>
+          <a
+            href={watchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1 rounded-md border border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
+          >
+            YouTube ↗
+          </a>
+        </span>
+      </div>
       <div ref={containerRef} className={`w-full h-full ${embedRestricted ? 'hidden' : ''}`} />
     </div>
   );
