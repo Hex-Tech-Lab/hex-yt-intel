@@ -108,16 +108,27 @@ export class StreamDeltaHandler {
 
       try {
         if (obj && obj.schemaVersion === '2.0') {
-          // Check if the raw sink itself is already a fully valid complete JSON object
+          // Check if the raw sink itself is already a fully valid complete JSON object.
+          // This probe runs on every delta while the sink is still accumulating, so a
+          // parse failure here is the expected steady state, not an anomaly -- and it
+          // can fail with many different V8 error shapes depending on exactly where the
+          // string got cut off ("Unterminated string", "Expected ',' or '}'", "Expected
+          // property name", etc.), not just "Unexpected end of JSON". Whitelisting one
+          // message and warning on the rest logged hundreds of false-positive warnings
+          // per streamed analysis (and fed Sentry's tunnel into 429s from the volume).
+          // There is nothing actionable here until the stream actually finishes -- if
+          // isRawComplete is still false after the LAST delta, that's a real bug, but
+          // this per-delta probe can't distinguish "mid-stream" from "genuinely stuck".
           let isRawComplete = false;
           try {
             JSON.parse(cleanSink);
             isRawComplete = true;
           } catch (err) {
-            // Speculative parse probe: check if raw sink is already complete
-            // Expected to fail during stream accumulation; log unexpected errors only
-            if (err instanceof Error && !err.message.includes('Unexpected end of JSON')) {
-              console.warn('[Adapter] Unexpected error parsing raw sink for completion check:', err.message);
+            // Expected while the stream is still accumulating -- gated behind the same
+            // opt-in debug flag used elsewhere in this codebase (window.__CHAT_DEBUG) so
+            // it stays fully silent by default instead of warning on every delta.
+            if (typeof window !== 'undefined' && window.__CHAT_DEBUG) {
+              console.debug('[Adapter] raw sink not yet complete (expected mid-stream):', err instanceof Error ? err.message : err);
             }
           }
 
