@@ -35,6 +35,36 @@ function reconstructGroundingMarkdown(analysisMarkdown: string | null, analysisP
   }
 }
 
+function formatTimestamp(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${m}:${String(s).padStart(2, '0')}`;
+}
+
+/**
+ * Renders the transcript's timed segments as "[mm:ss] text" lines so chat can
+ * answer "what was said around min. X" and quote verbatim with a timestamp,
+ * instead of only having an undifferentiated text blob. Returns '' (falls
+ * back to the flat `content` column) when segments are missing/malformed --
+ * older rows and text-only transcripts (see upsertTranscript callers) never
+ * had timed segments.
+ */
+function formatTranscriptWithTimestamps(rawSegments: unknown): string {
+  if (!Array.isArray(rawSegments) || rawSegments.length === 0) return '';
+  const lines: string[] = [];
+  for (const seg of rawSegments) {
+    if (!seg || typeof seg !== 'object') continue;
+    const { start, text } = seg as { start?: unknown; text?: unknown };
+    if (typeof start !== 'number' || typeof text !== 'string' || !text.trim()) continue;
+    lines.push(`[${formatTimestamp(start)}] ${text.trim()}`);
+  }
+  return lines.join('\n');
+}
+
 interface AnalysisRecord {
   id: string;
   video_id: string;
@@ -484,6 +514,8 @@ export class SupabaseAnalysisAdapter {
     analysisMarkdown: string | null;
     status: string;
     transcript?: string | null;
+    videoMetadata?: Record<string, unknown> | null;
+    channelMetadata?: Record<string, unknown> | null;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
@@ -509,10 +541,11 @@ export class SupabaseAnalysisAdapter {
       if (cleanVideoId) {
         const { data: txData } = await service
           .from('transcripts')
-          .select('content')
+          .select('content, segments')
           .eq('video_id', cleanVideoId)
           .maybeSingle();
-        transcript = txData?.content || null;
+        const rawSegments = (txData as { segments?: unknown } | null)?.segments;
+        transcript = formatTranscriptWithTimestamps(rawSegments) || txData?.content || null;
       }
 
       // Compute frontend-visible status (matches analysis endpoint logic)
@@ -547,6 +580,8 @@ export class SupabaseAnalysisAdapter {
         analysisMarkdown: reconstructGroundingMarkdown(data!.analysis_markdown, payload),
         status: computedStatus,
         transcript,
+        videoMetadata: (report.metadata as Record<string, unknown>) || null,
+        channelMetadata: (report.channelMeta as Record<string, unknown>) || null,
       };
     } catch (error: any) {
       Sentry.captureException(error, {

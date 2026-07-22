@@ -137,6 +137,7 @@ async function verifyStreamToken(
 interface ResolvedTranscript {
   transcript: string | undefined;
   segments?: TranscriptSegment[];
+  channelMeta?: Record<string, unknown> | null;
 }
 
 /**
@@ -164,6 +165,14 @@ async function fetchTranscriptIfMissing(
   const isPlaceholder = transcript?.includes("Transcript unavailable for this video");
   let segments: TranscriptSegment[] | undefined;
 
+  // Fetched unconditionally (independent of transcript cache/fetch branches below) --
+  // previously this only ran inside the transcript-missing branch, so any analysis
+  // whose transcript already existed (the common case) never got channel metadata
+  // at all, on top of it being fetched then immediately discarded after a log line.
+  const channelMetaPromise: Promise<Record<string, unknown> | null> = channelId
+    ? new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY).fetchChannelMetadata(channelId).catch(() => null)
+    : Promise.resolve(null);
+
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${videoId}`);
 
@@ -176,17 +185,18 @@ async function fetchTranscriptIfMissing(
         const cached = await cache.get(cacheKey);
         if (cached && cached.trim().length > 0 && !cached.includes("Transcript unavailable")) {
           console.info(`[analyze-llm-stream] Transcript cache HIT for ${videoId}`);
+          const channelMeta = await channelMetaPromise;
           // Cache values written pre-fix are plain transcript strings, not JSON —
           // parse defensively and fall back to flat text (no segments) for those.
           try {
             const parsed = JSON.parse(cached) as ResolvedTranscript;
             if (parsed && typeof parsed.transcript === 'string') {
-              return parsed;
+              return { ...parsed, channelMeta };
             }
           } catch (e) {
             console.debug(`[analyze-llm-stream] Cache entry for ${videoId} is not JSON — legacy plain-string entry, falling back to flat text`, e);
           }
-          return { transcript: cached };
+          return { transcript: cached, channelMeta };
         }
       } catch {
         console.warn(`[analyze-llm-stream] Transcript cache GET failed for ${videoId}, proceeding with fetch`);
@@ -195,10 +205,7 @@ async function fetchTranscriptIfMissing(
 
     try {
       const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY);
-      const [result, channelMeta] = await Promise.all([
-        extractor.fetch(videoId),
-        channelId ? extractor.fetchChannelMetadata(channelId).catch(() => null) : Promise.resolve(null),
-      ]);
+      const result = await extractor.fetch(videoId);
       if (result.transcript && result.transcript.trim().length > 0 && !result.transcript.includes("Transcript unavailable")) {
         transcript = result.transcript;
         segments = result.segments;
@@ -213,9 +220,6 @@ async function fetchTranscriptIfMissing(
           });
         }
       }
-      if (channelMeta) {
-        console.info(`[analyze-llm-stream] Channel metadata enriched for ${channelId}`);
-      }
     } catch (e) {
       console.error(`[analyze-llm-stream] Fetch failed for ${videoId}: ${e instanceof Error ? e.message : "Unknown"}`);
       if (!transcript) {
@@ -224,7 +228,11 @@ async function fetchTranscriptIfMissing(
     }
   }
 
-  return { transcript, segments };
+  const channelMeta = await channelMetaPromise;
+  if (channelMeta) {
+    console.info(`[analyze-llm-stream] Channel metadata enriched for ${channelId}`);
+  }
+  return { transcript, segments, channelMeta };
 }
 
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
@@ -254,6 +262,10 @@ function buildStreamResponse(
   // see RCA on fetchTranscriptIfMissing above). Chat grounding only needs the
   // text; segments are solely for timestamp-linked playback.
   let resolvedTranscriptText: string | undefined = req.transcript;
+  // Channel-level metadata (subscriber count, channel description, etc.) --
+  // previously fetched then discarded; now threaded through to persist so
+  // chat grounding has more than just the video's own metadata to draw on.
+  let resolvedChannelMeta: Record<string, unknown> | null = null;
 
   const persistService = new PersistService();
 
@@ -287,6 +299,7 @@ function buildStreamResponse(
         totalChunks: req.totalChunks,
         segments: resolvedSegments,
         transcript: resolvedTranscriptText,
+        channelMeta: resolvedChannelMeta,
       };
 
       // RCA (2026-07-22): this used to race EVERY persist call (including successful
@@ -362,6 +375,9 @@ function buildStreamResponse(
       }
       if (resolvedTranscript) {
         resolvedTranscriptText = resolvedTranscript;
+      }
+      if (fetchResult.status === 'fulfilled' && fetchResult.value.channelMeta) {
+        resolvedChannelMeta = fetchResult.value.channelMeta;
       }
 
       if (!resolvedTranscript || !resolvedTranscript.trim() || resolvedTranscript.includes("Transcript unavailable") || resolvedTranscript.includes("content ingestion failed")) {
