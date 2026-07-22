@@ -1,0 +1,30 @@
+web/components/templates/console/ProcessingLog.tsx
+  s_cd8c10957ebd37::t_49d583b0cf9651 6
+  s_cd8c10957ebd37::t_c4e3a3ce340dba 32-34,37
+  s_cd8c10957ebd37::t_7d332fede15b35 77
+  s_cd8c10957ebd37::t_186312fe498d6f 16
+web/components/templates/console/ChatDock.tsx
+  s_cd8c10957ebd37::t_47c8419a07dcfb 13
+  s_cd8c10957ebd37::t_f8cb4cd3bd3a66 42-56
+  s_cd8c10957ebd37::t_f15f65e2dbd592 438-447
+web/components/billing/billing-dashboard-client.tsx
+  s_cd8c10957ebd37::t_f75afccb51a6b7 197-209
+  s_cd8c10957ebd37::t_59e44f6ad82d4e 7
+  s_cd8c10957ebd37::t_f0bb17c9b8280b 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "0c8b17e26c96a4d11891b9581f5d031e63737c10",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
