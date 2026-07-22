@@ -268,41 +268,51 @@ function buildStreamResponse(
     hasContent: () => finalText.length > 0,
     persist: (status) => {
       const url = appUrl || "https://yt-intel.getmytestdrive.com";
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      const persistPromise = persistService.persist({
+      const persistParams = {
         analysisId: req.analysisId,
         videoId: req.videoId,
         finalText,
         modelUsed,
-        status,
         activeSecret: signingKey,
         appUrl: url,
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
         segments: resolvedSegments,
-      }).then((result) => {
+      };
+
+      // RCA (2026-07-22): this used to race EVERY persist call (including successful
+      // 'completed' ones) against a 15s timeout that, on firing, sent a SECOND persist
+      // with status forced to 'interrupted' -- silently downgrading a genuinely
+      // successful generation to 'interrupted' whenever the network round-trip to
+      // Vercel merely ran long (not a generation timeout, a persist-write timeout).
+      // Vercel's chunk-completeness check (`FINAL_CHUNK_STATUS = 'completed'`) then
+      // permanently excludes that dimension bundle, freezing billing_status at
+      // 'failed' even though the content was real and complete (A6). PersistService
+      // already retries the actual HTTP call internally (2 attempts, 10s AbortSignal
+      // timeout each) -- this outer race added no protection for the success path,
+      // only harm. Now only applied when we're already persisting as 'interrupted'
+      // (the abort/disconnect path), where a bounded best-effort attempt before
+      // giving up is the correct behavior.
+      if (status !== 'interrupted') {
+        return persistService.persist({ ...persistParams, status });
+      }
+
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const persistPromise = persistService.persist({ ...persistParams, status }).then((result) => {
         clearTimeout(timeoutId ?? null);
         return result;
       });
 
       const timeoutPromise = new Promise<boolean>((resolve) => {
         timeoutId = setTimeout(() => {
+          // Only reachable when persisting an already-'interrupted' outcome (the
+          // client's SSE stream is done receiving deltas by this point, regardless
+          // of how this persist call resolves) -- `settled` guards this module's own
+          // persist bookkeeping, not the client stream, so no send({type:'error'})
+          // belongs here.
           settled = true;
-          // settleAnalysis: Handle timeout by persisting with interrupted status
-          resolve(persistService.persist({
-            analysisId: req.analysisId,
-            videoId: req.videoId,
-            finalText,
-            modelUsed,
-            status: 'interrupted',
-            activeSecret: signingKey,
-            appUrl: url,
-            validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
-            chunkIndex: req.chunkIndex,
-            totalChunks: req.totalChunks,
-            segments: resolvedSegments,
-          }));
+          resolve(persistService.persist({ ...persistParams, status: 'interrupted' }));
         }, 15000);
       });
 
