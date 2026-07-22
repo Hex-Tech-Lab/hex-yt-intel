@@ -247,6 +247,13 @@ function buildStreamResponse(
   // handler below; defaults to req.segments (almost always empty from the browser)
   // so an interrupted/timeout persist firing before resolution still has a value.
   let resolvedSegments: TranscriptSegment[] | undefined = req.segments;
+  // Flat transcript text, kept alongside segments so the persist call can write
+  // a `transcripts` row even when the video has a transcript but no timed
+  // segments (e.g. it arrived pre-fetched from initial ingestion and
+  // fetchTranscriptIfMissing's short-circuit never re-fetches with timing —
+  // see RCA on fetchTranscriptIfMissing above). Chat grounding only needs the
+  // text; segments are solely for timestamp-linked playback.
+  let resolvedTranscriptText: string | undefined = req.transcript;
 
   const persistService = new PersistService();
 
@@ -279,6 +286,7 @@ function buildStreamResponse(
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
         segments: resolvedSegments,
+        transcript: resolvedTranscriptText,
       };
 
       // RCA (2026-07-22): this used to race EVERY persist call (including successful
@@ -351,6 +359,9 @@ function buildStreamResponse(
       // whatever the request already carried.
       if (fetchResult.status === 'fulfilled' && fetchResult.value.segments) {
         resolvedSegments = fetchResult.value.segments;
+      }
+      if (resolvedTranscript) {
+        resolvedTranscriptText = resolvedTranscript;
       }
 
       if (!resolvedTranscript || !resolvedTranscript.trim() || resolvedTranscript.includes("Transcript unavailable") || resolvedTranscript.includes("content ingestion failed")) {
