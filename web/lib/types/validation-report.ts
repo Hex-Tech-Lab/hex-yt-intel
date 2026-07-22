@@ -45,6 +45,11 @@ export interface PersistedValidationReport {
   analysis_type?: string;
   stale_after?: string;
   metadata?: any;
+  // Channel-level metadata (subscriber count, channel description, etc.), fetched
+  // by the worker's TranscriptExtractor.fetchChannelMetadata but previously
+  // discarded after a console.info log -- now threaded through persist so chat
+  // grounding can surface it instead of only the video's own metadata.
+  channelMeta?: Record<string, unknown> | null;
   persona?: string;
   timezone?: string;
   model_used?: string | null;

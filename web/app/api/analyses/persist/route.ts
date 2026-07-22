@@ -344,6 +344,9 @@ export async function POST(request: NextRequest) {
       // can still be written when the video's transcript arrived pre-fetched
       // (no timing) via initial ingestion rather than the worker's own fetch.
       transcript: z.string().optional(),
+      // Channel-level metadata (subscriber count, channel description, etc.)
+      // from the worker's TranscriptExtractor.fetchChannelMetadata.
+      channelMeta: z.record(z.string(), z.unknown()).nullable().optional(),
     });
 
     const parsedBody = bodySchema.safeParse(body);
@@ -370,6 +373,7 @@ export async function POST(request: NextRequest) {
         totalChunks,
         segments,
         transcript,
+        channelMeta,
       } = parsedBody.data;
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
@@ -678,6 +682,7 @@ export async function POST(request: NextRequest) {
             dimension_status: dimensionStatus,
             model_used: model || null,
             valid: isStitchedValid && finalStatus === 'done',
+            channelMeta: channelMeta ?? priorReport.channelMeta ?? null,
           };
 
           await retryWithBackoff(
@@ -873,6 +878,7 @@ export async function POST(request: NextRequest) {
         dimension_status: payloadToEvaluate !== undefined ? dimensionStatus : priorReport.dimension_status,
         model_used: model || null,
         valid: reportValidationStatus === 'done' && validationPassed,
+        channelMeta: channelMeta ?? priorReport.channelMeta ?? null,
       };
 
       await retryWithBackoff(

@@ -23,6 +23,7 @@ export interface PersistOptions {
   totalChunks?: number;
   segments?: Array<{ start: number; duration: number; text: string }>;
   transcript?: string;
+  channelMeta?: Record<string, unknown> | null;
 }
 
 const rawFetch = fetch;
@@ -105,6 +106,7 @@ export class PersistService {
     totalChunks?: number;
     segments?: Array<{ start: number; duration: number; text: string }>;
     transcript?: string;
+    channelMeta?: Record<string, unknown> | null;
   }): Promise<boolean> {
     const maxRetries = 2;
     for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {
@@ -127,6 +129,7 @@ export class PersistService {
             totalChunks: params.totalChunks,
             segments: params.segments,
             transcript: params.transcript,
+            channelMeta: params.channelMeta,
           }),
         });
         if (persistRes.ok) return true;
@@ -153,6 +156,7 @@ export class PersistService {
     status: 'failed' | 'interrupted';
     segments?: Array<{ start: number; duration: number; text: string }>;
     transcript?: string;
+    channelMeta?: Record<string, unknown> | null;
   }): Promise<void> {
     let markdown = options.finalText;
     let jsonPayload: Record<string, unknown> | null = null;
@@ -197,6 +201,7 @@ export class PersistService {
             status: options.status,
             segments: options.segments,
             transcript: options.transcript,
+            channelMeta: options.channelMeta,
           }),
         });
         return;
