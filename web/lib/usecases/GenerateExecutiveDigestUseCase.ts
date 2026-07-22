@@ -10,6 +10,33 @@ import type {
   DigestPersistencePort,
   StoredExecutiveDigest,
 } from '@/lib/ports/ExecutiveDigestPorts';
+import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+
+const MAX_DIGEST_PAYLOAD_BYTES = 100_000;
+
+/**
+ * Prefer stored markdown; fall back to reconstructing from analysis_payload.
+ *
+ * RCA (2026-07-22): this used to read row.analysis_markdown only, with no
+ * fallback -- the same gap fixed in getAnalysisGrounding (chat) for the
+ * identical reason: chunked persistence can populate analysis_payload before
+ * the analysis_markdown column catches up. Without this fallback, digest
+ * generation 409'd ("markdown is empty") on analyses that had real content,
+ * and the frontend has no retry-on-409 logic, so it looped/gave up silently.
+ */
+function reconstructDigestMarkdown(analysisMarkdown: unknown, analysisPayload: unknown): string {
+  if (typeof analysisMarkdown === 'string' && analysisMarkdown.trim().length > 0) {
+    return analysisMarkdown;
+  }
+  if (!analysisPayload || typeof analysisPayload !== 'object') return '';
+  try {
+    const payloadSize = new TextEncoder().encode(JSON.stringify(analysisPayload)).length;
+    if (payloadSize > MAX_DIGEST_PAYLOAD_BYTES) return '';
+    return reconstructMarkdown(analysisPayload as Parameters<typeof reconstructMarkdown>[0]);
+  } catch {
+    return '';
+  }
+}
 
 export interface GenerateExecutiveDigestParams {
   analysisId: string;
@@ -43,7 +70,7 @@ export class GenerateExecutiveDigestUseCase {
     const row = await this.persistence.verifyOwnership({
       analysisId,
       userId,
-      select: 'analysis_markdown, executive_digest',
+      select: 'analysis_markdown, analysis_payload, executive_digest',
     });
     if (!row) {
       return { type: 'error', code: 'ERR_ANALYSIS_NOT_FOUND', status: 404, message: 'Analysis not found' };
@@ -54,7 +81,7 @@ export class GenerateExecutiveDigestUseCase {
       return { type: 'success', digest: row.executive_digest, cached: true };
     }
 
-    const markdown = typeof row.analysis_markdown === 'string' ? row.analysis_markdown.trim() : '';
+    const markdown = reconstructDigestMarkdown(row.analysis_markdown, row.analysis_payload).trim();
     if (markdown.length === 0) {
       console.warn(`[digest-usecase] Analysis ${analysisId} has empty markdown; analysis may still be persisting`);
       return {

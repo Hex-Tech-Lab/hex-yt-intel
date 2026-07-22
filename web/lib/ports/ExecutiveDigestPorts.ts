@@ -33,6 +33,7 @@ export interface DigestPersistencePort {
     select: string;
   }): Promise<{
     analysis_markdown?: string | null;
+    analysis_payload?: unknown;
     executive_digest?: unknown;
     validation_report?: unknown;
   } | null>;

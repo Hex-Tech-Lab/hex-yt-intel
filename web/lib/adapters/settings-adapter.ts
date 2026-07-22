@@ -20,10 +20,12 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
       .from('admin_settings')
       .select('*')
       .eq('id', 'default')
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 = no rows returned (normal on first setup)
+    // maybeSingle() returns { data: null, error: null } for zero rows (normal on
+    // first setup) instead of PostgREST's 406 + PGRST116 that .single() throws --
+    // same fallback-to-defaults behavior below, without the noisy network error.
+    if (error) {
       throw error;
     }
 
@@ -71,9 +73,12 @@ export async function fetchUserSettings(userId: string): Promise<UserSettings | 
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
+    // maybeSingle() returns { data: null, error: null } for zero rows instead of
+    // PostgREST's 406 + PGRST116 that .single() throws -- same fallback-to-null
+    // behavior below (caller uses defaults), without the noisy network error.
+    if (error) {
       throw error;
     }
 
