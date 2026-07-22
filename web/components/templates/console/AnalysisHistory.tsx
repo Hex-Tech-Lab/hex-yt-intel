@@ -68,18 +68,20 @@ function DimensionDots({ present, totalDimensions }: { present: number[]; totalD
   );
 }
 
-function extractExecutiveSummary(markdown: string | undefined, digest?: Record<string, any> | null): ExecutiveSummaryData | null {
-  // Prefer stored digest (3-tier structure)
+function extractExecutiveSummary(digest?: Record<string, any> | null): ExecutiveSummaryData | null {
+  // Digest is the 4-tier structure: snapshot, overview, keyTakeaways, detailedSummary.
+  // Full 11-dimension markdown is never a valid fallback source for this — it isn't
+  // the same content, and parsing it as if it were produced the malformed-markdown
+  // "summary" bug reported live (raw ##/** showing in the WIP card).
   if (digest && typeof digest === 'object' && ('snapshot' in digest || 'overview' in digest)) {
     return {
       snapshot: (digest.snapshot ?? ''),
       keyTakeaways: Array.isArray(digest.takeaways) ? digest.takeaways : [],
       overview: (digest.overview ?? ''),
+      detailedSummary: (digest.detailedSummary ?? ''),
     };
   }
 
-  // Fallback: if no digest, don't try to parse full markdown
-  // (it contains all 11 dimensions, not just the 3-tier digest)
   return null;
 }
 
@@ -381,7 +383,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             {currentStatus === 'complete' && hasAnalysisData && (
               <div className="mt-6 pt-6 border-t border-[var(--line-faint)]">
                 <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Dimension 0 — Executive Summary</h3>
-                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis?.analysis_markdown, currentAnalysis?.executiveDigest)} />
+                <ExecutiveSummary data={extractExecutiveSummary(currentAnalysis?.executiveDigest)} />
               </div>
             )}
           </div>
