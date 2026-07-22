@@ -61,7 +61,17 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     const tokenMap: Record<string, { label: string; weight: number; type: string; id: string; maxWeight: number }> = {};
 
     graph.nodes.forEach(node => {
-      const words = node.label.split(/\s+/).filter(w => w.length > 2);
+      // Prefer real content-derived keyTerms over node.label. Fine-grained entity
+      // nodes (from the worker's own knowledgeGraph payload) have label = the actual
+      // entity name, so label is correct there. But the client-side TF-IDF fallback
+      // synthesizer (used when that real graph is missing/incomplete -- see
+      // useKnowledgeGraph.ts) builds ONE NODE PER DIMENSION with label = the ALL-CAPS
+      // section title ("APEX INTELLIGENCE", etc.) -- tokenizing that title produced
+      // section-title fragments as fake "entities" in the word cloud. keyTerms on
+      // those fallback nodes already holds real per-dimension extracted terms, so
+      // prefer it whenever present; only fall back to label when it's empty.
+      const sourceText = node.keyTerms && node.keyTerms.length > 0 ? node.keyTerms.join(' ') : node.label;
+      const words = sourceText.split(/\s+/).filter(w => w.length > 2);
       words.forEach(word => {
         const key = word.toLowerCase().replace(/[^\w]/g, '');
         if (!key || key.length < 3) return;
