@@ -100,6 +100,20 @@ export function VideoPlayerCard() {
 
   const embedRestricted = playbackError?.code === 101 || playbackError?.code === 150;
 
+  // Embedding is permanently disabled for this video — the iframe YouTube
+  // mounted is dead weight at this point: it keeps rendering its own
+  // "Video unavailable" chrome and pulling its full asset set (kevlar/lottie
+  // bundles, monitoring beacons) underneath our overlay indefinitely.
+  // Destroying it stops that traffic and the CSS-hidden container is emptied
+  // for real instead of just being visually covered.
+  useEffect(() => {
+    if (!embedRestricted) return;
+    playerRef.current?.destroy();
+    playerRef.current = null;
+    setReady(false);
+    if (containerRef.current) containerRef.current.innerHTML = '';
+  }, [embedRestricted]);
+
   useEffect(() => {
     if (seekTo === null) return;
     if (ready && playerRef.current) {
@@ -169,6 +183,10 @@ export function VideoPlayerCard() {
           alt=""
           className="absolute inset-0 w-full h-full object-cover opacity-30"
         />
+        {/* Solid backing so the destroyed-but-briefly-still-painting YouTube
+            iframe (and its own "Video unavailable" chrome) can never show
+            through the thumbnail's 30% opacity during the render gap. */}
+        <div className="absolute inset-0 bg-[rgb(11_14_20_/_0.85)]" />
         <div className="relative flex flex-col items-center">
           <div className="text-[var(--warn)] font-bold mb-2 uppercase tracking-wider">Embedding Restricted By Creator</div>
           <p className="text-[var(--ink-muted)] max-w-sm mb-4 leading-relaxed">
@@ -206,7 +224,7 @@ export function VideoPlayerCard() {
           </a>
         </span>
       </div>
-      <div ref={containerRef} className={`w-full h-full ${embedRestricted ? 'hidden' : ''}`} />
+      <div ref={containerRef} className={`w-full h-full ${embedRestricted ? 'hidden' : ''}`} style={embedRestricted ? { display: 'none' } : undefined} />
     </div>
   );
 }
