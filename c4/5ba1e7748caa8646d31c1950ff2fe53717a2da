@@ -1,0 +1,21 @@
+docs/history/ROSTER_2026-07-20.md
+  s_cd8c10957ebd37::t_08bc5fd9bb34cc 218-237,239-249
+  s_cd8c10957ebd37::t_88fd5cdc5755f9 127-178
+  s_cd8c10957ebd37::t_091aff22c9f837 89-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "c45ba1e7748caa8646d31c1950ff2fe53717a2da",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
