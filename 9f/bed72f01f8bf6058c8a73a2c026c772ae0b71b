@@ -1,0 +1,28 @@
+web/lib/adapters/settings-adapter.ts
+  s_cd8c10957ebd37::t_de255721b814fb 76,78-81
+  s_cd8c10957ebd37::t_3db6725b05cc00 23,25-28
+web/lib/adapters/stream-delta-handler.ts
+  s_cd8c10957ebd37::t_c524322e38252a 127-131
+  s_cd8c10957ebd37::t_fba145db0cfe71 111-121
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_cd8c10957ebd37::t_932497136ef7b0 13-39
+  s_cd8c10957ebd37::t_e7ba027d92b81c 73,84
+web/lib/ports/ExecutiveDigestPorts.ts
+  s_cd8c10957ebd37::t_2b602715456a82 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "9fbed72f01f8bf6058c8a73a2c026c772ae0b71b",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
