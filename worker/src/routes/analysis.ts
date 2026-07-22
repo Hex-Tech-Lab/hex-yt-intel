@@ -183,8 +183,8 @@ async function fetchTranscriptIfMissing(
             if (parsed && typeof parsed.transcript === 'string') {
               return parsed;
             }
-          } catch {
-            // Not JSON — legacy plain-string cache entry.
+          } catch (e) {
+            console.debug(`[analyze-llm-stream] Cache entry for ${videoId} is not JSON — legacy plain-string entry, falling back to flat text`, e);
           }
           return { transcript: cached };
         }
