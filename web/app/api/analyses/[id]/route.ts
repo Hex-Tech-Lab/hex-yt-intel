@@ -9,6 +9,20 @@ export const runtime = 'edge';
 
 const MAX_EDGE_PAYLOAD_BYTES = 100_000;
 
+/**
+ * Strip the `_archived_<timestamp>` suffix the reaper appends to superseded
+ * `video_id` rows (see `regexp_replace(video_id, '_archived_.*$', '')` in the
+ * history-overview SQL function, which only covers the aggregated list view --
+ * this per-analysis fetch never applied the same stripping). Without it, a
+ * restored analysis's raw video_id (e.g. 'vEC6e5dBi4Y_archived_1784...') gets
+ * handed straight to the YouTube player, which rejects it as invalid and can
+ * cascade into a React DOM crash from the resulting failed-mount re-render.
+ */
+function stripArchivedSuffix(videoId: string | null | undefined): string | null {
+  if (!videoId) return null;
+  return videoId.replace(/_archived_.*$/, '');
+}
+
 /** Safely reconstruct markdown with graceful fallback to empty string on error. */
 function safeReconstructMarkdown(analysis: { analysis_markdown?: string | null; analysis_payload?: Partial<UCISPayloadV2> | null }): string { try { return getAnalysisMarkdown(analysis); } catch { console.warn('[analyses] markdown reconstruction failed, returning empty'); return ''; } }
 
@@ -93,7 +107,7 @@ export async function GET(
     // if markdown reconstruction fails or markdown is missing
     return NextResponse.json({
       id: analysis.id,
-      videoId: analysis.video_id,
+      videoId: stripArchivedSuffix(analysis.video_id),
       title: analysis.title || 'Untitled',
       channelTitle: analysis.channel_title,
       model: analysis.model_used || 'unknown',
