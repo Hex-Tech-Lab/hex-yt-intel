@@ -12,6 +12,28 @@ import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { isPersistedValidationReport } from '@/lib/types/validation-report';
 import { mapHistoryOverviewRow, type RawHistoryOverviewRow } from '@/lib/utils/history-overview';
+import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+
+const MAX_GROUNDING_PAYLOAD_BYTES = 100_000;
+
+/** Prefer stored markdown; fall back to reconstructing from analysis_payload (mirrors /api/analyses/[id]).
+ *  Chat grounding and the Synthesis Console must read the same effective content — if this falls out of
+ *  sync with that route's safeReconstructMarkdown, chat will refuse on analyses the Console renders fine. */
+function reconstructGroundingMarkdown(analysisMarkdown: string | null, analysisPayload: unknown): string {
+  if (analysisMarkdown) return analysisMarkdown;
+  if (!analysisPayload || typeof analysisPayload !== 'object') return '';
+  try {
+    const payloadSize = new TextEncoder().encode(JSON.stringify(analysisPayload)).length;
+    if (payloadSize > MAX_GROUNDING_PAYLOAD_BYTES) {
+      console.warn('[getAnalysisGrounding] Payload too large for reconstruction, skipping:', payloadSize);
+      return '';
+    }
+    return reconstructMarkdown(analysisPayload as Partial<UCISPayloadV2>);
+  } catch {
+    console.warn('[getAnalysisGrounding] markdown reconstruction failed, returning empty');
+    return '';
+  }
+}
 
 interface AnalysisRecord {
   id: string;
@@ -467,7 +489,7 @@ export class SupabaseAnalysisAdapter {
       const service = getSupabaseServiceClient();
       let query = service
         .from('analyses')
-        .select('title, channel_title, analysis_markdown, validation_report, billing_status, video_id')
+        .select('title, channel_title, analysis_markdown, analysis_payload, validation_report, billing_status, video_id')
         .eq('id', params.analysisId);
       if (params.userId) {
         query = query.eq('user_id', params.userId);
@@ -503,11 +525,21 @@ export class SupabaseAnalysisAdapter {
         computedStatus = 'partial';
       }
 
+      const payload = (data as any).analysis_payload as Record<string, unknown> | null;
+      const reportDescription = isPersistedValidationReport(data!.validation_report)
+        ? data!.validation_report.metadata?.description || null
+        : null;
+      // Fallback: description can live in analysis_payload metadata when validation_report
+      // never captured it (e.g. persisted via the chunked stitching path).
+      const payloadDescription = payload && typeof (payload as any).metadata?.description === 'string'
+        ? (payload as any).metadata.description
+        : null;
+
       return {
         title: data!.title || '',
         channelTitle: data!.channel_title || null,
-        description: isPersistedValidationReport(data!.validation_report) ? data!.validation_report.metadata?.description || null : null,
-        analysisMarkdown: data!.analysis_markdown || null,
+        description: reportDescription || payloadDescription,
+        analysisMarkdown: reconstructGroundingMarkdown(data!.analysis_markdown, payload),
         status: computedStatus,
         transcript,
       };
