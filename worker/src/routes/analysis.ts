@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { TranscriptExtractor } from "../services/TranscriptExtractor";
+import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
 import { ReasoningEngine } from "../services/ReasoningEngine";
 import { PromptBuilder } from "../services/PromptBuilder";
 import { LLMCascade } from "../services/LLMCascade";
@@ -133,15 +134,35 @@ async function verifyStreamToken(
   return { isValid: false, secret: activeSecret, msg };
 }
 
-/** Fetch video transcript if missing or invalid; attempts cache then multiple sources before returning fallback message. */
+interface ResolvedTranscript {
+  transcript: string | undefined;
+  segments?: TranscriptSegment[];
+}
+
+/**
+ * Fetch video transcript if missing or invalid; attempts cache then multiple sources.
+ *
+ * RCA (2026-07-22): this used to return `string | undefined` (flat text only), while
+ * `TranscriptExtractor.fetch()` already produces timed `segments` internally
+ * (`fetchFromPageHTML`/`fetchWithDecodo`). Those segments were discarded here, so the
+ * persist call downstream fell back to `req.segments` — the ORIGINAL request's segments
+ * field, which the browser never populates (Vercel deliberately blanks the transcript
+ * before minting the stream token; the real transcript is only ever fetched here,
+ * worker-side). Net effect: the `transcripts` table almost never got a row, so chat
+ * grounding correctly-but-confusingly reported "no transcript" on analyses that DID
+ * have one. Returning segments alongside the flat text closes that gap for the fresh-
+ * fetch path; the cache round-trip below now also carries segments so repeat analyses
+ * of the same video (cache HIT) don't regress back to segment-less.
+ */
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
   channelId?: string,
   cache?: UpstashCacheAdapter,
-): Promise<string | undefined> {
+): Promise<ResolvedTranscript> {
   const isPlaceholder = transcript?.includes("Transcript unavailable for this video");
+  let segments: TranscriptSegment[] | undefined;
 
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${videoId}`);
@@ -155,7 +176,17 @@ async function fetchTranscriptIfMissing(
         const cached = await cache.get(cacheKey);
         if (cached && cached.trim().length > 0 && !cached.includes("Transcript unavailable")) {
           console.info(`[analyze-llm-stream] Transcript cache HIT for ${videoId}`);
-          return cached;
+          // Cache values written pre-fix are plain transcript strings, not JSON —
+          // parse defensively and fall back to flat text (no segments) for those.
+          try {
+            const parsed = JSON.parse(cached) as ResolvedTranscript;
+            if (parsed && typeof parsed.transcript === 'string') {
+              return parsed;
+            }
+          } catch {
+            // Not JSON — legacy plain-string cache entry.
+          }
+          return { transcript: cached };
         }
       } catch {
         console.warn(`[analyze-llm-stream] Transcript cache GET failed for ${videoId}, proceeding with fetch`);
@@ -170,11 +201,14 @@ async function fetchTranscriptIfMissing(
       ]);
       if (result.transcript && result.transcript.trim().length > 0 && !result.transcript.includes("Transcript unavailable")) {
         transcript = result.transcript;
-        console.info(`[analyze-llm-stream] Fetch successful for ${videoId}`);
+        segments = result.segments;
+        console.info(`[analyze-llm-stream] Fetch successful for ${videoId}`, { segmentCount: segments?.length ?? 0 });
 
-        // Cache the successful transcript fetch
+        // Cache the successful transcript fetch, segments included so a cache HIT
+        // on a repeat analysis still yields timed segments (see RCA above).
         if (cache) {
-          cache.set(cacheKey, transcript, CACHE_TTL).catch(() => {
+          const cachePayload: ResolvedTranscript = { transcript, segments };
+          cache.set(cacheKey, JSON.stringify(cachePayload), CACHE_TTL).catch(() => {
             console.warn(`[analyze-llm-stream] Transcript cache SET failed for ${videoId}`);
           });
         }
@@ -190,7 +224,7 @@ async function fetchTranscriptIfMissing(
     }
   }
 
-  return transcript;
+  return { transcript, segments };
 }
 
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
@@ -209,6 +243,10 @@ function buildStreamResponse(
   let finalText = "";
   let modelUsed = "";
   let settled = false;
+  // Populated once fetchTranscriptIfMissing resolves inside the stream's start()
+  // handler below; defaults to req.segments (almost always empty from the browser)
+  // so an interrupted/timeout persist firing before resolution still has a value.
+  let resolvedSegments: TranscriptSegment[] | undefined = req.segments;
 
   const persistService = new PersistService();
 
@@ -242,7 +280,7 @@ function buildStreamResponse(
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
         chunkIndex: req.chunkIndex,
         totalChunks: req.totalChunks,
-        segments: req.segments,
+        segments: resolvedSegments,
       }).then((result) => {
         clearTimeout(timeoutId ?? null);
         return result;
@@ -263,7 +301,7 @@ function buildStreamResponse(
             validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
             chunkIndex: req.chunkIndex,
             totalChunks: req.totalChunks,
-            segments: req.segments,
+            segments: resolvedSegments,
           }));
         }, 15000);
       });
@@ -297,7 +335,13 @@ function buildStreamResponse(
         cache,
       )]);
 
-      const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value : undefined;
+      const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value.transcript : undefined;
+      // Only overwrite the req.segments default when the fetch actually produced
+      // timed segments — an interrupted fetch (rejected settle) must not wipe out
+      // whatever the request already carried.
+      if (fetchResult.status === 'fulfilled' && fetchResult.value.segments) {
+        resolvedSegments = fetchResult.value.segments;
+      }
 
       if (!resolvedTranscript || !resolvedTranscript.trim() || resolvedTranscript.includes("Transcript unavailable") || resolvedTranscript.includes("content ingestion failed")) {
         send({ type: "error", error: "No transcript available", code: "ERR_NO_TRANSCRIPT" });
