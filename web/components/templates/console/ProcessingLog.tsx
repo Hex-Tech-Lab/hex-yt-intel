@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { Icon } from '@/components/templates/_shared/primitives';
+import { showToast } from '@/lib/dashboard/export';
 
 export interface ProcessingLogProps {
   status: 'idle' | 'streaming' | 'done' | 'error';
@@ -12,6 +13,7 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { terminalLines } = useAnalysisStore();
   const [collapsed, setCollapsed] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (status === 'streaming') setCollapsed(false);
@@ -27,8 +29,12 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
     const text = terminalLines.map(l => `[${l.timestamp}] ${l.message}`).join('\n');
     try {
       await navigator.clipboard.writeText(text);
+      setCopied(true);
+      showToast('Log copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
     } catch (e) {
       console.error(e);
+      showToast('Failed to copy log.', 'error');
     }
   };
 
@@ -68,7 +74,7 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
             </span>
           )}
           
-          <button type="button" onClick={handleCopy} aria-label="Copy logs" title="Copy logs" className="bg-transparent border-none text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:copy-linear" size={14} /></button>
+          <button type="button" onClick={handleCopy} aria-label="Copy logs" title="Copy logs" className={`bg-transparent border-none cursor-pointer transition-colors ${copied ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'}`}><Icon icon={copied ? 'solar:check-read-linear' : 'solar:copy-linear'} size={14} /></button>
           <button type="button" onClick={() => handleDownload('md')} aria-label="Download MD" title="Download MD" className="bg-transparent border-none text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:download-linear" size={14} /></button>
           
           <button

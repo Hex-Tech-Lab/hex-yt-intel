@@ -10,6 +10,7 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
 import { TimestampLink } from '@/components/TimestampLink';
+import { showToast } from '@/lib/dashboard/export';
 
 export interface ChatDockProps {
   /** Active analysis for grounding new threads (optional). */
@@ -38,6 +39,21 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   const [localInput, setLocalInput] = useState('');
   const [input, setInput] = useState('');
   const [, startInputTransition] = useTransition();
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
+  const handleCopyMessage = (id: string, body: string) => {
+    navigator.clipboard?.writeText(body)
+      .then(() => {
+        setCopiedMessageId(id);
+        showToast('Message copied to clipboard!');
+        setTimeout(() => setCopiedMessageId((current) => (current === id ? null : current)), 2000);
+      })
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error('[clipboard-copy]', { message: msg });
+        showToast('Failed to copy message.', 'error');
+      });
+  };
 
   const handleInputChange = (val: string) => {
     setLocalInput(val);
@@ -419,8 +435,16 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 </div>
                 {!isUser && body && (
                   <div className="flex gap-1.5 ml-0.5">
-                    <button onClick={() => navigator.clipboard?.writeText(body).catch((e) => { const msg = e instanceof Error ? e.message : String(e); console.error('[clipboard-copy]', { message: msg }); })} title="Copy" className="grid place-items-center w-6 h-6 rounded-md border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer">
-                      <Icon icon="solar:copy-linear" size={13} />
+                    <button
+                      onClick={() => handleCopyMessage(m.id, body)}
+                      title="Copy"
+                      className={`grid place-items-center w-6 h-6 rounded-md border cursor-pointer transition-colors ${
+                        copiedMessageId === m.id
+                          ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-a10)]'
+                          : 'border-[var(--line)] bg-transparent text-[var(--ink-muted)]'
+                      }`}
+                    >
+                      <Icon icon={copiedMessageId === m.id ? 'solar:check-read-linear' : 'solar:copy-linear'} size={13} />
                     </button>
                   </div>
                 )}
