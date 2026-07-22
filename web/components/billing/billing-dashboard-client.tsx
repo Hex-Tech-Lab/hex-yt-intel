@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { STRIPE_PRICING } from '@/lib/stripe';
 import { CheckoutButton } from './checkout-button';
+import { showToast } from '@/lib/dashboard/export';
 
 interface BillingDashboardProps {
   initialData: {
@@ -18,6 +19,7 @@ interface BillingDashboardProps {
 
 export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [referralCopied, setReferralCopied] = useState(false);
   const tierConfig = STRIPE_PRICING[initialData.tier as keyof typeof STRIPE_PRICING] || STRIPE_PRICING.free;
   
   const isPro = initialData.tier === 'pro' || initialData.tier === 'enterprise';
@@ -192,8 +194,19 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
              <p style={{ margin: 0, fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-muted)", textTransform: "uppercase" }}>Your Referral Link</p>
              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
                 <code style={{ fontSize: 12, color: "var(--accent)" }}>v-intel.app/r/user_{initialData.user.id.slice(0,5)}</code>
-                <button onClick={() => { navigator.clipboard.writeText(`https://v-intel.app/r/user_${initialData.user.id.slice(0,5)}`).catch(() => {}); }} style={{ background: "transparent", border: "none", color: "var(--ink-secondary)", cursor: "pointer" }}>
-                  <Icon icon="solar:copy-linear" size={14} />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://v-intel.app/r/user_${initialData.user.id.slice(0,5)}`)
+                      .then(() => {
+                        setReferralCopied(true);
+                        showToast('Referral link copied to clipboard!');
+                        setTimeout(() => setReferralCopied(false), 2000);
+                      })
+                      .catch(() => { showToast('Failed to copy referral link.', 'error'); });
+                  }}
+                  style={{ background: "transparent", border: "none", color: referralCopied ? "var(--accent)" : "var(--ink-secondary)", cursor: "pointer", transition: "color 0.15s" }}
+                >
+                  <Icon icon={referralCopied ? "solar:check-read-linear" : "solar:copy-linear"} size={14} />
                 </button>
              </div>
           </div>
