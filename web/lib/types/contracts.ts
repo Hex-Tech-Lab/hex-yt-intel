@@ -170,6 +170,7 @@ export interface WorkerStreamRequest {
   videoId: string;
   analysisId: string;
   transcript: string;
+  segments?: Array<{ start: number; duration: number; text: string }>;
   metadata: AnalysisJobMetadata;
   persona: string;
   timezone: string;

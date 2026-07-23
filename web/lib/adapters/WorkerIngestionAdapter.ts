@@ -1,6 +1,6 @@
 import { env } from '@/lib/env';
 import { detectPersona } from '@/lib/prompts';
-import type { VideoMetadata, IngestionResult, MetadataIngestionPort } from '@/lib/ports';
+import type { VideoMetadata, IngestionResult, MetadataIngestionPort, TranscriptSegment } from '@/lib/ports';
 import type { PersonaId } from '@/lib/prompts';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 
@@ -29,7 +29,7 @@ function getRandomUserAgent(): string {
   return USER_AGENTS[index] as string;
 }
 
-async function fetchWorkerTranscript(videoId: string): Promise<string> {
+async function fetchWorkerTranscript(videoId: string): Promise<{ transcript: string; segments?: TranscriptSegment[] }> {
   const workerUrl = env.cloudflareWorkerUrl;
   if (!workerUrl) throw new Error('Worker URL not configured');
 
@@ -43,8 +43,11 @@ async function fetchWorkerTranscript(videoId: string): Promise<string> {
     throw new Error(`Worker returned ${response.status} fetching transcript`);
   }
 
+  // The worker's TranscriptExtractor.fetch() (spread via `...result` in
+  // /fetch-transcript) already includes timed `segments` -- previously only
+  // `data.transcript` was read here, discarding them at this boundary.
   const data = await response.json();
-  return data.transcript || '';
+  return { transcript: data.transcript || '', segments: Array.isArray(data.segments) ? data.segments : undefined };
 }
 
 async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetadataResponse> {
@@ -122,7 +125,8 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
     }
 
     const meta = metadataResult.value;
-    const transcript = (transcriptResult.status === 'fulfilled' ? transcriptResult.value : '').trim();
+    const transcriptResultValue = transcriptResult.status === 'fulfilled' ? transcriptResult.value : { transcript: '', segments: undefined as TranscriptSegment[] | undefined };
+    const transcript = transcriptResultValue.transcript.trim();
 
     const metadata: VideoMetadata = {
       videoId,
@@ -138,7 +142,7 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
       thumbnailUrl: meta.thumbnailUrl,
     };
 
-    return { metadata, transcript, transcriptAvailable: transcript.length > 0 };
+    return { metadata, transcript, transcriptAvailable: transcript.length > 0, segments: transcriptResultValue.segments };
   }
 
   async fetchOnlyMetadata(videoId: string): Promise<VideoMetadata> {
