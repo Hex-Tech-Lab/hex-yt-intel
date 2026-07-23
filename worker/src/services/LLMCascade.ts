@@ -3,6 +3,7 @@
  * qa-intel: no stream state here to call settleAnalysis or setError
  */
 
+import * as Sentry from '@sentry/cloudflare';
 import type { LLMCascadePort } from '../ports/LLMCascadePort';
 import type { EngineMetadata, StreamStatusEvent } from '../ports/ReasoningEnginePort';
 import { translateModelId } from './model-id-translator';
@@ -120,6 +121,18 @@ export class LLMCascade implements LLMCascadePort {
 
       // skipcq: JS-0827
       console.warn(`[LLMCascade] Stream ${streamId} tier ${tierIndex} failed. Raw: ${rawError}, Classified: ${classifiedError}`);
+      // Cascade fallbacks previously only reached console.log, which is not
+      // queryable in Sentry -- "why did the primary model keep failing" was
+      // unanswerable after the fact (confirmed 2026-07-23: a user-reported
+      // pattern of frequent premium-tier fallback had zero matching Sentry
+      // events despite the worker having Sentry available). captureMessage
+      // (not captureException -- this is expected, handled cascade behavior,
+      // not a crash) makes every fallback searchable by model/reason.
+      Sentry.captureMessage(`LLMCascade fallback: ${name} -> tier ${tierIndex + 1}`, {
+        level: 'warning',
+        tags: { operation: 'llm-cascade-fallback', model: name, classifiedError },
+        extra: { streamId, tierIndex, rawError, chainLength: this.chain.length },
+      });
       onStatus?.({ stage: 'fallback', from: name, error: classifiedError, rawError });
       previousModel = name;
     }
