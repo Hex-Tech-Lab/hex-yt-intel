@@ -9,7 +9,7 @@
  */
 
 import { XMLParser } from 'fast-xml-parser';
-import { captureException } from '@sentry/cloudflare';
+import { captureException, captureMessage } from '@sentry/cloudflare';
 import { fetchWithProxy } from './http-utils';
 import { getRandomUserAgent } from './user-agent';
 import type { TranscriptProviderPort, TranscriptResult } from '../ports/TranscriptProviderPort';
@@ -173,7 +173,21 @@ export class TranscriptExtractor implements TranscriptProviderPort {
           limit: 1,
         }),
       }, this.residentialProxyUrl);
-      if (!response.ok) return null;
+      if (!response.ok) {
+        // RCA (2026-07-24): this branch returned null with zero logging --
+        // same silent-swallow shape fixed in MetadataScraper.fetchComments
+        // tonight (see that RCA). A non-2xx from Decodo (rate limit,
+        // account issue, target-site block) was indistinguishable from
+        // "this channel genuinely has no metadata."
+        const bodyText = await response.text().catch(() => '');
+        console.warn(`[transcript] Channel metadata fetch non-ok for ${channelId}: ${response.status} ${response.statusText}`, bodyText.slice(0, 300));
+        captureMessage(`Channel metadata fetch non-ok: ${channelId}`, {
+          level: 'warning',
+          tags: { operation: 'transcript-channel-metadata', status: String(response.status) },
+          extra: { channelId, status: response.status, body: bodyText.slice(0, 300) },
+        });
+        return null;
+      }
       const data = await response.json() as { results?: Array<{ content?: unknown }> };
       return data.results?.[0]?.content as Record<string, unknown> ?? null;
     } catch (e) {
