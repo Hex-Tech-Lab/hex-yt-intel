@@ -1,0 +1,21 @@
+supabase/migrations/20260723090000_settings_registry_and_access_matrix.sql
+  s_cd8c10957ebd37::t_7b20551fe23de4 1-206
+docs/history/RCA_2026-07-23_WHY_CONTRACT_AUDIT_MISSED_KG_SCALE_BUG.md
+  s_cd8c10957ebd37::t_767172350c7acf 1-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "e92dfc243173c071cfba57e138abae5eb34d19c1",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
