@@ -197,8 +197,21 @@ export class LLMCascade implements LLMCascadePort {
     const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
     const requestModel = translateModelId(model);
     const requestMaxTokens = isHaiku45 ? 62000 : 16000;
+    // RCA (2026-07-23): this used to unconditionally override `providerOrder`
+    // with a hardcoded ['anthropic', 'google-vertex', 'amazon-bedrock'] for
+    // ANY claude-haiku-4.5 tier, silently discarding the "Alternate Route"
+    // cascade tier's own providerOrder (['google-vertex', 'amazon-bedrock'],
+    // deliberately configured to skip the direct 'anthropic' provider). Net
+    // effect: the primary tier and the "alternate route" tier sent the exact
+    // same provider order to OpenRouter -- if 'anthropic' direct was down or
+    // rate-limited, BOTH Haiku tiers failed for the identical reason instead
+    // of the alternate tier actually routing through Vertex/Bedrock, and the
+    // cascade fell straight through to the premium Sonnet 4.6 fallback on
+    // every failure. Now respects each tier's own providerOrder when set,
+    // only falling back to the full default order for the primary tier
+    // (which has none).
     const requestProvider = isHaiku45
-      ? { order: ['anthropic', 'google-vertex', 'amazon-bedrock'], allow_fallbacks: false }
+      ? { order: providerOrder ?? ['anthropic', 'google-vertex', 'amazon-bedrock'], allow_fallbacks: false }
       : (providerOrder ? { order: providerOrder, allow_fallbacks: true } : undefined);
 
     try {
@@ -305,8 +318,13 @@ export class LLMCascade implements LLMCascadePort {
     const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
     const requestModel = translateModelId(model);
     const requestMaxTokens = isHaiku45 ? 62000 : 16000;
+    // Same tier-override bug as callLLMStream (see RCA there), plus this copy
+    // additionally had wrong-cased provider slugs ('Amazon'/'Anthropic'/'Google')
+    // -- OpenRouter provider slugs are lowercase ('anthropic', 'google-vertex',
+    // 'amazon-bedrock'); with allow_fallbacks:false and no valid slugs, every
+    // request through this path had no eligible provider at all.
     const requestProvider = isHaiku45
-      ? { order: ['Amazon', 'Anthropic', 'Google'], allow_fallbacks: false }
+      ? { order: providerOrder ?? ['anthropic', 'google-vertex', 'amazon-bedrock'], allow_fallbacks: false }
       : (providerOrder ? { order: providerOrder, allow_fallbacks: true } : undefined);
 
     try {
