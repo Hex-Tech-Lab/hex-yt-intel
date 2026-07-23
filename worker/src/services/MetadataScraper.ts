@@ -153,42 +153,58 @@ export class MetadataScraper {
 
   /**
    * Fetch top-level comments for a video (author, publish date, text, likes),
-   * ordered by relevance. Best-effort: returns [] on any API failure (comments
-   * disabled, quota, moderation) rather than throwing.
+   * ordered by relevance. One retry on transient failure (network error, 5xx) --
+   * a permanent condition (403 commentsDisabled, 404) is not retried since a
+   * second attempt can't succeed. Best-effort overall: still returns [] if
+   * every attempt fails, rather than throwing and blocking the analysis.
    */
   async fetchComments(videoId: string, maxResults = 20): Promise<VideoComment[]> {
     const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&order=relevance&maxResults=${maxResults}&key=${this.apiKey}`;
-    try {
-      const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
-      if (!response.ok) return [];
+    const maxAttempts = 2;
 
-      const data = (await response.json()) as {
-        items?: Array<{
-          snippet?: {
-            topLevelComment?: {
-              snippet?: {
-                authorDisplayName?: string;
-                textDisplay?: string;
-                publishedAt?: string;
-                likeCount?: number;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
+
+        if (!response.ok) {
+          // 403/404 cover commentsDisabled, video not found, and quota-denied --
+          // none of these change on retry, so stop immediately rather than
+          // burning a second API call (and a second proxy hop) for nothing.
+          if (response.status === 403 || response.status === 404) return [];
+          if (attempt < maxAttempts) continue;
+          return [];
+        }
+
+        const data = (await response.json()) as {
+          items?: Array<{
+            snippet?: {
+              topLevelComment?: {
+                snippet?: {
+                  authorDisplayName?: string;
+                  textDisplay?: string;
+                  publishedAt?: string;
+                  likeCount?: number;
+                };
               };
             };
-          };
-        }>;
-      };
-
-      return (data.items ?? []).map((item) => {
-        const snippet = item.snippet?.topLevelComment?.snippet ?? {};
-        return {
-          author: snippet.authorDisplayName ?? 'Unknown',
-          text: snippet.textDisplay ?? '',
-          publishedAt: snippet.publishedAt ?? '',
-          likeCount: snippet.likeCount ?? 0,
+          }>;
         };
-      });
-    } catch {
-      return [];
+
+        return (data.items ?? []).map((item) => {
+          const snippet = item.snippet?.topLevelComment?.snippet ?? {};
+          return {
+            author: snippet.authorDisplayName ?? 'Unknown',
+            text: snippet.textDisplay ?? '',
+            publishedAt: snippet.publishedAt ?? '',
+            likeCount: snippet.likeCount ?? 0,
+          };
+        });
+      } catch {
+        if (attempt < maxAttempts) continue;
+        return [];
+      }
     }
+    return [];
   }
 
   /**
