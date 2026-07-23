@@ -104,6 +104,54 @@ export class SupabaseSettingsAdapter
     return result;
   }
 
+  /**
+   * Wave S: read the change history for a single setting (setting_values_history,
+   * populated by trigger on setting_values -- see the 20260723210000 migration).
+   * Defaults to system scope (scope_id null) to match getRegistrySettings' scope
+   * assumption; pass `scope` for admin/user-tier settings.
+   */
+  static async getSettingHistory(
+    key: string,
+    scope: { type: 'system' | 'admin' | 'user'; id?: string | null } = { type: 'system', id: null }
+  ): Promise<
+    Array<{ oldValue: unknown; newValue: unknown; changedAt: string; changedBy: string | null }>
+  > {
+    try {
+      const service = getSupabaseServiceClient();
+      let query = service
+        .from('setting_values_history')
+        .select('old_value, new_value, changed_at, changed_by')
+        .eq('setting_key', key)
+        .eq('scope_type', scope.type)
+        .order('changed_at', { ascending: false });
+      query = scope.id ? query.eq('scope_id', scope.id) : query.is('scope_id', null);
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('[SupabaseSettingsAdapter] getSettingHistory failed:', error.message);
+        Sentry.captureException(error, {
+          tags: { method: 'getSettingHistory' },
+          extra: { key, scope },
+        });
+        return [];
+      }
+
+      return (data ?? []).map((row) => ({
+        oldValue: row.old_value,
+        newValue: row.new_value,
+        changedAt: row.changed_at,
+        changedBy: row.changed_by,
+      }));
+    } catch (error: unknown) {
+      console.error('[SupabaseSettingsAdapter] getSettingHistory error:', error);
+      Sentry.captureException(error, {
+        tags: { method: 'getSettingHistory' },
+        extra: { key, scope },
+      });
+      return [];
+    }
+  }
+
   static async getAppSettingStatic(key: string): Promise<any | null> {
     try {
       const service = getSupabaseServiceClient();

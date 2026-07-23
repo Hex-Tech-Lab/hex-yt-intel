@@ -79,11 +79,35 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
   }
 
   /**
-   * Consume quota for completed analysis
-   * Placeholder for future quota consumption tracking
+   * Consume quota for completed analysis. Real implementation as of
+   * 2026-07-24 (Usage tab work): logs an `analysis_completed` usage event
+   * for cost-per-user / tier-usage reporting. This is a pure logging call --
+   * it does NOT decrement or gate anything (the live-count `checkGate` query
+   * remains the sole quota-enforcement mechanism, untouched here). A logging
+   * failure must never propagate to the caller: same try/catch-and-warn
+   * shape as the `monthly_quota_exceeded` log above and
+   * `SupabaseBillingAdapter.logUsageEvent`'s own Sentry-capture-and-rethrow
+   * (rethrows are swallowed right here, not passed up).
    */
-  consumeQuota(): Promise<void> {
-    return Promise.resolve();
+  async consumeQuota(params: {
+    userId: string;
+    tier: UserTier;
+    email?: string;
+    analysisId?: string;
+  }): Promise<void> {
+    try {
+      await this.persistence.logUsageEvent({
+        userId: params.userId,
+        action: 'analysis_completed',
+        metadata: {
+          tier: params.tier,
+          ...(params.analysisId ? { analysisId: params.analysisId } : {}),
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (logErr) {
+      console.warn('[PostgresBillingAdapter] Failed to log analysis_completed usage event:', logErr);
+    }
   }
 
   /**

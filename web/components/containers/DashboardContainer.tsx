@@ -33,6 +33,7 @@ import { useAutoRestoreAnalysis } from '@/hooks/useAutoRestoreAnalysis';
 import { useExecutiveDigest } from '@/hooks/useExecutiveDigest';
 import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
 import { StatusBadge } from '@/components/templates/_shared/primitives';
+import { UsageTab } from '@/components/templates/console/UsageTab';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
@@ -544,9 +545,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       ) : (activeNav as string) === 'history' ? (
         <AnalysisHistory onSelectAnalysis={() => setActiveNav('console')} />
       ) : (
-        <div className="p-6 text-center text-[var(--ink-secondary)]">
-          Settings coming soon...
-        </div>
+        <UsageTab />
       )}
 
     </DashboardLayout>

@@ -19,6 +19,8 @@ import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 import { stitchChunksIntoPayload, buildDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
+import { PostgresBillingAdapter } from '@/lib/adapters/PostgresBillingAdapter';
+import { getUserTier } from '@/lib/services/traffic';
 
 /** Calculate exponential backoff delay with jitter to prevent thundering herd on retry. */
 const calculateBackoffDelay = (attempt: number): number => {
@@ -267,6 +269,7 @@ export async function POST(request: NextRequest) {
       }
 
       const persistenceAdapter = new SupabasePersistenceAdapter();
+      const billingQuotaPort = new PostgresBillingAdapter();
       const row = await retryWithBackoff(
         () => persistenceAdapter.findAnalysisForPersist({ analysisId, videoId }),
         2
@@ -593,6 +596,20 @@ export async function POST(request: NextRequest) {
               Sentry.captureException(e, { contexts: { persist: { phase: 'publish_digest_task_chunks', analysisId } } });
               console.warn('[analyses/persist] Failed to publish digest task for chunks', { analysisId, error: String(e) });
             });
+
+            // Usage-log: analysis genuinely completed (chunked path). Purely
+            // additive, fire-and-forget -- consumeQuota() itself never
+            // throws (see PostgresBillingAdapter), and this .catch() is a
+            // second belt-and-braces guard so a failure here can never
+            // affect the persist response. Note: a retried/re-persisted
+            // request for the same analysisId could in theory reach this
+            // gate more than once -- harmless for a pure usage-log row (not
+            // a decrementing counter), so no idempotency guard is added.
+            getUserTier(row.userId)
+              .then((tier) => billingQuotaPort.consumeQuota({ userId: row.userId, tier, analysisId }))
+              .catch(e => {
+                console.warn('[analyses/persist] Failed to log analysis_completed usage event (chunked path)', { analysisId, error: String(e) });
+              });
           }
         }
 
@@ -842,6 +859,16 @@ export async function POST(request: NextRequest) {
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_digest_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish digest task', { analysisId, error: String(e) });
         });
+
+        // Usage-log: analysis genuinely completed (non-chunked path). Same
+        // fire-and-forget / cannot-fail-the-caller shape as the chunked-path
+        // call site above -- see the comment there for the retry-safety
+        // and non-blocking reasoning.
+        getUserTier(row.userId)
+          .then((tier) => billingQuotaPort.consumeQuota({ userId: row.userId, tier, analysisId }))
+          .catch(e => {
+            console.warn('[analyses/persist] Failed to log analysis_completed usage event', { analysisId, error: String(e) });
+          });
       }
 
       return { type: 'ok' as const, analysisId };

@@ -9,6 +9,18 @@ import { env } from '@/lib/env';
 import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService';
 import { buildGroundingWithHistory } from '@/lib/utils/build-grounding-with-history';
 import { extractRequestedTranscriptRange } from '@/lib/utils/extract-transcript-range';
+import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
+import { getChatGroundingInstructions } from '@/lib/prompts/chat-grounding';
+
+// Fallback used only if the settings registry is unreachable (see
+// getRegistrySettings call below) -- matches the values these keys replaced
+// (2026-07-24 Usage tab work, migration 20260723231500).
+const CHAT_TURN_LIMIT_FALLBACK: Record<UserTier, number> = {
+  free: 5,
+  pro: 30,
+  enterprise: 100,
+};
 
 export interface ProcessChatMessageUseCaseParams {
   conversationId: string;
@@ -97,15 +109,23 @@ export class ProcessChatMessageUseCase {
       }
     }
 
-    // 3. Enforce turn limits based on user tier
+    // 3. Enforce turn limits based on user tier. Values come from the
+    // settings registry (Wave D1) as of 2026-07-24 -- see
+    // supabase/migrations/20260723231500_chat_turn_limit_settings.sql.
+    // getRegistrySettings itself never throws (falls back internally on any
+    // DB error), and CHAT_TURN_LIMIT_FALLBACK matches the values these keys
+    // replaced, so this call cannot change behavior on a registry outage.
     const userMessageCount = allMessages.filter((m) => m.role === 'user').length;
 
-    const limits: Record<UserTier, number> = {
-      free: 5,
-      pro: 30,
-      enterprise: 100,
-    };
-    const userLimit = limits[tier] || 5;
+    const limits = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['chat.turnLimit.free', 'chat.turnLimit.pro', 'chat.turnLimit.enterprise'],
+      {
+        'chat.turnLimit.free': CHAT_TURN_LIMIT_FALLBACK.free,
+        'chat.turnLimit.pro': CHAT_TURN_LIMIT_FALLBACK.pro,
+        'chat.turnLimit.enterprise': CHAT_TURN_LIMIT_FALLBACK.enterprise,
+      }
+    );
+    const userLimit = Number(limits[`chat.turnLimit.${tier}`]) || CHAT_TURN_LIMIT_FALLBACK[tier] || 5;
 
     if (userMessageCount >= userLimit && !isRetry) {
       return {
@@ -147,6 +167,25 @@ export class ProcessChatMessageUseCase {
         ]);
         userRow = createdMsg;
         groundingResult = ground;
+
+        // Usage-log: a genuinely new user turn was persisted (not the
+        // idempotent-retry/race-recovery paths above, which reuse an
+        // existing row and would double-count). Fire-and-forget,
+        // best-effort -- logUsageEvent rethrows internally after its own
+        // Sentry capture, so this MUST stay wrapped here; a logging failure
+        // must never affect chat message processing.
+        if (!isRetry) {
+          SupabaseBillingAdapter.logUsageEvent({
+            userId,
+            action: 'chat_turn',
+            metadata: {
+              surface: conv.analysisId ? 'synthesis_console' : 'atlas',
+              conversationId,
+            },
+          }).catch((logErr) => {
+            console.warn('[ProcessChatMessageUseCase] Failed to log chat_turn usage event:', logErr);
+          });
+        }
       } catch (error) {
         console.error('[chat-usecase] Failed during parallel user-message write / grounding fetch:', error);
         throw error;
@@ -368,7 +407,8 @@ export class ProcessChatMessageUseCase {
     // and organized by dimension) -- but the transcript is the authoritative
     // source for anything requiring exact wording, direct quotes, or a specific
     // timestamp, and must be used for those regardless of what the analysis says.
-    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis, video description, and transcript below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it. When both the analysis and the transcript could answer a question, prefer the analysis for synthesis and interpretation, but always defer to the verbatim transcript for exact quotes, wording, or a specific timestamp. When the user asks for a time range (e.g. "minute 52", "the full minute 52", "51:00 to 52:00"), you MUST scan the ENTIRE transcript and quote EVERY line whose timestamp falls anywhere within that whole range, from its start to its end — never stop after the first one or two lines you find near the start of the range; a sparse-looking range (few lines of dialogue) is a real property of the source and should be reported as-is, not padded or truncated further.${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}${commentsSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}${requestedRangeSection}`;
+    const groundingInstructions = await getChatGroundingInstructions();
+    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. ${groundingInstructions}${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}${commentsSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}${requestedRangeSection}`;
 
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);
