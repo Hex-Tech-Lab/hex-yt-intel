@@ -1,0 +1,19 @@
+web/store/useChatStore.ts
+  s_cd8c10957ebd37::t_7ac7a8509badd4 141-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "f7c5eae2f94121688fbb8cd5cfd52db3ef65688d",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
