@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import * as Sentry from "@sentry/cloudflare";
 import { TranscriptExtractor } from "../services/TranscriptExtractor";
 import { MetadataScraper, type VideoComment } from "../services/MetadataScraper";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
@@ -217,9 +218,25 @@ async function fetchChannelMetaCached(
     }
   }
 
+  // RCA (2026-07-24): this previously swallowed the error completely
+  // (.catch(() => null), no logging anywhere -- not console, not Sentry),
+  // so a genuinely broken/flaky metadata fetch was silently indistinguishable
+  // from "this channel just has no metadata." A live investigation into
+  // repeatedly-null commentCount/comments on one specific video hit a dead
+  // end here: no error was ever recorded to trace. captureMessage makes the
+  // next occurrence diagnosable by channelId + actual error text.
   const fetchPromise = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY)
     .fetchChannelMetadata(channelId)
-    .catch(() => null);
+    .catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[analyze-llm-stream] channel-meta fetch failed for ${channelId}:`, message);
+      Sentry.captureMessage(`channel-meta fetch failed: ${channelId}`, {
+        level: 'warning',
+        tags: { operation: 'channel-meta-fetch' },
+        extra: { channelId, error: message },
+      });
+      return null;
+    });
   const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), CHANNEL_META_TIMEOUT_MS));
   const result = truncateChannelMeta(await Promise.race([fetchPromise, timeoutPromise]));
 
@@ -306,9 +323,23 @@ async function fetchCommentsCached(
   // not a single number picked independent of it.
   const effectiveTimeoutMs = config.maxAttempts * config.timeoutPerAttemptMs;
 
+  // RCA (2026-07-24): same silent-swallow shape as channel-meta above --
+  // .catch(() => []) discarded the actual error entirely. A specific video
+  // repeatedly got zero comments across multiple post-fix analyses while
+  // another video succeeded, and there was no way to tell "genuinely zero
+  // comments" from "the fetch kept failing" without this.
   const fetchPromise = new MetadataScraper(env.YOUTUBE_API_KEY, env.RESIDENTIAL_PROXY_URL)
     .fetchComments(videoId, effectiveMaxResults, config.maxAttempts)
-    .catch(() => []);
+    .catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[analyze-llm-stream] comments fetch failed for ${videoId}:`, message);
+      Sentry.captureMessage(`comments fetch failed: ${videoId}`, {
+        level: 'warning',
+        tags: { operation: 'comments-fetch' },
+        extra: { videoId, error: message, effectiveMaxResults },
+      });
+      return [];
+    });
   const timeoutPromise = new Promise<VideoComment[]>((resolve) => setTimeout(() => resolve([]), effectiveTimeoutMs));
   const result = truncateComments(await Promise.race([fetchPromise, timeoutPromise]), config.maxPayloadBytes);
 

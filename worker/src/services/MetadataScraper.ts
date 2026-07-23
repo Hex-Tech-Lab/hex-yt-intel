@@ -14,6 +14,7 @@
  * - Channel context and statistics
  */
 
+import * as Sentry from '@sentry/cloudflare';
 import { fetchWithProxy } from './http-utils';
 import { getRandomUserAgent } from './user-agent';
 
@@ -166,11 +167,24 @@ export class MetadataScraper {
         const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
 
         if (!response.ok) {
+          // RCA (2026-07-24): every branch here used to return [] with zero
+          // logging, so "comments genuinely disabled" (expected, benign) and
+          // "quota exhausted / API erroring" (a real, actionable failure)
+          // were indistinguishable after the fact -- a live investigation
+          // into a video with repeatedly-zero comments hit a dead end
+          // because nothing recorded which case this was.
+          const bodyText = await response.text().catch(() => '');
+          console.warn(`[MetadataScraper] fetchComments non-ok for ${videoId}: ${response.status} ${response.statusText}`, bodyText.slice(0, 500));
           // 403/404 cover commentsDisabled, video not found, and quota-denied --
           // none of these change on retry, so stop immediately rather than
           // burning a second API call (and a second proxy hop) for nothing.
           if (response.status === 403 || response.status === 404) return [];
           if (attempt < maxAttempts) continue;
+          Sentry.captureMessage(`fetchComments exhausted retries: ${videoId}`, {
+            level: 'warning',
+            tags: { operation: 'fetch-comments', status: String(response.status) },
+            extra: { videoId, status: response.status, statusText: response.statusText, body: bodyText.slice(0, 500) },
+          });
           return [];
         }
 
@@ -198,8 +212,15 @@ export class MetadataScraper {
             likeCount: snippet.likeCount ?? 0,
           };
         });
-      } catch {
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[MetadataScraper] fetchComments threw for ${videoId} (attempt ${attempt}/${maxAttempts}):`, message);
         if (attempt < maxAttempts) continue;
+        Sentry.captureMessage(`fetchComments threw, retries exhausted: ${videoId}`, {
+          level: 'warning',
+          tags: { operation: 'fetch-comments' },
+          extra: { videoId, error: message },
+        });
         return [];
       }
     }
