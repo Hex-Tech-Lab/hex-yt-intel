@@ -247,8 +247,16 @@ async function fetchCommentsCached(
   videoId: string,
   env: Pick<AnalysisEnv, "YOUTUBE_API_KEY" | "RESIDENTIAL_PROXY_URL">,
   cache?: UpstashCacheAdapter,
+  // The video's total comment count, already fetched during ingestion's
+  // videos.list call (req.metadata.commentCount) -- checking it here first
+  // means a video with comments disabled or zero comments never spends a
+  // second API call (commentThreads.list) finding that out the hard way.
+  // Undefined (field missing/never fetched) still falls through to the real
+  // fetch rather than being treated as "known zero".
+  knownCommentCount?: number,
 ): Promise<VideoComment[] | null> {
   if (!env.YOUTUBE_API_KEY) return null;
+  if (knownCommentCount === 0) return null;
   const cacheKey = `comments:${videoId}`;
 
   if (cache) {
@@ -286,6 +294,7 @@ async function fetchTranscriptIfMissing(
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
   channelId?: string,
   cache?: UpstashCacheAdapter,
+  knownCommentCount?: number,
 ): Promise<ResolvedTranscript> {
   const isPlaceholder = transcript?.includes("Transcript unavailable for this video");
   let segments: TranscriptSegment[] | undefined;
@@ -299,7 +308,7 @@ async function fetchTranscriptIfMissing(
   const channelMetaPromise: Promise<Record<string, unknown> | null> = fetchChannelMetaCached(channelId, env, cache);
   // Same reasoning applies to comments: cached + time-bounded, fetched once
   // regardless of transcript branch.
-  const commentsPromise: Promise<VideoComment[] | null> = fetchCommentsCached(videoId, env, cache);
+  const commentsPromise: Promise<VideoComment[] | null> = fetchCommentsCached(videoId, env, cache, knownCommentCount);
 
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${videoId}`);
@@ -497,6 +506,11 @@ function buildStreamResponse(
         { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY, YOUTUBE_API_KEY: env.YOUTUBE_API_KEY },
         (req.metadata as { channelId?: string }).channelId,
         cache,
+        (() => {
+          const raw = (req.metadata as { commentCount?: string | number }).commentCount;
+          const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
+          return typeof n === 'number' && Number.isFinite(n) ? n : undefined;
+        })(),
       )]);
 
       const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value.transcript : undefined;
