@@ -1,0 +1,25 @@
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_cd8c10957ebd37::t_59a05720e510b2 520,526-530
+  s_cd8c10957ebd37::t_36678456ac4a2e 582-587,597
+  s_cd8c10957ebd37::t_359cbdfd8ce623 14
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_cd8c10957ebd37::t_f39722f95dd0c2 261
+  s_cd8c10957ebd37::t_738b087b62faef 254-260,262
+  s_cd8c10957ebd37::t_c36f70050c4456 269
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "6ac34d7a2bb73905e4dd053cea1acf34dbbc1727",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
