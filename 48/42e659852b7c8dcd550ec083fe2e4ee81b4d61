@@ -1,0 +1,20 @@
+worker/src/services/LLMCascade.ts
+  s_0eded1e9d0cab6::t_7a7ad588037cb3 6
+  s_0eded1e9d0cab6::t_7987ad2f00f453 124-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "4842e659852b7c8dcd550ec083fe2e4ee81b4d61",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
