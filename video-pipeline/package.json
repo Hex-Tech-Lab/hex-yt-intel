@@ -1,0 +1,23 @@
+{
+  "name": "hex-yt-intel-video-pipeline",
+  "version": "0.1.0",
+  "description": "Wave C/F: yt-dlp + FFmpeg scene-change screenshots + OCR. Runs on Railway (native binary execution -- Cloudflare Workers and Vercel Functions cannot do this), triggered by the main app.",
+  "type": "module",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.6.14",
+    "@hono/node-server": "^1.13.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
