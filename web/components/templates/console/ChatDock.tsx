@@ -433,8 +433,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                     </ReactMarkdown>
                   )}
                 </div>
-                {!isUser && body && (
-                  <div className="flex gap-1.5 ml-0.5">
+                {body && (
+                  <div className={`flex gap-1.5 ml-0.5 ${isUser ? 'self-end mr-0.5' : ''}`}>
                     <button
                       onClick={() => handleCopyMessage(m.id, body)}
                       title="Copy"

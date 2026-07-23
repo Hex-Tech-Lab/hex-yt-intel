@@ -226,7 +226,13 @@ async function fetchChannelMetaCached(
 // YouTube Data API call (commentThreads.list) with its own quota, so bound and
 // cache it rather than block/repeat per bundle stream. 7-day TTL — top
 // relevance-ordered comments on an existing video churn slowly.
-const COMMENTS_TIMEOUT_MS = 4000;
+// fetchComments does up to 2 attempts through the residential proxy on
+// failure/retry-eligible status; a 4s outer race was confirmed too tight in
+// production (comments silently came back null on every real analysis run,
+// including full re-analyzes) since two proxy round trips routinely exceed
+// it. This is a background Promise.all branch, not on the critical path, so
+// the larger budget costs nothing when comments resolve quickly.
+const COMMENTS_TIMEOUT_MS = 9000;
 const MAX_COMMENTS_BYTES = 20_000;
 const COMMENTS_CACHE_TTL = 604_800;
 

@@ -42,38 +42,43 @@ export function reconstructMarkdown(payload: Partial<UCISPayloadV2>): string {
     }
   }
 
-  // Classification (if present)
+  // Classification (if present) -- rendered as markdown (this text is fed
+  // straight to ReactMarkdown downstream) rather than "=== X ===" plain-text
+  // banners, which render as unstyled paragraph text with no visual distinction
+  // from the properly-formatted dimension content above it.
   if (payload.classification) {
-    lines.push('=== CLASSIFICATION ===');
+    lines.push('#### Classification');
+    lines.push('');
     if (payload.classification.authoritative !== undefined) {
-      lines.push(`Authoritative:           ${payload.classification.authoritative}`);
+      lines.push(`- **Authoritative:** ${payload.classification.authoritative}`);
     }
     if (payload.classification.practicallyActionable !== undefined) {
-      lines.push(`Practically Actionable:  ${payload.classification.practicallyActionable}`);
+      lines.push(`- **Practically Actionable:** ${payload.classification.practicallyActionable}`);
     }
     if (payload.classification.knowledgeGraphReady !== undefined) {
-      lines.push(`Knowledge Graph Ready:   ${payload.classification.knowledgeGraphReady}`);
+      lines.push(`- **Knowledge Graph Ready:** ${payload.classification.knowledgeGraphReady}`);
     }
     if (payload.classification.safe !== undefined) {
-      lines.push(`Safe:                    ${payload.classification.safe}`);
+      lines.push(`- **Safe:** ${payload.classification.safe}`);
     }
     if (payload.classification.personaOptimised !== undefined) {
-      lines.push(`Persona Optimised:       ${payload.classification.personaOptimised}`);
+      lines.push(`- **Persona Optimised:** ${payload.classification.personaOptimised}`);
     }
     if (payload.classification.recommendation !== undefined) {
-      lines.push(`Recommendation:          ${payload.classification.recommendation}`);
+      lines.push(`- **Recommendation:** ${payload.classification.recommendation}`);
     }
     lines.push('');
   }
 
   // Monetization verdicts (if present)
   if (payload.monetizationVerdict) {
-    lines.push('=== MONETIZATION VERDICTS ===');
-    lines.push(`Creator:         ${payload.monetizationVerdict.creator || 'N/A'}`);
-    lines.push(`Indie Maker:     ${payload.monetizationVerdict.indieMaker || 'N/A'}`);
-    lines.push(`Consultant:      ${payload.monetizationVerdict.consultant || 'N/A'}`);
-    lines.push(`Researcher:      ${payload.monetizationVerdict.researcher || 'N/A'}`);
-    lines.push(`Product Manager: ${payload.monetizationVerdict.productManager || 'N/A'}`);
+    lines.push('#### Monetization Verdicts');
+    lines.push('');
+    lines.push(`- **Creator:** ${payload.monetizationVerdict.creator || 'N/A'}`);
+    lines.push(`- **Indie Maker:** ${payload.monetizationVerdict.indieMaker || 'N/A'}`);
+    lines.push(`- **Consultant:** ${payload.monetizationVerdict.consultant || 'N/A'}`);
+    lines.push(`- **Researcher:** ${payload.monetizationVerdict.researcher || 'N/A'}`);
+    lines.push(`- **Product Manager:** ${payload.monetizationVerdict.productManager || 'N/A'}`);
     lines.push('');
   }
 
