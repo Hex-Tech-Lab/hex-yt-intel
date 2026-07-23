@@ -66,6 +66,7 @@ export interface ChatPersistencePort {
       takeaways?: string[];
       detailedSummary?: string;
     } | null;
+    comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
   } | null>;
 
   /**
