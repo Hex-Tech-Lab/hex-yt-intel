@@ -21,6 +21,13 @@ overrides:
   "@types/react-dom": "^19.2.3"
   "postcss": "^8.4.49"
   "esbuild": "^0.28.1"
+  # Dependabot alerts #69,71,72 (2026-07-24): each pin below is the first
+  # version GitHub's advisory data confirms as patched, not a blind
+  # latest-bump. (tar's #62-65 and js-yaml's #61 bumps are on their
+  # pre-existing entries further down, not duplicated here.)
+  "fast-uri": "^3.1.4"
+  "sharp": "^0.35.0"
+  "hono": "^4.12.27"
   "eslint-plugin-react-hooks": "5.1.0"
   "eslint-plugin-react": "7.34.3"
   "eslint-config-next": "14.2.16"
@@ -30,10 +37,12 @@ overrides:
   "ajv": "^8.18.0"
   "@eslint/eslintrc>ajv": "^6.14.0"
   "eslint>ajv": "^6.14.0"
-  "dompurify": "^3.4.11"
+  "dompurify": "^3.4.12"
   "path-to-regexp@>=4.0.0 <6.3.0": "6.3.0"
   "path-to-regexp@>=8.0.0 <8.4.0": "8.4.2"
-  "tar": "^7.5.16"
+  # Dependabot #62-65 (2026-07-24): 4 cascading CVEs (moderate->critical),
+  # 7.5.19 is the first version patching all of them at once.
+  "tar": "^7.5.19"
   "minimatch": "^10.2.5"
   "brace-expansion": "^5.0.7"
   "smol-toml": "^1.6.1"
@@ -41,7 +50,9 @@ overrides:
   "@tootallnate/once": "^3.0.1"
   "ws": "^8.21.0"
   "form-data": "^4.0.6"
-  "js-yaml": "^4.1.2"
+  # Dependabot #61 (2026-07-24): bumped ^4.1.2 -> ^4.3.0 (YAML merge-key
+  # quadratic-CPU CVE).
+  "js-yaml": "^4.3.0"
   "@opentelemetry/core": "^2.8.0"
 
 allowBuilds:
