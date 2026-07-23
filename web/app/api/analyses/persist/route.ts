@@ -167,6 +167,63 @@ function stitchChunksIntoPayload(
     .filter(d => d && typeof d.number === 'number' && !isNaN(d.number))
     .sort((a, b) => a.number - b.number);
 
+  // Normalize KG node.weight / edge.strength scale before validation.
+  //
+  // RCA (2026-07-23, live production test): the schema requires 1-10 (matching
+  // the prompt's explicit "weight: Importance (1-10)" / "strength: Connection
+  // strength (1-10)" instruction), but the model does NOT reliably follow this
+  // -- the SAME model, SAME prompt, emitted 1-10 on one run and 0-1 on another
+  // run of the identical video minutes apart. A strict range check alone
+  // cannot fix non-deterministic LLM output; it can only reject it. Rescale
+  // anything landing in the 0-1 band up onto the 1-10 scale (the model's
+  // intent -- "how important is this" -- is preserved either way, just
+  // expressed on a different unit), so an entire otherwise-complete 11/11
+  // analysis never fails validation over a KG cosmetic-scale slip.
+  const normalizeToTenScale = (value: unknown): number => {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n)) return 5; // schema default-ish midpoint, never invalid
+    const scaled = n > 0 && n <= 1 ? n * 10 : n;
+    return Math.min(10, Math.max(1, scaled));
+  };
+  for (const node of stitchedNodes) {
+    if (node && typeof node === 'object' && 'weight' in node) {
+      (node as { weight: number }).weight = normalizeToTenScale((node as { weight: unknown }).weight);
+    }
+  }
+  for (const edge of stitchedEdges) {
+    if (edge && typeof edge === 'object' && 'strength' in edge) {
+      (edge as { strength: number }).strength = normalizeToTenScale((edge as { strength: unknown }).strength);
+    }
+  }
+
+  // Normalize persona id spelling before validation.
+  //
+  // RCA (2026-07-23, same live test): the model emitted 'content_creator' /
+  // 'indie_maker' (snake_case) instead of the schema's canonical
+  // 'creator' / 'indieMaker' enum -- the exact "Persona Type Mismatch"
+  // finding from the 2026-07-08 Wave 0 contract audit (flagged CRITICAL /
+  // IMMEDIATE priority at the time), confirmed still live and unfixed today.
+  // Map known alternate spellings to the canonical id rather than reject the
+  // whole analysis over a label variant the model uses interchangeably.
+  const PERSONA_ID_ALIASES: Record<string, string> = {
+    content_creator: 'creator',
+    contentcreator: 'creator',
+    indie_maker: 'indieMaker',
+    indiemaker: 'indieMaker',
+    product_manager: 'productManager',
+    productmanager: 'productManager',
+  };
+  const normalizePersonaId = (id: unknown): unknown =>
+    typeof id === 'string' && PERSONA_ID_ALIASES[id] ? PERSONA_ID_ALIASES[id] : id;
+  if (stitchedPersona && typeof stitchedPersona === 'object') {
+    for (const slot of ['primary', 'secondary', 'tertiary'] as const) {
+      const entry = (stitchedPersona as Record<string, unknown>)[slot];
+      if (entry && typeof entry === 'object' && 'id' in entry) {
+        (entry as { id: unknown }).id = normalizePersonaId((entry as { id: unknown }).id);
+      }
+    }
+  }
+
   const stitchedPayload: UCISPayloadV2 = {
     schemaVersion: '2.0',
     persona: stitchedPersona || {
