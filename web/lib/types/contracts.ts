@@ -166,6 +166,21 @@ export type AnalysisJobMetadata = z.infer<typeof AnalysisJobMetadataSchema>;
  * @property chunkIndex - Current chunk index in multi-chunk analysis
  * @property totalChunks - Total number of chunks for this analysis
  */
+/**
+ * Comments-grounding fetch tunables (Wave D2, settings registry
+ * `chat.comments.*`). Resolved server-side by CreateAnalysisUseCase (Vercel
+ * has DB access; the worker does not, per ADR 005) and forwarded so the
+ * worker never hardcodes these -- the worker sizes the actual request
+ * against the video's known comment count on top of this config, it doesn't
+ * use maxResults blindly.
+ */
+export interface CommentsFetchConfig {
+  maxResults: number;
+  maxAttempts: number;
+  timeoutPerAttemptMs: number;
+  maxPayloadBytes: number;
+}
+
 export interface WorkerStreamRequest {
   videoId: string;
   analysisId: string;
@@ -182,6 +197,7 @@ export interface WorkerStreamRequest {
   dimensions?: number[];
   chunkIndex?: number;
   totalChunks?: number;
+  commentsConfig?: CommentsFetchConfig;
 }
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────

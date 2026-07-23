@@ -86,6 +86,15 @@ interface StreamRequest {
   dimensions?: number[];
   chunkIndex?: number;
   totalChunks?: number;
+  // Resolved server-side (Vercel has the DB access this worker doesn't, see
+  // ADR 005) from the settings registry's chat.comments.* keys and forwarded
+  // per-request -- never hardcode these worker-side, see fetchCommentsCached.
+  commentsConfig?: {
+    maxResults: number;
+    maxAttempts: number;
+    timeoutPerAttemptMs: number;
+    maxPayloadBytes: number;
+  };
 }
 
 interface TokenVerificationResult {
@@ -226,24 +235,28 @@ async function fetchChannelMetaCached(
 // YouTube Data API call (commentThreads.list) with its own quota, so bound and
 // cache it rather than block/repeat per bundle stream. 7-day TTL — top
 // relevance-ordered comments on an existing video churn slowly.
-// fetchComments does up to 2 attempts through the residential proxy on
-// failure/retry-eligible status; a 4s outer race was confirmed too tight in
-// production (comments silently came back null on every real analysis run,
-// including full re-analyzes) since two proxy round trips routinely exceed
-// it. This is a background Promise.all branch, not on the critical path, so
-// the larger budget costs nothing when comments resolve quickly.
-const COMMENTS_TIMEOUT_MS = 9000;
-const MAX_COMMENTS_BYTES = 20_000;
+//
+// Fetch sizing/timeout are NOT hardcoded here (see 2026-07-23 RCA: a flat 4s
+// timeout raced a function that internally retried twice through a
+// residential proxy and lost nearly every time, going straight to a 9s
+// version of the same mistake). They come from `CommentsFetchConfig`,
+// resolved server-side from the settings registry (chat.comments.*) by
+// CreateAnalysisUseCase and forwarded per-request -- this worker has no DB
+// access to read the registry itself (ADR 005: it's a pure fetch/stream
+// service). CONFIG_FALLBACK below is only a last-resort default for requests
+// from a stale/old client that never sent commentsConfig; it must be kept in
+// sync with the registry's seeded defaults (20260723190000_comments_fetch_settings.sql).
+const COMMENTS_CONFIG_FALLBACK = { maxResults: 20, maxAttempts: 2, timeoutPerAttemptMs: 4000, maxPayloadBytes: 20_000 };
 const COMMENTS_CACHE_TTL = 604_800;
 
-function truncateComments(comments: VideoComment[] | null): VideoComment[] | null {
+function truncateComments(comments: VideoComment[] | null, maxBytes: number): VideoComment[] | null {
   if (!comments || comments.length === 0) return null;
   const serialized = JSON.stringify(comments);
-  if (serialized.length <= MAX_COMMENTS_BYTES) return comments;
-  console.warn(`[analyze-llm-stream] comments exceed ${MAX_COMMENTS_BYTES}B (${serialized.length}B), truncating list`);
+  if (serialized.length <= maxBytes) return comments;
+  console.warn(`[analyze-llm-stream] comments exceed ${maxBytes}B (${serialized.length}B), truncating list`);
   // Drop from the end (already relevance-ordered) until it fits.
   const trimmed = [...comments];
-  while (trimmed.length > 0 && JSON.stringify(trimmed).length > MAX_COMMENTS_BYTES) {
+  while (trimmed.length > 0 && JSON.stringify(trimmed).length > maxBytes) {
     trimmed.pop();
   }
   return trimmed.length > 0 ? trimmed : null;
@@ -258,8 +271,11 @@ async function fetchCommentsCached(
   // means a video with comments disabled or zero comments never spends a
   // second API call (commentThreads.list) finding that out the hard way.
   // Undefined (field missing/never fetched) still falls through to the real
-  // fetch rather than being treated as "known zero".
+  // fetch rather than being treated as "known zero". It ALSO sizes the
+  // request itself below: never ask for more comments than are known to
+  // exist (check -> count -> estimate, not a blind fixed page size).
   knownCommentCount?: number,
+  config: typeof COMMENTS_CONFIG_FALLBACK = COMMENTS_CONFIG_FALLBACK,
 ): Promise<VideoComment[] | null> {
   if (!env.YOUTUBE_API_KEY) return null;
   if (knownCommentCount === 0) return null;
@@ -280,11 +296,21 @@ async function fetchCommentsCached(
     }
   }
 
+  // Sized against the KNOWN count, not the configured cap blindly -- a video
+  // with 5 comments has no reason to request page-size 20.
+  const effectiveMaxResults =
+    typeof knownCommentCount === 'number' && knownCommentCount > 0
+      ? Math.min(config.maxResults, knownCommentCount)
+      : config.maxResults;
+  // Total worst-case wait scales with the attempt budget actually in play,
+  // not a single number picked independent of it.
+  const effectiveTimeoutMs = config.maxAttempts * config.timeoutPerAttemptMs;
+
   const fetchPromise = new MetadataScraper(env.YOUTUBE_API_KEY, env.RESIDENTIAL_PROXY_URL)
-    .fetchComments(videoId)
+    .fetchComments(videoId, effectiveMaxResults, config.maxAttempts)
     .catch(() => []);
-  const timeoutPromise = new Promise<VideoComment[]>((resolve) => setTimeout(() => resolve([]), COMMENTS_TIMEOUT_MS));
-  const result = truncateComments(await Promise.race([fetchPromise, timeoutPromise]));
+  const timeoutPromise = new Promise<VideoComment[]>((resolve) => setTimeout(() => resolve([]), effectiveTimeoutMs));
+  const result = truncateComments(await Promise.race([fetchPromise, timeoutPromise]), config.maxPayloadBytes);
 
   if (result && cache) {
     cache.set(cacheKey, JSON.stringify(result), COMMENTS_CACHE_TTL).catch(() => {
@@ -301,6 +327,7 @@ async function fetchTranscriptIfMissing(
   channelId?: string,
   cache?: UpstashCacheAdapter,
   knownCommentCount?: number,
+  commentsConfig: typeof COMMENTS_CONFIG_FALLBACK = COMMENTS_CONFIG_FALLBACK,
 ): Promise<ResolvedTranscript> {
   const isPlaceholder = transcript?.includes("Transcript unavailable for this video");
   let segments: TranscriptSegment[] | undefined;
@@ -314,7 +341,7 @@ async function fetchTranscriptIfMissing(
   const channelMetaPromise: Promise<Record<string, unknown> | null> = fetchChannelMetaCached(channelId, env, cache);
   // Same reasoning applies to comments: cached + time-bounded, fetched once
   // regardless of transcript branch.
-  const commentsPromise: Promise<VideoComment[] | null> = fetchCommentsCached(videoId, env, cache, knownCommentCount);
+  const commentsPromise: Promise<VideoComment[] | null> = fetchCommentsCached(videoId, env, cache, knownCommentCount, commentsConfig);
 
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${videoId}`);
@@ -517,6 +544,7 @@ function buildStreamResponse(
           const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
           return typeof n === 'number' && Number.isFinite(n) ? n : undefined;
         })(),
+        req.commentsConfig ?? COMMENTS_CONFIG_FALLBACK,
       )]);
 
       const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value.transcript : undefined;
