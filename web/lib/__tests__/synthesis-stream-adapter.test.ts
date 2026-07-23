@@ -137,7 +137,7 @@ describe('SynthesisStreamAdapter', () => {
           dimension: 1,
           label: 'Hex-Tech',
           content: 'This is a long content for entity validation.',
-          weight: 0.8,
+          weight: 8,
           polarity: 0.5,
           keyTerms: ['hex', 'tech'],
           entityType: 'organization',
