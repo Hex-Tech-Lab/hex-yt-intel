@@ -1,3 +1,5 @@
+import type { BillingStatus } from '@/lib/types/validation-report';
+
 export interface UserProfile {
   email: string | null;
   name: string | null;
@@ -14,7 +16,7 @@ export interface BillingPersistencePort {
 
   updateBillingStatus(params: {
     analysisId: string;
-    status: 'processing' | 'completed' | 'failed';
+    status: BillingStatus;
   }): Promise<void>;
 
   getUserProfile(userId: string): Promise<UserProfile | null>;

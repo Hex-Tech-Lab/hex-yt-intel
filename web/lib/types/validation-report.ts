@@ -13,12 +13,24 @@ export type ValidationReportStatus = 'done' | 'partial' | 'failed' | 'error' | '
 /**
  * Billing status (independent of validation status).
  * Determines whether customer is charged and quota consumed.
- * - 'pending': Analysis in progress, not yet billable
- * - 'chargeable': Analysis complete and ready to charge
- * - 'charged': Payment processed
+ *
+ * RCA (2026-07-23): this type used to be 'pending' | 'chargeable' | 'charged' |
+ * 'failed', but the ACTUAL database column (analyses.billing_status) has
+ * enforced `CHECK (billing_status IN ('processing', 'completed', 'failed'))`
+ * since migration 20260611183500 -- a constraint that has NEVER matched this
+ * type. Every write of 'chargeable' has always violated that constraint
+ * (confirmed live: no analysis has successfully reached a terminal billing
+ * status since 2026-07-13, 10 days of silent failures). 'charged' was never
+ * written anywhere in the codebase either -- no payment-collection process
+ * exists that would transition chargeable->charged, so the 4-state model was
+ * aspirational, not a real requirement. Collapsed to match the DB's actual,
+ * battle-tested 3-state contract instead of widening the DB to match a
+ * speculative type nothing implements.
+ * - 'processing': Analysis in progress, not yet billable
+ * - 'completed': Analysis complete, quota consumed / ready to charge
  * - 'failed': Analysis failed, no charge
  */
-export type BillingStatus = 'pending' | 'chargeable' | 'charged' | 'failed';
+export type BillingStatus = 'processing' | 'completed' | 'failed';
 
 /**
  * Per-dimension completion status.
@@ -79,7 +91,7 @@ export function isPersistedValidationReport(obj: unknown): obj is PersistedValid
   const billingStatus = (obj as any).billing_status;
 
   const validValidationStatuses: ValidationReportStatus[] = ['done', 'partial', 'failed', 'error', 'interrupted', 'processing'];
-  const validBillingStatuses: BillingStatus[] = ['pending', 'chargeable', 'charged', 'failed'];
+  const validBillingStatuses: BillingStatus[] = ['processing', 'completed', 'failed'];
 
   // Check new validation_status field
   if (validationStatus !== undefined && validationStatus !== null) {

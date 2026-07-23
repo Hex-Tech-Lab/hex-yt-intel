@@ -143,6 +143,12 @@ export interface AnalysisPersistencePort {
 
   /**
    * Update the analysis row with the final reasoning results.
+   *
+   * `guardBillingStatus`, when provided, makes this a conditional update
+   * (`WHERE billing_status = guardBillingStatus`) so a caller recovering a
+   * stuck row (e.g. the analysis reaper) never clobbers a genuinely
+   * concurrent, legitimate settle -- the returned `updated` flag tells the
+   * caller whether it actually won the race.
    */
   updateAnalysisResult(params: {
     analysisId: string;
@@ -151,7 +157,8 @@ export interface AnalysisPersistencePort {
     model: string | null;
     validationPassed: boolean;
     validationReport: unknown;
-  }): Promise<void>;
+    guardBillingStatus?: string;
+  }): Promise<{ updated: boolean }>;
 
   persistAnalysisChunk(params: {
     analysisId: string;

@@ -75,9 +75,11 @@ export async function GET(request: NextRequest) {
       const metadataPayload = validationReport.metadata || (existingAnalysis as any).metadata || {};
 
       // NOTE: `analyses` has no `status` column — completeness lives in
-      // `billing_status`. Analysis is complete when billing_status='chargeable'
-      // (ready to charge) or 'charged' (payment processed).
-      if (existingAnalysis.billing_status === 'chargeable' || existingAnalysis.billing_status === 'charged') {
+      // `billing_status`. Analysis is complete when billing_status='completed'.
+      // RCA (2026-07-23): 'chargeable'/'charged' were never valid values here
+      // -- the DB's CHECK constraint only ever allowed processing|completed|
+      // failed. See BillingStatus type for full RCA.
+      if (existingAnalysis.billing_status === 'completed') {
         return NextResponse.json({
           exists: true,
           status: 'complete',
