@@ -187,8 +187,9 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
       const chunkRows = anyPayload.chunks.map((c: any, idx: number) => ({
         analysis_id: params.analysisId,
         chunk_index: idx,
-        content_text: c.text ?? String(c),
-        metadata_payload: c.metadata ?? {},
+        payload: { text: c.text ?? String(c), metadata: c.metadata ?? {} },
+        dimensions_covered: c.dimensionsCovered ?? [],
+        status: 'completed' as const,
         updated_at: new Date().toISOString(),
       }));
       try {

@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useChatStore } from '@/store/useChatStore';
+import { useVideoStore } from '@/store/useVideoStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
@@ -83,7 +84,8 @@ export function useSSEStream() {
     clearAnalysis();
     setVideoMetadata(preservedMetadata);
     resetSynthesis();
-    useChatStore.setState({ activeId: null });
+    useChatStore.getState().reset();
+    useVideoStore.getState().reset();
     setIsLoading(true);
     setStatus('downloading');
     setError(null);

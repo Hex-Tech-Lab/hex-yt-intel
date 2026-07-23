@@ -118,9 +118,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, [supabase, router]);
 
   // Track if we've ever had a video — prevents player from disappearing between analyses
-  if (videoMetadata?.videoId || nucleusAnalysis?.videoId) {
-    hasHadVideoRef.current = true;
-  }
+  useEffect(() => {
+    if (videoMetadata?.videoId || nucleusAnalysis?.videoId) {
+      hasHadVideoRef.current = true;
+    }
+  }, [videoMetadata?.videoId, nucleusAnalysis?.videoId]);
 
   const { graph } = useKnowledgeGraph(nucleusAnalysis?.id);
   const { insights, loading: insightsLoading } = useRelations(nucleusAnalysis?.id ?? null, status === 'complete');

@@ -76,7 +76,7 @@ Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-
 - **Node.js**: 24.16.0 LTS
 - **pnpm**: 11.9.0 (source of truth: package.json packageManager field; synced to action.yml + CI workflows)
 - **Next.js**: 16.2.6
-- **TypeScript**: 5.6.2
+- **TypeScript**: 6.0.3
 
 ---
 
