@@ -3,6 +3,7 @@ import { startTransition } from 'react';
 import { extractVideoId } from '@/lib/youtube';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useChatStore } from '@/store/useChatStore';
+import { useVideoStore } from '@/store/useVideoStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 
@@ -28,13 +29,19 @@ export function useAutoRestoreAnalysis(url: string) {
     if (videoId === 'unknown' || videoId.length < 5) return;
 
     // A different video URL was pasted — drop the previous video's chat thread
-    // immediately so stale conversation never lingers over the new context.
+    // and player state immediately so stale conversation/messages and stale
+    // isPlaying/seekTo never linger over the new context. Full reset() (not a
+    // partial setState) matches the useSSEStream new-analysis path — a bare
+    // `setState({ activeId: null })` here left `messagesByConv`/`conversations`
+    // populated with the old video's data until the background restore below
+    // happened to overwrite them (10X re-audit NEW-H(chat-clear)/NEW-H(state)).
     // The restore flow below re-selects the right thread if one exists.
     const loadedVideoId =
       useAnalysisStore.getState().videoMetadata?.videoId ??
       useSynthesisNucleus.getState().analysis?.videoId;
     if (loadedVideoId && loadedVideoId !== videoId) {
-      useChatStore.setState({ activeId: null });
+      useChatStore.getState().reset();
+      useVideoStore.getState().reset();
     }
 
     let cancelled = false;
