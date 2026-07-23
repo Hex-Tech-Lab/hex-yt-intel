@@ -203,6 +203,50 @@ export class SupabaseBillingAdapter {
     }
   }
 
+  /**
+   * Count usage_logs rows by action for a user since a given timestamp,
+   * grouped by `metadata.surface` when present (chat turns are tagged
+   * 'synthesis_console' | 'atlas'; other actions have no surface tag).
+   * Used by the Usage tab / GET /api/usage/summary -- read-only, no
+   * dependency on any specific writer having run (returns zeros if the
+   * table is simply empty for this user, never throws for that case).
+   */
+  static async getUsageEventCounts(params: {
+    userId: string;
+    since: string;
+  }): Promise<Array<{ action: string; surface: string | null; count: number; costUsd: number }>> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('usage_logs')
+        .select('action, metadata, cost_usd')
+        .eq('user_id', params.userId)
+        .gte('created_at', params.since);
+
+      if (error) {
+        console.error('[SupabaseBillingAdapter] getUsageEventCounts failed:', error.message);
+        throw error;
+      }
+
+      const grouped = new Map<string, { action: string; surface: string | null; count: number; costUsd: number }>();
+      for (const row of data || []) {
+        const surface = (row.metadata as { surface?: string } | null)?.surface ?? null;
+        const key = `${row.action}:${surface ?? ''}`;
+        const existing = grouped.get(key) ?? { action: row.action, surface, count: 0, costUsd: 0 };
+        existing.count += 1;
+        existing.costUsd += Number(row.cost_usd) || 0;
+        grouped.set(key, existing);
+      }
+      return Array.from(grouped.values());
+    } catch (error: unknown) {
+      Sentry.captureException(error, {
+        tags: { method: 'getUsageEventCounts' },
+        extra: { userId: params.userId, since: params.since },
+      });
+      throw error;
+    }
+  }
+
   static async logUsageEvent(params: {
     userId: string;
     action: string;

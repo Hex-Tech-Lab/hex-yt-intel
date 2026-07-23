@@ -5,6 +5,23 @@ import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS } from '../../../web/lib/config/syn
 import type { PersonaId } from '../../../web/lib/types/persona';
 import { isValidPersona } from '../../../web/lib/types/persona';
 
+// Wave P (2026-07-23) risk note: the segmented-dimension instruction text
+// below (dimLabels/extraFieldsInstruction/fallbackInstructions) is NOT
+// migrated to the Vault-backed prompt registry, unlike getUCISPrompt's base
+// prompt (cross-imported from web/lib/prompts/factory.ts). This text lives
+// directly in this worker-only file, so a runtime Vault RPC call from inside
+// it would need to go through the same getSupabaseServiceClient() the
+// cross-imported web/lib code already uses at runtime -- which is presumed
+// reachable from the Workers isolate (supabase-js v2 is fetch-based, and this
+// same client is already load-bearing for resolveUCISPromptTemplate's
+// app_settings read via that cross-import), but this was NOT independently
+// verified against a live Workers deployment in this pass (no local CF
+// Workers runtime available to test against). Given the small blast radius
+// (dimension-count instructions, not the core analysis prompt) and the lack
+// of a verified test path, this was deliberately left hardcoded rather than
+// wired blind. Revisit once a worker-side Vault RPC call has been proven out
+// against a real deployment (e.g. piggybacking on the UCIS v5.1 migration,
+// which will need exactly that verification).
 export class PromptBuilder implements PromptBuilderPort {
   async build(context: EngineContext): Promise<string> {
     const validPersona = isValidPersona(context.persona) ? (context.persona as PersonaId) : 'creator';

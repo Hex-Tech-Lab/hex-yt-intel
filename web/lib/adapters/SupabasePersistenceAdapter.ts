@@ -331,6 +331,10 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseBillingAdapter.logUsageEvent(params);
   }
 
+  getUsageEventCounts(params: { userId: string; since: string }): Promise<Array<{ action: string; surface: string | null; count: number; costUsd: number }>> {
+    return SupabaseBillingAdapter.getUsageEventCounts(params);
+  }
+
   // --- Chunks ---
   async persistAnalysisChunk(params: {
     analysisId: string;

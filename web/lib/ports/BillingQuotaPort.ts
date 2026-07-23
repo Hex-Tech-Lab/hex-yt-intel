@@ -17,11 +17,14 @@ export interface BillingQuotaPort {
 
   /**
    * Consume one monthly quota unit (called after successful synthesis).
+   * `analysisId` is optional and additive (added 2026-07-24 for usage-log
+   * tagging) -- existing/future callers that omit it are unaffected.
    */
   consumeQuota(params: {
     userId: string;
     tier: UserTier;
     email?: string;
+    analysisId?: string;
   }): Promise<void>;
 
   /**

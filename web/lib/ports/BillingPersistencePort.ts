@@ -37,6 +37,12 @@ export interface BillingPersistencePort {
     since: string;
   }): Promise<Array<{ id: string; billingStatus: string; createdAt: string }>>;
 
+  /** Usage-tab breakdown: usage_logs grouped by action + metadata.surface. */
+  getUsageEventCounts(params: {
+    userId: string;
+    since: string;
+  }): Promise<Array<{ action: string; surface: string | null; count: number; costUsd: number }>>;
+
   logUsageEvent(params: {
     userId: string;
     action: string;
