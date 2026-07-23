@@ -518,6 +518,7 @@ export class SupabaseAnalysisAdapter {
     videoMetadata?: Record<string, unknown> | null;
     channelMetadata?: Record<string, unknown> | null;
     executiveDigest?: StoredExecutiveDigest | null;
+    comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
@@ -595,6 +596,7 @@ export class SupabaseAnalysisAdapter {
         videoMetadata: (report.metadata as Record<string, unknown>) || null,
         channelMetadata: (report.channelMeta as Record<string, unknown>) || null,
         executiveDigest: hasDigestContent ? (rawDigest as StoredExecutiveDigest) : null,
+        comments: report.comments || null,
       };
     } catch (error: any) {
       Sentry.captureException(error, {
