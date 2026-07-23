@@ -1,0 +1,22 @@
+web/app/api/analyses/persist/route.ts
+  s_cd8c10957ebd37::t_0443539f8bc903 376,379-387
+  s_cd8c10957ebd37::t_ebcf6a58a7338f 388
+worker/src/routes/analysis.ts
+  s_cd8c10957ebd37::t_0f2bb2af9371ad 158-222,237-239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "7a99dcb7c70c8130c33ad19432547ff020199d89",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
