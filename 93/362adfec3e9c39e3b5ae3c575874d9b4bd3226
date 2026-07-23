@@ -1,0 +1,64 @@
+web/lib/ports/BillingQuotaPort.ts
+  s_0eded1e9d0cab6::t_a5ac297a213590 20-21,27
+video-pipeline/src/index.ts
+  s_0eded1e9d0cab6::t_a5ac297a213590 5-7,111-316
+  s_0eded1e9d0cab6::t_e99d4d9da8a956 317-318
+web/lib/adapters/SupabaseBillingAdapter.ts
+  s_0eded1e9d0cab6::t_236d6fd97729b9 206-249
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_651b6e17a8fedf 897
+  s_0eded1e9d0cab6::t_db5385153097a0 896
+web/lib/adapters/SupabaseSettingsAdapter.ts
+  s_0eded1e9d0cab6::t_a5ac297a213590 107-154
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_77b17b0b303546 36
+  s_0eded1e9d0cab6::t_1ee9115e806f06 548
+web/lib/ports/BillingPersistencePort.ts
+  s_0eded1e9d0cab6::t_59aa0483d50335 40-45
+web/app/api/usage/summary/route.ts
+  s_0eded1e9d0cab6::t_917c9adfc3e178 1-75
+supabase/migrations/20260723210000_setting_values_history.sql
+  s_0eded1e9d0cab6::t_a5ac297a213590 1-117
+web/app/api/analyses/persist/route.ts
+  s_0eded1e9d0cab6::t_a5ac297a213590 22-23,272,599-612,862-871
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_0eded1e9d0cab6::t_aa8ef83a11ce68 14
+  s_0eded1e9d0cab6::t_9105e3d82c92e0 410-411
+  s_0eded1e9d0cab6::t_e9dd3026ce26df 12-13
+  s_0eded1e9d0cab6::t_6d356bd7415644 15-17
+  s_0eded1e9d0cab6::t_fb869754e3112e 18-23,112-117,120-128,170-188
+web/lib/adapters/PostgresBillingAdapter.ts
+  s_0eded1e9d0cab6::t_a5ac297a213590 82-90,92-110
+video-pipeline/README.md
+  s_0eded1e9d0cab6::t_a5ac297a213590 10-57,101-108,112-121
+web/lib/prompts/chat-grounding.ts
+  s_0eded1e9d0cab6::t_a5ac297a213590 1-19
+worker/src/services/PromptBuilder.ts
+  s_0eded1e9d0cab6::t_a5ac297a213590 8-24
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_0eded1e9d0cab6::t_7cc0dfb53804a9 334-337
+supabase/migrations/20260723231500_chat_turn_limit_settings.sql
+  s_0eded1e9d0cab6::t_a5ac297a213590 1-49
+web/hooks/useUsageSummary.ts
+  s_0eded1e9d0cab6::t_59fce597d2de10 1-43
+web/components/templates/console/UsageTab.tsx
+  s_0eded1e9d0cab6::t_0ba243aff8dd2d 1-61
+supabase/migrations/20260723220000_prompts_everywhere.sql
+  s_0eded1e9d0cab6::t_a5ac297a213590 1-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "93362adfec3e9c39e3b5ae3c575874d9b4bd3226",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
