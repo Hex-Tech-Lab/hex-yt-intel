@@ -1,0 +1,29 @@
+web/lib/adapters/SupabasePromptAdapter.ts
+  s_0eded1e9d0cab6::t_8fe1e2b1b8d530 1-29,36,39-45
+  s_0eded1e9d0cab6::t_0980b32e01d1a5 30-35,37-38
+web/lib/prompts/executive-digest.ts
+  s_0eded1e9d0cab6::t_a7b7aa91320d76 17-25
+  s_0eded1e9d0cab6::t_f990b36c571017 48-53
+supabase/migrations/20260723200000_prompt_vault_registry.sql
+  s_0eded1e9d0cab6::t_a0bcaaf5338d35 1-122
+  s_0eded1e9d0cab6::t_c9a7d7acc74e37 123-152
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_0eded1e9d0cab6::t_0ae04009b419d8 98,100
+  s_0eded1e9d0cab6::t_1683abaec26146 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "27a1792a3843d4f7d0e9aa8300371fdc16161e99",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
