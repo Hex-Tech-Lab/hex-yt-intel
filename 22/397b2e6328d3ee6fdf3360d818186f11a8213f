@@ -1,0 +1,22 @@
+web/lib/__tests__/synthesis-stream-adapter.test.ts
+  s_cd8c10957ebd37::t_3b8003a14c575d 140
+web/lib/validators/synthesis.ts
+  s_cd8c10957ebd37::t_d376d1d8e98288 77-82
+  s_cd8c10957ebd37::t_d8e468b1161452 97-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "22397b2e6328d3ee6fdf3360d818186f11a8213f",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
