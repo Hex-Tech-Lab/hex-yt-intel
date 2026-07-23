@@ -1,0 +1,54 @@
+web/app/api/analyses/persist/route.ts
+  s_cd8c10957ebd37::t_3c76253cb16212 385
+  s_cd8c10957ebd37::t_a2e3e357891040 713
+  s_cd8c10957ebd37::t_3adac0565f23fd 350-357
+  s_cd8c10957ebd37::t_cf1c1f299b97b9 910
+  s_cd8c10957ebd37::t_b500bbc5b128a7 398-405
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_cd8c10957ebd37::t_54ccbd6a3a9cc7 310
+  s_cd8c10957ebd37::t_bbcce185f670de 324
+  s_cd8c10957ebd37::t_ccbe7daf9dd247 343
+  s_cd8c10957ebd37::t_2fb4847e492fe4 304-309,311-312
+worker/src/services/PersistService.ts
+  s_cd8c10957ebd37::t_316b3b57fa8887 135
+  s_cd8c10957ebd37::t_74360b9f96e498 111
+  s_cd8c10957ebd37::t_153ceae26ce95d 27
+  s_cd8c10957ebd37::t_576c79059a3340 163
+  s_cd8c10957ebd37::t_4cf147f9fea31a 209
+worker/src/routes/analysis.ts
+  s_cd8c10957ebd37::t_b6d2b2c8ec73fe 375
+  s_cd8c10957ebd37::t_134d5691b09adc 286,300-302,316,322,327
+  s_cd8c10957ebd37::t_b01ff6d7830771 359,363
+  s_cd8c10957ebd37::t_9841578c3c41a8 142
+  s_cd8c10957ebd37::t_b15ef055875c51 3
+  s_cd8c10957ebd37::t_0be7489f7a3532 397-400
+  s_cd8c10957ebd37::t_2203656e45b0b7 435
+  s_cd8c10957ebd37::t_a042e23aac79c0 497
+  s_cd8c10957ebd37::t_01d2e843d13570 515-517
+  s_cd8c10957ebd37::t_1c98f210ff4d84 225-282
+worker/src/services/MetadataScraper.ts
+  s_cd8c10957ebd37::t_31eb572b8b4d01 20-26
+  s_cd8c10957ebd37::t_004fa95f02b719 155-193
+  s_cd8c10957ebd37::t_98080b0835e7e1 154
+web/lib/types/validation-report.ts
+  s_cd8c10957ebd37::t_ea74b6637c65ce 53-55
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_cd8c10957ebd37::t_ac6aa98027b214 521
+  s_cd8c10957ebd37::t_bfcd29ce4c60f0 599
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "b8907f65b62c4cf6ee6309a3f0d9a49eb83bf91e",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
