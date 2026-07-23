@@ -390,7 +390,7 @@ jobs:
 
       - name: Verify database schema
         run: |
-          pnpm exec supabase db execute "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;"
+          pnpm exec supabase db query --linked "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name;"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
