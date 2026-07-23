@@ -236,6 +236,43 @@ export class ProcessChatMessageUseCase {
     }
 
     // 8b. Grounding retrieval — markdown is guaranteed non-empty past the gate.
+    //
+    // CONTEXT AVAILABILITY vs. SOURCE WEIGHTING (2026-07-23 redesign):
+    // A prior pass conflated these into one "70/30 ratio" by hard-slicing each
+    // section to a fixed character count (analysis 28,000 / transcript 12,000).
+    // That breaks down for any video whose transcript exceeds ~12,000 chars
+    // (roughly 15-20 minutes of speech) -- a "what was said at minute 52"
+    // question on a 90-minute video would silently lose the relevant part of
+    // the transcript, for no real reason: CHAT_CASCADE's models (gpt-oss-120b,
+    // gemini-3.1-flash-lite, gemini-2.0-flash) all carry at least a 128K-token
+    // context window, and the reasoning cascade's floor (o3-mini, gemini-1.5-pro,
+    // claude-3.5-sonnet) is comparable or larger. A ~12K-character cap has no
+    // relationship to any of these models' actual limits -- it was an arbitrary
+    // number, not a real constraint.
+    //
+    // The two concerns are independent and need separate mechanisms:
+    //   - AVAILABILITY: how much of each source the model can see at all. Fixed
+    //     per tonight: comprehensive by default (include everything, no fixed
+    //     per-section slice), truncating only the one naturally-unbounded field
+    //     (transcript) and only when the real combined size would approach the
+    //     cascade's actual floor context window -- computed below, not guessed.
+    //   - WEIGHTING: which source the model should prefer when synthesizing an
+    //     answer. This is a pure instruction concern -- deleting data can't
+    //     implement "prefer this source," it can only make the other source
+    //     unavailable. Expressed as an explicit sentence in the prompt instead.
+    //
+    // GROUNDING_CONTEXT_BUDGET_CHARS: 350,000 chars (~87,500 tokens at the
+    // conservative ~4 chars/token estimate) reserves headroom out of the
+    // 128K-token cascade floor for: this instruction preamble, description/
+    // metadata/digest/analysis sections, up to 20 turns of conversation history,
+    // and response output tokens. Only the transcript is trimmed against
+    // whatever budget remains after every other section is included in full --
+    // those are all naturally small (a paragraph, a JSON metadata blob capped
+    // at 20KB upstream, an 11-dimension synthesis) and essentially never need
+    // trimming in practice. Revisit this constant if CHAT_CASCADE's cheapest
+    // model ever drops below 128K tokens.
+    const GROUNDING_CONTEXT_BUDGET_CHARS = 350_000;
+
     const description = groundingResult.description;
     const descriptionSection = description
       ? `\n\n--- YOUTUBE VIDEO DESCRIPTION (contains official links & resources) ---\n${description}\n\n`
@@ -245,11 +282,14 @@ export class ProcessChatMessageUseCase {
     // (validation_report.metadata / .channelMeta) -- surfaced as raw JSON blocks
     // rather than hand-picked fields since their shape varies by source (YouTube
     // Data API vs Decodo scrape) and the LLM can read either shape directly.
+    // Included in full: channelMeta is already capped at 20KB where it's
+    // persisted (worker + persist route), and videoMetadata is a small,
+    // bounded field set -- no second, smaller cap needed here.
     const videoMetadataSection = groundingResult.videoMetadata
-      ? `\n\n--- VIDEO METADATA ---\n${JSON.stringify(groundingResult.videoMetadata, null, 2).slice(0, 4000)}\n`
+      ? `\n\n--- VIDEO METADATA ---\n${JSON.stringify(groundingResult.videoMetadata, null, 2)}\n`
       : '';
     const channelMetadataSection = groundingResult.channelMetadata
-      ? `\n\n--- CHANNEL METADATA ---\n${JSON.stringify(groundingResult.channelMetadata, null, 2).slice(0, 4000)}\n`
+      ? `\n\n--- CHANNEL METADATA ---\n${JSON.stringify(groundingResult.channelMetadata, null, 2)}\n`
       : '';
     // Dimension 0 (Snapshot/Overview/Key Takeaways/Detailed Summary) was
     // generated and shown in the product's Executive Summary panel, but
@@ -260,13 +300,38 @@ export class ProcessChatMessageUseCase {
     const executiveDigestSection = digest
       ? `\n\n--- DIMENSION 0: EXECUTIVE DIGEST ---\n${digest.snapshot ? `Snapshot: ${digest.snapshot}\n\n` : ''}${digest.overview ? `Overview: ${digest.overview}\n\n` : ''}${Array.isArray(digest.takeaways) && digest.takeaways.length > 0 ? `Key Takeaways:\n${digest.takeaways.map((t: string) => `- ${t}`).join('\n')}\n\n` : ''}${digest.detailedSummary ? `Detailed Summary: ${digest.detailedSummary}\n` : ''}`
       : '';
+
+    // Analysis (dims 1-11) is included in full -- a synthesized 11-dimension
+    // markdown is dense and typically well under the budget on its own.
+    const analysisSection = groundedMarkdown;
+
+    // Transcript is the one section sized by what's actually left of the
+    // budget after everything else, instead of a fixed number picked in
+    // advance -- so a 10-minute video's full transcript is never needlessly
+    // trimmed, and a 5-hour video's transcript is trimmed by exactly as much
+    // as it has to be, not by an arbitrary amount unrelated to its own length.
+    const fixedSectionsLength =
+      descriptionSection.length + videoMetadataSection.length + channelMetadataSection.length
+      + executiveDigestSection.length + analysisSection.length;
+    const transcriptBudget = Math.max(0, GROUNDING_CONTEXT_BUDGET_CHARS - fixedSectionsLength);
+    const transcriptSection = groundingResult.transcript
+      ? `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingResult.transcript.slice(0, transcriptBudget)}`
+      : '';
+
     // Grounding constrains the SOURCE, never the APPLICATION. The universe of
     // facts is this one video's analysis — but the user (our primary persona is
     // a content-repurposing creator) may transform those facts into any format:
     // podcast scripts, blog/Medium posts, social threads, bullet lists, shopping
     // lists, action plans. Refuse only when asked for facts outside the source,
     // not when asked to reshape what the source contains.
-    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis, video description, and transcript below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it.${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}--- ANALYSIS (Dimensions 1-11) ---\n${groundedMarkdown.slice(0, 28000)}${groundingResult.transcript ? `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingResult.transcript.slice(0, 12000)}` : ''}`;
+    //
+    // WEIGHTING (separate from the availability logic above): when the
+    // structured analysis and the raw transcript could both answer a question,
+    // prefer the analysis for synthesis/interpretation (it's already distilled
+    // and organized by dimension) -- but the transcript is the authoritative
+    // source for anything requiring exact wording, direct quotes, or a specific
+    // timestamp, and must be used for those regardless of what the analysis says.
+    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis, video description, and transcript below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it. When both the analysis and the transcript could answer a question, prefer the analysis for synthesis and interpretation, but always defer to the verbatim transcript for exact quotes, wording, or a specific timestamp.${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}`;
 
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);
