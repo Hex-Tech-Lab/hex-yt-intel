@@ -1,5 +1,5 @@
 import {
-  EXECUTIVE_DIGEST_SYSTEM,
+  getExecutiveDigestSystemPrompt,
   buildExecutiveDigestUserMessage,
   parseExecutiveDigest,
   type ExecutiveDigest,
@@ -95,8 +95,9 @@ export class GenerateExecutiveDigestUseCase {
     let text: string;
     let model: string;
     try {
+      const systemPrompt = await getExecutiveDigestSystemPrompt();
       const completion = await this.completion.complete({
-        system: EXECUTIVE_DIGEST_SYSTEM,
+        system: systemPrompt,
         user: buildExecutiveDigestUserMessage(markdown),
         models,
       });

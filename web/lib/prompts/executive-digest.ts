@@ -14,8 +14,15 @@
  * and the tier parser here makes the contract versioned and unit-testable.
  */
 
-/** Strict system prompt for the digest pass. */
-export const EXECUTIVE_DIGEST_SYSTEM = `You are a precision executive-summarizer. Your only input is a completed 11-dimension intelligence analysis of a single YouTube video. Produce a four-tier executive digest OF THAT ANALYSIS. You are compressing already-distilled material — surface the signal, invent nothing.
+/**
+ * Strict system prompt for the digest pass -- FALLBACK ONLY. The live source
+ * of truth is the Vault-backed prompt registry (Wave D3, migration
+ * 20260723200000, key 'prompt.executive_digest.system'); see
+ * getExecutiveDigestSystemPrompt() below. This constant is used only if the
+ * registry is unreachable, and must be kept in sync with the migration's
+ * seeded content.
+ */
+export const EXECUTIVE_DIGEST_SYSTEM_FALLBACK = `You are a precision executive-summarizer. Your only input is a completed 11-dimension intelligence analysis of a single YouTube video. Produce a four-tier executive digest OF THAT ANALYSIS. You are compressing already-distilled material — surface the signal, invent nothing.
 
 HARD RULES
 - Synthesize ONLY from the provided analysis. Introduce no facts, numbers, names, dates, or claims that are not present in it.
@@ -37,6 +44,12 @@ Up to 10 bullets ("- " each), ranked most→least important. Each ≤ 20 words, 
 
 #### 0.4 Detailed Summary
 3–5 paragraphs. The full arc: context → main arguments & evidence → conclusions / implications. Faithful to the source's structure and emphasis; add no new interpretation.`;
+
+/** Resolves the live digest system prompt from the Vault-backed registry, falling back to the hardcoded constant if unreachable. */
+export async function getExecutiveDigestSystemPrompt(): Promise<string> {
+  const { SupabasePromptAdapter } = await import('@/lib/adapters/SupabasePromptAdapter');
+  return SupabasePromptAdapter.getPrompt('prompt.executive_digest.system', EXECUTIVE_DIGEST_SYSTEM_FALLBACK);
+}
 
 export function truncateForDigest(markdown: string, maxChars = 18000): string {
   if (!markdown) return '';
