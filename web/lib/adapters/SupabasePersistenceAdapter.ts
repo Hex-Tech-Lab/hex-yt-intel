@@ -110,30 +110,14 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
   }): Promise<void> {
     const service = getSupabaseServiceClient();
 
-    // 1️⃣ Fetch analysis meta to obtain video_id, title and user_id
-    const { data: analysisMeta } = await service
-      .from('analyses')
-      .select('video_id, title, user_id')
-      .eq('id', params.analysisId)
-      .single();
-
-    // 2️⃣ Upsert video record ensuring FK user_id
-    if (analysisMeta?.video_id) {
-      try {
-        await service
-          .from('videos')
-          .upsert(
-            {
-              id: analysisMeta.video_id,
-              title: analysisMeta.title ?? '',
-              user_id: analysisMeta.user_id,
-            },
-            { ignoreDuplicates: true }
-          );
-      } catch (e) {
-        console.warn('[SupabasePersistenceAdapter] video upsert skipped:', e);
-      }
-    }
+    // 1️⃣-2️⃣ (Removed 2026-07-23 — audit finding CRIT-2) This used to fetch
+    // analysis meta solely to upsert it into a `videos` table that has never
+    // existed in any migration. Every finalize call silently attempted the
+    // write, always failed, and the failure was swallowed by the surrounding
+    // try/catch as a console.warn -- a wasted Supabase round-trip on every
+    // single analysis completion, forever, with no functional effect
+    // (nothing reads from a `videos` table anywhere in the codebase).
+    // Deleted rather than fixed forward: there was no reader to preserve.
 
     // 3️⃣ Extract billing_status from validation report (contract fix: use actual value, not override)
     // billing_status should come from validationReport if available (set by persist route),
