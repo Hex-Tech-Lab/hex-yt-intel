@@ -8,6 +8,7 @@ import type { ChatMessage } from '@/lib/types/chat';
 import { env } from '@/lib/env';
 import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService';
 import { buildGroundingWithHistory } from '@/lib/utils/build-grounding-with-history';
+import { extractRequestedTranscriptRange } from '@/lib/utils/extract-transcript-range';
 
 export interface ProcessChatMessageUseCaseParams {
   conversationId: string;
@@ -314,6 +315,22 @@ export class ProcessChatMessageUseCase {
     // markdown is dense and typically well under the budget on its own.
     const analysisSection = groundedMarkdown;
 
+    // Deterministic range extraction: when the user asks for a specific
+    // minute/timestamp range, don't rely on the model to find and quote
+    // every matching line out of a large transcript blob -- extract them
+    // here via regex (from the FULL, pre-truncation transcript, so this is
+    // never affected by the transcript budget below) and inject as a
+    // guaranteed-complete, separately labeled block. See
+    // extract-transcript-range.ts for the full RCA: a soft prompt instruction
+    // alone was confirmed insufficient (live test truncated to the first 2-3
+    // lines of a requested minute and stopped, despite the full data existing).
+    const requestedRange = groundingResult.transcript
+      ? extractRequestedTranscriptRange(groundingResult.transcript, finalContent)
+      : null;
+    const requestedRangeSection = requestedRange
+      ? `\n\n--- EVERY TRANSCRIPT LINE IN THE REQUESTED RANGE (complete -- this list IS the full answer to the user's time-range question; relay ALL of it, do not summarize down to a few lines or stop early) ---\n${requestedRange.lines.length > 0 ? requestedRange.lines.join('\n') : '(no transcript lines fall within this range)'}\n`
+      : '';
+
     // Transcript is the one section sized by what's actually left of the
     // budget after everything else, instead of a fixed number picked in
     // advance -- so a 10-minute video's full transcript is never needlessly
@@ -321,7 +338,8 @@ export class ProcessChatMessageUseCase {
     // as it has to be, not by an arbitrary amount unrelated to its own length.
     const fixedSectionsLength =
       descriptionSection.length + videoMetadataSection.length + channelMetadataSection.length
-      + executiveDigestSection.length + commentsSection.length + analysisSection.length;
+      + executiveDigestSection.length + commentsSection.length + analysisSection.length
+      + requestedRangeSection.length;
     const transcriptBudget = Math.max(0, GROUNDING_CONTEXT_BUDGET_CHARS - fixedSectionsLength);
     const transcriptSection = groundingResult.transcript
       ? `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingResult.transcript.slice(0, transcriptBudget)}`
@@ -340,7 +358,7 @@ export class ProcessChatMessageUseCase {
     // and organized by dimension) -- but the transcript is the authoritative
     // source for anything requiring exact wording, direct quotes, or a specific
     // timestamp, and must be used for those regardless of what the analysis says.
-    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis, video description, and transcript below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it. When both the analysis and the transcript could answer a question, prefer the analysis for synthesis and interpretation, but always defer to the verbatim transcript for exact quotes, wording, or a specific timestamp. When the user asks for a time range (e.g. "minute 52", "the full minute 52", "51:00 to 52:00"), you MUST scan the ENTIRE transcript and quote EVERY line whose timestamp falls anywhere within that whole range, from its start to its end — never stop after the first one or two lines you find near the start of the range; a sparse-looking range (few lines of dialogue) is a real property of the source and should be reported as-is, not padded or truncated further.${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}${commentsSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}`;
+    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis, video description, and transcript below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it. When both the analysis and the transcript could answer a question, prefer the analysis for synthesis and interpretation, but always defer to the verbatim transcript for exact quotes, wording, or a specific timestamp. When the user asks for a time range (e.g. "minute 52", "the full minute 52", "51:00 to 52:00"), you MUST scan the ENTIRE transcript and quote EVERY line whose timestamp falls anywhere within that whole range, from its start to its end — never stop after the first one or two lines you find near the start of the range; a sparse-looking range (few lines of dialogue) is a real property of the source and should be reported as-is, not padded or truncated further.${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}${commentsSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}${requestedRangeSection}`;
 
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);
