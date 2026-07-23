@@ -13,6 +13,17 @@ import type { TranscriptSegment } from '@/lib/ports';
 import { createHash } from 'crypto';
 
 import { env } from '@/lib/env';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
+import type { CommentsFetchConfig } from '@/lib/types/contracts';
+
+// Must match the registry's seeded defaults (20260723190000_comments_fetch_settings.sql)
+// -- used only if the registry is genuinely unreachable, never as the primary source.
+const COMMENTS_CONFIG_FALLBACK: CommentsFetchConfig = {
+  maxResults: 20,
+  maxAttempts: 2,
+  timeoutPerAttemptMs: 4000,
+  maxPayloadBytes: 20000,
+};
 
 export interface CreateAnalysisUseCaseParams {
   url: string;
@@ -36,6 +47,7 @@ export interface UseCaseSuccess {
   segments?: TranscriptSegment[];
   timezone: string;
   models: string[];
+  commentsConfig: CommentsFetchConfig;
   stream: {
     url: string;
     sig: string;
@@ -142,6 +154,27 @@ export class CreateAnalysisUseCase {
       },
     });
 
+    // Resolve worker-bound tunables from the settings registry (Wave D1/D2)
+    // server-side, where DB access exists, and hand them down in the signed
+    // stream payload -- the worker itself has no Supabase access (ADR 005:
+    // it's a pure fetch/stream service), so this is the correct place to
+    // source a live-editable value rather than hardcoding it worker-side.
+    const resolvedRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['chat.comments.maxResults', 'chat.comments.maxAttempts', 'chat.comments.timeoutPerAttemptMs', 'chat.comments.maxPayloadBytes'],
+      {
+        'chat.comments.maxResults': COMMENTS_CONFIG_FALLBACK.maxResults,
+        'chat.comments.maxAttempts': COMMENTS_CONFIG_FALLBACK.maxAttempts,
+        'chat.comments.timeoutPerAttemptMs': COMMENTS_CONFIG_FALLBACK.timeoutPerAttemptMs,
+        'chat.comments.maxPayloadBytes': COMMENTS_CONFIG_FALLBACK.maxPayloadBytes,
+      }
+    );
+    const commentsConfig: CommentsFetchConfig = {
+      maxResults: Number(resolvedRegistry['chat.comments.maxResults']) || COMMENTS_CONFIG_FALLBACK.maxResults,
+      maxAttempts: Number(resolvedRegistry['chat.comments.maxAttempts']) || COMMENTS_CONFIG_FALLBACK.maxAttempts,
+      timeoutPerAttemptMs: Number(resolvedRegistry['chat.comments.timeoutPerAttemptMs']) || COMMENTS_CONFIG_FALLBACK.timeoutPerAttemptMs,
+      maxPayloadBytes: Number(resolvedRegistry['chat.comments.maxPayloadBytes']) || COMMENTS_CONFIG_FALLBACK.maxPayloadBytes,
+    };
+
     // Mint HMAC token for streaming worker access
     let token;
     try {
@@ -178,6 +211,7 @@ export class CreateAnalysisUseCase {
         persona,
         timezone: params.timezone,
         models,
+        commentsConfig,
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,

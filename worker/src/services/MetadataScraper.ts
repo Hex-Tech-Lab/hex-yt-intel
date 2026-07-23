@@ -158,9 +158,8 @@ export class MetadataScraper {
    * second attempt can't succeed. Best-effort overall: still returns [] if
    * every attempt fails, rather than throwing and blocking the analysis.
    */
-  async fetchComments(videoId: string, maxResults = 20): Promise<VideoComment[]> {
+  async fetchComments(videoId: string, maxResults = 20, maxAttempts = 2): Promise<VideoComment[]> {
     const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&order=relevance&maxResults=${maxResults}&key=${this.apiKey}`;
-    const maxAttempts = 2;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
