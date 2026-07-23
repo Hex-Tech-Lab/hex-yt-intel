@@ -1,0 +1,28 @@
+worker/src/services/TranscriptExtractor.ts
+  s_0eded1e9d0cab6::t_11f4a538f4e2b0 176-190
+  s_0eded1e9d0cab6::t_0fe0d4f792b4d9 12
+worker/src/services/MetadataScraper.ts
+  s_0eded1e9d0cab6::t_0071f8f3b41cce 170-177,183-187
+  s_0eded1e9d0cab6::t_56896b930ffce3 17
+  s_0eded1e9d0cab6::t_c4e7da5d2be2c3 215-217,219-223
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_126ab38c868c61 221-227,230-239
+  s_0eded1e9d0cab6::t_95760ff0a0a3e7 326-330,333-342
+  s_0eded1e9d0cab6::t_30c429ddf3da3b 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "d9d0aac6f5a99fd955e769dd2c379ac74813e228",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
