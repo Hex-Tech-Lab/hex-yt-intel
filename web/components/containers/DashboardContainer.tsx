@@ -31,6 +31,8 @@ import { useSSEStream } from '@/hooks/useSSEStream';
 import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
 import { useAutoRestoreAnalysis } from '@/hooks/useAutoRestoreAnalysis';
 import { useExecutiveDigest } from '@/hooks/useExecutiveDigest';
+import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
+import { StatusBadge } from '@/components/templates/_shared/primitives';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
@@ -249,6 +251,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // partial analyses so Synthesis Console is accessible for re-analysis.
   const analysisId = nucleusAnalysis?.id ?? null;
   const { digest, digestLoading, mappedDigestData } = useExecutiveDigest(analysisId, status);
+  const auxStatus = useAuxElementStatus(analysisId, status);
 
   const getUserTimezone = (): string => {
     try {
@@ -517,6 +520,14 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     onSelectDimension={setSelectedDimensionKey}
                     status={status}
                   />
+                  {status === 'complete' && auxStatus && (
+                    <div className="flex flex-wrap gap-2" role="status" aria-label="Auxiliary data status">
+                      <StatusBadge status={digest ? 'done' : 'idle'} label="DIGEST" />
+                      <StatusBadge status={auxStatus.description ? 'done' : 'idle'} label="DESCRIPTION" />
+                      <StatusBadge status={auxStatus.channelMeta ? 'done' : 'idle'} label="CHANNEL META" />
+                      <StatusBadge status={auxStatus.comments ? 'done' : 'idle'} label="COMMENTS" />
+                    </div>
+                  )}
                 </>
               ) : (
                 <VisualizationPanel
