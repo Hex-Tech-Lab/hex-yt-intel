@@ -24,6 +24,7 @@ export interface PersistOptions {
   segments?: Array<{ start: number; duration: number; text: string }>;
   transcript?: string;
   channelMeta?: Record<string, unknown> | null;
+  comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
 }
 
 const rawFetch = fetch;
@@ -107,6 +108,7 @@ export class PersistService {
     segments?: Array<{ start: number; duration: number; text: string }>;
     transcript?: string;
     channelMeta?: Record<string, unknown> | null;
+    comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
   }): Promise<boolean> {
     const maxRetries = 2;
     for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {
@@ -130,6 +132,7 @@ export class PersistService {
             segments: params.segments,
             transcript: params.transcript,
             channelMeta: params.channelMeta,
+            comments: params.comments,
           }),
         });
         if (persistRes.ok) return true;
@@ -157,6 +160,7 @@ export class PersistService {
     segments?: Array<{ start: number; duration: number; text: string }>;
     transcript?: string;
     channelMeta?: Record<string, unknown> | null;
+    comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
   }): Promise<void> {
     let markdown = options.finalText;
     let jsonPayload: Record<string, unknown> | null = null;
@@ -202,6 +206,7 @@ export class PersistService {
             segments: options.segments,
             transcript: options.transcript,
             channelMeta: options.channelMeta,
+            comments: options.comments,
           }),
         });
         return;

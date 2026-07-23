@@ -301,6 +301,15 @@ export class ProcessChatMessageUseCase {
       ? `\n\n--- DIMENSION 0: EXECUTIVE DIGEST ---\n${digest.snapshot ? `Snapshot: ${digest.snapshot}\n\n` : ''}${digest.overview ? `Overview: ${digest.overview}\n\n` : ''}${Array.isArray(digest.takeaways) && digest.takeaways.length > 0 ? `Key Takeaways:\n${digest.takeaways.map((t: string) => `- ${t}`).join('\n')}\n\n` : ''}${digest.detailedSummary ? `Detailed Summary: ${digest.detailedSummary}\n` : ''}`
       : '';
 
+    // Top relevance-ordered comments (author/date/like-count metadata included so
+    // the model can answer "who said X" / "when" questions, not just quote text).
+    // Already capped at 20KB where persisted (worker + persist route), same as
+    // channelMeta -- no second cap needed here.
+    const comments = groundingResult.comments;
+    const commentsSection = comments && comments.length > 0
+      ? `\n\n--- TOP COMMENTS (author, date, likes) ---\n${comments.map((c: { author: string; publishedAt: string; likeCount: number; text: string }) => `[${c.author}, ${c.publishedAt}, ${c.likeCount} likes]: ${c.text}`).join('\n')}\n`
+      : '';
+
     // Analysis (dims 1-11) is included in full -- a synthesized 11-dimension
     // markdown is dense and typically well under the budget on its own.
     const analysisSection = groundedMarkdown;
@@ -312,7 +321,7 @@ export class ProcessChatMessageUseCase {
     // as it has to be, not by an arbitrary amount unrelated to its own length.
     const fixedSectionsLength =
       descriptionSection.length + videoMetadataSection.length + channelMetadataSection.length
-      + executiveDigestSection.length + analysisSection.length;
+      + executiveDigestSection.length + commentsSection.length + analysisSection.length;
     const transcriptBudget = Math.max(0, GROUNDING_CONTEXT_BUDGET_CHARS - fixedSectionsLength);
     const transcriptSection = groundingResult.transcript
       ? `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingResult.transcript.slice(0, transcriptBudget)}`
@@ -331,7 +340,7 @@ export class ProcessChatMessageUseCase {
     // and organized by dimension) -- but the transcript is the authoritative
     // source for anything requiring exact wording, direct quotes, or a specific
     // timestamp, and must be used for those regardless of what the analysis says.
-    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis, video description, and transcript below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it. When both the analysis and the transcript could answer a question, prefer the analysis for synthesis and interpretation, but always defer to the verbatim transcript for exact quotes, wording, or a specific timestamp.${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}`;
+    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis, video description, and transcript below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it. When both the analysis and the transcript could answer a question, prefer the analysis for synthesis and interpretation, but always defer to the verbatim transcript for exact quotes, wording, or a specific timestamp. When the user asks for a time range (e.g. "minute 52", "the full minute 52", "51:00 to 52:00"), you MUST scan the ENTIRE transcript and quote EVERY line whose timestamp falls anywhere within that whole range, from its start to its end — never stop after the first one or two lines you find near the start of the range; a sparse-looking range (few lines of dialogue) is a real property of the source and should be reported as-is, not padded or truncated further.${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}${commentsSection}--- ANALYSIS (Dimensions 1-11) ---\n${analysisSection}${transcriptSection}`;
 
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);

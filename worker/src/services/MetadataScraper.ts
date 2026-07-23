@@ -17,6 +17,13 @@
 import { fetchWithProxy } from './http-utils';
 import { getRandomUserAgent } from './user-agent';
 
+export interface VideoComment {
+  author: string;
+  text: string;
+  publishedAt: string;
+  likeCount: number;
+}
+
 export interface VideoMetadata {
   videoId: string;
   title: string;
@@ -141,6 +148,46 @@ export class MetadataScraper {
       throw err;
     } finally {
       clearTimeout(timeout);
+    }
+  }
+
+  /**
+   * Fetch top-level comments for a video (author, publish date, text, likes),
+   * ordered by relevance. Best-effort: returns [] on any API failure (comments
+   * disabled, quota, moderation) rather than throwing.
+   */
+  async fetchComments(videoId: string, maxResults = 20): Promise<VideoComment[]> {
+    const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&order=relevance&maxResults=${maxResults}&key=${this.apiKey}`;
+    try {
+      const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
+      if (!response.ok) return [];
+
+      const data = (await response.json()) as {
+        items?: Array<{
+          snippet?: {
+            topLevelComment?: {
+              snippet?: {
+                authorDisplayName?: string;
+                textDisplay?: string;
+                publishedAt?: string;
+                likeCount?: number;
+              };
+            };
+          };
+        }>;
+      };
+
+      return (data.items ?? []).map((item) => {
+        const snippet = item.snippet?.topLevelComment?.snippet ?? {};
+        return {
+          author: snippet.authorDisplayName ?? 'Unknown',
+          text: snippet.textDisplay ?? '',
+          publishedAt: snippet.publishedAt ?? '',
+          likeCount: snippet.likeCount ?? 0,
+        };
+      });
+    } catch {
+      return [];
     }
   }
 

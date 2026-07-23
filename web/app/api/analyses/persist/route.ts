@@ -347,6 +347,14 @@ export async function POST(request: NextRequest) {
       // Channel-level metadata (subscriber count, channel description, etc.)
       // from the worker's TranscriptExtractor.fetchChannelMetadata.
       channelMeta: z.record(z.string(), z.unknown()).nullable().optional(),
+      // Top relevance-ordered video comments from the worker's
+      // MetadataScraper.fetchComments (YouTube Data API commentThreads.list).
+      comments: z.array(z.object({
+        author: z.string(),
+        text: z.string(),
+        publishedAt: z.string(),
+        likeCount: z.number(),
+      })).nullable().optional(),
     });
 
     const parsedBody = bodySchema.safeParse(body);
@@ -374,6 +382,7 @@ export async function POST(request: NextRequest) {
         segments,
         transcript,
         channelMeta: rawChannelMeta,
+        comments: rawComments,
       } = parsedBody.data;
 
       // Defense in depth: the worker already caps channelMeta (see
@@ -384,6 +393,14 @@ export async function POST(request: NextRequest) {
       const channelMeta = rawChannelMeta && JSON.stringify(rawChannelMeta).length <= 20_000 ? rawChannelMeta : null;
       if (rawChannelMeta && !channelMeta) {
         console.warn('[analyses/persist] channelMeta exceeded size limit, dropping', { analysisId });
+      }
+
+      // Same defense-in-depth as channelMeta above: the worker already caps
+      // comments (MAX_COMMENTS_BYTES in worker/src/routes/analysis.ts), but
+      // don't trust that invariant across the network boundary.
+      const comments = rawComments && JSON.stringify(rawComments).length <= 20_000 ? rawComments : null;
+      if (rawComments && !comments) {
+        console.warn('[analyses/persist] comments exceeded size limit, dropping', { analysisId });
       }
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
@@ -693,6 +710,7 @@ export async function POST(request: NextRequest) {
             model_used: model || null,
             valid: isStitchedValid && finalStatus === 'done',
             channelMeta: channelMeta ?? priorReport.channelMeta ?? null,
+            comments: comments ?? priorReport.comments ?? null,
           };
 
           await retryWithBackoff(
@@ -889,6 +907,7 @@ export async function POST(request: NextRequest) {
         model_used: model || null,
         valid: reportValidationStatus === 'done' && validationPassed,
         channelMeta: channelMeta ?? priorReport.channelMeta ?? null,
+        comments: comments ?? priorReport.comments ?? null,
       };
 
       await retryWithBackoff(

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { TranscriptExtractor } from "../services/TranscriptExtractor";
+import { MetadataScraper, type VideoComment } from "../services/MetadataScraper";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
 import { ReasoningEngine } from "../services/ReasoningEngine";
 import { PromptBuilder } from "../services/PromptBuilder";
@@ -138,6 +139,7 @@ interface ResolvedTranscript {
   transcript: string | undefined;
   segments?: TranscriptSegment[];
   channelMeta?: Record<string, unknown> | null;
+  comments?: VideoComment[] | null;
 }
 
 /**
@@ -220,10 +222,68 @@ async function fetchChannelMetaCached(
   return result;
 }
 
+// Same rationale as channel-meta caching above: comments come from a separate
+// YouTube Data API call (commentThreads.list) with its own quota, so bound and
+// cache it rather than block/repeat per bundle stream. 7-day TTL — top
+// relevance-ordered comments on an existing video churn slowly.
+const COMMENTS_TIMEOUT_MS = 4000;
+const MAX_COMMENTS_BYTES = 20_000;
+const COMMENTS_CACHE_TTL = 604_800;
+
+function truncateComments(comments: VideoComment[] | null): VideoComment[] | null {
+  if (!comments || comments.length === 0) return null;
+  const serialized = JSON.stringify(comments);
+  if (serialized.length <= MAX_COMMENTS_BYTES) return comments;
+  console.warn(`[analyze-llm-stream] comments exceed ${MAX_COMMENTS_BYTES}B (${serialized.length}B), truncating list`);
+  // Drop from the end (already relevance-ordered) until it fits.
+  const trimmed = [...comments];
+  while (trimmed.length > 0 && JSON.stringify(trimmed).length > MAX_COMMENTS_BYTES) {
+    trimmed.pop();
+  }
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+async function fetchCommentsCached(
+  videoId: string,
+  env: Pick<AnalysisEnv, "YOUTUBE_API_KEY" | "RESIDENTIAL_PROXY_URL">,
+  cache?: UpstashCacheAdapter,
+): Promise<VideoComment[] | null> {
+  if (!env.YOUTUBE_API_KEY) return null;
+  const cacheKey = `comments:${videoId}`;
+
+  if (cache) {
+    try {
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        try {
+          return JSON.parse(cached) as VideoComment[];
+        } catch {
+          console.debug(`[analyze-llm-stream] comments cache entry for ${videoId} is not JSON, ignoring`);
+        }
+      }
+    } catch {
+      console.warn(`[analyze-llm-stream] comments cache GET failed for ${videoId}, proceeding with fetch`);
+    }
+  }
+
+  const fetchPromise = new MetadataScraper(env.YOUTUBE_API_KEY, env.RESIDENTIAL_PROXY_URL)
+    .fetchComments(videoId)
+    .catch(() => []);
+  const timeoutPromise = new Promise<VideoComment[]>((resolve) => setTimeout(() => resolve([]), COMMENTS_TIMEOUT_MS));
+  const result = truncateComments(await Promise.race([fetchPromise, timeoutPromise]));
+
+  if (result && cache) {
+    cache.set(cacheKey, JSON.stringify(result), COMMENTS_CACHE_TTL).catch(() => {
+      console.warn(`[analyze-llm-stream] comments cache SET failed for ${videoId}`);
+    });
+  }
+  return result;
+}
+
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
   channelId?: string,
   cache?: UpstashCacheAdapter,
 ): Promise<ResolvedTranscript> {
@@ -237,6 +297,9 @@ async function fetchTranscriptIfMissing(
   // Cached + time-bounded (see fetchChannelMetaCached) so it can never meaningfully
   // delay the transcript-critical path this function exists for.
   const channelMetaPromise: Promise<Record<string, unknown> | null> = fetchChannelMetaCached(channelId, env, cache);
+  // Same reasoning applies to comments: cached + time-bounded, fetched once
+  // regardless of transcript branch.
+  const commentsPromise: Promise<VideoComment[] | null> = fetchCommentsCached(videoId, env, cache);
 
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${videoId}`);
@@ -250,18 +313,18 @@ async function fetchTranscriptIfMissing(
         const cached = await cache.get(cacheKey);
         if (cached && cached.trim().length > 0 && !cached.includes("Transcript unavailable")) {
           console.info(`[analyze-llm-stream] Transcript cache HIT for ${videoId}`);
-          const channelMeta = await channelMetaPromise;
+          const [channelMeta, comments] = await Promise.all([channelMetaPromise, commentsPromise]);
           // Cache values written pre-fix are plain transcript strings, not JSON —
           // parse defensively and fall back to flat text (no segments) for those.
           try {
             const parsed = JSON.parse(cached) as ResolvedTranscript;
             if (parsed && typeof parsed.transcript === 'string') {
-              return { ...parsed, channelMeta };
+              return { ...parsed, channelMeta, comments };
             }
           } catch (e) {
             console.debug(`[analyze-llm-stream] Cache entry for ${videoId} is not JSON — legacy plain-string entry, falling back to flat text`, e);
           }
-          return { transcript: cached, channelMeta };
+          return { transcript: cached, channelMeta, comments };
         }
       } catch {
         console.warn(`[analyze-llm-stream] Transcript cache GET failed for ${videoId}, proceeding with fetch`);
@@ -293,11 +356,11 @@ async function fetchTranscriptIfMissing(
     }
   }
 
-  const channelMeta = await channelMetaPromise;
+  const [channelMeta, comments] = await Promise.all([channelMetaPromise, commentsPromise]);
   if (channelMeta) {
     console.info(`[analyze-llm-stream] Channel metadata enriched for ${channelId}`);
   }
-  return { transcript, segments, channelMeta };
+  return { transcript, segments, channelMeta, comments };
 }
 
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
@@ -309,7 +372,7 @@ function buildStreamResponse(
   httpConnSignal: AbortSignal | undefined,
   persistController: AbortController,
   waitUntil: (p: Promise<unknown>) => void,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
   cache?: UpstashCacheAdapter,
 ): Response {
   const encoder = new TextEncoder();
@@ -331,6 +394,10 @@ function buildStreamResponse(
   // previously fetched then discarded; now threaded through to persist so
   // chat grounding has more than just the video's own metadata to draw on.
   let resolvedChannelMeta: Record<string, unknown> | null = null;
+  // Top relevance-ordered comments (author, text, publish date, likes) --
+  // same enrichment purpose as channel metadata, fetched via the YouTube Data
+  // API in fetchTranscriptIfMissing / fetchCommentsCached.
+  let resolvedComments: VideoComment[] | null = null;
 
   const persistService = new PersistService();
 
@@ -365,6 +432,7 @@ function buildStreamResponse(
         segments: resolvedSegments,
         transcript: resolvedTranscriptText,
         channelMeta: resolvedChannelMeta,
+        comments: resolvedComments,
       };
 
       // RCA (2026-07-22): this used to race EVERY persist call (including successful
@@ -426,7 +494,7 @@ function buildStreamResponse(
       const [fetchResult] = await Promise.allSettled([fetchTranscriptIfMissing(
         req.transcript,
         req.videoId,
-        { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY },
+        { RESIDENTIAL_PROXY_URL: env.RESIDENTIAL_PROXY_URL, DECODO_API_KEY: env.DECODO_API_KEY, YOUTUBE_API_KEY: env.YOUTUBE_API_KEY },
         (req.metadata as { channelId?: string }).channelId,
         cache,
       )]);
@@ -443,6 +511,9 @@ function buildStreamResponse(
       }
       if (fetchResult.status === 'fulfilled' && fetchResult.value.channelMeta) {
         resolvedChannelMeta = fetchResult.value.channelMeta;
+      }
+      if (fetchResult.status === 'fulfilled' && fetchResult.value.comments) {
+        resolvedComments = fetchResult.value.comments;
       }
 
       if (!resolvedTranscript || !resolvedTranscript.trim() || resolvedTranscript.includes("Transcript unavailable") || resolvedTranscript.includes("content ingestion failed")) {
