@@ -373,8 +373,18 @@ export async function POST(request: NextRequest) {
         totalChunks,
         segments,
         transcript,
-        channelMeta,
+        channelMeta: rawChannelMeta,
       } = parsedBody.data;
+
+      // Defense in depth: the worker already caps channelMeta (see
+      // MAX_CHANNEL_META_BYTES in worker/src/routes/analysis.ts), but this is a
+      // network boundary from a separate deployable -- don't trust that
+      // invariant holds. Drop rather than reject the whole persist: this field
+      // is best-effort enrichment, not something worth failing an analysis over.
+      const channelMeta = rawChannelMeta && JSON.stringify(rawChannelMeta).length <= 20_000 ? rawChannelMeta : null;
+      if (rawChannelMeta && !channelMeta) {
+        console.warn('[analyses/persist] channelMeta exceeded size limit, dropping', { analysisId });
+      }
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
 

@@ -155,6 +155,71 @@ interface ResolvedTranscript {
  * fetch path; the cache round-trip below now also carries segments so repeat analyses
  * of the same video (cache HIT) don't regress back to segment-less.
  */
+// Bounds how much latency the (best-effort) channel-metadata enrichment can add
+// to the critical path. RCA (2026-07-23): the first version of this awaited the
+// full 15s fetchChannelMetadata timeout unconditionally on EVERY one of the 5
+// parallel bundle streams per analysis, including the fast path where a
+// transcript was already known and no network call was otherwise needed --
+// turning an instant return into a call that could stall up to 15s per bundle
+// for a "nice to have" field, risking the exact stream-timeout/billing-failure
+// class of bug A6/A7 fixed. Bounded so a slow/degraded Decodo never delays
+// synthesis; on timeout we simply proceed without channel metadata.
+const CHANNEL_META_TIMEOUT_MS = 4000;
+// Caps how much of the scraped channel page ends up in validation_report
+// (persisted, unbounded jsonb) and therefore in every chat grounding prompt.
+// Decodo's `youtube_channel` scrape can return large nested objects; nothing
+// upstream constrains its shape or size.
+const MAX_CHANNEL_META_BYTES = 20_000;
+// 7-day TTL: channel-level stats (subscriber count, description) change far
+// slower than per-video data, and this also protects against hitting Decodo
+// 5x per analysis (once per parallel bundle stream) -- see call site.
+const CHANNEL_META_CACHE_TTL = 604_800;
+
+function truncateChannelMeta(meta: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!meta) return null;
+  const serialized = JSON.stringify(meta);
+  if (serialized.length <= MAX_CHANNEL_META_BYTES) return meta;
+  console.warn(`[analyze-llm-stream] channelMeta exceeds ${MAX_CHANNEL_META_BYTES}B (${serialized.length}B), dropping`);
+  return null;
+}
+
+async function fetchChannelMetaCached(
+  channelId: string | undefined,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
+  cache?: UpstashCacheAdapter,
+): Promise<Record<string, unknown> | null> {
+  if (!channelId) return null;
+  const cacheKey = `channel-meta:${channelId}`;
+
+  if (cache) {
+    try {
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        try {
+          return JSON.parse(cached) as Record<string, unknown>;
+        } catch {
+          console.debug(`[analyze-llm-stream] channel-meta cache entry for ${channelId} is not JSON, ignoring`);
+        }
+      }
+    } catch {
+      console.warn(`[analyze-llm-stream] channel-meta cache GET failed for ${channelId}, proceeding with fetch`);
+    }
+  }
+
+  const fetchPromise = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY)
+    .fetchChannelMetadata(channelId)
+    .catch(() => null);
+  const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), CHANNEL_META_TIMEOUT_MS));
+  const result = truncateChannelMeta(await Promise.race([fetchPromise, timeoutPromise]));
+
+  if (result && cache) {
+    cache.set(cacheKey, JSON.stringify(result), CHANNEL_META_CACHE_TTL).catch(() => {
+      console.warn(`[analyze-llm-stream] channel-meta cache SET failed for ${channelId}`);
+    });
+  }
+  return result;
+}
+
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
@@ -169,9 +234,9 @@ async function fetchTranscriptIfMissing(
   // previously this only ran inside the transcript-missing branch, so any analysis
   // whose transcript already existed (the common case) never got channel metadata
   // at all, on top of it being fetched then immediately discarded after a log line.
-  const channelMetaPromise: Promise<Record<string, unknown> | null> = channelId
-    ? new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY).fetchChannelMetadata(channelId).catch(() => null)
-    : Promise.resolve(null);
+  // Cached + time-bounded (see fetchChannelMetaCached) so it can never meaningfully
+  // delay the transcript-critical path this function exists for.
+  const channelMetaPromise: Promise<Record<string, unknown> | null> = fetchChannelMetaCached(channelId, env, cache);
 
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${videoId}`);
