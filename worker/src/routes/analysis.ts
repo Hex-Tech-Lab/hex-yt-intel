@@ -386,7 +386,7 @@ function buildStreamResponse(
 
       let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const persistPromise = persistService.persist({ ...persistParams, status }).then((result) => {
-        clearTimeout(timeoutId ?? null);
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
         return result;
       });
 

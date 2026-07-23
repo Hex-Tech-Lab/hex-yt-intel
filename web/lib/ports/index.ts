@@ -1,9 +1,4 @@
 /**
- * Transcript extraction port - Fetches raw video transcripts from third-party services.
- */
-export * from './DecodoPort';
-
-/**
  * Authentication port - Verifies user sessions and resolves subscription tier.
  */
 export * from './AuthPort';

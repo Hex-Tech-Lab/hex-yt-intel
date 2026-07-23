@@ -58,6 +58,14 @@ export interface ChatPersistencePort {
     analysisMarkdown: string | null;
     status: string;
     transcript?: string | null;
+    videoMetadata?: Record<string, unknown> | null;
+    channelMetadata?: Record<string, unknown> | null;
+    executiveDigest?: {
+      snapshot?: string;
+      overview?: string;
+      takeaways?: string[];
+      detailedSummary?: string;
+    } | null;
   } | null>;
 
   /**

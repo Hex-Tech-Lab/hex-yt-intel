@@ -1,10 +1,4 @@
 /**
- * Decodo transcript extraction adapter.
- * Provides methods for fetching and parsing video transcripts from Decodo.
- */
-export { DecodoAdapter } from './DecodoAdapter';
-
-/**
  * Supabase authentication adapter.
  * Implements AuthPort to authenticate users and retrieve their tier/permissions.
  */
