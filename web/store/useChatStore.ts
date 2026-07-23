@@ -138,7 +138,14 @@ async function readSSE(res: Response, onEvent: (e: Record<string, unknown>) => v
           if (isDebugEnabled()) console.log('[ChatStore] Parsed SSE event', { eventCount, type: (parsed as Record<string, unknown>).type, frameCount });
           onEvent(parsed as Record<string, unknown>);
         } catch (e) {
-          console.debug('[ChatStore] Skipped parsing partial JSON frame:', e);
+          // RCA (2026-07-23): a partial/incomplete JSON frame mid-stream is
+          // expected and frequent -- every sibling log in this loop is
+          // gated behind isDebugEnabled(), this one was the sole exception.
+          // Console output at 10-25K+ lines was reported live; this fires
+          // on every incomplete-frame parse attempt for the entire duration
+          // of a chat stream, which is by far the highest-frequency call
+          // site in this file.
+          if (isDebugEnabled()) console.debug('[ChatStore] Skipped parsing partial JSON frame:', e);
         }
       }
     }
