@@ -10,6 +10,12 @@ export interface LogLine {
   timestamp: string;
   type: 'info' | 'ok' | 'error' | 'debug';
   message: string;
+  // Consecutive identical lines are coalesced (see logInfo/logOk/logError)
+  // instead of appended -- parallel bundle streams (5 for a full analysis)
+  // each emit the same generic status text ("Preparing analysis...",
+  // "Contacting OpenRouter...") independently, which used to 5x every one
+  // of them in the panel for no informational gain.
+  count?: number;
 }
 
 export interface AnalysisState extends UseAnalysisStreamState {
@@ -68,6 +74,35 @@ function sanitizeLogMessage(message: string, role: string | null): string {
   clean = clean.replace(/Worker handshaked successfully\./gi, 'Secure connection established.');
 
   return clean;
+}
+
+/**
+ * Appends a log line, coalescing into the previous one when the sanitized
+ * text and type are identical to what's already at the tail of the panel.
+ * A full analysis runs N parallel bundle streams (currently 5) that each
+ * independently emit the same generic status text ("Preparing analysis...",
+ * "Contacting OpenRouter...") -- without this, every one of those lines
+ * appeared N times back-to-back for zero additional information, and on a
+ * long video with fallback/retry cycling the panel could reach thousands of
+ * lines. A repeat bumps `count` on the existing line instead of adding a
+ * new one.
+ */
+function appendLogLine(
+  state: { terminalLines: LogLine[]; userRole: string | null },
+  type: LogLine['type'],
+  message: string
+): { terminalLines: LogLine[] } {
+  const sanitized = sanitizeLogMessage(message, state.userRole);
+  const lines = state.terminalLines;
+  const last = lines[lines.length - 1];
+  if (last && last.type === type && last.message === sanitized) {
+    const updated = [...lines];
+    updated[updated.length - 1] = { ...last, count: (last.count ?? 1) + 1, timestamp: new Date().toLocaleTimeString() };
+    return { terminalLines: updated };
+  }
+  return {
+    terminalLines: [...lines, { timestamp: new Date().toLocaleTimeString(), type, message: sanitized }],
+  };
 }
 
 export const useAnalysisStore = create<AnalysisState>((set) => ({
@@ -192,29 +227,9 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
 
   clearTerminal: () => set({ terminalLines: [] }),
 
-  logInfo: (message) =>
-    set((state) => ({
-      terminalLines: [
-        ...state.terminalLines,
-        { timestamp: new Date().toLocaleTimeString(), type: 'info', message: sanitizeLogMessage(message, state.userRole) },
-      ],
-    })),
-
-  logOk: (message) =>
-    set((state) => ({
-      terminalLines: [
-        ...state.terminalLines,
-        { timestamp: new Date().toLocaleTimeString(), type: 'ok', message: sanitizeLogMessage(message, state.userRole) },
-      ],
-    })),
-
-  logError: (message) =>
-    set((state) => ({
-      terminalLines: [
-        ...state.terminalLines,
-        { timestamp: new Date().toLocaleTimeString(), type: 'error', message: sanitizeLogMessage(message, state.userRole) },
-      ],
-    })),
+  logInfo: (message) => set((state) => appendLogLine(state, 'info', message)),
+  logOk: (message) => set((state) => appendLogLine(state, 'ok', message)),
+  logError: (message) => set((state) => appendLogLine(state, 'error', message)),
 
   initializeAnalysis: (id, title, initialMarkdown = '', executiveDigest = null) =>
     set(() => ({

@@ -135,12 +135,6 @@ export class StreamStatusTracker {
     if (onCompleteCallback) {
       onCompleteCallback();
     }
-
-    console.log('[Adapter] Stream complete:', {
-      model: fragment.model,
-      valid: fragment.valid,
-      analysisId: fragment.analysisId,
-    });
   }
 
   public handleError(

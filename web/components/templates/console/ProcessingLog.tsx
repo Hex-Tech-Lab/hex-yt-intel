@@ -104,6 +104,7 @@ export function ProcessingLog({ status }: ProcessingLogProps) {
                 <span className="text-[var(--ink-muted)] flex-shrink-0">[{line.timestamp}]</span>
                 <span className={`break-all ${line.type === 'ok' ? "text-[var(--ok)]" : line.type === 'error' ? "text-[var(--err)]" : "text-[var(--ink-secondary)]"}`}>
                   {line.message}
+                  {line.count && line.count > 1 ? <span className="text-[var(--ink-muted)]"> ×{line.count}</span> : null}
                 </span>
               </div>
             ))
