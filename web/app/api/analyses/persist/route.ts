@@ -8,7 +8,7 @@ import { verifyContentSig } from '@/lib/stream-token';
 import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { setAnalysisCache, generateCacheKey, type CachedAnalysisResult } from '@/lib/services/cache';
-import { publishValidationTask } from '@/lib/qstash-client';
+import { publishValidationTask, publishDigestTask } from '@/lib/qstash-client';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { SupabaseTranscriptAdapter } from '@/lib/adapters/SupabaseTranscriptAdapter';
 import * as Sentry from '@sentry/nextjs';
@@ -766,6 +766,15 @@ export async function POST(request: NextRequest) {
                 console.warn('[analyses/persist] Failed to publish validation task for chunks', { analysisId, error: String(e) });
               });
             }
+
+            // 10X re-audit NEW-H(dim0-trigger): give every finalized analysis a
+            // server-side digest attempt regardless of whether the client ever
+            // mounts the Executive Summary panel. Idempotent + best-effort --
+            // failure here must never affect the persist response.
+            await publishDigestTask({ analysisId, userId: row.userId }).catch(e => {
+              Sentry.captureException(e, { contexts: { persist: { phase: 'publish_digest_task_chunks', analysisId } } });
+              console.warn('[analyses/persist] Failed to publish digest task for chunks', { analysisId, error: String(e) });
+            });
           }
         }
 
@@ -1005,6 +1014,15 @@ export async function POST(request: NextRequest) {
         }).catch(e => {
           Sentry.captureException(e, { contexts: { persist: { phase: 'publish_validation_task', analysisId } } });
           console.warn('[analyses/persist] Failed to publish validation task', { analysisId, error: String(e) });
+        });
+      }
+
+      if (isNonChunkValid) {
+        // 10X re-audit NEW-H(dim0-trigger): see the identical comment at the
+        // chunk-path call site above.
+        await publishDigestTask({ analysisId, userId: row.userId }).catch(e => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'publish_digest_task', analysisId } } });
+          console.warn('[analyses/persist] Failed to publish digest task', { analysisId, error: String(e) });
         });
       }
 

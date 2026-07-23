@@ -67,6 +67,50 @@ export async function publishValidationTask(payload: ValidationPayload): Promise
   }
 }
 
+export interface DigestPayload {
+  analysisId: string;
+  userId: string;
+}
+
+/**
+ * Publish an executive-digest (Dimension 0) generation task to QStash.
+ *
+ * RCA (10X re-audit NEW-H(dim0-trigger)): digest generation was client-triggered
+ * only (POST /api/analyses/digest fired when the Executive Summary panel mounts).
+ * If the browser never mounts it -- nav-away, network error, background tab --
+ * the digest never exists, and chat grounding's Dimension-0 section stays empty
+ * forever with no retry path. This gives every successfully finalized analysis
+ * a server-side attempt regardless of what the client does; the client-side
+ * trigger stays as-is and is now just a (harmless, idempotent) redundant path.
+ */
+export async function publishDigestTask(payload: DigestPayload): Promise<string> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!baseUrl) {
+      throw new Error('NEXT_PUBLIC_APP_URL is missing. Cannot publish QStash task safely.');
+    }
+    const webhookUrl = `${baseUrl}/api/webhooks/digest`;
+    const result = await getQStashClient().publishJSON({
+      url: webhookUrl,
+      body: payload,
+      retries: 3,
+      delay: 0,
+    });
+
+    const messageId = typeof result === 'string' ? result : result.messageId;
+    console.log('[qstash] Digest task published', { analysisId: payload.analysisId, messageId });
+    return messageId;
+  } catch (error) {
+    console.error('[qstash] Failed to publish digest task', {
+      analysisId: payload.analysisId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Non-blocking: log but don't throw -- digest generation is best-effort
+    // enrichment, not something worth failing the persist call over.
+    return 'unknown';
+  }
+}
+
 /**
  * Publish an embedding generation task to QStash
  * For future use: semantic search requires embeddings
