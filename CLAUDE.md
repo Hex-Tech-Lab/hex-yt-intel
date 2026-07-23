@@ -75,7 +75,7 @@ Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-
 ### Runtime & Build Infrastructure
 - **Node.js**: 24.16.0 LTS
 - **pnpm**: 11.9.0 (source of truth: package.json packageManager field; synced to action.yml + CI workflows)
-- **Next.js**: 16.2.6
+- **Next.js**: 16.2.11 (patch-bumped 2026-07-24 for Dependabot #73-90: SSRF in Server Actions/rewrites, DoS, cache confusion — same minor line, no breaking changes)
 - **TypeScript**: 6.0.3
 
 ---
