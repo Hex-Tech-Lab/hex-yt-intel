@@ -1,0 +1,22 @@
+docs/history/RCA_2026-07-23_BILLING_STATUS_CONTRACT_MISMATCH.md
+  s_cd8c10957ebd37::t_8a8891ab615be8 1-165
+docs/history/ROSTER_2026-07-20.md
+  s_cd8c10957ebd37::t_bd0188394dd35e 489-494
+  s_cd8c10957ebd37::t_4c40a005785b6c 380-419
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "3fe0e69974ca7a178eb59fef2b0fe038cbeb04db",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
