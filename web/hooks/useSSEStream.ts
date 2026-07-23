@@ -205,6 +205,7 @@ export function useSSEStream() {
                   videoId: job.videoId,
                   analysisId: job.analysisId || job.id,
                   transcript: job.transcript || '',
+                  segments: job.segments,
                   metadata: job.metadata,
                   persona: job.persona,
                   timezone: job.timezone || safeTimezone,

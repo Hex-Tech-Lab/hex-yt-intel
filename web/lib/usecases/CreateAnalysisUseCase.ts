@@ -9,6 +9,7 @@ import { extractVideoId } from '@/lib/youtube';
 import type { UserTier } from '@/lib/types/billing';
 import type { PersonaId } from '@/lib/prompts';
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
+import type { TranscriptSegment } from '@/lib/ports';
 import { createHash } from 'crypto';
 
 import { env } from '@/lib/env';
@@ -32,6 +33,7 @@ export interface UseCaseSuccess {
   persona: PersonaId;
   metadata: AnalysisJobMetadata;
   transcript: string;
+  segments?: TranscriptSegment[];
   timezone: string;
   models: string[];
   stream: {
@@ -172,6 +174,7 @@ export class CreateAnalysisUseCase {
         title: ingestionResult.metadata.title,
         metadata: jobMetadata,
         transcript: ingestionResult.transcript,
+        segments: ingestionResult.segments,
         persona,
         timezone: params.timezone,
         models,
