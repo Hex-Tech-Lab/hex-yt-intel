@@ -7,10 +7,10 @@ execution (yt-dlp, ffmpeg, tesseract) that neither Cloudflare Workers (V8
 isolates, no subprocess exec) nor Vercel Functions (60s/300s timeout, too
 short for scene detection on a long video) can provide.
 
-**Status (2026-07-23): scaffold only.** `/health` and `/extract-metadata` are
-real and working — they prove the container, binaries, and auth wiring end
-to end. Scene detection + screenshot extraction + OCR (the actual feature)
-is not built yet.
+**Status (2026-07-23): scene detection + OCR implemented.** `/health`,
+`/extract-metadata`, and `/extract-scenes` are all real and working.
+Integration with the main app (how results get back to Supabase, what
+triggers a run) is still not built — see "Not yet built" below.
 
 ## Why Railway
 
@@ -54,13 +54,26 @@ Docker image guarantees them without a manual install.
 - `POST /extract-metadata` — `Authorization: Bearer <PIPELINE_SHARED_SECRET>`
   required. Body: `{"videoId": "<11-char YouTube ID>"}`. Returns
   `{videoId, title, duration, chapters}` via `yt-dlp --dump-json`.
+- `POST /extract-scenes` — `Authorization: Bearer <PIPELINE_SHARED_SECRET>`
+  required. Body: `{"videoId": "<11-char YouTube ID>", "threshold"?: 0-1
+  (default 0.4), "maxScenes"?: number (default 20, hard cap 60)}`.
+  Downloads the video at ≤480p, runs FFmpeg's scene-change filter to find
+  visually distinct frames, OCRs each with tesseract, and returns
+  `{videoId, sceneCount, truncated, scenes: [{timestampSeconds, ocrText,
+  imageBase64, mimeType}]}`. Rejects videos over 4h (422) before
+  downloading. Synchronous — no job queue, since Railway has no
+  per-request timeout. Images are returned inline, not persisted anywhere
+  by this service.
 
 ## Not yet built
 
-- Scene-change detection (FFmpeg `scdet`/`select='gt(scene,...)'`) +
-  timestamped keyframe extraction.
-- OCR pass over extracted frames (tesseract is installed and smoke-tested,
-  not yet wired into a pipeline).
 - Integration with the main app: how results get back to Supabase (S2S
-  callback vs. polling), and how a video-analysis run triggers this service.
-- Async/streaming progress reporting for long videos.
+  callback vs. polling — `/extract-scenes` currently returns everything
+  inline in the response, no persistence), and how a video-analysis run
+  triggers this service.
+- Async/streaming progress reporting for long videos (a slow, synchronous
+  request is the current tradeoff — fine until video length or scene count
+  makes a single response too slow/large).
+- Frontend wiring: nothing yet renders scene screenshots or lets a user
+  jump to one (this is the natural pairing with Wave B's `TimestampLink`
+  once real data exists).
