@@ -11,6 +11,7 @@ import type {
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { isPersistedValidationReport } from '@/lib/types/validation-report';
+import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
 import { mapHistoryOverviewRow, type RawHistoryOverviewRow } from '@/lib/utils/history-overview';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 
@@ -516,12 +517,17 @@ export class SupabaseAnalysisAdapter {
     transcript?: string | null;
     videoMetadata?: Record<string, unknown> | null;
     channelMetadata?: Record<string, unknown> | null;
+    executiveDigest?: StoredExecutiveDigest | null;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
       let query = service
         .from('analyses')
-        .select('title, channel_title, analysis_markdown, analysis_payload, validation_report, billing_status, video_id')
+        // RCA (2026-07-23): executive_digest (Dimension 0 -- snapshot/overview/
+        // takeaways/detailed-summary) was never selected here, so chat grounding
+        // only ever saw dimensions 1-11 despite the user-facing product surfacing
+        // dim-0 prominently. Selected + surfaced below.
+        .select('title, channel_title, analysis_markdown, analysis_payload, validation_report, billing_status, video_id, executive_digest')
         .eq('id', params.analysisId);
       if (params.userId) {
         query = query.eq('user_id', params.userId);
@@ -573,6 +579,12 @@ export class SupabaseAnalysisAdapter {
         ? (payload as any).metadata.description
         : null;
 
+      const rawDigest = (data as any).executive_digest;
+      const hasDigestContent = rawDigest && typeof rawDigest === 'object'
+        && (typeof rawDigest.snapshot === 'string' && rawDigest.snapshot.length > 0
+          || typeof rawDigest.overview === 'string' && rawDigest.overview.length > 0
+          || Array.isArray(rawDigest.takeaways) && rawDigest.takeaways.length > 0);
+
       return {
         title: data!.title || '',
         channelTitle: data!.channel_title || null,
@@ -582,6 +594,7 @@ export class SupabaseAnalysisAdapter {
         transcript,
         videoMetadata: (report.metadata as Record<string, unknown>) || null,
         channelMetadata: (report.channelMeta as Record<string, unknown>) || null,
+        executiveDigest: hasDigestContent ? (rawDigest as StoredExecutiveDigest) : null,
       };
     } catch (error: any) {
       Sentry.captureException(error, {

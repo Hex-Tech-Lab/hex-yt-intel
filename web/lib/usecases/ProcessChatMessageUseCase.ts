@@ -251,13 +251,22 @@ export class ProcessChatMessageUseCase {
     const channelMetadataSection = groundingResult.channelMetadata
       ? `\n\n--- CHANNEL METADATA ---\n${JSON.stringify(groundingResult.channelMetadata, null, 2).slice(0, 4000)}\n`
       : '';
+    // Dimension 0 (Snapshot/Overview/Key Takeaways/Detailed Summary) was
+    // generated and shown in the product's Executive Summary panel, but
+    // getAnalysisGrounding never selected `executive_digest` at all -- chat
+    // only ever saw dimensions 1-11. Surfaced explicitly, ahead of the
+    // 11-dimension body, since it's the highest-level synthesis of the video.
+    const digest = groundingResult.executiveDigest;
+    const executiveDigestSection = digest
+      ? `\n\n--- DIMENSION 0: EXECUTIVE DIGEST ---\n${digest.snapshot ? `Snapshot: ${digest.snapshot}\n\n` : ''}${digest.overview ? `Overview: ${digest.overview}\n\n` : ''}${Array.isArray(digest.takeaways) && digest.takeaways.length > 0 ? `Key Takeaways:\n${digest.takeaways.map((t: string) => `- ${t}`).join('\n')}\n\n` : ''}${digest.detailedSummary ? `Detailed Summary: ${digest.detailedSummary}\n` : ''}`
+      : '';
     // Grounding constrains the SOURCE, never the APPLICATION. The universe of
     // facts is this one video's analysis — but the user (our primary persona is
     // a content-repurposing creator) may transform those facts into any format:
     // podcast scripts, blog/Medium posts, social threads, bullet lists, shopping
     // lists, action plans. Refuse only when asked for facts outside the source,
     // not when asked to reshape what the source contains.
-    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis, video description, and transcript below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it.${descriptionSection}${videoMetadataSection}${channelMetadataSection}--- ANALYSIS ---\n${groundedMarkdown.slice(0, 12000)}${groundingResult.transcript ? `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingResult.transcript.slice(0, 24000)}` : ''}`;
+    let grounding = `You are the creative analyst for the YouTube video "${groundingResult.title}"${channelSuffix}. Your single source of truth is the structured analysis, video description, and transcript below — every fact, claim, quote, number, and detail you output must come from them, and you must never invent content or pull in outside knowledge about the topic. Within that boundary, the user's application is unrestricted: if they ask for a podcast script, blog or Medium post, social thread, newsletter, bullet summary, shopping list, step-by-step plan, or any other repurposed format, produce it fully and creatively using ONLY this video's material — do not refuse because the analysis "doesn't include" that format; formats are yours to create, facts are not. If a request needs facts the analysis genuinely does not contain, say what's missing rather than inventing it. Cite dimension names where relevant. Do not ask which video — you have it.${descriptionSection}${videoMetadataSection}${channelMetadataSection}${executiveDigestSection}--- ANALYSIS (Dimensions 1-11) ---\n${groundedMarkdown.slice(0, 12000)}${groundingResult.transcript ? `\n\n--- TRANSCRIPT (timestamped where available) ---\n${groundingResult.transcript.slice(0, 24000)}` : ''}`;
 
     // 8c. Inject user's learning history into grounding context
     grounding = buildGroundingWithHistory(grounding, knowledgeContext, finalContent);
