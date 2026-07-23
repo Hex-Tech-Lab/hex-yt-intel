@@ -1,0 +1,41 @@
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_3cdced5bc580d1 221
+web/lib/types/contracts.ts
+  s_0eded1e9d0cab6::t_eb5605c92b116d 169-183,200
+worker/src/services/MetadataScraper.ts
+  s_0eded1e9d0cab6::t_e06e016b094f01 161
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_260a43a623cc1f 238-249,252,255-256,259,274-276,278,299-308,310
+  s_0eded1e9d0cab6::t_1d9a6d99c75987 312-313
+  s_0eded1e9d0cab6::t_3cae0b0c79e2a0 330
+  s_0eded1e9d0cab6::t_ea801078605a07 344
+  s_0eded1e9d0cab6::t_142730552403e0 89-97
+  s_0eded1e9d0cab6::t_c711676bd3f9e3 547
+web/lib/adapters/SupabaseSettingsAdapter.ts
+  s_0eded1e9d0cab6::t_e42d65202948f6 49-67,69-106
+  s_0eded1e9d0cab6::t_3b20aad02c07b8 68
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_0eded1e9d0cab6::t_424e5c073c41e1 162-169,171-176
+  s_0eded1e9d0cab6::t_eb6ad416535ef0 157-161,170,177
+  s_0eded1e9d0cab6::t_337c11cbab15a7 50
+  s_0eded1e9d0cab6::t_ca0c9ba55e17d3 214
+  s_0eded1e9d0cab6::t_4d0f0890d714dc 16-26
+supabase/migrations/20260723190000_comments_fetch_settings.sql
+  s_0eded1e9d0cab6::t_bd9d7b8bbdd2aa 1-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "62caff4f56571140befca393a38338d8cf6dbbf5",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
