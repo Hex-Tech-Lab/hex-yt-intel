@@ -1,0 +1,31 @@
+web/lib/ports/IngestionPort.ts
+  s_cd8c10957ebd37::t_7e16a99a2cff6c 20-26,35-44
+web/hooks/useSSEStream.ts
+  s_cd8c10957ebd37::t_35bd30add67053 208
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_cd8c10957ebd37::t_723cd01a70dfe1 12
+  s_cd8c10957ebd37::t_62d28c9090411d 36
+  s_cd8c10957ebd37::t_e584ff1eda0770 177
+web/lib/types/contracts.ts
+  s_cd8c10957ebd37::t_adc2e498fd5e00 173
+web/lib/adapters/WorkerIngestionAdapter.ts
+  s_cd8c10957ebd37::t_8b83d357947b1d 128-129,145
+  s_cd8c10957ebd37::t_85b73db34273d8 32,46-48,50
+  s_cd8c10957ebd37::t_4ee1b076663c61 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "b9d63e5ed10f0d608bea4a44011b636b7924662f",
+  "prompts": {},
+  "sessions": {
+    "s_cd8c10957ebd37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f45d3d1-9ad2-4931-a11d-09764ab3f242",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
