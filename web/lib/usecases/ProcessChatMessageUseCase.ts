@@ -327,8 +327,18 @@ export class ProcessChatMessageUseCase {
     const requestedRange = groundingResult.transcript
       ? extractRequestedTranscriptRange(groundingResult.transcript, finalContent)
       : null;
+    // Numbered with an explicit, checkable count: an open-ended "relay all of
+    // it" instruction was confirmed insufficient on repeated live tests (the
+    // model kept stopping after 2-3 lines, including when asked to translate
+    // each line inline -- the extra per-line work seems to invite trimming).
+    // A concrete target count the model can self-verify against, plus
+    // separating "quote verbatim" from "then translate/analyze" into two
+    // passes, is the strongest lever available without changing the
+    // streaming architecture to buffer and post-validate server-side.
     const requestedRangeSection = requestedRange
-      ? `\n\n--- EVERY TRANSCRIPT LINE IN THE REQUESTED RANGE (complete -- this list IS the full answer to the user's time-range question; relay ALL of it, do not summarize down to a few lines or stop early) ---\n${requestedRange.lines.length > 0 ? requestedRange.lines.join('\n') : '(no transcript lines fall within this range)'}\n`
+      ? requestedRange.lines.length > 0
+        ? `\n\n--- EVERY TRANSCRIPT LINE IN THE REQUESTED RANGE: EXACTLY ${requestedRange.lines.length} LINES, NUMBERED ---\nThis numbered list is the complete, guaranteed-correct answer to the user's time-range question. Step 1: quote all ${requestedRange.lines.length} numbered lines below VERBATIM AND IN FULL, in this same order, before writing anything else -- do not paraphrase, merge, or drop any of them. Step 2 (only if the user asked for translation/analysis): add that AFTER all ${requestedRange.lines.length} lines are quoted, not interleaved. Before sending your reply, count your quoted lines against ${requestedRange.lines.length} -- if your count is lower, you have failed this instruction and must go back and include the missing ones.\n${requestedRange.lines.map((l, i) => `${i + 1}. ${l}`).join('\n')}\n`
+        : `\n\n--- REQUESTED RANGE ---\nNo transcript lines fall within the range the user asked about -- tell them that plainly rather than inventing or approximating content.\n`
       : '';
 
     // Transcript is the one section sized by what's actually left of the

@@ -65,6 +65,14 @@ export function detectRequestedRange(message: string): { startSec: number; endSe
     return { startSec: n * 60, endSec: (n + 1) * 60 };
   }
 
+  // Arabic "دقيقة"/"الدقيقة" (minute), digit may appear before or after the
+  // word (Arabic sentence order commonly puts it after, e.g. "الدقيقة 52").
+  const arabicMinuteWord = /(\d{1,3})\s*(?:دقيقة|دقيقه|الدقيقة|الدقيقه)|(?:دقيقة|دقيقه|الدقيقة|الدقيقه)\s*(\d{1,3})/.exec(trimmed);
+  if (arabicMinuteWord) {
+    const n = Number(arabicMinuteWord[1] ?? arabicMinuteWord[2]);
+    if (Number.isFinite(n)) return { startSec: n * 60, endSec: (n + 1) * 60 };
+  }
+
   // A single "mm:ss" timestamp mentioned anywhere -- treat as "that minute".
   const singleTimestamp = /\b(\d{1,2}):(\d{2})\b/.exec(trimmed);
   if (singleTimestamp) {

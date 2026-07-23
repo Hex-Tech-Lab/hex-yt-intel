@@ -38,6 +38,14 @@ describe('detectRequestedRange', () => {
   it('does NOT treat a creative request with no timestamp language as a range', () => {
     expect(detectRequestedRange('summarize the film\'s main themes')).toBeNull();
   });
+
+  it('detects Arabic "الدقيقة N" (minute N, digit after word)', () => {
+    expect(detectRequestedRange('إيه اللي اتقال حوالي الدقيقة 52')).toEqual({ startSec: 3120, endSec: 3180 });
+  });
+
+  it('detects Arabic "N دقيقة" (digit before word)', () => {
+    expect(detectRequestedRange('52 دقيقة')).toEqual({ startSec: 3120, endSec: 3180 });
+  });
 });
 
 describe('extractRequestedTranscriptRange', () => {
