@@ -107,7 +107,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     model: string | null;
     validationPassed: boolean;
     validationReport: unknown;
-  }): Promise<void> {
+    guardBillingStatus?: string;
+  }): Promise<{ updated: boolean }> {
     const service = getSupabaseServiceClient();
 
     // 1️⃣-2️⃣ (Removed 2026-07-23 — audit finding CRIT-2) This used to fetch
@@ -121,11 +122,15 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
 
     // 3️⃣ Extract billing_status from validation report (contract fix: use actual value, not override)
     // billing_status should come from validationReport if available (set by persist route),
-    // fallback to 'chargeable' if validation passes, otherwise 'failed'
+    // fallback to 'completed' if validation passes, otherwise 'failed'.
+    // RCA (2026-07-23): this used to fall back to 'chargeable', which the DB's
+    // CHECK constraint (processing|completed|failed) has always rejected --
+    // every real successful analysis has silently failed to reach a terminal
+    // billing status since 2026-07-13. See BillingStatus type for full RCA.
     const billingStatus = (params.validationReport as any)?.billing_status ||
-      (params.validationPassed ? 'chargeable' : 'failed');
+      (params.validationPassed ? 'completed' : 'failed');
 
-    const { error: analysisError } = await service
+    let updateQuery = service
       .from('analyses')
       .update({
         analysis_markdown: params.markdown,
@@ -135,12 +140,24 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         validation_report: params.validationReport,
         billing_status: billingStatus,
         updated_at: new Date().toISOString(),
-      })
+      }, { count: 'exact' })
       .eq('id', params.analysisId);
+    if (params.guardBillingStatus !== undefined) {
+      updateQuery = updateQuery.eq('billing_status', params.guardBillingStatus);
+    }
+    const { error: analysisError, count } = await updateQuery;
 
     if (analysisError) {
       console.error('[SupabasePersistenceAdapter] updateAnalysisResult failed:', analysisError.message);
       throw analysisError;
+    }
+
+    // Guarded call that lost the race (a concurrent writer already moved this
+    // row off guardBillingStatus): stop here. Applying KG/chunk side-effects
+    // below would write data for a row a different, possibly-conflicting
+    // write already claimed.
+    if (params.guardBillingStatus !== undefined && !count) {
+      return { updated: false };
     }
 
     // 4️⃣ Persist Knowledge Graph if present (ADR 006)
@@ -184,6 +201,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
         console.error('[SupabasePersistenceAdapter] chunk upsert failed:', err);
       }
     }
+
+    return { updated: true };
   }
 
   // --- Chat Adapter Delegation ---

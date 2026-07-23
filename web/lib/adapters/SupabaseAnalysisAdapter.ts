@@ -358,9 +358,12 @@ export class SupabaseAnalysisAdapter {
             done: 'completed',
             processing: 'processing',
           };
-          // Analysis is complete when billing_status is 'chargeable' (ready to charge) or 'charged' (paid)
-          if (analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged') return 'completed';
-          // Legacy fallback: support legacy 'completed' billing_status and validation_passed flag
+          // RCA (2026-07-23): 'chargeable'/'charged' were never valid DB values
+          // (CHECK constraint only allows processing|completed|failed) -- this
+          // branch was dead code that could never match a real row. The
+          // validation_passed fallback below is likely why this masked the
+          // constraint-violation bug for a while: billing_status writes were
+          // silently failing, but validation_passed sometimes still got set.
           if (analysis.billing_status === 'completed' || !!analysis.validation_passed) return 'completed';
           const reportStatus = analysis.validation_report?.status;
           if (!reportStatus) return 'incomplete';
@@ -562,7 +565,7 @@ export class SupabaseAnalysisAdapter {
       const hasDimensions = Array.isArray(dimensionStatus) && dimensionStatus.some((d: any) => d?.status === 'done');
 
       let computedStatus = 'incomplete';
-      if (validationStatus === 'done' || data!.billing_status === 'chargeable' || data!.billing_status === 'charged') {
+      if (validationStatus === 'done' || data!.billing_status === 'completed') {
         computedStatus = 'complete';
       } else if (validationStatus === 'error' || validationStatus === 'failed') {
         computedStatus = 'error';

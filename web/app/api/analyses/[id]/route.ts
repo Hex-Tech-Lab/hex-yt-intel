@@ -79,16 +79,20 @@ export async function GET(
     const primaryPersona = payload.persona?.primary;
 
     // Compute frontend-visible status:
-    // - 'complete' if validation_status='done' OR billing_status='chargeable'/'charged'
+    // - 'complete' if validation_status='done' OR billing_status='completed'
     // - 'partial' if has any dimensions (restorable partial analyses)
     // - 'error' if validation_status='error' or no dimensions + billing_status='failed'
     // - 'incomplete' otherwise (pending/processing)
+    //
+    // RCA (2026-07-23): 'chargeable'/'charged' were never valid billing_status
+    // values -- the DB's CHECK constraint only ever allowed
+    // processing|completed|failed. See BillingStatus type for full RCA.
     const validationStatus = (report as any).validation_status || (report as any).status || 'processing';
     const dimensionStatus = (report as any).dimension_status;
     const hasDimensions = Array.isArray(dimensionStatus) && dimensionStatus.some((d: any) => d?.status === 'done');
 
     let analysisStatus: 'complete' | 'incomplete' | 'error' | 'partial' = 'incomplete';
-    if (validationStatus === 'done' || analysis.billing_status === 'chargeable' || analysis.billing_status === 'charged') {
+    if (validationStatus === 'done' || analysis.billing_status === 'completed') {
       analysisStatus = 'complete';
     } else if (validationStatus === 'error' || validationStatus === 'failed') {
       analysisStatus = 'error';
