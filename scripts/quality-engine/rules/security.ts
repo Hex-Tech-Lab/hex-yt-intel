@@ -124,6 +124,15 @@ export const SecretsExposureRule: IRule = {
           // Normalize separators so snake/SCREAMING_CASE variants match the same
           // patterns as camelCase (`api_key`, `OPENAI_API_KEY` → `apikey`).
           const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+          // RCA (2026-07-25): 'token' alone also matches pagination cursors
+          // (`pageToken`, `nextPageToken`) -- e.g. YouTube Data API's opaque
+          // commentThreads.list continuation cursor, which Google's own docs
+          // treat as safe to log (single-use-context, not a credential).
+          // Distinguished from real credential tokens (accessToken, authToken,
+          // bearerToken, refreshToken, apiToken -- all still flagged) by name
+          // shape: a pagination cursor is always `<direction/kind>Token`, never
+          // bare `token` or `<authnoun>Token`.
+          const PAGINATION_TOKEN_NAME = /^(page|next|prev|previous|continuation|cursor)token$/i;
           // Candidates = every identifier in the args PLUS string-literal object
           // KEYS (`{ 'access_token': v }`) — a quoted key is a real secret-name
           // signal. String-literal *values* and message args are still excluded
@@ -142,7 +151,11 @@ export const SecretsExposureRule: IRule = {
                 ])
             .filter(n => !isRedactedKey(n));
           const hit = sensitivePatterns.find(p =>
-            idNodes.some(id => normalize(id.getText()).includes(p)),
+            idNodes.some(id => {
+              if (!normalize(id.getText()).includes(p)) return false;
+              if (p === 'token' && PAGINATION_TOKEN_NAME.test(id.getText())) return false;
+              return true;
+            }),
           );
           if (hit) {
             findings.push({

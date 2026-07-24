@@ -16,6 +16,7 @@
 
 import * as Sentry from '@sentry/cloudflare';
 import { fetchWithProxy } from './http-utils';
+import type { CommentIngestionPort, CommentPage } from '../ports/CommentIngestionPort';
 import { getRandomUserAgent } from './user-agent';
 
 export interface VideoComment {
@@ -39,7 +40,7 @@ export interface VideoMetadata {
   thumbnailUrl: string;
 }
 
-export class MetadataScraper {
+export class MetadataScraper implements CommentIngestionPort {
   private apiKey: string;
   private residentialProxyUrl?: string;
 
@@ -225,6 +226,90 @@ export class MetadataScraper {
       }
     }
     return [];
+  }
+
+  /**
+   * Paginated comment fetch (CommentIngestionPort). Additive alongside
+   * fetchComments -- the comments-sampling engine's stratified sampler
+   * (web/lib/services/comment-sampling.ts, Phase 0) needs a real pool to
+   * sample from, which a single relevance-ordered page of `maxResults`
+   * cannot provide for any video with more comments than that page size
+   * (the exact root cause of the under-sampling bug that motivated this
+   * feature). NOT wired into the live analyze-llm-stream path yet -- that
+   * integration (replacing fetchCommentsCached's single-page call with a
+   * loop against this) is its own change, deliberately deferred so this
+   * addition can land without touching current runtime behavior.
+   *
+   * Single attempt, no retry loop (unlike fetchComments) -- callers loop
+   * pages themselves and can decide whether a failed page is worth retrying
+   * or the run should stop with what it has so far.
+   */
+  async fetchCommentsPage(
+    videoId: string,
+    params: { pageToken?: string; maxResultsPerPage: number }
+  ): Promise<CommentPage> {
+    const pageParam = params.pageToken ? `&pageToken=${encodeURIComponent(params.pageToken)}` : '';
+    const url = `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&order=relevance&maxResults=${params.maxResultsPerPage}${pageParam}&key=${this.apiKey}`;
+
+    try {
+      const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
+
+      if (!response.ok) {
+        const bodyText = await response.text().catch(() => '');
+        console.warn(`[MetadataScraper] fetchCommentsPage non-ok for ${videoId}: ${response.status} ${response.statusText}`, bodyText.slice(0, 500));
+        // 403/404 (comments disabled, video not found, quota-denied) won't
+        // resolve on another page -- report exhausted so the caller stops.
+        if (response.status !== 403 && response.status !== 404) {
+          Sentry.captureMessage(`fetchCommentsPage failed: ${videoId}`, {
+            level: 'warning',
+            tags: { operation: 'fetch-comments-page', status: String(response.status) },
+            extra: { videoId, status: response.status, statusText: response.statusText, body: bodyText.slice(0, 500), pageToken: params.pageToken },
+          });
+        }
+        return { comments: [], exhausted: true };
+      }
+
+      const data = (await response.json()) as {
+        items?: Array<{
+          snippet?: {
+            topLevelComment?: {
+              snippet?: {
+                authorDisplayName?: string;
+                textDisplay?: string;
+                publishedAt?: string;
+                likeCount?: number;
+              };
+            };
+          };
+        }>;
+        nextPageToken?: string;
+      };
+
+      const comments = (data.items ?? []).map((item) => {
+        const snippet = item.snippet?.topLevelComment?.snippet ?? {};
+        return {
+          author: snippet.authorDisplayName ?? 'Unknown',
+          text: snippet.textDisplay ?? '',
+          publishedAt: snippet.publishedAt ?? '',
+          likeCount: snippet.likeCount ?? 0,
+        };
+      });
+
+      return {
+        comments,
+        nextPageToken: data.nextPageToken,
+        exhausted: !data.nextPageToken,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[MetadataScraper] fetchCommentsPage threw for ${videoId}:`, message);
+      Sentry.captureMessage(`fetchCommentsPage threw: ${videoId}`, {
+        level: 'warning',
+        tags: { operation: 'fetch-comments-page' },
+        extra: { videoId, error: message, pageToken: params.pageToken },
+      });
+      return { comments: [], exhausted: true };
+    }
   }
 
   /**
