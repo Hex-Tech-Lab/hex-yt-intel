@@ -1,0 +1,37 @@
+supabase/migrations/20260724120000_channel_meta_fetch_settings.sql
+  s_0eded1e9d0cab6::t_ea2fcbc6ac42b0 1-42
+web/lib/types/contracts.ts
+  s_0eded1e9d0cab6::t_6fe7f21777fb96 184-196
+  s_0eded1e9d0cab6::t_56c40ef4632ad3 214
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_05db4fe62447f7 627
+  s_0eded1e9d0cab6::t_548fc5afb0457e 185-191,197-201,204,208,212,221
+  s_0eded1e9d0cab6::t_8e048f6bb677d1 401
+  s_0eded1e9d0cab6::t_911af4a3a1d414 100-104
+  s_0eded1e9d0cab6::t_46cfbe941e3e44 265,273,277,280
+  s_0eded1e9d0cab6::t_7f1521d0d099f4 412
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_02bdd9844f8149 222
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_0eded1e9d0cab6::t_834bd42249f0b9 238
+  s_0eded1e9d0cab6::t_ee9e993d7524a7 189-200
+  s_0eded1e9d0cab6::t_d9d23cc6325e5b 60
+  s_0eded1e9d0cab6::t_1bcc1f2bbcde1f 17,29-31
+  s_0eded1e9d0cab6::t_dd08337d597b12 32-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "de01c6d838b51cce4c39989dc25bcc39385c5a10",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
