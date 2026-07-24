@@ -1,0 +1,27 @@
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0eded1e9d0cab6::t_feddabe23a6e13 24-31
+worker/src/services/MetadataScraper.ts
+  s_0eded1e9d0cab6::t_7a3308c80aaed3 19
+  s_0eded1e9d0cab6::t_2d3d63b76c7ca1 43
+  s_0eded1e9d0cab6::t_9d4715e68b9b42 232-314
+  s_0eded1e9d0cab6::t_1085a2b87cb505 231
+scripts/quality-engine/rules/security.ts
+  s_0eded1e9d0cab6::t_104815be2c5e9f 154-158
+  s_0eded1e9d0cab6::t_e4cc57ffa792d9 127-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "58eab7ee09ad886ca5af2be1772bc68375e20f67",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
