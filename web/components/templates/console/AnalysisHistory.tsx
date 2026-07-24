@@ -87,8 +87,19 @@ function extractExecutiveSummary(digest?: Record<string, any> | null): Executive
 
 export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const TOTAL_DIMENSIONS = useTotalDimensions();
-  const { items, isLoading, error } = useHistoryOverview();
+  const { items, isLoading, error, refetch: refetchHistoryOverview } = useHistoryOverview();
   const { analysis: currentAnalysis, status: currentStatus, videoMetadata: currentVideoMetadata } = useAnalysisStore();
+
+  // Refetch once per completion, not on every render while status stays
+  // 'complete' -- tracks the analysis id so a second re-analysis of the same
+  // video triggers a second refetch instead of only firing once ever.
+  const refetchedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (currentStatus !== 'complete' || !currentAnalysis?.id) return;
+    if (refetchedForRef.current === currentAnalysis.id) return;
+    refetchedForRef.current = currentAnalysis.id;
+    void refetchHistoryOverview();
+  }, [currentStatus, currentAnalysis?.id, refetchHistoryOverview]);
   const { initializeAnalysis, setIsLoading, setStatus, setVideoMetadata } = useAnalysisStore();
   const { initializeAnalysis: initSynthesis } = useSynthesisNucleus();
   const { url } = useInputStore();
