@@ -475,28 +475,44 @@ export const ReservedKeywordRule: IRule = {
     const findings: Finding[] = [];
     const filePath = source.getFilePath().replace(/\\/g, "/");
 
+    // RCA (2026-07-24): scoped to test files only, per the rule's original
+    // "in test files" intent (a reserved-word identifier collision is a real
+    // syntax-error risk in test scaffolding) -- previously ran repo-wide with
+    // no file-path gate at all, flagging ordinary source.
+    const isTestFile = /\.(test|spec)\.[jt]sx?$/.test(filePath) || filePath.includes('__tests__/');
+    if (!isTestFile) return findings;
+
     // Reserved words that should not be used as identifiers in test files
     const reservedWords = ['static', 'function', 'class', 'interface', 'type', 'const', 'let', 'var', 'async', 'await', 'return'];
 
     source.forEachDescendant((node) => {
-      // Check variable declarations and test names
-      if (Node.isVariableDeclaration(node) || Node.isIdentifier(node)) {
-        const nameNode = node.getNameNode?.() || node;
-        if (nameNode) {
-          const name = nameNode.getText?.() ?? '';
-          for (const reserved of reservedWords) {
-            if (name.toLowerCase().includes(reserved) && name === reserved) {
-              findings.push({
-                file: filePath,
-                severity: "medium",
-                title: `Syntax Error Risk: Reserved keyword '${reserved}' used as identifier`,
-                why: `Using '${reserved}' as a variable/test name causes parse errors. JavaScript reserves this keyword.`,
-                fix: `Rename to a non-reserved alternative: '${reserved}test', 'test${reserved.charAt(0).toUpperCase() + reserved.slice(1)}', etc.`
-              });
-              break;
-            }
-          }
-        }
+      if (!Node.isIdentifier(node)) return;
+      const parent = node.getParent();
+      // RCA (2026-07-24): only flag identifiers actually being DECLARED with
+      // this name. The old `Node.isIdentifier(node)` scan with a bare
+      // name-equality check also matched property/type-literal names
+      // (`{ type: 'idle' }`, a discriminant field) and the `const` in
+      // `as const` assertions -- TypeScript represents both as Identifier
+      // nodes with the same text, but neither is a declaration.
+      const isDeclarationName =
+        parent !== undefined &&
+        (Node.isVariableDeclaration(parent) ||
+          Node.isParameterDeclaration(parent) ||
+          Node.isBindingElement(parent) ||
+          Node.isFunctionDeclaration(parent) ||
+          Node.isClassDeclaration(parent)) &&
+        parent.getNameNode?.() === node;
+      if (!isDeclarationName) return;
+
+      const name = node.getText();
+      if (reservedWords.includes(name)) {
+        findings.push({
+          file: filePath,
+          severity: "medium",
+          title: `Syntax Error Risk: Reserved keyword '${name}' used as identifier`,
+          why: `Using '${name}' as a variable/test name causes parse errors. JavaScript reserves this keyword.`,
+          fix: `Rename to a non-reserved alternative: '${name}test', 'test${name.charAt(0).toUpperCase() + name.slice(1)}', etc.`
+        });
       }
     });
 
