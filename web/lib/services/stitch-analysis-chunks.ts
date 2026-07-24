@@ -12,7 +12,7 @@
  * behind tonight's KG-schema and persona-id incidents; this module exists
  * specifically to not repeat that mistake here.
  */
-import { UCISPayloadV2Schema } from '@/lib/validators/synthesis';
+import { UCISPayloadV2Schema, KGNodeSchema, KGEdgeSchema } from '@/lib/validators/synthesis';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
@@ -91,8 +91,8 @@ export function stitchChunksIntoPayload(
   let stitchedPersona: any = null;
   let stitchedClassification: any = null;
   let stitchedMonetization: any = null;
-  const stitchedNodes: any[] = [];
-  const stitchedEdges: any[] = [];
+  let stitchedNodes: any[] = [];
+  let stitchedEdges: any[] = [];
 
   for (let i = 1; i <= resolvedTotal; i++) {
     const chunkPayload = chunkMap.get(i);
@@ -154,6 +154,39 @@ export function stitchChunksIntoPayload(
       (edge as { strength: number }).strength = normalizeToTenScale((edge as { strength: unknown }).strength);
     }
   }
+
+  // Drop individually malformed KG nodes/edges before validation.
+  //
+  // RCA (2026-07-24, live production, HEX-YT-INTEL-2Z): each dimension bundle
+  // independently generates its own full knowledgeGraph per the prompt's
+  // "generate and include the full knowledgeGraph object" instruction, and
+  // stitching simply concatenates every bundle's nodes/edges. A bundle with
+  // nothing graph-worthy to contribute sometimes emits placeholder/incomplete
+  // node objects (missing weight/label, invalid entityType) instead of
+  // omitting the field -- one such node failed schema validation for the
+  // WHOLE stitched payload, forcing billing_status='failed' on an otherwise
+  // complete, valid 11/11-dimension analysis. Same "don't sink an entire
+  // result over a KG cosmetic slip" philosophy as the weight-normalization
+  // fix above -- filter the individually-invalid entries out rather than
+  // reject everything.
+  const validNodes = stitchedNodes.filter((node) => KGNodeSchema.safeParse(node).success);
+  const droppedNodeCount = stitchedNodes.length - validNodes.length;
+  if (droppedNodeCount > 0) {
+    console.warn(`[stitch-analysis-chunks] Dropped ${droppedNodeCount} malformed KG node(s) before validation`);
+  }
+  const validNodeIds = new Set(validNodes.map((n) => (n as { id: unknown }).id));
+  const validEdges = stitchedEdges.filter((edge) => {
+    if (!KGEdgeSchema.safeParse(edge).success) return false;
+    const e = edge as { source?: unknown; target?: unknown };
+    // An edge referencing a node we just dropped is equally invalid.
+    return validNodeIds.has(e.source) && validNodeIds.has(e.target);
+  });
+  const droppedEdgeCount = stitchedEdges.length - validEdges.length;
+  if (droppedEdgeCount > 0) {
+    console.warn(`[stitch-analysis-chunks] Dropped ${droppedEdgeCount} malformed/dangling KG edge(s) before validation`);
+  }
+  stitchedNodes = validNodes;
+  stitchedEdges = validEdges;
 
   // Normalize persona id spelling before validation.
   //
