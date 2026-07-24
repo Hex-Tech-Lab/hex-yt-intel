@@ -6,6 +6,14 @@ import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 export interface GetUCISPromptParams {
   version?: string;
+  /**
+   * Pre-resolved template text, supplied by callers (e.g. the Workers
+   * runtime) that can't reach resolveUCISPromptTemplate's process.env-based
+   * Supabase/Redis reads. When set, resolveUCISPromptTemplate is never
+   * called -- pass UCIS_V5_1_SYSTEM (or your own fallback) explicitly if
+   * your live-config lookup came back empty.
+   */
+  promptOverride?: string;
   metadata: {
     title: string;
     channelTitle: string;
@@ -27,6 +35,7 @@ export interface GetUCISPromptParams {
  */
 export async function getUCISPrompt({
   version,
+  promptOverride,
   metadata,
   transcript,
   persona,
@@ -34,7 +43,7 @@ export async function getUCISPrompt({
   duration,
   skipAllDimensionsInstruction,
 }: GetUCISPromptParams): Promise<string> {
-  const systemPrompt = await resolveUCISPromptTemplate(version);
+  const systemPrompt = promptOverride ?? (await resolveUCISPromptTemplate(version));
   const personas = rankPersonas(persona);
   const metadataJson = JSON.stringify(metadata, null, 2);
 
