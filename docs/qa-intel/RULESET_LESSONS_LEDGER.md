@@ -15,13 +15,21 @@ once the corresponding commit lands, the commit hash is the permanent record.
 
 ## Open
 
-### 2026-07-24 — reserved-keyword rule false-positives on `const` inside identifiers it doesn't own
-- **Rule**: "Syntax Error Risk: Reserved keyword 'const' used as identifier" (source file TBD — grep `scripts/quality-engine/rules` for the exact rule name)
-- **Symptom**: flagged `web/lib/config/cascade.ts` (commit `e6acd4e4`) twice for `export const ANALYSIS_CASCADE` / `export const CHAT_CASCADE` — normal `export const` declarations, not `const` used *as* an identifier name.
-- **Root cause (hypothesis, not yet confirmed)**: likely a crude substring/regex match on the literal token `const` without checking whether it's in declaration-keyword position vs. identifier position.
-- **Not fixed yet** — needs a look at the actual rule source before editing (same class of bug as the two `StreamResilienceRule` entries below: text-matching without position/AST awareness).
+### 2026-07-24 — driver silently suppresses medium/low findings whenever any high-severity finding exists
+- **File**: `scripts/verify-quality-engine.ts:301-309`
+- **Symptom**: `process.exit(0)` fires right after printing the high-severity block, before the script ever reaches the `nonCritical` (medium/low) print block below it. On a full-repo scan (`--mode full`), some high-severity finding almost always exists somewhere, so medium/low findings are effectively unreachable output in that mode — discovered while trying to verify the `ReservedKeywordRule` fix below: a genuine, correctly-flagged medium-severity violation in a throwaway test file produced zero output because an unrelated high-severity finding elsewhere in the repo triggered the early exit.
+- **Root cause**: each severity tier's block is written as an independent early-return/exit rather than accumulating all tiers before one final report.
+- **Not fixed yet** — needs the three severity blocks (critical/high/nonCritical) restructured to all print before any exit, with exit code decided last.
 
 ## Resolved
+
+### 2026-07-24 — `ReservedKeywordRule` false-positives on non-test files + property/type-literal names
+- **Rule**: `reserved-keyword-avoidance` (`scripts/quality-engine/rules/security.ts:472`)
+- **Symptom**: flagged `web/lib/config/cascade.ts` (`export const ANALYSIS_CASCADE ... as const`) and `worker/src/services/atomic-persist.ts` (`{ type: 'idle' }` discriminant properties, `AtomicPersistResult`'s `type:` fields) repeatedly — none are actual reserved-word identifier declarations.
+- **Root cause**: two independent gaps. (1) The rule's own comment says it's meant for test files only ("Reserved words that should not be used as identifiers in test files"), but the check had no file-path gate and ran against every file in the repo. (2) `Node.isIdentifier(node)` matched ANY identifier with matching text, including property/type-literal names (`{ type: 'x' }`) and the `const` in `as const` assertions — TypeScript represents both as Identifier nodes with the same text as a real declaration, but neither is one.
+- **Fix**: gated the whole rule behind a test-file path check (`.test.`/`.spec.`/`__tests__/`), and narrowed the identifier match to require the identifier actually be the declared name of a `VariableDeclaration`/`ParameterDeclaration`/`BindingElement`/`FunctionDeclaration`/`ClassDeclaration` (checked via `parent.getNameNode() === node`), excluding property and type-position identifiers.
+- **Verified**: isolated ts-morph script confirms the fixed rule flags `const type = 'value';` in a `.test.ts` file and does NOT flag `{ type: 'idle' }` or `] as const;` — could not verify end-to-end via the full driver due to the open issue above (medium-severity output unreachable whenever a high-severity finding exists elsewhere in the same full-repo scan).
+- **Commit**: (pending — see next commit in this session)
 
 ### 2026-07-24 — `StreamResilienceRule` false-positives on worker files (vocabulary gap)
 - **Rule**: `stream-resilience-audit` (`scripts/quality-engine/rules/streaming.ts`)
