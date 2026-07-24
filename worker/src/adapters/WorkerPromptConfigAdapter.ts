@@ -24,9 +24,18 @@
  * Supabase round trip on every single request.
  */
 
+import * as Sentry from '@sentry/cloudflare';
 import type { PromptConfigPort } from '../ports/PromptConfigPort';
 
 const rawFetch = fetch;
+// Bounded so a hung/slow Upstash response can't stall the analysis request
+// indefinitely -- same reasoning as CHANNEL_META_TIMEOUT_MS/comments timeout
+// elsewhere in this worker (settings-registry-tunable timeouts, not blind
+// picks). This one is small and local rather than registry-backed: it's a
+// pure infra-reachability check on a single small key, not a variable-cost
+// external fetch, so the fixed 2s bound is a resource safety net, not a
+// tunable business behavior.
+const REDIS_READ_TIMEOUT_MS = 2000;
 
 interface PromptConfig {
   latest?: string;
@@ -59,18 +68,43 @@ export class WorkerPromptConfigAdapter implements PromptConfigPort {
   }
 
   private async readConfig(): Promise<PromptConfig | null> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REDIS_READ_TIMEOUT_MS);
     try {
       const response = await rawFetch(`${this.url}/get/config:prompt_config`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${this.token}` },
+        signal: controller.signal,
       });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.warn(`[WorkerPromptConfigAdapter] Redis GET non-ok: ${response.status}, falling back to embedded prompt`);
+        Sentry.captureMessage('WorkerPromptConfigAdapter Redis GET non-ok', {
+          level: 'warning',
+          tags: { operation: 'worker-prompt-config-read', status: String(response.status) },
+        });
+        return null;
+      }
       const data = (await response.json()) as { result: string | null };
       if (!data.result) return null;
-      return typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
-    } catch {
-      console.warn('[WorkerPromptConfigAdapter] Redis GET failed, caller falls back to embedded prompt');
+      try {
+        return typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+      } catch (parseErr) {
+        console.warn('[WorkerPromptConfigAdapter] Redis value is not valid JSON, falling back to embedded prompt');
+        Sentry.captureException(parseErr, { tags: { operation: 'worker-prompt-config-parse' } });
+        return null;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const timedOut = err instanceof Error && err.name === 'AbortError';
+      console.warn(`[WorkerPromptConfigAdapter] Redis GET ${timedOut ? 'timed out' : 'failed'}, caller falls back to embedded prompt:`, message);
+      Sentry.captureMessage(`WorkerPromptConfigAdapter Redis GET ${timedOut ? 'timeout' : 'failed'}`, {
+        level: 'warning',
+        tags: { operation: 'worker-prompt-config-read', timedOut: String(timedOut) },
+        extra: { error: message },
+      });
       return null;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
