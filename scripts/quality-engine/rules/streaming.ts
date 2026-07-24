@@ -12,17 +12,28 @@ export const StreamResilienceRule: Rule = {
     const filePath = ctx.filePath.replace(/\\/g, "/");
     const text = source.getText();
 
-    // RCA (2026-07-24, PR #160): this rule only recognized the WEB store's
-    // settlement vocabulary (settleAnalysis/setError, from useSSEStream.ts's
-    // local closure) -- neither identifier can ever appear in a worker file,
-    // so this unconditionally false-positived on every worker/**/*.ts file
-    // containing any setTimeout+abort combo, regardless of correctness (e.g.
-    // worker/src/routes/analysis.ts's persist-retry timeout, unrelated to
-    // client stream settlement). The worker's actual equivalent is emitting
-    // an SSE error frame -- recognize that pattern too.
+    // RCA (2026-07-24, PR #160 + post-merge follow-up): two compounding false-
+    // positive sources.
+    //
+    // (a) The rule only recognized the WEB store's settlement vocabulary
+    // (settleAnalysis/setError, from useSSEStream.ts's local closure) --
+    // neither identifier can ever appear in a worker file, so this
+    // unconditionally false-positived on every worker/**/*.ts file containing
+    // any setTimeout+abort combo (e.g. analysis.ts's persist-retry timeout).
+    // The worker's actual equivalent is emitting an SSE error frame --
+    // recognize that pattern too.
+    //
+    // (b) The rule never confirmed the file is a client-facing stream
+    // response handler in the first place -- ANY setTimeout+abort pairing
+    // matched, including a plain bounded-fetch-with-timeout on a data
+    // adapter (WorkerPromptConfigAdapter's Redis read has nothing to
+    // "settle"; there's no stream response at all). "Settle error state"
+    // only means something for an actual ReadableStream/SSE response, so
+    // require that evidence before the setTimeout+abort check even applies.
+    const isStreamResponseHandler = /ReadableStream|text\/event-stream|EventSource|\.getReader\(\)|response\.body/.test(text);
     const hasWorkerErrorFrame = /send\(\s*\{\s*type:\s*["']error["']/.test(text);
 
-    if (text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError') && !hasWorkerErrorFrame) {
+    if (isStreamResponseHandler && text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError') && !hasWorkerErrorFrame) {
       findings.push({
         file: filePath,
         severity: "high",
