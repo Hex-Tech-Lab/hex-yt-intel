@@ -514,13 +514,6 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                       {' Use Re-analyze to attempt the rest.'}
                     </div>
                   )}
-                  {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
-                  <DimensionAccordion
-                    dimensions={dimensions}
-                    selectedDimensionKey={selectedDimensionKey}
-                    onSelectDimension={setSelectedDimensionKey}
-                    status={status}
-                  />
                   {status === 'complete' && auxStatus && (
                     <div className="flex flex-wrap gap-2" role="status" aria-label="Auxiliary data status">
                       <StatusBadge status={digest ? 'done' : 'idle'} label="DIGEST" />
@@ -529,6 +522,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                       <StatusBadge status={auxStatus.comments ? 'done' : 'idle'} label="COMMENTS" />
                     </div>
                   )}
+                  {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
+                  <DimensionAccordion
+                    dimensions={dimensions}
+                    selectedDimensionKey={selectedDimensionKey}
+                    onSelectDimension={setSelectedDimensionKey}
+                    status={status}
+                  />
                 </>
               ) : (
                 <VisualizationPanel

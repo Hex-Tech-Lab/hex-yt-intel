@@ -18,6 +18,10 @@ export interface RawHistoryOverviewRow {
   best_dimensions: number | null;
   present_dimensions: number[] | null;
   status: HistoryOverviewItem['status'];
+  has_digest: boolean | null;
+  has_description: boolean | null;
+  has_channel_meta: boolean | null;
+  has_comments: boolean | null;
 }
 
 /**
@@ -56,5 +60,9 @@ export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOvervi
     presentDimensions,
     missingDimensions: computeMissingDimensions(presentDimensions),
     status: row.status,
+    hasDigest: !!row.has_digest,
+    hasDescription: !!row.has_description,
+    hasChannelMeta: !!row.has_channel_meta,
+    hasComments: !!row.has_comments,
   };
 }

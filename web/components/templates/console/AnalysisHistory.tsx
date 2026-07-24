@@ -6,7 +6,7 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
-import { Icon } from '@/components/templates/_shared/primitives';
+import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
@@ -474,6 +474,16 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   {/* Per-dimension completeness map (green = generated, hollow = missing) */}
                   {item.status !== 'processing' && (item.presentDimensions.length > 0 || item.missingDimensions.length > 0) && (
                     <DimensionDots present={item.presentDimensions} totalDimensions={TOTAL_DIMENSIONS} />
+                  )}
+
+                  {/* Aux-element status row — mirrors the Wave A4 console-screen chips (Dim. 11+) */}
+                  {(item.status === 'complete' || item.status === 'partial') && (
+                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-[var(--line-faint)]" role="status" aria-label="Auxiliary data status">
+                      <StatusBadge status={item.hasDigest ? 'done' : 'idle'} label="DIGEST" />
+                      <StatusBadge status={item.hasDescription ? 'done' : 'idle'} label="DESCRIPTION" />
+                      <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="CHANNEL META" />
+                      <StatusBadge status={item.hasComments ? 'done' : 'idle'} label="COMMENTS" />
+                    </div>
                   )}
                 </div>
               );

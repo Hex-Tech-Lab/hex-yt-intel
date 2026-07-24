@@ -42,6 +42,10 @@ function baseRow(overrides: Partial<RawHistoryOverviewRow> = {}): RawHistoryOver
     best_dimensions: 11,
     present_dimensions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
     status: 'complete',
+    has_digest: true,
+    has_description: true,
+    has_channel_meta: true,
+    has_comments: true,
     ...overrides,
   };
 }
@@ -62,6 +66,10 @@ describe('mapHistoryOverviewRow', () => {
       presentDimensions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
       missingDimensions: [],
       status: 'complete',
+      hasDigest: true,
+      hasDescription: true,
+      hasChannelMeta: true,
+      hasComments: true,
     });
   });
 
