@@ -188,11 +188,19 @@ const MAX_CHANNEL_META_BYTES = 20_000;
 // 5x per analysis (once per parallel bundle stream) -- see call site.
 const CHANNEL_META_CACHE_TTL = 604_800;
 
-function truncateChannelMeta(meta: Record<string, unknown> | null): Record<string, unknown> | null {
+function truncateChannelMeta(meta: Record<string, unknown> | null, channelId: string | undefined): Record<string, unknown> | null {
   if (!meta) return null;
   const serialized = JSON.stringify(meta);
   if (serialized.length <= MAX_CHANNEL_META_BYTES) return meta;
+  // RCA (2026-07-24): this drop path had zero Sentry telemetry, unlike the fetch's
+  // non-ok/exception branches -- "has_channel_meta" chip consistently grey with no
+  // corresponding issue anywhere was the symptom that led here.
   console.warn(`[analyze-llm-stream] channelMeta exceeds ${MAX_CHANNEL_META_BYTES}B (${serialized.length}B), dropping`);
+  Sentry.captureMessage(`channel-meta dropped: exceeds size cap`, {
+    level: 'warning',
+    tags: { operation: 'channel-meta-truncate', channelId: channelId ?? 'unknown' },
+    extra: { channelId, byteSize: serialized.length, capBytes: MAX_CHANNEL_META_BYTES },
+  });
   return null;
 }
 
@@ -238,8 +246,27 @@ async function fetchChannelMetaCached(
       });
       return null;
     });
-  const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), CHANNEL_META_TIMEOUT_MS));
-  const result = truncateChannelMeta(await Promise.race([fetchPromise, timeoutPromise]));
+  let timedOut = false;
+  const timeoutPromise = new Promise<null>((resolve) =>
+    setTimeout(() => {
+      timedOut = true;
+      resolve(null);
+    }, CHANNEL_META_TIMEOUT_MS)
+  );
+  const raced = await Promise.race([fetchPromise, timeoutPromise]);
+  if (timedOut) {
+    // RCA (2026-07-24): the other two failure paths in this function report to
+    // Sentry; the race-timeout path silently returned null with no telemetry at
+    // all, making a "always grey, never any errors" symptom appear directly
+    // caused by this gap.
+    console.warn(`[analyze-llm-stream] channel-meta fetch exceeded ${CHANNEL_META_TIMEOUT_MS}ms budget for ${channelId}, proceeding without it`);
+    Sentry.captureMessage(`channel-meta dropped: fetch exceeded time budget`, {
+      level: 'warning',
+      tags: { operation: 'channel-meta-timeout', channelId: channelId ?? 'unknown' },
+      extra: { channelId, budgetMs: CHANNEL_META_TIMEOUT_MS },
+    });
+  }
+  const result = truncateChannelMeta(raced, channelId);
 
   if (result && cache) {
     cache.set(cacheKey, JSON.stringify(result), CHANNEL_META_CACHE_TTL).catch(() => {
@@ -648,7 +675,9 @@ function buildStreamResponse(
         send({ type: "error", error: error instanceof Error ? error.message : "stream failed" });
       } finally {
         if (!settled) {
-          atomicPersist.flush();
+          // Intentionally not awaited: waitUntil keeps this alive in the background;
+          // this stream doesn't relay persist status to the client (unlike chat-stream.ts).
+          void atomicPersist.flush();
         }
         persistController.abort();
         controller.close();

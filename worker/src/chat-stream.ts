@@ -389,7 +389,13 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         waitUntil: (p) => c.executionCtx.waitUntil(p),
       });
 
-      atomicPersist.flush();
+      // RCA (2026-07-24): must await -- flush() used to fire-and-forget via
+      // waitUntil while this function closed the SSE stream immediately after,
+      // so the 'persist'/'saved'/'failed' frames written inside persistFn()
+      // were enqueued on an already-closed controller and never reached the
+      // client. Every chat message hit the client's 8s "stuck at saving"
+      // watchdog as a result -- not intermittent, the only path that ever fired.
+      await atomicPersist.flush();
 
       // STAGE 4: Emit DONE event (stream closed)
       send({ type: "done", requestId: req.requestId });
