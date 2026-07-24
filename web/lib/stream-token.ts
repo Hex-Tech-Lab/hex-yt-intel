@@ -44,6 +44,20 @@ export async function signChatToken(conversationId: string, userId: string, mode
   return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
 }
 
+/**
+ * Signs a Vercel->Worker call to enqueue a Tier 3 (uncapped) comment fetch job.
+ * Longer TTL than the streaming tokens (TOKEN_TTL_MS=120s) -- this call just
+ * enqueues, but the user-facing action (approving a credit estimate) can sit
+ * on a slower network/tab-switch path before the request actually fires.
+ */
+const COMMENTS_TIER3_TOKEN_TTL_MS = 300_000;
+
+export async function signCommentsTier3Token(sampleRunId: string, userId: string): Promise<{ sig: string; exp: number }> {
+  const exp = Date.now() + COMMENTS_TIER3_TOKEN_TTL_MS;
+  const msg = `comments-tier3:${sampleRunId}:${userId}:${exp}`;
+  return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
+}
+
 export async function verifyChatToken(conversationId: string, userId: string, exp: number, sig: string, models: string[] = []): Promise<boolean> {
   if (Date.now() > exp) return false;
   const modelStr = [...models].sort().join(',');
@@ -53,11 +67,11 @@ export async function verifyChatToken(conversationId: string, userId: string, ex
 }
 
 /**
- * The two server-to-server persist flows that sign content with the shared HMAC
+ * The server-to-server persist flows that sign content with the shared HMAC
  * secret. The purpose tag is part of the signed message, so a signature minted
  * for one flow can never be replayed into the other.
  */
-export type BoundSigPurpose = 'persist' | 'chat-persist';
+export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3';
 
 /**
  * The canonical message for a bound, time-limited S2S content signature. MUST be

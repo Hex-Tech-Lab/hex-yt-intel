@@ -1,4 +1,4 @@
-import { signStreamToken, signChatToken } from '@/lib/stream-token';
+import { signStreamToken, signChatToken, signCommentsTier3Token } from '@/lib/stream-token';
 import type { StreamToken, CryptographicTokenPort } from '@/lib/ports';
 
 /**
@@ -30,5 +30,17 @@ export class StreamTokenAdapter implements CryptographicTokenPort {
     models: string[];
   }): Promise<StreamToken> {
     return signChatToken(params.conversationId, params.userId, params.models);
+  }
+
+  /**
+   * Sign a Tier 3 comments-fetch enqueue token bound to sampleRunId + userId.
+   * @param params Sample-run and user IDs
+   * @returns Stream token with signature and expiry
+   */
+  async signCommentsTier3Token(params: {
+    sampleRunId: string;
+    userId: string;
+  }): Promise<StreamToken> {
+    return signCommentsTier3Token(params.sampleRunId, params.userId);
   }
 }
