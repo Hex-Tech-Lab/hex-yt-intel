@@ -16,7 +16,19 @@ export type AtomicPersistResult =
   | { type: 'failed'; error?: string };
 
 export function createAtomicPersist(options: AtomicPersistOptions): {
-  flush: () => void;
+  /**
+   * Returns the persist promise so callers that stream status back to the
+   * client (chat-stream.ts) can await it before closing the response --
+   * `waitUntil` only keeps the Worker's execution context alive for
+   * background work, it does not keep an already-closed SSE stream open, so
+   * any `send()` calls inside `persist()` after an unawaited `flush()` never
+   * reach the client (RCA 2026-07-24: every chat message hit the client's
+   * 8s "stuck at saving" watchdog because of exactly this). Callers that
+   * intentionally don't stream persist status (analysis.ts's interrupted-path
+   * flush) can keep calling this without awaiting -- `waitUntil` still runs
+   * it to completion in the background either way.
+   */
+  flush: () => Promise<void>;
   result: () => AtomicPersistResult;
 } {
   const maxRetries = options.maxRetries ?? 3;
@@ -84,8 +96,11 @@ export function createAtomicPersist(options: AtomicPersistOptions): {
   return {
     flush: () => {
       if (state.type === 'idle' || state.type === 'failed') {
-        options.waitUntil(persistFn('completed'));
+        const persistPromise = persistFn('completed');
+        options.waitUntil(persistPromise);
+        return persistPromise;
       }
+      return Promise.resolve();
     },
     result: () => state,
   };
