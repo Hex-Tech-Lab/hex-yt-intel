@@ -56,21 +56,23 @@ export const CHAT_CASCADE: readonly CascadeItem[] = [
 /**
  * LLM cascade for video analysis operations.
  * Uses Claude models with high output limits for comprehensive analysis:
- * - Claude Haiku 4.5 (primary, cost-effective)
- * - Claude Haiku 4.5 via alternate providers (Vertex/Bedrock as failover)
- * - Claude Sonnet 4.6 Nitro (premium fallback)
+ * - Claude Haiku 4.5 pinned to Vertex/Bedrock first (30-40% faster, cheaper
+ *   per-token than routing through Anthropic direct; left unpinned, OpenRouter's
+ *   own auto-routing intermittently picked Anthropic direct anyway)
+ * - Claude Haiku 4.5 via Anthropic direct (failover if Vertex/Bedrock both down)
+ * - Claude Sonnet 4.6 Nitro (premium fallback, both Haiku tiers exhausted)
  */
 export const ANALYSIS_CASCADE: readonly CascadeItem[] = [
   {
     model: 'anthropic/claude-haiku-4.5',
-    name: 'Claude Haiku 4.5',
+    name: 'Claude Haiku 4.5 (Vertex/Bedrock)',
     cost: 0.0015,
+    providerOrder: ['google-vertex', 'amazon-bedrock'],
   },
   {
     model: 'anthropic/claude-haiku-4.5',
-    name: 'Claude Haiku 4.5 (Alternate Route)',
+    name: 'Claude Haiku 4.5 (Anthropic Direct)',
     cost: 0.0015,
-    providerOrder: ['google-vertex', 'amazon-bedrock'],
   },
   {
     model: 'anthropic/claude-sonnet-4.6:nitro',
