@@ -1,0 +1,27 @@
+worker/src/services/atomic-persist.ts
+  s_0eded1e9d0cab6::t_d364ec8d6a534b 19-31
+  s_0eded1e9d0cab6::t_2fe7ff09135258 99-101
+  s_0eded1e9d0cab6::t_fbd9194840534d 103
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_f7fd7347630b21 678-680
+  s_0eded1e9d0cab6::t_2ea6feae9472d3 191,195-197,199-203
+  s_0eded1e9d0cab6::t_d4a1e61e5f5f6a 249-269
+worker/src/chat-stream.ts
+  s_0eded1e9d0cab6::t_a63fbd663971f3 392-398
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "c187d552b5eb0d0b6e8e9e39696fca2b93237a8a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
