@@ -1,0 +1,45 @@
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_0eded1e9d0cab6::t_1fdcf4adb625e7 88-89
+  s_0eded1e9d0cab6::t_bdf4e23b37f2f9 211-219,232-244
+  s_0eded1e9d0cab6::t_69e83a578652c7 220-231
+  s_0eded1e9d0cab6::t_f5cc615a719733 18,21-25
+  s_0eded1e9d0cab6::t_bf0e7ea0e89817 68-69
+  s_0eded1e9d0cab6::t_5a717255183cb7 283-284
+  s_0eded1e9d0cab6::t_ba596eab1c52fd 7
+  s_0eded1e9d0cab6::t_aa4cf9b0dcf183 26
+web/lib/adapters/index.ts
+  s_0eded1e9d0cab6::t_7bd197ce16018f 83-89
+supabase/migrations/20260725110000_comments_sync_pool_fetch_settings.sql
+  s_0eded1e9d0cab6::t_7b074d0115330f 1-29
+web/app/api/analyses/route.ts
+  s_0eded1e9d0cab6::t_d5d35a89350102 23,33,42-43
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_32d3ebc6d80bcd 16
+  s_0eded1e9d0cab6::t_dce26cb4054582 505
+  s_0eded1e9d0cab6::t_da77d1490441f8 106-119
+  s_0eded1e9d0cab6::t_741410ac5eb238 757-758
+  s_0eded1e9d0cab6::t_006f063fc4a821 408-502,504,506-515
+  s_0eded1e9d0cab6::t_010f59faf4c3bc 503
+  s_0eded1e9d0cab6::t_d86fe68608b796 525-526,538-544
+web/lib/types/contracts.ts
+  s_0eded1e9d0cab6::t_a73766b663359f 197-215
+  s_0eded1e9d0cab6::t_0c8161b4e8c21a 234-235
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_5e1f876aded54c 223-224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "9fb350819dada3c674a4cdee1852f3e380ddf6b4",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
