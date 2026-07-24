@@ -1,0 +1,22 @@
+web/lib/services/comment-sampling.ts
+  s_0eded1e9d0cab6::t_ce83f293266f8f 1-128,130-144,146,148-165,167-178
+  s_0eded1e9d0cab6::t_7f90cfb31be59d 129,145,147,166
+web/lib/__tests__/comment-sampling.test.ts
+  s_0eded1e9d0cab6::t_52abae6ac936c7 1-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "42fe5e39455604638272097360bca213325298ca",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
