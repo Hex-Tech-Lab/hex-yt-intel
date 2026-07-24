@@ -12,7 +12,17 @@ export const StreamResilienceRule: Rule = {
     const filePath = ctx.filePath.replace(/\\/g, "/");
     const text = source.getText();
 
-    if (text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError')) {
+    // RCA (2026-07-24, PR #160): this rule only recognized the WEB store's
+    // settlement vocabulary (settleAnalysis/setError, from useSSEStream.ts's
+    // local closure) -- neither identifier can ever appear in a worker file,
+    // so this unconditionally false-positived on every worker/**/*.ts file
+    // containing any setTimeout+abort combo, regardless of correctness (e.g.
+    // worker/src/routes/analysis.ts's persist-retry timeout, unrelated to
+    // client stream settlement). The worker's actual equivalent is emitting
+    // an SSE error frame -- recognize that pattern too.
+    const hasWorkerErrorFrame = /send\(\s*\{\s*type:\s*["']error["']/.test(text);
+
+    if (text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError') && !hasWorkerErrorFrame) {
       findings.push({
         file: filePath,
         severity: "high",
