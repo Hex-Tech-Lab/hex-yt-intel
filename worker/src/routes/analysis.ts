@@ -97,6 +97,11 @@ interface StreamRequest {
     timeoutPerAttemptMs: number;
     maxPayloadBytes: number;
   };
+  // Same reasoning as commentsConfig -- see fetchChannelMetaCached.
+  channelMetaConfig?: {
+    timeoutMs: number;
+    maxPayloadBytes: number;
+  };
 }
 
 interface TokenVerificationResult {
@@ -177,29 +182,34 @@ interface ResolvedTranscript {
 // for a "nice to have" field, risking the exact stream-timeout/billing-failure
 // class of bug A6/A7 fixed. Bounded so a slow/degraded Decodo never delays
 // synthesis; on timeout we simply proceed without channel metadata.
-const CHANNEL_META_TIMEOUT_MS = 4000;
-// Caps how much of the scraped channel page ends up in validation_report
-// (persisted, unbounded jsonb) and therefore in every chat grounding prompt.
-// Decodo's `youtube_channel` scrape can return large nested objects; nothing
-// upstream constrains its shape or size.
-const MAX_CHANNEL_META_BYTES = 20_000;
+// Resolved server-side (Vercel has the DB access this worker doesn't, see
+// ADR 005) from the settings registry's chat.channelMeta.* keys and forwarded
+// per-request -- must be kept in sync with the registry's seeded defaults
+// (20260724120000_channel_meta_fetch_settings.sql), used only when a request
+// doesn't carry channelMetaConfig (stale/old client) or the registry itself
+// is unreachable.
+const CHANNEL_META_CONFIG_FALLBACK = { timeoutMs: 4000, maxPayloadBytes: 20_000 };
 // 7-day TTL: channel-level stats (subscriber count, description) change far
 // slower than per-video data, and this also protects against hitting Decodo
 // 5x per analysis (once per parallel bundle stream) -- see call site.
 const CHANNEL_META_CACHE_TTL = 604_800;
 
-function truncateChannelMeta(meta: Record<string, unknown> | null, channelId: string | undefined): Record<string, unknown> | null {
+function truncateChannelMeta(
+  meta: Record<string, unknown> | null,
+  channelId: string | undefined,
+  config: typeof CHANNEL_META_CONFIG_FALLBACK,
+): Record<string, unknown> | null {
   if (!meta) return null;
   const serialized = JSON.stringify(meta);
-  if (serialized.length <= MAX_CHANNEL_META_BYTES) return meta;
+  if (serialized.length <= config.maxPayloadBytes) return meta;
   // RCA (2026-07-24): this drop path had zero Sentry telemetry, unlike the fetch's
   // non-ok/exception branches -- "has_channel_meta" chip consistently grey with no
   // corresponding issue anywhere was the symptom that led here.
-  console.warn(`[analyze-llm-stream] channelMeta exceeds ${MAX_CHANNEL_META_BYTES}B (${serialized.length}B), dropping`);
+  console.warn(`[analyze-llm-stream] channelMeta exceeds ${config.maxPayloadBytes}B (${serialized.length}B), dropping`);
   Sentry.captureMessage(`channel-meta dropped: exceeds size cap`, {
     level: 'warning',
     tags: { operation: 'channel-meta-truncate', channelId: channelId ?? 'unknown' },
-    extra: { channelId, byteSize: serialized.length, capBytes: MAX_CHANNEL_META_BYTES },
+    extra: { channelId, byteSize: serialized.length, capBytes: config.maxPayloadBytes },
   });
   return null;
 }
@@ -208,6 +218,7 @@ async function fetchChannelMetaCached(
   channelId: string | undefined,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
   cache?: UpstashCacheAdapter,
+  config: typeof CHANNEL_META_CONFIG_FALLBACK = CHANNEL_META_CONFIG_FALLBACK,
 ): Promise<Record<string, unknown> | null> {
   if (!channelId) return null;
   const cacheKey = `channel-meta:${channelId}`;
@@ -251,7 +262,7 @@ async function fetchChannelMetaCached(
     setTimeout(() => {
       timedOut = true;
       resolve(null);
-    }, CHANNEL_META_TIMEOUT_MS)
+    }, config.timeoutMs)
   );
   const raced = await Promise.race([fetchPromise, timeoutPromise]);
   if (timedOut) {
@@ -259,14 +270,14 @@ async function fetchChannelMetaCached(
     // Sentry; the race-timeout path silently returned null with no telemetry at
     // all, making a "always grey, never any errors" symptom appear directly
     // caused by this gap.
-    console.warn(`[analyze-llm-stream] channel-meta fetch exceeded ${CHANNEL_META_TIMEOUT_MS}ms budget for ${channelId}, proceeding without it`);
+    console.warn(`[analyze-llm-stream] channel-meta fetch exceeded ${config.timeoutMs}ms budget for ${channelId}, proceeding without it`);
     Sentry.captureMessage(`channel-meta dropped: fetch exceeded time budget`, {
       level: 'warning',
       tags: { operation: 'channel-meta-timeout', channelId: channelId ?? 'unknown' },
-      extra: { channelId, budgetMs: CHANNEL_META_TIMEOUT_MS },
+      extra: { channelId, budgetMs: config.timeoutMs },
     });
   }
-  const result = truncateChannelMeta(raced, channelId);
+  const result = truncateChannelMeta(raced, channelId, config);
 
   if (result && cache) {
     cache.set(cacheKey, JSON.stringify(result), CHANNEL_META_CACHE_TTL).catch(() => {
@@ -387,6 +398,7 @@ async function fetchTranscriptIfMissing(
   cache?: UpstashCacheAdapter,
   knownCommentCount?: number,
   commentsConfig: typeof COMMENTS_CONFIG_FALLBACK = COMMENTS_CONFIG_FALLBACK,
+  channelMetaConfig: typeof CHANNEL_META_CONFIG_FALLBACK = CHANNEL_META_CONFIG_FALLBACK,
 ): Promise<ResolvedTranscript> {
   const isPlaceholder = transcript?.includes("Transcript unavailable for this video");
   let segments: TranscriptSegment[] | undefined;
@@ -397,7 +409,7 @@ async function fetchTranscriptIfMissing(
   // at all, on top of it being fetched then immediately discarded after a log line.
   // Cached + time-bounded (see fetchChannelMetaCached) so it can never meaningfully
   // delay the transcript-critical path this function exists for.
-  const channelMetaPromise: Promise<Record<string, unknown> | null> = fetchChannelMetaCached(channelId, env, cache);
+  const channelMetaPromise: Promise<Record<string, unknown> | null> = fetchChannelMetaCached(channelId, env, cache, channelMetaConfig);
   // Same reasoning applies to comments: cached + time-bounded, fetched once
   // regardless of transcript branch.
   const commentsPromise: Promise<VideoComment[] | null> = fetchCommentsCached(videoId, env, cache, knownCommentCount, commentsConfig);
@@ -612,6 +624,7 @@ function buildStreamResponse(
           return typeof n === 'number' && Number.isFinite(n) ? n : undefined;
         })(),
         req.commentsConfig ?? COMMENTS_CONFIG_FALLBACK,
+        req.channelMetaConfig ?? CHANNEL_META_CONFIG_FALLBACK,
       )]);
 
       const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value.transcript : undefined;

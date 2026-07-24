@@ -219,6 +219,7 @@ export function useSSEStream() {
                   chunkIndex: i + 1,
                   totalChunks: TOTAL_STREAMS,
                   commentsConfig: job.commentsConfig,
+                  channelMetaConfig: job.channelMetaConfig,
                 };
 
                 const streamController = new AbortController();

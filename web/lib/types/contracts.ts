@@ -181,6 +181,19 @@ export interface CommentsFetchConfig {
   maxPayloadBytes: number;
 }
 
+/**
+ * Channel-metadata fetch tunables (settings registry `chat.channelMeta.*`).
+ * Same reasoning as CommentsFetchConfig -- resolved server-side and
+ * forwarded, never hardcoded worker-side. RCA (2026-07-24): these were two
+ * hardcoded worker constants (CHANNEL_META_TIMEOUT_MS, MAX_CHANNEL_META_BYTES)
+ * whose silent-drop paths had no Sentry telemetry, making the "Channel Meta"
+ * history chip consistently grey with zero corresponding issues anywhere.
+ */
+export interface ChannelMetaFetchConfig {
+  timeoutMs: number;
+  maxPayloadBytes: number;
+}
+
 export interface WorkerStreamRequest {
   videoId: string;
   analysisId: string;
@@ -198,6 +211,7 @@ export interface WorkerStreamRequest {
   chunkIndex?: number;
   totalChunks?: number;
   commentsConfig?: CommentsFetchConfig;
+  channelMetaConfig?: ChannelMetaFetchConfig;
 }
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────
