@@ -9,8 +9,15 @@
 --   - has_description: validation_report.metadata.description non-empty
 --   - has_channel_meta: validation_report.channelMeta non-empty object
 --   - has_comments: validation_report.comments non-empty array
+--
+-- `create or replace` cannot change a function's return-row shape (adding 4
+-- new OUT columns here) -- Postgres requires the old signature dropped first
+-- (SQLSTATE 42P13, caught by CI's `supabase db push` before it ever reached
+-- the remote database).
 
-create or replace function public.get_user_history_overview(p_user_id uuid)
+drop function if exists public.get_user_history_overview(uuid);
+
+create function public.get_user_history_overview(p_user_id uuid)
 returns table (
   base_video_id text,
   latest_analysis_id uuid,
