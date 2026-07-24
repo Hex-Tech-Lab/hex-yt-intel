@@ -38,3 +38,6 @@ docs/for_sharing/
 # Dataset assets (local-only calibration — never commit large CSV corpora)
 scripts/quality-engine/calibration/data/
 .qa-intel/baseline.json
+
+# Supabase CLI local branch-tracking state (created by `supabase db start`/`reset`)
+supabase/.branches/
