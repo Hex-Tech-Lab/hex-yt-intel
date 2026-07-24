@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, startTransition, useRef, type ReactNode } from 'react';
+import { TextInput } from '@astryxdesign/core/TextInput';
 import { useHistoryOverview } from '@/hooks/useHistoryOverview';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -366,19 +367,19 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       )}
 
       <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Icon
-            icon="solar:magnifer-linear"
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] pointer-events-none"
-          />
-          <input
-            type="text"
+        <div className="flex-1 min-w-[200px]">
+          {/* Astryx pilot (2026-07-24): first component from the new design
+              system, per user's explicit ask to rebuild recent UI work on it.
+              startIcon/hasClear/isLabelHidden replace what was previously
+              hand-rolled with an absolutely-positioned Icon + raw <input>. */}
+          <TextInput
+            label="Search analysis history by title or channel"
+            isLabelHidden
             value={searchInput}
-            onChange={(e) => { setSearchInput(e.target.value); setCurrentPage(0); }}
+            onChange={(value) => { setSearchInput(value); setCurrentPage(0); }}
             placeholder="Search by title or channel…"
-            aria-label="Search analysis history by title or channel"
-            className="w-full pl-8 pr-3 py-2 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] placeholder:text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)] focus:border-[var(--accent)] outline-none"
+            startIcon={<Icon icon="solar:magnifer-linear" size={14} />}
+            hasClear
           />
         </div>
 
