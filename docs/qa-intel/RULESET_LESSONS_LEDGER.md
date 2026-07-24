@@ -21,6 +21,14 @@ once the corresponding commit lands, the commit hash is the permanent record.
 - **Root cause**: each severity tier's block is written as an independent early-return/exit rather than accumulating all tiers before one final report.
 - **Not fixed yet** — needs the three severity blocks (critical/high/nonCritical) restructured to all print before any exit, with exit code decided last.
 
+### 2026-07-25 — secrets-exposure "token" pattern false-positives on pagination cursors
+- **Rule**: the Sentry/telemetry secrets-exposure check (`scripts/quality-engine/rules/security.ts`, "Secrets Exposure: Sensitive data in telemetry")
+- **Symptom**: flagged `worker/src/services/MetadataScraper.ts`'s new `fetchCommentsPage` (`pageToken`, passed into `Sentry.captureMessage`'s `extra`) as a high-severity secret leak — high severity is CI-blocking. `pageToken` is YouTube Data API's opaque pagination continuation cursor, not a credential; Google's own docs treat it as safe to log.
+- **Root cause**: the rule's `sensitivePatterns` list matches any identifier containing the substring `token` with no distinction between credential tokens (`accessToken`, `authToken`, `bearerToken`, `refreshToken`) and pagination cursors (`pageToken`, `nextPageToken`, `cursorToken`).
+- **Fix**: added a `PAGINATION_TOKEN_NAME` regex (`^(page|next|prev|previous|continuation|cursor)token$`) that exempts only the `token` pattern's benign name-shape from the hit, applied narrowly (not a blanket allowlist token, still catches `accessToken`/`authToken`/etc.).
+- **Verified**: working-tree scan on the real file now shows zero secrets-exposure findings; a synthetic `accessToken` case in a throwaway file still fires correctly (isolated, not committed).
+- **Commit**: (pending — see next commit in this session)
+
 ## Resolved
 
 ### 2026-07-24 — `ReservedKeywordRule` false-positives on non-test files + property/type-literal names
