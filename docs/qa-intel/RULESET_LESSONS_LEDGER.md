@@ -15,7 +15,11 @@ once the corresponding commit lands, the commit hash is the permanent record.
 
 ## Open
 
-*(none — both entries below from 2026-07-24 are resolved as of this writing)*
+### 2026-07-24 — reserved-keyword rule false-positives on `const` inside identifiers it doesn't own
+- **Rule**: "Syntax Error Risk: Reserved keyword 'const' used as identifier" (source file TBD — grep `scripts/quality-engine/rules` for the exact rule name)
+- **Symptom**: flagged `web/lib/config/cascade.ts` (commit `e6acd4e4`) twice for `export const ANALYSIS_CASCADE` / `export const CHAT_CASCADE` — normal `export const` declarations, not `const` used *as* an identifier name.
+- **Root cause (hypothesis, not yet confirmed)**: likely a crude substring/regex match on the literal token `const` without checking whether it's in declaration-keyword position vs. identifier position.
+- **Not fixed yet** — needs a look at the actual rule source before editing (same class of bug as the two `StreamResilienceRule` entries below: text-matching without position/AST awareness).
 
 ## Resolved
 
