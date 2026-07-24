@@ -67,3 +67,8 @@ export * from './VideoPlayerPort';
  * Settings persistence port - Stores user preferences and configurations.
  */
 export * from './SettingsPersistencePort';
+
+/**
+ * Comment sampling port - Resolves tiered sample plans and Tier 3 credit estimates.
+ */
+export * from './CommentSamplingPort';
