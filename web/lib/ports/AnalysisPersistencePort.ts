@@ -52,6 +52,11 @@ export interface HistoryOverviewItem {
   missingDimensions: number[];
   /** Honest rollup: complete (validated) | partial (usable) | processing | failed. */
   status: 'complete' | 'partial' | 'processing' | 'failed';
+  /** Aux-element status row (Wave A4, mirrored from the console screen) for the winner analysis. */
+  hasDigest: boolean;
+  hasDescription: boolean;
+  hasChannelMeta: boolean;
+  hasComments: boolean;
 }
 
 /** Parameters for the validation_report blob persisted alongside the stub. */
