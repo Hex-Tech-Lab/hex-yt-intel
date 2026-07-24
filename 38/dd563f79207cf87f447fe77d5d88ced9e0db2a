@@ -1,0 +1,19 @@
+supabase/migrations/20260724100000_history_overview_function_v6_aux_status.sql
+  s_0eded1e9d0cab6::t_e769f4e12448cf 12-18,20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "38dd563f79207cf87f447fe77d5d88ced9e0db2a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
