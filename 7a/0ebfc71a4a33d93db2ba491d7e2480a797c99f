@@ -1,0 +1,32 @@
+worker/src/services/PromptBuilder.ts
+  s_0eded1e9d0cab6::t_c49b561a2f2ef0 2,4,10-22,25,27-28,32-33,35
+  s_0eded1e9d0cab6::t_5d5a43e206affb 23-24
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_95719f69c03eb8 687-691
+  s_0eded1e9d0cab6::t_fdffa0d9b04504 11
+  s_0eded1e9d0cab6::t_b388b0d285f06e 780-785
+worker/src/adapters/WorkerPromptConfigAdapter.ts
+  s_0eded1e9d0cab6::t_e542bd20bbfd14 1-102
+worker/src/ports/PromptConfigPort.ts
+  s_0eded1e9d0cab6::t_11b3b8d269dc74 1-9,12
+  s_0eded1e9d0cab6::t_d8e1cc26193fcf 10-11
+web/lib/prompts/factory.ts
+  s_0eded1e9d0cab6::t_9cf3f40bb68b00 38,46
+  s_0eded1e9d0cab6::t_48f2f4232bb596 9-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "7a0ebfc71a4a33d93db2ba491d7e2480a797c99f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
