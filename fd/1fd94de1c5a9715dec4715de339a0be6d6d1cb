@@ -1,0 +1,35 @@
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_392c94bc172269 370-377,379,381-382
+  s_0eded1e9d0cab6::t_2377c59b3d3179 4
+web/lib/prompts/executive-digest.ts
+  s_0eded1e9d0cab6::t_456f9e31bb8d00 17-19
+  s_0eded1e9d0cab6::t_fa07634c946ef6 27-31,33
+pnpm-workspace.yaml
+  s_0eded1e9d0cab6::t_a97d81ca87fe2b 59
+web/app/globals.css
+  s_0eded1e9d0cab6::t_7d001e65c381b8 4-9
+web/lib/prompts/fallbacks/executive-digest.fallback.ts
+  s_0eded1e9d0cab6::t_4d2c35681bdca9 1-3
+web/package.json
+  s_0eded1e9d0cab6::t_8edffb2be13283 18-19
+web/lib/prompts/fallback-loader.ts
+  s_0eded1e9d0cab6::t_d562f64ec0b7ea 1-22
+pnpm-lock.yaml
+  s_0eded1e9d0cab6::t_b022c22e1a4ebd 63-68,268,291-303,688-696,1825-1827,3043-3045,3942-3947,4359-4363,5348-5350,5969-5981,6285-6292,7124-7129,8480-8481,9636-9644,10049-10052,10436,11415-11416,11966,11972
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "fd1fd94de1c5a9715dec4715de339a0be6d6d1cb",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
