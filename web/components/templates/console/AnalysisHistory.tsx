@@ -43,10 +43,10 @@ function MetricChip({ icon, children, title }: { icon: string; children: ReactNo
  * insufficient-data" amber tier needs a per-dimension substantive signal from
  * the history-overview function — tracked separately.)
  */
-function DimensionDots({ present, totalDimensions }: { present: number[]; totalDimensions: number }) {
+function DimensionDots({ present, totalDimensions, auxChips }: { present: number[]; totalDimensions: number; auxChips?: ReactNode }) {
   const presentSet = new Set(present);
   return (
-    <div className="flex items-center gap-1 flex-wrap mt-3 pt-3 border-t border-[var(--line-faint)]">
+    <div className="flex items-center gap-1.5 flex-wrap mt-3 pt-3 border-t border-[var(--line-faint)]">
       <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-muted)] mr-1">Dimensions</span>
       {Array.from({ length: totalDimensions }, (_, i) => i + 1).map((n) => {
         const isPresent = presentSet.has(n);
@@ -64,6 +64,7 @@ function DimensionDots({ present, totalDimensions }: { present: number[]; totalD
           </span>
         );
       })}
+      {auxChips}
     </div>
   );
 }
@@ -482,19 +483,25 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                     </span>
                   </div>
 
-                  {/* Per-dimension completeness map (green = generated, hollow = missing) */}
+                  {/* Per-dimension completeness map (green = generated, hollow = missing), aux-status
+                      chips (Wave A4) appended to the SAME wrapping row right after dim. 11 -- one
+                      flex-wrap container so chips spill to a new line on narrow viewports instead of
+                      a fixed second row that could clip. */}
                   {item.status !== 'processing' && (item.presentDimensions.length > 0 || item.missingDimensions.length > 0) && (
-                    <DimensionDots present={item.presentDimensions} totalDimensions={TOTAL_DIMENSIONS} />
-                  )}
-
-                  {/* Aux-element status row — mirrors the Wave A4 console-screen chips (Dim. 11+) */}
-                  {(item.status === 'complete' || item.status === 'partial') && (
-                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-[var(--line-faint)]" role="status" aria-label="Auxiliary data status">
-                      <StatusBadge status={item.hasDigest ? 'done' : 'idle'} label="DIGEST" />
-                      <StatusBadge status={item.hasDescription ? 'done' : 'idle'} label="DESCRIPTION" />
-                      <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="CHANNEL META" />
-                      <StatusBadge status={item.hasComments ? 'done' : 'idle'} label="COMMENTS" />
-                    </div>
+                    <DimensionDots
+                      present={item.presentDimensions}
+                      totalDimensions={TOTAL_DIMENSIONS}
+                      auxChips={
+                        (item.status === 'complete' || item.status === 'partial') && (
+                          <span className="flex flex-wrap gap-1.5 ml-1" role="status" aria-label="Auxiliary data status">
+                            <StatusBadge status={item.hasDigest ? 'done' : 'idle'} label="DIGEST" />
+                            <StatusBadge status={item.hasDescription ? 'done' : 'idle'} label="DESCRIPTION" />
+                            <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="CHANNEL META" />
+                            <StatusBadge status={item.hasComments ? 'done' : 'idle'} label="COMMENTS" />
+                          </span>
+                        )
+                      }
+                    />
                   )}
                 </div>
               );
