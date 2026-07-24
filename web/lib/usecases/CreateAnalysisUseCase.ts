@@ -15,6 +15,7 @@ import { createHash } from 'crypto';
 import { env } from '@/lib/env';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import type { CommentsFetchConfig } from '@/lib/types/contracts';
+import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 // Must match the registry's seeded defaults (20260723190000_comments_fetch_settings.sql)
 // -- used only if the registry is genuinely unreachable, never as the primary source.
@@ -33,6 +34,8 @@ export interface CreateAnalysisUseCaseParams {
   timezone: string;
   persona?: PersonaId;
   forceRefresh?: boolean;
+  /** UA-derived device signal (cosmetic only — see client-platform.ts); null when UA absent/unparseable. */
+  clientPlatform?: ClientPlatform | null;
 }
 
 export interface UseCaseSuccess {
@@ -143,6 +146,7 @@ export class CreateAnalysisUseCase {
       userId: params.userId,
       title: ingestionResult.metadata.title,
       transcriptHash,
+      clientPlatform: params.clientPlatform ?? null,
       validationReport: {
         status: 'processing',
         transcriptAvailable: ingestionResult.transcriptAvailable,

@@ -46,6 +46,7 @@ function baseRow(overrides: Partial<RawHistoryOverviewRow> = {}): RawHistoryOver
     has_description: true,
     has_channel_meta: true,
     has_comments: true,
+    client_platform: 'ios',
     ...overrides,
   };
 }
@@ -70,7 +71,13 @@ describe('mapHistoryOverviewRow', () => {
       hasDescription: true,
       hasChannelMeta: true,
       hasComments: true,
+      clientPlatform: 'ios',
     });
+  });
+
+  it('nulls clientPlatform for rows predating the column', () => {
+    const item = mapHistoryOverviewRow(baseRow({ client_platform: null }));
+    expect(item.clientPlatform).toBeNull();
   });
 
   it('coerces PostgREST bigint strings (count/sum) to numbers', () => {

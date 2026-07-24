@@ -11,9 +11,15 @@ import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 import type { HistoryOverviewItem } from '@/lib/ports';
+import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 type SortOrder = 'recent' | 'oldest' | 'most-analyzed';
 type FilterStatus = 'all' | HistoryOverviewItem['status'];
+
+// UI micro-interaction timing, not a business-logic tunable -- keeps keystrokes
+// from re-filtering on every character while still feeling instant (data is
+// already client-resident, see search-box wiring below for why).
+const SEARCH_DEBOUNCE_MS = 200;
 
 export interface AnalysisHistoryProps {
   /** Called when user selects an analysis; parent should switch to console view. */
@@ -26,6 +32,38 @@ const STATUS_STYLE: Record<HistoryOverviewItem['status'], { label: string; cls: 
   processing: { label: 'Processing', cls: 'bg-[var(--accent)]/10 text-[var(--accent)]' },
   failed: { label: 'Failed', cls: 'bg-[var(--ink-muted)]/10 text-[var(--ink-muted)]' },
 };
+
+// Device/platform chip config (RCA 2026-07-24: cross-account confusion had no
+// "which device did I use" UI signal). Colors are OS-family-grouped CSS vars
+// defined in globals.css -- Apple family shares blue, Android family shares
+// green, Windows/Linux/web each get one distinct hue. Icons follow the same
+// solar icon-set already used for MetricChip/Icon throughout this file.
+const PLATFORM_STYLE: Record<ClientPlatform, { label: string; icon: string; varName: string }> = {
+  ios: { label: 'iOS', icon: 'solar:iphone-linear', varName: '--platform-ios' },
+  'ios-app': { label: 'iOS App', icon: 'solar:iphone-linear', varName: '--platform-ios-app' },
+  macos: { label: 'macOS', icon: 'solar:laptop-linear', varName: '--platform-macos' },
+  android: { label: 'Android', icon: 'solar:smartphone-linear', varName: '--platform-android' },
+  'android-app': { label: 'Android App', icon: 'solar:smartphone-linear', varName: '--platform-android-app' },
+  windows: { label: 'Windows', icon: 'solar:monitor-linear', varName: '--platform-windows' },
+  linux: { label: 'Linux', icon: 'solar:monitor-linear', varName: '--platform-linux' },
+  web: { label: 'Web', icon: 'solar:global-linear', varName: '--platform-web' },
+};
+
+/** Device-source chip. Omits itself (rather than an error state) for null/unrecognized platforms — older rows predate this column. */
+function PlatformChip({ platform }: { platform: ClientPlatform | null }) {
+  if (!platform || !PLATFORM_STYLE[platform]) return null;
+  const { label, icon, varName } = PLATFORM_STYLE[platform];
+  return (
+    <span
+      title={`Analyzed from ${label}`}
+      className="shrink-0 inline-flex items-center gap-1 text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+      style={{ color: `var(${varName})`, backgroundColor: `color-mix(in srgb, var(${varName}) 14%, transparent)` }}
+    >
+      <Icon icon={icon} size={11} />
+      {label}
+    </span>
+  );
+}
 
 function MetricChip({ icon, children, title }: { icon: string; children: ReactNode; title: string }) {
   return (
@@ -108,6 +146,20 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [currentPage, setCurrentPage] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Search-as-you-type: narrows from the first keystroke (no minimum length),
+  // debounced ~200ms so rapid typing doesn't re-filter on every character.
+  // Client-side over `items` (already fully loaded by useHistoryOverview) --
+  // get_user_history_overview() has no LIMIT and returns every one of the
+  // user's analyses in one call already, so a server round-trip here would
+  // just re-fetch data the client already holds. See report for the fuller
+  // scale justification against a Redis/pg_trgm-indexed endpoint.
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => setDebouncedSearch(searchInput), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(debounceTimer);
+  }, [searchInput]);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -248,6 +300,15 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     let result = [...items];
     if (filterStatus !== 'all') result = result.filter((item) => item.status === filterStatus);
 
+    const query = debouncedSearch.trim().toLowerCase();
+    if (query) {
+      result = result.filter(
+        (item) =>
+          item.title?.toLowerCase().includes(query) ||
+          item.channelTitle?.toLowerCase().includes(query)
+      );
+    }
+
     result.sort((a, b) => {
       if (sortBy === 'most-analyzed') return b.timesAnalyzed - a.timesAnalyzed;
       const aTime = new Date(a.lastAnalyzedAt).getTime();
@@ -255,7 +316,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
     });
     return result;
-  }, [items, filterStatus, sortBy]);
+  }, [items, filterStatus, sortBy, debouncedSearch]);
 
   const totalPages = Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE);
   const paginatedItems = filteredAndSorted.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
@@ -305,6 +366,22 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       )}
 
       <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Icon
+            icon="solar:magnifer-linear"
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] pointer-events-none"
+          />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => { setSearchInput(e.target.value); setCurrentPage(0); }}
+            placeholder="Search by title or channel…"
+            aria-label="Search analysis history by title or channel"
+            className="w-full pl-8 pr-3 py-2 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-[13px] placeholder:text-[var(--ink-muted)] transition-colors hover:border-[var(--accent)] focus:border-[var(--accent)] outline-none"
+          />
+        </div>
+
         <select
           value={sortBy}
           onChange={(e) => { setSortBy(e.target.value as SortOrder); setCurrentPage(0); }}
@@ -441,6 +518,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                         <p className="text-[12px] text-[var(--ink-muted)] truncate mt-0.5">{item.channelTitle}</p>
                       )}
                     </div>
+                    <PlatformChip platform={item.clientPlatform} />
                     <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${status.cls}`}>
                       {status.label}
                     </span>

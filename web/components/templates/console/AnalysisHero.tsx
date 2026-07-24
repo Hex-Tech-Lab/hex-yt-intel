@@ -13,9 +13,11 @@ export interface AnalysisHeroProps {
   onCancel?: () => void;
   error?: string;
   quota?: string;
+  /** True when this video already has a completed prior analysis (current view is 'done', or a pre-flight check on the typed URL found one) -- drives the single Analyze/Re-analyze button's label and which handler it calls. */
+  isRepeat?: boolean;
 }
 
-export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze, onCancel, error, quota }: AnalysisHeroProps) {
+export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze, onCancel, error, quota, isRepeat = false }: AnalysisHeroProps) {
   const streaming = status === "streaming";
   const disabled = streaming || !url || url.trim().length === 0;
 
@@ -113,22 +115,28 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                 </div>
               )}
               <div className="flex gap-2 flex-shrink-0">
-                {status === "done" && (
-                  <Button type="button" variant="outline" size="md" title="Re-analyze this video (bypasses cache)" onClick={onReanalyze}>
-                    <Icon icon="solar:refresh-linear" size={16} />
-                    Re-analyze
-                  </Button>
-                )}
                 {streaming && onCancel && (
                   <Button type="button" variant="danger" size="icon" title="Cancel analysis" onClick={onCancel}>
                     <Icon icon="solar:stop-circle-linear" size={16} />
                   </Button>
                 )}
+                {/* Single button, not two -- the label itself signals first-time vs
+                    repeat. RCA (2026-07-24, user-reported): the prior two-button
+                    layout (a primary "Analyze" that silently cache-hit-returned
+                    stale content for a video already analyzed, alongside a
+                    secondary "Re-analyze" that force-refreshed) was confusing --
+                    a button literally labeled "Analyze" that doesn't actually
+                    analyze reads as broken. Every click here now does a genuine
+                    fresh run (isRepeat routes to onReanalyze, which bypasses
+                    cache); "Analyze" for a truly new video has nothing cached to
+                    hit anyway, so behavior is identical -- only the label and
+                    the handler for an already-analyzed video changed. */}
                 <Button
                   type="button"
-                  variant="primary"
+                  variant={isRepeat ? "outline" : "primary"}
                   size="md"
-                  onClick={onAnalyze}
+                  title={isRepeat ? "Re-analyze this video (runs fresh, not from cache)" : undefined}
+                  onClick={isRepeat ? onReanalyze : onAnalyze}
                   disabled={disabled}
                 >
                   <Icon
@@ -136,7 +144,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                     size={16}
                     className={streaming ? "hx-anispin" : ""}
                   />
-                  {streaming ? "Analyzing" : "Analyze"}
+                  {streaming ? "Analyzing" : isRepeat ? "Re-analyze" : "Analyze"}
                 </Button>
               </div>
             </div>

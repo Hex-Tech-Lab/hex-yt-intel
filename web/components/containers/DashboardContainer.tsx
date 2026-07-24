@@ -32,6 +32,7 @@ import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
 import { useAutoRestoreAnalysis } from '@/hooks/useAutoRestoreAnalysis';
 import { useExecutiveDigest } from '@/hooks/useExecutiveDigest';
 import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
+import { useExistingAnalysisCheck } from '@/hooks/useExistingAnalysisCheck';
 import { StatusBadge } from '@/components/templates/_shared/primitives';
 import { UsageTab } from '@/components/templates/console/UsageTab';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -94,6 +95,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { url, setUrl } = useInputStore();
   const [mounted, setMounted] = useState(false);
   const hasHadVideoRef = useRef(false);
+  const hasExistingAnalysis = useExistingAnalysisCheck(url);
 
   const { startAnalysis, stopAnalysis } = useSSEStream();
   useEagerVideoMetadata();
@@ -476,6 +478,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             onCancel={stopAnalysis}
             error={error?.message}
             quota={quotaLabel}
+            isRepeat={status === 'complete' || hasExistingAnalysis}
           />
 
           {(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId) && (

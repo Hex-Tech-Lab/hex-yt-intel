@@ -101,6 +101,22 @@
   --err: #EF4444;
   --info: #06B6D4;            /* aliases accent — info == processing hue    */
 
+  /* --- Device/platform chips (history list, Wave — device-tag) -----------
+     Grouped by OS family hue, shaded per specific platform within the
+     family (native apps get the deeper shade of their family's hue):
+       Apple family (blue)   -- ios, ios-app, macos
+       Android family (green)-- android, android-app
+       Windows (indigo), Linux (amber), generic web (muted slate) each get
+       their own single hue -- no family to shade within.               */
+  --platform-ios: #60A5FA;       /* blue-400   */
+  --platform-ios-app: #3B82F6;   /* blue-500   */
+  --platform-macos: #93C5FD;     /* blue-300   */
+  --platform-android: #4ADE80;   /* green-400  */
+  --platform-android-app: #16A34A; /* green-600 */
+  --platform-windows: #818CF8;   /* indigo-400 */
+  --platform-linux: #FBBF24;     /* amber-400  */
+  --platform-web: var(--ink-muted);
+
   /* --- Radii — one source of truth (see @theme). Slightly rounded. ------ */
   --radius-control: 7px;
   --radius-card: 10px;
