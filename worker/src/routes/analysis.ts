@@ -8,6 +8,7 @@ import { PromptBuilder } from "../services/PromptBuilder";
 import { LLMCascade } from "../services/LLMCascade";
 import { ValidationService } from "../services/ValidationService";
 import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
+import { WorkerPromptConfigAdapter } from "../adapters/WorkerPromptConfigAdapter";
 import { PersistService } from "../services/PersistService";
 import { createAtomicPersist } from "../services/atomic-persist";
 import { hmacHex, secretFingerprint } from "../crypto";
@@ -683,7 +684,11 @@ analysis.post("/analyze-llm", async (c) => {
       upstashUrl && upstashToken
         ? new UpstashCacheAdapter({ url: upstashUrl, token: upstashToken })
         : undefined;
-    const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey), new ValidationService(), cache);
+    const promptConfig =
+      upstashUrl && upstashToken
+        ? new WorkerPromptConfigAdapter({ url: upstashUrl, token: upstashToken })
+        : undefined;
+    const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey), new ValidationService(), cache);
 
     const result = await engine.execute({
       metadata: request.metadata,
@@ -766,14 +771,18 @@ analysis.post("/analyze-llm-stream", async (c) => {
     return c.json({ error: "Invalid token", reason }, 401);
   }
 
-  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
-
   const upstashUrl = c.env.UPSTASH_REDIS_REST_URL;
   const upstashToken = c.env.UPSTASH_REDIS_REST_TOKEN;
   const cache =
     upstashUrl && upstashToken
       ? new UpstashCacheAdapter({ url: upstashUrl, token: upstashToken })
       : undefined;
+  const promptConfig =
+    upstashUrl && upstashToken
+      ? new WorkerPromptConfigAdapter({ url: upstashUrl, token: upstashToken })
+      : undefined;
+
+  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
 
   const persistController = new AbortController();
   const httpConnSignal = c.req.raw['signal'];

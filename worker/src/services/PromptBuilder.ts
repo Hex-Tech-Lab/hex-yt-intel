@@ -1,32 +1,38 @@
 import { getUCISPrompt } from '../../../web/lib/prompts/factory';
+import { UCIS_V5_1_SYSTEM } from '../../../web/lib/prompts/ucis-v5.1';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
+import type { PromptConfigPort } from '../ports/PromptConfigPort';
 import type { EngineContext } from '../ports/ReasoningEnginePort';
 import { DIMENSION_CONFIGS, TOTAL_DIMENSIONS } from '../../../web/lib/config/synthesis';
 import type { PersonaId } from '../../../web/lib/types/persona';
 import { isValidPersona } from '../../../web/lib/types/persona';
 
-// Wave P (2026-07-23) risk note: the segmented-dimension instruction text
-// below (dimLabels/extraFieldsInstruction/fallbackInstructions) is NOT
-// migrated to the Vault-backed prompt registry, unlike getUCISPrompt's base
-// prompt (cross-imported from web/lib/prompts/factory.ts). This text lives
-// directly in this worker-only file, so a runtime Vault RPC call from inside
-// it would need to go through the same getSupabaseServiceClient() the
-// cross-imported web/lib code already uses at runtime -- which is presumed
-// reachable from the Workers isolate (supabase-js v2 is fetch-based, and this
-// same client is already load-bearing for resolveUCISPromptTemplate's
-// app_settings read via that cross-import), but this was NOT independently
-// verified against a live Workers deployment in this pass (no local CF
-// Workers runtime available to test against). Given the small blast radius
-// (dimension-count instructions, not the core analysis prompt) and the lack
-// of a verified test path, this was deliberately left hardcoded rather than
-// wired blind. Revisit once a worker-side Vault RPC call has been proven out
-// against a real deployment (e.g. piggybacking on the UCIS v5.1 migration,
-// which will need exactly that verification).
+// RCA (2026-07-24): getUCISPrompt's default template resolution
+// (resolveUCISPromptTemplate) reads Supabase/Redis credentials via
+// process.env, which does not exist in the Workers isolate -- every request
+// silently fell through (each layer's own try/catch swallowed it) to the
+// hardcoded UCIS_V5_1_SYSTEM default. Confirmed live via Sentry issue
+// HEX-YT-INTEL-3D. `promptConfig`, when supplied, resolves the live template
+// via WorkerPromptConfigAdapter (Redis-only, ADR-005-compliant, no Postgres
+// access from the worker) and is passed to getUCISPrompt as promptOverride
+// so resolveUCISPromptTemplate's process.env path is never invoked here. No
+// port supplied (e.g. Redis creds missing) -- falls back to the embedded
+// UCIS_V5_1_SYSTEM text, same last-known-good behavior as before.
+//
+// The segmented-dimension instruction text below (dimLabels/
+// extraFieldsInstruction/fallbackInstructions) remains hardcoded in this
+// worker-only file -- smaller blast radius (dimension-count instructions,
+// not the core analysis prompt) than the base template, deferred separately.
 export class PromptBuilder implements PromptBuilderPort {
+  constructor(private readonly promptConfig?: PromptConfigPort) {}
+
   async build(context: EngineContext): Promise<string> {
     const validPersona = isValidPersona(context.persona) ? (context.persona as PersonaId) : 'creator';
 
+    const promptOverride = (await this.promptConfig?.resolvePromptTemplate()) ?? UCIS_V5_1_SYSTEM;
+
     const basePrompt = await getUCISPrompt({
+      promptOverride,
       metadata: {
         title: context.metadata.title,
         channelTitle: context.metadata.channelTitle,
