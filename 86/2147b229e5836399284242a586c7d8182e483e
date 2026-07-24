@@ -1,0 +1,38 @@
+web/lib/__tests__/history-overview.test.ts
+  s_0eded1e9d0cab6::t_d652abf95831f8 69-72
+  s_0eded1e9d0cab6::t_f9de76d4e29bd5 45-48
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_824ade1963789d 525-531
+web/components/templates/console/AnalysisHistory.tsx
+  s_eb93583c072c61::t_3f78b64f1a89d8 9,478-487
+supabase/migrations/20260724100000_history_overview_function_v6_aux_status.sql
+  s_0eded1e9d0cab6::t_a9b933595b0860 1-111
+web/lib/ports/AnalysisPersistencePort.ts
+  s_0eded1e9d0cab6::t_f03f85fa9e1a18 55-59
+web/lib/utils/history-overview.ts
+  s_0eded1e9d0cab6::t_ae216abfe1cbc4 21-24,63-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "862147b229e5836399284242a586c7d8182e483e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_eb93583c072c61": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bd9f75f-2e48-4504-b0d1-db58980bad15",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
