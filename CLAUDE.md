@@ -73,10 +73,8 @@ Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-
 **CSS Framework**: Tailwind CSS + shadcn/ui exclusively
 
 ### Runtime & Build Infrastructure
-- **Node.js**: 24.16.0 LTS
-- **pnpm**: 11.9.0 (source of truth: package.json packageManager field; synced to action.yml + CI workflows)
-- **Next.js**: 16.2.11 (patch-bumped 2026-07-24 for Dependabot #73-90: SSRF in Server Actions/rewrites, DoS, cache confusion — same minor line, no breaking changes)
-- **TypeScript**: 6.0.3
+(Exact pinned versions live in package.json / web/package.json — source of truth, don't duplicate here.)
+- **Next.js**: patch-bumped 2026-07-24 for Dependabot #73-90 (SSRF in Server Actions/rewrites, DoS, cache confusion) — same minor line, no breaking changes.
 
 ---
 
@@ -109,98 +107,15 @@ Multidimensional PR readiness scoring system that evaluates code quality across 
 
 ### Usage
 
-#### CLI (Local Development)
-```bash
-npm run pr:confidence --pr=129
-```
-
-#### GitHub Actions (Automatic)
-- Runs automatically in CI/CD pipeline on every PR
-- Score is appended to the final status comment
-- Does **not** block merge (informational only)
-
-#### Manual Query
 ```bash
 pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr=129
 ```
 
-### Output Format
+Runs automatically in CI/CD too (`.github/workflows/ci-cd.yml` → `final-status` job); score is appended to the PR status comment, informational only, never blocks merge.
 
-**JSON (Machine-Readable)**
-```json
-{
-  "pr": 129,
-  "confidence": 92,
-  "breakdown": {
-    "cubic": 28,
-    "coderabbit": 18,
-    "snyk": 15,
-    "ci_cd": 10,
-    "vercel": 5,
-    "codeql": 5
-  },
-  "recommendation": "MERGE READY",
-  "details": {
-    "cubic_comment": "Excellent architecture...",
-    "coderabbit_comment": "18 checks passed",
-    "snyk_comment": "All issues resolved",
-    "ci_status": "all-passed",
-    "vercel_status": "READY",
-    "codeql_alerts": 0
-  },
-  "timestamp": "2026-07-09T12:00:00.000Z"
-}
-```
+**Error handling** (behavior contract, not obvious from a glance at the code): missing tools default to 0 points rather than crashing the calculator; GitHub API failures are logged but don't block output; malformed scores cap at the tool's max rather than erroring.
 
-**Human-Readable Summary** (console output)
-```
-📊 Calculating PR Confidence for #129...
-
-📈 Breakdown:
-  Cubic:       28/30
-  CodeRabbit:  18/20
-  Snyk:        15/15
-  CI/CD:       10/10
-  Vercel:       5/5
-  CodeQL:       5/5
-  ─────────────────────
-  Total:       81/85
-
-🎯 Confidence: 95% (MERGE READY)
-```
-
-### Implementation Details
-
-**File**: `/scripts/calculate-pr-confidence.ts` (373 LOC)
-
-**Data Sources**:
-- GitHub API (comments, check runs, deployments, code-scanning alerts)
-- Review tool bot comments (Cubic, CodeRabbit, Snyk)
-- GitHub Actions check results
-- Vercel deployment status
-- CodeQL analysis results
-
-**Tool Detection**:
-- Cubic: Regex pattern `cubic[:\s]+([0-9]+)` on PR comments
-- CodeRabbit: Regex pattern `(\d+)\s+passed` + score normalization
-- Snyk: Count of `resolved|fixed` keywords in comments
-- CI/CD: All check runs in pull_request merge commit
-- Vercel: PR comments from Vercel bot containing "READY" or "PRODUCTION" status
-- CodeQL: Code-scanning alerts filtered by severity (critical/high)
-
-**Error Handling**:
-- Graceful fallback: Missing tools default to 0 points (doesn't crash calculator)
-- GitHub API failures are logged but do not block output
-- Invalid/malformed scores cap at tool's maximum points
-
-### Integration with CI/CD
-
-**Modified**: `.github/workflows/ci-cd.yml` → `final-status` job
-
-1. Runs after all quality checks (type-check, lint, build, security)
-2. Invokes `calculate-pr-confidence.ts --pr=${{ github.event.pull_request.number }}`
-3. Appends confidence score + breakdown table to the final PR status comment
-4. Labeled as "FYI — Confidence score is informational and does not block merging"
+Implementation, exact output format, and per-tool detection logic: `scripts/calculate-pr-confidence.ts`.
 
 ### Philosophy
 
@@ -215,11 +130,5 @@ pnpm dlx tsx scripts/calculate-pr-confidence.ts --pr=129
 - Architectural ADRs (design decisions)
 - Integration tests (real-world behavior)
 - Manual security audits (domain expertise)
-
-### Testing
-
-Tested against PR #129 (baseline, known good state):
-- **Expected**: Confidence ≥85% (MERGE READY)
-- **Status**: ✅ Verified during Wave 6 implementation
 
 See `docs/LESSONS_LEARNED.md` line 102 for the original formula rationale.

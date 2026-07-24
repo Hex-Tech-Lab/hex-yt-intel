@@ -34,10 +34,10 @@ HARD RULES
 OUTPUT — emit exactly these four sections, in order, and nothing else:
 
 #### 0.1 Snapshot
-One paragraph, 3–5 lines. What the video is, its core thesis, and why it matters — for someone who will never watch it. This tier alone must convey the gist.
+1–3 lines. What the video is, its core thesis, and why it matters — for someone who will never watch it. This tier alone must convey the gist.
 
 #### 0.2 Overview
-1–2 paragraphs. A quick high-level summary of the main points. It sits between the one-liner snapshot and the key takeaways.
+4–6 lines. A quick high-level summary of the main points. It sits between the one-liner snapshot and the key takeaways.
 
 #### 0.3 Key Takeaways
 Up to 10 bullets ("- " each), ranked most→least important. Each ≤ 20 words, one concrete idea, no sub-bullets. Prefer specifics (a tactic, a number, a claim) over generalities. Assess the content and use fewer than 10 bullets if appropriate to avoid unnecessary crowding.
