@@ -14,7 +14,7 @@ import { createHash } from 'crypto';
 
 import { env } from '@/lib/env';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
-import type { CommentsFetchConfig } from '@/lib/types/contracts';
+import type { CommentsFetchConfig, ChannelMetaFetchConfig } from '@/lib/types/contracts';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 // Must match the registry's seeded defaults (20260723190000_comments_fetch_settings.sql)
@@ -23,6 +23,12 @@ const COMMENTS_CONFIG_FALLBACK: CommentsFetchConfig = {
   maxResults: 20,
   maxAttempts: 2,
   timeoutPerAttemptMs: 4000,
+  maxPayloadBytes: 20000,
+};
+
+// Must match the registry's seeded defaults (20260724120000_channel_meta_fetch_settings.sql).
+const CHANNEL_META_CONFIG_FALLBACK: ChannelMetaFetchConfig = {
+  timeoutMs: 4000,
   maxPayloadBytes: 20000,
 };
 
@@ -51,6 +57,7 @@ export interface UseCaseSuccess {
   timezone: string;
   models: string[];
   commentsConfig: CommentsFetchConfig;
+  channelMetaConfig: ChannelMetaFetchConfig;
   stream: {
     url: string;
     sig: string;
@@ -179,6 +186,18 @@ export class CreateAnalysisUseCase {
       maxPayloadBytes: Number(resolvedRegistry['chat.comments.maxPayloadBytes']) || COMMENTS_CONFIG_FALLBACK.maxPayloadBytes,
     };
 
+    const resolvedChannelMetaRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['chat.channelMeta.timeoutMs', 'chat.channelMeta.maxPayloadBytes'],
+      {
+        'chat.channelMeta.timeoutMs': CHANNEL_META_CONFIG_FALLBACK.timeoutMs,
+        'chat.channelMeta.maxPayloadBytes': CHANNEL_META_CONFIG_FALLBACK.maxPayloadBytes,
+      }
+    );
+    const channelMetaConfig: ChannelMetaFetchConfig = {
+      timeoutMs: Number(resolvedChannelMetaRegistry['chat.channelMeta.timeoutMs']) || CHANNEL_META_CONFIG_FALLBACK.timeoutMs,
+      maxPayloadBytes: Number(resolvedChannelMetaRegistry['chat.channelMeta.maxPayloadBytes']) || CHANNEL_META_CONFIG_FALLBACK.maxPayloadBytes,
+    };
+
     // Mint HMAC token for streaming worker access
     let token;
     try {
@@ -216,6 +235,7 @@ export class CreateAnalysisUseCase {
         timezone: params.timezone,
         models,
         commentsConfig,
+        channelMetaConfig,
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,
