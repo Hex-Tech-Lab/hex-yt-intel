@@ -1,5 +1,6 @@
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 import type { HistoryOverviewItem } from '@/lib/ports';
+import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 /**
  * Raw row shape returned by the `get_user_history_overview` Postgres function
@@ -22,6 +23,7 @@ export interface RawHistoryOverviewRow {
   has_description: boolean | null;
   has_channel_meta: boolean | null;
   has_comments: boolean | null;
+  client_platform: ClientPlatform | null;
 }
 
 /**
@@ -64,5 +66,6 @@ export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOvervi
     hasDescription: !!row.has_description,
     hasChannelMeta: !!row.has_channel_meta,
     hasComments: !!row.has_comments,
+    clientPlatform: row.client_platform ?? null,
   };
 }

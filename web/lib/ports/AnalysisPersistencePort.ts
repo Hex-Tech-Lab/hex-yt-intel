@@ -1,6 +1,7 @@
 import type { AnalysisJobMetadata } from '@/lib/types/contracts';
 import type { PersonaId } from '@/lib/prompts';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
+import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 /** A cached analysis row retrieved for potential cache-hit return. */
 export interface CachedAnalysis {
@@ -57,6 +58,8 @@ export interface HistoryOverviewItem {
   hasDescription: boolean;
   hasChannelMeta: boolean;
   hasComments: boolean;
+  /** UA-derived device the winner analysis was run from. Null for rows predating this column. */
+  clientPlatform: ClientPlatform | null;
 }
 
 /** Parameters for the validation_report blob persisted alongside the stub. */
@@ -81,6 +84,7 @@ export interface AnalysisPersistencePort {
     userId: string;
     title: string;
     transcriptHash?: string;
+    clientPlatform?: ClientPlatform | null;
     validationReport: ValidationReportInput;
   }): Promise<AnalysisStub>;
 

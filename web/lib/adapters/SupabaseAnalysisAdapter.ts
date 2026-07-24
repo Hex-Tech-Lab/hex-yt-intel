@@ -14,6 +14,7 @@ import { isPersistedValidationReport } from '@/lib/types/validation-report';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
 import { mapHistoryOverviewRow, type RawHistoryOverviewRow } from '@/lib/utils/history-overview';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+import type { ClientPlatform } from '@/lib/utils/client-platform';
 
 const MAX_GROUNDING_PAYLOAD_BYTES = 100_000;
 
@@ -171,6 +172,7 @@ export class SupabaseAnalysisAdapter {
     userId: string;
     title: string;
     transcriptHash?: string;
+    clientPlatform?: ClientPlatform | null;
     validationReport: ValidationReportInput;
   }): Promise<AnalysisStub> {
     const service = getSupabaseServiceClient();
@@ -193,6 +195,10 @@ export class SupabaseAnalysisAdapter {
         .update({
           title: params.title,
           channel_title: params.validationReport.metadata?.channelTitle || '',
+          // Only overwrite on an actual signal; a retry/refresh call with no UA
+          // (or an unparseable one) must not clobber the platform recorded on
+          // the original request.
+          ...(params.clientPlatform ? { client_platform: params.clientPlatform } : {}),
           validation_report: {
             status: params.validationReport.status,
             transcript_available: params.validationReport.transcriptAvailable,
@@ -254,19 +260,26 @@ export class SupabaseAnalysisAdapter {
 
     const analysisId = rpcData as string;
 
-    // Store transcript hash if provided (ADR 006: cache key based on input transcript)
-    if (params.transcriptHash) {
-      const { error: hashError } = await service
+    // Store transcript hash (ADR 006: cache key based on input transcript) and the
+    // UA-derived client platform (cosmetic device signal, RCA 2026-07-24) if
+    // present. `reserve_analysis_quota` doesn't accept either column, so a
+    // single follow-up update covers both fields the RPC can't set directly.
+    const followUpUpdate: Record<string, string> = {};
+    if (params.transcriptHash) followUpUpdate.transcript_hash = params.transcriptHash;
+    if (params.clientPlatform) followUpUpdate.client_platform = params.clientPlatform;
+
+    if (Object.keys(followUpUpdate).length > 0) {
+      const { error: followUpError } = await service
         .from('analyses')
-        .update({ transcript_hash: params.transcriptHash })
+        .update(followUpUpdate)
         .eq('id', analysisId);
 
-      if (hashError) {
-        Sentry.captureException(hashError, {
-          tags: { operation: 'analysis-persist-transcript-hash' },
+      if (followUpError) {
+        Sentry.captureException(followUpError, {
+          tags: { operation: 'analysis-persist-stub-followup' },
           extra: { analysisId, videoId: params.videoId },
         });
-        console.warn('[SupabaseAnalysisAdapter] Failed to store transcript hash:', hashError.message);
+        console.warn('[SupabaseAnalysisAdapter] Failed to store transcript hash / client platform:', followUpError.message);
       }
     }
 

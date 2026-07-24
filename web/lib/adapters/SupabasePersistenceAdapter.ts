@@ -14,6 +14,7 @@ import type {
 import type { ChatConversation, ChatMessage } from '@/lib/types/chat';
 import type { GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
+import type { ClientPlatform } from '@/lib/utils/client-platform';
 import type { KnowledgeWikiPort } from '@/lib/services/KnowledgeHistoryService';
 
 import { SupabaseAnalysisAdapter } from './SupabaseAnalysisAdapter';
@@ -32,7 +33,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.findCachedAnalysis(params);
   }
 
-  upsertProcessingStub(params: { videoId: string; userId: string; title: string; validationReport: ValidationReportInput }): Promise<AnalysisStub> {
+  upsertProcessingStub(params: { videoId: string; userId: string; title: string; transcriptHash?: string; clientPlatform?: ClientPlatform | null; validationReport: ValidationReportInput }): Promise<AnalysisStub> {
     return SupabaseAnalysisAdapter.upsertProcessingStub(params);
   }
 

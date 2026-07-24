@@ -12,6 +12,7 @@ import { extractVideoId } from '@/lib/youtube';
 import * as Sentry from '@sentry/nextjs';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
+import { detectClientPlatform } from '@/lib/utils/client-platform';
 import {
   SupabaseAuthAdapter,
   WorkerIngestionAdapter,
@@ -94,6 +95,10 @@ export async function POST(request: NextRequest) {
       timezone: validation.data.timezone,
       persona: validation.data.persona as PersonaId | undefined,
       forceRefresh: validation.data.forceRefresh,
+      // Cosmetic-only device signal (RCA 2026-07-24: cross-account confusion
+      // traced to "which device did I use" having no UI answer). Never used
+      // for auth/billing/security decisions.
+      clientPlatform: detectClientPlatform(request.headers.get('user-agent')),
     });
 
     if (useCaseResult.type === 'error') {
