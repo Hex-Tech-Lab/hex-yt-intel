@@ -4,6 +4,7 @@ import type {
   BillingQuotaPort,
   ModelResolutionPort,
   CryptographicTokenPort,
+  CommentSamplingPort,
 } from '@/lib/ports';
 import { extractVideoId } from '@/lib/youtube';
 import type { UserTier } from '@/lib/types/billing';
@@ -14,8 +15,14 @@ import { createHash } from 'crypto';
 
 import { env } from '@/lib/env';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
-import type { CommentsFetchConfig, ChannelMetaFetchConfig } from '@/lib/types/contracts';
+import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
+
+// Must match the registry's seeded defaults (20260725110000_comments_sync_pool_fetch_settings.sql).
+const SYNC_POOL_CONFIG_FALLBACK: CommentsSyncPoolConfig = {
+  maxPages: 10,
+  timeoutMs: 8000,
+};
 
 // Must match the registry's seeded defaults (20260723190000_comments_fetch_settings.sql)
 // -- used only if the registry is genuinely unreachable, never as the primary source.
@@ -58,6 +65,8 @@ export interface UseCaseSuccess {
   models: string[];
   commentsConfig: CommentsFetchConfig;
   channelMetaConfig: ChannelMetaFetchConfig;
+  commentsSamplePlan?: { targetSampleCount: number; likeBucketCount: number; recencyBucketCount: number };
+  commentsSyncPoolConfig: CommentsSyncPoolConfig;
   stream: {
     url: string;
     sig: string;
@@ -76,7 +85,8 @@ export class CreateAnalysisUseCase {
     private persistence: AnalysisPersistencePort,
     private billingQuota: BillingQuotaPort,
     private modelResolution: ModelResolutionPort,
-    private tokenCrypto: CryptographicTokenPort
+    private tokenCrypto: CryptographicTokenPort,
+    private commentSampling: CommentSamplingPort
   ) {}
 
   async execute(params: CreateAnalysisUseCaseParams): Promise<UseCaseResult> {
@@ -198,6 +208,40 @@ export class CreateAnalysisUseCase {
       maxPayloadBytes: Number(resolvedChannelMetaRegistry['chat.channelMeta.maxPayloadBytes']) || CHANNEL_META_CONFIG_FALLBACK.maxPayloadBytes,
     };
 
+    // Tier 0 (free, 10%, auto-expands to Tier 1/20% below the registry's
+    // minSignalCount floor) is the default for every analysis -- Phase 6's UI
+    // tier selector doesn't exist yet, so there's no user choice to read.
+    // Replaces the old flat single-page comment fetch with a real stratified
+    // sample; see worker/src/routes/analysis.ts#fetchSampledCommentsCached.
+    const totalCommentCount = ingestionResult.metadata.commentCount || 0;
+    const samplePlan = totalCommentCount > 0
+      ? await this.commentSampling.planSample({ tier: 0, totalCommentCount })
+      : null;
+    let commentsSamplePlan: { targetSampleCount: number; likeBucketCount: number; recencyBucketCount: number } | undefined;
+    if (samplePlan) {
+      const resolvedBucketRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+        ['comments.sampling.likeBucketCount', 'comments.sampling.recencyBucketCount'],
+        { 'comments.sampling.likeBucketCount': 3, 'comments.sampling.recencyBucketCount': 3 }
+      );
+      commentsSamplePlan = {
+        targetSampleCount: samplePlan.targetSampleCount,
+        likeBucketCount: Number(resolvedBucketRegistry['comments.sampling.likeBucketCount']) || 3,
+        recencyBucketCount: Number(resolvedBucketRegistry['comments.sampling.recencyBucketCount']) || 3,
+      };
+    }
+
+    const resolvedSyncPoolRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['comments.sampling.syncPoolMaxPages', 'comments.sampling.syncPoolTimeoutMs'],
+      {
+        'comments.sampling.syncPoolMaxPages': SYNC_POOL_CONFIG_FALLBACK.maxPages,
+        'comments.sampling.syncPoolTimeoutMs': SYNC_POOL_CONFIG_FALLBACK.timeoutMs,
+      }
+    );
+    const commentsSyncPoolConfig: CommentsSyncPoolConfig = {
+      maxPages: Number(resolvedSyncPoolRegistry['comments.sampling.syncPoolMaxPages']) || SYNC_POOL_CONFIG_FALLBACK.maxPages,
+      timeoutMs: Number(resolvedSyncPoolRegistry['comments.sampling.syncPoolTimeoutMs']) || SYNC_POOL_CONFIG_FALLBACK.timeoutMs,
+    };
+
     // Mint HMAC token for streaming worker access
     let token;
     try {
@@ -236,6 +280,8 @@ export class CreateAnalysisUseCase {
         models,
         commentsConfig,
         channelMetaConfig,
+        commentsSamplePlan,
+        commentsSyncPoolConfig,
         stream: {
           url: `${env.cloudflareWorkerUrl}/analyze-llm-stream`,
           sig: token.sig,
