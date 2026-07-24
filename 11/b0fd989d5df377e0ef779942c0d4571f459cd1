@@ -1,0 +1,27 @@
+web/app/api/admin/prompts/invalidate/route.ts
+  s_0eded1e9d0cab6::t_008e8eb160d441 1-59
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_a6b0ca28b4ab42 46,49,67
+  s_0eded1e9d0cab6::t_16e1d3a13f8552 486-489,491-504
+web/lib/prompts/executive-digest.ts
+  s_0eded1e9d0cab6::t_ab4f1c30d35de9 37,40
+CLAUDE.md
+  s_0eded1e9d0cab6::t_6d2b5eabc255d6 114,116,118
+  s_0eded1e9d0cab6::t_70479692602ddc 76-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "11b0fd989d5df377e0ef779942c0d4571f459cd1",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
