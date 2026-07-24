@@ -12,4 +12,9 @@ export interface CryptographicTokenPort {
     userId: string;
     models: string[];
   }): Promise<StreamToken>;
+
+  signCommentsTier3Token(params: {
+    sampleRunId: string;
+    userId: string;
+  }): Promise<StreamToken>;
 }

@@ -9,6 +9,9 @@ import metadata from "./routes/metadata";
 import transcript from "./routes/transcript";
 import analysis from "./routes/analysis";
 import chat from "./routes/chat";
+import comments from "./routes/comments";
+import { handleCommentsTier3Message } from "./queue-consumers/comments-tier3";
+import type { CommentsTier3QueueMessage } from "./routes/comments";
 
 type Env = {
   YOUTUBE_API_KEY: string;
@@ -25,6 +28,7 @@ type Env = {
   ENVIRONMENT?: string;
   DEV_HMAC_SECRET?: string;
   DECODO_API_KEY?: string;
+  COMMENTS_TIER3_QUEUE: Queue<CommentsTier3QueueMessage>;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -49,5 +53,24 @@ app.route("/", metadata);
 app.route("/", transcript);
 app.route("/", analysis);
 app.route("/", chat);
+app.route("/", comments);
 
-export default app;
+export default {
+  fetch: app.fetch,
+  // Cloudflare Queues consumer entrypoint (Tier 3 uncapped comment fetch,
+  // see queue-consumers/comments-tier3.ts). max_batch_size=1 in wrangler.toml
+  // -- each Tier 3 job is a long paginated fetch, kept isolated per-invocation
+  // rather than batched with others so one failing job can't stall siblings.
+  async queue(batch: MessageBatch<CommentsTier3QueueMessage>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        await handleCommentsTier3Message(message.body, env);
+        message.ack();
+      } catch (err) {
+        // skipcq: JS-0827
+        console.error("[worker] queue message processing threw:", err instanceof Error ? err.message : String(err));
+        message.retry();
+      }
+    }
+  },
+};

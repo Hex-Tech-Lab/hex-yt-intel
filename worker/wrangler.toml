@@ -17,6 +17,21 @@ vars = { REGION = "eu-west-3", WORKER_NAME = "yt-intel", ENVIRONMENT = "producti
 # RESIDENTIAL_PROXY_URL set via `wrangler secret put RESIDENTIAL_PROXY_URL --env production`
 # Format: brd-customer-<CUSTOMER_ID>-zone-<ZONE>:<PASSWORD>@brd.superproxy.io:33335
 
+# Tier 3 (uncapped) comment fetch: 300+ sequential paginated YouTube API
+# calls for a 30K-comment run can't complete inside a single sync request
+# (see docs/specs/COMMENTS_SAMPLING_ENGINE_PLAN_2026-07-24.md Phase 4).
+# Producer enqueues a job when a user approves a Tier 3 credit estimate;
+# consumer does the actual paginated fetch + persists comment_sample_runs.
+[[env.production.queues.producers]]
+queue = "yt-intel-comments-tier3"
+binding = "COMMENTS_TIER3_QUEUE"
+
+[[env.production.queues.consumers]]
+queue = "yt-intel-comments-tier3"
+max_batch_size = 1
+max_retries = 3
+dead_letter_queue = "yt-intel-comments-tier3-dlq"
+
 [env.production.observability]
 enabled = false
 head_sampling_rate = 1
