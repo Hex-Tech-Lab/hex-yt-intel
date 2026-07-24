@@ -81,3 +81,9 @@ export { YouTubePlayerAdapter } from './YouTubePlayerAdapter';
  * Parses, accumulates, and normalizes streaming JSON responses from LLM models.
  */
 export { SynthesisStreamAdapter } from './synthesis-stream-adapter';
+
+/**
+ * Comment sampling adapter.
+ * Resolves tiered sample plans and Tier 3 credit estimates from the Settings Registry.
+ */
+export { SupabaseCommentSamplingAdapter } from './SupabaseCommentSamplingAdapter';

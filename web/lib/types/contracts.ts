@@ -194,6 +194,25 @@ export interface ChannelMetaFetchConfig {
   maxPayloadBytes: number;
 }
 
+/**
+ * Resolved sample plan for the live synchronous Tier 0-2 comments fetch
+ * (CommentSamplingPort.planSample, resolved by CreateAnalysisUseCase and
+ * forwarded -- worker has no DB access, ADR 005). Replaces the old flat
+ * single-page comment fetch with a stratified sample over a real
+ * multi-page pool. See worker/src/routes/analysis.ts#fetchSampledCommentsCached.
+ */
+export interface CommentsSamplePlanConfig {
+  targetSampleCount: number;
+  likeBucketCount: number;
+  recencyBucketCount: number;
+}
+
+/** Bounds the pool-build loop (pages + time budget) for the plan above -- not the sample size itself. */
+export interface CommentsSyncPoolConfig {
+  maxPages: number;
+  timeoutMs: number;
+}
+
 export interface WorkerStreamRequest {
   videoId: string;
   analysisId: string;
@@ -212,6 +231,8 @@ export interface WorkerStreamRequest {
   totalChunks?: number;
   commentsConfig?: CommentsFetchConfig;
   channelMetaConfig?: ChannelMetaFetchConfig;
+  commentsSamplePlan?: CommentsSamplePlanConfig;
+  commentsSyncPoolConfig?: CommentsSyncPoolConfig;
 }
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────

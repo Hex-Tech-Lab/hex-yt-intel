@@ -13,6 +13,7 @@ import { PersistService } from "../services/PersistService";
 import { createAtomicPersist } from "../services/atomic-persist";
 import { hmacHex, secretFingerprint } from "../crypto";
 import { isProductionEnv } from "../env-utils";
+import { stratifiedSampleIndices, type StratifiableComment } from "../../../web/lib/services/comment-sampling";
 import { isValidAppUrl } from "../middleware/cors";
 import type { ReasoningEnginePort, StreamStatusEvent } from "../ports/ReasoningEnginePort";
 
@@ -101,6 +102,20 @@ interface StreamRequest {
   channelMetaConfig?: {
     timeoutMs: number;
     maxPayloadBytes: number;
+  };
+  // Resolved server-side by CreateAnalysisUseCase from CommentSamplingPort
+  // (registry-backed) -- see fetchSampledCommentsCached. Undefined means a
+  // stale/old client; the worker falls back to the flat single-page fetch.
+  commentsSamplePlan?: {
+    targetSampleCount: number;
+    likeBucketCount: number;
+    recencyBucketCount: number;
+  };
+  // Same reasoning as commentsConfig -- bounds fetchSampledCommentsCached's
+  // pool-build loop (pages + time budget), not the sample size itself.
+  commentsSyncPoolConfig?: {
+    maxPages: number;
+    timeoutMs: number;
   };
 }
 
@@ -390,6 +405,114 @@ async function fetchCommentsCached(
   return result;
 }
 
+// Resolved server-side (CreateAnalysisUseCase) from CommentSamplingPort and
+// forwarded per-request, same reasoning as commentsConfig/channelMetaConfig
+// above -- this worker has no DB access (ADR 005) to compute a sample plan
+// itself (needs the Settings Registry's comments.sampling.*/comments.cochran.*
+// keys). Undefined means a stale/old client that never sent a plan; callers
+// fall back to the flat single-page fetchCommentsCached above, preserving
+// today's exact behavior for that case rather than guessing a plan.
+interface CommentSamplePlan {
+  targetSampleCount: number;
+  likeBucketCount: number;
+  recencyBucketCount: number;
+}
+
+// Must match the registry's seeded defaults
+// (20260725110000_comments_sync_pool_fetch_settings.sql).
+const SYNC_POOL_CONFIG_FALLBACK = { maxPages: 10, timeoutMs: 8000 };
+
+/**
+ * Builds a representative comment pool via paginated commentThreads.list
+ * calls (Phase 3b's fetchCommentsPage), then applies the two-dimensional
+ * stratified sampler (Phase 0, web/lib/services/comment-sampling.ts) to
+ * select the final sample -- replaces the old flat single-page fetch, which
+ * silently under-sampled any video with more comments than one page (the
+ * root cause of the original grey/inconsistent comments bug this whole
+ * engine was built to fix).
+ *
+ * Scope note (2026-07-25): bounded by syncPoolConfig (pages + time budget)
+ * because this runs inside the synchronous dual-timeout streaming path
+ * (ADR 002), not Tier 3's uncapped async queue. For very large comment
+ * counts, the pool -- and therefore the stratification -- covers a bounded
+ * prefix of the relevance-ordered set, not the true full population. This is
+ * an honest, documented tradeoff, not a silent limitation: still far more
+ * representative than the single page it replaces, and Tier 3 exists
+ * specifically for callers that need the uncapped case.
+ *
+ * Also scoped out of this change: writing a `comment_sample_runs` audit row
+ * for this synchronous path (Phase 1's schema supports it, Tier 3's async
+ * path already does it) -- would need threading a new field through
+ * PersistService's two call sites, the persist route's Zod schema, and
+ * CreateAnalysisUseCase. Real additional surface area on an already-large
+ * change; a UI-transparency nice-to-have, not the core fix. Left as a clean,
+ * separately-reviewable follow-up rather than bundled in blind.
+ */
+async function fetchSampledCommentsCached(
+  videoId: string,
+  env: Pick<AnalysisEnv, "YOUTUBE_API_KEY" | "RESIDENTIAL_PROXY_URL">,
+  cache: UpstashCacheAdapter | undefined,
+  samplePlan: CommentSamplePlan,
+  syncPoolConfig: typeof SYNC_POOL_CONFIG_FALLBACK,
+  maxPayloadBytes: number,
+): Promise<VideoComment[] | null> {
+  if (!env.YOUTUBE_API_KEY) return null;
+  if (samplePlan.targetSampleCount <= 0) return null;
+
+  const cacheKey = `comments-sampled:${videoId}:${samplePlan.targetSampleCount}`;
+  if (cache) {
+    try {
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        try {
+          return JSON.parse(cached) as VideoComment[];
+        } catch {
+          console.debug(`[analyze-llm-stream] sampled-comments cache entry for ${videoId} is not JSON, ignoring`);
+        }
+      }
+    } catch {
+      console.warn(`[analyze-llm-stream] sampled-comments cache GET failed for ${videoId}, proceeding with fetch`);
+    }
+  }
+
+  const scraper = new MetadataScraper(env.YOUTUBE_API_KEY, env.RESIDENTIAL_PROXY_URL);
+  const deadline = Date.now() + syncPoolConfig.timeoutMs;
+  const pool: VideoComment[] = [];
+  let pageToken: string | undefined;
+  let pages = 0;
+
+  try {
+    while (pages < syncPoolConfig.maxPages && Date.now() < deadline) {
+      const page = await scraper.fetchCommentsPage(videoId, { pageToken, maxResultsPerPage: 100 });
+      pool.push(...page.comments);
+      pages += 1;
+      if (page.exhausted || !page.nextPageToken) break;
+      pageToken = page.nextPageToken;
+    }
+  } catch (err) {
+    // fetchCommentsPage already reports its own failures to Sentry; this
+    // catch only guards against something unexpected escaping it so the pool
+    // built so far (possibly empty) is still used rather than the whole
+    // analysis failing over a best-effort enrichment field.
+    console.warn(`[analyze-llm-stream] sampled-comments pool build threw for ${videoId}:`, err instanceof Error ? err.message : String(err));
+  }
+
+  if (pool.length === 0) return null;
+
+  const effectiveTarget = Math.min(samplePlan.targetSampleCount, pool.length);
+  const stratifiable: StratifiableComment[] = pool.map((comment, index) => ({ index, likeCount: comment.likeCount, publishedAt: comment.publishedAt }));
+  const selectedIndices = stratifiedSampleIndices(stratifiable, effectiveTarget, samplePlan.likeBucketCount, samplePlan.recencyBucketCount);
+  const sampled = selectedIndices.map((index) => pool[index]).filter((comment): comment is VideoComment => !!comment);
+  const result = truncateComments(sampled, maxPayloadBytes);
+
+  if (result && cache) {
+    cache.set(cacheKey, JSON.stringify(result), COMMENTS_CACHE_TTL).catch(() => {
+      console.warn(`[analyze-llm-stream] sampled-comments cache SET failed for ${videoId}`);
+    });
+  }
+  return result;
+}
+
 async function fetchTranscriptIfMissing(
   transcript: string | undefined,
   videoId: string,
@@ -399,6 +522,8 @@ async function fetchTranscriptIfMissing(
   knownCommentCount?: number,
   commentsConfig: typeof COMMENTS_CONFIG_FALLBACK = COMMENTS_CONFIG_FALLBACK,
   channelMetaConfig: typeof CHANNEL_META_CONFIG_FALLBACK = CHANNEL_META_CONFIG_FALLBACK,
+  commentSamplePlan?: CommentSamplePlan,
+  syncPoolConfig: typeof SYNC_POOL_CONFIG_FALLBACK = SYNC_POOL_CONFIG_FALLBACK,
 ): Promise<ResolvedTranscript> {
   const isPlaceholder = transcript?.includes("Transcript unavailable for this video");
   let segments: TranscriptSegment[] | undefined;
@@ -410,9 +535,13 @@ async function fetchTranscriptIfMissing(
   // Cached + time-bounded (see fetchChannelMetaCached) so it can never meaningfully
   // delay the transcript-critical path this function exists for.
   const channelMetaPromise: Promise<Record<string, unknown> | null> = fetchChannelMetaCached(channelId, env, cache, channelMetaConfig);
-  // Same reasoning applies to comments: cached + time-bounded, fetched once
-  // regardless of transcript branch.
-  const commentsPromise: Promise<VideoComment[] | null> = fetchCommentsCached(videoId, env, cache, knownCommentCount, commentsConfig);
+  // Sampled multi-page pool + stratified selection when the caller sent a
+  // plan (CreateAnalysisUseCase, resolved from CommentSamplingPort); falls
+  // back to the original flat single-page fetch for a stale/old client that
+  // never sends one, preserving today's exact behavior for that case.
+  const commentsPromise: Promise<VideoComment[] | null> = commentSamplePlan
+    ? fetchSampledCommentsCached(videoId, env, cache, commentSamplePlan, syncPoolConfig, commentsConfig.maxPayloadBytes)
+    : fetchCommentsCached(videoId, env, cache, knownCommentCount, commentsConfig);
 
   if (!transcript || transcript.trim().length === 0 || isPlaceholder) {
     console.info(`[analyze-llm-stream] Transcript missing or placeholder, attempting fetch for ${videoId}`);
@@ -625,6 +754,8 @@ function buildStreamResponse(
         })(),
         req.commentsConfig ?? COMMENTS_CONFIG_FALLBACK,
         req.channelMetaConfig ?? CHANNEL_META_CONFIG_FALLBACK,
+        req.commentsSamplePlan,
+        req.commentsSyncPoolConfig ?? SYNC_POOL_CONFIG_FALLBACK,
       )]);
 
       const resolvedTranscript = fetchResult.status === 'fulfilled' ? fetchResult.value.transcript : undefined;

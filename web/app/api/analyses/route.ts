@@ -20,6 +20,7 @@ import {
   PostgresBillingAdapter,
   SettingsModelAdapter,
   StreamTokenAdapter,
+  SupabaseCommentSamplingAdapter,
 } from '@/lib/adapters';
 
 // Module-level singleton adapters — created once per cold-start, reused across requests.
@@ -29,6 +30,7 @@ const persistenceAdapter = new SupabasePersistenceAdapter();
 const billingAdapter = new PostgresBillingAdapter();
 const modelResolutionAdapter = new SettingsModelAdapter();
 const tokenAdapter = new StreamTokenAdapter();
+const commentSamplingAdapter = new SupabaseCommentSamplingAdapter();
 
 import { CreateAnalysisUseCase } from '@/lib/usecases/CreateAnalysisUseCase';
 
@@ -37,7 +39,8 @@ const createAnalysisUseCase = new CreateAnalysisUseCase(
   persistenceAdapter,
   billingAdapter,
   modelResolutionAdapter,
-  tokenAdapter
+  tokenAdapter,
+  commentSamplingAdapter
 );
 
 
