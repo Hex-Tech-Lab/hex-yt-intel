@@ -539,6 +539,14 @@ function buildStreamResponse(
           // of how this persist call resolves) -- `settled` guards this module's own
           // persist bookkeeping, not the client stream, so no send({type:'error'})
           // belongs here.
+          //
+          // Reviewed false positive (PR #160, 2026-07-24): an automated
+          // quality gate flags this as "timeout abort does not settle error
+          // state." It's checked the wrong signal -- this timeout is a
+          // bounded best-effort persist RETRY race, not the client-facing
+          // stream timeout; the SSE response has already completed by the
+          // time this can fire, so there is no client error state left to
+          // settle. Do not "fix" this by adding a send({type:'error'}) call.
           settled = true;
           resolve(persistService.persist({ ...persistParams, status: 'interrupted' }));
         }, 15000);
