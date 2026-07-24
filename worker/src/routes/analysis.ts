@@ -790,7 +790,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
       ? new WorkerPromptConfigAdapter({ url: upstashUrl, token: upstashToken })
       : undefined;
 
-  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models), new ValidationService(), undefined);
+  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models), new ValidationService(), cache);
 
   const persistController = new AbortController();
   const httpConnSignal = c.req.raw['signal'];
