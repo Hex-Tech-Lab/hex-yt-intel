@@ -1,0 +1,47 @@
+web/lib/stream-token.ts
+  s_0eded1e9d0cab6::t_068f56b63e67d2 47-60
+  s_0eded1e9d0cab6::t_fa456a5affc923 70,74
+worker/src/routes/comments.ts
+  s_0eded1e9d0cab6::t_52480e4728ef6c 2-3,5-126
+  s_0eded1e9d0cab6::t_791386a5c3be33 1
+  s_0eded1e9d0cab6::t_f901a58fb54ce3 4
+  s_0eded1e9d0cab6::t_31b5e16bb9684d 127-132
+web/lib/adapters/StreamTokenAdapter.ts
+  s_0eded1e9d0cab6::t_6a9af9fed81c91 34-45
+  s_0eded1e9d0cab6::t_ea71d7466eab55 1
+worker/wrangler.toml
+  s_0eded1e9d0cab6::t_2046778b60da00 20-34
+web/lib/ports/CryptographicTokenPort.ts
+  s_0eded1e9d0cab6::t_f3a607f215fafa 15-19
+worker/src/queue-consumers/comments-tier3.ts
+  s_0eded1e9d0cab6::t_3ee41b1bf109f7 1-102
+web/app/api/comments/tier3/start/route.ts
+  s_0eded1e9d0cab6::t_b00a85fe895dab 1-103,105-122
+  s_0eded1e9d0cab6::t_bc8ee8541f0462 104
+supabase/migrations/20260725100000_credit_wallet_atomic_debit.sql
+  s_0eded1e9d0cab6::t_c98214e009bad0 1-57
+worker/src/worker.ts
+  s_0eded1e9d0cab6::t_bdbabf98bfee65 14
+  s_0eded1e9d0cab6::t_96b7c40a684527 56,58-76
+  s_0eded1e9d0cab6::t_0726f4a2439abb 12-13,31
+web/app/api/comments/persist-sample-run/route.ts
+  s_0eded1e9d0cab6::t_9e0820d420cbba 1-91
+worker/src/crypto.ts
+  s_0eded1e9d0cab6::t_e9e2d95c78a257 33-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "4ab59206e999f8aeb806a41adb24feacf975c54f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
