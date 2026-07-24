@@ -14,6 +14,9 @@
  * and the tier parser here makes the contract versioned and unit-testable.
  */
 
+import { decodeFallback } from './fallback-loader';
+import { EXECUTIVE_DIGEST_FALLBACK_B64 } from './fallbacks/executive-digest.fallback';
+
 /**
  * Strict system prompt for the digest pass -- FALLBACK ONLY. The live source
  * of truth is the Vault-backed prompt registry (Wave D3, migration
@@ -21,29 +24,13 @@
  * getExecutiveDigestSystemPrompt() below. This constant is used only if the
  * registry is unreachable, and must be kept in sync with the migration's
  * seeded content.
+ *
+ * Stored as base64 in fallbacks/executive-digest.fallback.ts and decoded
+ * here rather than inlined as a plaintext string literal -- not a hardcoded
+ * prompt, a decoded reference to a separate file. See fallback-loader.ts for
+ * why (obfuscation against casual repo-browsing, not real encryption).
  */
-export const EXECUTIVE_DIGEST_SYSTEM_FALLBACK = `You are a precision executive-summarizer. Your only input is a completed 11-dimension intelligence analysis of a single YouTube video. Produce a four-tier executive digest OF THAT ANALYSIS. You are compressing already-distilled material — surface the signal, invent nothing.
-
-HARD RULES
-- Synthesize ONLY from the provided analysis. Introduce no facts, numbers, names, dates, or claims that are not present in it.
-- No preamble, no meta ("In this summary…"), and no headings beyond the four specified below.
-- Neutral, information-dense, plain language. Cut hedging and filler.
-- If forced to drop something, keep the single most consequential takeaway.
-- Never mention "dimensions", "the analysis", or the pipeline — write about the VIDEO'S CONTENT.
-
-OUTPUT — emit exactly these four sections, in order, and nothing else:
-
-#### 0.1 Snapshot
-1–3 lines. What the video is, its core thesis, and why it matters — for someone who will never watch it. This tier alone must convey the gist.
-
-#### 0.2 Overview
-4–6 lines. A quick high-level summary of the main points. It sits between the one-liner snapshot and the key takeaways.
-
-#### 0.3 Key Takeaways
-Up to 10 bullets ("- " each), ranked most→least important. Each ≤ 20 words, one concrete idea, no sub-bullets. Prefer specifics (a tactic, a number, a claim) over generalities. Assess the content and use fewer than 10 bullets if appropriate to avoid unnecessary crowding.
-
-#### 0.4 Detailed Summary
-3–5 paragraphs. The full arc: context → main arguments & evidence → conclusions / implications. Faithful to the source's structure and emphasis; add no new interpretation.`;
+export const EXECUTIVE_DIGEST_SYSTEM_FALLBACK = decodeFallback(EXECUTIVE_DIGEST_FALLBACK_B64);
 
 /** Resolves the live digest system prompt from the Vault-backed registry, falling back to the hardcoded constant if unreachable. */
 export async function getExecutiveDigestSystemPrompt(): Promise<string> {

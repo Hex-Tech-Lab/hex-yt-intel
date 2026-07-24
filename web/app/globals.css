@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Astryx pilot (2026-07-24) -- new UI surfaces only, existing screens stay
+   on _shared/primitives.tsx until proven out. See CLAUDE.md decision note. */
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+@import "@astryxdesign/theme-neutral/theme.css";
+
 @theme {
   --color-void: var(--void);
   --color-bg: var(--bg);

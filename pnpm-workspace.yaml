@@ -56,6 +56,7 @@ overrides:
   "@opentelemetry/core": "^2.8.0"
 
 allowBuilds:
+  '@astryxdesign/core': true
   "@sentry/cli": true
   "esbuild": true
   "sharp": true
