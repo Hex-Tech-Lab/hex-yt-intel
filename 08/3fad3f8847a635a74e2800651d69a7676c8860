@@ -1,0 +1,25 @@
+web/components/templates/console/BentoMetadata.tsx
+  s_0eded1e9d0cab6::t_839aed879e6cac 4,7-8,69,71-73,84,87,89-91,96,99,101-103,108,111,113-115,120,123,125-127,132
+web/components/templates/console/StreamingGrid.tsx
+  s_0eded1e9d0cab6::t_839aed879e6cac 3,6,92-95
+web/components/templates/console/ProcessingLog.tsx
+  s_0eded1e9d0cab6::t_839aed879e6cac 5,60,73,77-96,99,102
+web/components/templates/console/ApexSummaryCard.tsx
+  s_0eded1e9d0cab6::t_839aed879e6cac 4,7,107,109,111-114,116,132-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "083fad3f8847a635a74e2800651d69a7676c8860",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
