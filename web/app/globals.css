@@ -1,28 +1,32 @@
-/* RCA (2026-07-25): CSS @layer priority is determined by DECLARATION ORDER,
- * not specificity or import order intuition -- whichever layer name is
+/* RCA (2026-07-25, part 1): CSS @layer priority is determined by DECLARATION
+ * ORDER, not specificity or import order intuition -- whichever layer name is
  * mentioned LAST in the stylesheet wins, full stop, even against a more
  * specific selector in an earlier layer. Tailwind v4 declares
  * `@layer theme, base, components, utilities;` as its own first statement
- * (web/node_modules/tailwindcss/index.css:1). Because `@import "tailwindcss"`
- * used to come first in this file, Astryx's `reset`/`astryx-base`/
- * `astryx-theme` layers (imported after) were each new/unseen names --
- * CSS registers them AFTER Tailwind's four layers, giving them higher
- * priority than even Tailwind's own `utilities` layer. Astryx's reset
- * (`border-width: 0` on every element, `font-size`/`font-weight: inherit`
- * on form elements) was silently winning over EVERY Tailwind border/font
- * utility app-wide -- not just on the one Astryx component (TextInput) this
- * pilot actually uses. This explains the reported breakage in one place:
- * missing panel borders, oversized/thick chat message-box font, and any
- * other Tailwind border/font utility that stopped rendering, everywhere in
- * the app, all from this single ordering mistake.
+ * (web/node_modules/tailwindcss/index.css:1). The original fix here put
+ * Astryx's layers FIRST (reset, astryx-base, astryx-theme, then Tailwind's
+ * four) so Tailwind utility classes would always win over Astryx defaults.
  *
- * Fix: declare the full layer order explicitly, up front, with Tailwind's
- * layers listed LAST (so they win) and Astryx's listed first (so Astryx
- * only supplies sane defaults for its own component, deferred to whenever
- * Tailwind has an opinion) -- matching the pilot's actual intent (Astryx
- * for the one new component, existing Tailwind styling untouched
- * everywhere else). */
-@layer reset, astryx-base, astryx-theme, theme, base, components, utilities;
+ * RCA (2026-07-26, part 2): that ordering broke the opposite direction.
+ * `@astryxdesign/core/astryx.css` wraps its ENTIRE component stylesheet --
+ * every real component's border/padding/font, not just resets -- inside one
+ * `@layer astryx-base { ... }` block. With Tailwind's `base` layer (preflight,
+ * which zeroes out border/padding on form elements like textarea/input as
+ * part of its own reset) declared AFTER astryx-base, Tailwind's preflight
+ * reset was winning over Astryx's actual component chrome -- e.g. the chat
+ * composer's Astryx TextArea rendering as a bare, chromeless native textarea
+ * (0 border, 0 padding, tiny fixed width) instead of its real designed
+ * appearance.
+ *
+ * Fix: astryx-base/astryx-theme now sit AFTER Tailwind's theme/base (so
+ * Astryx's real component styling wins over Tailwind's preflight reset) but
+ * BEFORE components/utilities (so an explicit Tailwind utility override in a
+ * className prop -- e.g. `!bg-transparent !border-none`, the pattern used
+ * throughout this codebase to intentionally strip a component's chrome --
+ * still wins, which is the actual mechanism every existing override relies
+ * on). Verified live via computed-style inspection on the deployed chat
+ * composer before and after this change. */
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
 
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
