@@ -1,0 +1,21 @@
+web/components/templates/console/TopBar.tsx
+  s_0eded1e9d0cab6::t_e76e863ea52930 4,26-30,32,34-39,60-66,68,70-76,79,83,106-111,115,119-123,125
+web/components/templates/console/Sidebar.tsx
+  s_0eded1e9d0cab6::t_e76e863ea52930 5-6,33-40,47,49-51,53-54,64-66,69-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d43e1b9ed552bf8c06361fcc6a5d135ec14c909f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
