@@ -1,0 +1,25 @@
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_0f612a9cd0e219 49,235-241,468
+web/components/containers/dashboard/ExpandedPanelOverlay.tsx
+  s_0eded1e9d0cab6::t_0f612a9cd0e219 5,130-135,137-144,146,148,151,153-158,160,163,165,167-171,173
+web/components/containers/dashboard/ConsoleTabSwitcher.tsx
+  s_0eded1e9d0cab6::t_0f612a9cd0e219 5,14,18-23,26-30,34,36-41,44
+web/components/containers/dashboard/SidebarFooter.tsx
+  s_0eded1e9d0cab6::t_0f612a9cd0e219 3,13-22,25,34-39,41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "def5ee75f8def885dcaf49c375f8d0418bb90d10",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
