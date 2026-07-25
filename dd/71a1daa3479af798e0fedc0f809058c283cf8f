@@ -1,0 +1,23 @@
+worker/src/services/CommentClassifier.ts
+  s_0eded1e9d0cab6::t_6bb53c38c1cf5f 142-143
+  s_0eded1e9d0cab6::t_ecbf7113aecd13 57
+  s_0eded1e9d0cab6::t_667253d181919f 1-56,58-141,144-146
+worker/src/ports/CommentClassificationPort.ts
+  s_0eded1e9d0cab6::t_d030d3ca720421 15-20,23-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "dd71a1daa3479af798e0fedc0f809058c283cf8f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
