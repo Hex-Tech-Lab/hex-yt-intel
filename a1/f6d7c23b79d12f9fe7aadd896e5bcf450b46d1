@@ -1,0 +1,19 @@
+supabase/migrations/20260725180000_drop_dead_analyses_engagement_columns.sql
+  s_0eded1e9d0cab6::t_cec388e4e4423b 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a1f6d7c23b79d12f9fe7aadd896e5bcf450b46d1",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
