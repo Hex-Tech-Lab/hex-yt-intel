@@ -148,3 +148,49 @@ export function exportPanelContent(
     showToast('Export failed: ' + message, 'error');
   }
 }
+
+export interface ChatMessageForExport {
+  role: 'user' | 'assistant' | string;
+  /** Already stripped of the trailing OPTIONS:[...] chip payload -- pass ChatDock's parseAssistant().body for assistant turns. */
+  body: string;
+}
+
+/** Formats a chat thread as a markdown document: `## User` / `## Assistant` per turn. */
+export function chatToMarkdown(messages: ChatMessageForExport[], title?: string | null): string {
+  const header = `# ${title || 'Chat conversation'}\n`;
+  const turns = messages
+    .filter((m) => m.body.trim().length > 0)
+    .map((m) => `## ${m.role === 'user' ? 'User' : 'Assistant'}\n\n${m.body.trim()}`);
+  return [header, ...turns].join('\n\n');
+}
+
+/** Copies the full chat thread to the clipboard as markdown. */
+export async function copyChatAsMarkdown(messages: ChatMessageForExport[], title?: string | null): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(chatToMarkdown(messages, title));
+    showToast('Chat copied to clipboard!');
+  } catch (err) {
+    reportClipboardError(err, 'chat-copy-all');
+    showToast('Failed to copy chat.', 'error');
+  }
+}
+
+/** Downloads the full chat thread as a .md file. */
+export function exportChatAsMarkdown(messages: ChatMessageForExport[], title?: string | null): void {
+  try {
+    const blob = new Blob([chatToMarkdown(messages, title)], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    try {
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${title || 'chat'}.md`;
+      anchor.click();
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error during export';
+    Sentry.captureException(err, { contexts: { export: { context: 'chat-markdown', title } } });
+    showToast('Export failed: ' + message, 'error');
+  }
+}
