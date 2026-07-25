@@ -126,6 +126,13 @@ export const AnalysisJobMetadataSchema = z.object({
   videoId: z.string(),
   title: z.string(),
   channelTitle: z.string(),
+  // RCA (2026-07-25): never existed in this schema, so buildJobMetadata()
+  // silently dropped the channelId that WAS correctly scraped -- job.metadata
+  // (client) and req.metadata (forwarded back to the worker's /analyze-llm-stream)
+  // both lost it, so fetchChannelMetaCached always received channelId=undefined,
+  // always short-circuited to null, and the CHANNEL META history badge could
+  // never turn green regardless of whether the channel actually had metadata.
+  channelId: z.string().optional(),
   publishedAt: z.string(),
   duration: z.number(),
   viewCount: z.string(),
