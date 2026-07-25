@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, ReactNode, useState } from 'react';
+import { IconButton, Badge, Avatar, Button } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useUIStore } from '@/store/useUIStore';
 
@@ -22,15 +23,20 @@ function TopBarImpl({ search, onSearchChange, onSearchSubmit, onExport, tier, ac
   return (
     <div className="flex items-center gap-2 sm:gap-3 py-3 px-3 sm:px-6">
       {/* Mobile: open the left navigation drawer */}
-      <button
-        type="button"
+      <IconButton
+        label="Open menu"
+        variant="ghost"
+        className="xl:hidden flex-none"
+        icon={<Icon icon="solar:hamburger-menu-linear" size={18} />}
         onClick={() => setMobileNav(true)}
-        aria-label="Open menu"
-        className="xl:hidden grid place-items-center flex-none w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
-      >
-        <Icon icon="solar:hamburger-menu-linear" size={18} />
-      </button>
+      />
 
+      {/*
+        Search input stays a raw <input> — the same decision already made in
+        AnalysisHero.tsx this rollout: astryx's TextInput chrome (border/focus
+        ring/padding) clashes with this field's kbd-shortcut affordance and
+        icon-inline layout, and there's no lighter-weight text-field primitive.
+      */}
       <label
         className="flex min-w-0 flex-1 items-center gap-2 max-w-[460px] rounded-lg border border-[var(--line)] bg-[rgb(26_31_43_/_0.6)] py-2 px-3"
       >
@@ -51,22 +57,30 @@ function TopBarImpl({ search, onSearchChange, onSearchSubmit, onExport, tier, ac
       <span className="flex-1" />
 
       <div className="relative">
-        <button
+        <Button
+          label="Export"
+          variant="ghost"
+          size="sm"
+          className="font-mono"
+          icon={<Icon icon="solar:download-minimalistic-linear" size={14} />}
+          endContent={<Icon icon="solar:alt-arrow-down-linear" size={12} className={`transition-transform duration-200 ${exportOpen ? 'rotate-180' : ''}`} />}
           onClick={() => setExportOpen(!exportOpen)}
-          className="hx-navitem flex items-center gap-1.5 py-1.5 px-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer text-xs font-mono transition-all duration-200"
-        >
-          <Icon icon="solar:download-minimalistic-linear" size={14} />
-          Export
-          <Icon icon="solar:alt-arrow-down-linear" size={12} className={`transition-transform duration-200 ${exportOpen ? 'rotate-180' : ''}`} />
-        </button>
+        />
 
+        {/*
+          The dropdown itself (2-item export-format action menu) stays custom:
+          astryx's TopNavMenu is a hover-triggered nav-overflow menu built for
+          title+description nav items, wrong semantics/interaction model for a
+          click-triggered 2-item action list, and there's no lighter-weight
+          generic menu/dropdown primitive in the package.
+        */}
         {exportOpen && (
           <>
-            <div 
+            <div
               className="fixed inset-0 z-40"
               onClick={() => setExportOpen(false)}
             />
-            <div 
+            <div
               className="hx-rise absolute top-[calc(100%_+_8px)] right-0 w-40 bg-[var(--surface-raised)] border border-[var(--line-strong)] rounded-xl p-1 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] z-50 flex flex-col gap-0.5"
             >
               <button
@@ -89,32 +103,26 @@ function TopBarImpl({ search, onSearchChange, onSearchSubmit, onExport, tier, ac
       </div>
 
       {tier && (
-        <span
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-a30)] bg-[var(--accent-a10)] py-1 px-[11px] font-mono text-[11px] font-semibold tracking-wider text-[var(--accent-ink)]"
-        >
-          <Icon icon="solar:crown-minimalistic-linear" size={12} />
-          {tier.toUpperCase()}
+        <span className="hidden sm:inline-flex">
+          <Badge
+            variant="cyan"
+            label={tier.toUpperCase()}
+            icon={<Icon icon="solar:crown-minimalistic-linear" size={12} />}
+          />
         </span>
       )}
 
-      {account || (
-        <span
-          className="grid place-items-center w-8 h-8 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
-        >
-          <Icon icon="solar:user-linear" size={16} />
-        </span>
-      )}
+      {account || <Avatar size={32} alt="Account" />}
 
       {/* Mobile: open the right intelligence panel drawer */}
       {hasRightPanel && (
-        <button
-          type="button"
+        <IconButton
+          label="Open intelligence panel"
+          variant="ghost"
+          className="xl:hidden flex-none"
+          icon={<Icon icon="solar:widget-linear" size={18} />}
           onClick={() => setMobileRight(true)}
-          aria-label="Open intelligence panel"
-          className="xl:hidden grid place-items-center flex-none w-9 h-9 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] cursor-pointer"
-        >
-          <Icon icon="solar:widget-linear" size={18} />
-        </button>
+        />
       )}
     </div>
   );
