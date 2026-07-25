@@ -7,6 +7,7 @@ import type { UserTier } from '@/lib/types/billing';
 import type { ChatMessage } from '@/lib/types/chat';
 import { env } from '@/lib/env';
 import { KnowledgeHistoryService } from '@/lib/services/KnowledgeHistoryService';
+import type { UserKnowledgeContext } from '@/lib/types/knowledge-context';
 import { buildGroundingWithHistory } from '@/lib/utils/build-grounding-with-history';
 import { extractRequestedTranscriptRange } from '@/lib/utils/extract-transcript-range';
 import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
@@ -21,6 +22,10 @@ const CHAT_TURN_LIMIT_FALLBACK: Record<UserTier, number> = {
   pro: 30,
   enterprise: 100,
 };
+
+// Fallback used only if the settings registry is unreachable -- see
+// supabase/migrations/20260725130000_chat_transcript_range_leadin_settings.sql.
+const CHAT_TRANSCRIPT_RANGE_LEADIN_SECONDS_FALLBACK = 5;
 
 export interface ProcessChatMessageUseCaseParams {
   conversationId: string;
@@ -45,6 +50,9 @@ export interface ProcessChatMessageSuccess {
     grounding: string;
     history: Array<{ role: string; content: string }>;
     models: string[];
+    // Forwarded to the worker so AdaptiveOptionsBuilder can generate follow-up
+    // OPTIONS that vary by conversation content instead of the static fallback.
+    knowledgeContext?: UserKnowledgeContext;
   };
 }
 
@@ -363,8 +371,21 @@ export class ProcessChatMessageUseCase {
     // extract-transcript-range.ts for the full RCA: a soft prompt instruction
     // alone was confirmed insufficient (live test truncated to the first 2-3
     // lines of a requested minute and stopped, despite the full data existing).
+    // Lead-in buffer (2026-07-25 live report): the matched minute boundary
+    // often lands a few seconds AFTER the sentence actually relevant to the
+    // user's question starts, since transcript segments don't align to round
+    // numbers. Widening the extraction window's start earlier (registry-
+    // driven, not hardcoded -- see extract-transcript-range.ts's doc comment)
+    // ensures the excerpt includes that lead-in context.
+    const leadInLimits = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['chat.transcriptRange.leadInSeconds'],
+      { 'chat.transcriptRange.leadInSeconds': CHAT_TRANSCRIPT_RANGE_LEADIN_SECONDS_FALLBACK }
+    );
+    const leadInSeconds = Number(leadInLimits['chat.transcriptRange.leadInSeconds'])
+      || CHAT_TRANSCRIPT_RANGE_LEADIN_SECONDS_FALLBACK;
+
     const requestedRange = groundingResult.transcript
-      ? extractRequestedTranscriptRange(groundingResult.transcript, finalContent)
+      ? extractRequestedTranscriptRange(groundingResult.transcript, finalContent, leadInSeconds)
       : null;
     // Numbered with an explicit, checkable count: an open-ended "relay all of
     // it" instruction was confirmed insufficient on repeated live tests (the
@@ -456,6 +477,12 @@ export class ProcessChatMessageUseCase {
           grounding,
           history: history.map((m) => ({ role: m.role, content: m.content })),
           models: chatModels,
+          // Forwarded to the worker's AdaptiveOptionsBuilder so follow-up OPTIONS
+          // actually vary by conversation content instead of always falling
+          // through to the static fallback (this field was previously never
+          // sent -- knowledgeContext was only folded into the grounding TEXT via
+          // buildGroundingWithHistory, never passed as structured data).
+          knowledgeContext,
         },
       },
     };

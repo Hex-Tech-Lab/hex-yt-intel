@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/nextjs';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Icon } from '@/components/templates/_shared/primitives';
+import { TextArea } from '@astryxdesign/core';
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
@@ -475,14 +476,16 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
       {/* Composer */}
       <div className="border-t border-[var(--line)] px-3 lg:px-4 py-2">
         <div className="flex gap-2 items-end">
-          <textarea
+          <TextArea
             ref={inputRef}
+            label="Message"
+            isLabelHidden
             value={localInput}
-            onChange={(e) => handleInputChange(e.target.value)}
+            onChange={(value) => handleInputChange(value)}
             onKeyDown={onKeyDown}
             rows={1}
             placeholder="Message… (Enter to send, Shift+Enter for newline)"
-            className="flex-1 resize-none max-h-[140px] py-2 px-2.5 rounded-lg border border-[var(--line)] bg-[rgb(8_11_17_/_0.8)] text-[var(--ink)] text-[13.5px] leading-normal outline-none hx-field"
+            className="flex-1 max-h-[140px] hx-field"
           />
           <button
             onClick={() => void handleSend()}

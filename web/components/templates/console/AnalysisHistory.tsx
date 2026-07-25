@@ -371,7 +371,22 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           {/* Astryx pilot (2026-07-24): first component from the new design
               system, per user's explicit ask to rebuild recent UI work on it.
               startIcon/hasClear/isLabelHidden replace what was previously
-              hand-rolled with an absolutely-positioned Icon + raw <input>. */}
+              hand-rolled with an absolutely-positioned Icon + raw <input>.
+
+              Astryx rollout (2026-07-25): investigated swapping this for
+              PowerSearch (`@astryxdesign/core/PowerSearch`). Kept TextInput --
+              PowerSearch is a structured token-filter bar: it requires a
+              PowerSearchConfig of fields/operators and renders filters as
+              removable chips (field + operator + value), even its
+              `contentSearchFieldKey` free-text mode still needs a full field
+              config and produces PowerSearchFilter[] output. This box is a
+              single plain substring match over title/channel feeding the
+              existing `filteredAndSorted` useMemo via a plain string --
+              adopting PowerSearch would mean inventing a fake one-field config
+              just to get a token UI this search doesn't need, and reshaping
+              the debounced-string filter into filter-array handling for no
+              behavioral gain. TextInput's startIcon/hasClear/isLabelHidden
+              already cover the real UX need. */}
           <TextInput
             label="Search analysis history by title or channel"
             isLabelHidden
@@ -498,7 +513,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !busy) { e.preventDefault(); restoreAnalysis(item.analysisId); } }}
-                  className={`rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 transition-all hx-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                  className={`rounded-xl border border-[var(--line)] p-4 transition-all hx-rise focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                    idx % 2 === 1 ? 'bg-[var(--card-quiet)]' : 'bg-[var(--card)]'
+                  } ${
                     busy ? 'cursor-wait opacity-60' : 'cursor-pointer hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'
                   }`}
                   style={{ animationDelay: `${idx * 40}ms` }}

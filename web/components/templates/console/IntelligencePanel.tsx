@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { Card as AstryxCard } from '@astryxdesign/core';
 import { MonoLabel, Icon } from '@/components/templates/_shared/primitives';
 import { nodeIntelligence } from '@/lib/intelligence/knowledge-graph';
 import type { KnowledgeGraph, RelatedRef, RelationInsight } from '@/lib/types/knowledge-graph';
@@ -47,8 +48,10 @@ function StanceSection({
           const borderClass = contra ? "border-l-[var(--warn)]" : "border-l-[var(--ink-secondary)]";
           
           return (
-            <div 
-              key={`${i.kind}-${i.source}-${i.target}`} 
+            <AstryxCard
+              key={`${i.kind}-${i.source}-${i.target}`}
+              variant="transparent"
+              padding={0}
               className={`border border-[var(--line)] ${borderClass} border-l-2 rounded-xl p-2 px-3 bg-[rgb(11_14_20_/_0.5)]`}
             >
               <div className="flex items-center gap-1.5 mb-1.25">
@@ -56,22 +59,22 @@ function StanceSection({
                 <span className={`font-mono text-[10px] uppercase tracking-[0.05em] ${colorClass}`}>{i.kind}</span>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                <button 
-                  onClick={() => onSelect(`dim-${i.source}`)} 
+                <button
+                  onClick={() => onSelect(`dim-${i.source}`)}
                   className="bg-transparent border-none text-[var(--ink)] text-xs font-semibold cursor-pointer p-0 hover:text-[var(--accent)] transition-colors"
                 >
                   {i.sourceLabel}
                 </button>
                 <Icon icon="solar:arrow-right-linear" size={12} className="text-[var(--ink-muted)]" />
-                <button 
-                  onClick={() => onSelect(`dim-${i.target}`)} 
+                <button
+                  onClick={() => onSelect(`dim-${i.target}`)}
                   className="bg-transparent border-none text-[var(--ink)] text-xs font-semibold cursor-pointer p-0 hover:text-[var(--accent)] transition-colors"
                 >
                   {i.targetLabel}
                 </button>
               </div>
               <p className="m-0 text-[var(--ink-secondary)] text-xs leading-relaxed">{i.rationale}</p>
-            </div>
+            </AstryxCard>
           );
         })
       )}
@@ -109,7 +112,7 @@ function RefRow({ r, color, onSelect }: { r: RelatedRef; color: string; onSelect
   );
 }
 
-function Card({
+function RelationCard({
   kind,
   refs,
   onSelect,
@@ -120,7 +123,7 @@ function Card({
 }) {
   const meta = CARD[kind];
   return (
-    <div className="border border-[var(--line)] rounded-xl overflow-hidden bg-[rgb(11_14_20_/_0.5)]">
+    <AstryxCard variant="transparent" padding={0} className="border border-[var(--line)] rounded-xl overflow-hidden bg-[rgb(11_14_20_/_0.5)]">
       <div className="flex items-center justify-between p-2 px-3 border-b border-[var(--line)]">
         <span className="flex items-center gap-1.75 text-[11.5px] font-mono tracking-tight uppercase" style={{ color: meta.color }}>
           <Icon icon={meta.icon} size={14} />
@@ -137,7 +140,7 @@ function Card({
           ))}
         </div>
       )}
-    </div>
+    </AstryxCard>
   );
 }
 
@@ -151,7 +154,7 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
       <div className="flex flex-col gap-3">
         <MonoLabel index="//">graph intelligence</MonoLabel>
         {rootNode && (
-          <div className="border border-[var(--line)] rounded-xl p-3 bg-[var(--accent-a06)]">
+          <AstryxCard variant="transparent" padding={0} className="border border-[var(--line)] rounded-xl p-3 bg-[var(--accent-a06)]">
             <div className="flex items-center gap-1.75 text-[var(--accent-ink)] font-mono text-xs tracking-tight uppercase">
               <Icon icon="solar:crown-minimalistic-linear" size={14} />
               Foundational dimension
@@ -165,7 +168,7 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
             <p className="mt-1.5 text-[var(--ink-muted)] text-xs leading-relaxed">
               The most connected node — the conceptual anchor the rest of the analysis leans on.
             </p>
-          </div>
+          </AstryxCard>
         )}
         <div className="text-[var(--ink-muted)] font-mono text-xs leading-relaxed">
           Select a node to see its <span className="text-[var(--accent-ink)]">related</span>,{' '}
@@ -213,10 +216,10 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
         </div>
       )}
 
-      <Card kind="related" refs={intel.related} onSelect={onSelect} />
-      <Card kind="similar" refs={intel.similar} onSelect={onSelect} />
-      <Card kind="contrarian" refs={intel.contrarian} onSelect={onSelect} />
-      <Card kind="tangents" refs={intel.tangents} onSelect={onSelect} />
+      <RelationCard kind="related" refs={intel.related} onSelect={onSelect} />
+      <RelationCard kind="similar" refs={intel.similar} onSelect={onSelect} />
+      <RelationCard kind="contrarian" refs={intel.contrarian} onSelect={onSelect} />
+      <RelationCard kind="tangents" refs={intel.tangents} onSelect={onSelect} />
       <StanceSection insights={insights} loading={insightsLoading} selectedDim={selectedNode.dimension} onSelect={onSelect} />
     </div>
   );
