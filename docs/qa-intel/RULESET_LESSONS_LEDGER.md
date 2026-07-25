@@ -21,6 +21,12 @@ once the corresponding commit lands, the commit hash is the permanent record.
 - **Root cause**: each severity tier's block is written as an independent early-return/exit rather than accumulating all tiers before one final report.
 - **Not fixed yet** — needs the three severity blocks (critical/high/nonCritical) restructured to all print before any exit, with exit code decided last.
 
+### 2026-07-25 — "DB operation without validation" fires on read-only .select() calls
+- **File**: `web/app/api/admin/settings/route.ts` (new file, GET-only, contains zero `.insert`/`.upsert`/`.update` calls)
+- **Symptom**: 3x "Data Integrity: DB operation without validation" (high severity) fired on a file whose only Supabase calls are `.select().order()` and `.select().eq().is()` -- pure reads.
+- **Root cause**: the data-integrity rule appears to match on `supabase.from(...)` generically without checking which method (`.select` vs `.insert`/`.upsert`/`.update`) follows, so any DB call in a file gets flagged as an unvalidated write.
+- **Not fixed yet** — needs the rule to only fire when the call chain actually contains a write method.
+
 ### 2026-07-25 — secrets-exposure "token" pattern false-positives on pagination cursors
 - **Rule**: the Sentry/telemetry secrets-exposure check (`scripts/quality-engine/rules/security.ts`, "Secrets Exposure: Sensitive data in telemetry")
 - **Symptom**: flagged `worker/src/services/MetadataScraper.ts`'s new `fetchCommentsPage` (`pageToken`, passed into `Sentry.captureMessage`'s `extra`) as a high-severity secret leak — high severity is CI-blocking. `pageToken` is YouTube Data API's opaque pagination continuation cursor, not a credential; Google's own docs treat it as safe to log.
