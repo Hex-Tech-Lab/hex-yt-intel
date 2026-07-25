@@ -11,7 +11,7 @@ import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
 import { TimestampLink } from '@/components/TimestampLink';
-import { showToast } from '@/lib/dashboard/export';
+import { showToast, copyChatAsMarkdown, exportChatAsMarkdown, type ChatMessageForExport } from '@/lib/dashboard/export';
 
 export interface ChatDockProps {
   /** Active analysis for grounding new threads (optional). */
@@ -69,6 +69,13 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   const processedMessageIdsRef = useRef<Set<string>>(new Set());
 
   const messages = useMemo(() => (activeId ? messagesByConv[activeId] || [] : []), [activeId, messagesByConv]);
+  // Assistant turns carry a trailing OPTIONS:[...] chip payload (see parseAssistant
+  // below) that must not leak into a copy-all/export -- reuses the same parser the
+  // per-message body/chip rendering already uses, so the two paths can't drift.
+  const exportableMessages = useMemo<ChatMessageForExport[]>(
+    () => messages.map((m) => ({ role: m.role, body: m.role === 'assistant' ? parseAssistant(m.content).body : m.content })),
+    [messages]
+  );
   const activeConv = useMemo(() => conversations.find((c) => c.id === activeId) || null, [conversations, activeId]);
 
   // Reset processed message tracking when conversation changes
@@ -305,6 +312,24 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           <PersistStatusIndicator state={persistState} />
         </div>
         <div className="flex gap-1.5">
+          {messages.length > 0 && (
+            <>
+              <button
+                onClick={() => copyChatAsMarkdown(exportableMessages, activeConv?.title)}
+                title="Copy all as markdown"
+                className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"
+              >
+                <Icon icon="solar:copy-linear" size={14} />
+              </button>
+              <button
+                onClick={() => exportChatAsMarkdown(exportableMessages, activeConv?.title)}
+                title="Export as markdown"
+                className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"
+              >
+                <Icon icon="solar:file-download-linear" size={14} />
+              </button>
+            </>
+          )}
           <button onClick={handleNew} title="New chat" className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:pen-new-square-linear" size={14} /></button>
           <button
             onClick={() => {
