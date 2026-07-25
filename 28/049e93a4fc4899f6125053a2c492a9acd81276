@@ -1,0 +1,66 @@
+worker/src/services/LLMCascade.ts
+  s_0eded1e9d0cab6::t_f6da0353681a3f 20,22-28,40,42-49
+web/lib/adapters/SettingsModelAdapter.ts
+  s_0eded1e9d0cab6::t_c2125fffbbf86e 87,93,95
+  s_0eded1e9d0cab6::t_4027d5a0d8e2e6 4,17-18
+web/lib/intelligence/relations-engine.ts
+  s_0eded1e9d0cab6::t_3c5fbd0d8d8eae 133,135
+  s_0eded1e9d0cab6::t_5586fc2ef595a9 3
+worker/src/chat-stream.ts
+  s_0eded1e9d0cab6::t_8cb63699699cd3 340
+  s_0eded1e9d0cab6::t_ac27585c5ab5a5 54-57
+  s_0eded1e9d0cab6::t_42775d411cc67c 98,104-106
+  s_0eded1e9d0cab6::t_cfd6c1005612cb 6-12
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_0eded1e9d0cab6::t_60d6efe99d1d7f 156-160
+  s_0eded1e9d0cab6::t_cb1c6d79d02c99 288
+  s_0eded1e9d0cab6::t_7f908b605d7b42 18
+  s_0eded1e9d0cab6::t_6c56a6ae702ccc 67
+web/lib/config/prompts.ts
+  s_0eded1e9d0cab6::t_4db64bdd22e6f2 6
+  s_0eded1e9d0cab6::t_ec6c6938794fda 32
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_c77f1be18d0d85 215
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_0eded1e9d0cab6::t_9b4cbae144b9f0 15
+  s_0eded1e9d0cab6::t_d8260163e04dca 487
+  s_0eded1e9d0cab6::t_a039e4a244ee29 443-447
+  s_0eded1e9d0cab6::t_605dfb567b4606 54
+web/app/api/webhooks/digest/route.ts
+  s_0eded1e9d0cab6::t_8064e9f4c5a95e 18,48
+supabase/migrations/20260725140000_cascade_registry.sql
+  s_0eded1e9d0cab6::t_f76d26ca1827bf 1-101
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_1a915d9d6196cb 86-91
+  s_0eded1e9d0cab6::t_3b1e600da84c73 972
+web/lib/config/cascade.ts
+  s_0eded1e9d0cab6::t_6cc7155c3ee35e 1-2,17-26,28-34,36-42,44-49,52-91
+web/lib/services/openrouter.ts
+  s_0eded1e9d0cab6::t_16d88f41c99812 26-33
+  s_0eded1e9d0cab6::t_c2296dc215e075 9
+  s_0eded1e9d0cab6::t_11db958c8ad8d7 57-58,63-66
+  s_0eded1e9d0cab6::t_5090ada434d78d 131,172
+  s_0eded1e9d0cab6::t_c670268c01dbce 67
+web/lib/types/contracts.ts
+  s_0eded1e9d0cab6::t_cb19af99119f54 226-229
+web/app/api/analyses/digest/route.ts
+  s_0eded1e9d0cab6::t_8064e9f4c5a95e 10,40
+worker/src/services/CommentClassifier.ts
+  s_0eded1e9d0cab6::t_7a71dfa77e3152 2-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "28049e93a4fc4899f6125053a2c492a9acd81276",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
