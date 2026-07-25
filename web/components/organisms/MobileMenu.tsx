@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { IconButton, Divider } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
-import type { User } from '@supabase/supabase-js';
 import { useUIStore } from '@/store/useUIStore';
+import type { User } from '@supabase/supabase-js';
 
 /**
  * MobileMenu Component
@@ -18,16 +19,16 @@ export function MobileMenu({ user }: { user?: User | null }) {
   return (
     <div className="flex flex-col h-full bg-[var(--void)]">
       {/* Menu Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[var(--line)]">
+      <div className="flex items-center justify-between p-4">
         <span className="text-sm font-semibold text-[var(--ink)] uppercase tracking-wide">Menu</span>
-        <button
+        <IconButton
+          label="Close menu"
+          variant="secondary"
+          icon={<Icon icon="solar:close-circle-linear" size={20} />}
           onClick={closeMenu}
-          aria-label="Close menu"
-          className="grid place-items-center w-10 h-10 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--line-faint)] transition-colors"
-        >
-          <Icon icon="solar:close-circle-linear" size={20} />
-        </button>
+        />
       </div>
+      <Divider />
 
       {/* Menu Content */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
@@ -62,7 +63,8 @@ export function MobileMenu({ user }: { user?: User | null }) {
       </nav>
 
       {/* Menu Footer */}
-      <div className="border-t border-[var(--line)] p-4 space-y-3">
+      <Divider />
+      <div className="p-4 space-y-3">
         {safeUser ? (
           <>
             <div className="text-xs text-[var(--ink-muted)] truncate">{safeUser.email}</div>
