@@ -223,6 +223,10 @@ export interface WorkerStreamRequest {
   timezone: string;
   // Per-tier model cascade (app_settings); bound into the stream token's HMAC.
   models?: string[];
+  // Full registry-resolved cascade (2026-07-25, includes providerOrder per tier)
+  // -- see CreateAnalysisUseCase's resolveAnalysisCascade() and StreamRequest.cascade
+  // in worker/src/routes/analysis.ts.
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
   sig: string;
   exp: number;
   appUrl?: string;

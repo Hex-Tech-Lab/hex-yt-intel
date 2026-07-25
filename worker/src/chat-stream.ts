@@ -3,7 +3,13 @@ import * as Sentry from "@sentry/cloudflare";
 // Chat config is bundled from web/lib by esbuild (same pattern as ReasoningEngine's
 // getUCISPrompt import) — the protocol/model list stays a single source of truth.
 import { CHAT_PROTOCOL, CHAT_MODELS } from "../../web/lib/config/prompts";
-import { CHAT_CASCADE } from "../../web/lib/config/cascade";
+import { CASCADE_FALLBACKS } from "../../web/lib/config/cascade";
+
+// Deploy-time snapshot only -- see CASCADE_FALLBACKS' doc comment in cascade.ts.
+// Real per-request values come from ChatStreamRequest.cascade, registry-resolved
+// server-side (ProcessChatMessageUseCase via resolveChatCascade) since the worker
+// has no DB access (ADR 005).
+const CHAT_CASCADE = CASCADE_FALLBACKS.chat;
 import { translateModelId } from "./services/model-id-translator";
 import { createAtomicPersist } from "./services/atomic-persist";
 import { signBoundContent, secretFingerprint } from "./crypto";
@@ -45,6 +51,10 @@ interface ChatStreamRequest {
   history: Array<{ role: string; content: string }>;
   // Per-tier chat cascade resolved by the bouncer (app_settings); bound into the HMAC.
   models?: string[];
+  // Full registry-resolved cascade (2026-07-25, includes providerOrder per tier) --
+  // see ProcessChatMessageUseCase's resolveChatCascade(). Preferred over `models`
+  // when present.
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
   sig: string;
   exp: number;
   appUrl?: string;
@@ -85,12 +95,15 @@ async function streamChatCascade(
   history: Array<{ role: string; content: string }>,
   onDelta: (chunk: string) => void,
   models?: string[],
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
 ): Promise<string> {
   const messages: Array<{ role: string; content: string }> = [{ role: "system", content: CHAT_PROTOCOL }];
   if (grounding) messages.push({ role: "system", content: grounding });
   for (const m of history) messages.push({ role: m.role, content: m.content });
 
-  const chain = models && models.length > 0
+  const chain = cascade && cascade.length > 0
+    ? cascade
+    : models && models.length > 0
     ? models.map((m, idx) => {
         if (CHAT_CASCADE[idx] && CHAT_CASCADE[idx].model === m) {
           return CHAT_CASCADE[idx];
@@ -324,7 +337,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       try {
         full = await streamChatCascade(apiKey, grounding, history, (chunk) => {
           send({ type: "delta", content: chunk, requestId: req.requestId });
-        }, req.models);
+        }, req.models, req.cascade);
         if (!full) {
           full = "Sorry, I couldn't generate a response. All fallback models failed to respond. Please check your internet connection and try again.";
           send({ type: "delta", content: full, requestId: req.requestId });

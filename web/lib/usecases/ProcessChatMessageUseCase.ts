@@ -12,6 +12,7 @@ import { buildGroundingWithHistory } from '@/lib/utils/build-grounding-with-hist
 import { extractRequestedTranscriptRange } from '@/lib/utils/extract-transcript-range';
 import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
+import { resolveChatCascade, resolveReasoningCascade, type CascadeItem } from '@/lib/config/cascade';
 import { getChatGroundingInstructions } from '@/lib/prompts/chat-grounding';
 
 // Fallback used only if the settings registry is unreachable (see
@@ -50,6 +51,7 @@ export interface ProcessChatMessageSuccess {
     grounding: string;
     history: Array<{ role: string; content: string }>;
     models: string[];
+    cascade: CascadeItem[];
     // Forwarded to the worker so AdaptiveOptionsBuilder can generate follow-up
     // OPTIONS that vary by conversation content instead of the static fallback.
     knowledgeContext?: UserKnowledgeContext;
@@ -438,6 +440,11 @@ export class ProcessChatMessageUseCase {
     const chatModels = isReasoning
       ? await this.modelResolution.resolveModels(tier, 'reasoning')
       : await this.modelResolution.resolveModels(tier, 'chat');
+    // Full registry-resolved tiers (with providerOrder), forwarded to the worker
+    // alongside chatModels -- see ChatStreamRequest.cascade in worker/src/chat-stream.ts.
+    const chatCascade: CascadeItem[] = isReasoning
+      ? await resolveReasoningCascade(tier === 'pro' || tier === 'enterprise' ? tier : 'free')
+      : await resolveChatCascade();
 
     // 10. Generate cryptographic stream token
     let sig: string;
@@ -477,6 +484,7 @@ export class ProcessChatMessageUseCase {
           grounding,
           history: history.map((m) => ({ role: m.role, content: m.content })),
           models: chatModels,
+          cascade: chatCascade,
           // Forwarded to the worker's AdaptiveOptionsBuilder so follow-up OPTIONS
           // actually vary by conversation content instead of always falling
           // through to the static fallback (this field was previously never

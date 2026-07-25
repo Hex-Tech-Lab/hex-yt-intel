@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import type { UserTier } from '@/lib/types/billing';
 import type { ModelResolutionPort } from '@/lib/ports';
-import { CHAT_CASCADE, ANALYSIS_CASCADE, REASONING_CASCADE } from '@/lib/config/cascade';
+import { resolveChatCascade, resolveAnalysisCascade, resolveReasoningCascade, CASCADE_FALLBACKS } from '@/lib/config/cascade';
 import { getRedisValue, setRedisValue } from '@/lib/redis';
 import { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
 
@@ -14,8 +14,8 @@ interface ModelConfig {
 }
 
 const FALLBACK: Record<ModelKind, readonly string[]> = {
-  chat: CHAT_CASCADE.map((c) => c.model),
-  analysis: ANALYSIS_CASCADE.map((c) => c.model),
+  chat: CASCADE_FALLBACKS.chat.map((c) => c.model),
+  analysis: CASCADE_FALLBACKS.analysis.map((c) => c.model),
 };
 
 const TTL_MS = 60_000;
@@ -84,15 +84,15 @@ export class SettingsModelAdapter implements ModelResolutionPort {
    */
   async resolveModels(tier: UserTier, kind: 'analysis' | 'chat' | 'reasoning'): Promise<string[]> {
     if (kind === 'reasoning') {
-      const cascade = REASONING_CASCADE[tier] || REASONING_CASCADE.free || [];
+      const cascade = await resolveReasoningCascade(tier === 'pro' || tier === 'enterprise' ? tier : 'free');
       return cascade.map((item) => item.model);
     }
 
     if (this.commercialTrialMode) {
       if (kind === 'chat') {
-        return CHAT_CASCADE.map((c) => c.model);
+        return (await resolveChatCascade()).map((c) => c.model);
       }
-      return ANALYSIS_CASCADE.map((c) => c.model);
+      return (await resolveAnalysisCascade()).map((c) => c.model);
     }
 
     const cfg = await readModelConfig(this.persistence);

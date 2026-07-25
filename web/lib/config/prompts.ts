@@ -3,7 +3,7 @@
  * Extracts multi-line prompt strings from routes and services
  */
 
-import { CHAT_CASCADE } from './cascade';
+import { CASCADE_FALLBACKS } from './cascade';
 
 /**
  * Chat protocol — interaction rules for OpenRouter streaming
@@ -29,6 +29,6 @@ export const CHAT_PROTOCOL = [
  *
  * Used by: /api/chat/conversations/[id]/messages
  */
-export const CHAT_MODELS: readonly string[] = CHAT_CASCADE.map((c) => c.model);
+export const CHAT_MODELS: readonly string[] = CASCADE_FALLBACKS.chat.map((c) => c.model);
 
 

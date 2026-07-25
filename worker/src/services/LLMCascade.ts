@@ -17,9 +17,15 @@ import { translateModelId } from './model-id-translator';
 //   - claude-haiku-4.5: paid last resort (needs OpenRouter credit; 402 while overdrawn).
 // NOTE: ":free" IDs need their providers enabled in the OpenRouter account allowlist
 // or they 404 "no allowed providers". Paid IDs must NOT carry ":free".
-import { ANALYSIS_CASCADE } from '../../../web/lib/config/cascade';
+import { CASCADE_FALLBACKS } from '../../../web/lib/config/cascade';
 
-const MODEL_CHAIN = ANALYSIS_CASCADE;
+// Deploy-time snapshot only -- the worker has no DB access (ADR 005), so this
+// is never the live source of truth. Real per-request values come from the
+// `cascade` field on StreamRequest (full CascadeItem[], registry-resolved
+// server-side via resolveAnalysisCascade), forwarded by CreateAnalysisUseCase.
+// `models` (flat id array, positionally matched below) is the older/signed
+// fallback for stale clients that haven't picked up the `cascade` field yet.
+const MODEL_CHAIN = CASCADE_FALLBACKS.analysis;
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const HTTP_REFERER = 'https://yt-intel.hex-tech-lab.workers.dev';
@@ -31,9 +37,16 @@ export class LLMCascade implements LLMCascadePort {
   // the override source of truth; MODEL_CHAIN is the safety-net fallback.
   private chain: ReadonlyArray<{ model: string; name: string; providerOrder?: readonly string[] }>;
 
-  constructor(apiKey: string, models?: string[]) {
+  constructor(apiKey: string, models?: string[], cascade?: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[] }>) {
     this.apiKey = apiKey;
-    if (models && models.length > 0) {
+    if (cascade && cascade.length > 0) {
+      // Preferred path: full registry-resolved tiers, providerOrder included
+      // directly -- correct even when multiple tiers share one model id
+      // across different providers (e.g. Haiku 4.5 on Vertex/Anthropic/Azure),
+      // which the `models`-only path below can't distinguish once MODEL_CHAIN
+      // drifts from what was actually resolved server-side.
+      this.chain = cascade;
+    } else if (models && models.length > 0) {
       this.chain = models.map((model, idx) => {
         if (MODEL_CHAIN[idx] && MODEL_CHAIN[idx].model === model) {
           return MODEL_CHAIN[idx];

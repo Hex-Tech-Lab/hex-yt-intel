@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
-import { STANCE_CASCADE } from '@/lib/config/cascade';
+import { resolveStanceCascade } from '@/lib/config/cascade';
 import { translateModelId } from '@/lib/utils/model-id-translator';
 
 // See /docs/intelligence/relations-engine.md
@@ -9,8 +9,6 @@ export interface StanceDimension {
   name: string;
   content: string;
 }
-
-const STANCE_MODELS = STANCE_CASCADE;
 
 const LLMInsightSchema = z.object({
   kind: z.enum(['tangent', 'contrarian']),
@@ -132,8 +130,9 @@ export async function* computeStanceRelationsStream(
 
   const labelOf = new Map(usable.map((d) => [d.number, d.name]));
   const prompt = buildPrompt(usable);
+  const stanceModels = await resolveStanceCascade();
 
-  for (const item of STANCE_MODELS) {
+  for (const item of stanceModels) {
     if (handshakeSignal?.aborted) {
       console.warn(`[relations/engine] Cascade aborted before attempting model: ${item.model}`);
       break;
