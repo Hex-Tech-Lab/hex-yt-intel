@@ -1,0 +1,21 @@
+web/lib/types/contracts.ts
+  s_0eded1e9d0cab6::t_501303d82e74ee 129-135
+web/lib/adapters/WorkerIngestionAdapter.ts
+  s_0eded1e9d0cab6::t_24b2f52ec3e07f 181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f3def52e8a88a83c4a4848243a733bb3247ae88e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
