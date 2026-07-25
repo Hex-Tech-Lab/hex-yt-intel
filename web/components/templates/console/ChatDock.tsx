@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/nextjs';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Icon } from '@/components/templates/_shared/primitives';
-import { TextArea } from '@astryxdesign/core';
+import { TextArea, IconButton } from '@astryxdesign/core';
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
@@ -273,9 +273,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           </span>
           <PersistStatusIndicator state={persistState} />
         </button>
-        <button onClick={() => setOpen(true)} aria-label="Expand chat" title="Expand" className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer">
-          <Icon icon="solar:alt-arrow-up-linear" size={16} />
-        </button>
+        <IconButton label="Expand chat" variant="ghost" size="sm" icon={<Icon icon="solar:alt-arrow-up-linear" size={16} />} onClick={() => setOpen(true)} />
       </div>
     );
   }
@@ -314,24 +312,39 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         <div className="flex gap-1.5">
           {messages.length > 0 && (
             <>
-              <button
+              <IconButton
+                label="Copy all as markdown"
+                variant="ghost"
+                size="sm"
+                icon={<Icon icon="solar:copy-linear" size={14} />}
                 onClick={() => copyChatAsMarkdown(exportableMessages, activeConv?.title)}
-                title="Copy all as markdown"
-                className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"
-              >
-                <Icon icon="solar:copy-linear" size={14} />
-              </button>
-              <button
+              />
+              <IconButton
+                label="Export as markdown"
+                variant="ghost"
+                size="sm"
+                icon={<Icon icon="solar:file-download-linear" size={14} />}
                 onClick={() => exportChatAsMarkdown(exportableMessages, activeConv?.title)}
-                title="Export as markdown"
-                className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"
-              >
-                <Icon icon="solar:file-download-linear" size={14} />
-              </button>
+              />
             </>
           )}
-          <button onClick={handleNew} title="New chat" className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:pen-new-square-linear" size={14} /></button>
-          <button
+          <IconButton label="New chat" variant="ghost" size="sm" icon={<Icon icon="solar:pen-new-square-linear" size={14} />} onClick={handleNew} />
+          <IconButton
+            label={heightState === 'normal' ? "Expand to 50%" : heightState === 'half' ? "Expand to 100%" : "Restore size"}
+            variant="ghost"
+            size="sm"
+            icon={
+              <Icon
+                icon={
+                  heightState === 'normal'
+                    ? 'solar:maximize-square-linear'
+                    : heightState === 'half'
+                    ? 'solar:maximize-square-bold'
+                    : 'solar:minimize-square-linear'
+                }
+                size={15}
+              />
+            }
             onClick={() => {
               setHeightState((curr) => {
                 if (curr === 'normal') return 'half';
@@ -339,22 +352,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 return 'normal';
               });
             }}
-            aria-label="Expand height"
-            title={heightState === 'normal' ? "Expand to 50%" : heightState === 'half' ? "Expand to 100%" : "Restore size"}
-            className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"
-          >
-            <Icon
-              icon={
-                heightState === 'normal'
-                  ? 'solar:maximize-square-linear'
-                  : heightState === 'half'
-                  ? 'solar:maximize-square-bold'
-                  : 'solar:minimize-square-linear'
-              }
-              size={15}
-            />
-          </button>
-          <button onClick={() => setOpen(false)} aria-label="Collapse chat" title="Collapse" className="grid place-items-center w-7 h-7 rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:alt-arrow-down-linear" size={16} /></button>
+          />
+          <IconButton label="Collapse chat" variant="ghost" size="sm" icon={<Icon icon="solar:alt-arrow-down-linear" size={16} />} onClick={() => setOpen(false)} />
         </div>
       </div>
 
@@ -375,7 +374,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 {c.analysisId && <Icon icon="solar:link-round-angle-linear" size={12} className="flex-shrink-0 opacity-70" />}
                 <span className="overflow-hidden text-ellipsis">{c.title}</span>
               </button>
-              <button onClick={() => void deleteConversation(c.id)} title="Delete" className="grid place-items-center w-[22px] h-[22px] rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer"><Icon icon="solar:trash-bin-minimalistic-linear" size={12} /></button>
+              <IconButton label="Delete conversation" variant="ghost" size="sm" icon={<Icon icon="solar:trash-bin-minimalistic-linear" size={12} />} onClick={() => void deleteConversation(c.id)} />
             </div>
                 ))}
               </>
@@ -461,17 +460,14 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 </div>
                 {body && (
                   <div className={`flex gap-1.5 ml-0.5 ${isUser ? 'self-end mr-0.5' : ''}`}>
-                    <button
+                    <IconButton
+                      label="Copy message"
+                      variant="ghost"
+                      size="sm"
+                      icon={<Icon icon={copiedMessageId === m.id ? 'solar:check-read-linear' : 'solar:copy-linear'} size={13} />}
                       onClick={() => handleCopyMessage(m.id, body)}
-                      title="Copy"
-                      className={`grid place-items-center w-6 h-6 rounded-md border cursor-pointer transition-colors ${
-                        copiedMessageId === m.id
-                          ? 'border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-a10)]'
-                          : 'border-[var(--line)] bg-transparent text-[var(--ink-muted)]'
-                      }`}
-                    >
-                      <Icon icon={copiedMessageId === m.id ? 'solar:check-read-linear' : 'solar:copy-linear'} size={13} />
-                    </button>
+                      className={copiedMessageId === m.id ? '!border-[var(--accent)] !text-[var(--accent)] !bg-[var(--accent-a10)]' : ''}
+                    />
                   </div>
                 )}
                 {!isUser && options.length > 0 && (
