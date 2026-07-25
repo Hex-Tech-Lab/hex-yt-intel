@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, startTransition, useRef, type ReactNode } from 'react';
 import { TextInput } from '@astryxdesign/core/TextInput';
+import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { useHistoryOverview } from '@/hooks/useHistoryOverview';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -104,6 +105,38 @@ function DimensionDots({ present, totalDimensions, auxChips }: { present: number
         );
       })}
       {auxChips}
+    </div>
+  );
+}
+
+/**
+ * Vercel-style shimmer skeleton row, shape-matched to the real history-item
+ * card below (title row + metrics row + dimension-dots row) so the layout
+ * doesn't jump when data arrives. `index` staggers Astryx's built-in pulse
+ * timing per row for the wave effect the user asked for ("especially with
+ * any lists"), same as Vercel's own deployments-list loading state.
+ */
+function HistoryRowSkeleton({ index }: { index: number }) {
+  return (
+    <div className="rounded-xl border border-[var(--line)] p-4 bg-[var(--card)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 flex items-center gap-2">
+          <Skeleton width={20} height={20} radius="rounded" index={index} />
+          <Skeleton width="45%" height={16} index={index} />
+        </div>
+        <Skeleton width={64} height={16} radius={1} index={index} />
+      </div>
+      <div className="flex items-center gap-4 mt-3">
+        <Skeleton width={90} height={12} index={index} />
+        <Skeleton width={70} height={12} index={index} />
+        <Skeleton width={110} height={12} index={index} />
+      </div>
+      <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[var(--line-faint)]">
+        <Skeleton width={64} height={10} index={index} />
+        {Array.from({ length: 8 }, (_, i) => (
+          <Skeleton key={i} width={20} height={20} radius={2} index={index} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -328,9 +361,13 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
   if (isLoading) {
     return (
-      <div className="p-4 text-center text-[var(--ink-secondary)]">
-        <Icon icon="solar:refresh-linear" size={24} className="hx-anispin inline-block mb-4" />
-        <p>Loading your analysis history…</p>
+      <div className="flex flex-col gap-4 pb-20">
+        <Skeleton width={220} height={22} index={0} />
+        <div className="flex flex-col gap-2.5">
+          {Array.from({ length: 6 }, (_, i) => (
+            <HistoryRowSkeleton key={i} index={i} />
+          ))}
+        </div>
       </div>
     );
   }

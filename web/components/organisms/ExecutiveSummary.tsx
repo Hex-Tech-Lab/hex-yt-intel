@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 export interface ExecutiveSummaryData {
@@ -291,7 +292,7 @@ function SummarySkeletons() {
           className="border border-[var(--line)] rounded-lg bg-[var(--surface)] overflow-hidden"
         >
           <div className="px-4 py-3 bg-[var(--bg)] border-0 border-b border-[var(--line-faint)]">
-            <div className="h-3 w-1/4 rounded bg-[var(--ink)]/10" />
+            <Skeleton width="25%" height={12} index={i} />
           </div>
         </div>
       ))}
