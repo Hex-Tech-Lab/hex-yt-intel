@@ -254,6 +254,10 @@ export class LLMCascade implements LLMCascadePort {
           temperature: 1,
           max_tokens: requestMaxTokens,
           stream: true,
+          // Default to low reasoning effort for reasoning-capable models unless
+          // the caller explicitly needs more (user directive 2026-07-25) -- keeps
+          // cost/latency down for cascade tiers that don't need deep reasoning.
+          reasoning: { effort: 'low' },
           // The system prompt (getUCISPrompt) already embeds the metadata + transcript
           // in its ACTIVE ANALYSIS SESSION block. Re-sending them here made the model
           // echo the prompt header instead of analyzing.
@@ -366,6 +370,7 @@ export class LLMCascade implements LLMCascadePort {
           model: requestModel,
           temperature: 1,
           max_tokens: requestMaxTokens,
+          reasoning: { effort: 'low' },
           messages: [
             { role: 'system', content: systemPrompt },
           ],

@@ -80,6 +80,9 @@ export class CommentClassifier implements CommentClassificationPort {
             ],
             temperature: 0.2,
             max_tokens: Math.max(500, comments.length * 40),
+            // Default to low reasoning effort unless explicitly asked otherwise
+            // (user directive 2026-07-25) -- classification doesn't need deep reasoning.
+            reasoning: { effort: 'low' },
             ...(entry.providerOrder ? { provider: { order: entry.providerOrder, allow_fallbacks: true } } : {}),
           }),
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

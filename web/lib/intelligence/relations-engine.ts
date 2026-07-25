@@ -72,6 +72,9 @@ async function* callStanceModelStream(
         temperature: 0.3,
         max_tokens: 700,
         stream: true,
+        // Default to low reasoning effort unless the caller explicitly needs
+        // more (user directive 2026-07-25) -- this task is a cheap classification.
+        reasoning: { effort: 'low' },
         messages: [{ role: 'user', content: prompt }],
         provider: {
           sort: 'latency',
