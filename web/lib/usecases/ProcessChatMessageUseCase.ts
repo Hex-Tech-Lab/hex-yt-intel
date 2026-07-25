@@ -356,8 +356,14 @@ export class ProcessChatMessageUseCase {
     // Already capped at 20KB where persisted (worker + persist route), same as
     // channelMeta -- no second cap needed here.
     const comments = groundingResult.comments;
+    // Real population size, so the Vault-approved sample-size-honesty caveat
+    // (prompt.chat_grounding.instructions, 2026-07-25) has an actual number to
+    // cite instead of describing the sample with no context for how partial it
+    // is. Sourced from videoMetadata.commentCount (the raw YouTube API total
+    // ingested at analysis time), NOT comments.length (the sampled subset).
+    const totalCommentCount = Number(groundingResult.videoMetadata?.commentCount) || 0;
     const commentsSection = comments && comments.length > 0
-      ? `\n\n--- TOP COMMENTS (author, date, likes) ---\n${comments.map((c: { author: string; publishedAt: string; likeCount: number; text: string }) => `[${c.author}, ${c.publishedAt}, ${c.likeCount} likes]: ${c.text}`).join('\n')}\n`
+      ? `\n\n--- TOP COMMENTS (sample of ${comments.length}${totalCommentCount > comments.length ? ` out of ${totalCommentCount} total` : ''}; author, date, likes) ---\n${comments.map((c: { author: string; publishedAt: string; likeCount: number; text: string }) => `[${c.author}, ${c.publishedAt}, ${c.likeCount} likes]: ${c.text}`).join('\n')}\n`
       : '';
 
     // Analysis (dims 1-11) is included in full -- a synthesized 11-dimension
