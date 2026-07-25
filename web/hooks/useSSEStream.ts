@@ -212,6 +212,7 @@ export function useSSEStream() {
                   persona: job.persona,
                   timezone: job.timezone || safeTimezone,
                   models: job.models,
+                  cascade: job.cascade,
                   sig: job.stream.sig,
                   exp: job.stream.exp,
                   appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,

@@ -6,7 +6,7 @@
 import { getUCISPrompt } from '@/lib/prompts/factory';
 import type { PersonaId } from '@/lib/prompts';
 import type { VideoMetadata } from '@/lib/types';
-import { ANALYSIS_CASCADE } from '@/lib/config/cascade';
+import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
 import { translateModelId } from '@/lib/utils/model-id-translator';
 
 export class AnalysisEngineError extends Error {
@@ -23,12 +23,14 @@ export class AnalysisEngineError extends Error {
   }
 }
 
-const MODEL_TIERS = ANALYSIS_CASCADE.map((item) => ({
-  model: item.model,
-  tier: 'paid',
-  cost: item.cost ?? 0,
-  providerOrder: item.providerOrder,
-}));
+function toModelTiers(cascade: readonly CascadeItem[]) {
+  return cascade.map((item) => ({
+    model: item.model,
+    tier: 'paid',
+    cost: item.cost ?? 0,
+    providerOrder: item.providerOrder,
+  }));
+}
 
 /**
  * Read a failed response body for diagnostics without ever throwing.
@@ -52,10 +54,16 @@ export async function callOpenRouter(
   persona: PersonaId,
   timezone: string,
   duration?: number,
-  tierIndex: number = 0
+  tierIndex: number = 0,
+  modelTiers?: ReturnType<typeof toModelTiers>
 ): Promise<Response> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY missing');
+
+  // Resolved once at tierIndex 0 (registry-driven, per user directive
+  // 2026-07-25) and threaded through the recursive cascade calls below so a
+  // single request doesn't re-hit the registry per tier.
+  const MODEL_TIERS = modelTiers ?? toModelTiers(await resolveAnalysisCascade());
 
   const currentTier = MODEL_TIERS[tierIndex];
   if (!currentTier) {
@@ -120,7 +128,7 @@ export async function callOpenRouter(
         console.warn(
           `[OpenRouter] Tier ${tierIndex} (${currentTier.model}) returned ${response.status}; cascading to next tier. Detail: ${errorBody}`
         );
-        return callOpenRouter(metadata, transcript, persona, timezone, duration, tierIndex + 1);
+        return callOpenRouter(metadata, transcript, persona, timezone, duration, tierIndex + 1, MODEL_TIERS);
       }
 
       // Waterfall exhausted on a quota/rate signal → emit a clean, UI-renderable
@@ -161,7 +169,7 @@ export async function callOpenRouter(
   } catch (err) {
     clearTimeout(timeoutId);
     if ((err as Error).name === 'AbortError' && tierIndex < MODEL_TIERS.length - 1) {
-      return callOpenRouter(metadata, transcript, persona, timezone, duration, tierIndex + 1);
+      return callOpenRouter(metadata, transcript, persona, timezone, duration, tierIndex + 1, MODEL_TIERS);
     }
     throw err;
   }

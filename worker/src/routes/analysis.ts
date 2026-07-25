@@ -83,6 +83,12 @@ interface StreamRequest {
   persona: string;
   timezone: string;
   models?: string[];
+  // Full registry-resolved cascade (2026-07-25, forwarded from CreateAnalysisUseCase
+  // via resolveAnalysisCascade -- see web/lib/config/cascade.ts) including providerOrder
+  // per tier, which `models` (flat id list, signed into the HMAC token) can't carry when
+  // multiple tiers share the same model id across different providers. Preferred over
+  // `models` when present; `models` stays as the signed/legacy fallback for stale clients.
+  cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
   sig: string;
   exp: number;
   appUrl?: string;
@@ -963,7 +969,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
       ? new WorkerPromptConfigAdapter({ url: upstashUrl, token: upstashToken })
       : undefined;
 
-  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models), new ValidationService(), cache);
+  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade), new ValidationService(), cache);
 
   const persistController = new AbortController();
   const httpConnSignal = c.req.raw['signal'];

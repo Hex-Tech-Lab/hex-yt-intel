@@ -15,6 +15,7 @@ import { createHash } from 'crypto';
 
 import { env } from '@/lib/env';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
+import { resolveAnalysisCascade, type CascadeItem } from '@/lib/config/cascade';
 import type { CommentsFetchConfig, ChannelMetaFetchConfig, CommentsSyncPoolConfig } from '@/lib/types/contracts';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
@@ -63,6 +64,7 @@ export interface UseCaseSuccess {
   segments?: TranscriptSegment[];
   timezone: string;
   models: string[];
+  cascade: CascadeItem[];
   commentsConfig: CommentsFetchConfig;
   channelMetaConfig: ChannelMetaFetchConfig;
   commentsSamplePlan?: { targetSampleCount: number; likeBucketCount: number; recencyBucketCount: number };
@@ -151,6 +153,11 @@ export class CreateAnalysisUseCase {
     // Resolve model cascade for the user's tier
     const rawModels = await this.modelResolution.resolveModels(params.tier, 'analysis');
     const models = [...rawModels];
+    // Full registry-resolved tiers (with providerOrder), forwarded to the worker
+    // alongside `models` -- see StreamRequest.cascade in worker/src/routes/analysis.ts
+    // for why `models` (flat ids, signed into the token) alone can't disambiguate
+    // multiple tiers sharing one model id across different providers.
+    const analysisCascade: CascadeItem[] = await resolveAnalysisCascade();
 
     // Compute transcript hash (ADR 006: input-based cache key)
     const transcriptHash = createHash('sha256')
@@ -278,6 +285,7 @@ export class CreateAnalysisUseCase {
         persona,
         timezone: params.timezone,
         models,
+        cascade: analysisCascade,
         commentsConfig,
         channelMetaConfig,
         commentsSamplePlan,

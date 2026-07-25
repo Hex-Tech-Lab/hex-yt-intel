@@ -1,5 +1,10 @@
 import * as Sentry from "@sentry/cloudflare";
-import { CHAT_CASCADE } from "../../../web/lib/config/cascade";
+import { CASCADE_FALLBACKS } from "../../../web/lib/config/cascade";
+
+// CF Queue consumer, no live per-request payload to receive a registry-resolved
+// cascade from (unlike chat-stream.ts/LLMCascade.ts) -- rides the deploy-time
+// fallback. Retune via a worker redeploy until this gets its own forwarding path.
+const CHAT_CASCADE = CASCADE_FALLBACKS.chat;
 import type {
   CommentClassificationPort,
   ClassifiedComment,
