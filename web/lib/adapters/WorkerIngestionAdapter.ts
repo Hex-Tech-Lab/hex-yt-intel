@@ -178,6 +178,7 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
       videoId: metadata.videoId,
       title: metadata.title,
       channelTitle: metadata.channelTitle,
+      channelId: metadata.channelId || undefined,
       publishedAt: metadata.publishedAt,
       duration: metadata.duration,
       viewCount: String(metadata.viewCount),
