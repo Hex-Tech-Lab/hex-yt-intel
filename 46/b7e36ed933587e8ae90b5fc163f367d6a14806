@@ -1,0 +1,45 @@
+web/next-env.d.ts
+  s_0eded1e9d0cab6::t_a323c47de216ac 3
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_0eded1e9d0cab6::t_a5ad11e3406382 480-485
+  s_0eded1e9d0cab6::t_4e84ad5c2f69bc 53-55
+  s_0eded1e9d0cab6::t_df37864a53061b 10
+  s_0eded1e9d0cab6::t_fcc5efe830daec 26-29
+  s_0eded1e9d0cab6::t_a3e26c9dd40ecb 374-386,388
+web/lib/utils/extract-transcript-range.ts
+  s_0eded1e9d0cab6::t_9faf16e0908669 100-113,117-118,123-124,129
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_a323c47de216ac 8,479,481-482,484,488
+web/components/templates/console/IntelligencePanel.tsx
+  s_0eded1e9d0cab6::t_a323c47de216ac 4,51-54,62-63,69-70,77,115,126,143,157,171,219-222
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_a323c47de216ac 374-389,516-518
+supabase/migrations/20260725130000_chat_transcript_range_leadin_settings.sql
+  s_0eded1e9d0cab6::t_a323c47de216ac 1-31
+web/lib/__tests__/extract-transcript-range.test.ts
+  s_0eded1e9d0cab6::t_9faf16e0908669 72-100
+web/components/templates/console/AnalysisHero.tsx
+  s_0eded1e9d0cab6::t_17df01e4f1fc21 87-90,92-93,96,98
+  s_0eded1e9d0cab6::t_06bbaf15d240a1 95
+  s_0eded1e9d0cab6::t_386e18e81e9799 4
+web/components/TimestampLink.tsx
+  s_0eded1e9d0cab6::t_a323c47de216ac 69
+web/app/landing-page.tsx
+  s_0eded1e9d0cab6::t_a323c47de216ac 4-8,11,14-19,22-26,69-70,78-87,95-108,110-146,162-169,172,174-188,202,205-212,215-216,222-247,251-256
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "46b7e36ed933587e8ae90b5fc163f367d6a14806",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
