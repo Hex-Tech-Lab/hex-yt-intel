@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import { IconButton } from '@astryxdesign/core';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Icon } from '@/components/templates/_shared/primitives';
 
@@ -191,24 +192,23 @@ function AccordionItem({
           />
         </button>
 
-        <button
-          type="button"
+        <IconButton
+          label="Copy to clipboard"
+          tooltip="Copy to clipboard"
+          variant="ghost"
+          size="sm"
           onClick={(e) => {
             e.stopPropagation();
             void handleCopy();
           }}
-          title="Copy to clipboard"
-          className={`p-1.5 rounded transition-all duration-200 mr-2 ${
-            isConfirmed
-              ? 'bg-[var(--ok)]/20 text-[var(--ok)]'
-              : 'bg-transparent text-[var(--ink-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10'
-          }`}
-        >
-          <Icon
-            icon={isConfirmed ? 'solar:check-circle-linear' : 'solar:copy-linear'}
-            size={14}
-          />
-        </button>
+          className={`mr-2 ${isConfirmed ? '!text-[var(--ok)]' : ''}`}
+          icon={
+            <Icon
+              icon={isConfirmed ? 'solar:check-circle-linear' : 'solar:copy-linear'}
+              size={14}
+            />
+          }
+        />
       </div>
 
       {/* Accordion content with smooth transition */}

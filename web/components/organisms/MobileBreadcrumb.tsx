@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Breadcrumbs, BreadcrumbItem, IconButton } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 /**
@@ -75,14 +76,16 @@ export function MobileBreadcrumb({
       {/* Back Button + Title Row */}
       {showBackButton && breadcrumbs.length > 0 && (
         <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--line)]">
-          <button
+          <IconButton
+            label="Go back to previous page"
+            variant="secondary"
+            size="lg"
+            icon={<Icon icon="solar:arrow-left-linear" size={20} />}
             onClick={handleBack}
-            aria-label="Go back to previous page"
-            className="grid place-items-center w-12 h-12 flex-shrink-0 rounded-lg border border-[var(--line)] bg-[var(--void)] text-[var(--ink-secondary)] hover:bg-[var(--surface)] transition-colors active:scale-95"
-            aria-expanded="false"
-          >
-            <Icon icon="solar:arrow-left-linear" size={20} />
-          </button>
+            width={48}
+            style={{ height: 48 }}
+            className="flex-shrink-0"
+          />
           <h1 className="flex-1 text-sm font-semibold text-[var(--ink)] truncate">
             {pageTitle}
           </h1>
@@ -91,49 +94,33 @@ export function MobileBreadcrumb({
 
       {/* Breadcrumb Trail */}
       {breadcrumbs.length > 0 && (
-        <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto">
-          {breadcrumbs.map((crumb, index) => {
-            const isLast = index === breadcrumbs.length - 1;
-            return (
-              <div key={crumb.href} className="flex items-center gap-2 flex-shrink-0">
-                {index > 0 && (
-                  <Icon
-                    icon="solar:alt-arrow-right-linear"
-                    size={14}
-                    className="text-[var(--ink-muted)] flex-shrink-0"
-                  />
-                )}
-                {isLast ? (
-                  <div className="flex items-center gap-1">
-                    {crumb.icon && (
+        <div className="px-4 py-2 overflow-x-auto">
+          <Breadcrumbs
+            separator={<Icon icon="solar:alt-arrow-right-linear" size={14} className="text-[var(--ink-muted)]" />}
+          >
+            {breadcrumbs.map((crumb, index) => {
+              const isLast = index === breadcrumbs.length - 1;
+              return (
+                <BreadcrumbItem
+                  key={crumb.href}
+                  as={Link}
+                  href={isLast ? undefined : crumb.href}
+                  isCurrent={isLast}
+                  startIcon={
+                    crumb.icon ? (
                       <Icon
                         icon={crumb.icon}
                         size={14}
-                        className="text-[var(--accent)] flex-shrink-0"
+                        className={isLast ? 'text-[var(--accent)]' : undefined}
                       />
-                    )}
-                    <span className="text-xs font-medium text-[var(--accent)] truncate">
-                      {crumb.label}
-                    </span>
-                  </div>
-                ) : (
-                  <Link
-                    href={crumb.href}
-                    className="flex items-center gap-1 text-xs font-medium text-[var(--ink-secondary)] hover:text-[var(--accent)] transition-colors truncate"
-                  >
-                    {crumb.icon && (
-                      <Icon
-                        icon={crumb.icon}
-                        size={14}
-                        className="flex-shrink-0"
-                      />
-                    )}
-                    <span className="truncate">{crumb.label}</span>
-                  </Link>
-                )}
-              </div>
-            );
-          })}
+                    ) : undefined
+                  }
+                >
+                  {crumb.label}
+                </BreadcrumbItem>
+              );
+            })}
+          </Breadcrumbs>
         </div>
       )}
     </div>
