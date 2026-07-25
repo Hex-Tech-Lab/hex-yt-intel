@@ -222,7 +222,7 @@ export class LLMCascade implements LLMCascadePort {
 
     const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
     const requestModel = translateModelId(model);
-    const requestMaxTokens = isHaiku45 ? 62000 : 16000;
+    const requestMaxTokens = isHaiku45 ? 8192 : 16000;
     // RCA (2026-07-23): this used to unconditionally override `providerOrder`
     // with a hardcoded ['anthropic', 'google-vertex', 'amazon-bedrock'] for
     // ANY claude-haiku-4.5 tier, silently discarding the "Alternate Route"
@@ -347,7 +347,7 @@ export class LLMCascade implements LLMCascadePort {
 
     const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
     const requestModel = translateModelId(model);
-    const requestMaxTokens = isHaiku45 ? 62000 : 16000;
+    const requestMaxTokens = isHaiku45 ? 8192 : 16000;
     // Same tier-override bug as callLLMStream (see RCA there), plus this copy
     // additionally had wrong-cased provider slugs ('Amazon'/'Anthropic'/'Google')
     // -- OpenRouter provider slugs are lowercase ('anthropic', 'google-vertex',
