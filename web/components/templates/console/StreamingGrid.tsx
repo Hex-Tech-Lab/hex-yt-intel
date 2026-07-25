@@ -1,8 +1,9 @@
 'use client';
 
-import { MonoLabel, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
+import { Skeleton } from '@astryxdesign/core';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { MonoLabel, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
 
 export interface Dimension {
   key: string;
@@ -88,10 +89,10 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
               </p>
             ) : (
               <div aria-hidden style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
-                <div style={{ height: 6, width: "90%", borderRadius: 9999, background: "var(--line-strong)", opacity: 0.3 }} />
-                <div style={{ height: 6, width: "70%", borderRadius: 9999, background: "var(--line-strong)", opacity: 0.2 }} />
-                <div style={{ height: 6, width: "80%", borderRadius: 9999, background: "var(--line-strong)", opacity: 0.15 }} />
-                {span >= 2 && <div style={{ height: 6, width: "50%", borderRadius: 9999, background: "var(--line-strong)", opacity: 0.1 }} />}
+                <Skeleton width="90%" height={6} radius="rounded" index={0} />
+                <Skeleton width="70%" height={6} radius="rounded" index={1} />
+                <Skeleton width="80%" height={6} radius="rounded" index={2} />
+                {span >= 2 && <Skeleton width="50%" height={6} radius="rounded" index={3} />}
               </div>
             )}
           </div>

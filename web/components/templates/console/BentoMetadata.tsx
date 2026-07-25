@@ -1,7 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { Card } from '@astryxdesign/core';
 import { Icon, MonoLabel } from '@/components/templates/_shared/primitives';
+
+const MotionCard = motion.create(Card);
 
 export interface BentoMetadataProps {
   title: string;
@@ -63,9 +66,11 @@ export function BentoMetadata({
       className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-12 gap-3 mt-6 sm:mt-8"
     >
       {/* Title Card (Large) */}
-      <motion.div
+      <MotionCard
         variants={item}
-        className="col-span-2 sm:col-span-4 xl:col-span-8 xl:row-span-2 min-w-0 flex flex-col justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-4"
+        variant="default"
+        padding={0}
+        className="col-span-2 sm:col-span-4 xl:col-span-8 xl:row-span-2 min-w-0 flex flex-col justify-between gap-3 p-3 sm:p-4"
       >
         <MonoLabel index="01">video intelligence context</MonoLabel>
         <div className="min-w-0">
@@ -76,47 +81,55 @@ export function BentoMetadata({
             {channelTitle}
           </p>
         </div>
-      </motion.div>
+      </MotionCard>
 
       {/* View Count (Small) */}
-      <motion.div
+      <MotionCard
         variants={item}
-        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
+        variant="default"
+        padding={0}
+        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-4"
       >
         <Icon icon="solar:eye-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
         <span className="text-lg font-bold text-[var(--ink)]">{formatViews(viewCount)}</span>
         <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Views</span>
-      </motion.div>
+      </MotionCard>
 
       {/* Like Count (Small) */}
-      <motion.div
+      <MotionCard
         variants={item}
-        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
+        variant="default"
+        padding={0}
+        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-4"
       >
         <Icon icon="solar:heart-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
         <span className="text-lg font-bold text-[var(--ink)]">{formatViews(likeCount)}</span>
         <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Likes</span>
-      </motion.div>
+      </MotionCard>
 
       {/* Duration (Small) */}
-      <motion.div
+      <MotionCard
         variants={item}
-        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
+        variant="default"
+        padding={0}
+        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-4"
       >
         <Icon icon="solar:clock-circle-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
         <span className="text-lg font-bold text-[var(--ink)]">{formatDuration(duration)}</span>
         <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Length</span>
-      </motion.div>
+      </MotionCard>
 
       {/* Published (Small) */}
-      <motion.div
+      <MotionCard
         variants={item}
-        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
+        variant="default"
+        padding={0}
+        className="col-span-1 xl:col-span-2 min-w-0 flex flex-col items-center justify-center text-center p-4"
       >
         <Icon icon="solar:calendar-linear" size={20} className="mb-1 text-[var(--ink-muted)]" />
         <span className="text-[13px] font-bold text-[var(--ink)]">{new Date(publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}</span>
         <span className="text-[11px] uppercase tracking-[0.05em] text-[var(--ink-muted)]">Date</span>
-      </motion.div>
+      </MotionCard>
     </motion.section>
   );
 }
