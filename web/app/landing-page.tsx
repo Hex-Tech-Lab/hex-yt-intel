@@ -1,15 +1,28 @@
 'use client';
 
 import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Divider } from '@astryxdesign/core/Divider';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { Footer } from '@/components/Footer';
+import { LandingThree } from '@/components/LandingThree';
 
 /**
- * LANDING PAGE - 10X DESIGN SYSTEM REPLICATION
- * -------------------------------------------
- * This page strictly mirrors ui_kits/marketing/index.html
- * and consumes tokens from colors_and_type.css.
+ * LANDING PAGE - ASTRYX ROLLOUT + MOTION
+ * ---------------------------------------
+ * Public marketing surface (pre-signup). Uses @astryxdesign/core primitives
+ * (Button/Card/Badge/Divider) layered on the existing hx-* design tokens,
+ * plus framer-motion entrance choreography and CSS "living" glow reusing
+ * the hx-pulse/hx-rise keyframes already defined in globals.css.
  */
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0 },
+};
 
 function Nav() {
   return (
@@ -53,12 +66,8 @@ function Nav() {
         }}>HEX·YT·INTEL</span>
       </div>
       <nav style={{ display: "flex", gap: "clamp(6px, 2vw, 16px)", alignItems: "center", flex: "none" }}>
-        <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none", padding: "9px clamp(12px, 3.2vw, 24px)" }}>
-          Pricing
-        </Link>
-        <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none", padding: "9px clamp(12px, 3.2vw, 24px)" }}>
-          Sign in
-        </Link>
+        <Button label="Pricing" variant="ghost" as={Link} href="/pricing" />
+        <Button label="Sign in" variant="primary" as={Link} href="/auth/signin" />
       </nav>
     </header>
   );
@@ -66,9 +75,16 @@ function Nav() {
 
 function Hero() {
   return (
-    <section style={{ textAlign: "center", paddingTop: 80, paddingBottom: 80, maxWidth: 1280, margin: "0 auto", padding: "80px 32px", width: "100%" }}>
-      <div style={{ maxWidth: "52ch", margin: "0 auto" }}>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// YouTube → knowledge graph"}</p>
+    <section style={{ position: "relative", textAlign: "center", maxWidth: 1280, margin: "0 auto", padding: "80px 32px", width: "100%" }}>
+      <LandingThree />
+      <motion.div
+        initial="hidden"
+        animate="show"
+        variants={fadeUp}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ position: "relative", maxWidth: "52ch", margin: "0 auto" }}
+      >
+        <Badge variant="cyan" label="// YouTube → knowledge graph" />
         <h1 className="hx-display" style={{ marginTop: 16, marginBottom: 12 }}>
           Drop a video. Get a synthesis.
         </h1>
@@ -76,39 +92,58 @@ function Hero() {
           Transcript, claims, frameworks, and contrarian takes — structured across the most important dimensions, mapped into your knowledge graph, searchable in seconds.
         </p>
         <div style={{ marginTop: 32, display: "flex", justifyContent: "center", gap: 12 }}>
-          <Link href="/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>
-            <Icon icon="solar:bolt-linear" size={16} />
-            Try it free
-          </Link>
-          <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none" }}>
-            See a sample
-            <Icon icon="solar:arrow-right-linear" size={16} />
-          </Link>
+          <Button
+            label="Try it free"
+            variant="primary"
+            icon={<Icon icon="solar:bolt-linear" size={16} />}
+            as={Link}
+            href="/dashboard"
+          />
+          <Button
+            label="See a sample"
+            variant="secondary"
+            endContent={<Icon icon="solar:arrow-right-linear" size={16} />}
+            as={Link}
+            href="/pricing"
+          />
         </div>
-      </div>
-      {/* Product Still Placeholder */}
-      <div style={{ 
-        marginTop: 48, 
-        padding: 32, 
-        borderRadius: 16, 
-        border: "1px solid rgb(148 163 184 / 0.18)", 
-        background: "rgb(26 31 43 / 0.6)",
-        boxShadow: "0 24px 48px -12px rgba(0,0,0,0.5)"
-      }}>
-        <div style={{ 
-          height: 320, 
-          background: "linear-gradient(135deg, rgb(51 65 85 / 0.3) 0%, transparent 60%)", 
-          borderRadius: 12,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "var(--font-mono)",
-          color: "var(--ink-muted)",
-          fontSize: 12
-        }}>
-          [ PROPRIETARY SYNTHESIS ENGINE INTERFACE ]
-        </div>
-      </div>
+      </motion.div>
+
+      {/* Product Still Placeholder — living glow, breathes via hx-pulse */}
+      <motion.div
+        initial={{ opacity: 0, y: 32, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+        style={{ position: "relative" }}
+      >
+        <Card
+          variant="default"
+          padding={4}
+          className="hx-glow"
+          style={{
+            marginTop: 48,
+            boxShadow: "0 24px 48px -12px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div
+            className="hx-pulse"
+            style={{
+              height: 320,
+              background: "linear-gradient(135deg, rgb(51 65 85 / 0.3) 0%, transparent 60%)",
+              borderRadius: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "var(--font-mono)",
+              color: "var(--ink-muted)",
+              fontSize: 12,
+              animationDuration: "4s",
+            }}
+          >
+            [ PROPRIETARY SYNTHESIS ENGINE INTERFACE ]
+          </div>
+        </Card>
+      </motion.div>
     </section>
   );
 }
@@ -124,18 +159,33 @@ function Features() {
   ];
   return (
     <section id="features" style={{ borderTop: "1px solid var(--line)", padding: "80px 32px", maxWidth: 1280, margin: "0 auto", width: "100%" }}>
-      <div style={{ maxWidth: "52ch", marginBottom: 48 }}>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// Multi-dimension synthesis"}</p>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.5 }}
+        style={{ maxWidth: "52ch", marginBottom: 48 }}
+      >
+        <Badge variant="neutral" label="// Multi-dimension synthesis" />
         <h2 className="hx-h2" style={{ marginTop: 12 }}>The UCIS model.</h2>
         <p className="hx-body-lg">Every video is parsed across the most important semantic dimensions. You get the full picture — not a summary, a structured synthesis.</p>
-      </div>
+      </motion.div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
-        {features.map((f) => (
-          <div key={f.title} className="hx-glow" style={{ padding: 20, background: "rgb(26 31 43 / 0.6)", border: "1px solid var(--line)", borderRadius: 16 }}>
-            <Icon icon={f.icon} size={24} style={{ color: "var(--accent)" }} />
-            <h3 style={{ marginTop: 12, marginBottom: 0, fontSize: 18, fontWeight: 500, color: "var(--ink)" }}>{f.title}</h3>
-            <p style={{ fontSize: 14, color: "var(--ink-secondary)", marginTop: 8, lineHeight: 1.5 }}>{f.desc}</p>
-          </div>
+        {features.map((feature, i) => (
+          <motion.div
+            key={feature.title}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.45, delay: i * 0.06 }}
+            whileHover={{ y: -4 }}
+          >
+            <Card variant="default" padding={4} className="hx-glow">
+              <Icon icon={feature.icon} size={24} style={{ color: "var(--accent)" }} />
+              <h3 style={{ marginTop: 12, marginBottom: 0, fontSize: 18, fontWeight: 500, color: "var(--ink)" }}>{feature.title}</h3>
+              <p style={{ fontSize: 14, color: "var(--ink-secondary)", marginTop: 8, lineHeight: 1.5 }}>{feature.desc}</p>
+            </Card>
+          </motion.div>
         ))}
       </div>
     </section>
@@ -149,36 +199,61 @@ export function LandingPage() {
       <main style={{ flex: 1 }}>
         <Hero />
         <Features />
-        
+
         {/* Pricing Summary */}
         <section style={{ borderTop: "1px solid var(--line)", padding: "80px 32px", maxWidth: 1280, margin: "0 auto", width: "100%" }}>
-          <div style={{ maxWidth: "52ch", marginBottom: 48 }}>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", margin: 0 }}>{"// Investment"}</p>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.5 }}
+            style={{ maxWidth: "52ch", marginBottom: 48 }}
+          >
+            <Badge variant="neutral" label="// Investment" />
             <h2 className="hx-h2" style={{ marginTop: 12 }}>Simple, transparent pricing.</h2>
             <p className="hx-body-lg">Pay for what you use. Scale when you&apos;re ready.</p>
-          </div>
-          
+          </motion.div>
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginBottom: 40 }}>
             {[
               { name: "Free", price: "$0", desc: "Individual experimenters", isPro: false },
               { name: "Pro", price: "$9", desc: "Serious content analysts", isPro: true },
               { name: "Enterprise", price: "$99", desc: "For high-volume operations", isPro: false, isEnterprise: true },
-            ].map((p) => (
-              <div key={p.name} style={{ padding: 32, border: p.isPro || (p as any).isEnterprise ? "1px solid var(--accent)" : "1px solid var(--line)", borderRadius: 16, background: "rgb(26 31 43 / 0.6)" }}>
-                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{p.name}</h3>
-                <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 500, color: "var(--accent)" }}>{p.price}</p>
-                <p style={{ margin: "2px 0 20px", fontSize: 13, color: "var(--ink-secondary)" }}>{p.desc}</p>
-                <Link href="/pricing" className={p.isPro ? "btn-primary" : "btn-secondary"} style={{ width: "100%", textDecoration: "none", display: "flex", justifyContent: "center" }}>
-                  {(p as any).isEnterprise ? "Contact Sales" : "Get started"}
-                </Link>
-              </div>
+            ].map((plan, i) => (
+              <motion.div
+                key={plan.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.45, delay: i * 0.08 }}
+                whileHover={{ y: -4 }}
+              >
+                <Card
+                  variant={plan.isPro || plan.isEnterprise ? "cyan" : "default"}
+                  padding={8}
+                  className={plan.isPro ? "hx-glow" : undefined}
+                >
+                  <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{plan.name}</h3>
+                  <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 500, color: "var(--accent)" }}>{plan.price}</p>
+                  <p style={{ margin: "2px 0 20px", fontSize: 13, color: "var(--ink-secondary)" }}>{plan.desc}</p>
+                  <Button
+                    label={plan.isEnterprise ? "Contact Sales" : "Get started"}
+                    variant={plan.isPro ? "primary" : "secondary"}
+                    width="100%"
+                    as={Link}
+                    href="/pricing"
+                  />
+                </Card>
+              </motion.div>
             ))}
           </div>
 
-          <div style={{ textAlign: "center" }}>
-             <Link href="/pricing#compare" style={{ color: "var(--accent)", textDecoration: "none", fontSize: 13, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 8 }}>
-                Compare all features <Icon icon="solar:arrow-right-linear" size={14} />
-             </Link>
+          <Divider />
+
+          <div style={{ textAlign: "center", marginTop: 24 }}>
+            <Link href="/pricing#compare" style={{ color: "var(--accent)", textDecoration: "none", fontSize: 13, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 8 }}>
+              Compare all features <Icon icon="solar:arrow-right-linear" size={14} />
+            </Link>
           </div>
         </section>
       </main>

@@ -97,19 +97,36 @@ export function detectRequestedRange(message: string): { startSec: number; endSe
 /**
  * Extracts every transcript line whose timestamp falls within [startSec,
  * endSec) from an already-formatted "[m:ss] text\n..." transcript string.
+ *
+ * `leadInSeconds` (2026-07-25, live production report): a user asking for
+ * "minute 42" means "what was being discussed around/at minute 42" -- but
+ * transcript segments don't align to round numbers, so the sentence that's
+ * actually relevant often starts a few seconds BEFORE the matched boundary
+ * (e.g. the real answer starts at 41:55, not 42:00). Without a buffer, the
+ * returned excerpt starts mid-thought, missing the lead-in context. This
+ * shifts the inclusion window's start earlier by `leadInSeconds`, clamped to
+ * 0 so it never underflows into negative territory. The caller-facing
+ * `startSec`/`endSec` reflect the ORIGINAL requested range (unchanged) --
+ * only the line-selection window is widened -- so anything keyed off the
+ * detected range (e.g. UI labeling) still reads "minute 42", not "41:55".
+ * Value is registry-driven (`chat.transcriptRange.leadInSeconds`), resolved
+ * by the caller -- see ProcessChatMessageUseCase.ts.
  */
 export function extractRequestedTranscriptRange(
   formattedTranscript: string,
-  message: string
+  message: string,
+  leadInSeconds = 0
 ): RequestedTranscriptRange | null {
   const range = detectRequestedRange(message);
   if (!range) return null;
+
+  const bufferedStartSec = Math.max(0, range.startSec - Math.max(0, leadInSeconds));
 
   const lines: string[] = [];
   for (const rawLine of formattedTranscript.split('\n')) {
     const parsed = parseLineTimestamp(rawLine);
     if (!parsed) continue;
-    if (parsed.seconds >= range.startSec && parsed.seconds < range.endSec) {
+    if (parsed.seconds >= bufferedStartSec && parsed.seconds < range.endSec) {
       lines.push(rawLine);
     }
   }
