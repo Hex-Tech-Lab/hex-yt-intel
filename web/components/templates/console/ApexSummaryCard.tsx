@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { MonoLabel, GlowBorder, Icon, CornerFrame } from '@/components/templates/_shared/primitives';
+import { TabList, Tab, Skeleton } from '@astryxdesign/core';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { MonoLabel, GlowBorder, Icon, CornerFrame } from '@/components/templates/_shared/primitives';
 import type { Dimension } from './StreamingGrid';
 
 interface ApexSummaryCardProps {
@@ -103,20 +104,16 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
               <h2 className="text-xl font-semibold tracking-tight text-[var(--ink)]">Synthesis Overview</h2>
             </div>
             
-            <div className="flex gap-1 p-1 rounded-xl border border-[var(--line)] bg-[rgb(11_14_20_/_0.5)]">
+            <TabList value={activeTab} onChange={(v) => setActiveTab(v as SummaryTab)} size="sm">
               {tabs.map((t) => (
-                <button
+                <Tab
                   key={t.key}
-                  onClick={() => setActiveTab(t.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-none cursor-pointer font-mono text-[10px] font-bold uppercase tracking-wider transition-all ${
-                    activeTab === t.key ? 'bg-[var(--accent)] text-[var(--void)] shadow-lg' : 'bg-transparent text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
-                  }`}
-                >
-                  <Icon icon={t.icon} size={14} />
-                  {t.label}
-                </button>
+                  value={t.key}
+                  label={t.label}
+                  icon={<Icon icon={t.icon} size={14} />}
+                />
               ))}
-            </div>
+            </TabList>
           </header>
 
           <div className="flex-1 overflow-y-auto max-h-[500px] hx-custom-scrollbar pr-2">
@@ -132,11 +129,11 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
                 <p className="font-mono text-xs">Synthesis failure in Apex layer. Retry available.</p>
               </div>
             ) : (
-              <div className="space-y-4 animate-pulse pt-4">
-                <div className="h-4 bg-[var(--line-strong)] rounded w-3/4 opacity-20" />
-                <div className="h-4 bg-[var(--line-strong)] rounded w-1/2 opacity-15" />
-                <div className="h-4 bg-[var(--line-strong)] rounded w-5/6 opacity-10" />
-                <div className="h-24 bg-[var(--line-strong)] rounded w-full opacity-5 mt-8" />
+              <div className="space-y-4 pt-4">
+                <Skeleton width="75%" height={16} index={0} />
+                <Skeleton width="50%" height={16} index={1} />
+                <Skeleton width="83%" height={16} index={2} />
+                <Skeleton width="100%" height={96} index={3} />
               </div>
             )}
           </div>
