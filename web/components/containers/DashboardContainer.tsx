@@ -46,6 +46,7 @@ import { ConsoleTabSwitcher } from './dashboard/ConsoleTabSwitcher';
 import { SidebarFooter } from './dashboard/SidebarFooter';
 import { ExpandedPanelOverlay } from './dashboard/ExpandedPanelOverlay';
 import { copyPanelContent, exportPanelContent, type PanelId } from '@/lib/dashboard/export';
+import { Avatar } from '@astryxdesign/core';
 
 // See /docs/ui/dashboard-container.md
 
@@ -231,6 +232,13 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       ? `${profile.analysesUsed} analyses · Unlimited`
       : `${profile.analysesUsed} / ${profile.monthlyLimit} monthly analyses`;
   const historyBadge = analysisHistory.length > 0 ? String(analysisHistory.length) : undefined;
+  // Astryx <Avatar> derives initials from `name` by first-lettering each
+  // whitespace-separated word; a raw email (no space) would collapse to a
+  // single letter. Reconstruct a two-word string so it reproduces
+  // profile.initials exactly instead of re-deriving (and mangling) it.
+  const accountAvatarName = profile.initials.length >= 2
+    ? `${profile.initials[0]} ${profile.initials.slice(1)}`
+    : profile.initials;
 
   // Partial-analysis awareness: count dimensions that actually carry content and,
   // when a completed analysis is missing some of the 11, surface which ones so the
@@ -457,7 +465,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           onExport={handleExport}
           tier={tierLabel}
           hasRightPanel={rightPanelItems.length > 0}
-          account={<div title={profile.email} className="w-8 h-8 rounded-lg bg-[var(--accent)] grid place-items-center text-[var(--void)] font-bold text-xs">{profile.initials}</div>}
+          account={<Avatar name={accountAvatarName} alt={profile.email} size={32} />}
         />
       }
       rightPanel={

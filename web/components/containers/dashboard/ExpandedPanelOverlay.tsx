@@ -2,6 +2,7 @@
 
 import { startTransition, useEffect, useRef, useCallback } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
+import { IconButton, Divider } from '@astryxdesign/core';
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
 import { useUIStore } from '@/store/useUIStore';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
@@ -126,55 +127,50 @@ export function ExpandedPanelOverlay({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
+          <IconButton
+            variant="ghost"
+            size="sm"
+            label="Copy panel content"
+            tooltip="Copy"
+            icon={<Icon icon="solar:copy-linear" size={14} />}
             onClick={() => onCopy(panelId)}
-            aria-label="Copy panel content"
-            title="Copy"
-            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-          >
-            <Icon icon="solar:copy-linear" size={14} />
-          </button>
+          />
 
-          <button
-            type="button"
+          <IconButton
+            variant="ghost"
+            size="sm"
+            label="Export panel content"
+            tooltip="Export"
+            icon={<Icon icon="solar:download-linear" size={14} />}
             onClick={() => onExport(panelId)}
-            aria-label="Export panel content"
-            title="Export"
-            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-          >
-            <Icon icon="solar:download-linear" size={14} />
-          </button>
+          />
 
-          <div className="w-[1px] h-3 bg-[var(--line)] mx-1" />
+          <Divider orientation="vertical" className="h-3 mx-1" />
 
           {(['vertical', 'left', 'diagonal'] as const).map((m) => (
-            <button
+            <IconButton
               key={m}
-              type="button"
+              variant="ghost"
+              size="sm"
+              label={`${m.charAt(0).toUpperCase() + m.slice(1)} mode`}
+              tooltip={`${m.charAt(0).toUpperCase() + m.slice(1)} Mode`}
+              icon={<Icon icon={m === 'vertical' ? 'solar:maximize-square-minimalistic-linear' : m === 'left' ? 'solar:double-alt-arrow-left-linear' : 'solar:scale-linear'} size={14} />}
+              className={mode === m ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'}
               onClick={() => startTransition(() => onModeChange(panelId, m))}
-              aria-label={`${m.charAt(0).toUpperCase() + m.slice(1)} mode`}
-              title={`${m.charAt(0).toUpperCase() + m.slice(1)} Mode`}
-              className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
-                mode === m ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              <Icon icon={m === 'vertical' ? 'solar:maximize-square-minimalistic-linear' : m === 'left' ? 'solar:double-alt-arrow-left-linear' : 'solar:scale-linear'} size={14} />
-            </button>
+            />
           ))}
 
-          <div className="w-[1px] h-3 bg-[var(--line)] mx-1" />
+          <Divider orientation="vertical" className="h-3 mx-1" />
 
-          <button
+          <IconButton
             ref={closeBtnRef}
-            type="button"
+            variant="ghost"
+            size="sm"
+            label="Close panel"
+            tooltip="Close overlay"
+            icon={<Icon icon="solar:close-circle-linear" size={16} />}
             onClick={() => startTransition(() => handleClose())}
-            aria-label="Close panel"
-            title="Close overlay"
-            className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--err)] cursor-pointer flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-          >
-            <Icon icon="solar:close-circle-linear" size={16} />
-          </button>
+          />
         </div>
       </div>
 
