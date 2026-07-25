@@ -1,5 +1,6 @@
 'use client';
 
+import { Avatar, IconButton } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { ConsoleProfile } from '@/lib/services/console-profile';
 
@@ -9,25 +10,19 @@ interface SidebarFooterProps {
 }
 
 export function SidebarFooter({ profile, onSignOut }: SidebarFooterProps) {
+  // Avatar derives initials from `name` by taking the first letter of each
+  // whitespace-separated word (falls back to a single letter for a
+  // single-word string — e.g. an email has no space and would collapse to
+  // "K"). profile.initials is already computed correctly upstream, so we
+  // reconstruct a two-word string whose per-word first letters reproduce it
+  // exactly, rather than letting Avatar re-derive (and mangle) initials from
+  // the raw email.
+  const avatarName = profile.initials.length >= 2
+    ? `${profile.initials[0]} ${profile.initials.slice(1)}`
+    : profile.initials;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
-      <div
-        title={profile.email}
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: 8,
-          background: 'var(--accent-strong)',
-          color: 'var(--void)',
-          display: 'grid',
-          placeItems: 'center',
-          fontWeight: 'bold',
-          fontSize: 12,
-          flexShrink: 0,
-        }}
-      >
-        {profile.initials}
-      </div>
+      <Avatar name={avatarName} alt={profile.email} size={32} />
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {profile.email.split('@')[0]}
@@ -36,27 +31,14 @@ export function SidebarFooter({ profile, onSignOut }: SidebarFooterProps) {
           {profile.tier} Tier
         </span>
       </div>
-      <button
-        type="button"
+      <IconButton
+        variant="ghost"
+        size="sm"
+        label="Sign Out"
+        tooltip="Sign Out"
+        icon={<Icon icon="solar:logout-3-linear" size={16} />}
         onClick={onSignOut}
-        title="Sign Out"
-        style={{
-          background: 'transparent',
-          border: 'none',
-          color: 'var(--ink-muted)',
-          cursor: 'pointer',
-          padding: 6,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 6,
-          transition: 'color var(--dur-fast), background var(--dur-fast)',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--err)'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ink-muted)'; e.currentTarget.style.background = 'transparent'; }}
-      >
-        <Icon icon="solar:logout-3-linear" size={16} />
-      </button>
+      />
     </div>
   );
 }
