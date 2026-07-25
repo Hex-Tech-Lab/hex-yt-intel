@@ -1,0 +1,31 @@
+web/lib/utils/require-admin.ts
+  s_0eded1e9d0cab6::t_e2f7b12086f1df 1-42
+web/app/api/admin/settings/[key]/route.ts
+  s_0eded1e9d0cab6::t_9ccdc58ea8e9c0 1-108
+web/app/admin/settings/AdminSettingsClient.tsx
+  s_0eded1e9d0cab6::t_80662b030904d0 1-155
+web/app/admin/settings/page.tsx
+  s_0eded1e9d0cab6::t_91e831d4c9184f 1-44
+web/app/api/admin/settings/route.ts
+  s_0eded1e9d0cab6::t_dfd20722e57ab0 1-65
+supabase/migrations/20260725160000_admin_settings_page_access_matrix.sql
+  s_0eded1e9d0cab6::t_c3c471f90756e4 1-22
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0eded1e9d0cab6::t_faf4ba1dfd55cf 24-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "db338ea90a261bd77a65a012768c343defce855f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
