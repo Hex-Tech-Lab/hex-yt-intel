@@ -3,6 +3,9 @@ import type { MiddlewareHandler } from "hono";
 const ALLOWED_ORIGINS = [
   "https://hex-yt-intel.vercel.app",
   "https://yt-intel.getmytestdrive.com",
+  // Parallel domain cutover (2026-07-25): both domains valid during
+  // transition; drop yt-intel.getmytestdrive.com once the hard cutoff happens.
+  "https://v-intel.getmytestdrive.com",
   "http://localhost:3000",
   "http://localhost:3005",
 ];
@@ -41,7 +44,8 @@ export function isValidAppUrl(
       listMatch: originList.includes(origin),
       localhost: hostname === "localhost" || hostname === "127.0.0.1",
       vercel: hostname.endsWith(".vercel.app"),
-      production: hostname === "yt-intel.getmytestdrive.com",
+      // Parallel domain cutover (2026-07-25) -- both valid until hard cutoff.
+      production: hostname === "yt-intel.getmytestdrive.com" || hostname === "v-intel.getmytestdrive.com",
     };
 
     if (originMap.envMatch || originMap.listMatch) return true;
