@@ -12,9 +12,18 @@
 
 import type { VideoComment } from './CommentIngestionPort';
 
+/** Fixed 4-way sentiment -- comments with type spam/off_topic should be excluded from sentiment aggregation at query time (classified, but not representative of audience reaction). */
+export type CommentSentiment = 'positive' | 'negative' | 'neutral' | 'mixed';
+
+/** Fixed actionable-feedback categories, user-confirmed 2026-07-25. */
+export type CommentType = 'question' | 'praise' | 'criticism' | 'suggestion' | 'spam' | 'off_topic';
+
 export interface ClassifiedComment {
   comment: VideoComment;
-  label: string;
+  sentiment: CommentSentiment;
+  commentType: CommentType;
+  /** Free-form, model-chosen per-video topic cluster -- deliberately unconstrained, not a fixed enum. */
+  topic: string;
   /** Model id that produced this classification (observability / cost attribution). */
   modelUsed: string;
 }
