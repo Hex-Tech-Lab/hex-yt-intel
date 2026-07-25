@@ -1,0 +1,22 @@
+worker/src/middleware/cors.ts
+  s_0eded1e9d0cab6::t_010e75786d5ef3 6-8
+  s_0eded1e9d0cab6::t_5162e72ba3a759 47-48
+CLAUDE.md
+  s_0eded1e9d0cab6::t_f5b0d3dbd15038 63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a465d8c8666f83b7439bfbf63285232ae0079ed8",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
