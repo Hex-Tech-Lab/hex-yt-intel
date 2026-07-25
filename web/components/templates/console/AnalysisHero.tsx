@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { TextInput } from '@astryxdesign/core/TextInput';
+import { Button } from '@astryxdesign/core/Button';
 import { MonoLabel, StatusBadge, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
-import { Button } from '@/components/ui/button';
 
 export interface AnalysisHeroProps {
   url: string;
@@ -119,9 +119,15 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
               )}
               <div className="flex gap-2 flex-shrink-0">
                 {streaming && onCancel && (
-                  <Button type="button" variant="danger" size="icon" title="Cancel analysis" onClick={onCancel}>
-                    <Icon icon="solar:stop-circle-linear" size={16} />
-                  </Button>
+                  <Button
+                    type="button"
+                    label="Cancel analysis"
+                    variant="destructive"
+                    size="md"
+                    isIconOnly
+                    icon={<Icon icon="solar:stop-circle-linear" size={16} />}
+                    onClick={onCancel}
+                  />
                 )}
                 {/* Single button, not two -- the label itself signals first-time vs
                     repeat. RCA (2026-07-24, user-reported): the prior two-button
@@ -136,19 +142,15 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                     the handler for an already-analyzed video changed. */}
                 <Button
                   type="button"
-                  variant={isRepeat ? "outline" : "primary"}
+                  label={streaming ? "Analyzing" : isRepeat ? "Re-analyze" : "Analyze"}
+                  variant={isRepeat ? "secondary" : "primary"}
                   size="md"
-                  title={isRepeat ? "Re-analyze this video (runs fresh, not from cache)" : undefined}
+                  tooltip={isRepeat ? "Re-analyze this video (runs fresh, not from cache)" : undefined}
                   onClick={isRepeat ? onReanalyze : onAnalyze}
-                  disabled={disabled}
-                >
-                  <Icon
-                    icon={streaming ? "solar:refresh-linear" : "solar:bolt-linear"}
-                    size={16}
-                    className={streaming ? "hx-anispin" : ""}
-                  />
-                  {streaming ? "Analyzing" : isRepeat ? "Re-analyze" : "Analyze"}
-                </Button>
+                  isDisabled={disabled}
+                  isLoading={streaming}
+                  icon={!streaming ? <Icon icon="solar:bolt-linear" size={16} /> : undefined}
+                />
               </div>
             </div>
           </GlowBorder>
