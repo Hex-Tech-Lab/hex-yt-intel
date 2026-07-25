@@ -1,5 +1,6 @@
 'use client';
 
+import { Skeleton } from '@astryxdesign/core/Skeleton';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
 
 export interface ExecutiveDigestCardProps {
@@ -89,11 +90,13 @@ function Tier({ label, children }: { label: string; children: React.ReactNode })
 function DigestSkeleton() {
   return (
     <div className="flex flex-col gap-3" aria-hidden>
-      <div className="h-3 w-1/3 rounded bg-[var(--ink)]/10" />
-      <div className="h-3 w-full rounded bg-[var(--ink)]/10" />
-      <div className="h-3 w-5/6 rounded bg-[var(--ink)]/10" />
-      <div className="mt-2 h-3 w-1/4 rounded bg-[var(--ink)]/10" />
-      <div className="h-3 w-2/3 rounded bg-[var(--ink)]/10" />
+      <Skeleton width="33%" height={12} index={0} />
+      <Skeleton width="100%" height={12} index={1} />
+      <Skeleton width="83%" height={12} index={2} />
+      <div className="mt-2">
+        <Skeleton width="25%" height={12} index={3} />
+      </div>
+      <Skeleton width="67%" height={12} index={4} />
     </div>
   );
 }
