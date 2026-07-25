@@ -105,6 +105,9 @@ export async function callOpenRouter(
         messages: [{ role: 'user', content: prompt }],
         stream: true,
         max_tokens: maxTokens,
+        // Default to low reasoning effort unless the caller explicitly needs
+        // more (user directive 2026-07-25) -- keeps cost/latency down.
+        reasoning: { effort: 'low' },
         provider: {
           sort: 'latency',
           allow_fallbacks: false,

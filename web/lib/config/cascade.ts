@@ -41,12 +41,16 @@ const ANALYSIS_CASCADE_FALLBACK: readonly CascadeItem[] = [
   { model: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5 (Anthropic Direct)', cost: 0.003, providerOrder: ['anthropic'] },
 ];
 
-// See migration comment: deliberately unchanged pending user review of
-// docs/intelligence/relations-engine.md's original fast/cheap-model intent.
+// 2026-07-25: given its own values (previously aliased cascade.analysis with
+// no real reasoning behind that -- see migration 20260725150000). gpt-oss-120b
+// across the same 3 providers as the original chat cascade, then Llama 3.3 70B
+// on Groq instead of a heavier/pricier fallback -- deliberately does not
+// escalate into Haiku/Sonnet the way analysis does.
 const STANCE_CASCADE_FALLBACK: readonly CascadeItem[] = [
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Vertex/Bedrock)', cost: 0.0015, providerOrder: ['google-vertex', 'amazon-bedrock'] },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Anthropic Direct)', cost: 0.0015 },
-  { model: 'anthropic/claude-sonnet-4.6:nitro', name: 'Claude Sonnet 4.6 (Nitro)', cost: 0.003 },
+  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Groq)', cost: 0.00015, providerOrder: ['groq'] },
+  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Vertex)', cost: 0.00015, providerOrder: ['google-vertex'] },
+  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Cerebras)', cost: 0.00035, providerOrder: ['cerebras'] },
+  { model: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (Groq)', cost: 0.0000004, providerOrder: ['groq'] },
 ];
 
 const REASONING_CASCADE_FREE_FALLBACK: readonly CascadeItem[] = [
