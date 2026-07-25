@@ -65,6 +65,7 @@ export interface UseCaseSuccess {
   timezone: string;
   models: string[];
   cascade: CascadeItem[];
+  maxOutputTokens: { haiku: number; default: number };
   commentsConfig: CommentsFetchConfig;
   channelMetaConfig: ChannelMetaFetchConfig;
   commentsSamplePlan?: { targetSampleCount: number; likeBucketCount: number; recencyBucketCount: number };
@@ -158,6 +159,16 @@ export class CreateAnalysisUseCase {
     // for why `models` (flat ids, signed into the token) alone can't disambiguate
     // multiple tiers sharing one model id across different providers.
     const analysisCascade: CascadeItem[] = await resolveAnalysisCascade();
+    // Registry-resolved max_tokens (2026-07-25 -- see LLMCascade.ts's
+    // MAX_TOKENS_FALLBACK doc comment for the production-outage RCA behind this).
+    const resolvedMaxTokensRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['analysis.maxOutputTokens.haiku', 'analysis.maxOutputTokens.default'],
+      { 'analysis.maxOutputTokens.haiku': 8192, 'analysis.maxOutputTokens.default': 16000 }
+    );
+    const maxOutputTokens = {
+      haiku: Number(resolvedMaxTokensRegistry['analysis.maxOutputTokens.haiku']) || 8192,
+      default: Number(resolvedMaxTokensRegistry['analysis.maxOutputTokens.default']) || 16000,
+    };
 
     // Compute transcript hash (ADR 006: input-based cache key)
     const transcriptHash = createHash('sha256')
@@ -286,6 +297,7 @@ export class CreateAnalysisUseCase {
         timezone: params.timezone,
         models,
         cascade: analysisCascade,
+        maxOutputTokens,
         commentsConfig,
         channelMetaConfig,
         commentsSamplePlan,
