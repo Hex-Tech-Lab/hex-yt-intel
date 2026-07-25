@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { SearchResult } from '@/hooks/useSearch';
 
@@ -112,36 +113,29 @@ const ResultCard: React.FC<ResultCardProps> = ({
 
       {/* Action Buttons */}
       <div className="flex items-center justify-end gap-2 pt-4 border-t border-line/50">
-        {/* Save Button */}
-        <button
+        <Button
+          label={isSaved ? 'Saved' : 'Save'}
+          variant={isSaved ? 'destructive' : 'secondary'}
+          size="sm"
+          icon={<Icon icon="solar:heart-linear" size={14} style={{ fill: isSaved ? 'currentColor' : 'none' }} />}
           onClick={() => onSaveClick?.(result.id)}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-            isSaved
-              ? 'bg-err/10 text-err border border-err/20'
-              : 'bg-void text-ink-muted border border-line hover:border-ink-muted hover:text-ink'
-          }`}
-        >
-          <Icon icon="solar:heart-linear" size={14} style={{ fill: isSaved ? 'currentColor' : 'none' }} />
-          {isSaved ? 'Saved' : 'Save'}
-        </button>
+        />
 
-        {/* Share Button */}
-        <button
+        <Button
+          label="Share"
+          variant="secondary"
+          size="sm"
+          icon={<Icon icon="solar:share-linear" size={14} />}
           onClick={() => onShareClick?.(result.id)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-void text-ink-muted border border-line rounded-lg text-xs font-bold uppercase tracking-wider hover:border-ink-muted hover:text-ink transition-all"
-        >
-          <Icon icon="solar:share-linear" size={14} />
-          Share
-        </button>
+        />
 
-        {/* View Button */}
-        <button
+        <Button
+          label="View Analysis"
+          variant="primary"
+          size="sm"
+          icon={<Icon icon="solar:eye-linear" size={14} />}
           onClick={() => onViewClick?.(result.id)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-accent text-void rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-accent-strong transition-all"
-        >
-          <Icon icon="solar:eye-linear" size={14} />
-          View Analysis
-        </button>
+        />
       </div>
     </div>
   );

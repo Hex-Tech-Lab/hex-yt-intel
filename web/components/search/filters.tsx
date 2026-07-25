@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Collapsible } from '@astryxdesign/core/Collapsible';
+import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@/components/templates/_shared/primitives';
 import type { SearchFilters } from '@/hooks/useSearch';
 
@@ -70,33 +72,25 @@ const SearchFilters: React.FC<FiltersProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* Filter Header - Collapsible */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-2 bg-surface border border-line rounded-lg hover:bg-surface-raised transition-colors"
+      <Collapsible
+        isOpen={isOpen}
+        onOpenChange={setIsOpen}
+        trigger={
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-ink">Filters</span>
+            {hasActiveFilters && (
+              <span className="inline-block px-2 py-0.5 bg-accent/10 text-accent-ink border border-accent/20 rounded text-[10px] font-bold uppercase tracking-wider">
+                {[
+                  filters.dateFrom || filters.dateTo ? 1 : 0,
+                  filters.channels?.length || 0,
+                  filters.minEngagement ? 1 : 0,
+                ].reduce((a, b) => a + b, 0)}{' '}
+                active
+              </span>
+            )}
+          </div>
+        }
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-ink">Filters</span>
-          {hasActiveFilters && (
-            <span className="inline-block px-2 py-0.5 bg-accent/10 text-accent-ink border border-accent/20 rounded text-[10px] font-bold uppercase tracking-wider">
-              {[
-                filters.dateFrom || filters.dateTo ? 1 : 0,
-                filters.channels?.length || 0,
-                filters.minEngagement ? 1 : 0,
-              ].reduce((a, b) => a + b, 0)}{' '}
-              active
-            </span>
-          )}
-        </div>
-        <Icon
-          icon="solar:alt-arrow-down-linear"
-          size={18}
-          className={`transition-transform text-ink-muted ${isOpen ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {/* Filter Panel - Collapsible Content */}
-      {isOpen && (
         <div className="space-y-4 p-4 bg-surface border border-line rounded-lg hx-rise">
           {/* Date Range Filter */}
           <div className="space-y-2">
@@ -177,16 +171,17 @@ const SearchFilters: React.FC<FiltersProps> = ({
 
           {/* Clear Filters Button */}
           {hasActiveFilters && (
-            <button
+            <Button
+              label="Clear Filters"
+              variant="secondary"
+              size="sm"
+              width="100%"
+              icon={<Icon icon="solar:refresh-linear" size={14} />}
               onClick={handleClearAll}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-void text-ink-secondary border border-line rounded-lg hover:bg-err/10 hover:text-err hover:border-err/20 transition-all text-xs font-bold uppercase tracking-widest"
-            >
-              <Icon icon="solar:refresh-linear" size={14} />
-              Clear Filters
-            </button>
+            />
           )}
         </div>
-      )}
+      </Collapsible>
     </div>
   );
 };

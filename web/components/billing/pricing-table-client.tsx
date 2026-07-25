@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@astryxdesign/core/Button';
 import { CheckoutButton } from './checkout-button';
 import { Icon } from '@/components/templates/_shared/primitives';
 
@@ -61,9 +62,7 @@ export function PricingTableClient({ userInfo }: PricingTableClientProps) {
           <p style={{ margin: "2px 0 20px", fontSize: 13, color: "var(--ink-secondary)" }}>{p.desc}</p>
           
           {p.name === "Free" ? (
-            <button className="btn-secondary" disabled style={{ width: "100%", opacity: 0.5, cursor: "not-allowed", border: "1px solid var(--line-strong)", background: "transparent", color: "var(--ink-secondary)", padding: "10px 17px", borderRadius: 8, fontSize: 14, fontFamily: "var(--font-sans)", fontWeight: 500 }}>
-              Current Plan
-            </button>
+            <Button label="Current Plan" variant="secondary" size="md" width="100%" isDisabled />
           ) : (p.isPro && userInfo) ? (
             <div style={{ width: "100%" }}>
               <CheckoutButton
@@ -72,9 +71,13 @@ export function PricingTableClient({ userInfo }: PricingTableClientProps) {
               />
             </div>
           ) : (
-            <button onClick={() => window.location.href = p.isEnterprise ? 'mailto:sales@v-intel.app' : '/auth/signin'} className="btn-primary" style={{ width: "100%", background: p.isEnterprise ? "var(--ink)" : "var(--accent-strong)", color: "var(--void)", border: "none", padding: "11px 18px", borderRadius: 8, fontSize: 14, fontFamily: "var(--font-sans)", fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              {p.isEnterprise ? 'Contact Sales' : 'Get started'}
-            </button>
+            <Button
+              label={p.isEnterprise ? 'Contact Sales' : 'Get started'}
+              variant="primary"
+              size="md"
+              width="100%"
+              onClick={() => window.location.href = p.isEnterprise ? 'mailto:sales@v-intel.app' : '/auth/signin'}
+            />
           )}
 
           <ul style={{ marginTop: 20, listStyle: "none", padding: 0 }}>

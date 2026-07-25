@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { STRIPE_PRICING } from '@/lib/stripe';
 import { CheckoutButton } from './checkout-button';
@@ -104,27 +105,14 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
         {!isPro ? (
            <CheckoutButton isLoading={isLoading} setIsLoading={setIsLoading} />
         ) : (
-          <button
+          <Button
             type="button"
+            label="Manage in Billing Portal"
+            variant="secondary"
+            size="md"
+            width="100%"
             onClick={handleManageBilling}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 8,
-              border: "1px solid var(--line)",
-              background: "transparent",
-              color: "var(--accent)",
-              fontFamily: "var(--font-sans)",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "all var(--dur-fast)",
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = "var(--accent-a10)"}
-            onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
-          >
-            Manage in Billing Portal
-          </button>
+          />
         )}
       </div>
 
@@ -194,7 +182,13 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
              <p style={{ margin: 0, fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--ink-muted)", textTransform: "uppercase" }}>Your Referral Link</p>
              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
                 <code style={{ fontSize: 12, color: "var(--accent)" }}>v-intel.app/r/user_{initialData.user.id.slice(0,5)}</code>
-                <button
+                <Button
+                  type="button"
+                  label={referralCopied ? "Copied" : "Copy referral link"}
+                  variant="ghost"
+                  size="sm"
+                  isIconOnly
+                  icon={<Icon icon={referralCopied ? "solar:check-read-linear" : "solar:copy-linear"} size={14} />}
                   onClick={() => {
                     navigator.clipboard.writeText(`https://v-intel.app/r/user_${initialData.user.id.slice(0,5)}`)
                       .then(() => {
@@ -204,10 +198,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
                       })
                       .catch(() => { showToast('Failed to copy referral link.', 'error'); });
                   }}
-                  style={{ background: "transparent", border: "none", color: referralCopied ? "var(--accent)" : "var(--ink-secondary)", cursor: "pointer", transition: "color 0.15s" }}
-                >
-                  <Icon icon={referralCopied ? "solar:check-read-linear" : "solar:copy-linear"} size={14} />
-                </button>
+                />
              </div>
           </div>
           <div style={{ padding: 16, borderRadius: 8, background: "rgb(26 31 43 / 0.4)", border: "1px dashed var(--line)" }}>
