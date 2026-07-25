@@ -1,3 +1,29 @@
+/* RCA (2026-07-25): CSS @layer priority is determined by DECLARATION ORDER,
+ * not specificity or import order intuition -- whichever layer name is
+ * mentioned LAST in the stylesheet wins, full stop, even against a more
+ * specific selector in an earlier layer. Tailwind v4 declares
+ * `@layer theme, base, components, utilities;` as its own first statement
+ * (web/node_modules/tailwindcss/index.css:1). Because `@import "tailwindcss"`
+ * used to come first in this file, Astryx's `reset`/`astryx-base`/
+ * `astryx-theme` layers (imported after) were each new/unseen names --
+ * CSS registers them AFTER Tailwind's four layers, giving them higher
+ * priority than even Tailwind's own `utilities` layer. Astryx's reset
+ * (`border-width: 0` on every element, `font-size`/`font-weight: inherit`
+ * on form elements) was silently winning over EVERY Tailwind border/font
+ * utility app-wide -- not just on the one Astryx component (TextInput) this
+ * pilot actually uses. This explains the reported breakage in one place:
+ * missing panel borders, oversized/thick chat message-box font, and any
+ * other Tailwind border/font utility that stopped rendering, everywhere in
+ * the app, all from this single ordering mistake.
+ *
+ * Fix: declare the full layer order explicitly, up front, with Tailwind's
+ * layers listed LAST (so they win) and Astryx's listed first (so Astryx
+ * only supplies sane defaults for its own component, deferred to whenever
+ * Tailwind has an opinion) -- matching the pilot's actual intent (Astryx
+ * for the one new component, existing Tailwind styling untouched
+ * everywhere else). */
+@layer reset, astryx-base, astryx-theme, theme, base, components, utilities;
+
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
