@@ -1,0 +1,33 @@
+web/lib/types/contracts.ts
+  s_0eded1e9d0cab6::t_3ac890ce84111e 230-232
+supabase/migrations/20260725170000_analysis_max_output_tokens_settings.sql
+  s_0eded1e9d0cab6::t_48914ef787d896 1-36
+worker/src/services/LLMCascade.ts
+  s_0eded1e9d0cab6::t_12cee5ef9e192c 33-41,48,50-55,57
+  s_0eded1e9d0cab6::t_8eb98f1ec3b53d 241,366
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_0eded1e9d0cab6::t_54b49323b6a90c 68
+  s_0eded1e9d0cab6::t_bf9b05af33810f 162-171
+  s_0eded1e9d0cab6::t_c558b1ccdb9415 300
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_1a8313b090e180 216
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_0081f4de4049a7 92-94
+  s_0eded1e9d0cab6::t_7df83e694085f1 975
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "685dab8dfd4fa3805172bd1a34b5f441e1199eea",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
