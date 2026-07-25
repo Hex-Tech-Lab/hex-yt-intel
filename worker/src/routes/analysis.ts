@@ -89,6 +89,9 @@ interface StreamRequest {
   // multiple tiers share the same model id across different providers. Preferred over
   // `models` when present; `models` stays as the signed/legacy fallback for stale clients.
   cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
+  // Registry-resolved (2026-07-25, analysis.maxOutputTokens.*) -- see LLMCascade.ts's
+  // MAX_TOKENS_FALLBACK for why this must never be hardcoded worker-side again.
+  maxOutputTokens?: { haiku: number; default: number };
   sig: string;
   exp: number;
   appUrl?: string;
@@ -969,7 +972,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
       ? new WorkerPromptConfigAdapter({ url: upstashUrl, token: upstashToken })
       : undefined;
 
-  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade), new ValidationService(), cache);
+  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens), new ValidationService(), cache);
 
   const persistController = new AbortController();
   const httpConnSignal = c.req.raw['signal'];

@@ -227,6 +227,9 @@ export interface WorkerStreamRequest {
   // -- see CreateAnalysisUseCase's resolveAnalysisCascade() and StreamRequest.cascade
   // in worker/src/routes/analysis.ts.
   cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>;
+  // Registry-resolved (2026-07-25) -- see CreateAnalysisUseCase and LLMCascade.ts's
+  // MAX_TOKENS_FALLBACK doc comment for the production-outage RCA behind this field.
+  maxOutputTokens?: { haiku: number; default: number };
   sig: string;
   exp: number;
   appUrl?: string;

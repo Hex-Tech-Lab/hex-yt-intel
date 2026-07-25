@@ -213,6 +213,7 @@ export function useSSEStream() {
                   timezone: job.timezone || safeTimezone,
                   models: job.models,
                   cascade: job.cascade,
+                  maxOutputTokens: job.maxOutputTokens,
                   sig: job.stream.sig,
                   exp: job.stream.exp,
                   appUrl: typeof window !== 'undefined' ? window.location.origin : undefined,

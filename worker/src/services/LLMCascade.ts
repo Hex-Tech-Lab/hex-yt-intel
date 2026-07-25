@@ -30,15 +30,31 @@ const MODEL_CHAIN = CASCADE_FALLBACKS.analysis;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const HTTP_REFERER = 'https://yt-intel.hex-tech-lab.workers.dev';
 
+// Emergency fix 2026-07-25: was 62000 (a "for testing" bump from commit
+// e18b82f, 2026-06-13, never reverted) -- broke every production analysis
+// once account credits tightened, since 5 parallel streams x 62000 requested
+// tokens each trips OpenRouter's per-request affordability check. 8192 is
+// the pre-testing value. Registry-driven now (analysis.maxOutputTokens.haiku/
+// .default) per the standing no-hardcoded-tunables directive -- these are
+// ONLY the fallback for a stale client that didn't forward maxOutputTokens.
+const MAX_TOKENS_FALLBACK = { haiku: 8192, default: 16000 };
+
 export class LLMCascade implements LLMCascadePort {
   private apiKey: string;
   // The ordered cascade actually used. Defaults to the hardcoded MODEL_CHAIN, but the
   // bouncer may inject a per-tier list (resolved from app_settings) — the DB config is
   // the override source of truth; MODEL_CHAIN is the safety-net fallback.
   private chain: ReadonlyArray<{ model: string; name: string; providerOrder?: readonly string[] }>;
+  private maxTokens: { haiku: number; default: number };
 
-  constructor(apiKey: string, models?: string[], cascade?: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[] }>) {
+  constructor(
+    apiKey: string,
+    models?: string[],
+    cascade?: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
+    maxOutputTokens?: { haiku: number; default: number }
+  ) {
     this.apiKey = apiKey;
+    this.maxTokens = maxOutputTokens ?? MAX_TOKENS_FALLBACK;
     if (cascade && cascade.length > 0) {
       // Preferred path: full registry-resolved tiers, providerOrder included
       // directly -- correct even when multiple tiers share one model id
@@ -222,7 +238,7 @@ export class LLMCascade implements LLMCascadePort {
 
     const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
     const requestModel = translateModelId(model);
-    const requestMaxTokens = isHaiku45 ? 8192 : 16000;
+    const requestMaxTokens = isHaiku45 ? this.maxTokens.haiku : this.maxTokens.default;
     // RCA (2026-07-23): this used to unconditionally override `providerOrder`
     // with a hardcoded ['anthropic', 'google-vertex', 'amazon-bedrock'] for
     // ANY claude-haiku-4.5 tier, silently discarding the "Alternate Route"
@@ -347,7 +363,7 @@ export class LLMCascade implements LLMCascadePort {
 
     const isHaiku45 = model === 'anthropic/claude-haiku-4.5';
     const requestModel = translateModelId(model);
-    const requestMaxTokens = isHaiku45 ? 8192 : 16000;
+    const requestMaxTokens = isHaiku45 ? this.maxTokens.haiku : this.maxTokens.default;
     // Same tier-override bug as callLLMStream (see RCA there), plus this copy
     // additionally had wrong-cased provider slugs ('Amazon'/'Anthropic'/'Google')
     // -- OpenRouter provider slugs are lowercase ('anthropic', 'google-vertex',
