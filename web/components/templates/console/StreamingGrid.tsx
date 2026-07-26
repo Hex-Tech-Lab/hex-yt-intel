@@ -1,9 +1,24 @@
 'use client';
 
-import { Skeleton } from '@astryxdesign/core';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { useMemo } from 'react';
+import { Skeleton, Markdown } from '@astryxdesign/core';
 import { MonoLabel, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
+
+// Line-clamped preview card previously hid tables via `prose-table:hidden`
+// (Astryx Markdown renders its own Table components, not Tailwind Typography
+// markup, so that CSS selector no longer applies). Strip GFM table blocks
+// before rendering so the compact card preview never shows a truncated table.
+function stripMarkdownTables(markdown: string): string {
+  return markdown
+    .split(/\r?\n\r?\n/)
+    .filter((block) => {
+      const lines = block.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) return true;
+      const looksLikeTable = lines.every((line) => /^\s*\|/.test(line) || /^\s*[-:|\s]+$/.test(line));
+      return !looksLikeTable;
+    })
+    .join('\n\n');
+}
 
 export interface Dimension {
   key: string;
@@ -28,6 +43,7 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
   const { key, label, icon, status, content, span = 1 } = dimension;
   const streaming = status === "streaming";
   const interactive = status === "done" && Boolean(onOpen);
+  const strippedContent = useMemo(() => (content ? stripMarkdownTables(content) : ''), [content]);
 
   return (
     <GlowBorder
@@ -78,10 +94,8 @@ export function DimensionCard({ dimension, index, onOpen, delayClass }: Dimensio
 
           <div style={{ flex: 1, overflowY: "auto", maxHeight: 320, paddingRight: 4 }} className="hx-custom-scrollbar">
             {(status === "done" || status === "streaming") && content ? (
-              <div className="prose prose-invert max-w-none line-clamp-3 prose-table:hidden">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {content}
-                </ReactMarkdown>
+              <div className="line-clamp-3">
+                <Markdown density="compact">{strippedContent}</Markdown>
               </div>
             ) : status === "error" ? (
               <p style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--err)", opacity: 0.8 }}>

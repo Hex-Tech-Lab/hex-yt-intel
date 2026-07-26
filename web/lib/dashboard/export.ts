@@ -1,26 +1,19 @@
 import * as Sentry from '@sentry/nextjs';
+/**
+ * Re-exported so existing call sites (`import { showToast } from
+ * '@/lib/dashboard/export'`) keep working unchanged. Real implementation
+ * now fires an Astryx `Toast` via the imperative bridge in
+ * `@/lib/dashboard/toast-bridge` instead of hand-rolled DOM manipulation --
+ * see that module for why an imperative bridge is needed for a function
+ * called from plain (non-component) code.
+ */
+import { showToast } from './toast-bridge';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
 
-export type PanelId = 'insights' | 'knowledge-graph' | 'word-cloud' | 'mind-map';
+export { showToast };
 
-/**
- * Fires a transient, DOM-imperative toast in the bottom-right corner.
- * Not a React component — this is intentionally a direct DOM manipulation
- * (no toast/notification primitive exists elsewhere in the codebase to
- * reuse), matching the original inline implementation in DashboardContainer.
- */
-export function showToast(message: string, type: 'success' | 'error' = 'success') {
-  if (typeof document === 'undefined') return;
-  const el = document.createElement('div');
-  el.textContent = message;
-  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-  el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
-  el.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 18px;border-radius:10px;font:600 12px/1.4 var(--font-mono);pointer-events:none;opacity:0;transition:opacity .2s;color:var(--ink);background:${type === 'error' ? 'rgba(239,68,68,0.9)' : 'rgba(6,182,212,0.9)'};backdrop-filter:blur(8px);`;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => { el.style.opacity = '1'; });
-  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
-}
+export type PanelId = 'insights' | 'knowledge-graph' | 'word-cloud' | 'mind-map';
 
 export function reportClipboardError(error: unknown, context: string) {
   const message = error instanceof Error ? error.message : String(error);
@@ -191,6 +184,7 @@ export function exportChatAsMarkdown(messages: ChatMessageForExport[], title?: s
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error during export';
     Sentry.captureException(err, { contexts: { export: { context: 'chat-markdown', title } } });
+    console.error('[export] Chat markdown export failed:', { message });
     showToast('Export failed: ' + message, 'error');
   }
 }

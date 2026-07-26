@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useImperativeAlertDialog } from '@astryxdesign/core';
 import { Footer } from '@/components/Footer';
 import { Icon, MonoLabel } from '@/components/templates/_shared/primitives';
 
@@ -22,6 +23,7 @@ export default function SavedSearchesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const deleteConfirm = useImperativeAlertDialog();
 
   useEffect(() => {
     loadSavedSearches();
@@ -41,11 +43,16 @@ export default function SavedSearchesPage() {
     }
   };
 
-  const handleDeleteSearch = async (id: string) => {
-    if (!confirm('Are you sure you want to remove this saved search?')) {
-      return;
-    }
-    setSavedSearches((prev) => prev.filter((item) => item.id !== id));
+  const handleDeleteSearch = (id: string) => {
+    deleteConfirm.show({
+      title: 'Remove saved search?',
+      description: 'This will remove the saved search from your library. This action cannot be undone.',
+      actionLabel: 'Remove',
+      onAction: () => {
+        setSavedSearches((prev) => prev.filter((item) => item.id !== id));
+        deleteConfirm.hide();
+      },
+    });
   };
 
   const handleViewAnalysis = (analysisId: string) => {
@@ -208,6 +215,8 @@ export default function SavedSearchesPage() {
       </main>
 
       <Footer />
+
+      {deleteConfirm.element}
 
       <style jsx global>{`
         @keyframes hx-rise { 

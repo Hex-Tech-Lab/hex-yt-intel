@@ -1,9 +1,8 @@
 'use client';
 
-import ReactMarkdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
-import DOMPurify from 'isomorphic-dompurify';
 import Link from 'next/link';
+import { Markdown } from '@astryxdesign/core';
+import DOMPurify from 'isomorphic-dompurify';
 import { Footer } from '@/components/Footer';
 import { Icon, MonoLabel } from '@/components/templates/_shared/primitives';
 
@@ -54,8 +53,22 @@ export function LegalPage({ content }: LegalPageProps) {
              
              {/* Note: The Markdown usually starts with an H1, we let it render but we control the spacing */}
              <div className="prose-container">
-                <article className="prose prose-invert prose-cyan max-w-none">
-                  <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{content}</ReactMarkdown>
+                <article className="legal-prose">
+                  <Markdown
+                    autolink="gfm"
+                    components={{
+                      heading: ({ level, children }) => {
+                        const Tag = `h${level}` as const;
+                        return <Tag className={level === 1 ? 'legal-h1' : level === 2 ? 'legal-h2' : 'legal-h3'}>{children}</Tag>;
+                      },
+                      paragraph: ({ children }) => <p className="legal-p">{children}</p>,
+                      link: ({ href, children }) => (
+                        <a href={href} className="legal-a" target="_blank" rel="noopener noreferrer">{children}</a>
+                      ),
+                    }}
+                  >
+                    {content}
+                  </Markdown>
                 </article>
              </div>
           </div>
@@ -75,7 +88,7 @@ export function LegalPage({ content }: LegalPageProps) {
         }
         .animate-hx-rise { animation: hx-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-        .prose h1 {
+        .legal-h1 {
           font-family: var(--font-sans);
           font-weight: 500;
           font-size: clamp(30px, 8vw, 48px) !important;
@@ -86,7 +99,7 @@ export function LegalPage({ content }: LegalPageProps) {
           overflow-wrap: break-word;
         }
 
-        .prose p:first-of-type strong {
+        .legal-prose p:first-of-type strong {
           color: #94A3B8 !important;
           font-family: var(--font-mono);
           font-size: 12px;
@@ -94,7 +107,7 @@ export function LegalPage({ content }: LegalPageProps) {
           letter-spacing: 0.05em;
         }
 
-        .prose h2 {
+        .legal-h2 {
           font-family: var(--font-sans);
           font-weight: 500;
           font-size: 24px !important;
@@ -105,7 +118,7 @@ export function LegalPage({ content }: LegalPageProps) {
           padding-bottom: 12px;
         }
 
-        .prose p {
+        .legal-p {
           font-family: var(--font-sans);
           font-size: 16px !important;
           line-height: 1.6 !important;
@@ -115,29 +128,29 @@ export function LegalPage({ content }: LegalPageProps) {
           max-width: 72ch;
         }
 
-        .prose strong { color: #ffffff !important; font-weight: 600; }
-        
-        .prose ul, .prose ol {
+        .legal-prose strong { color: #ffffff !important; font-weight: 600; }
+
+        .legal-prose ul, .legal-prose ol {
           margin-top: 1.5rem !important;
           margin-bottom: 1.5rem !important;
           padding-left: 1.5rem !important;
         }
 
-        .prose li {
+        .legal-prose li {
           margin-top: 0.75rem !important;
           margin-bottom: 0.75rem !important;
           color: #94A3B8 !important;
         }
 
-        .prose a {
+        .legal-a {
           color: #06B6D4 !important;
           text-decoration: none !important;
           border-bottom: 1px solid transparent;
           transition: border-color 0.2s;
         }
-        .prose a:hover { border-color: #06B6D4; }
+        .legal-a:hover { border-color: #06B6D4; }
 
-        .prose table {
+        .legal-prose table {
           width: 100% !important;
           border-collapse: collapse !important;
           margin: 32px 0 !important;
@@ -145,7 +158,7 @@ export function LegalPage({ content }: LegalPageProps) {
           background: rgba(26, 31, 43, 0.4);
           border: 1px solid #1E293B;
         }
-        .prose th {
+        .legal-prose th {
           background: #1A1F2B !important;
           color: #94A3B8 !important;
           font-family: var(--font-mono);
@@ -155,7 +168,7 @@ export function LegalPage({ content }: LegalPageProps) {
           text-align: left !important;
           border: 1px solid #1E293B !important;
         }
-        .prose td {
+        .legal-prose td {
           padding: 12px 16px !important;
           border: 1px solid #1E293B !important;
           color: #E2E8F0 !important;
