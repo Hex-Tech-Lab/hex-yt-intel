@@ -252,9 +252,17 @@ export class LLMCascade implements LLMCascadePort {
     // every failure. Now respects each tier's own providerOrder when set,
     // only falling back to the full default order for the primary tier
     // (which has none).
+    // RCA (2026-07-26): allow_fallbacks:true here let OpenRouter silently
+    // substitute a different provider than the pinned providerOrder (e.g.
+    // chat's Cerebras-first tier landing on a slower provider under the
+    // hood -- "Unknown Provider" + inconsistent tok/s in the OpenRouter
+    // dashboard was this, not a real outage). The cascade already provides
+    // its own tier-to-tier fallback (Cerebras -> Groq -> Baseten -> ...), so
+    // OpenRouter-level substitution is redundant and actively defeats
+    // deliberate provider choice (e.g. paying more for Cerebras speed).
     const requestProvider = isHaiku45
       ? { order: providerOrder ?? ['anthropic', 'google-vertex', 'amazon-bedrock'], allow_fallbacks: false }
-      : (providerOrder ? { order: providerOrder, allow_fallbacks: true } : undefined);
+      : (providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined);
 
     try {
       const response = await fetch(OPENROUTER_URL, {
@@ -369,9 +377,13 @@ export class LLMCascade implements LLMCascadePort {
     // -- OpenRouter provider slugs are lowercase ('anthropic', 'google-vertex',
     // 'amazon-bedrock'); with allow_fallbacks:false and no valid slugs, every
     // request through this path had no eligible provider at all.
+    // Same allow_fallbacks fix as callLLMStream's requestProvider -- see RCA
+    // there. OpenRouter-level provider substitution is redundant given the
+    // cascade's own tier-to-tier fallback and defeats deliberate provider
+    // pinning (e.g. Cerebras for chat speed).
     const requestProvider = isHaiku45
       ? { order: providerOrder ?? ['anthropic', 'google-vertex', 'amazon-bedrock'], allow_fallbacks: false }
-      : (providerOrder ? { order: providerOrder, allow_fallbacks: true } : undefined);
+      : (providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined);
 
     try {
       const response = await fetch(OPENROUTER_URL, {
