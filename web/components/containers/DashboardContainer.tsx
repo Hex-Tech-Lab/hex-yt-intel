@@ -11,7 +11,7 @@ import { AnalysisHero } from '@/components/templates/console/AnalysisHero';
 import { BentoMetadata } from '@/components/templates/console/BentoMetadata';
 import type { Dimension } from '@/components/templates/console/DimensionAccordion';
 import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
-import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
+import { useTotalDimensions, useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
 import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
 import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
@@ -90,6 +90,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const error = useAnalysisStore((s) => s.error);
   const terminalLines = useAnalysisStore((s) => s.terminalLines);
   const TOTAL_DIMENSIONS = useTotalDimensions();
+  const { dimensionConfigs } = useSynthesisConfig();
 
   const showLog = status !== 'idle' && terminalLines.length > 0;
 
@@ -312,48 +313,20 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   ], [historyBadge]);
 
   const dimensions: Dimension[] = useMemo(() => {
-    const DIMENSION_LABELS: Record<number, string> = {
-      1: "Apex Intelligence",
-      2: "Provenance & Metadata",
-      3: "Content Architecture",
-      4: "Psychological Layer",
-      5: "Core Intelligence",
-      6: "Quantitative Analysis",
-      7: "Implementation Systems",
-      8: "Semantic Foundation",
-      9: "Forward Foresight",
-      10: "Credibility & Risk",
-      11: "Commercial Yield",
-    };
-
-    const DIMENSION_ICONS: Record<number, string> = {
-      1: "solar:graph-up-linear",
-      2: "solar:link-round-angle-linear",
-      3: "solar:folder-with-files-linear",
-      4: "solar:user-linear",
-      5: "solar:bolt-linear",
-      6: "solar:magnifer-linear",
-      7: "solar:refresh-linear",
-      8: "solar:crown-minimalistic-linear",
-      9: "solar:graph-up-linear",
-      10: "solar:shield-check-linear",
-      11: "solar:wad-of-money-linear",
-    };
-
-    const DIMENSION_SPANS: Record<number, 1 | 2 | 3> = {
-      1: 3, 5: 2, 11: 2
-    };
-
     // If projection isn't ready but we're analyzing, show all dimensions as idle/streaming skeletons
     if (!nucleusProjection && (status === 'analyzing' || status === 'downloading')) {
-      return Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => ({
-        key: `dim-skeleton-${i + 1}`,
-        label: DIMENSION_LABELS[i + 1] || `Dimension ${i + 1}`,
-        icon: DIMENSION_ICONS[i + 1] || "solar:bolt-linear",
-        status: i === 0 ? 'streaming' : 'idle', // Stream first one as a visual cue
-        content: '',
-        span: (DIMENSION_SPANS[i + 1] || 1) as 1 | 2 | 3,
-      }));
+      return Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => {
+        const num = i + 1;
+        const cfg = dimensionConfigs[num];
+        return {
+          key: `dim-skeleton-${num}`,
+          label: cfg?.label || `Dimension ${num}`,
+          icon: cfg?.icon || "solar:bolt-linear",
+          status: i === 0 ? 'streaming' : 'idle',
+          content: '',
+          span: (cfg?.span || 1) as 1 | 2 | 3,
+        };
+      });
     }
 
     if (!nucleusProjection) return [];
@@ -392,16 +365,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         dimStatus = 'error';
       }
 
+      const cfg = dimensionConfigs[dim.number];
+
       return {
         key: `dim-${dim.number}`,
-        label: DIMENSION_LABELS[dim.number] || `Dimension ${dim.number}`,
-        icon: DIMENSION_ICONS[dim.number] || "solar:bolt-linear",
+        label: cfg?.label || `Dimension ${dim.number}`,
+        icon: cfg?.icon || "solar:bolt-linear",
         status: dimStatus,
         content: cleanDimensionContent(dim.content),
-        span: (DIMENSION_SPANS[dim.number] || 1) as 1 | 2 | 3,
+        span: (cfg?.span || 1) as 1 | 2 | 3,
       };
     });
-  }, [nucleusProjection, status, nucleusAnalysis?.streaming.dimensionsReceived, TOTAL_DIMENSIONS]);
+  }, [nucleusProjection, status, nucleusAnalysis?.streaming.dimensionsReceived, TOTAL_DIMENSIONS, dimensionConfigs]);
 
   const selectedDimension = useMemo(() => {
     if (!selectedDimensionKey) return null;
@@ -490,7 +465,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           />
 
           {(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId) && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
               <VideoPlayerCard />
               {videoMetadata && (
                 <BentoMetadata

@@ -28,7 +28,15 @@ export function useExecutiveDigest(analysisId: string | null, status: string) {
     };
   }, [digest]);
 
-  // Reset the card whenever we switch to a different analysis.
+  // Reset the card whenever we switch to a different analysis or re-analyze.
+  useEffect(() => {
+    if (status === 'analyzing' || status === 'downloading') {
+      setDigest(null);
+      setDigestLoading(false);
+      digestFetchedForRef.current = null;
+    }
+  }, [status]);
+
   useEffect(() => {
     setDigest(null);
     setDigestLoading(false);

@@ -36,7 +36,7 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
   useEffect(() => {
     setAuxStatus(null);
     fetchedForRef.current = null;
-  }, [analysisId]);
+  }, [analysisId, status]);
 
   useEffect(() => {
     if (!analysisId || status !== 'complete') return;

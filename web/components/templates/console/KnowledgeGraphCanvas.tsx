@@ -326,6 +326,13 @@ export function KnowledgeGraphCanvas({
         }}
       />
 
+      {graph.nodes.length === 0 && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 pointer-events-none">
+          <Icon icon="solar:share-circle-linear" size={32} className="text-[var(--accent)] mb-2 opacity-50" />
+          <p className="font-mono text-xs text-[var(--ink-secondary)]">Knowledge Graph nodes are being extracted and mapped...</p>
+        </div>
+      )}
+
       {/* Floating Legend */}
       <div style={{
         position: 'absolute',

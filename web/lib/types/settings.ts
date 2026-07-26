@@ -7,6 +7,9 @@
 export interface DimensionConfig {
   number: number;
   name: string;
+  label?: string;
+  icon?: string;
+  span?: 1 | 2 | 3;
   extraFields?: ('persona' | 'knowledgeGraph' | 'classification' | 'monetizationVerdict')[];
 }
 

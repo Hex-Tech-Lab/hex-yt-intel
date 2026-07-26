@@ -416,12 +416,29 @@ export const useChatStore = create<ChatState>((set, get) => {
       set({ loadingList: true, error: null });
       try {
         const { conversations } = await api<{ conversations: ChatConversation[] }>('/api/chat/conversations');
-        set((s) => ({
+        let restoredId: string | null = get().activeId;
+        if (!restoredId && typeof window !== 'undefined') {
+          try {
+            const savedId = localStorage.getItem('hex_yt_last_active_conv');
+            if (savedId && conversations.some((c) => c.id === savedId)) {
+              restoredId = savedId;
+            }
+          } catch (e) {
+            console.debug('[ChatStore] Read last_active_conv failed:', e);
+          }
+        }
+        // Deliberately does NOT default to the first conversation when there's
+        // no active/restored id -- an unrelated video's thread must never
+        // auto-open (ADR 009 ownership binding). Only a saved id for THIS
+        // browser's own last session is trusted as a restore source.
+        set({
           conversations,
           loadingList: false,
-          // Only keep activeId if it exists in the new list; don't default to first conversation
-          activeId: s.activeId && conversations.some((c) => c.id === s.activeId) ? s.activeId : null,
-        }));
+          activeId: restoredId && conversations.some((c) => c.id === restoredId) ? restoredId : null,
+        });
+        if (restoredId && conversations.some((c) => c.id === restoredId) && !get().messagesByConv[restoredId]) {
+          void get().selectConversation(restoredId);
+        }
       } catch (e) {
         set({ loadingList: false, error: e instanceof Error ? e.message : 'Failed to load chats' });
       }
@@ -429,6 +446,13 @@ export const useChatStore = create<ChatState>((set, get) => {
 
     selectConversation: async (id) => {
       set({ activeId: id });
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('hex_yt_last_active_conv', id);
+        } catch (e) {
+          console.debug('[ChatStore] Write last_active_conv failed:', e);
+        }
+      }
       if (get().messagesByConv[id]) return;
       set({ loadingThread: true });
       try {
@@ -551,6 +575,13 @@ export const useChatStore = create<ChatState>((set, get) => {
     },
 
     reset: () => {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('hex_yt_last_active_conv');
+        } catch (e) {
+          console.debug('[ChatStore] Clear last_active_conv failed:', e);
+        }
+      }
       set({
         conversations: [],
         activeId: null,
