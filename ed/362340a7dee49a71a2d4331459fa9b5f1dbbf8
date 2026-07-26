@@ -1,0 +1,46 @@
+web/store/useChatStore.ts
+  s_0eded1e9d0cab6::t_c24c8b998fb525 235-240
+  s_0eded1e9d0cab6::t_fcec7b83556813 373
+  s_0eded1e9d0cab6::t_92b3ea2c12623d 38-43
+  s_0eded1e9d0cab6::t_7ed78e29260515 558
+web/app/globals.css
+  s_0eded1e9d0cab6::t_a92d5077eedb0c 318-321,369-374
+web/components/templates/console/AnalysisHero.tsx
+  s_0eded1e9d0cab6::t_a92d5077eedb0c 70,76,81,84-86,123,163
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_8ab77a70163185 936
+  s_0eded1e9d0cab6::t_9ada5410433ad7 929-935
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_a92d5077eedb0c 15,277-337,513-514,541,543-566,600,606,611
+  s_0eded1e9d0cab6::t_54acb454cc95b3 542
+  s_0eded1e9d0cab6::t_81b65e6a76bde9 233-240
+web/components/templates/console/DimensionDrawer.tsx
+  s_0eded1e9d0cab6::t_a92d5077eedb0c 69-74
+web/components/templates/console/DimensionAccordion.tsx
+  s_0eded1e9d0cab6::t_a92d5077eedb0c 3,18,50-51,91-92
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_0eded1e9d0cab6::t_fd925162339cd0 58-63
+  s_0eded1e9d0cab6::t_7560bc5fd45b87 506
+web/app/layout.tsx
+  s_0eded1e9d0cab6::t_a92d5077eedb0c 38
+web/components/dashboard/DimensionAccordion.tsx
+  s_0eded1e9d0cab6::t_dd567294a5bb6e 9
+web/lib/prompts/chat-grounding.ts
+  s_0eded1e9d0cab6::t_a92d5077eedb0c 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ed362340a7dee49a71a2d4331459fa9b5f1dbbf8",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
