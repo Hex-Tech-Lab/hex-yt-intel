@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { TabList, Tab, Skeleton } from '@astryxdesign/core';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { TabList, Tab, Skeleton, Markdown } from '@astryxdesign/core';
 import { MonoLabel, GlowBorder, Icon, CornerFrame } from '@/components/templates/_shared/primitives';
 import type { Dimension } from './StreamingGrid';
 
@@ -118,11 +116,9 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
 
           <div className="flex-1 overflow-y-auto max-h-[500px] hx-custom-scrollbar pr-2">
             {status === "done" || (status === "streaming" && parsedSummaries[activeTab]) ? (
-              <div className="prose prose-invert max-w-none prose-p:text-sm prose-p:leading-relaxed prose-headings:text-base prose-headings:mt-4 prose-headings:mb-2">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {parsedSummaries[activeTab] || `*Waiting for ${activeTab} summary layer...*`}
-                </ReactMarkdown>
-              </div>
+              <Markdown density="compact">
+                {parsedSummaries[activeTab] || `*Waiting for ${activeTab} summary layer...*`}
+              </Markdown>
             ) : status === "error" ? (
               <div className="flex flex-col items-center justify-center py-12 text-[var(--err)] opacity-80">
                 <Icon icon="solar:danger-triangle-linear" size={32} className="mb-2" />

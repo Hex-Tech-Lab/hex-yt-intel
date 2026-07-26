@@ -1,11 +1,20 @@
 'use client';
 
-import { memo, useEffect, useMemo, useRef, useState, startTransition, useTransition } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import * as Sentry from '@sentry/nextjs';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Icon } from '@/components/templates/_shared/primitives';
-import { TextArea, IconButton } from '@astryxdesign/core';
+import {
+  IconButton,
+  ChatMessageList,
+  ChatMessage,
+  ChatMessageBubble,
+  ChatSystemMessage,
+  ChatComposer,
+  ChatComposerInput,
+  Markdown,
+  type ChatComposerInputHandle,
+  type MarkdownComponents,
+} from '@astryxdesign/core';
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
@@ -20,6 +29,36 @@ export interface ChatDockProps {
 }
 
 const OPEN_KEY = 'hx-chatdock-open';
+
+/**
+ * Hoisted to module scope (mirrors SelectedDimensionReadout's
+ * `readoutComponents`) so it isn't recreated per message per render.
+ * Astryx `Markdown` has no table/list override slots (unlike react-markdown) --
+ * lists/tables fall back to Astryx's own built-in styling, same tradeoff
+ * already accepted in SelectedDimensionReadout.
+ */
+const chatMarkdownComponents: MarkdownComponents = {
+  paragraph: ({ children }) => (
+    <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{children}</p>
+  ),
+  link: ({ href, children }) => {
+    if (href?.startsWith('#t=')) {
+      const timestamp = href.replace('#t=', '');
+      return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
+    }
+    return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+  },
+  inlineCode: ({ children }) => (
+    <code className="bg-slate-800/80 px-1.5 py-0.5 rounded font-mono text-[11px] text-[var(--ink-secondary)]">
+      {parseAnsiToReact(children)}
+    </code>
+  ),
+  code: ({ code }) => (
+    <pre className="bg-slate-900/60 p-3 rounded-lg border border-[var(--line-faint)] overflow-x-auto my-3 font-mono text-[11px] leading-relaxed text-[var(--ink-secondary)]">
+      <code className="block">{parseAnsiToReact(code.replace(/\n$/, ''))}</code>
+    </pre>
+  ),
+};
 
 /**
  * Bottom-docked, vertically-collapsible chat sheet. Rendered into DashboardLayout's
@@ -38,8 +77,6 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   const [heightState, setHeightState] = useState<'normal' | 'half' | 'full'>('normal');
   const videoId = useAnalysisStore((s) => s.videoMetadata?.videoId);
   const [localInput, setLocalInput] = useState('');
-  const [input, setInput] = useState('');
-  const [, startInputTransition] = useTransition();
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   const handleCopyMessage = (id: string, body: string) => {
@@ -56,15 +93,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
       });
   };
 
-  const handleInputChange = (val: string) => {
-    setLocalInput(val);
-    startInputTransition(() => {
-      setInput(val);
-    });
-  };
-
   const listRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputHandleRef = useRef<ChatComposerInputHandle>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedMessageIdsRef = useRef<Set<string>>(new Set());
 
@@ -109,7 +139,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     void (async () => {
       await loadConversations();
       if (cancelled) return;
-      requestAnimationFrame(() => inputRef.current?.focus());
+      requestAnimationFrame(() => inputHandleRef.current?.focus());
 
       const state = useChatStore.getState();
       
@@ -238,23 +268,24 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   const submit = async (text: string) => {
     const t = text.trim();
     if (!t || sending) return;
-    setInput('');
     setLocalInput('');
     scrollToBottom(); // user just sent — always follow to the bottom
     await sendMessage(t, { analysisId: analysisId ?? null });
   };
 
-  const handleSend = () => submit(input);
-
   const handleNew = async () => {
     setShowThreads(false);
     await newConversation({ analysisId: null });
-    requestAnimationFrame(() => inputRef.current?.focus());
+    requestAnimationFrame(() => inputHandleRef.current?.focus());
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); }
-    else if (e.key === 'Escape') { startTransition(() => { setOpen(false); }); }
+  // ChatComposerInput owns Enter-to-send / Shift+Enter-for-newline / history
+  // recall internally (see its handleKeyDown) — the composer's onSubmit prop
+  // covers Enter. Escape-to-close-dock isn't part of its API, so it's still
+  // caught here via bubbling (ChatComposerInput has no stopPropagation on
+  // keydown, confirmed by reading its source).
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') startTransition(() => { setOpen(false); });
   };
 
   // --- Collapsed: slim bar -------------------------------------------------
@@ -383,140 +414,108 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         </div>
       )}
 
-      {/* Messages — left-aligned for natural chat UX */}
-      <div ref={listRef} aria-live="polite" className="flex-1 overflow-y-auto py-3 px-0">
-        <div className="px-3 lg:px-4 flex flex-col gap-3">
-          {messages.length === 0 && !sending && (
+      {/* Messages — Astryx ChatMessageList + ChatMessage + ChatMessageBubble */}
+      <ChatMessageList
+        ref={listRef}
+        isStreaming={sending}
+        density="compact"
+        gap={10}
+        className="flex-1 overflow-y-auto py-3 px-3 lg:px-4"
+        emptyState={
+          !sending ? (
             <div className="my-6 mx-auto text-center text-[var(--ink-muted)] font-mono text-xs leading-[1.6]">
               <Icon icon="solar:chat-square-like-linear" size={28} className="text-[var(--ink-muted)] mb-2 mx-auto" />
-              <div>{analysisTitle ? `Ask about “${analysisTitle.slice(0, 48)}”` : 'Ask anything —'}</div>
+              <div>{analysisTitle ? `Ask about "${analysisTitle.slice(0, 48)}"` : 'Ask anything —'}</div>
               <div>this thread is saved to your history.</div>
             </div>
-          )}
-          {messages.map((m) => {
-            const { body, options } = m.role === 'assistant' ? parseAssistant(m.content) : { body: m.content, options: [] as string[] };
-            const isUser = m.role === 'user';
-            return (
-              <div key={m.id} className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
-                <div 
-                  className={isUser ? "max-w-[85%] py-3 px-4 rounded-lg text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] border-none whitespace-pre-wrap break-words" : "prose prose-invert max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 py-3 px-4 rounded-lg text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words"}
-                >
-                  {isUser ? (
-                    body
-                  ) : (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        a: ({ children, href }) => {
-                          if (href?.startsWith('#t=')) {
-                            const timestamp = href.replace('#t=', '');
-                            return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
-                          }
-                          return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
-                        },
-                        ul: ({ children }) => <ul className="list-disc list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal list-outside pl-7 my-3 space-y-1.5 ml-1">{children}</ol>,
-                        li: ({ children }) => <li className="text-[12px] leading-relaxed text-[var(--ink-secondary)] pl-0.5">{renderChildren(children)}</li>,
-                        p: ({ children }) => <p className="text-[12px] leading-relaxed mb-3.5 mt-1.5 text-[var(--ink-secondary)] last:mb-0">{renderChildren(children)}</p>,
-                        pre: ({ children }) => (
-                          <pre className="bg-slate-900/60 p-3 rounded-lg border border-[var(--line-faint)] overflow-x-auto my-3 font-mono text-[11px] leading-relaxed text-[var(--ink-secondary)]">
-                            {children}
-                          </pre>
-                        ),
-                        code: ({ className, children }) => {
-                          const codeText = String(children).replace(/\n$/, '');
-                          const hasNewline = codeText.includes('\n');
-                          const isInline = !hasNewline && !className?.includes('language-');
-
-                          if (isInline) {
-                            return (
-                              <code className="bg-slate-800/80 px-1.5 py-0.5 rounded font-mono text-[11px] text-[var(--ink-secondary)]">
-                                {parseAnsiToReact(codeText)}
-                              </code>
-                            );
-                          }
-
-                          return (
-                            <code className="block font-mono text-[11px] leading-relaxed text-[var(--ink-secondary)]">
-                              {parseAnsiToReact(codeText)}
-                            </code>
-                          );
-                        },
-                        table: ({ children }) => (
-                          <div className="overflow-x-auto mt-4 mb-6 rounded-xl border border-[var(--line-faint)] bg-[var(--bg)]/30">
-                            <table className="min-w-full divide-y divide-[var(--line-faint)] text-[11px] text-[var(--ink-secondary)]">{children}</table>
-                          </div>
-                        ),
-                        thead: ({ children }) => <thead className="bg-[var(--bg)]/50">{children}</thead>,
-                        tbody: ({ children }) => <tbody className="divide-y divide-[var(--line-faint)]/50">{children}</tbody>,
-                        tr: ({ children }) => <tr>{children}</tr>,
-                        th: ({ children }) => <th className="px-4 py-2.5 text-left font-mono font-bold uppercase tracking-wider text-[var(--ink-muted)] border-r border-[var(--line-faint)] last:border-r-0">{renderChildren(children)}</th>,
-                        td: ({ children }) => <td className="px-4 py-2.5 border-r border-[var(--line-faint)] last:border-r-0 whitespace-pre-wrap">{renderChildren(children)}</td>,
-                      }}
-                    >
-                      {preprocessMarkdown(body)}
-                    </ReactMarkdown>
-                  )}
+          ) : undefined
+        }
+      >
+        {messages.map((m) => {
+          const { body, options } = m.role === 'assistant' ? parseAssistant(m.content) : { body: m.content, options: [] as string[] };
+          const isUser = m.role === 'user';
+          const sender = isUser ? 'user' : 'assistant';
+          return (
+            <ChatMessage key={m.id} sender={sender}>
+              <ChatMessageBubble
+                variant={isUser ? 'filled' : 'ghost'}
+                className={isUser
+                  ? 'max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words'
+                  : 'prose prose-invert max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words'
+                }
+                metadata={
+                  body ? (
+                    <div className={`flex gap-1.5 ml-0.5 ${isUser ? 'self-end mr-0.5' : ''}`}>
+                      <IconButton
+                        label="Copy message"
+                        variant="ghost"
+                        size="sm"
+                        icon={<Icon icon={copiedMessageId === m.id ? 'solar:check-read-linear' : 'solar:copy-linear'} size={13} />}
+                        onClick={() => handleCopyMessage(m.id, body)}
+                        className={copiedMessageId === m.id ? '!border-[var(--accent)] !text-[var(--accent)] !bg-[var(--accent-a10)]' : ''}
+                      />
+                    </div>
+                  ) : undefined
+                }
+              >
+                {isUser ? (
+                  body
+                ) : (
+                  <Markdown components={chatMarkdownComponents} density="compact">
+                    {preprocessMarkdown(body)}
+                  </Markdown>
+                )}
+              </ChatMessageBubble>
+              {!isUser && options.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 max-w-[92%] px-3 pb-1">
+                  {options.map((opt) => (
+                    <button key={opt} onClick={() => void submit(opt)} disabled={sending}
+                      className={`py-2 px-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-a10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                      {opt}
+                    </button>
+                  ))}
                 </div>
-                {body && (
-                  <div className={`flex gap-1.5 ml-0.5 ${isUser ? 'self-end mr-0.5' : ''}`}>
-                    <IconButton
-                      label="Copy message"
-                      variant="ghost"
-                      size="sm"
-                      icon={<Icon icon={copiedMessageId === m.id ? 'solar:check-read-linear' : 'solar:copy-linear'} size={13} />}
-                      onClick={() => handleCopyMessage(m.id, body)}
-                      className={copiedMessageId === m.id ? '!border-[var(--accent)] !text-[var(--accent)] !bg-[var(--accent-a10)]' : ''}
-                    />
-                  </div>
-                )}
-                {!isUser && options.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 max-w-[92%]">
-                    {options.map((opt) => (
-                      <button key={opt} onClick={() => void submit(opt)} disabled={sending}
-                        className={`py-2 px-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-a10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {sending && (
-            <div className="flex gap-[5px] py-[9px] px-[13px] self-start">
+              )}
+            </ChatMessage>
+          );
+        })}
+        {sending && (
+          <ChatSystemMessage>
+            <div className="flex gap-[5px] py-1">
               {[0, 1, 2].map((i) => (
                 <span key={i} className="w-1.5 h-1.5 rounded-full bg-[var(--ink-muted)]" style={{ animation: `hx-pulse 1.2s ease-in-out ${i * 0.18}s infinite` }} />
               ))}
             </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
+          </ChatSystemMessage>
+        )}
+        <div ref={messagesEndRef} />
+      </ChatMessageList>
 
-      {/* Composer */}
+      {/* Composer — ChatComposer is the layout shell (drawer/header/input/
+          send-button slots); its context wires value/onChange/onSubmit/
+          isDisabled/canSend to the default ChatComposerInput + ChatSendButton
+          automatically (verified via ChatComposer.js: renders a
+          ChatComposerContext.Provider around the body). ChatComposerInput
+          itself owns Enter-to-send / Shift+Enter-for-newline / message
+          history recall (see its handleKeyDown), so onKeyDown here only
+          needs to catch Escape (bubbles up, no stopPropagation in the
+          library's keydown handler). */}
       <div className="border-t border-[var(--line)] px-3 lg:px-4 py-2">
-        <div className="flex gap-2 items-end">
-          <TextArea
-            ref={inputRef}
-            label="Message"
-            isLabelHidden
-            value={localInput}
-            onChange={(value) => handleInputChange(value)}
-            onKeyDown={onKeyDown}
-            rows={1}
-            placeholder="Message… (Enter to send, Shift+Enter for newline)"
-            className="flex-1 max-h-[140px] hx-field"
-          />
-          <button
-            onClick={() => void handleSend()}
-            disabled={!input.trim() || sending}
-            aria-label="Send message"
-            className={`flex-shrink-0 w-10 h-10 rounded-lg border-none grid place-items-center ${!input.trim() || sending ? 'cursor-not-allowed bg-[rgb(51_65_85_/_0.5)]' : 'cursor-pointer bg-[var(--accent)]'} text-[var(--void)]`}
-          >
-            <Icon icon="solar:arrow-up-linear" size={18} />
-          </button>
-        </div>
+        <ChatComposer
+          value={localInput}
+          onChange={setLocalInput}
+          onSubmit={(text) => void submit(text)}
+          isDisabled={sending}
+          density="compact"
+          className="hx-field"
+          input={
+            <ChatComposerInput
+              handleRef={inputHandleRef}
+              placeholder="Message… (Enter to send, Shift+Enter for newline)"
+              onKeyDown={onKeyDown}
+            />
+          }
+        />
       </div>
     </div>
   );
@@ -538,13 +537,6 @@ function parseAssistant(content: string): { body: string; options: string[] } {
   const body = content.slice(0, m.index).trim();
   return { body: body || content.trim(), options };
 }
-
-const renderChildren = (children: React.ReactNode) => {
-  if (typeof children === 'string') {
-    return parseAnsiToReact(children);
-  }
-  return children;
-};
 
 function PersistStatusIndicator({ state }: { state: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted' }) {
   if (state === 'idle') return null;

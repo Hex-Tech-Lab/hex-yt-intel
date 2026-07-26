@@ -59,3 +59,8 @@ once the corresponding commit lands, the commit hash is the permanent record.
 - **Fix**: gate the whole check behind evidence of a real stream handler (`ReadableStream`/`text/event-stream`/`EventSource`/`.getReader()`/`response.body`) before the setTimeout+abort heuristic applies. Verified against a full-repo scan that the rule's original intended targets (`analysis.ts`, `useSSEStream.ts`) still fire correctly.
 - **Commit**: `3f3826b8`
 - **Also surfaced** (not fixed, logged for a future entry): `web/lib/services/openrouter.ts` and `web/lib/intelligence/relations-engine.ts` trip the same rule — previously masked by the false-positive noise on other files. Needs its own investigation (may be real, may be a third gap in the rule) before touching.
+
+## 2026-07-26 — Astryx round 3 (Chat family, Markdown, Toast/AlertDialog)
+
+- **False positive**: "Observability: Catch block without error logging" on `web/lib/dashboard/export.ts` catches at lines 67 (`copyPanelContent`) and 165 (`copyChatAsMarkdown`). Both call `reportClipboardError(err, context)`, which itself does `Sentry.captureException` + `console.error` — same pre-existing pattern noted for `web/app/api/admin/settings/route.ts` (rule doesn't trace into a logging helper one level down).
+- **False positive**: "Accessibility: Toast notification missing role/aria-live" on `web/lib/dashboard/export.ts`. Stale — the rule pattern-matches on `showToast(` call sites assuming the old hand-rolled DOM toast implementation; `showToast` is now a re-export of `@/lib/dashboard/toast-bridge`, which fires an Astryx `Toast` (role/aria-live handled internally by the component, no manual DOM container exists anymore).
