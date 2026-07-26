@@ -1,0 +1,22 @@
+worker/src/services/LLMCascade.ts
+  s_0eded1e9d0cab6::t_f80b21dafede69 380-383,386
+  s_0eded1e9d0cab6::t_9a9c784beca05a 255-262,265
+supabase/migrations/20260726140000_usage_logs_action_check_add_chat_turn_analysis_completed.sql
+  s_0eded1e9d0cab6::t_2ec73228f7f5e8 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "1a0210de2be69f1f4d439ce5006443cc6c73427c",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
