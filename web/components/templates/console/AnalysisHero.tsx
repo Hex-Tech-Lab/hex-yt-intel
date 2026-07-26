@@ -77,7 +77,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
         </p>
       </div>
 
-      <div className="mt-4 max-w-[640px]">
+      <div className="mt-4">
         <CornerFrame tone={streaming ? "accent" : "line"}>
           <GlowBorder active={streaming} radius="control">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-[var(--surface)] p-2.5 rounded-lg shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
@@ -157,7 +157,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
         </CornerFrame>
       </div>
 
-      <div className="mt-2 flex min-h-5 max-w-[640px] items-center text-xs">
+      <div className="mt-2 flex min-h-5 items-center text-xs">
         <span id="hero-error" role="alert" aria-live="assertive" className="font-mono text-[var(--err)] font-medium">{status === "error" ? error : ""}</span>
       </div>
     </section>
