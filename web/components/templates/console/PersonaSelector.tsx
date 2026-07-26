@@ -1,6 +1,8 @@
 'use client';
 
+import { Tooltip } from '@astryxdesign/core';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
+import { Icon } from '@/components/templates/_shared/primitives';
 import type { PersonaId } from '@/lib/types/persona';
 
 // The PRD's primary 5 personas (UCIS P1–P5). The Content Creator (P1) is the apex
@@ -45,30 +47,30 @@ export function PersonaSelector() {
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
       {PERSONAS.map(persona => (
-        <button
-          key={persona.id}
-          onClick={() => switchPersona(persona.id)}
-          title={persona.description}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 8,
-            border: '1px solid var(--line)',
-            background: activePersona === persona.id ? 'var(--accent)' : 'var(--surface)',
-            color: activePersona === persona.id ? 'var(--void)' : 'var(--ink)',
-            cursor: 'pointer',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 12,
-            fontWeight: 500,
-            transition: 'all var(--dur-base)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6
-          }}
-          aria-pressed={activePersona === persona.id}
-        >
-          <span style={{ fontSize: 14 }}>●</span>
-          {persona.label}
-        </button>
+        <Tooltip key={persona.id} content={persona.description}>
+          <button
+            onClick={() => switchPersona(persona.id)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: '1px solid var(--line)',
+              background: activePersona === persona.id ? 'var(--accent)' : 'var(--surface)',
+              color: activePersona === persona.id ? 'var(--void)' : 'var(--ink)',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              fontWeight: 500,
+              transition: 'all var(--dur-base)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+            aria-pressed={activePersona === persona.id}
+          >
+            <Icon icon={persona.icon} size={14} />
+            {persona.label}
+          </button>
+        </Tooltip>
       ))}
     </div>
   );

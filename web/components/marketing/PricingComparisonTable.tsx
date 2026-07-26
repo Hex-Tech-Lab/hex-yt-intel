@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHeaderCell } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 interface FeatureRow {
@@ -75,55 +76,55 @@ export function PricingComparisonTable() {
       background: "rgb(26 31 43 / 0.4)",
       overflow: "hidden"
     }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid var(--line)", background: "var(--bg)" }}>
-            <th style={{ padding: "24px 32px", width: "40%" }}>
+      <Table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+        <TableHeader>
+          <TableRow style={{ borderBottom: "1px solid var(--line)", background: "var(--bg)" }}>
+            <TableHeaderCell style={{ padding: "24px 32px", width: "40%" }}>
               <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>{"// Capability"}</p>
-            </th>
-            <th style={{ padding: "24px 20px", textAlign: "center" }}>
+            </TableHeaderCell>
+            <TableHeaderCell style={{ padding: "24px 20px", textAlign: "center" }}>
                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Free</p>
-            </th>
-            <th style={{ padding: "24px 20px", textAlign: "center", background: "var(--accent-a05)" }}>
+            </TableHeaderCell>
+            <TableHeaderCell style={{ padding: "24px 20px", textAlign: "center", background: "var(--accent-a05)" }}>
                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--accent)" }}>Pro</p>
-            </th>
-            <th style={{ padding: "24px 20px", textAlign: "center" }}>
+            </TableHeaderCell>
+            <TableHeaderCell style={{ padding: "24px 20px", textAlign: "center" }}>
                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>Enterprise</p>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+            </TableHeaderCell>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {COMPARISON_DATA.map((cat) => (
             <React.Fragment key={cat.category}>
               {/* Category Header */}
-              <tr style={{ background: "rgb(17 20 29 / 0.6)" }}>
-                <td colSpan={4} style={{ padding: "12px 32px", borderBottom: "1px solid var(--line)" }}>
+              <TableRow style={{ background: "rgb(17 20 29 / 0.6)" }}>
+                <TableCell colSpan={4} style={{ padding: "12px 32px", borderBottom: "1px solid var(--line)" }}>
                   <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {cat.category}
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
               {/* Features */}
               {cat.features.map((feat) => (
-                <tr key={feat.name} style={{ borderBottom: "1px solid var(--line-faint)" }}>
-                  <td style={{ padding: "16px 32px" }}>
+                <TableRow key={feat.name} style={{ borderBottom: "1px solid var(--line-faint)" }}>
+                  <TableCell style={{ padding: "16px 32px" }}>
                     <p style={{ margin: 0, fontSize: 14, color: "var(--ink-secondary)" }}>{feat.name}</p>
-                  </td>
-                  <td style={{ padding: "16px 20px", textAlign: "center" }}>
+                  </TableCell>
+                  <TableCell style={{ padding: "16px 20px", textAlign: "center" }}>
                     <CheckOrValue value={feat.free} />
-                  </td>
-                  <td style={{ padding: "16px 20px", textAlign: "center", background: "var(--accent-a03)" }}>
+                  </TableCell>
+                  <TableCell style={{ padding: "16px 20px", textAlign: "center", background: "var(--accent-a03)" }}>
                     <CheckOrValue value={feat.pro} />
-                  </td>
-                  <td style={{ padding: "16px 20px", textAlign: "center" }}>
+                  </TableCell>
+                  <TableCell style={{ padding: "16px 20px", textAlign: "center" }}>
                     <CheckOrValue value={feat.enterprise} />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
             </React.Fragment>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

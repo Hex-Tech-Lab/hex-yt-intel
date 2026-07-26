@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card as AstryxCard } from '@astryxdesign/core';
+import { Card as AstryxCard, Tooltip } from '@astryxdesign/core';
 import { MonoLabel, Icon } from '@/components/templates/_shared/primitives';
 import { nodeIntelligence } from '@/lib/intelligence/knowledge-graph';
 import type { KnowledgeGraph, RelatedRef, RelationInsight } from '@/lib/types/knowledge-graph';
@@ -197,13 +197,14 @@ export function IntelligencePanel({ graph, selectedId, onSelect, insights = [], 
           </div>
           <div className="text-[var(--ink)] text-sm font-semibold mt-0.5 tracking-tight">{selectedNode.label}</div>
         </div>
-        <button
-          onClick={() => onSelect(null)}
-          title="Clear selection"
-          className="flex-shrink-0 w-[26px] h-[26px] rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer hover:text-[var(--ink)] transition-colors"
-        >
-          <Icon icon="solar:close-circle-linear" size={14} />
-        </button>
+        <Tooltip content="Clear selection">
+          <button
+            onClick={() => onSelect(null)}
+            className="flex-shrink-0 w-[26px] h-[26px] rounded-lg border border-[var(--line)] bg-transparent text-[var(--ink-muted)] cursor-pointer hover:text-[var(--ink)] transition-colors"
+          >
+            <Icon icon="solar:close-circle-linear" size={14} />
+          </button>
+        </Tooltip>
       </div>
 
       {selectedNode.keyTerms.length > 0 && (

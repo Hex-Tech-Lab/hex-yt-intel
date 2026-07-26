@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Icon } from '@/components/templates/_shared/primitives';
-import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
+import { Tooltip } from '@astryxdesign/core';
 import { entityHex, entityRgb } from '@/lib/design/entity-colors';
+import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
+import { Icon } from '@/components/templates/_shared/primitives';
 
 interface MindMapProps {
   graph: KnowledgeGraph;
@@ -228,9 +229,11 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
               }`}
             >
               <div className="flex flex-col truncate pr-1">
-                <span className="truncate font-bold" title={node.label}>
-                  {node.label}
-                </span>
+                <Tooltip content={node.label}>
+                  <span className="truncate font-bold">
+                    {node.label}
+                  </span>
+                </Tooltip>
                 <span className="text-[8px] opacity-60 uppercase tracking-widest font-mono">
                   {node.type}
                 </span>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHeaderCell } from '@astryxdesign/core';
 import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { STRIPE_PRICING } from '@/lib/stripe';
@@ -208,23 +209,23 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
         </div>
 
         <div style={{ borderRadius: 8, border: "1px solid var(--line)", overflow: "hidden" }}>
-           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-             <thead style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
-               <tr>
-                 <th style={{ padding: 10, textAlign: "left", color: "var(--ink-muted)" }}>CODE</th>
-                 <th style={{ padding: 10, textAlign: "left", color: "var(--ink-muted)" }}>TYPE</th>
-                 <th style={{ padding: 10, textAlign: "left", color: "var(--ink-muted)" }}>STATUS</th>
-                 <th style={{ padding: 10, textAlign: "right", color: "var(--ink-muted)" }}>ACTION</th>
-               </tr>
-             </thead>
-             <tbody>
-               <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                 <td colSpan={4} style={{ padding: 20, textAlign: "center", color: "var(--ink-muted)", fontStyle: "italic" }}>
+           <Table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+             <TableHeader style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
+               <TableRow>
+                 <TableHeaderCell style={{ padding: 10, textAlign: "left", color: "var(--ink-muted)" }}>CODE</TableHeaderCell>
+                 <TableHeaderCell style={{ padding: 10, textAlign: "left", color: "var(--ink-muted)" }}>TYPE</TableHeaderCell>
+                 <TableHeaderCell style={{ padding: 10, textAlign: "left", color: "var(--ink-muted)" }}>STATUS</TableHeaderCell>
+                 <TableHeaderCell style={{ padding: 10, textAlign: "right", color: "var(--ink-muted)" }}>ACTION</TableHeaderCell>
+               </TableRow>
+             </TableHeader>
+             <TableBody>
+               <TableRow style={{ borderBottom: "1px solid var(--line)" }}>
+                 <TableCell colSpan={4} style={{ padding: 20, textAlign: "center", color: "var(--ink-muted)", fontStyle: "italic" }}>
                    No active promo codes or gift cards found.
-                 </td>
-               </tr>
-             </tbody>
-           </table>
+                 </TableCell>
+               </TableRow>
+             </TableBody>
+           </Table>
         </div>
       </div>
 
@@ -245,33 +246,33 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
           </div>
 
           <div style={{ borderRadius: 8, border: "1px solid var(--line)", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Date</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Amount</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Status</th>
-                  <th style={{ padding: 12, textAlign: "right", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Receipt</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <TableHeader>
+                <TableRow style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
+                  <TableHeaderCell style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Date</TableHeaderCell>
+                  <TableHeaderCell style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Amount</TableHeaderCell>
+                  <TableHeaderCell style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Status</TableHeaderCell>
+                  <TableHeaderCell style={{ padding: 12, textAlign: "right", fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>Receipt</TableHeaderCell>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {initialData.invoices.map((inv) => (
-                  <tr key={inv.id} style={{ borderBottom: "1px solid var(--line)" }}>
-                    <td style={{ padding: 12, color: "var(--ink)" }}>
+                  <TableRow key={inv.id} style={{ borderBottom: "1px solid var(--line)" }}>
+                    <TableCell style={{ padding: 12, color: "var(--ink)" }}>
                       {inv.paidAt ? inv.paidAt.toLocaleDateString() : 'Pending'}
-                    </td>
-                    <td style={{ padding: 12, color: "var(--ink)" }}>
+                    </TableCell>
+                    <TableCell style={{ padding: 12, color: "var(--ink)" }}>
                       ${(inv.amount / 100).toFixed(2)} {inv.currency.toUpperCase()}
-                    </td>
-                    <td style={{ padding: 12 }}>
+                    </TableCell>
+                    <TableCell style={{ padding: 12 }}>
                       <span style={{ 
                         color: inv.status === 'paid' ? "var(--ok)" : "var(--warn)",
                         fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase"
                       }}>
                         {inv.status}
                       </span>
-                    </td>
-                    <td style={{ padding: 12, textAlign: "right" }}>
+                    </TableCell>
+                    <TableCell style={{ padding: 12, textAlign: "right" }}>
                       {inv.invoiceUrl ? (
                         <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "none", fontSize: 12, fontWeight: 500 }}>
                           View
@@ -279,11 +280,11 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
                       ) : (
                         <span style={{ color: "var(--ink-muted)", fontSize: 12 }}>N/A</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}

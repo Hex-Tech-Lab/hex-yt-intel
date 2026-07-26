@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
+import { Tooltip } from '@astryxdesign/core';
+import { Icon } from '@/components/templates/_shared/primitives';
 import dynamic from 'next/dynamic';
 import { forceCollide, forceCenter, forceManyBody } from 'd3-force';
 import type { KnowledgeGraph, RelationKind } from '@/lib/types/knowledge-graph';
@@ -356,28 +358,27 @@ export function KnowledgeGraphCanvas({
       </div>
 
       {/* Fit-to-view control */}
-      <button
-        onClick={fit}
-        title="Fit to view"
-        style={{
-          position: 'absolute',
-          bottom: 8,
-          right: 8,
-          width: 28,
-          height: 28,
-          borderRadius: 4,
-          border: '1px solid var(--line)',
-          background: 'rgb(26 31 43 / 0.8)',
-          color: 'var(--ink-secondary)',
-          cursor: 'pointer',
-          fontSize: 13,
-          display: 'grid',
-          placeItems: 'center',
-          zIndex: 10
-        }}
-      >
-        ⤢
-      </button>
+      <Tooltip content="Fit to view">
+        <button
+          onClick={fit}
+          style={{
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            width: 28,
+            height: 28,
+            borderRadius: 4,
+            border: '1px solid var(--line)',
+            background: 'rgb(26 31 43 / 0.8)',
+            color: 'var(--ink-secondary)',
+            cursor: 'pointer',
+            display: 'grid',
+            placeItems: 'center',
+          }}
+        >
+          <Icon icon="solar:maximize-square-linear" size={14} />
+        </button>
+      </Tooltip>
     </div>
   );
   /* eslint-enable @typescript-eslint/no-explicit-any */

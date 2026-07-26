@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, startTransition, useRef, type ReactNode } from 'react';
+import { Tooltip } from '@astryxdesign/core';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { useHistoryOverview } from '@/hooks/useHistoryOverview';
@@ -69,10 +70,12 @@ function PlatformChip({ platform }: { platform: ClientPlatform | null }) {
 
 function MetricChip({ icon, children, title }: { icon: string; children: ReactNode; title: string }) {
   return (
-    <span title={title} className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--ink-secondary)]">
-      <Icon icon={icon} size={12} className="text-[var(--ink-muted)]" />
-      {children}
-    </span>
+    <Tooltip content={title}>
+      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--ink-secondary)]">
+        <Icon icon={icon} size={12} className="text-[var(--ink-muted)]" />
+        {children}
+      </span>
+    </Tooltip>
   );
 }
 
@@ -91,17 +94,17 @@ function DimensionDots({ present, totalDimensions, auxChips }: { present: number
       {Array.from({ length: totalDimensions }, (_, i) => i + 1).map((n) => {
         const isPresent = presentSet.has(n);
         return (
-          <span
-            key={n}
-            title={`Dimension ${n}: ${isPresent ? 'generated' : 'missing'}`}
-            className={`inline-grid place-items-center w-5 h-5 rounded text-[9px] font-mono font-semibold tabular-nums ${
-              isPresent
-                ? 'bg-[var(--ok)]/15 text-[var(--ok)] border border-[var(--ok)]/40'
-                : 'bg-transparent text-[var(--ink-muted)] border border-dashed border-[var(--line)]'
-            }`}
-          >
-            {n}
-          </span>
+          <Tooltip key={n} content={`Dimension ${n}: ${isPresent ? 'generated' : 'missing'}`}>
+            <span
+              className={`inline-grid place-items-center w-5 h-5 rounded text-[9px] font-mono font-semibold tabular-nums ${
+                isPresent
+                  ? 'bg-[var(--ok)]/15 text-[var(--ok)] border border-[var(--ok)]/40'
+                  : 'bg-transparent text-[var(--ink-muted)] border border-dashed border-[var(--line)]'
+              }`}
+            >
+              {n}
+            </span>
+          </Tooltip>
         );
       })}
       {auxChips}
@@ -566,7 +569,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                         </span>
                         <h3 className="text-sm font-semibold text-[var(--ink)] truncate">{item.title || 'Untitled Analysis'}</h3>
                         {item.status === 'partial' && (
-                          <span title="Partial analysis: incomplete data from timeout" className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-[var(--warn)] animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                          <Tooltip content="Partial analysis: incomplete data from timeout">
+                            <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-[var(--warn)] animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                          </Tooltip>
                         )}
                       </div>
                       {item.channelTitle && (
