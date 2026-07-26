@@ -1,0 +1,37 @@
+web/components/billing/billing-dashboard-client.tsx
+  s_0eded1e9d0cab6::t_332735d33e467e 4,212-223,225-228,249-258,260-261,263-264,266-267,274-275,283-284,286-287
+web/components/templates/console/AnalysisHero.tsx
+  s_0eded1e9d0cab6::t_332735d33e467e 6,103-120
+web/components/templates/console/IntelligencePanel.tsx
+  s_0eded1e9d0cab6::t_332735d33e467e 4,200-207
+web/components/marketing/PricingComparisonTable.tsx
+  s_0eded1e9d0cab6::t_332735d33e467e 4,79-82,84-85,87-88,90-91,93-96,100-101,105-106,109-110,112-113,115-116,118-119,121-122,126-127
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_332735d33e467e 4,73-78,97-107,572-574
+web/components/templates/console/KnowledgeGraphCanvas.tsx
+  s_0eded1e9d0cab6::t_332735d33e467e 4-5,361-381
+web/components/templates/console/DimensionDrawer.tsx
+  s_0eded1e9d0cab6::t_332735d33e467e 4,107-116
+web/components/templates/console/MindMap.tsx
+  s_0eded1e9d0cab6::t_332735d33e467e 4,6-7,232-236
+web/components/templates/console/PersonaSelector.tsx
+  s_0eded1e9d0cab6::t_332735d33e467e 3,5,50-73
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_2ff43ce082de7f 927-928
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d27e608f823e2be1658d2451b3af6184a72f6adb",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
