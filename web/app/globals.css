@@ -374,6 +374,33 @@
   will-change: transform;
 }
 
+/* Astryx Toast dark theme override — data-theme="dark" on <html> wasn't
+   enough for every toast render path; force dark surface + crisp text
+   directly regardless of the fallback viewport's inverted mediaMode. */
+[data-toast-id] > div,
+[data-astryx-toast-fallback] [role="status"],
+[data-astryx-toast-fallback] [role="alert"],
+div[data-toast-id] [role="status"],
+div[data-toast-id] [role="alert"] {
+  background-color: #161b26 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.8) !important;
+}
+[data-toast-id] [role="status"] *,
+[data-toast-id] [role="alert"] * {
+  color: #f1f5f9 !important;
+}
+
+/* Chat Message Bubble 8px corner radius override — belt-and-suspenders for
+   the Tailwind !rounded-lg class in case an Astryx internal class wins on
+   specificity. */
+[data-chat-dock="true"] [class*="ChatMessageBubble"],
+[data-chat-dock="true"] [class*="chat-message-bubble"],
+div[data-chat-dock="true"] div[class*="content"] {
+  border-radius: 8px !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

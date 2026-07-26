@@ -508,10 +508,10 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           return (
             <ChatMessage key={m.id} sender={sender}>
               <ChatMessageBubble
-                variant={isUser ? 'filled' : 'ghost'}
+                variant="filled"
                 className={isUser
-                  ? '!rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words'
-                  : 'prose prose-invert !rounded-lg max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words'
+                  ? '!rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words !p-3.5 !py-2.5 !px-3.5'
+                  : 'prose prose-invert !rounded-lg max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-p:my-1 prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words !p-3.5 !py-2.5 !px-3.5'
                 }
                 metadata={
                   body ? (
