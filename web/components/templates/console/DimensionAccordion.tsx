@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useTransition } from 'react';
+import { memo, useCallback } from 'react';
 import { MonoLabel, GlowBorder, Icon, CornerFrame, StatusBadge, type SynthesisStatus } from '@/components/templates/_shared/primitives';
 
 export interface Dimension {
@@ -15,7 +15,7 @@ export interface Dimension {
 interface DimensionAccordionProps {
   dimensions: Dimension[];
   selectedDimensionKey: string | null;
-  onSelectDimension: (key: string) => void;
+  onSelectDimension: (key: string | null) => void;
   progress?: string;
 }
 
@@ -47,9 +47,8 @@ const DimensionItem = memo(function DimensionItem({
     >
       <CornerFrame tone={isSelected ? 'accent' : 'line'}>
         <button
-          onClick={() => {
-            requestAnimationFrame(() => onSelect(d.key));
-          }}
+          data-dimension-trigger="true"
+          onClick={() => onSelect(d.key)}
           className={`w-full text-left flex items-center justify-between p-3 px-4 rounded-lg border cursor-pointer transition-all duration-200 ${buttonClass}`}
           style={{ boxSizing: 'border-box' }}
         >
@@ -88,12 +87,9 @@ export function DimensionAccordion({
   onSelectDimension,
   progress
 }: DimensionAccordionProps) {
-  const [, startTransition] = useTransition();
   const handleSelect = useCallback((key: string) => {
-    startTransition(() => {
-      onSelectDimension(key);
-    });
-  }, [onSelectDimension]);
+    onSelectDimension(selectedDimensionKey === key ? null : key);
+  }, [onSelectDimension, selectedDimensionKey]);
 
   return (
     <section className="hx-rise flex flex-col gap-4">

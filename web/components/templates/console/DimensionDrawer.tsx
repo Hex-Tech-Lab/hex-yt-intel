@@ -66,7 +66,12 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     // rather than requiring a throwaway first click to dismiss the backdrop.
     const handlePointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
-      if (drawerRef.current && !drawerRef.current.contains(target) && !target.closest('[data-chat-dock="true"]')) {
+      if (
+        drawerRef.current &&
+        !drawerRef.current.contains(target) &&
+        !target.closest('[data-chat-dock="true"]') &&
+        !target.closest('[data-dimension-trigger="true"]')
+      ) {
         onClose();
       }
     };

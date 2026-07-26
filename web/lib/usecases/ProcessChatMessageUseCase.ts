@@ -55,6 +55,12 @@ export interface ProcessChatMessageSuccess {
     // Forwarded to the worker so AdaptiveOptionsBuilder can generate follow-up
     // OPTIONS that vary by conversation content instead of the static fallback.
     knowledgeContext?: UserKnowledgeContext;
+    // True when the persisted comment sample (`comments`) is smaller than the
+    // real total (`totalCommentCount` from the video's metadata) -- i.e. Tier-3
+    // expansion would actually surface more data. Computed here (Vercel has DB
+    // access) instead of via a client-side keyword regex on conversation text,
+    // which had no relationship to whether the sample was actually incomplete.
+    hasMoreComments?: boolean;
   };
 }
 
@@ -497,6 +503,7 @@ export class ProcessChatMessageUseCase {
           // sent -- knowledgeContext was only folded into the grounding TEXT via
           // buildGroundingWithHistory, never passed as structured data).
           knowledgeContext,
+          hasMoreComments: totalCommentCount > (comments?.length ?? 0),
         },
       },
     };

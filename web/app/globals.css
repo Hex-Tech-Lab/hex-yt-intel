@@ -315,6 +315,10 @@
    MOTION & UI COMPONENTS
    ========================================================================= */
 @property --hx-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes hx-rotate-transform {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 @keyframes hx-rotate-ring { to { --hx-angle: 360deg; } }
 @keyframes hx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes hx-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
@@ -362,9 +366,12 @@
 
 .hx-spin {
   position: absolute;
-  inset: -40%;
-  background: conic-gradient(from var(--hx-angle), transparent 55%, var(--accent) 78%, transparent 92%);
-  animation: hx-rotate-ring 3s linear infinite;
+  inset: -60%;
+  aspect-ratio: 1 / 1;
+  margin: auto;
+  background: conic-gradient(from 0deg, transparent 55%, var(--accent) 78%, transparent 92%);
+  animation: hx-rotate-transform 3s linear infinite;
+  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
