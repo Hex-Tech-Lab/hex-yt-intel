@@ -1,0 +1,48 @@
+web/lib/config/synthesis.ts
+  s_0eded1e9d0cab6::t_d4c5e179f4a379 39-41,46-57
+web/lib/prompts/chat-grounding.ts
+  s_0eded1e9d0cab6::t_d81a48f6470af1 13
+web/app/globals.css
+  s_0eded1e9d0cab6::t_19d3dfad7255f5 377-403
+web/store/useChatStore.ts
+  s_0eded1e9d0cab6::t_f03926d42565f4 578-584
+  s_0eded1e9d0cab6::t_9a88f55d7e72d2 419-434,437-441
+  s_0eded1e9d0cab6::t_d54e1777d13755 449-455
+web/components/templates/console/AnalysisHero.tsx
+  s_0eded1e9d0cab6::t_98740245cb99e5 8
+  s_0eded1e9d0cab6::t_94174ac0ff6d93 84,87-88,91-128
+  s_0eded1e9d0cab6::t_6d4b60c01b4b61 49,53
+  s_0eded1e9d0cab6::t_0bc783b9cc1a6b 168
+  s_0eded1e9d0cab6::t_1d645e84edb380 59
+web/lib/types/settings.ts
+  s_0eded1e9d0cab6::t_d4c5e179f4a379 10-12
+web/components/containers/dashboard/ConsoleTabSwitcher.tsx
+  s_0eded1e9d0cab6::t_7e1cf3baa8b7e5 9,18-23,30-37
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_c40d072c75797a 511,513-514
+web/hooks/useAuxElementStatus.ts
+  s_0eded1e9d0cab6::t_d4c5e179f4a379 39
+web/components/templates/console/KnowledgeGraphCanvas.tsx
+  s_0eded1e9d0cab6::t_808391d609ecdb 329
+  s_0eded1e9d0cab6::t_a2c889d92fa8e1 330-335
+web/hooks/useExecutiveDigest.ts
+  s_0eded1e9d0cab6::t_d4c5e179f4a379 31-39
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_6f94d81fc29e6a 14,93,318-329,368-369,372-373,376,379,468
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "633a52ddb1b46df4b9b1f5833a839918230cd709",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
