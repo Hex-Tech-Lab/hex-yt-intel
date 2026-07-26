@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Button } from '@astryxdesign/core/Button';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { MonoLabel, StatusBadge, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
 
 export interface AnalysisHeroProps {
@@ -99,22 +100,24 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
               />
               {url && (
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    type="button"
-                    title="Copy URL"
-                    onClick={handleCopy}
-                    className={`bg-transparent border-none ${copied ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} cursor-pointer p-1.5 flex items-center justify-center rounded-md transition-colors duration-[var(--dur-fast)]`}
-                  >
-                    <Icon icon={copied ? "solar:check-read-linear" : "solar:copy-linear"} size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    title="Clear input"
-                    onClick={() => onUrlChange('')}
-                    className="bg-transparent border-none text-[var(--ink-muted)] cursor-pointer p-1.5 flex items-center justify-center rounded-md transition-colors duration-[var(--dur-fast)]"
-                  >
-                    <Icon icon="solar:close-circle-linear" size={16} />
-                  </button>
+                  <Tooltip content="Copy URL">
+                    <button
+                      type="button"
+                      onClick={handleCopy}
+                      className={`bg-transparent border-none ${copied ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} cursor-pointer p-1.5 flex items-center justify-center rounded-md transition-colors duration-[var(--dur-fast)]`}
+                    >
+                      <Icon icon={copied ? "solar:check-read-linear" : "solar:copy-linear"} size={16} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Clear input">
+                    <button
+                      type="button"
+                      onClick={() => onUrlChange('')}
+                      className="bg-transparent border-none text-[var(--ink-muted)] cursor-pointer p-1.5 flex items-center justify-center rounded-md transition-colors duration-[var(--dur-fast)]"
+                    >
+                      <Icon icon="solar:close-circle-linear" size={16} />
+                    </button>
+                  </Tooltip>
                 </div>
               )}
               <div className="flex gap-2 flex-shrink-0">

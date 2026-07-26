@@ -1,6 +1,7 @@
 'use client';
 
 import { Icon } from '@/components/templates/_shared/primitives';
+import { Tooltip } from '@astryxdesign/core';
 import { useEffect, useRef, useCallback } from 'react';
 import { useUIStore } from '@/store/useUIStore';
 import { SelectedDimensionReadout } from '@/components/dashboard/SelectedDimensionReadout';
@@ -103,15 +104,16 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
               {dimension.label}
             </span>
           </div>
-          <button
-            ref={closeBtnRef}
-            onClick={handleClose}
-            aria-label="Close dimension details"
-            title="Close"
-            className="grid place-items-center w-7 h-7 rounded-md border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-          >
-            <Icon icon="solar:close-circle-linear" size={16} />
-          </button>
+          <Tooltip content="Close">
+            <button
+              ref={closeBtnRef}
+              onClick={handleClose}
+              aria-label="Close dimension details"
+              className="grid place-items-center w-7 h-7 rounded-md border-none bg-transparent text-[var(--ink-secondary)] cursor-pointer transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              <Icon icon="solar:close-circle-linear" size={16} />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Content */}
