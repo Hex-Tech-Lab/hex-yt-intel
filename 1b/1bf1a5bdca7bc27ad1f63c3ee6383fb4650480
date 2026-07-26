@@ -1,0 +1,57 @@
+web/components/templates/console/StreamingGrid.tsx
+  s_0eded1e9d0cab6::t_b6f1c705a16ffc 98
+  s_0eded1e9d0cab6::t_7bb313d8163799 4,7-22,97
+  s_0eded1e9d0cab6::t_531efe6272783b 46
+  s_0eded1e9d0cab6::t_af7b77716499ed 3
+web/app/search/page.tsx
+  s_0eded1e9d0cab6::t_7bb313d8163799 9
+web/lib/dashboard/toast-bridge.tsx
+  s_0eded1e9d0cab6::t_7bb313d8163799 1-45
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_bc8f224b1fffa4 14,16
+  s_0eded1e9d0cab6::t_b4fe86a50e98a1 3,6-13,15,17,97,142,279,282-288,417-425,428,431-463,465,468-484,489-502,504-505,507-518
+  s_0eded1e9d0cab6::t_710dc7ca8b176a 464,466
+  s_0eded1e9d0cab6::t_4a75ca6e205240 506
+  s_0eded1e9d0cab6::t_5f71e154df97bd 34-62
+  s_0eded1e9d0cab6::t_e88a036e25119c 33
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0eded1e9d0cab6::t_54fda5f5a5c811 62-66
+web/components/templates/LegalPage.tsx
+  s_0eded1e9d0cab6::t_7bb313d8163799 4-5,56-71,91,102,110,121,131-133,139,145,151,153,161,171
+web/app/providers.tsx
+  s_0eded1e9d0cab6::t_7bb313d8163799 4,6,11-14
+web/app/analyses/saved/page.tsx
+  s_0eded1e9d0cab6::t_7bb313d8163799 6,26,46-55,219
+  s_0eded1e9d0cab6::t_5ae282ce81a8cb 220
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_b9ca024a6d217b 923-924
+  s_0eded1e9d0cab6::t_b9dbfaf0abca6c 925
+web/lib/dashboard/export.ts
+  s_0eded1e9d0cab6::t_997209fea78c8e 187
+  s_0eded1e9d0cab6::t_021fe478c90012 16
+  s_0eded1e9d0cab6::t_7bb313d8163799 3-10
+  s_0eded1e9d0cab6::t_325e02beefff1c 14
+  s_0eded1e9d0cab6::t_716cc2b787d968 2
+web/components/templates/console/ApexSummaryCard.tsx
+  s_0eded1e9d0cab6::t_7bb313d8163799 4,119-121
+web/app/share/[token]/MarkdownRenderer.tsx
+  s_0eded1e9d0cab6::t_7bb313d8163799 3,7-8
+web/components/dashboard/SelectedDimensionReadout.tsx
+  s_0eded1e9d0cab6::t_7bb313d8163799 3-4,8-45,68,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "1b1bf1a5bdca7bc27ad1f63c3ee6383fb4650480",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
