@@ -12,6 +12,7 @@ import {
   ChatComposer,
   ChatComposerInput,
   Markdown,
+  useImperativeAlertDialog,
   type ChatComposerInputHandle,
   type MarkdownComponents,
 } from '@astryxdesign/core';
@@ -229,6 +230,14 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         conversationHistory,
       });
 
+      // Data-driven, not a keyword guess: server (ProcessChatMessageUseCase,
+      // which has DB access to the real comment count) already told us
+      // whether the persisted sample is smaller than the actual total.
+      const hasMoreComments = useChatStore.getState().hasMoreCommentsByConv[activeId];
+      if (hasMoreComments) {
+        prompts.unshift('[ACTION:expand-comments]');
+      }
+
       const optionsJson = JSON.stringify(prompts);
       const updatedContent = `${latestMessage.content}\n\nOPTIONS: ${optionsJson}`;
 
@@ -263,6 +272,67 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   const scrollToBottom = () => {
     const el = listRef.current;
     if (el) requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }));
+  };
+
+  const prevSendingRef = useRef(sending);
+  useEffect(() => {
+    if (prevSendingRef.current && !sending) {
+      const activeEl = document.activeElement;
+      const isInputOrTextArea = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable);
+      if (!isInputOrTextArea) {
+        requestAnimationFrame(() => {
+          inputHandleRef.current?.focus();
+        });
+      }
+    }
+    prevSendingRef.current = sending;
+  }, [sending]);
+
+  const expandConfirm = useImperativeAlertDialog();
+
+  const handleExpandCommentsClick = async () => {
+    if (!videoId) {
+      showToast('No active video associated with this conversation for comment expansion.', 'error');
+      return;
+    }
+    const defaultCommentCount = 500;
+    try {
+      const estRes = await fetch('/api/comments/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totalCommentCount: defaultCommentCount }),
+      });
+      const estimate = await estRes.json().catch(() => ({ estimatedCredits: 15 }));
+      const credits = estimate.estimatedCredits ?? 15;
+
+      expandConfirm.show({
+        title: 'Confirm Comment Expansion',
+        description: `Uncapped Tier 3 comment fetch will analyze all comments for this video. Estimated cost: ${credits} credits. Proceed?`,
+        actionLabel: 'Confirm & Expand',
+        onAction: async () => {
+          expandConfirm.hide();
+          try {
+            const startRes = await fetch('/api/comments/tier3/start', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ videoId, totalCommentCount: defaultCommentCount }),
+            });
+            if (!startRes.ok) {
+              const errData = await startRes.json().catch(() => ({ error: 'Failed' }));
+              throw new Error(errData.error || 'Failed to start expansion');
+            }
+            showToast('Comment expansion started! Full sentiment processing in background.');
+            await submit('Started full comment expansion.');
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            showToast(`Expansion failed: ${msg}`, 'error');
+          }
+        },
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast(`Could not estimate cost: ${msg}`, 'error');
+    }
   };
 
   const submit = async (text: string) => {
@@ -440,8 +510,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               <ChatMessageBubble
                 variant={isUser ? 'filled' : 'ghost'}
                 className={isUser
-                  ? 'max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words'
-                  : 'prose prose-invert max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words'
+                  ? '!rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words'
+                  : 'prose prose-invert !rounded-lg max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words'
                 }
                 metadata={
                   body ? (
@@ -468,12 +538,32 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               </ChatMessageBubble>
               {!isUser && options.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 max-w-[92%] px-3 pb-1">
-                  {options.map((opt) => (
-                    <button key={opt} onClick={() => void submit(opt)} disabled={sending}
-                      className={`py-2 px-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-a10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-                      {opt}
-                    </button>
-                  ))}
+                  {options.map((opt) => {
+                    const isExpandComments = opt.includes('expand-comments');
+                    if (isExpandComments) {
+                      return (
+                        <button
+                          key={opt}
+                          onClick={() => void handleExpandCommentsClick()}
+                          disabled={sending}
+                          className={`py-2 px-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-a15)] text-[var(--accent)] font-mono text-[11.5px] font-semibold text-left flex items-center gap-1.5 shadow-[0_0_12px_-2px_var(--accent-a20)] ${sending ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-[var(--accent-a20)]'}`}
+                        >
+                          <Icon icon="solar:bolt-linear" size={13} />
+                          <span>Expand to full comments</span>
+                        </button>
+                      );
+                    }
+                    return (
+                      <button
+                        key={opt}
+                        onClick={() => void submit(opt)}
+                        disabled={sending}
+                        className={`py-2 px-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-a10)] text-[var(--accent-ink)] font-mono text-[11.5px] text-left ${sending ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </ChatMessage>
@@ -507,16 +597,18 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           onSubmit={(text) => void submit(text)}
           isDisabled={sending}
           density="compact"
-          className="hx-field"
+          className="hx-field !rounded-lg"
           input={
             <ChatComposerInput
               handleRef={inputHandleRef}
               placeholder="Message… (Enter to send, Shift+Enter for newline)"
               onKeyDown={onKeyDown}
+              className="!rounded-lg"
             />
           }
         />
       </div>
+      {expandConfirm.element}
     </div>
   );
 }

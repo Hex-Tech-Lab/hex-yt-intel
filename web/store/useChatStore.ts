@@ -35,6 +35,12 @@ interface ChatState {
   persistState: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted';
   activePersistRequestId: string | null;
 
+  // Whether the persisted comment sample for a conversation's video is smaller
+  // than the real total (server-computed in ProcessChatMessageUseCase from
+  // actual grounding data) -- drives the "Expand to full comments" chip.
+  // Real data, not a client-side keyword guess.
+  hasMoreCommentsByConv: Record<string, boolean>;
+
   isChatOpen: boolean;
   setChatOpen: (open: boolean) => void;
   setPersistState: (persistState: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted', requestId?: string | null) => void;
@@ -226,6 +232,12 @@ export const useChatStore = create<ChatState>((set, get) => {
         return;
       }
 
+      if (typeof job.payload?.hasMoreComments === 'boolean') {
+        set((s) => ({
+          hasMoreCommentsByConv: { ...s.hasMoreCommentsByConv, [convId]: job.payload.hasMoreComments },
+        }));
+      }
+
       if (!job.stream?.url) {
         set({ error: 'Chat streaming endpoint not configured (NEXT_PUBLIC_WORKER_URL).' });
         outbox.remove(clientMsgId);
@@ -358,6 +370,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     conversations: [],
     activeId: null,
     messagesByConv: {},
+    hasMoreCommentsByConv: {},
     loadingList: false,
     loadingThread: false,
     sending: false,
@@ -542,6 +555,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         conversations: [],
         activeId: null,
         messagesByConv: {},
+        hasMoreCommentsByConv: {},
         error: null,
         sending: false,
         isChatOpen: false,

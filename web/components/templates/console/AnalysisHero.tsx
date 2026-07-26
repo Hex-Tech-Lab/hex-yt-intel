@@ -67,23 +67,23 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
         style={{ 
           maxHeight: status !== 'idle' ? '0px' : `${measuredHeight}px`, 
           opacity: status !== 'idle' ? 0 : 1, 
-          marginBottom: status !== 'idle' ? 0 : 16
+          marginBottom: status !== 'idle' ? 0 : 8
         }}
       >
         <h1 className="hx-h1 max-w-[20ch]">
           Drop a YouTube URL. Get a structured synthesis across 11 dimensions.
         </h1>
-        <p className="hx-body-lg mt-2 max-w-[54ch]">
+        <p className="hx-body-lg mt-1.5 max-w-[54ch]">
           Transcript, claims, frameworks, and contrarian takes, mapped into your knowledge graph and searchable in seconds.
         </p>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-2.5 sm:mt-3">
         <CornerFrame tone={streaming ? "accent" : "line"}>
           <GlowBorder active={streaming} radius="control">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-[var(--surface)] p-2.5 rounded-lg shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
-              <span aria-hidden className={`grid place-items-center w-10 h-10 rounded-lg bg-[var(--bg)] ${streaming ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} flex-none border border-[var(--line)]`}>
-                <Icon icon="solar:link-round-angle-linear" size={20} />
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 bg-[var(--surface)] p-2 sm:p-2.5 rounded-lg shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
+              <span aria-hidden className={`grid place-items-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-[var(--bg)] ${streaming ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} flex-none border border-[var(--line)]`}>
+                <Icon icon="solar:link-round-angle-linear" size={18} />
               </span>
               <TextInput
                 type="text"
@@ -120,7 +120,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                   </Tooltip>
                 </div>
               )}
-              <div className="flex gap-2 flex-shrink-0">
+              <div className="flex gap-2 flex-shrink-0 ml-auto">
                 {streaming && onCancel && (
                   <Button
                     type="button"
@@ -160,7 +160,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
         </CornerFrame>
       </div>
 
-      <div className="mt-2 flex min-h-5 items-center text-xs">
+      <div className={`mt-1.5 flex items-center text-xs ${status === "error" && error ? "min-h-5" : ""}`}>
         <span id="hero-error" role="alert" aria-live="assertive" className="font-mono text-[var(--err)] font-medium">{status === "error" ? error : ""}</span>
       </div>
     </section>

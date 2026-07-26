@@ -6,7 +6,7 @@ import { Icon } from '@/components/templates/_shared/primitives';
 interface DimensionAccordionProps {
   dimensions: Dimension[];
   selectedDimensionKey: string | null;
-  onSelectDimension: (key: string) => void;
+  onSelectDimension: (key: string | null) => void;
   status: string;
 }
 
