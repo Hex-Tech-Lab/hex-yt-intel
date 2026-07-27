@@ -163,10 +163,12 @@ export async function GET(
 
           send({ ...result, type: 'complete' });
         } catch (err) {
+          Sentry.captureException(err, { tags: { operation: 'relations', analysisId: id, modelUsed } });
+          console.error(`[relations/route] Error computing stance relations for ${id} (last model ${modelUsed}):`, err);
           const fallbackResult: RelationsResult = {
             analysisId: id,
             generatedAt: new Date().toISOString(),
-            model: 'none',
+            model: modelUsed,
             insights: [],
           };
           resolvePromise(fallbackResult);
