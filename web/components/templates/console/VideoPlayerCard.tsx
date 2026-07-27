@@ -63,6 +63,7 @@ export function VideoPlayerCard() {
     
     adapter.mount(containerRef.current, videoId, {
       onReady: () => {
+        clearTimeout(readyTimeout);
         if (cancelled || videoIdRef.current !== videoId) {
           adapter.destroy();
           if (playerRef.current === adapter) playerRef.current = null;

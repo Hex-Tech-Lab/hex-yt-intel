@@ -209,9 +209,14 @@ async function captureQuestionToStorage(
     if (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       const isDuplicate = errorMsg.includes('already exists') || errorMsg.includes('Duplicate');
+      const isMissingBucket = errorMsg.toLowerCase().includes('bucket not found');
       if (isDuplicate) {
         // Treat duplicate as idempotent success
         console.debug('[question-capture] File already exists (idempotent)');
+        return;
+      }
+      if (isMissingBucket) {
+        console.warn('[question-capture] Supabase storage bucket "analyses" not provisioned yet, skipping async store');
         return;
       }
       // Other errors (permission, storage full, etc.) are critical
