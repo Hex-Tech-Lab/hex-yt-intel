@@ -173,6 +173,10 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
 
   destroy(): void {
     this.destroyed = true;
+    if (this.loadTimeout) {
+      clearTimeout(this.loadTimeout);
+      this.loadTimeout = null;
+    }
     if (this.player?.destroy) {
       try { this.player.destroy(); } catch (err) {
         Sentry.captureException(err, { tags: { operation: 'youtube-player-destroy' } });
