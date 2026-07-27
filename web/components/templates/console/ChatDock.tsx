@@ -466,7 +466,12 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
       {showThreads && (
         <div className="max-h-[200px] overflow-y-auto border-b border-[var(--line)] bg-[rgb(8_11_17_/_0.8)]">
           {(() => {
-            const filteredConversations = conversations.filter((c) => !videoId || c.videoId === videoId || c.id === activeId);
+            const filteredConversations = [];
+            for (const itemConv of conversations) {
+              if (!videoId || itemConv.videoId === videoId || itemConv.id === activeId) {
+                filteredConversations.push(itemConv);
+              }
+            }
             return (
               <>
                 {filteredConversations.length === 0 && <div className="p-3 text-[var(--ink-muted)] font-mono text-[11px]">No conversations yet</div>}
@@ -621,17 +626,24 @@ export const ChatDock = memo(ChatDockImpl);
 
 /** Split an assistant reply into its body and the trailing OPTIONS chips. */
 function parseAssistant(content: string): { body: string; options: string[] } {
-  const m = content.match(/OPTIONS:\s*(\[[\s\S]*\])\s*$/);
-  if (!m || m.index === undefined) return { body: content.trim(), options: [] };
-  let options: string[] = [];
+  const matchResult = content.match(/OPTIONS:\s*(\[[\s\S]*\])\s*$/);
+  if (!matchResult || matchResult.index === undefined) return { body: content.trim(), options: [] };
+  const validOptions: string[] = [];
   try {
-    const arr = JSON.parse(m[1] ?? '[]');
-    if (Array.isArray(arr)) options = arr.filter((x) => typeof x === 'string').slice(0, 4);
+    const parsedJson = JSON.parse(matchResult[1] ?? '[]');
+    if (Array.isArray(parsedJson)) {
+      for (const optItem of parsedJson) {
+        if (typeof optItem === 'string') {
+          validOptions.push(optItem);
+          if (validOptions.length === 4) break;
+        }
+      }
+    }
   } catch (e) {
     console.debug('[ChatDock] Assistant reply options JSON parse failed (streaming/malformed):', e);
   }
-  const body = content.slice(0, m.index).trim();
-  return { body: body || content.trim(), options };
+  const bodyText = content.slice(0, matchResult.index).trim();
+  return { body: bodyText || content.trim(), options: validOptions };
 }
 
 function PersistStatusIndicator({ state }: { state: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted' }) {

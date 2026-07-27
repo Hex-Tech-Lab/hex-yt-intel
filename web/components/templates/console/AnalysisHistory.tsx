@@ -342,26 +342,29 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   };
 
   const filteredAndSorted = useMemo(() => {
-    let result = [...items];
-    if (filterStatus !== 'all') result = result.filter((item) => item.status === filterStatus);
-
     const query = debouncedSearch.trim().toLowerCase();
-    if (query) {
-      result = result.filter(
-        (item) =>
-          item.title?.toLowerCase().includes(query) ||
-          item.channelTitle?.toLowerCase().includes(query)
-      );
+    const result = [];
+    for (const itemRecord of items) {
+      if (filterStatus !== 'all' && itemRecord.status !== filterStatus) {
+        continue;
+      }
+      if (query) {
+        const matchesTitle = itemRecord.title?.toLowerCase().includes(query);
+        const matchesChannel = itemRecord.channelTitle?.toLowerCase().includes(query);
+        if (!matchesTitle && !matchesChannel) continue;
+      }
+      result.push(itemRecord);
     }
 
-    result.sort((a, b) => {
-      if (sortBy === 'most-analyzed') return b.timesAnalyzed - a.timesAnalyzed;
-      const aTime = new Date(a.lastAnalyzedAt).getTime();
-      const bTime = new Date(b.lastAnalyzedAt).getTime();
+    result.sort((firstRecord, secondRecord) => {
+      if (sortBy === 'most-analyzed') return secondRecord.timesAnalyzed - firstRecord.timesAnalyzed;
+      const aTime = new Date(firstRecord.lastAnalyzedAt).getTime();
+      const bTime = new Date(secondRecord.lastAnalyzedAt).getTime();
       return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
     });
+
     return result;
-  }, [items, filterStatus, sortBy, debouncedSearch]);
+  }, [items, filterStatus, debouncedSearch, sortBy]);
 
   const totalPages = Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE);
   const paginatedItems = filteredAndSorted.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
@@ -552,7 +555,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           <div className="flex flex-col gap-2.5">
             {paginatedItems.map((item, idx) => {
               const busy = loadingId === item.analysisId;
-              const status = STATUS_STYLE[item.status];
+              const status = STATUS_STYLE[item.status as keyof typeof STATUS_STYLE] || STATUS_STYLE.complete;
               const itemNumber = currentPage * ITEMS_PER_PAGE + idx + 1;
               return (
                 <div
