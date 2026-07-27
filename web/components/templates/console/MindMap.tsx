@@ -74,11 +74,15 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
       const parentNode = nodeMap[currentId]!;
 
       // Find neighbors
-      const neighbors = graph.edges
-        .filter((e) => e.source === currentId || e.target === currentId)
-        .map((e) => (e.source === currentId ? e.target : e.source))
-        // Only take neighbors that are "lower" in priority or equal if not visited
-        .filter(id => !visited.has(id) && nodeMap[id]);
+      const neighbors: string[] = [];
+      for (const edgeItem of graph.edges) {
+        if (edgeItem.source === currentId || edgeItem.target === currentId) {
+          const neighborId = edgeItem.source === currentId ? edgeItem.target : edgeItem.source;
+          if (!visited.has(neighborId) && nodeMap[neighborId]) {
+            neighbors.push(neighborId);
+          }
+        }
+      }
 
       neighbors.forEach((neighborId) => {
         const neighborNode = nodeMap[neighborId];
@@ -97,9 +101,12 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
       if (!mindNode || visited.has(n.id) || n.id === rootNode.id) return;
       const myTypePri = typePriority[mindNode.type] ?? 99;
       // Find a visited node with lower priority (higher in tree)
-      const candidates = Object.values(nodeMap).filter(
-        v => visited.has(v.id) && (typePriority[v.type] ?? 99) < myTypePri
-      );
+      const candidates: MindNode[] = [];
+      for (const vCandidate of Object.values(nodeMap)) {
+        if (visited.has(vCandidate.id) && (typePriority[vCandidate.type] ?? 99) < myTypePri) {
+          candidates.push(vCandidate);
+        }
+      }
       const bestParent = candidates.length > 0
         ? candidates.sort((a, b) => b.weight - a.weight)[0]
         : rootMindNode;

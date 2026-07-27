@@ -71,7 +71,11 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       // those fallback nodes already holds real per-dimension extracted terms, so
       // prefer it whenever present; only fall back to label when it's empty.
       const sourceText = node.keyTerms && node.keyTerms.length > 0 ? node.keyTerms.join(' ') : node.label;
-      const words = sourceText.split(/\s+/).filter(w => w.length > 2);
+      const rawWords = sourceText.split(/\s+/);
+      const words: string[] = [];
+      for (const wItem of rawWords) {
+        if (wItem.length > 2) words.push(wItem);
+      }
       words.forEach(word => {
         const key = word.toLowerCase().replace(/[^\w]/g, '');
         if (!key || key.length < 3) return;
@@ -97,7 +101,11 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     // Also extract bigrams (two-word phrases) for richer cloud
     graph.nodes.forEach(node => {
-      const wordList = node.label.split(/\s+/).filter(w => w.length > 2);
+      const rawWordList = node.label.split(/\s+/);
+      const wordList: string[] = [];
+      for (const wlItem of rawWordList) {
+        if (wlItem.length > 2) wordList.push(wlItem);
+      }
       for (let i = 0; i < wordList.length - 1; i++) {
         const bigram = `${wordList[i]} ${wordList[i + 1]}`;
         const key = bigram.toLowerCase().replace(/[^\w\s]/g, '');

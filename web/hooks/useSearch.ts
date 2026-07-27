@@ -136,18 +136,21 @@ export function useSearch(options: UseSearchOptions = {}) {
         }
 
         const data: SearchApiResponse = await response.json();
-        const normalizedResults = (data.results || [])
-          .filter((result) => result.analysisId || result.id)
-          .map((result) => ({
-            id: (result.analysisId || result.id) as string,
-            title: result.title || '',
-            snippet: result.excerpt || result.snippet || '',
-            similarity: result.score ?? result.similarity ?? 0,
-            createdAt: result.createdAt || new Date().toISOString(),
-            matchType: result.matchType || 'semantic',
-            channelTitle: result.channelTitle,
-            viewCount: result.viewCount,
-          }));
+        const normalizedResults: SearchResult[] = [];
+        for (const resItem of (data.results || [])) {
+          if (resItem.analysisId || resItem.id) {
+            normalizedResults.push({
+              id: (resItem.analysisId || resItem.id) as string,
+              title: resItem.title || '',
+              snippet: resItem.excerpt || resItem.snippet || '',
+              similarity: resItem.score ?? resItem.similarity ?? 0,
+              createdAt: resItem.createdAt || new Date().toISOString(),
+              matchType: resItem.matchType || 'semantic',
+              channelTitle: resItem.channelTitle,
+              viewCount: resItem.viewCount,
+            });
+          }
+        }
         setState((prev) => ({
           ...prev,
           results: normalizedResults,

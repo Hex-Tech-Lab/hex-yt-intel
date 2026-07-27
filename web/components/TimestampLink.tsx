@@ -19,7 +19,12 @@ export interface TimestampLinkProps {
  * @example parseTimestamp("45") // returns 45
  */
 const parseTimestamp = (timestamp: string): number => {
-  const parts: number[] = timestamp.split(':').map(p => parseInt(p, 10)).filter(p => !isNaN(p));
+  const rawParts = timestamp.split(':');
+  const parts: number[] = [];
+  for (const pStr of rawParts) {
+    const parsedNum = parseInt(pStr, 10);
+    if (!isNaN(parsedNum)) parts.push(parsedNum);
+  }
   if (parts.length === 0) return 0;
 
   const multipliers: number[] = [3600, 60, 1];
