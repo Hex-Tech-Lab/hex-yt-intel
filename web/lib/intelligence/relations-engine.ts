@@ -45,7 +45,7 @@ async function* callStanceModelStream(
   model: string,
   prompt: string,
   apiKey: string,
-  handshakeTimeoutMs: number = 3000,
+  handshakeTimeoutMs: number = 8000,
   externalSignal?: AbortSignal,
   providerOrder?: string[]
 ): AsyncGenerator<string> {
@@ -72,8 +72,6 @@ async function* callStanceModelStream(
         temperature: 0.3,
         max_tokens: 700,
         stream: true,
-        // Default to low reasoning effort unless the caller explicitly needs
-        // more (user directive 2026-07-25) -- this task is a cheap classification.
         reasoning: { effort: 'low' },
         messages: [{ role: 'user', content: prompt }],
         provider: {
@@ -86,7 +84,11 @@ async function* callStanceModelStream(
     });
 
     clearTimeout(handshakeTimer);
-    if (!res.ok || !res.body) return;
+    if (!res.ok || !res.body) {
+      const errText = await res.text().catch(() => '');
+      console.warn(`[relations/engine] Model ${model} returned HTTP ${res.status}:`, errText.slice(0, 200));
+      return;
+    }
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -112,11 +114,10 @@ async function* callStanceModelStream(
       }
     }
   } catch (err) {
-    console.error(`[relations/engine] Model ${model} failed:`, err);
-    if ((err as Error)?.name === 'AbortError') {
-      throw err;
-    }
+    const isAbort = (err as Error)?.name === 'AbortError';
+    console.warn(`[relations/engine] Model ${model} ${isAbort ? 'handshake timed out (8s)' : 'failed'}:`, err instanceof Error ? err.message : String(err));
   } finally {
+    clearTimeout(handshakeTimer);
     if (externalSignal) {
       externalSignal.removeEventListener('abort', abortListener);
     }
@@ -135,11 +136,14 @@ export async function* computeStanceRelationsStream(
   const prompt = buildPrompt(usable);
   const stanceModels = await resolveStanceCascade();
 
-  for (const item of stanceModels) {
+  for (let idx = 0; idx < stanceModels.length; idx++) {
+    const item = stanceModels[idx]!;
     if (handshakeSignal?.aborted) {
-      console.warn(`[relations/engine] Cascade aborted before attempting model: ${item.model}`);
+      console.warn(`[relations/engine] Handshake signal aborted before attempting model: ${item.model}`);
       break;
     }
+
+    console.log(`[relations/engine] Cascade attempt ${idx + 1}/${stanceModels.length}: ${item.name} (${item.model})`);
     yield { type: 'model', model: item.model };
     let fullText = '';
 
@@ -148,19 +152,22 @@ export async function* computeStanceRelationsStream(
         item.model,
         prompt,
         apiKey,
-        3000,
+        8000,
         handshakeSignal,
         item.providerOrder as string[] | undefined
       )) {
         fullText += delta;
       }
     } catch (err) {
-      console.warn(`[relations/engine] Model ${item.model} aborted, trying next:`, err instanceof Error ? err.message : String(err));
+      console.warn(`[relations/engine] Model ${item.model} exception, falling to next cascade model:`, err instanceof Error ? err.message : String(err));
       continue;
     }
 
     const json = extractJson(fullText);
-    if (!json) continue;
+    if (!json) {
+      console.warn(`[relations/engine] Model ${item.model} returned no valid JSON; trying next cascade model`);
+      continue;
+    }
 
     try {
       const parsed = JSON.parse(json);
@@ -170,6 +177,7 @@ export async function* computeStanceRelationsStream(
           .filter((i) => i.source !== i.target && labelOf.has(i.source) && labelOf.has(i.target))
           .slice(0, 6);
         
+        console.log(`[relations/engine] Successfully extracted ${insights.length} stance relation insights using ${item.model}`);
         for (const i of insights) {
           yield {
             type: 'insight',
@@ -184,12 +192,16 @@ export async function* computeStanceRelationsStream(
           };
         }
         return; // Success, stop cascade
+      } else {
+        console.warn(`[relations/engine] Model ${item.model} JSON schema validation failed:`, result.error.format());
       }
-    } catch { continue; }
+    } catch (parseErr) {
+      console.warn(`[relations/engine] Model ${item.model} JSON parse failed:`, parseErr);
+      continue;
+    }
   }
 
-  console.warn('[relations/engine] All models in stance relations cascade failed or timed out; returning empty insights');
-  return;
+  console.warn('[relations/engine] All cascade models exhausted without valid stance relations output');
 }
 
 
