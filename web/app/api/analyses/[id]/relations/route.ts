@@ -129,10 +129,8 @@ export async function GET(
         let modelUsed = 'unknown';
 
         let resolvePromise: (val: RelationsResult) => void = () => {};
-        let rejectPromise: (err: any) => void = () => {};
-        const computePromise = new Promise<RelationsResult>((res, rej) => {
+        const computePromise = new Promise<RelationsResult>((res) => {
           resolvePromise = res;
-          rejectPromise = rej;
         });
         serverInFlight.set(cacheKey, computePromise);
 
