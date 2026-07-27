@@ -10,10 +10,20 @@ export interface StanceDimension {
   content: string;
 }
 
+const sanitizeDimensionNumber = (val: unknown): number => {
+  if (typeof val === 'number' && !isNaN(val)) return val;
+  if (typeof val === 'string') {
+    const digits = val.replace(/\D/g, '');
+    const parsed = parseInt(digits, 10);
+    return isNaN(parsed) ? 1 : parsed;
+  }
+  return 1;
+};
+
 const LLMInsightSchema = z.object({
   kind: z.enum(['tangent', 'contrarian']),
-  source: z.coerce.number().int().min(1).max(11),
-  target: z.coerce.number().int().min(1).max(11),
+  source: z.preprocess(sanitizeDimensionNumber, z.number().int().min(1).max(11)),
+  target: z.preprocess(sanitizeDimensionNumber, z.number().int().min(1).max(11)),
   rationale: z.string().min(1).max(280),
 });
 const LLMResponseSchema = z.object({ insights: z.array(LLMInsightSchema).max(12) });
