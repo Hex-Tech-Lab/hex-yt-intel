@@ -587,14 +587,32 @@ export class SupabaseAnalysisAdapter {
       }
 
       const payload = (data as any).analysis_payload as Record<string, unknown> | null;
+
       const reportDescription = isPersistedValidationReport(data!.validation_report)
         ? data!.validation_report.metadata?.description || null
         : null;
-      // Fallback: description can live in analysis_payload metadata when validation_report
-      // never captured it (e.g. persisted via the chunked stitching path).
-      const payloadDescription = payload && typeof (payload as any).metadata?.description === 'string'
-        ? (payload as any).metadata.description
-        : null;
+
+      const payloadDescription =
+        (payload && typeof (payload as any).videoMetadata?.description === 'string' ? (payload as any).videoMetadata.description : null) ||
+        (payload && typeof (payload as any).metadata?.description === 'string' ? (payload as any).metadata.description : null) ||
+        (payload && typeof (payload as any).description === 'string' ? (payload as any).description : null);
+
+      const resolvedVideoMetadata =
+        (report.metadata as Record<string, unknown>) ||
+        (payload?.videoMetadata as Record<string, unknown>) ||
+        (payload?.metadata as Record<string, unknown>) ||
+        null;
+
+      const resolvedChannelMetadata =
+        (report.channelMeta as Record<string, unknown>) ||
+        (payload?.channelMeta as Record<string, unknown>) ||
+        (payload?.channelMetadata as Record<string, unknown>) ||
+        null;
+
+      const resolvedComments =
+        (Array.isArray(report.comments) ? report.comments : null) ||
+        (payload && Array.isArray((payload as any).comments) ? (payload as any).comments : null) ||
+        null;
 
       const rawDigest = (data as any).executive_digest;
       const hasDigestContent = rawDigest && typeof rawDigest === 'object'
@@ -605,14 +623,14 @@ export class SupabaseAnalysisAdapter {
       return {
         title: data!.title || '',
         channelTitle: data!.channel_title || null,
-        description: reportDescription || payloadDescription,
+        description: reportDescription || payloadDescription || null,
         analysisMarkdown: reconstructGroundingMarkdown(data!.analysis_markdown, payload),
         status: computedStatus,
         transcript,
-        videoMetadata: (report.metadata as Record<string, unknown>) || null,
-        channelMetadata: (report.channelMeta as Record<string, unknown>) || null,
+        videoMetadata: resolvedVideoMetadata,
+        channelMetadata: resolvedChannelMetadata,
         executiveDigest: hasDigestContent ? (rawDigest as StoredExecutiveDigest) : null,
-        comments: report.comments || null,
+        comments: resolvedComments,
       };
     } catch (error: any) {
       Sentry.captureException(error, {
