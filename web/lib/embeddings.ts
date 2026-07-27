@@ -56,8 +56,8 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://hex-yt-intel.vercel.app',
-          'X-Title': 'hex-yt-intel-embeddings',
+          'HTTP-Referer': 'https://yt-intel.getmytestdrive.com',
+          'X-Title': 'hex-yt-intel / vector-embeddings',
         },
         body: JSON.stringify({
           model: EMBEDDING_MODEL,

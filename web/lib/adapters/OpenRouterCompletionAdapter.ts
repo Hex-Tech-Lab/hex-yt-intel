@@ -27,7 +27,7 @@ async function requestCompletion(
       Authorization: `Bearer ${env.openrouterApiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': HTTP_REFERER,
-      'X-Title': 'Hex YT Intel',
+      'X-Title': 'hex-yt-intel / chat-assistant',
     },
     body: JSON.stringify({
       model: entry.model,

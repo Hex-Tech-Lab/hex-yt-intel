@@ -51,11 +51,14 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
   },
 
   setPersonaConfig: (config: PersonaConfigV2) => {
+    if (get().personaConfig?.primary?.id === config.primary?.id) return;
     set({ personaConfig: config });
     console.debug('[Metadata] Persona config received:', config.primary.id);
   },
 
   setKnowledgeGraph: (kg: KnowledgeGraphV2) => {
+    const current = get().knowledgeGraph;
+    if (current?.nodes?.length === kg.nodes?.length && current?.edges?.length === kg.edges?.length) return;
     set({ knowledgeGraph: kg });
     console.debug('[Metadata] Knowledge Graph received:', {
       nodes: kg.nodes.length,
@@ -64,11 +67,13 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
   },
 
   setClassification: (data: ClassificationData) => {
+    if (get().classification?.recommendation === data.recommendation) return;
     set({ classification: data });
     console.debug('[Metadata] Classification received:', data.recommendation);
   },
 
   setMonetizationVerdict: (verdict: MonetizationVerdict) => {
+    if (get().monetizationVerdict === verdict) return;
     set({ monetizationVerdict: verdict });
     console.debug('[Metadata] Monetization verdict received');
   },

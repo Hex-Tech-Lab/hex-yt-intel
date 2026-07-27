@@ -12,8 +12,8 @@ export interface StanceDimension {
 
 const LLMInsightSchema = z.object({
   kind: z.enum(['tangent', 'contrarian']),
-  source: z.number().int().min(1).max(11),
-  target: z.number().int().min(1).max(11),
+  source: z.coerce.number().int().min(1).max(11),
+  target: z.coerce.number().int().min(1).max(11),
   rationale: z.string().min(1).max(280),
 });
 const LLMResponseSchema = z.object({ insights: z.array(LLMInsightSchema).max(12) });
@@ -65,7 +65,7 @@ async function* callStanceModelStream(
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://yt-intel.getmytestdrive.com',
-        'X-Title': 'hex-yt-intel',
+        'X-Title': 'hex-yt-intel / stance-relations',
       },
       body: JSON.stringify({
         model: translateModelId(model),
