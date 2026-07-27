@@ -98,7 +98,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                   onEnter={() => { if (!disabled) onAnalyze(); }}
                   placeholder="https://youtube.com/watch?v=..."
                   status={status === "error" ? { type: "error" } : undefined}
-                  isDisabled={disabled}
+                  isDisabled={streaming}
                   aria-describedby={status === "error" ? "hero-error" : undefined}
                   className="hx-field w-full !bg-transparent !border-none !outline-none !shadow-none px-1 font-mono text-sm text-[var(--ink)]"
                 />

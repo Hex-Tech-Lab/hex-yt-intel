@@ -247,6 +247,11 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
 
       const dimensions = parseToUCISDimensions(data.analysis_markdown || '');
 
+      const meta = data.analysis_payload?.videoMetadata || data.analysis_payload?.metadata || {};
+      const duration = typeof meta.duration === 'number' ? meta.duration : typeof meta.lengthSeconds === 'number' ? Number(meta.lengthSeconds) : (data.duration || 0);
+      const viewCount = typeof meta.viewCount === 'number' ? meta.viewCount : typeof meta.view_count === 'number' ? Number(meta.view_count) : (data.viewCount || 0);
+      const likeCount = typeof meta.likeCount === 'number' ? meta.likeCount : typeof meta.like_count === 'number' ? Number(meta.like_count) : (data.likeCount || 0);
+
       // Repopulate the URL input from the restored video so the Analyze /
       // re-analyze controls are enabled — both bail on an empty `url`, so
       // without this the box shows only its placeholder and both buttons no-op.
@@ -261,11 +266,11 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         setVideoMetadata({
           videoId: data.videoId,
           title: data.title,
-          channelTitle: data.channelTitle || 'Unknown',
-          publishedAt: data.analysisAt || data.created_at || new Date().toISOString(),
-          duration: data.duration || 0,
-          viewCount: data.viewCount || 0,
-          likeCount: data.likeCount || 0,
+          channelTitle: data.channelTitle || meta.channelTitle || 'Unknown',
+          publishedAt: meta.publishedAt || data.analysisAt || data.created_at || new Date().toISOString(),
+          duration,
+          viewCount,
+          likeCount,
         } as never);
 
         initSynthesis({
@@ -310,7 +315,10 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         try {
           const chatStore = useChatStore.getState();
           await chatStore.loadConversations();
-          const existing = chatStore.conversations.find((c) => c.videoId === data.videoId);
+          const cleanVid = data.videoId?.replace(/_archived_.*$/, '');
+          const existing = chatStore.conversations.find(
+            (c) => c.analysisId === data.id || c.videoId === data.videoId || (cleanVid && c.videoId?.replace(/_archived_.*$/, '') === cleanVid)
+          );
           if (existing) {
             if (existing.analysisId !== data.id) {
               await chatStore.updateConversationAnalysisId(existing.id, data.id);

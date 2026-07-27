@@ -50,15 +50,35 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
         if (!res.ok || cancelled) return;
         const data = await res.json();
         if (cancelled) return;
+        const payload = (data.analysis_payload ?? {}) as {
+          metadata?: { description?: string };
+          videoMetadata?: { description?: string };
+          channelMeta?: Record<string, unknown> | null;
+          comments?: unknown[] | null;
+        };
         const report = (data.validation_report ?? {}) as {
           metadata?: { description?: string };
           channelMeta?: Record<string, unknown> | null;
           comments?: unknown[] | null;
         };
+
+        const descStr =
+          payload.metadata?.description ||
+          payload.videoMetadata?.description ||
+          report.metadata?.description ||
+          '';
+
+        const channelObj = payload.channelMeta || report.channelMeta || null;
+        const commentsArr = Array.isArray(payload.comments)
+          ? payload.comments
+          : Array.isArray(report.comments)
+          ? report.comments
+          : null;
+
         setAuxStatus({
-          description: typeof report.metadata?.description === 'string' && report.metadata.description.trim().length > 0,
-          channelMeta: !!report.channelMeta && Object.keys(report.channelMeta).length > 0,
-          comments: Array.isArray(report.comments) && report.comments.length > 0,
+          description: typeof descStr === 'string' && descStr.trim().length > 0,
+          channelMeta: !!channelObj && Object.keys(channelObj).length > 0,
+          comments: Array.isArray(commentsArr) && commentsArr.length > 0,
         });
       } catch (err) {
         console.debug('[useAuxElementStatus] fetch failed:', err);
