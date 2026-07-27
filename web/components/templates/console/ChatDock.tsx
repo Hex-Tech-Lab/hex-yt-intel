@@ -185,8 +185,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
   }, [open, analysisId, videoId, loadConversations, selectConversation, newConversation]);
 
   useEffect(() => {
-    if (open && activeId) void selectConversation(activeId);
-  }, [open, activeId, selectConversation]);
+    if (activeId) void selectConversation(activeId);
+  }, [activeId, selectConversation]);
 
   useEffect(() => {
     const el = listRef.current;

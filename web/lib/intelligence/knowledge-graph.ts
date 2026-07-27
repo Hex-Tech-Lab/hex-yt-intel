@@ -194,7 +194,14 @@ export function nodeIntelligence(graph: KnowledgeGraph, nodeId: string): NodeInt
   }
 
   for (const k of Object.keys(buckets) as RelationKind[]) {
-    buckets[k].sort((a, b) => b.strength - a.strength);
+    const seen = new Set<string>();
+    buckets[k] = buckets[k]
+      .filter((r) => {
+        if (seen.has(r.nodeId)) return false;
+        seen.add(r.nodeId);
+        return true;
+      })
+      .sort((a, b) => b.strength - a.strength);
   }
 
   return {

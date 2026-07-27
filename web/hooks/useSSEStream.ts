@@ -192,6 +192,23 @@ export function useSSEStream() {
                   setStatus('complete');
                   setIsLoading(false);
                   archiveCurrentAnalysis();
+                  void (async () => {
+                    try {
+                      const chatStore = useChatStore.getState();
+                      await chatStore.loadConversations();
+                      const currentVid = job.videoId;
+                      const currentAnalId = job.analysisId || job.id;
+                      const existing = chatStore.conversations.find((c) => c.analysisId === currentAnalId || c.videoId === currentVid);
+                      if (existing) {
+                        if (existing.analysisId !== currentAnalId) {
+                          await chatStore.updateConversationAnalysisId(existing.id, currentAnalId);
+                        }
+                        await chatStore.selectConversation(existing.id);
+                      }
+                    } catch (e) {
+                      console.debug('[useSSEStream] Post-analysis chat reload failed:', e);
+                    }
+                  })();
                 } else {
                   myController.abort();
                   const msg = errorMsg || 'Analysis stream failed to complete. Please try again.';

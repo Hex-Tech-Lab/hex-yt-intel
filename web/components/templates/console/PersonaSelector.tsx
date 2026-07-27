@@ -30,7 +30,7 @@ export const PERSONAS: { id: PersonaId; label: string; icon: string; description
   {
     id: 'researcher',
     label: 'Researcher',
-    icon: 'solar:graduation-cap-linear',
+    icon: 'solar:book-bookmark-linear',
     description: 'P4 · evidence & forward signals'
   },
   {
