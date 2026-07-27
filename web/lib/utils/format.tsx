@@ -203,6 +203,14 @@ export function linkifyTimestamps(markdown: string): string {
   return out.join('\n');
 }
 
+function filterTextClasses(classList: string[]): string[] {
+  const keep: string[] = [];
+  for (const itemClass of classList) {
+    if (!itemClass.startsWith('text-')) keep.push(itemClass);
+  }
+  return keep;
+}
+
 /**
  * Parses ANSI escape codes (colors/formatting) in text and outputs React elements.
  */
@@ -245,39 +253,39 @@ export function parseAnsiToReact(text: string): React.ReactNode[] | string {
       for (const s of styles) {
         switch (s) {
           case '30':
-            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses = filterTextClasses(currentClasses);
             currentClasses.push('text-black');
             break;
           case '31':
-            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses = filterTextClasses(currentClasses);
             currentClasses.push('text-red-500');
             break;
           case '32':
-            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses = filterTextClasses(currentClasses);
             currentClasses.push('text-green-500');
             break;
           case '33':
-            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses = filterTextClasses(currentClasses);
             currentClasses.push('text-yellow-500');
             break;
           case '34':
-            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses = filterTextClasses(currentClasses);
             currentClasses.push('text-blue-500');
             break;
           case '35':
-            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses = filterTextClasses(currentClasses);
             currentClasses.push('text-purple-500');
             break;
           case '36':
-            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses = filterTextClasses(currentClasses);
             currentClasses.push('text-cyan-500');
             break;
           case '37':
-            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses = filterTextClasses(currentClasses);
             currentClasses.push('text-white');
             break;
           case '90':
-            currentClasses = currentClasses.filter(c => !c.startsWith('text-'));
+            currentClasses = filterTextClasses(currentClasses);
             currentClasses.push('text-gray-500');
             break;
           case '1':

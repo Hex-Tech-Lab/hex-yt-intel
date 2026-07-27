@@ -31,8 +31,11 @@ export function ApexSummaryCard({ dimension }: ApexSummaryCardProps) {
       if (match && match[1]) {
         return `**Core Thesis:** ${match[1].trim()}`;
       }
-      const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
-      return paragraphs[0] || text.slice(0, limit);
+      const rawParas = text.split('\n\n');
+      for (const pItem of rawParas) {
+        if (pItem.trim().length > 0) return pItem;
+      }
+      return text.slice(0, limit);
     };
 
     // Helper to extract sections between markers
