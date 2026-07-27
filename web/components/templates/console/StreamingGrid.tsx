@@ -9,15 +9,27 @@ import { MonoLabel, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/com
 // markup, so that CSS selector no longer applies). Strip GFM table blocks
 // before rendering so the compact card preview never shows a truncated table.
 function stripMarkdownTables(markdown: string): string {
-  return markdown
-    .split(/\r?\n\r?\n/)
-    .filter((block) => {
-      const lines = block.split(/\r?\n/).filter(Boolean);
-      if (lines.length < 2) return true;
-      const looksLikeTable = lines.every((line) => /^\s*\|/.test(line) || /^\s*[-:|\s]+$/.test(line));
-      return !looksLikeTable;
-    })
-    .join('\n\n');
+  const blocks = markdown.split(/\r?\n\r?\n/);
+  const cleanBlocks: string[] = [];
+  for (const blockItem of blocks) {
+    const rawLines = blockItem.split(/\r?\n/);
+    const lines: string[] = [];
+    for (const lItem of rawLines) {
+      if (lItem.trim().length > 0) lines.push(lItem);
+    }
+    if (lines.length >= 2) {
+      let looksLikeTable = true;
+      for (const lineStr of lines) {
+        if (!(/^\s*\|/.test(lineStr) || /^\s*[-:|\s]+$/.test(lineStr))) {
+          looksLikeTable = false;
+          break;
+        }
+      }
+      if (looksLikeTable) continue;
+    }
+    cleanBlocks.push(blockItem);
+  }
+  return cleanBlocks.join('\n\n');
 }
 
 export interface Dimension {

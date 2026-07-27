@@ -58,15 +58,19 @@ export function ExecutiveDigestCard({ digest, loading }: ExecutiveDigestCardProp
           {digest.overview && (
             <Tier label="Overview">
               <div className="flex flex-col gap-2">
-                {digest.overview
-                  .split(/\n{2,}/)
-                  .map((p) => p.trim())
-                  .filter(Boolean)
-                  .map((p) => (
+                {(() => {
+                  const rawParas = digest.overview.split(/\n{2,}/);
+                  const cleanParas: string[] = [];
+                  for (const pStr of rawParas) {
+                    const trimmed = pStr.trim();
+                    if (trimmed.length > 0) cleanParas.push(trimmed);
+                  }
+                  return cleanParas.map((p) => (
                     <p key={p} className="text-sm leading-relaxed text-[var(--ink-secondary)]">
                       {p}
                     </p>
-                  ))}
+                  ));
+                })()}
               </div>
             </Tier>
           )}
