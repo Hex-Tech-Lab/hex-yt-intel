@@ -52,10 +52,14 @@ export function VideoPlayerCard() {
     
     // Timeout fallback: if onReady never fires, log and don't hang forever
     const readyTimeout = setTimeout(() => {
-      if (!cancelled && playerRef.current === adapter) {
-        console.warn('[VideoPlayerCard] Player ready timeout - API may have failed to initialize', { videoId });
+      if (cancelled) return;
+      console.warn('[VideoPlayerCard] Player ready timeout - API may have failed to initialize', { videoId });
+      adapter.destroy();
+      if (playerRef.current === adapter) {
+        playerRef.current = null;
       }
-    }, 15000);
+      setPlaybackError({ code: null, message: 'YouTube player failed to initialize' });
+    }, 30000);
     
     adapter.mount(containerRef.current, videoId, {
       onReady: () => {

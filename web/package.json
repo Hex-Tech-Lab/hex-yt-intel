@@ -17,6 +17,7 @@
   "dependencies": {
     "@astryxdesign/core": "^0.1.8",
     "@astryxdesign/theme-neutral": "^0.1.8",
+    "@iconify/react": "^6.0.2",
     "@paddle/paddle-node-sdk": "^3.8.0",
     "@sentry/nextjs": "10.57.0",
     "@supabase/ssr": "0.12.0",

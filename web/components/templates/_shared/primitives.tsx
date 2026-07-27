@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, CSSProperties } from 'react';
+import { Icon as IconifyIcon } from '@iconify/react';
 
 export interface IconProps {
   icon: string;
@@ -10,17 +11,18 @@ export interface IconProps {
 }
 
 /**
- * High-fidelity Iconify web component wrapper.
- * Reverted from Lucide-React to restore intended Solar icon set aesthetics.
+ * High-fidelity bundled Iconify React wrapper.
+ * Bundles icons locally via @iconify/react so UI icons never fail or disappear
+ * when third-party CDNs (code.iconify.design) time out or block network requests.
  */
 export function Icon({ icon, size = 16, className = "", style = {} }: IconProps) {
   return (
-    <iconify-icon
+    <IconifyIcon
       icon={icon}
       width={size}
       height={size}
       style={{ ...style }}
-      class={className}
+      className={className}
     />
   );
 }

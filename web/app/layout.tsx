@@ -2,7 +2,6 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -26,9 +25,6 @@ export const metadata: Metadata = {
   },
 };
 
-// Icons used in interactive elements (buttons, nav, actions)
-import { SOLAR_ICON_DATA } from '@/lib/icon-data';
-
 export default function RootLayout({
   children,
 }: {
@@ -42,19 +38,6 @@ export default function RootLayout({
           <Analytics />
           <SpeedInsights />
         </Providers>
-        <Script
-          src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"
-          strategy="afterInteractive"
-        />
-        {/* codacy-disable <script>dangerouslySetInnerHTML</script> */}
-        {/* DOMPurify / sanitize bypass: this is static javascript code, not user-generated HTML */}
-        <Script
-          id="iconify-preload"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `const _solarData=${JSON.stringify(SOLAR_ICON_DATA)};if(typeof Iconify!=="undefined"){Iconify.addCollection(_solarData);}else{document.addEventListener("DOMContentLoaded",function(){if(typeof Iconify!=="undefined")Iconify.addCollection(_solarData);});}`,
-          }}
-        />
       </body>
     </html>
   );
