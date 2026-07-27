@@ -22,24 +22,28 @@ export function useAutoRestoreAnalysis(url: string) {
 
   // Auto-restore already analyzed videos
   useEffect(() => { // skipcq: JS-0903
-    if (!url) return;
+    if (!url) {
+      // URL was cleared by user — reset all stores so no stale video data lingers
+      useAnalysisStore.getState().clearAnalysis();
+      useSynthesisNucleus.getState().reset();
+      useChatStore.getState().reset();
+      useVideoStore.getState().reset();
+      return;
+    }
 
     const videoId = extractVideoId(url);
 
     if (videoId === 'unknown' || videoId.length < 5) return;
 
-    // A different video URL was pasted — drop the previous video's chat thread
-    // and player state immediately so stale conversation/messages and stale
-    // isPlaying/seekTo never linger over the new context. Full reset() (not a
-    // partial setState) matches the useSSEStream new-analysis path — a bare
-    // `setState({ activeId: null })` here left `messagesByConv`/`conversations`
-    // populated with the old video's data until the background restore below
-    // happened to overwrite them (10X re-audit NEW-H(chat-clear)/NEW-H(state)).
-    // The restore flow below re-selects the right thread if one exists.
+    // A different video URL was pasted — drop the previous video's analysis data,
+    // graphs, chat thread, and player state immediately so stale metadata and
+    // dimensions never linger over the new context.
     const loadedVideoId =
       useAnalysisStore.getState().videoMetadata?.videoId ??
       useSynthesisNucleus.getState().analysis?.videoId;
     if (loadedVideoId && loadedVideoId !== videoId) {
+      useAnalysisStore.getState().clearAnalysis();
+      useSynthesisNucleus.getState().reset();
       useChatStore.getState().reset();
       useVideoStore.getState().reset();
     }
@@ -97,15 +101,18 @@ export function useAutoRestoreAnalysis(url: string) {
 
           startTransition(() => {
             initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown);
-            setVideoMetadata({
-              videoId: restoreData.videoId,
-              title: restoreData.title,
-              channelTitle: restoreData.channelTitle || meta.channelTitle || 'Unknown',
-              publishedAt: meta.publishedAt || restoreData.analysisAt || restoreData.created_at || new Date().toISOString(),
-              duration,
-              viewCount,
-              likeCount,
-            } as any);
+            const currentMeta = useAnalysisStore.getState().videoMetadata;
+            if (currentMeta?.videoId !== restoreData.videoId || !currentMeta?.duration) {
+              setVideoMetadata({
+                videoId: restoreData.videoId,
+                title: restoreData.title,
+                channelTitle: restoreData.channelTitle || meta.channelTitle || 'Unknown',
+                publishedAt: meta.publishedAt || restoreData.analysisAt || restoreData.created_at || new Date().toISOString(),
+                duration,
+                viewCount,
+                likeCount,
+              } as any);
+            }
 
             initSynthesis({
               id: restoreData.id,

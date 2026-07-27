@@ -88,7 +88,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
               <span aria-hidden className={`grid place-items-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-[var(--bg)] ${streaming ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} flex-shrink-0 border border-[var(--line)]`}>
                 <Icon icon="solar:link-round-angle-linear" size={18} />
               </span>
-              <div className="flex-1 min-w-0 flex items-center">
+              <div className="flex-1 min-w-0 flex items-center w-full">
                 <TextInput
                   type="text"
                   label="YouTube video URL"
@@ -100,7 +100,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                   status={status === "error" ? { type: "error" } : undefined}
                   isDisabled={streaming}
                   aria-describedby={status === "error" ? "hero-error" : undefined}
-                  className="hx-field w-full !bg-transparent !border-none !outline-none !shadow-none px-1 font-mono text-sm text-[var(--ink)]"
+                  className="hx-field w-full !w-full !max-w-none !bg-transparent !border-none !outline-none !shadow-none px-1 font-mono text-sm text-[var(--ink)]"
                 />
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
