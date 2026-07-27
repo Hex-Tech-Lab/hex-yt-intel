@@ -45,14 +45,14 @@ function StanceSection({
         shown.map((i) => {
           const contra = i.kind === 'contrarian';
           const colorClass = contra ? "text-[var(--warn)]" : "text-[var(--ink-secondary)]";
-          const borderClass = contra ? "border-l-[var(--warn)]" : "border-l-[var(--ink-secondary)]";
+          const bgClass = contra ? "bg-[rgba(239,68,68,0.08)] border-[rgba(239,68,68,0.25)]" : "bg-[rgb(11_14_20_/_0.5)] border-[var(--line)]";
           
           return (
             <AstryxCard
               key={`${i.kind}-${i.source}-${i.target}`}
               variant="transparent"
               padding={0}
-              className={`border border-[var(--line)] ${borderClass} border-l-2 rounded-xl p-2 px-3 bg-[rgb(11_14_20_/_0.5)]`}
+              className={`border ${bgClass} rounded-xl p-2 px-3`}
             >
               <div className="flex items-center gap-1.5 mb-1.25">
                 <Icon icon={contra ? 'solar:bolt-circle-linear' : 'solar:arrow-right-up-linear'} size={13} className={colorClass} />
