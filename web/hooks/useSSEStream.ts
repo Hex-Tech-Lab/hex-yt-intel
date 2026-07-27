@@ -198,12 +198,18 @@ export function useSSEStream() {
                       await chatStore.loadConversations();
                       const currentVid = job.videoId;
                       const currentAnalId = job.analysisId || job.id;
-                      const existing = chatStore.conversations.find((c) => c.analysisId === currentAnalId || c.videoId === currentVid);
-                      if (existing) {
-                        if (existing.analysisId !== currentAnalId) {
-                          await chatStore.updateConversationAnalysisId(existing.id, currentAnalId);
+                      let existingConv: (typeof chatStore.conversations)[number] | undefined;
+                      for (const convRecord of chatStore.conversations) {
+                        if (convRecord.analysisId === currentAnalId || convRecord.videoId === currentVid) {
+                          existingConv = convRecord;
+                          break;
                         }
-                        await chatStore.selectConversation(existing.id);
+                      }
+                      if (existingConv) {
+                        if (existingConv.analysisId !== currentAnalId) {
+                          await chatStore.updateConversationAnalysisId(existingConv.id, currentAnalId);
+                        }
+                        await chatStore.selectConversation(existingConv.id);
                       }
                     } catch (e) {
                       console.debug('[useSSEStream] Post-analysis chat reload failed:', e);
