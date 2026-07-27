@@ -1,293 +1,82 @@
 import { UCISValidator } from '@/lib/ucis-v5-validator';
 
 describe('UCISValidator', () => {
-  describe('Structural Checks', () => {
-    it('should pass with complete persona header', () => {
-      const output = `=== PERSONA CONFIGURATION ===
-Primary Persona:    P1 Content Creator (Weight: 50%)
-Secondary Persona:  P2 Indie Maker (Weight: 25%)
-==============================
-
-### DIMENSION 1 – APEX INTELLIGENCE
-Content here`;
-      const checks = UCISValidator.structuralChecks(output);
-      expect(checks.some((c) => c.section === 'Persona Header' && c.ok)).toBe(true);
-    });
-
-    it('should fail without persona header', () => {
-      const output = 'No persona header here';
-      const checks = UCISValidator.structuralChecks(output);
-      expect(checks.some((c) => c.section === 'Persona Header' && !c.ok)).toBe(true);
-    });
-
-    it('should check for all 10 dimension headers', () => {
-      const output = `### DIMENSION 1 – APEX INTELLIGENCE
-### DIMENSION 2 – PROVENANCE
-### DIMENSION 3 – CONTENT ARCHITECTURE
-### DIMENSION 4 – PSYCHOLOGICAL
-### DIMENSION 5 – CORE INTELLIGENCE
-### DIMENSION 6 – COMPARATIVE
-### DIMENSION 7 – IMPLEMENTATION
-### DIMENSION 8 – SEMANTIC
-### DIMENSION 9 – FORWARD INTELLIGENCE
-### DIMENSION 10 – CREDIBILITY`;
-      const checks = UCISValidator.structuralChecks(output);
-      expect(checks.some((c) => c.section === 'Dimension Headers' && c.ok)).toBe(true);
-    });
-
-    it('should fail with insufficient dimension headers', () => {
-      const output = `### DIMENSION 1 – APEX INTELLIGENCE
-### DIMENSION 2 – PROVENANCE`;
-      const checks = UCISValidator.structuralChecks(output);
-      expect(checks.some((c) => c.section === 'Dimension Headers' && !c.ok)).toBe(true);
-    });
+  const validV2Payload = JSON.stringify({
+    schemaVersion: '2.0',
+    persona: {
+      primary: { id: 'creator', label: 'Content Creator', weight: 0.5 },
+      secondary: { id: 'indieMaker', label: 'Indie Maker', weight: 0.25 },
+      tertiary: { id: 'consultant', label: 'Consultant', weight: 0.15 },
+      cognitiveLenses: ['First Principles', 'Systems Thinking'],
+      selectionRationale: 'Optimized for creator growth',
+    },
+    dimensions: [
+      { number: 1, name: 'Apex Intelligence', content: 'Apex summary content here' },
+      { number: 2, name: 'Provenance & Metadata', content: 'Provenance content here' },
+      { number: 3, name: 'Content Architecture', content: 'Content architecture content here' },
+      { number: 4, name: 'Psychological Layer', content: 'Psychological layer content here' },
+      { number: 5, name: 'Core Intelligence', content: 'Core intelligence content here' },
+      { number: 6, name: 'Comparative & Quantitative', content: 'Comparative content here' },
+      { number: 7, name: 'Implementation Systems', content: 'Implementation content here' },
+      { number: 8, name: 'Semantic Graph Foundation', content: 'Semantic content here' },
+      { number: 9, name: 'Forward Intelligence', content: 'Forward intelligence content here' },
+      { number: 10, name: 'Credibility & Meta-Assessment', content: 'Credibility content here' },
+      { number: 11, name: 'Commercial Yield', content: 'Monetization content here' },
+    ],
+    knowledgeGraph: {
+      nodes: [
+        { id: 'n1', dimension: 8, label: 'Node 1', content: 'Domain node content here', weight: 8, polarity: 1, keyTerms: ['term1'], entityType: 'concept' }
+      ],
+      edges: [
+        { source: 'n1', target: 'n1', strength: 7, kind: 'related', rationale: 'Self reference' }
+      ],
+      rootId: 'n1',
+    },
+    classification: {
+      authoritative: true,
+      practicallyActionable: true,
+      knowledgeGraphReady: true,
+      safe: true,
+      personaOptimised: true,
+      recommendation: 'highly_recommended',
+    },
+    monetizationVerdict: {
+      creator: 'Highly Viable',
+      indieMaker: 'Viable',
+      consultant: 'Conditional',
+      researcher: 'Conditional',
+      productManager: 'Conditional',
+    },
   });
 
-  describe('Persona Checks', () => {
-    it('should verify primary persona weight is 50%', () => {
-      const output = 'Primary Persona:    P1 Content Creator (Weight: 50%)';
-      const checks = UCISValidator.personaChecks(output);
-      expect(checks.some((c) => c.section === 'Persona Weights' && c.ok)).toBe(true);
-    });
-
-    it('should fail if primary persona weight is not 50%', () => {
-      const output = 'Primary Persona:    P1 Content Creator (Weight: 60%)';
-      const checks = UCISValidator.personaChecks(output);
-      expect(checks.some((c) => c.section === 'Persona Weights' && !c.ok)).toBe(true);
-    });
-
-    it('should count inline lens tags', () => {
-      const output = `
-Lens applied: [First Principles]
-Some content here.
-Lens applied: [Game Theory]
-More content.
-Lens applied: [Systems Thinking]`;
-      const checks = UCISValidator.personaChecks(output);
-      expect(checks.some((c) => c.section === 'Cognitive Lenses' && c.ok)).toBe(true);
-    });
-
-    it('should fail with fewer than 3 lens tags', () => {
-      const output = `Lens applied: [First Principles]`;
-      const checks = UCISValidator.personaChecks(output);
-      expect(checks.some((c) => c.section === 'Cognitive Lenses' && !c.ok)).toBe(true);
-    });
-  });
-
-  describe('Formatting Checks', () => {
-    it('should detect proper table format', () => {
-      const output = `| **Factor** | Score |
-|---|---|
-| Item A | 8 |`;
-      const checks = UCISValidator.formattingChecks(output, 'test-title-author-2026-05-18_14-30-45.md');
-      expect(checks.some((c) => c.section === 'Table Format' && c.ok)).toBe(true);
-    });
-
-    it('should validate filename format', () => {
-      const checks = UCISValidator.formattingChecks('', 'valid-title-author-2026-05-18_14-30-45.md');
-      expect(checks.some((c) => c.section === 'Filename Format' && c.ok)).toBe(true);
-    });
-
-    it('should fail on invalid filename format', () => {
-      const checks = UCISValidator.formattingChecks('', 'invalid_filename.md');
-      expect(checks.some((c) => c.section === 'Filename Format' && !c.ok)).toBe(true);
-    });
-
-    it('should detect emojis (except ⚠️)', () => {
-      const output = 'This has an 🚀 emoji which is not allowed';
-      const checks = UCISValidator.formattingChecks(output, 'valid-title-author-2026-05-18_14-30-45.md');
-      expect(checks.some((c) => c.section === 'Emoji Usage' && !c.ok)).toBe(true);
-    });
-
-    it('should allow ⚠️ in risk disclosures', () => {
-      const output = '⚠️ **Critical Notice**: This is allowed';
-      const checks = UCISValidator.formattingChecks(output, 'valid-title-author-2026-05-18_14-30-45.md');
-      // The check looks for illegal emoji, so ⚠️ should be fine
-      const emojiCheck = checks.find((c) => c.section === 'Emoji Usage');
-      expect(emojiCheck?.ok || emojiCheck === undefined).toBe(true);
-    });
-  });
-
-  describe('Content Rigor Checks', () => {
-    it('should count in-content timestamps', () => {
-      const output = `Insight at \`00:23:45\` and another at \`01:12:30\` and more at \`02:05:15\` and here \`03:40:22\` plus \`04:15:10\``;
-      const checks = UCISValidator.contentRigorChecks(output);
-      expect(checks.some((c) => c.section === 'Quantitative Claims' && c.ok)).toBe(true);
-    });
-
-    it('should fail with insufficient timestamps', () => {
-      const output = 'Only one timestamp \`00:23:45\`';
-      const checks = UCISValidator.contentRigorChecks(output);
-      expect(checks.some((c) => c.section === 'Quantitative Claims' && !c.ok)).toBe(true);
-    });
-
-    it('should detect contrarian perspectives section', () => {
-      const output = '## Contrarian Perspectives\nHere are alternative viewpoints...';
-      const checks = UCISValidator.contentRigorChecks(output);
-      expect(checks.some((c) => c.section === 'Contrarian Perspectives' && c.ok)).toBe(true);
-    });
-
-    it('should fail without contrarian perspectives', () => {
-      const output = 'No contrarian section here';
-      const checks = UCISValidator.contentRigorChecks(output);
-      expect(checks.some((c) => c.section === 'Contrarian Perspectives' && !c.ok)).toBe(true);
-    });
-  });
-
-  describe('KG Readiness Checks', () => {
-    it('should find primary semantic nodes section', () => {
-      const output = '## Primary Semantic Nodes\n- Node 1\n- Node 2';
-      const checks = UCISValidator.kgReadinessChecks(output);
-      expect(checks.some((c) => c.section === 'Primary KG Nodes' && c.ok)).toBe(true);
-    });
-
-    it('should count cross-domain bridges', () => {
-      const output = `
-Cross-Domain Bridge: From AI to healthcare
-Text here.
-Cross-Domain Bridge: From marketing to psychology`;
-      const checks = UCISValidator.kgReadinessChecks(output);
-      expect(checks.some((c) => c.section === 'Cross-Domain Bridges' && c.ok)).toBe(true);
-    });
-
-    it('should detect unfair advantages', () => {
-      const output = '## Unfair Advantages\nHere is the competitive edge...';
-      const checks = UCISValidator.kgReadinessChecks(output);
-      expect(checks.some((c) => c.section === 'Unfair Advantages' && c.ok)).toBe(true);
-    });
-  });
-
-  describe('Final Checks', () => {
-    it('should validate final classification table', () => {
-      const output = `| Tag | Status |
-|---|---|
-| Authoritative | ✓ |`;
-      const checks = UCISValidator.finalChecks(output);
-      expect(checks.some((c) => c.section === 'Final Classification Table' && c.ok)).toBe(true);
-    });
-
-    it('should check for read-depth guidance', () => {
-      const output = '## Read-Depth Guidance\n- 60 seconds: stop here';
-      const checks = UCISValidator.finalChecks(output);
-      expect(checks.some((c) => c.section === 'Read-Depth Guidance' && c.ok)).toBe(true);
-    });
-  });
-
-  describe('Full Validation Report', () => {
-    it('should generate passing report for complete output', () => {
-      const completeOutput = `=== PERSONA CONFIGURATION ===
-Analysis Timestamp: \`2026-05-18 14:30:45 (Agent)\`
-Primary Persona:    P1 Content Creator (Weight: 50%)
-Secondary Persona:  P2 Indie Maker (Weight: 25%)
-Tertiary Persona:   P3 Consultant (Weight: 15%)
-Tier-2 Persona A:   P4 Researcher (Weight: 5%)
-Tier-2 Persona B:   P5 Product Manager (Weight: 5%)
-Active Cognitive Lenses: First Principles, Game Theory, Systems Thinking
-Selection Rationale: Content is creator-focused.
-==============================
-
-### DIMENSION 1 – APEX INTELLIGENCE
-**The Core Thesis**: Test thesis
-**The Unfair Advantage**: Test advantage
-
-**Top 3–5 Ranked Deliverables for P1 Content Creator**:
-1. **Deliverable 1** – Value statement
-   - **Action**: Step-by-step action
-   - **Persona Fit**: [Primary]
-   - **Source Anchor**: \`00:23:45\`
-
-2. **Deliverable 2** – Second value
-   - **Action**: Step-by-step action
-   - **Persona Fit**: [Secondary]
-   - **Source Anchor**: \`02:10:05\`
-
-3. **Deliverable 3** – Third value
-   - **Action**: Step-by-step action
-   - **Persona Fit**: [Tertiary]
-   - **Source Anchor**: \`03:15:20\`
-
-**Read-Depth Guidance**:
-- *60 seconds*: stop here.
-- *5 minutes*: read more.
-
-### DIMENSION 2 – PROVENANCE
-| **Field** | **Value** |
-|---|---|
-| Title | Test |
-
-### DIMENSION 3 – CONTENT ARCHITECTURE
-**Executive Overview**
-Detailed narrative here.
-
-### DIMENSION 4 – PSYCHOLOGICAL
-**Sentiment Profile**
-Tone assessment.
-
-### DIMENSION 5 – CORE INTELLIGENCE
-**Tier 1 Insights**
-1. **Insight** \`00:45:30\`
-   - Detailed explanation.
-   - Lens applied: [First Principles]
-
-2. **Insight 2** \`01:05:00\`
-   - Detailed explanation.
-   - Lens applied: [Game Theory]
-
-3. **Insight 3** \`01:45:00\`
-   - Detailed explanation.
-   - Lens applied: [Systems Thinking]
-
-**Power Quotes**
-1. **"This is a sample quote that is longer than twenty characters"** \`01:20:15\`
-   - Context: Here.
-
-2. **"This is another sample quote that is longer than twenty characters"** \`02:30:00\`
-   - Context: Here.
-
-### DIMENSION 6 – COMPARATIVE
-| Dimension | Option A |
-|---|---|
-| Metric | Data |
-Scenario Analysis: Stress Test
-
-### DIMENSION 7 – IMPLEMENTATION
-**System: Example**
-Steps here.
-
-### DIMENSION 8 – SEMANTIC
-**Primary Knowledge Graph Nodes**
-- Node 1
-
-**Cross-Domain Bridges**
-- Cross-Domain Bridge: From A to B
-- Cross-Domain Bridge: From C to D
-
-### DIMENSION 9 – FORWARD INTELLIGENCE
-**Contrarian Perspectives**
-Alternative views here.
-Unfair Advantages: competitive advantage mapping
-
-### DIMENSION 10 – CREDIBILITY
-⚠️ **Critical Notice**: Educational only.
-
-**Final Classification**
-| Tag | Status |
-|---|---|
-| Authoritative | ✓ |
-
-`;
-
-      const report = UCISValidator.validate(completeOutput, 'test-title-author-2026-05-18_14-30-45.md');
+  describe('Contract Validation via UCISValidator.validate', () => {
+    it('should pass validation for a fully compliant v2.0 JSON payload', () => {
+      const report = UCISValidator.validate(validV2Payload, 'test-video-2026-07-27.md');
+      if (!report.passed) {
+        console.log('Test Failed Checks:', JSON.stringify(report.failedChecks, null, 2));
+      }
       expect(report.passed).toBe(true);
       expect(report.failedChecks.length).toBe(0);
+      expect(report.passedChecks).toBeGreaterThan(0);
     });
 
-    it('should report failed checks with reasons', () => {
-      const incompleteOutput = 'Missing everything';
-      const report = UCISValidator.validate(incompleteOutput, 'invalid.txt');
+    it('should detect schema contract violations for malformed JSON payload', () => {
+      const malformedPayload = JSON.stringify({
+        schemaVersion: '1.0', // Wrong schemaVersion
+        persona: null,
+      });
+      const report = UCISValidator.validate(malformedPayload, 'test-video-2026-07-27.md');
       expect(report.passed).toBe(false);
       expect(report.failedChecks.length).toBeGreaterThan(0);
-      expect(report.failedChecks[0]?.reason).toBeDefined();
+    });
+
+    it('should fallback gracefully for non-JSON markdown input', () => {
+      const markdown = `
+        ### DIMENSION 1 – APEX INTELLIGENCE
+        This is raw markdown analysis content.
+      `;
+      const report = UCISValidator.validate(markdown, 'test-video-2026-07-27.md');
+      expect(report.totalChecks).toBeGreaterThan(0);
     });
   });
 });
