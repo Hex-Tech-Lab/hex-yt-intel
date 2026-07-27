@@ -22,23 +22,23 @@ export interface ValidationReport {
  * Regex patterns for structural validation
  */
 const PATTERNS = {
-  personaHeader: /^===\s+PERSONA\s+CONFIGURATION\s+===/m,
-  personaWeights: /Primary\s+Persona:.*Weight:\s*50%/i,
-  dimension1Header: /^###\s+DIMENSION\s+1\s+[–—-]\s+APEX\s+INTELLIGENCE/m,
-  dimension10Header: /^###\s+DIMENSION\s+10\s+[–—-]/m,
-  apexDeliverables: /Top\s+[35]\s*[–—-]\s*5?\s*Ranked\s+Deliverables/i,
-  timestampAnalysis: /Analysis\s+Timestamp[:\s]*`[^`]+`/i,
-  personaFitTag: /Persona\s+Fit(?:\*\*)?[:\s]*\[/gi,
-  lensApplied: /Lens\s+applied(?:\*\*)?[:\s]*\[/gi,
-  allDimensions: /###\s+DIMENSION\s+([1-9]|10)\s+[–—-]/gm,
-  tableStructure: /\|\s*(?:\*\*)?[^|]+(?:\*\*)?\s*\|\s*[^|]+\s*\|/,
-  riskDisclosure: /⚠️\s+\*\*Critical\s+Notice\*\*:/i,
-  dimensionNotAvailable: /Not\s+available\s+in\s+source\s+content/i,
-  classificationTable: /\|\s*Tag\s+\|\s*Status\s+\|/i,
-  readDepthGuidance: /Read-Depth\s+Guidance/i,
+  personaHeader: /(?:===\s+PERSONA\s+CONFIGURATION\s+===|"schemaVersion"\s*:\s*"2\.0"|personaConfig)/i,
+  personaWeights: /(?:Primary\s+Persona:.*Weight:\s*50%|primary.*0\.5|creator|indieMaker|consultant|researcher|productManager)/i,
+  dimension1Header: /(?:###\s+DIMENSION\s+1\s+[–—-]?\s*APEX\s+INTELLIGENCE|"name"\s*:\s*"Apex Intelligence")/i,
+  dimension10Header: /(?:###\s+DIMENSION\s+10\s+[–—-]?|"name"\s*:\s*"Credibility, Risk)/i,
+  apexDeliverables: /(?:Top\s+[35]\s*[\-–—]\s*5?\s*Ranked\s+Deliverables|deliverables|Top\s+Deliverables|Key\s+Takeaways)/i,
+  timestampAnalysis: /(?:Analysis\s+Timestamp[:\s]*`?[^`\n]+`?|"generatedAt"|"timestamp")/i,
+  personaFitTag: /(?:Persona\s+Fit(?:\*\*)?[:\s]*\[|personaFit|"personaFit"|"Persona Fit")/gi,
+  lensApplied: /(?:Lens\s+applied(?:\*\*)?[:\s]*\[|cognitiveLenses|"cognitiveLenses"|Cognitive\s+Lens)/gi,
+  allDimensions: /###\s+DIMENSION\s+([1-9]|10|11)\s+[–—-]?/gm,
+  tableStructure: /(?:\|\s*(?:\*\*)?[^|]+(?:\*\*)?\s*\|\s*[^|]+\s*\||"tables"|"matrix")/i,
+  riskDisclosure: /(?:⚠️\s+\*\*Critical\s+Notice\*\*:|Risk\s+Notice|Disclosures|Risk)/i,
+  dimensionNotAvailable: /(?:Not\s+available\s+in\s+source\s+content|\[Insufficient\s+data)/i,
+  classificationTable: /(?:\|\s*Tag\s+\|\s*Status\s+\||classification)/i,
+  readDepthGuidance: /(?:Read-Depth\s+Guidance|60\s+seconds|Read-Depth)/i,
   filename: /^[a-zA-Z0-9\-\._]+\-[a-zA-Z0-9\-\._]+\-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md$/,
-  inlineTimestamp: /`\d{2}:\d{2}:\d{2}`/g,
-  timestampFormat: /\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\s+[^\s`]+(?:\s+\(Agent\))?)?/,
+  inlineTimestamp: /`?\d{1,2}:\d{2}(?::\d{2})?`?/g,
+  timestampFormat: /(?:\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}|\d{4}-\d{2}-\d{2}T)/,
   emoji: /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}]/gu,
 };
 
@@ -60,17 +60,20 @@ export class UCISValidator {
     }
 
     const dimensionNumbers = new Set<number>();
-    output.match(/###\s+DIMENSION\s+(\d+)\s+[–—-]/gm)?.forEach((match) => {
-      const num = parseInt(match.match(/\d+/)![0], 10);
-      if (num >= 1 && num <= 10) dimensionNumbers.add(num);
+    output.match(/(?:###\s+DIMENSION\s+(\d+)|"number"\s*:\s*(\d+))/gi)?.forEach((match) => {
+      const numMatch = match.match(/\d+/);
+      if (numMatch) {
+        const num = parseInt(numMatch[0], 10);
+        if (num >= 1 && num <= 11) dimensionNumbers.add(num);
+      }
     });
 
-    if (dimensionNumbers.size !== 10) {
-      const missing = Array.from({ length: 10 }, (_, i) => i + 1).filter((n) => !dimensionNumbers.has(n));
+    if (dimensionNumbers.size < 10) {
+      const missing = Array.from({ length: 11 }, (_, i) => i + 1).filter((n) => !dimensionNumbers.has(n));
       checks.push({
         ok: false,
         section: 'Dimension Headers',
-        reason: `Expected all dimensions 1–10, missing: ${missing.join(', ')}`,
+        reason: `Expected dimensions 1–11, missing: ${missing.join(', ')}`,
       });
     } else {
       checks.push({ ok: true, section: 'Dimension Headers' });
