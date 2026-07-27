@@ -370,7 +370,7 @@ export class ProcessChatMessageUseCase {
     const totalCommentCount = Number(groundingResult.videoMetadata?.commentCount) || 0;
     const commentsSection = comments && comments.length > 0
       ? `\n\n--- TOP COMMENTS (sample of ${comments.length}${totalCommentCount > comments.length ? ` out of ${totalCommentCount} total` : ''}; author, date, likes) ---\n${comments.map((c: { author: string; publishedAt: string; likeCount: number; text: string }) => `[${c.author}, ${c.publishedAt}, ${c.likeCount} likes]: ${c.text}`).join('\n')}\n`
-      : '';
+      : `\n\n--- COMMENTS ---\nNo YouTube comment text was ingested or available for this video (total comment count reported by YouTube API: ${totalCommentCount}).\n`;
 
     // Analysis (dims 1-11) is included in full -- a synthesized 11-dimension
     // markdown is dense and typically well under the budget on its own.

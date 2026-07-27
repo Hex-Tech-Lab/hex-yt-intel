@@ -271,7 +271,7 @@ export class LLMCascade implements LLMCascadePort {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': HTTP_REFERER,
-          'X-Title': 'Hex YT Intel',
+          'X-Title': 'hex-yt-intel / synthesis-stream',
         },
         body: JSON.stringify({
           model: requestModel,
@@ -392,7 +392,7 @@ export class LLMCascade implements LLMCascadePort {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': HTTP_REFERER,
-          'X-Title': 'Hex YT Intel',
+          'X-Title': 'hex-yt-intel / synthesis-stream',
         },
         body: JSON.stringify({
           model: requestModel,
