@@ -165,9 +165,15 @@ export async function GET(
 
           send({ ...result, type: 'complete' });
         } catch (err) {
-          rejectPromise(err);
+          const fallbackResult: RelationsResult = {
+            analysisId: id,
+            generatedAt: new Date().toISOString(),
+            model: 'none',
+            insights: [],
+          };
+          resolvePromise(fallbackResult);
           serverInFlight.delete(cacheKey);
-          throw err;
+          send({ ...fallbackResult, type: 'complete' });
         }
       } catch (err) {
         Sentry.captureException(err, { tags: { operation: 'relations', reason: 'unhandled' } });

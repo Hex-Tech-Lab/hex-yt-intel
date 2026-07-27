@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { TextInput } from '@astryxdesign/core/TextInput';
 import { Button } from '@astryxdesign/core/Button';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { MonoLabel, StatusBadge, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
@@ -15,7 +16,7 @@ export interface AnalysisHeroProps {
   onCancel?: () => void;
   error?: string;
   quota?: string;
-  /** True when this video already has a completed prior analysis (current view is 'done', or a pre-flight check on the typed URL found one) -- drives the single Analyze/Re-analyze button's label and which handler it calls. */
+  /** True when this video already has a completed prior analysis (current view is 'done', or a pre-flight check on the typed URL found one) -- drives the single Analyze/Re-analyze button'label and which handler it calls. */
   isRepeat?: boolean;
 }
 
@@ -88,21 +89,22 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                 <Icon icon="solar:link-round-angle-linear" size={18} />
               </span>
               <div className="flex-1 min-w-0 flex items-center w-full">
-                <input
+                <TextInput
                   type="text"
-                  aria-label="YouTube video URL"
+                  label="YouTube video URL"
+                  isLabelHidden
                   value={url}
-                  onChange={(e) => onUrlChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !disabled) {
-                      e.preventDefault();
+                  onChange={(val) => onUrlChange(val)}
+                  onEnter={() => {
+                    if (!disabled) {
                       if (isRepeat) onReanalyze(); else onAnalyze();
                     }
                   }}
                   placeholder="https://youtube.com/watch?v=..."
-                  disabled={streaming}
+                  status={status === "error" ? { type: "error" } : undefined}
+                  isDisabled={streaming}
                   aria-describedby={status === "error" ? "hero-error" : undefined}
-                  className="w-full bg-transparent border-none outline-none shadow-none px-1 font-mono text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] disabled:opacity-50"
+                  className="hx-field w-full font-mono text-sm text-[var(--ink)] !bg-transparent !border-none !outline-none !shadow-none px-1"
                 />
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">

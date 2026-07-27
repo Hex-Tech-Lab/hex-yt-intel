@@ -98,11 +98,13 @@ function getApi(): YTNamespace | undefined {
 
 export class YouTubePlayerAdapter implements VideoPlayerPort {
   private player: YTPlayerInstance | null = null;
+  private container: HTMLElement | null = null;
   private destroyed = false;
   private loadTimeout: ReturnType<typeof setTimeout> | null = null;
 
   async mount(container: HTMLElement, videoId: string, callbacks?: VideoPlayerCallbacks): Promise<void> {
     this.destroyed = false;
+    this.container = container;
 
     const timeout = new Promise<never>((_, reject) => {
       this.loadTimeout = setTimeout(() => {
@@ -114,7 +116,10 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
       await Promise.race([loadYouTubeAPI(), timeout]);
       if (this.loadTimeout) { clearTimeout(this.loadTimeout); this.loadTimeout = null; }
 
-      if (this.destroyed) return;
+      if (this.destroyed) {
+        if (container) container.innerHTML = '';
+        return;
+      }
 
       const YT = getApi();
       if (!YT?.Player) {
@@ -131,7 +136,13 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
         },
         events: {
           onReady: () => {
-            if (this.destroyed) { this.destroy(); return; }
+            if (this.destroyed) {
+              if (this.player?.destroy) {
+                try { this.player.destroy(); } catch (_) { /* ignore */ }
+              }
+              if (this.container) this.container.innerHTML = '';
+              return;
+            }
             callbacks?.onReady?.();
           },
           onError: (e: YTPlayerEvent) => {
@@ -181,6 +192,10 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
       try { this.player.destroy(); } catch (err) {
         Sentry.captureException(err, { tags: { operation: 'youtube-player-destroy' } });
       }
+    }
+    if (this.container) {
+      this.container.innerHTML = '';
+      this.container = null;
     }
     this.player = null;
   }
