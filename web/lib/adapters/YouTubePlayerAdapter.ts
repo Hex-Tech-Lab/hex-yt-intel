@@ -106,8 +106,8 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
 
     const timeout = new Promise<never>((_, reject) => {
       this.loadTimeout = setTimeout(() => {
-        reject(new Error('YouTube Player mount timed out after 15s'));
-      }, 15000);
+        reject(new Error('YouTube Player mount timed out after 30s'));
+      }, 30000);
     });
 
     try {
