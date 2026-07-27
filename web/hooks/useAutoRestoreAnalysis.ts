@@ -90,16 +90,21 @@ export function useAutoRestoreAnalysis(url: string) {
             }
           }
 
+          const meta = restoreData.analysis_payload?.videoMetadata || restoreData.analysis_payload?.metadata || {};
+          const duration = typeof meta.duration === 'number' ? meta.duration : typeof meta.lengthSeconds === 'number' ? Number(meta.lengthSeconds) : (restoreData.duration || 0);
+          const viewCount = typeof meta.viewCount === 'number' ? meta.viewCount : typeof meta.view_count === 'number' ? Number(meta.view_count) : (restoreData.viewCount || 0);
+          const likeCount = typeof meta.likeCount === 'number' ? meta.likeCount : typeof meta.like_count === 'number' ? Number(meta.like_count) : (restoreData.likeCount || 0);
+
           startTransition(() => {
             initializeAnalysis(restoreData.id, restoreData.title, restoreData.analysis_markdown);
             setVideoMetadata({
               videoId: restoreData.videoId,
               title: restoreData.title,
-              channelTitle: restoreData.channelTitle || 'Unknown',
-              publishedAt: restoreData.analysisAt || restoreData.created_at || new Date().toISOString(),
-              duration: restoreData.duration || 0,
-              viewCount: restoreData.viewCount || 0,
-              likeCount: restoreData.likeCount || 0,
+              channelTitle: restoreData.channelTitle || meta.channelTitle || 'Unknown',
+              publishedAt: meta.publishedAt || restoreData.analysisAt || restoreData.created_at || new Date().toISOString(),
+              duration,
+              viewCount,
+              likeCount,
             } as any);
 
             initSynthesis({
