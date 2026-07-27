@@ -215,12 +215,17 @@ export async function POST(request: NextRequest) {
         console.warn('[analyses/persist] channelMeta exceeded size limit, dropping', { analysisId });
       }
 
-      // Same defense-in-depth as channelMeta above: the worker already caps
-      // comments (MAX_COMMENTS_BYTES in worker/src/routes/analysis.ts), but
-      // don't trust that invariant across the network boundary.
-      const comments = rawComments && JSON.stringify(rawComments).length <= 20_000 ? rawComments : null;
-      if (rawComments && !comments) {
-        console.warn('[analyses/persist] comments exceeded size limit, dropping', { analysisId });
+      // Iteratively slice comments array so large payloads are bounded under 20KB without being completely dropped
+      let comments = rawComments ?? null;
+      if (comments && Array.isArray(comments)) {
+        let bounded = comments;
+        while (bounded.length > 0 && JSON.stringify(bounded).length > 20_000) {
+          bounded = bounded.slice(0, -1);
+        }
+        comments = bounded.length > 0 ? bounded : null;
+        if (rawComments && bounded.length < rawComments.length) {
+          console.warn('[analyses/persist] comments capped to fit 20KB budget', { analysisId, original: rawComments.length, kept: bounded.length });
+        }
       }
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;

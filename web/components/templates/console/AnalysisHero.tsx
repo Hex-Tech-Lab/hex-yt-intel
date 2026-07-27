@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState, ViewTransition } from 'react';
-import { TextInput } from '@astryxdesign/core/TextInput';
 import { Button } from '@astryxdesign/core/Button';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { MonoLabel, StatusBadge, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
@@ -89,22 +88,20 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                   <Icon icon="solar:link-round-angle-linear" size={18} />
                 </span>
                 <div className="flex-1 min-w-0 flex items-center w-full">
-                  <TextInput
+                  <input
                     type="text"
-                    label="YouTube video URL"
-                    isLabelHidden
+                    aria-label="YouTube video URL"
                     value={url}
-                    onChange={(val) => onUrlChange(val)}
-                    onEnter={() => {
-                      if (!disabled) {
+                    onChange={(e) => onUrlChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !disabled) {
                         if (isRepeat) onReanalyze(); else onAnalyze();
                       }
                     }}
                     placeholder="https://youtube.com/watch?v=..."
-                    status={status === "error" ? { type: "error" } : undefined}
-                    isDisabled={streaming}
+                    disabled={streaming}
                     aria-describedby={status === "error" ? "hero-error" : undefined}
-                    className="hx-field w-full font-mono text-sm text-[var(--ink)] !bg-transparent !border-none !outline-none !shadow-none px-1"
+                    className="w-full min-w-0 font-mono text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] bg-transparent border-none outline-none shadow-none px-1 overflow-x-auto"
                   />
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
