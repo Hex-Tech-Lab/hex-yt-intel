@@ -223,12 +223,19 @@ export function generateSparseVector(text: string): SparseVector {
     rawIndices.push({ index, value });
   }
 
+  // Sort by term frequency signal descending first to select the most significant terms
+  rawIndices.sort((a, b) => b.value - a.value);
+
+  // Upstash Vector limit: sparse vector size must be <= 1000 non-zero entries.
+  // Cap at top 500 highest-value terms to preserve BM25 search precision while respecting index limits.
+  const cappedIndices = rawIndices.slice(0, 500);
+
   // Sort by index ascending to meet canonical sparse vector conventions
-  rawIndices.sort((a, b) => a.index - b.index);
+  cappedIndices.sort((a, b) => a.index - b.index);
 
   return {
-    indices: rawIndices.map(item => item.index),
-    values: rawIndices.map(item => item.value),
+    indices: cappedIndices.map(item => item.index),
+    values: cappedIndices.map(item => item.value),
   };
 }
 
