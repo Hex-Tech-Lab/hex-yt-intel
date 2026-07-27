@@ -146,10 +146,13 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
       
       // If we have an analysis or videoId context, try to ground in that thread
       if (analysisId || videoId) {
-        const existing = state.conversations.find((c) => 
-          (analysisId && c.analysisId === analysisId) || 
-          (videoId && c.videoId === videoId)
-        );
+        let existing: (typeof state.conversations)[number] | undefined;
+        for (const itemConv of state.conversations) {
+          if ((analysisId && itemConv.analysisId === analysisId) || (videoId && itemConv.videoId === videoId)) {
+            existing = itemConv;
+            break;
+          }
+        }
         if (existing) {
           // If the conversation matched by videoId but has a different analysisId (due to re-analysis),
           // update it in-place and save to database.

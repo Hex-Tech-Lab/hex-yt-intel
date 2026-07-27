@@ -27,9 +27,16 @@ function StanceSection({
   selectedDim: number | null;
   onSelect: (id: string | null) => void;
 }) {
-  const shown = selectedDim
-    ? insights.filter((i) => i.source === selectedDim || i.target === selectedDim)
-    : insights;
+  const shown: RelationInsight[] = [];
+  if (selectedDim) {
+    for (const itemInsight of insights) {
+      if (itemInsight.source === selectedDim || itemInsight.target === selectedDim) {
+        shown.push(itemInsight);
+      }
+    }
+  } else {
+    shown.push(...insights);
+  }
 
   if (!loading && shown.length === 0) return null;
 

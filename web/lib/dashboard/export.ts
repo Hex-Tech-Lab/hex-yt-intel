@@ -151,9 +151,13 @@ export interface ChatMessageForExport {
 /** Formats a chat thread as a markdown document: `## User` / `## Assistant` per turn. */
 export function chatToMarkdown(messages: ChatMessageForExport[], title?: string | null): string {
   const header = `# ${title || 'Chat conversation'}\n`;
-  const turns = messages
-    .filter((m) => m.body.trim().length > 0)
-    .map((m) => `## ${m.role === 'user' ? 'User' : 'Assistant'}\n\n${m.body.trim()}`);
+  const turns: string[] = [];
+  for (const itemMsg of messages) {
+    const trimmedBody = itemMsg.body.trim();
+    if (trimmedBody.length > 0) {
+      turns.push(`## ${itemMsg.role === 'user' ? 'User' : 'Assistant'}\n\n${trimmedBody}`);
+    }
+  }
   return [header, ...turns].join('\n\n');
 }
 

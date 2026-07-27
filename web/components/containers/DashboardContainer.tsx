@@ -247,13 +247,19 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   const partialInfo = useMemo(() => {
     const dims = nucleusAnalysis?.dimensions;
     if (status !== 'complete' || !dims) return null;
-    const present = Object.entries(dims)
-      .filter(([, d]) => d && typeof (d as { content?: unknown }).content === 'string' && ((d as { content: string }).content).trim().length > 0)
-      .map(([k]) => Number(k))
-      .filter((n) => Number.isFinite(n));
+    const present: number[] = [];
+    for (const [k, d] of Object.entries(dims)) {
+      if (d && typeof (d as { content?: unknown }).content === 'string' && ((d as { content: string }).content).trim().length > 0) {
+        const num = Number(k);
+        if (Number.isFinite(num)) present.push(num);
+      }
+    }
     const presentCount = new Set(present).size;
     if (presentCount === 0 || presentCount >= TOTAL_DIMENSIONS) return null;
-    const missing = Array.from({ length: TOTAL_DIMENSIONS }, (_, i) => i + 1).filter((n) => !present.includes(n));
+    const missing: number[] = [];
+    for (let i = 1; i <= TOTAL_DIMENSIONS; i++) {
+      if (!present.includes(i)) missing.push(i);
+    }
     return { presentCount, missing };
   }, [nucleusAnalysis?.dimensions, status, TOTAL_DIMENSIONS]);
 
@@ -332,12 +338,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     if (!nucleusProjection) return [];
 
     const rawReceived = nucleusAnalysis?.streaming.dimensionsReceived;
-    const receivedList = Array.isArray(rawReceived)
-      ? rawReceived.filter((v): v is number => typeof v === 'number')
-      : [];
+    const receivedList: number[] = [];
+    if (Array.isArray(rawReceived)) {
+      for (const valItem of rawReceived) {
+        if (typeof valItem === 'number') receivedList.push(valItem);
+      }
+    }
 
     const visibleDimensionNumbers = nucleusProjection.visibleDimensions.map(d => d.number);
-    const visibleReceivedList = receivedList.filter(num => visibleDimensionNumbers.includes(num));
+    const visibleReceivedList: number[] = [];
+    for (const numItem of receivedList) {
+      if (visibleDimensionNumbers.includes(numItem)) visibleReceivedList.push(numItem);
+    }
     const lastVisibleReceived = visibleReceivedList.length > 0 ? visibleReceivedList[visibleReceivedList.length - 1] : null;
 
     return nucleusProjection.visibleDimensions.map((dim) => {
