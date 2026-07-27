@@ -51,7 +51,7 @@ jobs:
           fi
           echo "Comparing against $BASE_COMPARE"
 
-          if git diff --quiet $BASE_COMPARE HEAD -- 'web/' 'packages/' '*.json' '*.ts'; then
+          if git diff --quiet $BASE_COMPARE HEAD -- 'web/' 'packages/' 'pnpm-workspace.yaml' 'pnpm-lock.yaml' '*.json' '*.ts'; then
             echo "build-needed=false" >> $GITHUB_OUTPUT
           else
             echo "build-needed=true" >> $GITHUB_OUTPUT
