@@ -552,3 +552,61 @@ button:focus-visible,
   white-space: nowrap;
 }
 
+/* =============================================================================
+   REACT VIEW TRANSITIONS (vercel-react-view-transitions)
+   ============================================================================= */
+
+:root {
+  --duration-exit: 150ms;
+  --duration-enter: 210ms;
+  --duration-move: 350ms;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 250ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Fade Transitions */
+::view-transition-old(.fade-out) {
+  animation: var(--duration-exit) ease-in fade reverse;
+}
+::view-transition-new(.fade-in) {
+  animation: var(--duration-enter) ease-out var(--duration-exit) both fade;
+}
+
+/* Slide Right Drawer Transitions */
+::view-transition-old(.slide-out-right) {
+  animation: var(--duration-exit) ease-in slide-right reverse;
+}
+::view-transition-new(.slide-in-right) {
+  animation: var(--duration-enter) ease-out var(--duration-exit) both slide-right;
+}
+
+/* Shared Element Morph */
+::view-transition-group(.morph) {
+  animation-duration: var(--duration-move);
+}
+
+/* Keyframes */
+@keyframes fade {
+  from { filter: blur(3px); opacity: 0; }
+  to { filter: blur(0); opacity: 1; }
+}
+
+@keyframes slide-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+
