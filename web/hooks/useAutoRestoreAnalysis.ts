@@ -132,10 +132,12 @@ export function useAutoRestoreAnalysis(url: string) {
               if (payload.monetizationVerdict) nucleus.setMonetizationVerdict(payload.monetizationVerdict);
             }
 
-            // Sync status to UI (either complete, error or partial)
-            if (restoreData.analysisStatus === 'complete') {
+            // Sync status to UI (either complete, error, partial, or processing/analyzing)
+            if (data.status === 'processing' || restoreData.analysisStatus === 'incomplete') {
+              setStatus('analyzing');
+            } else if (restoreData.analysisStatus === 'complete') {
               setStatus('complete');
-            } else if (restoreData.analysisStatus === 'failed') {
+            } else if (restoreData.analysisStatus === 'failed' || restoreData.analysisStatus === 'error') {
               setStatus('error');
             } else if (restoreData.analysisStatus === 'partial') {
               setStatus('complete'); // partial displays accordion with re-analyze banner

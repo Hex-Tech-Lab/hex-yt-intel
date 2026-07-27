@@ -365,11 +365,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         dimStatus = 'error';
       }
 
-      const cfg = dimensionConfigs[dim.number];
+      const cfg = dimensionConfigs[dim.number] || (dimensionConfigs as any)[String(dim.number)];
 
       return {
         key: `dim-${dim.number}`,
-        label: cfg?.label || `Dimension ${dim.number}`,
+        label: cfg?.label || cfg?.name || dim.name || `Dimension ${dim.number}`,
         icon: cfg?.icon || "solar:bolt-linear",
         status: dimStatus,
         content: cleanDimensionContent(dim.content),

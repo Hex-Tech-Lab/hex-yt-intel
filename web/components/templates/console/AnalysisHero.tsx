@@ -153,7 +153,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                   label={streaming ? "Analyzing" : isRepeat ? "Re-analyze" : "Analyze"}
                   variant={isRepeat ? "secondary" : "primary"}
                   size="md"
-                  tooltip={isRepeat ? "Re-analyze this video (runs fresh, not from cache)" : undefined}
+                  tooltip={isRepeat ? "Re-analyze this video (runs fresh, not from cache)" : "Analyze YouTube video and extract multi-dimensional intelligence"}
                   onClick={isRepeat ? onReanalyze : onAnalyze}
                   isDisabled={disabled}
                   isLoading={streaming}
