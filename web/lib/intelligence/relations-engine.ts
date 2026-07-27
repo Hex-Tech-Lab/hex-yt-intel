@@ -188,11 +188,8 @@ export async function* computeStanceRelationsStream(
     } catch { continue; }
   }
 
-  if (handshakeSignal?.aborted) {
-    return;
-  }
-
-  throw new Error('All models in relations cascade failed or timed out');
+  console.warn('[relations/engine] All models in stance relations cascade failed or timed out; returning empty insights');
+  return;
 }
 
 
