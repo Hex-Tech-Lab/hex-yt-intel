@@ -78,18 +78,25 @@ export function KnowledgeGraphCanvas({
   const data = useMemo(() => {
     const rawNodes = (graph.nodes ?? []).map((n) => ({ ...n })) as FGNode[];
     const validNodeIds = new Set(rawNodes.map((n) => String(n.id)));
-    const validLinks = (graph.edges ?? [])
-      .filter(
-        (e) =>
-          e &&
-          e.source !== null &&
-          e.source !== undefined &&
-          e.target !== null &&
-          e.target !== undefined &&
-          validNodeIds.has(String(e.source)) &&
-          validNodeIds.has(String(e.target))
-      )
-      .map((e) => ({ source: e.source, target: e.target, strength: e.strength, kind: e.kind }));
+    const validLinks: { source: any; target: any; strength: number; kind: string }[] = [];
+    for (const edge of graph.edges ?? []) {
+      if (
+        edge &&
+        edge.source !== null &&
+        edge.source !== undefined &&
+        edge.target !== null &&
+        edge.target !== undefined &&
+        validNodeIds.has(String(edge.source)) &&
+        validNodeIds.has(String(edge.target))
+      ) {
+        validLinks.push({
+          source: edge.source,
+          target: edge.target,
+          strength: edge.strength,
+          kind: edge.kind,
+        });
+      }
+    }
 
     return {
       nodes: rawNodes,
