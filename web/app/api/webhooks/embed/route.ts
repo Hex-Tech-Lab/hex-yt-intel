@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       const supabase = getSupabaseServiceClient();
       const { data, error: fetchError } = await supabase
         .from('analyses')
-        .select('title, video_id')
+        .select('title, video_id, analysis_payload')
         .eq('id', analysisId)
         .maybeSingle();
 
@@ -133,14 +133,24 @@ export async function POST(request: NextRequest) {
       });
       addBreadcrumb('Metadata fetch failed (continuing with partial data)', { analysisId, error: message }, 'error');
       // Continue without metadata rather than failing completely
-      analysis = { title: 'Analysis', video_id: 'unknown' };
+      analysis = { title: 'Analysis', video_id: 'unknown', analysis_payload: null };
     }
 
     // 7. Upsert embedding to Upstash Vector Index (with sparse vector for hybrid query capabilities)
     if (!vectorIndex) {
       console.warn('[embed-webhook] Vector index not configured, skipping upsert');
     } else {
-      const sparse = generateSparseVector(markdown);
+      // Extract LLM Knowledge Graph nodes & key terms for 3.5x term signal boosting
+      const kg = (analysis.analysis_payload as any)?.knowledgeGraph;
+      const highPriorityTerms: string[] = [];
+      if (kg && Array.isArray(kg.nodes)) {
+        for (const node of kg.nodes) {
+          if (node?.label) highPriorityTerms.push(node.label);
+          if (Array.isArray(node?.keyTerms)) highPriorityTerms.push(...node.keyTerms);
+        }
+      }
+
+      const sparse = generateSparseVector(markdown, highPriorityTerms);
       await vectorIndex.upsert({
         id: analysisId,
         vector: embeddingResult.embedding as unknown as number[],
