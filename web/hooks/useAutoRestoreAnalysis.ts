@@ -23,11 +23,17 @@ export function useAutoRestoreAnalysis(url: string) {
   // Auto-restore already analyzed videos
   useEffect(() => { // skipcq: JS-0903
     if (!url) {
-      // URL was cleared by user — reset all stores so no stale video data lingers
-      useAnalysisStore.getState().clearAnalysis();
-      useSynthesisNucleus.getState().reset();
-      useChatStore.getState().reset();
-      useVideoStore.getState().reset();
+      // Only clear stores if there is no active loaded analysis in memory
+      const hasActiveAnalysis = Boolean(
+        useAnalysisStore.getState().videoMetadata?.videoId ||
+        useSynthesisNucleus.getState().analysis?.videoId
+      );
+      if (!hasActiveAnalysis) {
+        useAnalysisStore.getState().clearAnalysis();
+        useSynthesisNucleus.getState().reset();
+        useChatStore.getState().reset();
+        useVideoStore.getState().reset();
+      }
       return;
     }
 
