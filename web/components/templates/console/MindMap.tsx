@@ -81,9 +81,11 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
         .filter(id => !visited.has(id) && nodeMap[id]);
 
       neighbors.forEach((neighborId) => {
+        const neighborNode = nodeMap[neighborId];
+        if (!neighborNode) return;
         visited.add(neighborId);
-        nodeMap[neighborId]!.parentId = currentId;
-        parentNode.children.push(nodeMap[neighborId]!);
+        neighborNode.parentId = currentId;
+        parentNode.children.push(neighborNode);
         queue.push(neighborId);
       });
     }
