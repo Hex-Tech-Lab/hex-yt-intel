@@ -190,11 +190,23 @@ export interface SparseVector {
 /**
  * Generate a sparse vector representation for BM25-like search in hybrid indexes
  * Tokenizes text, removes common stopwords, and hashes tokens to integer indices.
+ * Applies a 3.5x signal multiplier to LLM-extracted highPriorityTerms (Knowledge Graph nodes/key terms)
+ * so rare-but-critical domain terms rank at the top regardless of low raw transcript frequency.
  */
-export function generateSparseVector(text: string): SparseVector {
+export function generateSparseVector(
+  text: string,
+  highPriorityTerms: string[] = []
+): SparseVector {
   if (!text) {
     return { indices: [], values: [] };
   }
+
+  // Set of normalized high-priority terms for O(1) lookup
+  const prioritySet = new Set(
+    highPriorityTerms
+      .flatMap(t => t.toLowerCase().match(/[a-z0-9]{2,}/g) || [])
+      .filter(w => w.length >= 2)
+  );
 
   // Split into words, lowercase, and keep only alphanumeric tokens of length >= 2
   const words = text.toLowerCase().match(/[a-z0-9]{2,}/g) || [];
@@ -218,8 +230,12 @@ export function generateSparseVector(text: string): SparseVector {
       continue;
     }
     const index = hashWordToLong(word);
-    // Log frequency weighting
-    const value = Math.log(1 + count);
+    
+    // Log frequency weighting with 3.5x boost for LLM Knowledge Graph / Key Terms
+    const baseValue = Math.log(1 + count);
+    const boost = prioritySet.has(word) ? 3.5 : 1.0;
+    const value = baseValue * boost;
+
     rawIndices.push({ index, value });
   }
 
