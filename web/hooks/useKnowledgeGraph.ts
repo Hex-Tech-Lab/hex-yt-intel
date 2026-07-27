@@ -76,11 +76,14 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
           entityType: e.type || 'concept',
           weight: e.weight
         }));
-        const edges = (data.relations || []).map((r: any) => ({
-          source: r.source_entity_id,
-          target: r.target_entity_id,
-          strength: r.strength
-        }));
+        const nodeIds = new Set(nodes.map((n: any) => String(n.id)));
+        const edges = (data.relations || [])
+          .filter((r: any) => r && nodeIds.has(String(r.source_entity_id)) && nodeIds.has(String(r.target_entity_id)))
+          .map((r: any) => ({
+            source: r.source_entity_id,
+            target: r.target_entity_id,
+            strength: r.strength
+          }));
         
         if (nodes.length > 0) {
           setGraph({
@@ -130,10 +133,16 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
           entityType: n.entityType || n.type || 'concept',
         }));
 
-        // Validate edges: check required fields and filter out malformed ones
+        // Validate edges: check required fields and filter out malformed/orphaned ones
         const rawEdges = Array.isArray(storeKnowledgeGraph.edges) ? storeKnowledgeGraph.edges : [];
         const validEdges = rawEdges.filter((e: any) => {
-          return e && (typeof e.source === 'string' || typeof e.source === 'number') && (typeof e.target === 'string' || typeof e.target === 'number');
+          return (
+            e &&
+            (typeof e.source === 'string' || typeof e.source === 'number') &&
+            (typeof e.target === 'string' || typeof e.target === 'number') &&
+            nodeIds.has(String(e.source)) &&
+            nodeIds.has(String(e.target))
+          );
         });
 
         const mappedEdges: GraphEdge[] = validEdges.map((e: any) => ({

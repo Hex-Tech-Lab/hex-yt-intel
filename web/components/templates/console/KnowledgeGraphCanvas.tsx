@@ -75,13 +75,27 @@ export function KnowledgeGraphCanvas({
     return () => ro.disconnect();
   }, [height, compact]);
 
-  const data = useMemo(
-    () => ({
-      nodes: (graph.nodes ?? []).map((n) => ({ ...n })) as FGNode[],
-      links: (graph.edges ?? []).map((e) => ({ source: e.source, target: e.target, strength: e.strength, kind: e.kind })),
-    }),
-    [graph.nodes, graph.edges]
-  );
+  const data = useMemo(() => {
+    const rawNodes = (graph.nodes ?? []).map((n) => ({ ...n })) as FGNode[];
+    const validNodeIds = new Set(rawNodes.map((n) => String(n.id)));
+    const validLinks = (graph.edges ?? [])
+      .filter(
+        (e) =>
+          e &&
+          e.source !== null &&
+          e.source !== undefined &&
+          e.target !== null &&
+          e.target !== undefined &&
+          validNodeIds.has(String(e.source)) &&
+          validNodeIds.has(String(e.target))
+      )
+      .map((e) => ({ source: e.source, target: e.target, strength: e.strength, kind: e.kind }));
+
+    return {
+      nodes: rawNodes,
+      links: validLinks,
+    };
+  }, [graph.nodes, graph.edges]);
 
   // Configure custom D3 forces on the engine to resolve isolated islands
   useEffect(() => {
