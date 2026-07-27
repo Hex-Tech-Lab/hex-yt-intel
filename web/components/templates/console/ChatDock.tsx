@@ -184,8 +184,12 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     };
   }, [open, analysisId, videoId, loadConversations, selectConversation, newConversation]);
 
+  const lastFetchedActiveIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (activeId) void selectConversation(activeId);
+    if (activeId && lastFetchedActiveIdRef.current !== activeId) {
+      lastFetchedActiveIdRef.current = activeId;
+      void selectConversation(activeId);
+    }
   }, [activeId, selectConversation]);
 
   useEffect(() => {
