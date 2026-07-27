@@ -223,19 +223,27 @@ export function generateSparseVector(text: string): SparseVector {
     rawIndices.push({ index, value });
   }
 
-  // Sort by term frequency signal descending first to select the most significant terms
-  rawIndices.sort((a, b) => b.value - a.value);
-
   // Upstash Vector limit: sparse vector size must be <= 1000 non-zero entries.
-  // Cap at top 500 highest-value terms to preserve BM25 search precision while respecting index limits.
-  const cappedIndices = rawIndices.slice(0, 500);
+  // We enforce a 95% capacity buffer (max 950 terms) and apply a statistical signal threshold
+  // (value >= 0.15) to preserve 100% of meaningful term entropy without hitting hard database limits.
+  const MAX_SPARSE_BUFFER_SIZE = 950;
+  const MIN_TERM_SIGNAL_THRESHOLD = 0.15;
+
+  // Filter low-signal long-tail noise
+  const significantIndices = rawIndices.filter(item => item.value >= MIN_TERM_SIGNAL_THRESHOLD);
+
+  // Sort by term frequency signal descending first to prioritize high-entropy terms
+  significantIndices.sort((a, b) => b.value - a.value);
+
+  // Slice to the statistical 950-term buffer capacity
+  const bufferedIndices = significantIndices.slice(0, MAX_SPARSE_BUFFER_SIZE);
 
   // Sort by index ascending to meet canonical sparse vector conventions
-  cappedIndices.sort((a, b) => a.index - b.index);
+  bufferedIndices.sort((a, b) => a.index - b.index);
 
   return {
-    indices: cappedIndices.map(item => item.index),
-    values: cappedIndices.map(item => item.value),
+    indices: bufferedIndices.map(item => item.index),
+    values: bufferedIndices.map(item => item.value),
   };
 }
 
