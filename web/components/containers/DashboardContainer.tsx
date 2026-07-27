@@ -32,6 +32,7 @@ import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
 import { useAutoRestoreAnalysis } from '@/hooks/useAutoRestoreAnalysis';
 import { useExecutiveDigest } from '@/hooks/useExecutiveDigest';
 import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
+import { extractVideoId } from '@/lib/youtube';
 import { useExistingAnalysisCheck } from '@/hooks/useExistingAnalysisCheck';
 import { StatusBadge } from '@/components/templates/_shared/primitives';
 import { UsageTab } from '@/components/templates/console/UsageTab';
@@ -124,10 +125,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     router.push('/');
   }, [supabase, router]);
 
-  // Track if we've ever had a video — prevents player from disappearing between analyses
+  // Track if we've ever had a video and sync input URL box
   useEffect(() => {
-    if (videoMetadata?.videoId || nucleusAnalysis?.videoId) {
+    const activeVideoId = videoMetadata?.videoId || nucleusAnalysis?.videoId;
+    if (activeVideoId) {
       hasHadVideoRef.current = true;
+      const currentInputId = extractVideoId(useInputStore.getState().url);
+      if (!useInputStore.getState().url || currentInputId !== activeVideoId) {
+        useInputStore.getState().setUrl(`https://www.youtube.com/watch?v=${activeVideoId}`);
+      }
     }
   }, [videoMetadata?.videoId, nucleusAnalysis?.videoId]);
 
@@ -463,7 +469,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       dock={<ChatDock analysisId={nucleusAnalysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
       {activeNav === 'console' ? (
-        <div className="flex flex-col gap-3 pb-3">
+        <div className="flex flex-col gap-1.5 pb-2">
           <AnalysisHero
             url={mounted ? url : ''}
             status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
@@ -477,7 +483,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           />
 
           {(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId) && (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               <VideoPlayerCard />
               {videoMetadata && (
                 <BentoMetadata
@@ -493,7 +499,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           )}
 
           {status !== 'idle' && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
               <ConsoleTabSwitcher activeTab={consoleTab} hasGraph={graph.nodes.length > 0} onTabChange={setConsoleTab} />
 
               {consoleTab === 'synthesis' ? (
