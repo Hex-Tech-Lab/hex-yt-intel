@@ -238,9 +238,11 @@ function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
   }
 
   if (type === 'bullets') {
-    const bulletItemsRaw = content
-      .split('\n')
-      .filter((line) => line.trim().length > 0);
+    const rawLines = content.split('\n');
+    const bulletItemsRaw: string[] = [];
+    for (const itemLine of rawLines) {
+      if (itemLine.trim().length > 0) bulletItemsRaw.push(itemLine);
+    }
     const bulletItems = maxLines !== undefined ? bulletItemsRaw.slice(0, maxLines) : bulletItemsRaw;
 
     return (
@@ -259,10 +261,12 @@ function SummaryContent({ content, type, maxLines }: SummaryContentProps) {
   }
 
   if (type === 'paragraphs') {
-    const paragraphsRaw = content
-      .split(/\n{2,}/)
-      .map((p) => p.trim())
-      .filter(Boolean);
+    const rawParas = content.split(/\n{2,}/);
+    const paragraphsRaw: string[] = [];
+    for (const pItem of rawParas) {
+      const trimmed = pItem.trim();
+      if (trimmed.length > 0) paragraphsRaw.push(trimmed);
+    }
     const paragraphs = maxLines !== undefined ? paragraphsRaw.slice(0, maxLines) : paragraphsRaw;
 
     return (
