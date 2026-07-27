@@ -79,13 +79,14 @@ export function useSSEStream() {
     abortControllerRef.current = myController;
     const currentSignal = myController.signal;
 
-    // Set immediate status to update UI instantly without frame delays
-    // Clear analysis but preserve video metadata to prevent player unmount
+    // Clear analysis but preserve video metadata & chat thread when re-analyzing same video
     clearAnalysis();
     setVideoMetadata(preservedMetadata);
     resetSynthesis();
-    useChatStore.getState().reset();
-    useVideoStore.getState().reset();
+    if (!isSameVideo) {
+      useChatStore.getState().reset();
+      useVideoStore.getState().reset();
+    }
     setIsLoading(true);
     setStatus('downloading');
     setError(null);
