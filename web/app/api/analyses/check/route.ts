@@ -9,6 +9,9 @@ import { VideoIdSchema } from '@/lib/types/contracts';
 
 export const runtime = 'edge';
 
+/** A processing row this old means its background generator was killed (Vercel maxDuration) or crashed. */
+const PROCESSING_STALE_MS = 120_000;
+
 /** GET /api/analyses/check — Poll for cached analysis or in-progress status by video ID. */
 export async function GET(request: NextRequest) {
   try {
@@ -46,8 +49,11 @@ export async function GET(request: NextRequest) {
       throw authError;
     }
 
-    // Check if analysis exists for this user/video combination
-    const existingAnalysis = await trackDatabaseQuery(
+    // Check if analysis exists for this user/video combination. Fetch a
+    // small window (not just the single newest row) so a dead/stale
+    // in-flight row doesn't permanently shadow a real completed analysis
+    // for the same video on every future check.
+    const recentAnalyses = await trackDatabaseQuery(
       'select',
       'analyses',
       async () => {
@@ -57,8 +63,7 @@ export async function GET(request: NextRequest) {
           .eq('video_id', normalizedVideoId)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(5);
 
         if (error) throw error;
         return data;
@@ -68,6 +73,16 @@ export async function GET(request: NextRequest) {
       addBreadcrumb('Pre-flight cache check failed', { videoId: normalizedVideoId, error: String(err) }, 'database');
       return null;
     });
+
+    const newestRow = recentAnalyses?.[0] ?? null;
+    const newestIsStale = !!newestRow &&
+      newestRow.billing_status !== 'completed' &&
+      Date.now() - new Date(newestRow.created_at).getTime() >= PROCESSING_STALE_MS;
+    const latestCompleted = recentAnalyses?.find((a) => a.billing_status === 'completed') ?? null;
+
+    // A stale/dead newest row falls back to the last real completed
+    // analysis (if any) instead of surfacing a permanent error/ghost state.
+    const existingAnalysis = newestIsStale && latestCompleted ? latestCompleted : newestRow;
 
     if (existingAnalysis) {
       // Enforce compatibility with the PR #36 / PR #40 serialization structures
@@ -92,7 +107,6 @@ export async function GET(request: NextRequest) {
 
       // A processing row this old means its background generator was killed (Vercel
       // maxDuration) or crashed; surface it as a terminal error so the client stops polling.
-      const PROCESSING_STALE_MS = 120_000;
       const ageMs = Date.now() - new Date(existingAnalysis.created_at).getTime();
 
       if (validationReport.status === 'error' || existingAnalysis.billing_status === 'failed') {
