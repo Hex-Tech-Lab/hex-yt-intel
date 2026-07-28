@@ -401,6 +401,18 @@ div[data-chat-dock="true"] div[class*="content"] {
   border-radius: 8px !important;
 }
 
+/* Chat composer (input box) corner radius override — Astryx defaults to a
+   full pill; match the rest of the app's 8-12px radius language instead
+   (Claude-style rounded rect, not a pill). */
+[data-chat-dock="true"] .astryx-chat-composer {
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+[data-chat-dock="true"] .astryx-chat-composer:focus-within {
+  box-shadow: 0 0 0 2px var(--accent-a40, rgba(56, 189, 248, 0.4)) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
