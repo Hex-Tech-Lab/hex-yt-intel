@@ -12,6 +12,12 @@ const PersistRequestSchema = z.object({
   userId: z.string().uuid(),
   sampledCount: z.number().int().min(0),
   status: z.enum(['completed', 'failed']),
+  comments: z.array(z.object({
+    author: z.string(),
+    text: z.string(),
+    publishedAt: z.string(),
+    likeCount: z.number(),
+  })).optional(),
   sig: z.string(),
   exp: z.number(),
 });
@@ -33,7 +39,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
-  const { sampleRunId, userId, sampledCount, status, sig, exp } = parsed.data;
+  const { sampleRunId, userId, sampledCount, status, comments, sig, exp } = parsed.data;
 
   const isValid = await verifyContentSig(
     JSON.stringify({ sampleRunId, sampledCount, status }),
@@ -48,13 +54,52 @@ export async function POST(request: NextRequest) {
 
   const { data: runRow, error: fetchError } = await service
     .from('comment_sample_runs')
-    .select('id, user_id, total_comment_count')
+    .select('id, user_id, analysis_id, total_comment_count')
     .eq('id', sampleRunId)
     .eq('user_id', userId)
     .maybeSingle();
 
   if (fetchError || !runRow) {
     return NextResponse.json({ error: 'Sample run not found' }, { status: 404 });
+  }
+
+  // Persist expanded comment set to analyses table before completing run status
+  if (comments && comments.length > 0 && runRow.analysis_id) {
+    const { data: analysisRow } = await service
+      .from('analyses')
+      .select('analysis_payload, validation_report')
+      .eq('id', runRow.analysis_id)
+      .maybeSingle();
+
+    if (analysisRow) {
+      const priorPayload = (analysisRow.analysis_payload as Record<string, unknown>) || {};
+      const priorReport = (analysisRow.validation_report as Record<string, unknown>) || {};
+
+      const updatedPayload = {
+        ...priorPayload,
+        comments,
+      };
+      const updatedReport = {
+        ...priorReport,
+        comments,
+      };
+
+      const { error: analysisUpdateError } = await service
+        .from('analyses')
+        .update({
+          analysis_payload: updatedPayload,
+          validation_report: updatedReport,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', runRow.analysis_id);
+
+      if (analysisUpdateError) {
+        Sentry.captureException(analysisUpdateError, {
+          tags: { operation: 'comments_tier3_persist_analyses' },
+          extra: { sampleRunId, analysisId: runRow.analysis_id },
+        });
+      }
+    }
   }
 
   await service
