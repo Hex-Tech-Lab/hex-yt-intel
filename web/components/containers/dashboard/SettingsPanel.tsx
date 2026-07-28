@@ -42,7 +42,7 @@ export function SettingsPanel() {
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
       <div className="flex items-center justify-between mb-4 gap-3">
-        <h2 className="font-mono text-sm font-semibold text-[var(--ink)] tracking-wide">// SETTINGS</h2>
+        <h2 className="font-mono text-sm font-semibold text-[var(--ink)] tracking-wide">{'// SETTINGS'}</h2>
         <div className="flex items-center gap-1 bg-[rgb(26_31_43_/_0.6)] border border-[var(--line)] rounded-lg p-0.5">
           {DENSITY_OPTIONS.map((opt) => (
             <button
