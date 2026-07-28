@@ -8,7 +8,6 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Divider } from '@astryxdesign/core/Divider';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { Footer } from '@/components/Footer';
-import { LandingThree } from '@/components/LandingThree';
 
 /**
  * LANDING PAGE - ASTRYX ROLLOUT + MOTION
@@ -76,7 +75,6 @@ function Nav() {
 function Hero() {
   return (
     <section style={{ position: "relative", textAlign: "center", maxWidth: 1280, margin: "0 auto", padding: "80px 32px", width: "100%" }}>
-      <LandingThree />
       <motion.div
         initial="hidden"
         animate="show"
