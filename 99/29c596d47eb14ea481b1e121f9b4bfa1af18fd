@@ -1,0 +1,39 @@
+web/app/api/admin/logs/supabase/route.ts
+  s_0eded1e9d0cab6::t_f11da204b20200 5,16-18
+web/app/api/admin/logs/cloudflare/route.ts
+  s_0eded1e9d0cab6::t_5ecc8c7161c14c 5,16-18
+web/app/api/admin/logs/snapshot/route.ts
+  s_0eded1e9d0cab6::t_64838a48d7412d 1-45,47-94
+  s_0eded1e9d0cab6::t_cb11fba43d5222 46
+scripts/poll-logs-snapshot.sh
+  s_0eded1e9d0cab6::t_89874346c63c37 1-31
+web/app/api/admin/logs/upstash-redis/route.ts
+  s_0eded1e9d0cab6::t_04808cd27b1a17 5,19-20
+web/app/api/admin/logs/upstash-vector/route.ts
+  s_0eded1e9d0cab6::t_e6e72e55d9497d 5,19-20
+web/app/api/admin/logs/synthesis/route.ts
+  s_0eded1e9d0cab6::t_79d93e2283c2b7 5,17-18
+web/app/api/admin/logs/qstash/route.ts
+  s_0eded1e9d0cab6::t_0467bff18b924c 5,17-18
+web/app/api/admin/logs/vercel/route.ts
+  s_0eded1e9d0cab6::t_3e49d23ef700f4 5,17-18
+web/lib/admin-logs/fetchers.ts
+  s_0eded1e9d0cab6::t_c4ce54971f227d 1-227,231-334
+  s_0eded1e9d0cab6::t_82e6ef5783473c 228-230
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "9929c596d47eb14ea481b1e121f9b4bfa1af18fd",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
