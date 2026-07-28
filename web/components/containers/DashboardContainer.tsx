@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback, useEffect, useRef, startTransition, ViewTransition } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
@@ -36,7 +37,7 @@ import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
 import { extractVideoId } from '@/lib/youtube';
 import { useExistingAnalysisCheck } from '@/hooks/useExistingAnalysisCheck';
 import { UsageTab } from '@/components/templates/console/UsageTab';
-import { SettingsPanel } from '@/components/containers/dashboard/SettingsPanel';
+import { SettingsContentPane, SETTINGS_TREE, type SettingsSubmenuKey } from '@/components/containers/dashboard/SettingsPanel';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
@@ -147,6 +148,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // close-on-route-change effect never fires for them — we close it explicitly.
   const setMobileNav = useUIStore((s) => s.setMobileNav);
   const [activeNav, setActiveNav] = useState<'console' | 'history' | 'settings'>('console');
+  // Settings is a collapsible node WITHIN the left nav (not a separate
+  // route/shell) -- collapsed by default, and its expand/collapse state is
+  // independent of which submenu leaf is currently rendered in the central
+  // panel (collapsing after selecting a leaf must not clear the content).
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [activeSettingsLeaf, setActiveSettingsLeaf] = useState<SettingsSubmenuKey>('overview');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDimensionKey, setSelectedDimensionKey] = useState<string | null>(null);
   const [consoleTab, setConsoleTab] = useState<'synthesis' | 'graph'>('synthesis');
@@ -325,7 +332,20 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     { key: 'console', label: 'Synthesis Console', icon: 'solar:graph-up-linear' },
     { key: 'atlas', label: 'The Atlas', icon: 'solar:globus-linear' },
     { key: 'history', label: 'Analysis History', icon: 'solar:folder-with-files-linear', badge: historyBadge },
-    { key: 'settings', label: 'Settings', icon: 'solar:settings-linear' },
+    {
+      key: 'settings',
+      label: 'Settings',
+      icon: 'solar:settings-linear',
+      submenu: [
+        { key: 'overview', label: 'Overview', icon: 'solar:home-2-linear' },
+        ...SETTINGS_TREE.map((item) => ({
+          key: item.key,
+          label: item.label,
+          icon: item.icon,
+          category: item.category,
+        })),
+      ],
+    },
   ], [historyBadge]);
 
   const dimensions: Dimension[] = useMemo(() => {
@@ -428,6 +448,23 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     }
   }, [setMobileNav, router]);
 
+  // Settings header click: toggle the inline disclosure only. This does NOT
+  // navigate -- expanding/collapsing the submenu list must not change
+  // whatever is currently showing in the central panel.
+  const handleToggleSettingsSubmenu = useCallback(() => {
+    startTransition(() => setSettingsExpanded((prev) => !prev));
+  }, []);
+
+  // Clicking a Settings submenu leaf is the only thing that actually swaps
+  // the central panel into the Settings content for that leaf.
+  const handleNavigateSettingsLeaf = useCallback((_parentKey: string, leafKey: string) => {
+    setMobileNav(false);
+    startTransition(() => {
+      setActiveNav('settings');
+      setActiveSettingsLeaf(leafKey as SettingsSubmenuKey);
+    });
+  }, [setMobileNav]);
+
   const handleCloseDimensionDrawer = useCallback(() => {
     startTransition(() => setSelectedDimensionKey(null));
   }, []);
@@ -449,6 +486,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             items={sidebarItems}
             activeKey={activeNav}
             onNavigate={handleSidebarNavigate}
+            expandedKeys={{ settings: settingsExpanded }}
+            onToggleSubmenu={handleToggleSettingsSubmenu}
+            activeSubKey={activeNav === 'settings' ? activeSettingsLeaf : null}
+            onNavigateSub={handleNavigateSettingsLeaf}
             footer={<SidebarFooter profile={profile} onSignOut={handleSignOut} />}
           >
             {showLog && (
@@ -468,9 +509,20 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         />
       }
       rightPanel={
-        <div className="h-full overflow-y-auto">
-          <RightPanelAccordion items={rightPanelItems} />
-        </div>
+        <AnimatePresence mode="wait">
+          {rightPanelItems.length > 0 && (
+            <motion.div
+              key="right-panel"
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 20, opacity: 0 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="h-full overflow-y-auto"
+            >
+              <RightPanelAccordion items={rightPanelItems} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       }
       dock={<ChatDock analysisId={nucleusAnalysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
@@ -560,7 +612,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
           ) : (activeNav as string) === 'history' ? (
             <AnalysisHistory onSelectAnalysis={() => startTransition(() => setActiveNav('console'))} />
           ) : (activeNav as string) === 'settings' ? (
-            <SettingsPanel />
+            <SettingsContentPane
+              activeKey={activeSettingsLeaf}
+              onNavigate={setActiveSettingsLeaf}
+            />
           ) : (
             <UsageTab />
           )}

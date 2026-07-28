@@ -72,7 +72,7 @@ function UsagePane() {
 
 export type SettingsSubmenuKey = 'overview' | 'logs' | 'usage' | 'preferences' | 'admin-settings';
 
-interface SettingsItem {
+export interface SettingsItem {
   key: SettingsSubmenuKey;
   label: string;
   description: string;
@@ -80,7 +80,7 @@ interface SettingsItem {
   category: 'TELEMETRY & OBSERVABILITY' | 'ACCOUNT & USAGE' | 'SYSTEM REGISTRY';
 }
 
-const SETTINGS_TREE: SettingsItem[] = [
+export const SETTINGS_TREE: SettingsItem[] = [
   {
     key: 'logs',
     label: 'System Logs',
@@ -111,14 +111,125 @@ const SETTINGS_TREE: SettingsItem[] = [
   },
 ];
 
+interface SettingsContentPaneProps {
+  activeKey: SettingsSubmenuKey;
+  /** Lets the Overview grid (and any future in-content cross-links) jump
+   *  directly to another leaf. Optional because standalone hosts that don't
+   *  want cross-navigation (e.g. a future read-only embed) can omit it. */
+  onNavigate?: (key: SettingsSubmenuKey) => void;
+}
+
+/**
+ * Content-only pane: renders whichever Settings leaf is active. No tree, no
+ * breadcrumb -- those live in the host (either the main left nav's inline
+ * submenu, or SettingsPanel's own two-pane shell for the standalone
+ * /settings routes). Keeping this split lets both hosts render identical
+ * content without duplicating the switch.
+ */
+export function SettingsContentPane({ activeKey, onNavigate }: SettingsContentPaneProps) {
+  const [density, setDensity] = useState<'compact' | 'balanced' | 'spacious'>('balanced');
+
+  const goTo = (key: SettingsSubmenuKey) => {
+    if (onNavigate) startTransition(() => onNavigate(key));
+  };
+
+  return (
+    <ViewTransition
+      enter={activeKey === 'overview' ? 'slide-in-left' : 'slide-in-right'}
+      exit={activeKey === 'overview' ? 'slide-out-right' : 'slide-out-left'}
+      default="none"
+    >
+      <div key={activeKey}>
+        {activeKey === 'overview' && (
+          <div className="max-w-4xl mx-auto flex flex-col gap-6">
+            <div>
+              <h2 className="text-lg font-bold text-[var(--ink-main)] tracking-tight">Settings & System Hub</h2>
+              <p className="text-xs text-[var(--ink-muted)] mt-1">
+                Select a section from the left navigation tree to view telemetry, usage stats, or registry configurations in place.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {SETTINGS_TREE.map((item) => (
+                <div
+                  key={item.key}
+                  onClick={() => goTo(item.key)}
+                  className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border-muted)] hover:border-[var(--accent)] cursor-pointer transition-all flex flex-col justify-between gap-3 group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-[var(--bg)] border border-[var(--border-muted)] text-[var(--accent)] group-hover:border-[var(--accent)]">
+                      <Icon icon={item.icon} size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--ink-main)] group-hover:text-[var(--accent)]">
+                        {item.label}
+                      </h3>
+                      <p className="text-xs text-[var(--ink-muted)] mt-1 leading-relaxed">{item.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end text-xs text-[var(--accent)] font-semibold gap-1">
+                    <span>Open section</span>
+                    <Icon icon="solar:alt-arrow-right-linear" size={14} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeKey === 'logs' && <LogsViewerClient />}
+
+        {activeKey === 'usage' && <UsagePane />}
+
+        {activeKey === 'preferences' && (
+          <div className="max-w-2xl mx-auto flex flex-col gap-6 p-4 bg-[var(--surface)] border border-[var(--border-muted)] rounded-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-[var(--ink-main)]">App Display & Control Density</h2>
+              <div className="flex items-center gap-1 bg-[rgb(26_31_43_/_0.6)] border border-[var(--line)] rounded-lg p-0.5">
+                {(['compact', 'balanced', 'spacious'] as const).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setDensity(d)}
+                    className={`px-2.5 py-1 rounded-md text-[10.5px] capitalize transition-colors ${
+                      density === d
+                        ? 'bg-[var(--accent-a12)] text-[var(--accent-ink)]'
+                        : 'text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-[var(--ink-muted)]">
+              Configure list padding, visual density, and component defaults across the synthesis console.
+            </p>
+            <div className="flex items-center justify-between p-3 bg-[var(--bg)] rounded-lg border border-[var(--border-muted)]">
+              <span className="text-xs font-semibold">List Spacing Density</span>
+              <span className="text-xs capitalize font-bold text-[var(--accent)]">{density}</span>
+            </div>
+          </div>
+        )}
+
+        {activeKey === 'admin-settings' && <AdminSettingsClient />}
+      </div>
+    </ViewTransition>
+  );
+}
+
 interface SettingsPanelProps {
   initialSubmenu?: SettingsSubmenuKey;
 }
 
+/**
+ * Standalone two-pane Settings shell -- still used by the deep-link routes
+ * (/settings, /settings/logs) that need a self-contained page rather than
+ * the in-dashboard collapsible nav. Renders its own tree + breadcrumb, then
+ * delegates content to the shared SettingsContentPane.
+ */
 export function SettingsPanel({ initialSubmenu = 'overview' }: SettingsPanelProps) {
   const [activeKey, setActiveKey] = useState<SettingsSubmenuKey>(initialSubmenu);
   const [query, setQuery] = useState('');
-  const [density, setDensity] = useState<'compact' | 'balanced' | 'spacious'>('balanced');
 
   const activeItem = SETTINGS_TREE.find((i) => i.key === activeKey);
 
@@ -144,24 +255,6 @@ export function SettingsPanel({ initialSubmenu = 'overview' }: SettingsPanelProp
             </>
           )}
         </div>
-
-        {activeKey === 'preferences' && (
-          <div className="flex items-center gap-1 bg-[rgb(26_31_43_/_0.6)] border border-[var(--line)] rounded-lg p-0.5">
-            {(['compact', 'balanced', 'spacious'] as const).map((d) => (
-              <button
-                key={d}
-                onClick={() => setDensity(d)}
-                className={`px-2.5 py-1 rounded-md text-[10.5px] capitalize transition-colors ${
-                  density === d
-                    ? 'bg-[var(--accent-a12)] text-[var(--accent-ink)]'
-                    : 'text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
-                }`}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Persistent Two-Pane Layout */}
@@ -229,71 +322,9 @@ export function SettingsPanel({ initialSubmenu = 'overview' }: SettingsPanelProp
           </div>
         </div>
 
-        {/* Right-Hand Content Pane — ViewTransition In-Place Swapping */}
+        {/* Right-Hand Content Pane */}
         <div className="flex-1 overflow-y-auto bg-[var(--bg)] p-4 lg:p-6">
-          <ViewTransition
-            enter={activeKey === 'overview' ? 'slide-in-left' : 'slide-in-right'}
-            exit={activeKey === 'overview' ? 'slide-out-right' : 'slide-out-left'}
-            default="none"
-          >
-            <div key={activeKey}>
-              {activeKey === 'overview' && (
-                <div className="max-w-4xl mx-auto flex flex-col gap-6">
-                  <div>
-                    <h2 className="text-lg font-bold text-[var(--ink-main)] tracking-tight">Settings & System Hub</h2>
-                    <p className="text-xs text-[var(--ink-muted)] mt-1">
-                      Select a section from the left navigation tree to view telemetry, usage stats, or registry configurations in place.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {SETTINGS_TREE.map((item) => (
-                      <div
-                        key={item.key}
-                        onClick={() => startTransition(() => setActiveKey(item.key))}
-                        className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border-muted)] hover:border-[var(--accent)] cursor-pointer transition-all flex flex-col justify-between gap-3 group"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 rounded-lg bg-[var(--bg)] border border-[var(--border-muted)] text-[var(--accent)] group-hover:border-[var(--accent)]">
-                            <Icon icon={item.icon} size={20} />
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-bold text-[var(--ink-main)] group-hover:text-[var(--accent)]">
-                              {item.label}
-                            </h3>
-                            <p className="text-xs text-[var(--ink-muted)] mt-1 leading-relaxed">{item.description}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-end text-xs text-[var(--accent)] font-semibold gap-1">
-                          <span>Open section</span>
-                          <Icon icon="solar:alt-arrow-right-linear" size={14} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeKey === 'logs' && <LogsViewerClient />}
-
-              {activeKey === 'usage' && <UsagePane />}
-
-              {activeKey === 'preferences' && (
-                <div className="max-w-2xl mx-auto flex flex-col gap-6 p-4 bg-[var(--surface)] border border-[var(--border-muted)] rounded-xl">
-                  <h2 className="text-base font-bold text-[var(--ink-main)]">App Display & Control Density</h2>
-                  <p className="text-xs text-[var(--ink-muted)]">
-                    Configure list padding, visual density, and component defaults across the synthesis console.
-                  </p>
-                  <div className="flex items-center justify-between p-3 bg-[var(--bg)] rounded-lg border border-[var(--border-muted)]">
-                    <span className="text-xs font-semibold">List Spacing Density</span>
-                    <span className="text-xs capitalize font-bold text-[var(--accent)]">{density}</span>
-                  </div>
-                </div>
-              )}
-
-              {activeKey === 'admin-settings' && <AdminSettingsClient />}
-            </div>
-          </ViewTransition>
+          <SettingsContentPane activeKey={activeKey} onNavigate={setActiveKey} />
         </div>
       </div>
     </div>
