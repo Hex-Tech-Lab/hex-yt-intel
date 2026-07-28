@@ -85,7 +85,8 @@ export function buildDimensionStatus(
  */
 export function stitchChunksIntoPayload(
   chunkMap: Map<number, any>,
-  resolvedTotal: number
+  resolvedTotal: number,
+  extraMetadata?: { videoMetadata?: any; channelMeta?: any; comments?: any }
 ): StitchResult {
   const stitchedDimensions: any[] = [];
   let stitchedPersona: any = null;
@@ -237,7 +238,10 @@ export function stitchChunksIntoPayload(
       personaOptimised: false,
       recommendation: 'conditional'
     },
-    ...(stitchedMonetization ? { monetizationVerdict: stitchedMonetization } : {})
+    ...(stitchedMonetization ? { monetizationVerdict: stitchedMonetization } : {}),
+    ...(extraMetadata?.videoMetadata ? { videoMetadata: extraMetadata.videoMetadata } : {}),
+    ...(extraMetadata?.channelMeta ? { channelMeta: extraMetadata.channelMeta } : {}),
+    ...(extraMetadata?.comments ? { comments: extraMetadata.comments } : {}),
   };
 
   // Validate stitched payload. The schema is .strict(), but LLMs routinely emit

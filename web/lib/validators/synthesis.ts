@@ -187,6 +187,9 @@ export const UCISPayloadV2Schema = z.object({
   knowledgeGraph: KnowledgeGraphSchema,
   classification: ClassificationDataSchema,
   monetizationVerdict: MonetizationVerdictSchema.optional(),
+  videoMetadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  channelMeta: z.record(z.string(), z.unknown()).nullable().optional(),
+  comments: z.array(z.record(z.string(), z.unknown())).nullable().optional(),
 }).strict();
 
 // =============================================================================

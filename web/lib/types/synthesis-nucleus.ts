@@ -177,6 +177,9 @@ export interface UCISPayloadV2 {
   knowledgeGraph: KnowledgeGraphV2;
   classification: ClassificationData;
   monetizationVerdict?: MonetizationVerdict;
+  videoMetadata?: Record<string, unknown> | null;
+  channelMeta?: Record<string, unknown> | null;
+  comments?: Array<Record<string, unknown>> | null;
 }
 
 /**
