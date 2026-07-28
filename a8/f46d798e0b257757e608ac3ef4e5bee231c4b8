@@ -1,0 +1,24 @@
+web/app/settings/logs/LogsViewerClient.tsx
+  s_0eded1e9d0cab6::t_0b75351a582deb 114
+  s_0eded1e9d0cab6::t_1a98318aca4e90 5,39-45
+web/app/api/admin/logs/upstash-vector/route.ts
+  s_0eded1e9d0cab6::t_d9bd4eb0bf98a8 1-56
+web/app/api/admin/logs/qstash/route.ts
+  s_0eded1e9d0cab6::t_39b2bd28be059c 50,62-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a8f46d798e0b257757e608ac3ef4e5bee231c4b8",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
