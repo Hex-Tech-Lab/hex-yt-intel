@@ -11,6 +11,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useInputStore } from '@/store/useInputStore';
 import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
+import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 import type { HistoryOverviewItem } from '@/lib/ports';
@@ -214,16 +215,17 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   // Check for executiveDigest for zero-dimensional analyses
   const hasAnalysisData = Boolean(currentAnalysis?.analysis_markdown || currentAnalysis?.executiveDigest);
 
-  // Real dimension count for the analysis currently in the window
+  // Real dimension count for the analysis currently in the window. Derived
+  // ONLY from actual per-dimension content via `countUcisDimensions` -- the
+  // same markdown-based presence check used by the reaper and history-overview
+  // -- never from `currentStatus === 'complete'`. A stream reaching a terminal
+  // state (currentStatus) does not mean all dimensions actually landed intact
+  // (see billing_status: 'failed' analyses, DashboardContainer's identical
+  // `isReceived || hasContent` trap documented at its `dimensions` useMemo).
   const wipDimCount = useMemo(() => {
     if (!currentAnalysis) return 0;
-    if (currentStatus === 'complete') {
-      return TOTAL_DIMENSIONS;
-    }
-    const parsedCount = Object.keys(parseToUCISDimensions(currentAnalysis?.analysis_markdown)).length;
-    const payloadCount = (currentAnalysis as any)?.dimensions ? Object.keys((currentAnalysis as any).dimensions).length : 0;
-    return Math.min(TOTAL_DIMENSIONS, Math.max(parsedCount, payloadCount));
-  }, [currentAnalysis, currentStatus]);
+    return Math.min(TOTAL_DIMENSIONS, countUcisDimensions(currentAnalysis?.analysis_markdown));
+  }, [currentAnalysis, TOTAL_DIMENSIONS]);
   const showWIPSection = url && currentAnalysis && currentAnalysis.id && hasAnalysisData && (isActivelyAnalyzing || currentStatus === 'complete');
 
   // Debug: Log showWIPSection condition to diagnose rendering issues
