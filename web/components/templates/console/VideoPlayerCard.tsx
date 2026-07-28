@@ -18,6 +18,13 @@ export function VideoPlayerCard() {
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
+  // Facade pattern: the real YouTube IFrame API (www-widgetapi.js,
+  // player_embed_es6 base.js, www-player.css, iframe_api bootstrap) is a
+  // meaningful chunk of network/JS weight. Don't pull any of it in until the
+  // user has expressed real intent to watch — either clicking the facade's
+  // play button, or clicking a transcript timestamp (which implies "play
+  // from here").
+  const [interacted, setInteracted] = useState(false);
 
   const [playbackError, setPlaybackError] = useState<{ code: number | null; message: string } | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
@@ -34,7 +41,7 @@ export function VideoPlayerCard() {
   }, []);
 
   useEffect(() => {
-    if (!mounted || !videoId || !containerRef.current) return;
+    if (!mounted || !interacted || !videoId || !containerRef.current) return;
     
     let cancelled = false;
     
@@ -102,7 +109,7 @@ export function VideoPlayerCard() {
       setReady(false);
       setPlaybackError(null);
     };
-  }, [mounted, videoId, setPlaying, retryNonce]);
+  }, [mounted, interacted, videoId, setPlaying, retryNonce]);
 
   const embedRestricted = playbackError?.code === 101 || playbackError?.code === 150;
 
@@ -122,6 +129,12 @@ export function VideoPlayerCard() {
 
   useEffect(() => {
     if (seekTo === null) return;
+    // A transcript timestamp click while still on the facade expresses the
+    // same "play this video" intent as clicking the play button — mount the
+    // real player so the queued seek can land once it's ready.
+    if (!interacted && !embedRestricted) {
+      setInteracted(true);
+    }
     if (ready && playerRef.current) {
       playerRef.current.seekTo(seekTo);
       requestAnimationFrame(() => {
@@ -137,7 +150,7 @@ export function VideoPlayerCard() {
     } else {
       seekQueueRef.current = seekTo;
     }
-  }, [seekTo, ready, clearSeek, embedRestricted]);
+  }, [seekTo, ready, clearSeek, embedRestricted, interacted]);
 
   useEffect(() => {
     if (!ready || !playerRef.current) return;
@@ -208,6 +221,28 @@ export function VideoPlayerCard() {
           </a>
         </div>
       </div>
+      {!interacted && !embedRestricted && (
+        <button
+          type="button"
+          onClick={() => setInteracted(true)}
+          aria-label="Play video"
+          className="absolute inset-0 z-10 w-full h-full group cursor-pointer"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail, next/image needs remote host config */}
+          <img
+            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[rgb(11_14_20_/_0.35)] group-hover:bg-[rgb(11_14_20_/_0.5)] transition-colors flex items-center justify-center">
+            <span className="flex items-center justify-center w-16 h-16 rounded-full bg-[rgb(11_14_20_/_0.75)] border border-[var(--accent)] text-[var(--accent)] group-hover:scale-105 transition-transform">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 translate-x-0.5">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </span>
+          </div>
+        </button>
+      )}
       <div className={`absolute inset-x-0 bottom-0 z-10 items-center justify-between gap-3 px-3 py-2 bg-[rgb(11_14_20_/_0.92)] backdrop-blur-sm border-t border-[var(--line)] text-[11px] font-mono ${!embedRestricted && playbackError ? 'flex' : 'hidden'}`}>
         <span className="text-[var(--warn)] truncate">Playback error — this is usually transient.</span>
         <span className="flex items-center gap-2 flex-shrink-0">
