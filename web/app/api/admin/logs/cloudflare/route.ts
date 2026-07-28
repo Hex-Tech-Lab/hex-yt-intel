@@ -2,13 +2,14 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/utils/require-admin';
+import { computeTimeWindow } from '@/lib/utils/time-range';
 import * as Sentry from '@sentry/nextjs';
 
 /**
  * GET /api/admin/logs/cloudflare — Admin-only live fetch for Cloudflare Worker execution logs
  * Queries Cloudflare GraphQL Analytics API (workersInvocationsAdaptive) using CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
  */
-export async function GET(_request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const adminResult = await requireAdmin('admin/logs/cloudflare:GET');
   if (!adminResult.ok) {
     return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
@@ -62,7 +63,12 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     }
 
     const json = await res.json();
-    const invocations = json?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
+    const rawInvocations = json?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
+    const { startTimeMs, endTimeMs } = computeTimeWindow(new URL(request.url).searchParams);
+    const invocations = rawInvocations.filter((inv: any) => {
+      const ts = new Date(inv.dimensions?.datetime || 0).getTime();
+      return ts >= startTimeMs && ts <= endTimeMs;
+    });
 
     const logLines = invocations.map((inv: any) => {
       const dims = inv.dimensions || {};

@@ -2,13 +2,14 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/utils/require-admin';
+import { computeTimeWindow } from '@/lib/utils/time-range';
 import * as Sentry from '@sentry/nextjs';
 
 /**
  * GET /api/admin/logs/supabase — Admin-only live fetch for Supabase Management API logs
  * Queries https://api.supabase.com/v1/projects/{ref}/logs when SUPABASE_ACCESS_TOKEN is present.
  */
-export async function GET(_request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const adminResult = await requireAdmin('admin/logs/supabase:GET');
   if (!adminResult.ok) {
     return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
@@ -38,7 +39,12 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     }
 
     const data = await res.json();
-    const resultList = Array.isArray(data.result) ? data.result : [];
+    const rawList = Array.isArray(data.result) ? data.result : [];
+    const { startTimeMs, endTimeMs } = computeTimeWindow(new URL(request.url).searchParams);
+    const resultList = rawList.filter((e: any) => {
+      const ts = e.timestamp ? e.timestamp / 1000 : Date.now();
+      return ts >= startTimeMs && ts <= endTimeMs;
+    });
 
     const logLines = resultList.map((e: any) => {
       const time = new Date(e.timestamp ? e.timestamp / 1000 : Date.now()).toISOString();
