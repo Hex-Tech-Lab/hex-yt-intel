@@ -91,10 +91,19 @@ export async function GET(
     const dimensionStatus = (report as any).dimension_status;
     const hasDimensions = Array.isArray(dimensionStatus) && dimensionStatus.some((d: any) => d?.status === 'done');
 
+    const staleAfter = (report as any).stale_after;
+    const isPastStaleDeadline = typeof staleAfter === 'string' && Date.parse(staleAfter) < Date.now();
+
     let analysisStatus: 'complete' | 'incomplete' | 'error' | 'partial' = 'incomplete';
     if (validationStatus === 'done' || analysis.billing_status === 'completed') {
       analysisStatus = 'complete';
     } else if (validationStatus === 'error' || validationStatus === 'failed') {
+      analysisStatus = 'error';
+    } else if (validationStatus === 'processing' && isPastStaleDeadline && !hasDimensions) {
+      // Row's own pipeline-written stale_after deadline has passed with no
+      // dimensions ever landing — the generator was killed or crashed.
+      // Without this, a permanently 'incomplete' row masks the last real
+      // completed analysis for the same video on every future auto-restore.
       analysisStatus = 'error';
     } else if (validationStatus === 'partial' || hasDimensions) {
       analysisStatus = 'partial';
