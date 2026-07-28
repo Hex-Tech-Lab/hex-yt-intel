@@ -48,6 +48,7 @@ import { ConsoleTabSwitcher } from './dashboard/ConsoleTabSwitcher';
 import { SidebarFooter } from './dashboard/SidebarFooter';
 import { ExpandedPanelOverlay } from './dashboard/ExpandedPanelOverlay';
 import { copyPanelContent, exportPanelContent, type PanelId } from '@/lib/dashboard/export';
+import { parseUcisDimensionNumbers } from '@/lib/utils/count-ucis-dimensions';
 import { Avatar } from '@astryxdesign/core';
 
 // See /docs/ui/dashboard-container.md
@@ -251,24 +252,26 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // Partial-analysis awareness: count dimensions that actually carry content and,
   // when a completed analysis is missing some of the 11, surface which ones so the
   // user can decide whether to re-analyze (a re-run bypasses the cache).
+  //
+  // Derived from `analysis.analysis_markdown` via `parseUcisDimensionNumbers` --
+  // the SAME canonical, content-based presence check AnalysisHistory's WIP card
+  // uses (`countUcisDimensions`) -- not a status flag and not a second,
+  // independently-written parse. Both surfaces must agree on this count for the
+  // same analysis (regression: AnalysisHistory previously hardcoded
+  // TOTAL_DIMENSIONS whenever currentStatus === 'complete', which showed 11/11
+  // for analyses with billing_status: 'failed').
   const partialInfo = useMemo(() => {
-    const dims = nucleusAnalysis?.dimensions;
-    if (status !== 'complete' || !dims) return null;
-    const present: number[] = [];
-    for (const [k, d] of Object.entries(dims)) {
-      if (d && typeof (d as { content?: unknown }).content === 'string' && ((d as { content: string }).content).trim().length > 0) {
-        const num = Number(k);
-        if (Number.isFinite(num)) present.push(num);
-      }
-    }
-    const presentCount = new Set(present).size;
+    if (status !== 'complete' || !analysis?.analysis_markdown) return null;
+    const presentNumbers = parseUcisDimensionNumbers(analysis.analysis_markdown);
+    const presentCount = presentNumbers.length;
     if (presentCount === 0 || presentCount >= TOTAL_DIMENSIONS) return null;
+    const present = new Set(presentNumbers);
     const missing: number[] = [];
     for (let i = 1; i <= TOTAL_DIMENSIONS; i++) {
-      if (!present.includes(i)) missing.push(i);
+      if (!present.has(i)) missing.push(i);
     }
     return { presentCount, missing };
-  }, [nucleusAnalysis?.dimensions, status, TOTAL_DIMENSIONS]);
+  }, [analysis?.analysis_markdown, status, TOTAL_DIMENSIONS]);
 
   // Dimension 0 — executive digest. Generated once (the cheap "#12 call") the
   // first time a completed, full analysis is viewed, then cached server-side, so
