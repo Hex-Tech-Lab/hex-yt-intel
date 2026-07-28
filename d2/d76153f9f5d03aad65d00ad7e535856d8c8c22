@@ -1,0 +1,20 @@
+web/app/globals.css
+  s_0eded1e9d0cab6::t_4c7cb709786e78 404-408,414-415
+  s_0eded1e9d0cab6::t_77d6b2ba608d75 409-413
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d2d76153f9f5d03aad65d00ad7e535856d8c8c22",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
