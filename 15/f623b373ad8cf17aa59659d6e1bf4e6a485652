@@ -1,0 +1,29 @@
+web/app/api/webhooks/upstash-snapshot-poll/route.ts
+  s_0eded1e9d0cab6::t_f1c65b7397ac05 1-115
+web/app/api/admin/logs/upstash-redis/route.ts
+  s_0eded1e9d0cab6::t_f1c65b7397ac05 5,11-13,15,21-44,78
+web/app/settings/logs/LogsViewerClient.tsx
+  s_0eded1e9d0cab6::t_f1c65b7397ac05 17-25,48-49,56-57,135-136,145,159-161,401-448
+web/app/api/admin/logs/upstash-vector/route.ts
+  s_0eded1e9d0cab6::t_f1c65b7397ac05 5,11-13,15,21-44,78
+web/scripts/setup-qstash-cron.ts
+  s_0eded1e9d0cab6::t_f1c65b7397ac05 21
+supabase/migrations/20260729100000_upstash_snapshots.sql
+  s_0eded1e9d0cab6::t_f1c65b7397ac05 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "15f623b373ad8cf17aa59659d6e1bf4e6a485652",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
