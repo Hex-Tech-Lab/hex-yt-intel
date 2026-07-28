@@ -119,13 +119,16 @@ export const STATUS_MAP = {
 export interface StatusBadgeProps {
   status: SynthesisStatus;
   label?: string;
+  tooltip?: string;
   style?: CSSProperties;
 }
 
-export function StatusBadge({ status, label, style = {} }: StatusBadgeProps) {
+export function StatusBadge({ status, label, tooltip, style = {} }: StatusBadgeProps) {
   const statusConfig = STATUS_MAP[status] || STATUS_MAP.idle;
   return (
-    <span style={{
+    <span
+      title={tooltip || (label ? `${label} status: ${statusConfig.label}` : undefined)}
+      style={{
       display: "inline-flex",
       alignItems: "center",
       gap: 7,

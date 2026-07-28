@@ -8,6 +8,14 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
+- [2026-07-28T15:50:00+03:00] [AGY (Gemini)] [DONE] Tasks A-G Completed:
+  - Task A: Applied 2s checkmark morph (solar:check-read-linear + accent style) to copy all header button, ExpandedPanelOverlay, and RightPanelAccordion.
+  - Task B: Fixed empty assistant placeholder bubble in ChatDock.tsx line 525 by skipping render when m.role === 'assistant' and !body.trim().
+  - Task C: Capitalized top-strip badges to Digest / Description / Channel Meta / Comments and added descriptive tooltips.
+  - Task D: Restored distinct per-dimension icons across all 11 core dimensions + Executive Digest in synthesis.ts DIMENSION_CONFIGS.
+  - Task E: Removed nested double-border rule in globals.css for toasts and removed hx-field wrapper class on ChatComposer in ChatDock.tsx.
+  - Task F (RCA): Identified Stream Bundle 4 ([5, 7, 10]) concentration as root cause for dimensions 5, 7, 10 timing out together when OpenRouter/stream latency exceeds Vercel connection horizon.
+  - Task G: Wrapped all setOpen and setHeightState triggers in ChatDock.tsx with startTransition to reliably fire View Transitions. Documented decision to keep framer-motion for landing page scroll animations.
 - [2026-07-16T17:55:00+03:00] [Claude (CC)] [DONE] Post-#155 remediation: restored non-embed video playback (error-code-gated overlay + retry, thumbnail fallback player with timestamp handoff for 101/150), dim-0 digest client retry-with-backoff on 409 persist race, ChatDock full-height overlay fix (input clipping + top gap), chat thread clear on new URL paste, CI main fixes (cron workspace filter, health-check subsystems JSON, deflaked 2 playwright 'load' tests). (VideoPlayerCard.tsx, DashboardContainer.tsx, ChatDock.tsx, ci-cd.yml, verify-production.sh, production-verification.spec.ts)
 - [2026-07-16T16:45:00+03:00] [Antigravity (Agent)] [DONE] Merged PR #155 into main branch after successful local and remote CI checks.
 - [2026-07-16T16:25:00+03:00] [Antigravity (Agent)] [DONE] Restored Decodo primary transcript extraction pipeline; aligned missing transcript errors across all 11 dimensions; added failed/partial auto-restoration state support on URL paste retries. (CreateAnalysisUseCase.ts, VideoPlayerCard.tsx, DashboardContainer.tsx)

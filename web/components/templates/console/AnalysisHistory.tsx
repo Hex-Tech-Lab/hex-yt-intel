@@ -643,10 +643,10 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       auxChips={
                         (item.status === 'complete' || item.status === 'partial') && (
                           <span className="flex flex-wrap gap-1.5 ml-1" role="status" aria-label="Auxiliary data status">
-                            <StatusBadge status={item.hasDigest ? 'done' : 'idle'} label="DIGEST" />
-                            <StatusBadge status={item.hasDescription ? 'done' : 'idle'} label="DESCRIPTION" />
-                            <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="CHANNEL META" />
-                            <StatusBadge status={item.hasComments ? 'done' : 'idle'} label="COMMENTS" />
+                            <StatusBadge status={item.hasDigest ? 'done' : 'idle'} label="Digest" />
+                            <StatusBadge status={item.hasDescription ? 'done' : 'idle'} label="Description" />
+                            <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="Channel Meta" />
+                            <StatusBadge status={item.hasComments ? 'done' : 'idle'} label="Comments" />
                           </span>
                         )
                       }

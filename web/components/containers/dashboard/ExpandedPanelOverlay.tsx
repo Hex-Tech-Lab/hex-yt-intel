@@ -1,6 +1,4 @@
-'use client';
-
-import { startTransition, useEffect, useRef, useCallback } from 'react';
+import { startTransition, useEffect, useRef, useCallback, useState } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { IconButton, Divider } from '@astryxdesign/core';
 import { KnowledgeGraphCanvas } from '@/components/templates/console/KnowledgeGraphCanvas';
@@ -48,6 +46,12 @@ export function ExpandedPanelOverlay({
   onClose,
   content,
 }: ExpandedPanelOverlayProps) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    onCopy(panelId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   const panelRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -132,8 +136,9 @@ export function ExpandedPanelOverlay({
             size="sm"
             label="Copy panel content"
             tooltip="Copy"
-            icon={<Icon icon="solar:copy-linear" size={14} />}
-            onClick={() => onCopy(panelId)}
+            icon={<Icon icon={copied ? "solar:check-read-linear" : "solar:copy-linear"} size={14} />}
+            onClick={handleCopy}
+            className={copied ? '!border-[var(--accent)] !text-[var(--accent)] !bg-[var(--accent-a10)]' : ''}
           />
 
           <IconButton

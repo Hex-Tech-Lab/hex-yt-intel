@@ -108,6 +108,12 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     [messages]
   );
   const activeConv = useMemo(() => conversations.find((c) => c.id === activeId) || null, [conversations, activeId]);
+  const [copiedAllHeader, setCopiedAllHeader] = useState(false);
+  const handleCopyAllHeader = () => {
+    copyChatAsMarkdown(exportableMessages, activeConv?.title);
+    setCopiedAllHeader(true);
+    setTimeout(() => setCopiedAllHeader(false), 2000);
+  };
 
   // Reset processed message tracking when conversation changes
   useEffect(() => {
@@ -370,7 +376,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     return (
       <div data-chat-dock="true" className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px]">
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => startTransition(() => setOpen(true))}
           aria-label="Open chat"
           className="flex-1 flex items-center gap-[10px] bg-transparent border-none text-[var(--ink-secondary)] cursor-pointer font-mono text-[12.5px] h-full"
         >
@@ -381,7 +387,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           </span>
           <PersistStatusIndicator state={persistState} />
         </button>
-        <IconButton label="Expand chat" variant="ghost" size="sm" icon={<Icon icon="solar:alt-arrow-up-linear" size={16} />} onClick={() => setOpen(true)} />
+        <IconButton label="Expand chat" variant="ghost" size="sm" icon={<Icon icon="solar:alt-arrow-up-linear" size={16} />} onClick={() => startTransition(() => setOpen(true))} />
       </div>
     );
   }
@@ -425,8 +431,9 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 label="Copy all as markdown"
                 variant="ghost"
                 size="sm"
-                icon={<Icon icon="solar:copy-linear" size={14} />}
-                onClick={() => copyChatAsMarkdown(exportableMessages, activeConv?.title)}
+                icon={<Icon icon={copiedAllHeader ? 'solar:check-read-linear' : 'solar:copy-linear'} size={14} />}
+                onClick={handleCopyAllHeader}
+                className={copiedAllHeader ? '!border-[var(--accent)] !text-[var(--accent)] !bg-[var(--accent-a10)]' : ''}
               />
               <IconButton
                 label="Export as markdown"
@@ -455,14 +462,16 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               />
             }
             onClick={() => {
-              setHeightState((curr) => {
-                if (curr === 'normal') return 'half';
-                if (curr === 'half') return 'full';
-                return 'normal';
+              startTransition(() => {
+                setHeightState((curr) => {
+                  if (curr === 'normal') return 'half';
+                  if (curr === 'half') return 'full';
+                  return 'normal';
+                });
               });
             }}
           />
-          <IconButton label="Collapse chat" variant="ghost" size="sm" icon={<Icon icon="solar:alt-arrow-down-linear" size={16} />} onClick={() => setOpen(false)} />
+          <IconButton label="Collapse chat" variant="ghost" size="sm" icon={<Icon icon="solar:alt-arrow-down-linear" size={16} />} onClick={() => startTransition(() => setOpen(false))} />
         </div>
       </div>
 
@@ -517,6 +526,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         {messages.map((m) => {
           const { body, options } = m.role === 'assistant' ? parseAssistant(m.content) : { body: m.content, options: [] as string[] };
           const isUser = m.role === 'user';
+          if (!isUser && !body.trim()) return null;
           const sender = isUser ? 'user' : 'assistant';
           return (
             <ChatMessage key={m.id} sender={sender}>
@@ -610,7 +620,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           onSubmit={(text) => void submit(text)}
           isDisabled={sending}
           density="compact"
-          className="hx-field !rounded-lg"
+          className="!rounded-lg"
           input={
             <ChatComposerInput
               handleRef={inputHandleRef}
