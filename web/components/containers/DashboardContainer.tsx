@@ -471,7 +471,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       }
       dock={<ChatDock analysisId={nucleusAnalysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
-      <ViewTransition enter="fade-in" exit="fade-out" default="none">
+      <ViewTransition enter="slide-in-up" exit="fade-out" default="none">
         <div key={activeNav}>
           {activeNav === 'console' ? (
             <div className="flex flex-col gap-1.5 pb-2">
