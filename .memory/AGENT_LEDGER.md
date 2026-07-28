@@ -992,8 +992,14 @@ Work in progress on various feature branches. Will consolidate into wave-2-docst
   1. Fixed URL input box text truncation by replacing TextInput wrapper with native <input className="w-full min-w-0 font-mono text-sm overflow-x-auto"> in AnalysisHero.tsx.
   2. Scoped useChatStore and useVideoStore resets in useSSEStream.ts to !isSameVideo, preserving video player state without iframe reload and preserving active chat threads on Re-analyze.
   3. Replaced all-or-nothing comment dropping in web/app/api/analyses/persist/route.ts with iterative array slicing (bounded.slice(0, -1)) to keep maximum comments under 20KB. Verified via tsc (0 errors) and vitest (46/46 passed).
-- [2026-07-28T07:35:00Z] [AGY (Gemini)] [DONE] Tier-3 Comment Persistence, Metadata Loss Prevention, & Cascade SSE Observability:
-  1. Fixed Tier-3 comment persistence: worker queue consumer (comments-tier3.ts) now collects and transmits fetched comments array to persist-sample-run route, which updates analyses.analysis_payload and validation_report before marking run status completed.
-  2. Fixed missing analysis_payload metadata: persist route (web/app/api/analyses/persist/route.ts) now shallow merges priorPayload and explicitly attaches videoMetadata, channelMeta, and comments onto stitchedPayload, preventing metadata stripping on DB write.
-  3. Fixed cascade tier observability (D2): worker chat-stream.ts now emits an initial SSE meta event frame ({"tier": "...", "models": [...], "cascade": [...]}) before token streaming starts for devtools network inspection. Verified via tsc (0 errors).
+- [2026-07-28T08:00:00Z] [AGY (Gemini)] [DONE] Settings System Logs & Multi-Provider Traceability Console:
+  1. Task 0: OpenRouter API Investigation — Confirmed OpenRouter provides no bulk text log download API (only single-request /api/v1/generation?id=... and aggregated /api/v1/activity counts). Set OpenRouter tab as paste-in.
+  2. Task 1: Built admin-gated Settings > Logs page (web/app/settings/logs/page.tsx & web/app/admin/logs/page.tsx re-export). Gated via server-side admin role lookup in users table (redirecting non-admins to /dashboard).
+  3. Task 2 & Credential Audit:
+     - Synthesis Log (In-App): LIVE FETCH via admin API route /api/admin/logs/synthesis querying public.analyses and comment_sample_runs using SUPABASE_SERVICE_ROLE_KEY.
+     - Vercel Log: PASTE-IN (Missing VERCEL_TOKEN & VERCEL_PROJECT_ID in runtime env).
+     - Supabase Engine Log: PASTE-IN (Missing SUPABASE_ACCESS_TOKEN for Supabase Management API).
+     - Cloudflare Worker Log: PASTE-IN (Missing CLOUDFLARE_API_TOKEN & CLOUDFLARE_ACCOUNT_ID).
+     - OpenRouter Log: PASTE-IN (Per Task 0 endpoint limitation).
+  4. Task 3: UI & Filters — Built LogsViewerClient with quick range presets (30m, 1h, today, custom), custom date-range picker, per-tab Copy button with feedback tooltip, and page-level "Copy All" button producing sectioned clipboard payload (=== SYNTHESIS LOG ===, === VERCEL LOGS ===, etc.). Verified via tsc (0 errors).
 [2026-07-26T14:20:00Z] [Claude (CC)] [SINK: Round 5 -- CLOSED] 7 UI/UX fixes merged (Toast theme, dimension double-click regression, spacing, GlowBorder jank, corner radius, composer refocus). Comment-expansion chip (Task 7) had a real altitude flaw found via /simplify: AGY gated a credit-consuming action on a client-side keyword regex instead of real server data. CC fixed directly: ProcessChatMessageUseCase now computes hasMoreComments server-side (comments.length < totalCommentCount) and forwards it through payload -> useChatStore.hasMoreCommentsByConv -> ChatDock injects the real chip instead of regex-matching conversation text. generate-followup-prompts.ts reverted to pure follow-up-question generation, decoupled from the credit-action concern.
