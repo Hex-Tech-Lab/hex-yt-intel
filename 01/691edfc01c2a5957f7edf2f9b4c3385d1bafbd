@@ -1,0 +1,19 @@
+web/lib/config/synthesis.ts
+  s_0eded1e9d0cab6::t_c011df401226ff 47,52,54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "01691edfc01c2a5957f7edf2f9b4c3385d1bafbd",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
