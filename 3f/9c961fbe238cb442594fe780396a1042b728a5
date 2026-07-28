@@ -1,0 +1,31 @@
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_260d3c547bcc8b 3-4,375-379,381-408,412-416,424,649-651
+web/components/containers/dashboard/SettingsPanel.tsx
+  s_0eded1e9d0cab6::t_3f2293c25463a2 75,83,114-219,224-229,325,327
+web/components/templates/console/Sidebar.tsx
+  s_0eded1e9d0cab6::t_abdc96525c6ad3 5,9-15
+  s_0eded1e9d0cab6::t_ea2b0f36f399ea 87,91-96,100-108,115
+  s_0eded1e9d0cab6::t_3f2293c25463a2 17-26,32-36,51-58,61-72,89-90,97-99,109-113,116-158
+  s_0eded1e9d0cab6::t_c2424f16e1aac6 159
+  s_0eded1e9d0cab6::t_fcfb49abb28dbd 16
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_3f2293c25463a2 40,151-156,335-348,451-467,489-492,615-618
+  s_0eded1e9d0cab6::t_3f37bd17cc4869 512-525
+  s_0eded1e9d0cab6::t_eedeb5d218687b 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "3f9c961fbe238cb442594fe780396a1042b728a5",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
