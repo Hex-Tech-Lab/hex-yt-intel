@@ -1,0 +1,25 @@
+web/app/api/analyses/check/route.ts
+  s_0eded1e9d0cab6::t_e174a382f8279a 12-14
+  s_0eded1e9d0cab6::t_08efb4745ca7f9 52-56,66,77-79,81-85
+  s_0eded1e9d0cab6::t_2d43bbd15883e0 80
+  s_0eded1e9d0cab6::t_43cb08de0ba836 86
+web/app/api/analyses/[id]/route.ts
+  s_0eded1e9d0cab6::t_25e80921a8b2fb 94-96,102-106
+  s_0eded1e9d0cab6::t_9066d887cfe540 107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "29e5f69fd41b5ffaa10be39c5161cbf69576b15b",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
