@@ -587,6 +587,22 @@ button:focus-visible,
   animation: var(--duration-enter) ease-out var(--duration-exit) both slide-right;
 }
 
+/* Slide Left Transitions (Forward Submenu Navigation) */
+::view-transition-old(.slide-out-left) {
+  animation: var(--duration-exit) ease-in slide-left reverse;
+}
+::view-transition-new(.slide-in-left) {
+  animation: var(--duration-enter) ease-out var(--duration-exit) both slide-left;
+}
+
+/* Slide Up Transitions (Vertical Depth) */
+::view-transition-old(.slide-out-up) {
+  animation: var(--duration-exit) ease-in slide-up reverse;
+}
+::view-transition-new(.slide-in-up) {
+  animation: var(--duration-enter) ease-out var(--duration-exit) both slide-up;
+}
+
 /* Shared Element Morph */
 ::view-transition-group(.morph) {
   animation-duration: var(--duration-move);
@@ -601,6 +617,16 @@ button:focus-visible,
 @keyframes slide-right {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
+}
+
+@keyframes slide-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

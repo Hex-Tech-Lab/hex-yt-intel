@@ -231,7 +231,11 @@ export function SettingsPanel({ initialSubmenu = 'overview' }: SettingsPanelProp
 
         {/* Right-Hand Content Pane — ViewTransition In-Place Swapping */}
         <div className="flex-1 overflow-y-auto bg-[var(--bg)] p-4 lg:p-6">
-          <ViewTransition enter="fade-in" exit="fade-out" default="none">
+          <ViewTransition
+            enter={activeKey === 'overview' ? 'slide-in-left' : 'slide-in-right'}
+            exit={activeKey === 'overview' ? 'slide-out-right' : 'slide-out-left'}
+            default="none"
+          >
             <div key={activeKey}>
               {activeKey === 'overview' && (
                 <div className="max-w-4xl mx-auto flex flex-col gap-6">
