@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
-import { LogsViewerClient } from './LogsViewerClient';
+import { SettingsPanel } from '@/components/containers/dashboard/SettingsPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,5 +40,5 @@ export default async function SettingsLogsPage() {
     redirect('/dashboard');
   }
 
-  return <LogsViewerClient />;
+  return <SettingsPanel initialSubmenu="logs" />;
 }

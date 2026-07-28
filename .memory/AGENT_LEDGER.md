@@ -8,11 +8,9 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
-- [2026-07-28T18:36:00+03:00] [AGY (Gemini)] [DONE] Completed follow-up prompt tasks:
-  - Task 1: Fixed QStash event log route (web/app/api/admin/logs/qstash/route.ts) by removing invalid startTime/endTime query parameters from the Upstash QStash REST API call and performing in-memory timestamp filtering.
-  - Task 2: Built live Upstash Vector log endpoint (web/app/api/admin/logs/upstash-vector/route.ts) and added Upstash Vector as the official 8th tab in LogsViewerClient.tsx.
-  - Task 3: Internalized RCA context regarding OpenRouter maxOutputTokens token limits vs dynamic affordability ceilings.
-  - Task 4: Captured finishReason from OpenRouter SSE chunks in worker/src/services/LLMCascade.ts and passed finishReason into extractJsonPayload context for Sentry.captureException in worker/src/services/MarkdownReconstructor.ts.
+- [2026-07-28T18:45:00+03:00] [AGY (Gemini)] [DONE] Completed Logs Copy-Icon Parity & Settings Tree Navigation:
+  - Task 1: Replaced text copy buttons in LogsViewerClient.tsx with icon-only solar:copy-linear -> solar:check-read-linear morph buttons wrapped in design-system <Tooltip> components, with 2s auto-revert timeouts.
+  - Task 2: Rebuilt SettingsPanel.tsx as a persistent two-pane expanding tree navigation layout. Created a left-hand categorized tree column (TELEMETRY & OBSERVABILITY, ACCOUNT & USAGE, SYSTEM REGISTRY) that stays visible and swaps right-hand content in place without full page reloads. Added top persistent breadcrumb // SETTINGS header with home return affordance. Updated /settings/logs/page.tsx and /settings/page.tsx for deep-link compatibility.
 - [2026-07-16T17:55:00+03:00] [Claude (CC)] [DONE] Post-#155 remediation: restored non-embed video playback (error-code-gated overlay + retry, thumbnail fallback player with timestamp handoff for 101/150), dim-0 digest client retry-with-backoff on 409 persist race, ChatDock full-height overlay fix (input clipping + top gap), chat thread clear on new URL paste, CI main fixes (cron workspace filter, health-check subsystems JSON, deflaked 2 playwright 'load' tests). (VideoPlayerCard.tsx, DashboardContainer.tsx, ChatDock.tsx, ci-cd.yml, verify-production.sh, production-verification.spec.ts)
 - [2026-07-16T16:45:00+03:00] [Antigravity (Agent)] [DONE] Merged PR #155 into main branch after successful local and remote CI checks.
 - [2026-07-16T16:25:00+03:00] [Antigravity (Agent)] [DONE] Restored Decodo primary transcript extraction pipeline; aligned missing transcript errors across all 11 dimensions; added failed/partial auto-restoration state support on URL paste retries. (CreateAnalysisUseCase.ts, VideoPlayerCard.tsx, DashboardContainer.tsx)
