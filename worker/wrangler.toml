@@ -33,7 +33,7 @@ max_retries = 3
 dead_letter_queue = "yt-intel-comments-tier3-dlq"
 
 [env.production.observability]
-enabled = false
+enabled = true
 head_sampling_rate = 1
 
 [env.production.observability.logs]

@@ -96,7 +96,8 @@ async function streamChatCascade(
   onDelta: (chunk: string) => void,
   models?: string[],
   cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
-): Promise<string> {
+): Promise<{ content: string; servedByModel: string | null; servedByProvider: string | null; attempts: string[] }> {
+  const attempts: string[] = [];
   const messages: Array<{ role: string; content: string }> = [{ role: "system", content: CHAT_PROTOCOL }];
   if (grounding) messages.push({ role: "system", content: grounding });
   for (const m of history) messages.push({ role: m.role, content: m.content });
@@ -118,8 +119,10 @@ async function streamChatCascade(
 
   for (const { model, providerOrder } of chain) {
     let full = "";
+    let servedByProvider: string | null = null;
+    const translatedModel = translateModelId(model);
+    attempts.push(translatedModel);
     try {
-      const translatedModel = translateModelId(model);
       // skipcq: JS-0827
       console.log(`[chat-cascade] Attempting model=${translatedModel} with providers=${providerOrder?.join(',') || 'default'}`);
       const res = await fetch(OPENROUTER_URL, {
@@ -171,6 +174,12 @@ async function streamChatCascade(
           if (payload === "[DONE]") continue;
           try {
             const json = JSON.parse(payload);
+            // OpenRouter includes the actual serving provider on each chunk once
+            // routing resolves -- capture it so we know who really served the
+            // request instead of just which model/providerOrder we requested.
+            if (!servedByProvider && typeof json.provider === 'string') {
+              servedByProvider = json.provider;
+            }
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
               full += delta;
@@ -185,22 +194,22 @@ async function streamChatCascade(
       }
       if (full) {
         // skipcq: JS-0827
-        console.log(`[chat-cascade] Model ${translateModelId(model)} succeeded with ${full.length} chars`);
-        return full; // committed to this model
+        console.log(`[chat-cascade] Model ${translatedModel} succeeded via provider=${servedByProvider || 'unknown'} with ${full.length} chars`);
+        return { content: full, servedByModel: translatedModel, servedByProvider, attempts };
       }
       // skipcq: JS-0827
-      console.warn(`[chat-cascade] Model ${translateModelId(model)} produced empty response`);
+      console.warn(`[chat-cascade] Model ${translatedModel} produced empty response`);
     } catch (e) {
       /* timeout / network — fall through to next model */
       const msg = e instanceof Error ? e.message : String(e);
       const isTimeout = e instanceof DOMException && e.name === 'AbortError';
       // skipcq: JS-0827
-      console.warn(`[chat-cascade] Model ${translateModelId(model)} failed: ${isTimeout ? 'timeout (50s)' : msg}`);
+      console.warn(`[chat-cascade] Model ${translatedModel} failed: ${isTimeout ? 'timeout (50s)' : msg}`);
     }
   }
   // skipcq: JS-0827
-  console.error('[chat-cascade] All models in cascade exhausted, returning empty response');
-  return "";
+  console.error(`[chat-cascade] All models in cascade exhausted (attempted: ${attempts.join(' -> ')}), returning empty response`);
+  return { content: "", servedByModel: null, servedByProvider: null, attempts };
 }
 
 export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
@@ -351,10 +360,17 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       // OPTIONS have been sent; now safe to start LLM cascade.
       // DELTAs will arrive after OPTIONS.
       let full = "";
+      let servedByModel: string | null = null;
+      let servedByProvider: string | null = null;
+      let cascadeAttempts: string[] = [];
       try {
-        full = await streamChatCascade(apiKey, grounding, history, (chunk) => {
+        const result = await streamChatCascade(apiKey, grounding, history, (chunk) => {
           send({ type: "delta", content: chunk, requestId: req.requestId });
         }, req.models, req.cascade);
+        full = result.content;
+        servedByModel = result.servedByModel;
+        servedByProvider = result.servedByProvider;
+        cascadeAttempts = result.attempts;
         if (!full) {
           full = "Sorry, I couldn't generate a response. All fallback models failed to respond. Please check your internet connection and try again.";
           send({ type: "delta", content: full, requestId: req.requestId });
@@ -367,6 +383,16 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
         full = "The model request failed. Your message is saved — please try again.";
         send({ type: "delta", content: full, requestId: req.requestId });
       }
+      // Structured, queryable-once-persisted (Workers Logs) record of exactly who
+      // served this request, so "why did it fall back" is a log query, not a guess.
+      // skipcq: JS-0827
+      console.log("[chat-cascade:summary]", {
+        conversationId: req.conversationId,
+        requestId: req.requestId,
+        servedByModel,
+        servedByProvider,
+        attempts: cascadeAttempts,
+      });
 
       // STAGE 3: Persist chat content server-to-server
       let hasSaved = false;
