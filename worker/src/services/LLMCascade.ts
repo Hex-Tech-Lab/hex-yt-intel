@@ -211,7 +211,7 @@ export class LLMCascade implements LLMCascadePort {
     timeoutMs = 120000,
     signal?: AbortSignal,
     providerOrder?: string[]
-  ): Promise<{ started: boolean; text: string; error?: string }> {
+  ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string }> {
     const controller = new AbortController();
     const handshakeTimer = setTimeout(() => {
       // skipcq: JS-0827
@@ -225,6 +225,7 @@ export class LLMCascade implements LLMCascadePort {
     }, timeoutMs);
     let text = '';
     let started = false;
+    let finishReason: string | undefined;
 
     const onAbort = () => controller.abort();
     if (signal) {
