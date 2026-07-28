@@ -14,6 +14,19 @@ import type { DimensionConfig } from '@/lib/types/settings';
  * Hook to get synthesis configuration from settings context.
  * Returns settings-based values, falling back to hard-coded defaults if settings not loaded.
  */
+function mergeDimensionConfigs(
+  fromDb: Partial<Record<number, Partial<DimensionConfig>>> | undefined
+): Record<number, DimensionConfig> {
+  if (!fromDb) return DEFAULT_DIMENSION_CONFIGS;
+  const merged: Record<number, DimensionConfig> = { ...DEFAULT_DIMENSION_CONFIGS };
+  for (const [key, value] of Object.entries(fromDb)) {
+    const num = Number(key);
+    const base = DEFAULT_DIMENSION_CONFIGS[num];
+    merged[num] = base ? { ...base, ...value } : (value as DimensionConfig);
+  }
+  return merged;
+}
+
 export function useSynthesisConfig() {
   const adminSettings = useAdminSettings();
 
@@ -30,8 +43,10 @@ export function useSynthesisConfig() {
     // Stream bundle configuration (dimensions grouped for parallel streaming)
     streamBundles: adminSettings?.streamBundles?.map(b => b.dimensions) ?? DEFAULT_STREAM_BUNDLES,
 
-    // Dimension metadata and display names
-    dimensionConfigs: (adminSettings?.dimensionConfigs ?? DEFAULT_DIMENSION_CONFIGS) as Record<number, DimensionConfig>,
+    // Dimension metadata and display names. Per-key merge (not whole-object fallback):
+    // a DB row missing a field (e.g. icon) on one dimension must not blank out that
+    // field for every dimension — each dimension's config falls back to its own default.
+    dimensionConfigs: mergeDimensionConfigs(adminSettings?.dimensionConfigs),
 
     // Whether to abort all streams if one fails
     abortOnPartialFailure: adminSettings?.abortOnPartialFailure ?? DEFAULT_ABORT_ON_PARTIAL_FAILURE,
