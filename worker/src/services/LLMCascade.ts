@@ -317,6 +317,9 @@ export class LLMCascade implements LLMCascadePort {
           if (payload === '[DONE]') continue;
           try {
             const json = JSON.parse(payload);
+            const reason = json.choices?.[0]?.finish_reason;
+            if (reason) finishReason = reason;
+
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
               started = true;
@@ -340,12 +343,12 @@ export class LLMCascade implements LLMCascadePort {
         }
       }
       clearTimeout(totalTimer);
-      return { started, text };
+      return { started, text, finishReason };
     } catch (error) {
       clearTimeout(handshakeTimer);
       clearTimeout(totalTimer);
       const message = error instanceof Error ? error.message : 'Unknown error';
-      return { started, text, error: message === 'The operation was aborted' ? 'Request timeout' : message };
+      return { started, text, error: message === 'The operation was aborted' ? 'Request timeout' : message, finishReason };
     } finally {
       clearTimeout(handshakeTimer);
       clearTimeout(totalTimer);
