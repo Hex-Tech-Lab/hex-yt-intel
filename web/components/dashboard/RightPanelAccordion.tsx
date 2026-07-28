@@ -20,8 +20,16 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
     Object.fromEntries(items.map((item) => [item.id, item.defaultOpen || false]))
   );
 
+  const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
+
   const toggleItem = (id: string) => {
     setOpenStates((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleCopyItem = (id: string, onAction?: (action: 'vertical' | 'left' | 'diagonal' | 'copy' | 'export') => void) => {
+    onAction?.('copy');
+    setCopiedItemId(id);
+    setTimeout(() => setCopiedItemId(null), 2000);
   };
 
   return (
@@ -66,11 +74,13 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => item.onAction?.('copy')}
+                    onClick={() => handleCopyItem(item.id, item.onAction)}
                     title="Copy"
-                    className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
+                    className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
+                      copiedItemId === item.id ? 'text-[var(--accent)] font-bold' : 'text-[var(--ink-muted)] hover:text-[var(--accent)]'
+                    }`}
                   >
-                    <Icon icon="solar:copy-linear" size={14} />
+                    <Icon icon={copiedItemId === item.id ? "solar:check-read-linear" : "solar:copy-linear"} size={14} />
                   </button>
                   <button
                     type="button"

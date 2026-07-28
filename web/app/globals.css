@@ -374,40 +374,31 @@
   will-change: transform;
 }
 
-/* Astryx Toast dark theme override — data-theme="dark" on <html> wasn't
-   enough for every toast render path; force dark surface + crisp text
-   directly regardless of the fallback viewport's inverted mediaMode. */
-[data-toast-id] > div,
-[data-astryx-toast-fallback] [role="status"],
-[data-astryx-toast-fallback] [role="alert"],
-div[data-toast-id] [role="status"],
-div[data-toast-id] [role="alert"] {
+/* Astryx Toast dark theme override — force dark surface + crisp text
+   Target outer toast container only to eliminate double-border. */
+div[data-toast-id],
+div[data-astryx-toast-fallback] {
   background-color: #161b26 !important;
   color: #f1f5f9 !important;
-  border: 1px solid #334155 !important;
+  border: 1px solid var(--line) !important;
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.8) !important;
+  border-radius: 8px !important;
 }
-[data-toast-id] [role="status"] *,
-[data-toast-id] [role="alert"] * {
+div[data-toast-id] *,
+div[data-astryx-toast-fallback] * {
   color: #f1f5f9 !important;
 }
 
-/* Chat Message Bubble 8px corner radius override — belt-and-suspenders for
-   the Tailwind !rounded-lg class in case an Astryx internal class wins on
-   specificity. */
+/* Chat Message Bubble 8px corner radius override */
 [data-chat-dock="true"] [class*="ChatMessageBubble"],
 [data-chat-dock="true"] [class*="chat-message-bubble"],
 div[data-chat-dock="true"] div[class*="content"] {
   border-radius: 8px !important;
 }
 
-/* Chat composer (input box) corner radius override — Astryx defaults to a
-   full pill; match the rest of the app's 8-12px radius language instead
-   (Claude-style rounded rect, not a pill). */
+/* Chat composer (input box) corner radius override */
 [data-chat-dock="true"] .astryx-chat-composer {
   border-radius: 12px !important;
-  border: none !important;
-  box-shadow: none !important;
 }
 [data-chat-dock="true"] .astryx-chat-composer:focus-within {
   box-shadow: 0 0 0 2px var(--accent-a40, rgba(56, 189, 248, 0.4)) !important;

@@ -521,10 +521,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                   )}
                   {status === 'complete' && auxStatus && (
                     <div className="flex flex-wrap gap-2" role="status" aria-label="Auxiliary data status">
-                      <StatusBadge status={digest ? 'done' : 'idle'} label="DIGEST" />
-                      <StatusBadge status={auxStatus.description ? 'done' : 'idle'} label="DESCRIPTION" />
-                      <StatusBadge status={auxStatus.channelMeta ? 'done' : 'idle'} label="CHANNEL META" />
-                      <StatusBadge status={auxStatus.comments ? 'done' : 'idle'} label="COMMENTS" />
+                      <StatusBadge status={digest ? 'done' : 'idle'} label="Digest" tooltip="Executive summary digest generated from analysis" />
+                      <StatusBadge status={auxStatus.description ? 'done' : 'idle'} label="Description" tooltip="YouTube video description ingested" />
+                      <StatusBadge status={auxStatus.channelMeta ? 'done' : 'idle'} label="Channel Meta" tooltip="Channel metadata and statistics enriched" />
+                      <StatusBadge status={auxStatus.comments ? 'done' : 'idle'} label="Comments" tooltip="Top audience comments sampled and analyzed" />
                     </div>
                   )}
                   {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}

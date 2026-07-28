@@ -44,14 +44,14 @@ export interface DimensionConfig {
 
 export const DIMENSION_CONFIGS: Record<number, DimensionConfig> = {
   0: { number: 0, name: 'EXECUTIVE DIGEST', label: 'Executive Digest', icon: 'solar:document-text-linear', span: 3 },
-  1: { number: 1, name: 'APEX INTELLIGENCE', label: 'Apex Intelligence', icon: 'solar:graph-up-linear', span: 3, extraFields: ['persona'] },
+  1: { number: 1, name: 'APEX INTELLIGENCE', label: 'Apex Intelligence', icon: 'solar:stars-minimalistic-linear', span: 3, extraFields: ['persona'] },
   2: { number: 2, name: 'PROVENANCE, METADATA & VIRALITY PROFILE', label: 'Provenance & Metadata', icon: 'solar:link-round-angle-linear', span: 1 },
   3: { number: 3, name: 'CONTENT ARCHITECTURE & FIRST PRINCIPLES', label: 'Content Architecture', icon: 'solar:folder-with-files-linear', span: 1 },
   4: { number: 4, name: 'PSYCHOLOGICAL & RHETORICAL LAYER', label: 'Psychological Layer', icon: 'solar:user-linear', span: 1 },
   5: { number: 5, name: 'CORE INTELLIGENCE EXTRACTION', label: 'Core Intelligence', icon: 'solar:bolt-linear', span: 2 },
-  6: { number: 6, name: 'COMPARATIVE & QUANTITATIVE ANALYSIS', label: 'Quantitative Analysis', icon: 'solar:magnifer-linear', span: 1 },
+  6: { number: 6, name: 'COMPARATIVE & QUANTITATIVE ANALYSIS', label: 'Quantitative Analysis', icon: 'solar:chart-2-linear', span: 1 },
   7: { number: 7, name: 'IMPLEMENTATION SYSTEMS & WORKFLOWS', label: 'Implementation Systems', icon: 'solar:refresh-linear', span: 1 },
-  8: { number: 8, name: 'SEMANTIC & KNOWLEDGE GRAPH FOUNDATION', label: 'Semantic Foundation', icon: 'solar:crown-minimalistic-linear', span: 1, extraFields: ['knowledgeGraph'] },
+  8: { number: 8, name: 'SEMANTIC & KNOWLEDGE GRAPH FOUNDATION', label: 'Semantic Foundation', icon: 'solar:share-circle-linear', span: 1, extraFields: ['knowledgeGraph'] },
   9: { number: 9, name: 'FORWARD INTELLIGENCE & STRATEGIC FORESIGHT', label: 'Forward Foresight', icon: 'solar:graph-up-linear', span: 1 },
   10: { number: 10, name: 'CREDIBILITY, RISK & META-ASSESSMENT', label: 'Credibility & Risk', icon: 'solar:shield-check-linear', span: 1 },
   11: { number: 11, name: 'COMMERCIAL YIELD & MONETIZATION PROFILING', label: 'Commercial Yield', icon: 'solar:wad-of-money-linear', span: 2, extraFields: ['classification', 'monetizationVerdict'] },
