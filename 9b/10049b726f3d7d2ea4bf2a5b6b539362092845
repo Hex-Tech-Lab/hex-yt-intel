@@ -1,0 +1,33 @@
+scripts/highlight-logs.mjs
+  s_0eded1e9d0cab6::t_b64c205778e8fb 1-35
+supabase/migrations/20260728100000_create_analyses_storage_bucket.sql
+  s_0eded1e9d0cab6::t_bf8993c932593a 1-39
+web/app/api/admin/logs/synthesis/route.ts
+  s_0eded1e9d0cab6::t_fe1352cda6bb78 12,14-15
+web/app/api/analyses/persist/route.ts
+  s_0eded1e9d0cab6::t_3ee57c37fe70b6 524,528-530,721-726,728
+web/components/templates/console/MindMap.tsx
+  s_0eded1e9d0cab6::t_b609698ee094b4 89,92,116
+web/lib/services/stitch-analysis-chunks.ts
+  s_0eded1e9d0cab6::t_f2bfaa4e062cb1 88-89,241-244
+web/lib/types/synthesis-nucleus.ts
+  s_0eded1e9d0cab6::t_43cf31e70f345c 180-182
+web/lib/validators/synthesis.ts
+  s_0eded1e9d0cab6::t_7e275e14751882 190-192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "9b10049b726f3d7d2ea4bf2a5b6b539362092845",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
