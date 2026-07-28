@@ -2,6 +2,7 @@
 
 import { ReactNode, CSSProperties } from 'react';
 import { Icon as IconifyIcon } from '@iconify/react';
+import { Tooltip } from '@astryxdesign/core';
 
 export interface IconProps {
   icon: string;
@@ -125,32 +126,43 @@ export interface StatusBadgeProps {
 
 export function StatusBadge({ status, label, tooltip, style = {} }: StatusBadgeProps) {
   const statusConfig = STATUS_MAP[status] || STATUS_MAP.idle;
-  return (
+  const tooltipText = tooltip || (label ? `${label} status: ${statusConfig.label}` : undefined);
+
+  const badgeElement = (
     <span
-      title={tooltip || (label ? `${label} status: ${statusConfig.label}` : undefined)}
       style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 7,
-      borderRadius: 6,
-      border: "1px solid var(--line)",
-      background: "rgb(26 31 43 / 0.6)",
-      padding: "4px 10px",
-      fontFamily: "var(--font-mono)",
-      fontSize: 11,
-      fontWeight: 600,
-      letterSpacing: "0.08em",
-      color: statusConfig.text,
-      ...style,
-    }}>
-      <span style={{
-        width: 6,
-        height: 6,
-        borderRadius: "50%",
-        background: statusConfig.dot,
-        animation: statusConfig.pulse ? "hx-pulse 1.4s ease-in-out infinite" : "none"
-      }} />
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        borderRadius: 6,
+        border: "1px solid var(--line)",
+        background: "rgb(26 31 43 / 0.6)",
+        padding: "4px 10px",
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        color: statusConfig.text,
+        lineHeight: 1,
+        userSelect: "none",
+        cursor: tooltipText ? "help" : "default",
+        ...style,
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: statusConfig.dot,
+          boxShadow: statusConfig.pulse ? `0 0 6px ${statusConfig.dot}` : "none",
+        }}
+      />
       {label || statusConfig.label}
     </span>
   );
+
+  if (tooltipText) {
+    return <Tooltip content={tooltipText}>{badgeElement}</Tooltip>;
+  }
+
+  return badgeElement;
 }

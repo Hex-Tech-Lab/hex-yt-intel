@@ -17,9 +17,16 @@ const SETTINGS_ENTRIES: SettingsEntry[] = [
   {
     key: 'logs',
     label: 'System Logs',
-    description: 'Synthesis, Vercel, Supabase, Cloudflare, and OpenRouter logs',
+    description: 'Synthesis, QStash, Upstash Redis, Vercel, Supabase, Cloudflare, and OpenRouter logs',
     icon: 'solar:folder-with-files-linear',
     href: '/settings/logs',
+  },
+  {
+    key: 'usage',
+    label: 'Activity & Usage',
+    description: 'Analysis usage statistics, model generation counts, and token telemetry',
+    icon: 'solar:chart-2-linear',
+    href: '/billing',
   },
 ];
 
