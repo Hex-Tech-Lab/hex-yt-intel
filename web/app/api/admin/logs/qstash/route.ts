@@ -47,7 +47,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const endTimeMs = range === 'custom' && customEnd ? new Date(customEnd).getTime() : now;
 
   try {
-    const res = await fetch(`https://qstash.upstash.io/v2/events?startTime=${startTimeMs}&endTime=${endTimeMs}`, {
+    const res = await fetch('https://qstash.upstash.io/v2/events', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -59,7 +59,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const data = await res.json();
-    const events = Array.isArray(data.events) ? data.events : Array.isArray(data) ? data : [];
+    const rawEvents = Array.isArray(data.events) ? data.events : Array.isArray(data) ? data : [];
+
+    const events = rawEvents.filter((evt: any) => {
+      const timeMs = typeof evt.time === 'number' ? evt.time : new Date(evt.time || evt.createdAt || 0).getTime();
+      return timeMs >= startTimeMs && timeMs <= endTimeMs;
+    });
 
     const logLines: string[] = events.map((evt: any) => {
       const time = new Date(evt.time || evt.createdAt || Date.now()).toISOString();
