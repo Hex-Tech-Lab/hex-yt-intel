@@ -53,6 +53,7 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 | 014 | 2026-07-19 | Video-ID-Scoped Chat Grounding Fallback — chat_conversations.video_id column alongside ADR 009 analysis-scoped ownership binding | ✅ |
 | 015 | 2026-07-19 | PR Confidence Calculator Fail-Closed Semantics — tool-query failures score 0 (not 100 false-confidence) as of 2026-07-19 re-audit fix | ✅ |
 | 016 | 2026-07-19 | External Research-Harness API Key Boundary & Rotation Policy — SerpAPI/Exa/Decodo keys in scripts/research/; rotation tracked as ops task | ✅ |
+| 017 | 2026-07-29 | `/dashboard` Client Bundle — Zod-Driven 535KB Chunk (see `docs/specs/ADR_017_DASHBOARD_BUNDLE_ZOD_REGRESSION_2026-07-29.md`) — Zod v4 (276.5KB, 52% of chunk) pulled in client-side via `useInputStore.ts`; remediation not yet implemented | 🔍 |
 
 Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-AND-DIM0.md` §2 and `.memory/ADRS.md`.
 
