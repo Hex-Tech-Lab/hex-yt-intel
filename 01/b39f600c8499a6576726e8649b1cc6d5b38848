@@ -1,0 +1,26 @@
+CLAUDE.md
+  s_0eded1e9d0cab6::t_035592b4981072 56
+docs/specs/ADR_017_DASHBOARD_BUNDLE_ZOD_REGRESSION_2026-07-29.md
+  s_0eded1e9d0cab6::t_cf3c0e5db98e1a 1-68
+web/next.config.ts
+  s_0eded1e9d0cab6::t_900660f082a24b 8-11
+  s_0eded1e9d0cab6::t_fd92ab05d4a069 12
+pnpm-lock.yaml
+  s_0eded1e9d0cab6::t_83cec8c072fbe9 9001,9021,9036,9043,9058
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "01b39f600c8499a6576726e8649b1cc6d5b38848",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
