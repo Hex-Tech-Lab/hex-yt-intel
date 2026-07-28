@@ -18,6 +18,7 @@ const SCHEDULES: Array<{ id: string; cron: string; path: string }> = [
   { id: "monthly-wiki-builder", cron: "0 0 1 * *", path: "/api/webhooks/wiki-builder" }, // first of month
   { id: "transcript-purger", cron: "*/15 * * * *", path: "/api/webhooks/transcript-purge" }, // every 15 min purge expired 72h
   { id: "transcript-compliance-check", cron: "0 2 * * *", path: "/api/webhooks/compliance-check" }, // daily 2 AM compliance
+  { id: "upstash-snapshot-poll", cron: "*/15 * * * *", path: "/api/webhooks/upstash-snapshot-poll" }, // every 15 min Redis/Vector telemetry trend
 ];
 
 async function setupCron() {

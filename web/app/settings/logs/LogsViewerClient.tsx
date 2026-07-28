@@ -14,6 +14,15 @@ interface TabConfig {
   endpoint?: string;
   reason?: string;
   helpText?: string;
+  /** Tab has a QStash-polled snapshot history table (upstash_snapshots) to show. */
+  hasHistory?: boolean;
+}
+
+interface SnapshotHistoryRow {
+  polledAt: string;
+  ok: boolean;
+  stats: Record<string, unknown>;
+  error: string | null;
 }
 
 const TABS: TabConfig[] = [
@@ -36,14 +45,16 @@ const TABS: TabConfig[] = [
     label: 'Upstash Redis',
     isLive: true,
     endpoint: '/api/admin/logs/upstash-redis',
-    helpText: 'Live fetch: Telemetry and database info metrics via UPSTASH_REDIS_REST_URL.',
+    helpText: 'Live fetch: Telemetry and database info metrics via UPSTASH_REDIS_REST_URL. History below is polled every 15 min by QStash and stored in upstash_snapshots.',
+    hasHistory: true,
   },
   {
     key: 'upstash-vector',
     label: 'Upstash Vector',
     isLive: true,
     endpoint: '/api/admin/logs/upstash-vector',
-    helpText: 'Live fetch: Index telemetry and dimension vector counts via UPSTASH_VECTOR_REST_URL.',
+    helpText: 'Live fetch: Index telemetry and dimension vector counts via UPSTASH_VECTOR_REST_URL. History below is polled every 15 min by QStash and stored in upstash_snapshots.',
+    hasHistory: true,
   },
   {
     key: 'vercel',
@@ -121,6 +132,8 @@ export function LogsViewerClient() {
   });
 
   const [loading, setLoading] = useState<boolean>(false);
+  const [historyByTab, setHistoryByTab] = useState<Partial<Record<LogTabKey, SnapshotHistoryRow[]>>>({});
+  const [showHistory, setShowHistory] = useState<boolean>(false);
 
   const fetchTabLogs = useCallback(async (tab: TabConfig) => {
     if (!tab.endpoint) return;
@@ -129,6 +142,7 @@ export function LogsViewerClient() {
       let url = `${tab.endpoint}?range=${timeRange}`;
       if (timeRange === 'custom' && customStart) url += `&start=${encodeURIComponent(customStart)}`;
       if (timeRange === 'custom' && customEnd) url += `&end=${encodeURIComponent(customEnd)}`;
+      if (tab.hasHistory) url += `&history=1`;
 
       const res = await fetch(url);
       const data = await res.json().catch(() => ({}));
@@ -142,6 +156,9 @@ export function LogsViewerClient() {
           ...prev,
           [tab.key]: data.logs || 'No log data returned.',
         }));
+        if (tab.hasHistory) {
+          setHistoryByTab((prev) => ({ ...prev, [tab.key]: data.history || [] }));
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -381,6 +398,54 @@ export function LogsViewerClient() {
           </div>
         )}
       </div>
+
+      {/* Snapshot History (Upstash Redis/Vector only): 15-min QStash-polled trend */}
+      {currentTabConfig.hasHistory && (
+        <div className="border border-[var(--border-muted)] rounded-lg overflow-hidden bg-[var(--surface)]">
+          <button
+            onClick={() => setShowHistory((v) => !v)}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink-main)] bg-[var(--surface-raised)]"
+          >
+            <span>
+              Snapshot History ({(historyByTab[activeTab] || []).length} polls, every 15 min)
+            </span>
+            <span>{showHistory ? '▲' : '▼'}</span>
+          </button>
+          {showHistory && (
+            (historyByTab[activeTab] || []).length === 0 ? (
+              <div className="p-4 text-center text-xs text-[var(--ink-muted)]">
+                No polled snapshots yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[var(--surface-raised)] border-b border-[var(--border-muted)] text-[var(--ink-muted)] font-semibold">
+                      <th className="py-2 px-3 w-[190px]">Polled At</th>
+                      <th className="py-2 px-3 w-[70px]">Status</th>
+                      <th className="py-2 px-3">Stats / Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(historyByTab[activeTab] || []).map((row, idx) => (
+                      <tr
+                        key={`${row.polledAt}-${idx}`}
+                        className={`border-b border-[var(--border-muted)]/50 ${!row.ok ? 'bg-[var(--err)]/10 text-[var(--err)]' : idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'}`}
+                      >
+                        <td className="py-2 px-3 whitespace-nowrap text-[var(--ink-muted)]">{row.polledAt}</td>
+                        <td className="py-2 px-3 font-bold">{row.ok ? 'OK' : 'FAIL'}</td>
+                        <td className="py-2 px-3 font-mono break-all">
+                          {row.ok ? JSON.stringify(row.stats) : row.error}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
+        </div>
+      )}
     </div>
   );
 }
