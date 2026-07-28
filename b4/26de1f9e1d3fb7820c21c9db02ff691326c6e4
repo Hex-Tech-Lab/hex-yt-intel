@@ -1,0 +1,19 @@
+docs/history/prompts/2026-07-28-agy-logs-copy-icons-and-settings-tree-nav.md
+  s_0eded1e9d0cab6::t_bcc3a59482124a 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "b426de1f9e1d3fb7820c21c9db02ff691326c6e4",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
