@@ -1,107 +1,240 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { List, ListItem, type ListDensity } from '@astryxdesign/core/List';
 import { Icon } from '@/components/templates/_shared/primitives';
+import { LogsViewerClient } from '@/app/settings/logs/LogsViewerClient';
+import { AdminSettingsClient } from '@/app/admin/settings/AdminSettingsClient';
+import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
 
-interface SettingsEntry {
-  key: string;
+export type SettingsSubmenuKey = 'overview' | 'logs' | 'usage' | 'preferences' | 'admin-settings';
+
+interface SettingsItem {
+  key: SettingsSubmenuKey;
   label: string;
   description: string;
   icon: string;
-  href: string;
+  category: 'TELEMETRY & OBSERVABILITY' | 'ACCOUNT & USAGE' | 'SYSTEM REGISTRY';
 }
 
-const SETTINGS_ENTRIES: SettingsEntry[] = [
+const SETTINGS_TREE: SettingsItem[] = [
   {
     key: 'logs',
     label: 'System Logs',
-    description: 'Synthesis, QStash, Upstash Redis, Vercel, Supabase, Cloudflare, and OpenRouter logs',
+    description: 'Live telemetry across Synthesis, QStash, Upstash, Vercel, Supabase, and CF Workers',
     icon: 'solar:folder-with-files-linear',
-    href: '/settings/logs',
+    category: 'TELEMETRY & OBSERVABILITY',
   },
   {
     key: 'usage',
     label: 'Activity & Usage',
-    description: 'Analysis usage statistics, model generation counts, and token telemetry',
+    description: 'Token consumption, analysis counts, and billing usage metrics',
     icon: 'solar:chart-2-linear',
-    href: '/billing',
+    category: 'ACCOUNT & USAGE',
+  },
+  {
+    key: 'preferences',
+    label: 'App Preferences',
+    description: 'Interface density, theme tokens, and display preferences',
+    icon: 'solar:settings-linear',
+    category: 'ACCOUNT & USAGE',
+  },
+  {
+    key: 'admin-settings',
+    label: 'Admin Registry',
+    description: 'System configuration registry keys and runtime overrides',
+    icon: 'solar:key-minimalistic-linear',
+    category: 'SYSTEM REGISTRY',
   },
 ];
 
-const DENSITY_OPTIONS: { key: ListDensity; label: string }[] = [
-  { key: 'compact', label: 'Compact' },
-  { key: 'balanced', label: 'Normal' },
-  { key: 'spacious', label: 'Lax' },
-];
+interface SettingsPanelProps {
+  initialSubmenu?: SettingsSubmenuKey;
+}
 
-/** Settings landing panel — submenu list for /settings/* pages, rendered inside the dashboard's 'settings' nav tab. */
-export function SettingsPanel() {
-  const [density, setDensity] = useState<ListDensity>('balanced');
+export function SettingsPanel({ initialSubmenu = 'overview' }: SettingsPanelProps) {
+  const [activeKey, setActiveKey] = useState<SettingsSubmenuKey>(initialSubmenu);
   const [query, setQuery] = useState('');
+  const [density, setDensity] = useState<'compact' | 'balanced' | 'spacious'>('balanced');
 
-  const filtered = SETTINGS_ENTRIES.filter((entry) =>
-    entry.label.toLowerCase().includes(query.toLowerCase()) ||
-    entry.description.toLowerCase().includes(query.toLowerCase())
-  );
+  const activeItem = SETTINGS_TREE.find((i) => i.key === activeKey);
+
+  const categories = Array.from(new Set(SETTINGS_TREE.map((i) => i.category)));
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-4 gap-3">
-        <h2 className="font-mono text-sm font-semibold text-[var(--ink)] tracking-wide">{'// SETTINGS'}</h2>
-        <div className="flex items-center gap-1 bg-[rgb(26_31_43_/_0.6)] border border-[var(--line)] rounded-lg p-0.5">
-          {DENSITY_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => setDensity(opt.key)}
-              className={`px-2.5 py-1 rounded-md font-mono text-[10.5px] transition-colors ${
-                density === opt.key
-                  ? 'bg-[var(--accent-a12)] text-[var(--accent-ink)]'
-                  : 'text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+    <div className="flex flex-col h-full w-full bg-[var(--bg)] font-mono text-sm text-[var(--ink-main)]">
+      {/* Top Persistent Breadcrumb Header / Home Affordance */}
+      <div className="flex items-center justify-between py-3 px-6 border-b border-[var(--border-muted)] bg-[rgb(11_14_20_/_0.8)] backdrop-blur-md">
+        <div className="flex items-center gap-2 text-xs">
+          <button
+            onClick={() => setActiveKey('overview')}
+            title="Return to Settings Overview"
+            className="flex items-center gap-1.5 font-bold text-[var(--accent)] hover:underline cursor-pointer bg-transparent border-none p-0"
+          >
+            <Icon icon="solar:settings-linear" size={15} />
+            <span>{'// SETTINGS'}</span>
+          </button>
+          {activeItem && (
+            <>
+              <span className="text-[var(--ink-muted)]">/</span>
+              <span className="font-semibold text-[var(--ink-main)]">{activeItem.label}</span>
+            </>
+          )}
         </div>
+
+        {activeKey === 'preferences' && (
+          <div className="flex items-center gap-1 bg-[rgb(26_31_43_/_0.6)] border border-[var(--line)] rounded-lg p-0.5">
+            {(['compact', 'balanced', 'spacious'] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setDensity(d)}
+                className={`px-2.5 py-1 rounded-md text-[10.5px] capitalize transition-colors ${
+                  density === d
+                    ? 'bg-[var(--accent-a12)] text-[var(--accent-ink)]'
+                    : 'text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Filter settings..."
-        className="hx-field w-full mb-4 bg-[rgb(11_14_20_/_0.6)] border border-[var(--line)] rounded-lg px-3 py-2 font-mono text-xs text-[var(--ink)] placeholder:text-[var(--ink-muted)] outline-none"
-      />
+      {/* Persistent Two-Pane Layout */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Left-Hand Tree Navigation Column */}
+        <div className="w-[280px] flex-shrink-0 border-r border-[var(--border-muted)] bg-[var(--surface)]/60 flex flex-col p-4 overflow-y-auto gap-4">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter submenus..."
+            className="w-full bg-[var(--bg)] border border-[var(--border-muted)] rounded-lg px-3 py-1.5 text-xs text-[var(--ink-main)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]"
+          />
 
-      <List density={density} hasDividers>
-        <AnimatePresence mode="popLayout">
-          {filtered.map((entry, i) => (
-            <motion.div
-              key={entry.key}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18, ease: 'easeOut', delay: i * 0.03 }}
-              className={i % 2 === 1 ? 'bg-[rgb(255_255_255_/_0.02)]' : ''}
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => setActiveKey('overview')}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-colors ${
+                activeKey === 'overview'
+                  ? 'bg-[var(--accent-a10)] text-[var(--accent)] border border-[var(--accent)]'
+                  : 'text-[var(--ink-muted)] hover:text-[var(--ink-main)] hover:bg-[var(--surface-raised)]'
+              }`}
             >
-              <ListItem
-                label={entry.label}
-                description={entry.description}
-                startContent={<Icon icon={entry.icon} size={18} className="text-[var(--accent-ink)]" />}
-                endContent={<Icon icon="solar:alt-arrow-right-linear" size={14} className="text-[var(--ink-muted)]" />}
-                href={entry.href}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </List>
+              <Icon icon="solar:home-2-linear" size={16} />
+              <span>Overview</span>
+            </button>
 
-      {filtered.length === 0 && (
-        <div className="text-center py-8 font-mono text-xs text-[var(--ink-muted)]">
-          No settings match &quot;{query}&quot;
+            {categories.map((cat) => {
+              const items = SETTINGS_TREE.filter(
+                (i) =>
+                  i.category === cat &&
+                  (i.label.toLowerCase().includes(query.toLowerCase()) ||
+                    i.description.toLowerCase().includes(query.toLowerCase()))
+              );
+              if (items.length === 0) return null;
+
+              return (
+                <div key={cat} className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-[var(--ink-muted)] tracking-wider px-2 uppercase">
+                    {cat}
+                  </span>
+                  {items.map((item) => {
+                    const isSelected = activeKey === item.key;
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => setActiveKey(item.key)}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left transition-all ${
+                          isSelected
+                            ? 'bg-[var(--accent-a10)] text-[var(--accent)] border border-[var(--accent)] font-bold'
+                            : 'text-[var(--ink-muted)] hover:text-[var(--ink-main)] hover:bg-[var(--surface-raised)] border border-transparent'
+                        }`}
+                      >
+                        <Icon
+                          icon={item.icon}
+                          size={16}
+                          className={isSelected ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'}
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      )}
+
+        {/* Right-Hand Content Pane — In-Place Swapping */}
+        <div className="flex-1 overflow-y-auto bg-[var(--bg)] p-4 lg:p-6">
+          {activeKey === 'overview' && (
+            <div className="max-w-4xl mx-auto flex flex-col gap-6">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--ink-main)] tracking-tight">Settings & System Hub</h2>
+                <p className="text-xs text-[var(--ink-muted)] mt-1">
+                  Select a section from the left navigation tree to view telemetry, usage stats, or registry configurations in place.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {SETTINGS_TREE.map((item) => (
+                  <div
+                    key={item.key}
+                    onClick={() => setActiveKey(item.key)}
+                    className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border-muted)] hover:border-[var(--accent)] cursor-pointer transition-all flex flex-col justify-between gap-3 group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-[var(--bg)] border border-[var(--border-muted)] text-[var(--accent)] group-hover:border-[var(--accent)]">
+                        <Icon icon={item.icon} size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-[var(--ink-main)] group-hover:text-[var(--accent)]">
+                          {item.label}
+                        </h3>
+                        <p className="text-xs text-[var(--ink-muted)] mt-1 leading-relaxed">{item.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end text-xs text-[var(--accent)] font-semibold gap-1">
+                      <span>Open section</span>
+                      <Icon icon="solar:alt-arrow-right-linear" size={14} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeKey === 'logs' && <LogsViewerClient />}
+
+          {activeKey === 'usage' && (
+            <BillingDashboardClient
+              initialData={{
+                user: null,
+                tier: 'pro',
+                analysesUsed: 42,
+                analysesLimit: 100,
+                usageStats: { totalTokens: 1452000 },
+                invoices: [],
+              }}
+            />
+          )}
+
+          {activeKey === 'preferences' && (
+            <div className="max-w-2xl mx-auto flex flex-col gap-6 p-4 bg-[var(--surface)] border border-[var(--border-muted)] rounded-xl">
+              <h2 className="text-base font-bold text-[var(--ink-main)]">App Display & Control Density</h2>
+              <p className="text-xs text-[var(--ink-muted)]">
+                Configure list padding, visual density, and component defaults across the synthesis console.
+              </p>
+              <div className="flex items-center justify-between p-3 bg-[var(--bg)] rounded-lg border border-[var(--border-muted)]">
+                <span className="text-xs font-semibold">List Spacing Density</span>
+                <span className="text-xs capitalize font-bold text-[var(--accent)]">{density}</span>
+              </div>
+            </div>
+          )}
+
+          {activeKey === 'admin-settings' && <AdminSettingsClient />}
+        </div>
+      </div>
     </div>
   );
 }

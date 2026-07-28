@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Icon } from '@/components/templates/_shared/primitives';
+import { IconButton, Tooltip } from '@astryxdesign/core';
 
 type LogTabKey = 'synthesis' | 'qstash' | 'upstash-redis' | 'upstash-vector' | 'vercel' | 'supabase' | 'worker' | 'openrouter';
 type TimeRangeKey = '30m' | '1h' | 'today' | 'custom';
@@ -119,7 +121,6 @@ export function LogsViewerClient() {
   });
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   const fetchTabLogs = useCallback(async (tab: TabConfig) => {
     if (!tab.endpoint) return;
@@ -162,19 +163,26 @@ export function LogsViewerClient() {
     setTabLogs((prev) => ({ ...prev, [tab]: value }));
   };
 
-  const showTooltip = (msg: string) => {
-    setCopyFeedback(msg);
-    setTimeout(() => setCopyFeedback(null), 2500);
+  const [copiedTabKey, setCopiedTabKey] = useState<LogTabKey | null>(null);
+  const [copiedAll, setCopiedAll] = useState<boolean>(false);
+
+  const copyTabLogs = (tabKey: LogTabKey) => {
+    const text = tabLogs[tabKey] || '';
+    if (!text.trim()) return;
+    navigator.clipboard.writeText(text);
+    setCopiedTabKey(tabKey);
+    setTimeout(() => setCopiedTabKey(null), 2000);
   };
 
-  const copyTabLogs = () => {
-    const text = tabLogs[activeTab] || '';
-    if (!text.trim()) {
-      showTooltip('Tab is empty!');
-      return;
-    }
-    navigator.clipboard.writeText(text);
-    showTooltip(`Copied ${currentTabConfig.label} logs!`);
+  const copyAllLogs = () => {
+    const sections: string[] = [];
+    TABS.forEach((tab) => {
+      const content = (tabLogs[tab.key] || '').trim();
+      sections.push(`=== ${tab.label.toUpperCase()} ===\n${content || '(No log data)'}`);
+    });
+    navigator.clipboard.writeText(sections.join('\n\n'));
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
   };
 
   const rawContent = tabLogs[activeTab] || '';
@@ -190,19 +198,30 @@ export function LogsViewerClient() {
         <div>
           <h1 className="text-xl font-bold tracking-tight text-[var(--ink-main)]">System Logs & Multi-Provider Telemetry</h1>
           <p className="text-xs text-[var(--ink-muted)] mt-1">
-            Live telemetry and log assembly across Synthesis, QStash, Upstash Redis, Vercel, Supabase, Cloudflare Workers, and OpenRouter.
+            Live telemetry and log assembly across Synthesis, QStash, Upstash Redis, Upstash Vector, Vercel, Supabase, Cloudflare Workers, and OpenRouter.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {copyFeedback && (
-            <span className="text-xs text-[var(--accent)] font-semibold animate-pulse">{copyFeedback}</span>
-          )}
-          <button
-            onClick={copyTabLogs}
-            className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--surface-raised)] border border-[var(--border-muted)] hover:border-[var(--accent)] transition-colors"
-          >
-            Copy Current Tab
-          </button>
+        <div className="flex items-center gap-2">
+          <Tooltip content="Copy all tabs as markdown text">
+            <IconButton
+              label="Copy all tabs"
+              variant="ghost"
+              size="sm"
+              icon={<Icon icon={copiedAll ? 'solar:check-read-linear' : 'solar:copy-linear'} size={15} />}
+              onClick={copyAllLogs}
+              className={copiedAll ? '!border-[var(--accent)] !text-[var(--accent)] !bg-[var(--accent-a10)]' : ''}
+            />
+          </Tooltip>
+          <Tooltip content={`Copy ${currentTabConfig.label} logs`}>
+            <IconButton
+              label={`Copy ${currentTabConfig.label} logs`}
+              variant="ghost"
+              size="sm"
+              icon={<Icon icon={copiedTabKey === activeTab ? 'solar:check-read-linear' : 'solar:copy-linear'} size={15} />}
+              onClick={() => copyTabLogs(activeTab)}
+              className={copiedTabKey === activeTab ? '!border-[var(--accent)] !text-[var(--accent)] !bg-[var(--accent-a10)]' : ''}
+            />
+          </Tooltip>
         </div>
       </div>
 
