@@ -40,7 +40,11 @@ async function reportSampleRunResult(
   appUrl: string,
   sampleRunId: string,
   userId: string,
-  result: { sampledCount: number; status: "completed" | "failed" },
+  result: {
+    sampledCount: number;
+    status: "completed" | "failed";
+    comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }>;
+  },
 ): Promise<void> {
   const exp = Date.now() + 300_000;
   const payload = JSON.stringify({ sampleRunId, sampledCount: result.sampledCount, status: result.status });
@@ -50,7 +54,15 @@ async function reportSampleRunResult(
     const res = await fetch(`${appUrl}/api/comments/persist-sample-run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sampleRunId, userId, sampledCount: result.sampledCount, status: result.status, sig, exp }),
+      body: JSON.stringify({
+        sampleRunId,
+        userId,
+        sampledCount: result.sampledCount,
+        status: result.status,
+        comments: result.comments ?? [],
+        sig,
+        exp,
+      }),
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
@@ -79,6 +91,7 @@ export async function handleCommentsTier3Message(
   let sampledCount = 0;
   let pageToken: string | undefined;
   let pages = 0;
+  const collectedComments: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> = [];
 
   try {
     while (sampledCount < totalCommentCount && pages < MAX_PAGES) {
@@ -86,17 +99,26 @@ export async function handleCommentsTier3Message(
         pageToken,
         maxResultsPerPage: Math.min(PAGE_SIZE, totalCommentCount - sampledCount),
       });
+      collectedComments.push(...page.comments);
       sampledCount += page.comments.length;
       pages += 1;
       if (page.exhausted || !page.nextPageToken) break;
       pageToken = page.nextPageToken;
     }
 
-    await reportSampleRunResult(env, appUrl, sampleRunId, userId, { sampledCount, status: "completed" });
+    await reportSampleRunResult(env, appUrl, sampleRunId, userId, {
+      sampledCount,
+      status: "completed",
+      comments: collectedComments,
+    });
   } catch (err) {
     // skipcq: JS-0827
     console.error(`[comments-tier3-consumer] fetch loop failed for ${videoId}:`, err instanceof Error ? err.message : String(err));
     Sentry.captureException(err, { tags: { operation: "comments-tier3-fetch-loop" }, extra: { sampleRunId, videoId, sampledCount } });
-    await reportSampleRunResult(env, appUrl, sampleRunId, userId, { sampledCount, status: "failed" });
+    await reportSampleRunResult(env, appUrl, sampleRunId, userId, {
+      sampledCount,
+      status: "failed",
+      comments: collectedComments,
+    });
   }
 }

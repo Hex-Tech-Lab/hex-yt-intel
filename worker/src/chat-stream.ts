@@ -292,6 +292,14 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
   // - Adding explicit ordering checks to catch violations
   const stream = new ReadableStream({
     async start(controller) {
+      const sendEvent = (event: string, data: unknown) => {
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        } catch (e) {
+          /* client gone */
+        }
+      };
+
       const send = (obj: unknown) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
@@ -301,6 +309,14 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           console.warn("[chat-stream] client disconnected during stream send", e instanceof Error ? e.message : String(e));
         }
       };
+
+      // Emit SSE metadata frame with tier and model cascade info for client-side observability (Task 3 / D2)
+      sendEvent("meta", {
+        tier: req.tier || "free",
+        models: req.models || [],
+        cascade: req.cascade ? req.cascade.map((c) => c.model) : [],
+        requestId: req.requestId,
+      });
 
       // STAGE 1: Generate and emit OPTIONS IMMEDIATELY (blocking step)
       // This ensures OPTIONS arrive before any DELTA events.

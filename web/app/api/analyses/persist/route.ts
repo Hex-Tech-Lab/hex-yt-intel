@@ -293,6 +293,7 @@ export async function POST(request: NextRequest) {
       const priorReport: PersistedValidationReport = isPersistedValidationReport(row.validationReport)
         ? row.validationReport
         : { status: 'processing' };
+      const priorPayload = (row.analysisPayload as Record<string, any>) || {};
       const isInterrupted = status === 'interrupted';
 
       if (chunkIndex !== undefined && validPayload && 'dimensions' in validPayload) {
@@ -521,7 +522,14 @@ export async function POST(request: NextRequest) {
           }
 
           const stitchResult = stitchChunksIntoPayload(chunkMap, resolvedTotal);
-          const stitchedPayload = stitchResult.payload;
+          const rawStitchedPayload = stitchResult.payload;
+          const stitchedPayload = rawStitchedPayload ? {
+            ...priorPayload,
+            ...rawStitchedPayload,
+            videoMetadata: priorPayload?.videoMetadata ?? (priorReport as any)?.metadata ?? null,
+            channelMeta: channelMeta ?? priorPayload?.channelMeta ?? (priorReport as any)?.channelMeta ?? null,
+            comments: comments ?? priorPayload?.comments ?? (priorReport as any)?.comments ?? null,
+          } as any : null;
           const stitchedMarkdown = stitchResult.markdown;
           const isStitchedValid = stitchResult.validationPassed;
 
@@ -712,10 +720,15 @@ export async function POST(request: NextRequest) {
             partialChunkMap.set(c.chunk_index, c.payload);
           });
 
-          // Reuse stitchChunksIntoPayload for consistency
           const stitchResult = stitchChunksIntoPayload(partialChunkMap, resolvedTotal);
           if (stitchResult.payload !== undefined) {
-            stitchedPayload = stitchResult.payload;
+            stitchedPayload = {
+              ...priorPayload,
+              ...stitchResult.payload,
+              videoMetadata: priorPayload?.videoMetadata ?? (priorReport as any)?.metadata ?? null,
+              channelMeta: channelMeta ?? priorPayload?.channelMeta ?? (priorReport as any)?.channelMeta ?? null,
+              comments: comments ?? priorPayload?.comments ?? (priorReport as any)?.comments ?? null,
+            } as any;
             stitchedMarkdown = stitchResult.markdown;
             if (!stitchResult.validationPassed) {
               console.warn('[analyses/persist] Stitched partial payload used but schema validation failed', {

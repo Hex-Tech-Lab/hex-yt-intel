@@ -480,14 +480,15 @@ export class SupabaseAnalysisAdapter {
     transcriptHash?: string | null;
     transcript?: string | null;
     validationReport: ValidationReportInput | unknown;
+    analysisPayload?: unknown;
     createdAt: string;
     channelTitle?: string | null;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
       const columns = params.includeTranscript
-        ? 'id, user_id, title, transcript_hash, transcript, validation_report, created_at, channel_title'
-        : 'id, user_id, title, transcript_hash, validation_report, created_at, channel_title';
+        ? 'id, user_id, title, transcript_hash, transcript, validation_report, analysis_payload, created_at, channel_title'
+        : 'id, user_id, title, transcript_hash, validation_report, analysis_payload, created_at, channel_title';
       const { data, error } = await service
         .from('analyses')
         .select(columns)
@@ -509,6 +510,7 @@ export class SupabaseAnalysisAdapter {
         transcriptHash: row.transcript_hash,
         transcript: row.transcript,
         validationReport: row.validation_report,
+        analysisPayload: row.analysis_payload,
         createdAt: row.created_at,
         channelTitle: row.channel_title,
       };
