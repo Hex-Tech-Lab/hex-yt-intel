@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect, useRef, startTransition } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, startTransition, ViewTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
@@ -419,12 +419,14 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     if (key === 'atlas') {
       router.push('/atlas');
     } else {
-      setActiveNav(key as 'console' | 'history' | 'settings');
+      startTransition(() => {
+        setActiveNav(key as 'console' | 'history' | 'settings');
+      });
     }
   }, [setMobileNav, router]);
 
   const handleCloseDimensionDrawer = useCallback(() => {
-    setSelectedDimensionKey(null);
+    startTransition(() => setSelectedDimensionKey(null));
   }, []);
 
   const handleSearchChange = useCallback((v: string) => {
@@ -469,92 +471,95 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       }
       dock={<ChatDock analysisId={nucleusAnalysis?.id ?? null} analysisTitle={videoMetadata?.title} />}
     >
-      {activeNav === 'console' ? (
-        <div className="flex flex-col gap-1.5 pb-2">
-          <AnalysisHero
-            url={mounted ? url : ''}
-            status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
-            onUrlChange={setUrl}
-            onAnalyze={handleAnalyze}
-            onReanalyze={handleReanalyze}
-            onCancel={stopAnalysis}
-            error={error?.message}
-            quota={quotaLabel}
-            isRepeat={status === 'complete' || hasExistingAnalysis}
-          />
+      <ViewTransition enter="fade-in" exit="fade-out" default="none">
+        <div key={activeNav}>
+          {activeNav === 'console' ? (
+            <div className="flex flex-col gap-1.5 pb-2">
+              <AnalysisHero
+                url={mounted ? url : ''}
+                status={status === 'analyzing' || status === 'downloading' ? 'streaming' : status === 'complete' ? 'done' : status === 'error' ? 'error' : 'idle'}
+                onUrlChange={setUrl}
+                onAnalyze={handleAnalyze}
+                onReanalyze={handleReanalyze}
+                onCancel={stopAnalysis}
+                error={error?.message}
+                quota={quotaLabel}
+                isRepeat={status === 'complete' || hasExistingAnalysis}
+              />
 
-          {(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId) && (
-            <div className="flex flex-col gap-1">
-              <VideoPlayerCard />
-              {videoMetadata && (
-                <BentoMetadata
-                  title={videoMetadata.title}
-                  channelTitle={videoMetadata.channelTitle}
-                  viewCount={videoMetadata.viewCount}
-                  likeCount={videoMetadata.likeCount}
-                  duration={videoMetadata.duration || 0}
-                  publishedAt={videoMetadata.publishedAt}
-                />
-              )}
-            </div>
-          )}
-
-          {status !== 'idle' && (
-            <div className="flex flex-col gap-1">
-              <ConsoleTabSwitcher activeTab={consoleTab} hasGraph={graph.nodes.length > 0} onTabChange={setConsoleTab} />
-
-              {consoleTab === 'synthesis' ? (
-                <>
-                  {status === 'complete' && (digest || digestLoading) && (
-                    <ExecutiveSummary data={mappedDigestData} loading={digestLoading} />
+              {(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId) && (
+                <div className="flex flex-col gap-1">
+                  <VideoPlayerCard />
+                  {videoMetadata && (
+                    <BentoMetadata
+                      title={videoMetadata.title}
+                      channelTitle={videoMetadata.channelTitle}
+                      viewCount={videoMetadata.viewCount}
+                      likeCount={videoMetadata.likeCount}
+                      duration={videoMetadata.duration || 0}
+                      publishedAt={videoMetadata.publishedAt}
+                    />
                   )}
-                  {partialInfo && (
-                    <div
-                      role="status"
-                      className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs leading-relaxed text-[var(--ink-secondary)]"
-                    >
-                      <span className="font-mono font-semibold text-[var(--accent-ink)]">Partial analysis</span>
-                      {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
-                      <span className="text-[var(--ink-muted)]">Missing: {partialInfo.missing.join(', ')}.</span>
-                      {' Use Re-analyze to attempt the rest.'}
-                    </div>
-                  )}
-                  {status === 'complete' && auxStatus && (
-                    <div className="flex flex-wrap gap-2" role="status" aria-label="Auxiliary data status">
-                      <StatusBadge status={digest ? 'done' : 'idle'} label="Digest" tooltip="Executive summary digest generated from analysis" />
-                      <StatusBadge status={auxStatus.description ? 'done' : 'idle'} label="Description" tooltip="YouTube video description ingested" />
-                      <StatusBadge status={auxStatus.channelMeta ? 'done' : 'idle'} label="Channel Meta" tooltip="Channel metadata and statistics enriched" />
-                      <StatusBadge status={auxStatus.comments ? 'done' : 'idle'} label="Comments" tooltip="Top audience comments sampled and analyzed" />
-                    </div>
-                  )}
-                  {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
-                  <DimensionAccordion
-                    dimensions={dimensions}
-                    selectedDimensionKey={selectedDimensionKey}
-                    onSelectDimension={setSelectedDimensionKey}
-                    status={status}
-                  />
-                </>
-              ) : (
-                <VisualizationPanel
-                  graph={graph}
-                  selectedNodeId={selectedNodeId}
-                  onSelectNode={handleSelectNode}
-                  onFocusNode={(id) => startTransition(() => setSelectedNodeId(id))}
-                />
+                </div>
               )}
 
+              {status !== 'idle' && (
+                <div className="flex flex-col gap-1">
+                  <ConsoleTabSwitcher activeTab={consoleTab} hasGraph={graph.nodes.length > 0} onTabChange={(t) => startTransition(() => setConsoleTab(t))} />
+
+                  {consoleTab === 'synthesis' ? (
+                    <>
+                      {status === 'complete' && (digest || digestLoading) && (
+                        <ExecutiveSummary data={mappedDigestData} loading={digestLoading} />
+                      )}
+                      {partialInfo && (
+                        <div
+                          role="status"
+                          className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs leading-relaxed text-[var(--ink-secondary)]"
+                        >
+                          <span className="font-mono font-semibold text-[var(--accent-ink)]">Partial analysis</span>
+                          {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
+                          <span className="text-[var(--ink-muted)]">Missing: {partialInfo.missing.join(', ')}.</span>
+                          {' Use Re-analyze to attempt the rest.'}
+                        </div>
+                      )}
+                      {status === 'complete' && auxStatus && (
+                        <div className="flex flex-wrap gap-2" role="status" aria-label="Auxiliary data status">
+                          <StatusBadge status={digest ? 'done' : 'idle'} label="Digest" tooltip="Executive summary digest generated from analysis" />
+                          <StatusBadge status={auxStatus.description ? 'done' : 'idle'} label="Description" tooltip="YouTube video description ingested" />
+                          <StatusBadge status={auxStatus.channelMeta ? 'done' : 'idle'} label="Channel Meta" tooltip="Channel metadata and statistics enriched" />
+                          <StatusBadge status={auxStatus.comments ? 'done' : 'idle'} label="Comments" tooltip="Top audience comments sampled and analyzed" />
+                        </div>
+                      )}
+                      {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
+                      <DimensionAccordion
+                        dimensions={dimensions}
+                        selectedDimensionKey={selectedDimensionKey}
+                        onSelectDimension={(k) => startTransition(() => setSelectedDimensionKey(k))}
+                        status={status}
+                      />
+                    </>
+                  ) : (
+                    <VisualizationPanel
+                      graph={graph}
+                      selectedNodeId={selectedNodeId}
+                      onSelectNode={handleSelectNode}
+                      onFocusNode={(id) => startTransition(() => setSelectedNodeId(id))}
+                    />
+                  )}
+
+                </div>
+              )}
             </div>
+          ) : (activeNav as string) === 'history' ? (
+            <AnalysisHistory onSelectAnalysis={() => startTransition(() => setActiveNav('console'))} />
+          ) : (activeNav as string) === 'settings' ? (
+            <SettingsPanel />
+          ) : (
+            <UsageTab />
           )}
         </div>
-      ) : (activeNav as string) === 'history' ? (
-        <AnalysisHistory onSelectAnalysis={() => setActiveNav('console')} />
-      ) : (activeNav as string) === 'settings' ? (
-        <SettingsPanel />
-      ) : (
-        <UsageTab />
-      )}
-
+      </ViewTransition>
     </DashboardLayout>
 
     {/* Dimension Drawer — outside DashboardLayout to avoid inert conflict */}
