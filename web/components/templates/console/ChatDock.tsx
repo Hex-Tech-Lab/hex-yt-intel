@@ -1,6 +1,7 @@
 'use client';
 
-import { memo, useEffect, useMemo, useRef, useState, startTransition, ViewTransition } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, startTransition } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import * as Sentry from '@sentry/nextjs';
 import { Icon } from '@/components/templates/_shared/primitives';
 import {
@@ -371,35 +372,48 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     if (e.key === 'Escape') startTransition(() => { setOpen(false); });
   };
 
-  // --- Collapsed: slim bar -------------------------------------------------
-  if (!open) {
-    return (
-      <div data-chat-dock="true" className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px]">
-        <button
-          onClick={() => startTransition(() => setOpen(true))}
-          aria-label="Open chat"
-          className="flex-1 flex items-center gap-[10px] bg-transparent border-none text-[var(--ink-secondary)] cursor-pointer font-mono text-[12.5px] h-full"
-        >
-          <Icon icon="solar:chat-round-dots-bold" size={17} className="text-[var(--accent-ink)]" />
-          <span className="font-semibold text-[var(--ink)]">Synthesis Chat</span>
-          <span className="text-[var(--ink-muted)] overflow-hidden text-ellipsis whitespace-nowrap">
-            {activeConv ? `· ${activeConv.title}` : analysisTitle ? `· ask about “${analysisTitle.slice(0, 40)}”` : '· ask anything'}
-          </span>
-          <PersistStatusIndicator state={persistState} />
-        </button>
-        <IconButton label="Expand chat" variant="ghost" size="sm" icon={<Icon icon="solar:alt-arrow-up-linear" size={16} />} onClick={() => startTransition(() => setOpen(true))} />
-      </div>
-    );
-  }
-
-  // --- Expanded: bottom sheet growing upward -------------------------------
+  // --- Collapsed / Expanded, animated with framer-motion -------------------
+  // Both states live under one AnimatePresence so the toggle is a real
+  // exit/enter transition (the previous <ViewTransition> here produced no
+  // visible effect in production, replaced with the same AnimatePresence
+  // system already proven in AnalysisHero/RightPanelAccordion).
   return (
-    <ViewTransition enter="slide-in-right" exit="slide-out-right" default="none">
-      <div
+    <AnimatePresence mode="wait" initial={false}>
+      {!open ? (
+        <motion.div
+          key="chat-collapsed"
+          data-chat-dock="true"
+          initial={{ y: 16, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 16, opacity: 0 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px]"
+        >
+          <button
+            onClick={() => startTransition(() => setOpen(true))}
+            aria-label="Open chat"
+            className="flex-1 flex items-center gap-[10px] bg-transparent border-none text-[var(--ink-secondary)] cursor-pointer font-mono text-[12.5px] h-full"
+          >
+            <Icon icon="solar:chat-round-dots-bold" size={17} className="text-[var(--accent-ink)]" />
+            <span className="font-semibold text-[var(--ink)]">Synthesis Chat</span>
+            <span className="text-[var(--ink-muted)] overflow-hidden text-ellipsis whitespace-nowrap">
+              {activeConv ? `· ${activeConv.title}` : analysisTitle ? `· ask about “${analysisTitle.slice(0, 40)}”` : '· ask anything'}
+            </span>
+            <PersistStatusIndicator state={persistState} />
+          </button>
+          <IconButton label="Expand chat" variant="ghost" size="sm" icon={<Icon icon="solar:alt-arrow-up-linear" size={16} />} onClick={() => startTransition(() => setOpen(true))} />
+        </motion.div>
+      ) : (
+      <motion.div
+        key="chat-expanded"
         data-chat-dock="true"
         role="dialog"
         aria-label="Synthesis chat"
-        className={`w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] flex flex-col transition-all duration-300 ease-in-out ${
+        initial={{ y: 28, opacity: 0, scale: 0.98 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 28, opacity: 0, scale: 0.98 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className={`w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] flex flex-col origin-bottom ${
           // 'full' overlays the entire main column (absolute within the
           // relative <main>) instead of using a fixed viewport calc: a flow
           // child taller than the space under the header gets its bottom (the
@@ -407,7 +421,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           // offset leaves a sliver of content peeking at the top.
           heightState === 'full'
             ? 'absolute inset-0 z-30'
-            : `flex-shrink-0 ${heightState === 'half' ? 'h-[50vh]' : 'h-[min(40vh,_420px)]'}`
+            : `flex-shrink-0 transition-[height] duration-300 ease-in-out ${heightState === 'half' ? 'h-[50vh]' : 'h-[min(40vh,_420px)]'}`
         }`}
       >
       {/* Header */}
@@ -632,8 +646,9 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         />
       </div>
       {expandConfirm.element}
-      </div>
-    </ViewTransition>
+      </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
