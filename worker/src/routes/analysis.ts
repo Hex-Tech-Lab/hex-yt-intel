@@ -666,6 +666,8 @@ function buildStreamResponse(
     );
   }
 
+  let finishReason: string | undefined = undefined;
+
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
     persist: (status) => {
@@ -675,6 +677,7 @@ function buildStreamResponse(
         videoId: req.videoId,
         finalText,
         modelUsed,
+        finishReason,
         activeSecret: signingKey,
         appUrl: url,
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
@@ -816,6 +819,8 @@ function buildStreamResponse(
           },
           httpConnSignal,
         );
+
+        finishReason = result.finishReason;
 
         if (!result.produced && !result.finalText) {
           send({ type: "error", error: "All models in cascade failed to produce output" });

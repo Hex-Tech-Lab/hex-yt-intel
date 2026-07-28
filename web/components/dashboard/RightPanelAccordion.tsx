@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/components/templates/_shared/primitives';
 
 export interface AccordionItem {
@@ -34,9 +35,12 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {items.map((item) => (
-        <div
+      {items.map((item, index) => (
+        <motion.div
           key={item.id}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.25, delay: index * 0.04 }}
           className="border border-[var(--line)] rounded-lg bg-[var(--surface)] overflow-hidden shadow-sm"
         >
           <div
@@ -51,32 +55,32 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
                   <button
                     type="button"
                     onClick={() => item.onAction?.('vertical')}
-                    title="Expand Vertically"
+                    title="Split Vertical"
                     className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
                   >
-                    <Icon icon="solar:maximize-square-minimalistic-linear" size={14} />
+                    <Icon icon="solar:sidebar-minimalistic-linear" size={14} />
                   </button>
                   <button
                     type="button"
                     onClick={() => item.onAction?.('left')}
-                    title="Expand Left"
+                    title="Move Left"
                     className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
                   >
-                    <Icon icon="solar:double-alt-arrow-left-linear" size={14} />
+                    <Icon icon="solar:arrow-left-linear" size={14} />
                   </button>
                   <button
                     type="button"
                     onClick={() => item.onAction?.('diagonal')}
-                    title="Expand Diagonally"
+                    title="Popout / Expand"
                     className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
                   >
-                    <Icon icon="solar:scale-linear" size={14} />
+                    <Icon icon="solar:square-share-line-linear" size={14} />
                   </button>
                   <button
                     type="button"
                     onClick={() => handleCopyItem(item.id, item.onAction)}
-                    title="Copy"
-                    className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors ${
+                    title="Copy Markdown"
+                    className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-all ${
                       copiedItemId === item.id ? 'text-[var(--accent)] font-bold' : 'text-[var(--ink-muted)] hover:text-[var(--accent)]'
                     }`}
                   >
@@ -105,12 +109,20 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
               </button>
             </div>
           </div>
-          {openStates[item.id] && (
-            <div className="p-4 pl-5 pr-3 text-[13px] text-[var(--ink-secondary)]">
-              {typeof item.content === 'function' ? item.content() : item.content}
-            </div>
-          )}
-        </div>
+          <AnimatePresence initial={false}>
+            {openStates[item.id] && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="overflow-hidden p-4 pl-5 pr-3 text-[13px] text-[var(--ink-secondary)]"
+              >
+                {typeof item.content === 'function' ? item.content() : item.content}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       ))}
     </div>
   );

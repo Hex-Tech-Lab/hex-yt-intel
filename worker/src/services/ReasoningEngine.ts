@@ -72,7 +72,7 @@ export class ReasoningEngine implements ReasoningEnginePort {
     const systemPrompt = context.systemPrompt || await this.promptBuilder.build(context);
     const bracketBuffer = new BracketBuffer();
 
-    const { started, finalText, modelUsed } = await this.cascade.streamCascade(
+    const { started, finalText, modelUsed, finishReason } = await this.cascade.streamCascade(
       systemPrompt,
       (delta) => {
         // Raw delta for terminal/processing log
@@ -94,6 +94,7 @@ export class ReasoningEngine implements ReasoningEnginePort {
     return {
       finalText,
       modelUsed,
+      finishReason,
       valid: this.validator.validate12D(finalText, context.dimensions?.length),
       produced: started,
     };

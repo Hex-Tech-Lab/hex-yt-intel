@@ -18,7 +18,7 @@ export interface LLMCascadePort {
     onDelta: (text: string) => void,
     onStatus?: (status: StreamStatusEvent) => void,
     signal?: AbortSignal
-  ): Promise<{ started: boolean; finalText: string; modelUsed: string }>;
+  ): Promise<{ started: boolean; finalText: string; modelUsed: string; finishReason?: string }>;
 
   /**
    * Run the cascade without streaming (legacy /analyze-llm). Returns the first

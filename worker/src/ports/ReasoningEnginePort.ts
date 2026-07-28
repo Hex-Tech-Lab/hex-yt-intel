@@ -70,6 +70,7 @@ export interface StreamHandlers {
 export interface StreamResult {
   finalText: string;
   modelUsed: string;
+  finishReason?: string;
   valid: boolean;
   produced: boolean;
 }

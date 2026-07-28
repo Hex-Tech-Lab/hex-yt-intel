@@ -215,10 +215,15 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   const hasAnalysisData = Boolean(currentAnalysis?.analysis_markdown || currentAnalysis?.executiveDigest);
 
   // Real dimension count for the analysis currently in the window
-  const wipDimCount = useMemo(
-    () => Object.keys(parseToUCISDimensions(currentAnalysis?.analysis_markdown)).length,
-    [currentAnalysis?.analysis_markdown]
-  );
+  const wipDimCount = useMemo(() => {
+    if (!currentAnalysis) return 0;
+    if (currentStatus === 'complete') {
+      return TOTAL_DIMENSIONS;
+    }
+    const parsedCount = Object.keys(parseToUCISDimensions(currentAnalysis?.analysis_markdown)).length;
+    const payloadCount = (currentAnalysis as any)?.dimensions ? Object.keys((currentAnalysis as any).dimensions).length : 0;
+    return Math.min(TOTAL_DIMENSIONS, Math.max(parsedCount, payloadCount));
+  }, [currentAnalysis, currentStatus]);
   const showWIPSection = url && currentAnalysis && currentAnalysis.id && hasAnalysisData && (isActivelyAnalyzing || currentStatus === 'complete');
 
   // Debug: Log showWIPSection condition to diagnose rendering issues
@@ -606,9 +611,11 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       </MetricChip>
                     )}
                     {item.status === 'complete' && (
-                      <MetricChip icon="solar:star-linear" title="Executive digest (Dimension 0)">
-                        Dim.0
-                      </MetricChip>
+                      <Tooltip content="Dimension 0: Executive Digest Summary">
+                        <MetricChip icon="solar:star-linear" title="Executive digest (Dimension 0)">
+                          Dim.0 (Digest)
+                        </MetricChip>
+                      </Tooltip>
                     )}
                     <MetricChip icon="solar:refresh-linear" title="Times analyzed (including re-runs)">
                       {item.timesAnalyzed}× analyzed

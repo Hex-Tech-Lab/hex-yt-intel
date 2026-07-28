@@ -15,6 +15,7 @@ export interface PersistOptions {
   videoId: string;
   finalText: string;
   modelUsed: string;
+  finishReason?: string;
   status: 'completed' | 'interrupted';
   activeSecret: string;
   appUrl: string;
@@ -47,7 +48,7 @@ export class PersistService {
     let markdown = options.finalText;
     let jsonPayload: Record<string, unknown> | null = null;
 
-    const extracted = extractJsonPayload(options.finalText);
+    const extracted = extractJsonPayload(options.finalText, options.finishReason);
 
     if (extracted) {
       const isChunk = options.chunkIndex !== undefined;
@@ -165,7 +166,7 @@ export class PersistService {
     let markdown = options.finalText;
     let jsonPayload: Record<string, unknown> | null = null;
 
-    const extracted = extractJsonPayload(options.finalText);
+    const extracted = extractJsonPayload(options.finalText, options.finishReason);
     if (extracted) {
       const result = ChunkPayloadSchema.safeParse(extracted);
       if (result.success) {

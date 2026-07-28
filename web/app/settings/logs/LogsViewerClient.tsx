@@ -174,10 +174,31 @@ export function LogsViewerClient() {
     setTimeout(() => setCopiedTabKey(null), 2000);
   };
 
-  const copyAllLogs = () => {
+  const copyAllLogs = async () => {
+    const fetchedLogs: Record<string, string> = { ...tabLogs };
+    await Promise.all(
+      TABS.map(async (tab) => {
+        if (tab.isLive && tab.endpoint && !fetchedLogs[tab.key]) {
+          try {
+            const query = timeRange === 'custom' && customStart && customEnd
+              ? `?startTime=${encodeURIComponent(customStart)}&endTime=${encodeURIComponent(customEnd)}`
+              : `?range=${timeRange}`;
+            const res = await fetch(`${tab.endpoint}${query}`);
+            if (res.ok) {
+              const data = await res.json();
+              fetchedLogs[tab.key] = data.logs || 'No log data returned.';
+            }
+          } catch (err) {
+            console.error('[copyAllLogs] Failed fetching tab logs for', tab.key, err);
+          }
+        }
+      })
+    );
+    setTabLogs(fetchedLogs);
+
     const sections: string[] = [];
     TABS.forEach((tab) => {
-      const content = (tabLogs[tab.key] || '').trim();
+      const content = (fetchedLogs[tab.key] || '').trim();
       sections.push(`=== ${tab.label.toUpperCase()} ===\n${content || '(No log data)'}`);
     });
     navigator.clipboard.writeText(sections.join('\n\n'));
@@ -330,19 +351,21 @@ export function LogsViewerClient() {
               <tbody>
                 {logRows.map((row, idx) => {
                   const isErr = row.level.includes('ERR');
-                  const isWarn = row.level.includes('WARN');
+                  const isWarn = row.level.includes('WARN') || row.message.includes('synthesis:FAILED') || row.message.includes('valid=false');
                   return (
                     <tr
                       key={idx}
-                      className={`border-b border-[var(--border-muted)]/50 ${
+                      className={`border-b border-[var(--border-muted)]/50 transition-colors ${
+                        isWarn ? 'bg-[var(--warn)]/10 text-[var(--warn)] shadow-[0_0_10px_rgba(245,158,11,0.15)]' :
+                        isErr ? 'bg-[var(--err)]/10 text-[var(--err)]' :
                         idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'
-                      } ${isErr ? 'text-[var(--err)]' : isWarn ? 'text-[var(--warn)]' : ''}`}
+                      }`}
                     >
                       <td className="py-2 px-3 whitespace-nowrap text-[var(--ink-muted)]">{row.timestamp}</td>
                       <td className="py-2 px-3 font-bold">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] ${
                           isErr ? 'bg-red-950 text-red-400 border border-red-800' :
-                          isWarn ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                          isWarn ? 'bg-[var(--warn)]/20 text-[var(--warn)] border border-[var(--warn)]/60' :
                           'bg-cyan-950 text-cyan-400 border border-cyan-800'
                         }`}>
                           {row.level}
