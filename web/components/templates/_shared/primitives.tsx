@@ -1,8 +1,24 @@
 'use client';
 
 import { ReactNode, CSSProperties } from 'react';
-import { Icon as IconifyIcon } from '@iconify/react';
+// Offline variant: never performs a network fetch, only renders icons registered
+// via addCollection/addIcon. This is what actually delivers the "bundled, never
+// fails or disappears" guarantee -- the default `@iconify/react` `Icon` fetches
+// SVG data from api.iconify.design at runtime per icon unless the icon set is
+// pre-registered, which the previous implementation never did.
+import { Icon as IconifyIcon, addCollection } from '@iconify/react/offline';
 import { Tooltip } from '@astryxdesign/core';
+// Trimmed Iconify collection containing only the "solar:*" icon names actually
+// used across the app (see scripts/generate-icon-subset.mjs -- re-run it whenever
+// a new solar: icon name is introduced, or the icon will render blank).
+import solarSubset from '@/lib/icons/solar-subset.json';
+
+let registered = false;
+function ensureIconsRegistered() {
+  if (registered) return;
+  addCollection(solarSubset as Parameters<typeof addCollection>[0]);
+  registered = true;
+}
 
 export interface IconProps {
   icon: string;
@@ -13,10 +29,13 @@ export interface IconProps {
 
 /**
  * High-fidelity bundled Iconify React wrapper.
- * Bundles icons locally via @iconify/react so UI icons never fail or disappear
- * when third-party CDNs (code.iconify.design) time out or block network requests.
+ * Bundles icons locally via @iconify/react/offline + a pre-generated solar icon
+ * subset (lib/icons/solar-subset.json), so UI icons render from the JS bundle
+ * with zero runtime network calls -- never fail or disappear when third-party
+ * CDNs (api.iconify.design) time out or block network requests.
  */
 export function Icon({ icon, size = 16, className = "", style = {} }: IconProps) {
+  ensureIconsRegistered();
   return (
     <IconifyIcon
       icon={icon}
