@@ -608,7 +608,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       <span className="text-[var(--ink)] font-semibold">{item.bestDimensions}</span>/{TOTAL_DIMENSIONS} dims
                     </MetricChip>
                     {item.status === 'partial' && (
-                      <MetricChip icon="solar:alert-circle-linear" title="Partial analysis with incomplete data">
+                      <MetricChip icon="solar:danger-circle-linear" title="Partial analysis with incomplete data">
                         <span className="text-[var(--warn)]">Incomplete</span>
                       </MetricChip>
                     )}
