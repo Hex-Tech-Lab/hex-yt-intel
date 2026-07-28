@@ -86,9 +86,10 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
 
       neighbors.forEach((neighborId) => {
         const neighborNode = nodeMap[neighborId];
-        if (!neighborNode) return;
+        if (!neighborNode || !parentNode) return;
         visited.add(neighborId);
         neighborNode.parentId = currentId;
+        if (!parentNode.children) parentNode.children = [];
         parentNode.children.push(neighborNode);
         queue.push(neighborId);
       });
@@ -112,6 +113,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
         : rootMindNode;
       if (bestParent) {
         mindNode.parentId = bestParent.id;
+        if (!bestParent.children) bestParent.children = [];
         bestParent.children.push(mindNode);
         visited.add(n.id);
       }
