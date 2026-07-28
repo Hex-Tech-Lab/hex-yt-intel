@@ -36,16 +36,19 @@ function timingSafeEqualHex(a: string, b: string): boolean {
  * blast radius (read admin telemetry) is unrelated to the streaming flow's,
  * a leak of one must not unlock the other.
  */
-async function verifySnapshotHmac(request: NextRequest): Promise<boolean> {
+async function verifySnapshotHmac(request: NextRequest): Promise<{ ok: boolean; reason: string }> {
   const secret = process.env.LOGS_SNAPSHOT_HMAC_SECRET;
-  if (!secret) return false;
+  if (!secret) return { ok: false, reason: 'no_secret_configured' };
   const sig = request.headers.get('x-snapshot-sig');
   const expHeader = request.headers.get('x-snapshot-exp');
-  if (!sig || !expHeader) return false;
+  if (!sig || !expHeader) return { ok: false, reason: `missing_headers:sig=${!!sig},exp=${!!expHeader}` };
   const exp = Number(expHeader);
-  if (!Number.isFinite(exp) || Date.now() > exp || exp > Date.now() + SIG_TTL_MS) return false;
+  if (!Number.isFinite(exp)) return { ok: false, reason: 'exp_not_finite' };
+  if (Date.now() > exp) return { ok: false, reason: `expired:now=${Date.now()},exp=${exp}` };
+  if (exp > Date.now() + SIG_TTL_MS) return { ok: false, reason: `exp_too_far:now=${Date.now()},exp=${exp}` };
   const expected = await hmacHex(secret, `logs-snapshot:${exp}`);
-  return timingSafeEqualHex(expected, sig);
+  const match = timingSafeEqualHex(expected, sig);
+  return { ok: match, reason: match ? 'ok' : `sig_mismatch:secretLen=${secret.length}` };
 }
 
 /**
@@ -61,11 +64,17 @@ async function verifySnapshotHmac(request: NextRequest): Promise<boolean> {
  * machine-to-machine polling without a browser session.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const hmacOk = await verifySnapshotHmac(request);
-  if (!hmacOk) {
+  const hmacResult = await verifySnapshotHmac(request);
+  if (!hmacResult.ok) {
     const adminResult = await requireAdmin('admin/logs/snapshot:GET');
     if (!adminResult.ok) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      // TEMP DIAGNOSTIC (2026-07-29): remove after root-causing the HMAC
+      // path always falling through to session auth. Reports why HMAC
+      // verification failed without leaking the secret itself.
+      return NextResponse.json(
+        { error: adminResult.error, _hmacDebug: hmacResult.reason },
+        { status: adminResult.status }
+      );
     }
   }
 
