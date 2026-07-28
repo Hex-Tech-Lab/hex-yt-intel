@@ -162,6 +162,7 @@ export class PersistService {
     transcript?: string;
     channelMeta?: Record<string, unknown> | null;
     comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
+    finishReason?: string;
   }): Promise<void> {
     let markdown = options.finalText;
     let jsonPayload: Record<string, unknown> | null = null;
