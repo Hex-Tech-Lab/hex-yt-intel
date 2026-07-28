@@ -8,11 +8,11 @@ To eliminate redundant work and ensure high concurrency, all active agents MUST 
 3. **Report Completion (Update)**: Upon finishing your task, update your line to `[DONE]` with a brief summary.
 
 ---
-- [2026-07-28T18:10:00+03:00] [AGY (Gemini)] [DONE] Completed Live Multi-Provider Logs Console & Tooltip Primitive Refactor:
-  - Task 1: Built live log API endpoints for QStash (/api/admin/logs/qstash), Upstash Redis (/api/admin/logs/upstash-redis), Vercel (/api/admin/logs/vercel), Supabase (/api/admin/logs/supabase), and Cloudflare Workers (/api/admin/logs/cloudflare). Requested Vercel env mirror for missing secrets.
-  - Task 2: Added 'Activity & Usage' sibling entry to SettingsPanel.tsx. Rebuilt LogsViewerClient.tsx into a structured 4-column log table with alternating zebra striping, level pill badges, and time-range filtering.
-  - Task 3: Refactored StatusBadge in primitives.tsx to use @astryxdesign/core's <Tooltip> primitive instead of native HTML title attribute, resolving overlapping tooltip visual glitch.
-  - Task 4 (RCA & Fix): Confirmed Stream 4 JSON truncation caused by finish_reason: "length" cut-off on 14.3KB payload against 8192 token limit. Rebalanced STREAM_BUNDLES in synthesis.ts so Dimension 10 moves to Stream 1 ([1, 10] and [5, 7]).
+- [2026-07-28T18:36:00+03:00] [AGY (Gemini)] [DONE] Completed follow-up prompt tasks:
+  - Task 1: Fixed QStash event log route (web/app/api/admin/logs/qstash/route.ts) by removing invalid startTime/endTime query parameters from the Upstash QStash REST API call and performing in-memory timestamp filtering.
+  - Task 2: Built live Upstash Vector log endpoint (web/app/api/admin/logs/upstash-vector/route.ts) and added Upstash Vector as the official 8th tab in LogsViewerClient.tsx.
+  - Task 3: Internalized RCA context regarding OpenRouter maxOutputTokens token limits vs dynamic affordability ceilings.
+  - Task 4: Captured finishReason from OpenRouter SSE chunks in worker/src/services/LLMCascade.ts and passed finishReason into extractJsonPayload context for Sentry.captureException in worker/src/services/MarkdownReconstructor.ts.
 - [2026-07-16T17:55:00+03:00] [Claude (CC)] [DONE] Post-#155 remediation: restored non-embed video playback (error-code-gated overlay + retry, thumbnail fallback player with timestamp handoff for 101/150), dim-0 digest client retry-with-backoff on 409 persist race, ChatDock full-height overlay fix (input clipping + top gap), chat thread clear on new URL paste, CI main fixes (cron workspace filter, health-check subsystems JSON, deflaked 2 playwright 'load' tests). (VideoPlayerCard.tsx, DashboardContainer.tsx, ChatDock.tsx, ci-cd.yml, verify-production.sh, production-verification.spec.ts)
 - [2026-07-16T16:45:00+03:00] [Antigravity (Agent)] [DONE] Merged PR #155 into main branch after successful local and remote CI checks.
 - [2026-07-16T16:25:00+03:00] [Antigravity (Agent)] [DONE] Restored Decodo primary transcript extraction pipeline; aligned missing transcript errors across all 11 dimensions; added failed/partial auto-restoration state support on URL paste retries. (CreateAnalysisUseCase.ts, VideoPlayerCard.tsx, DashboardContainer.tsx)

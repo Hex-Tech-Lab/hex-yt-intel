@@ -176,21 +176,21 @@ function locateJsonBounds(text: string): { start: number; end: number } | null {
   return { start, end };
 }
 
-function safeParse(text: string, phase: string): { parsed: Partial<UCISPayloadV2> | null; repaired: string | null } {
+function safeParse(text: string, phase: string, finishReason?: string): { parsed: Partial<UCISPayloadV2> | null; repaired: string | null } {
   try {
     return { parsed: JSON.parse(text) as Partial<UCISPayloadV2>, repaired: null };
   } catch (error) {
-    Sentry.captureException(error, { contexts: { extractJsonPayload: { phase, textLength: text.length } } });
+    Sentry.captureException(error, { contexts: { extractJsonPayload: { phase, textLength: text.length, finishReason: finishReason || 'unknown' } } });
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[extractJsonPayload]', { message, phase });
+    console.error('[extractJsonPayload]', { message, phase, finishReason });
     const repaired = repairUnclosedJson(text);
     if (!repaired) return { parsed: null, repaired: null };
     try {
       return { parsed: JSON.parse(repaired) as Partial<UCISPayloadV2>, repaired };
     } catch (repairError) {
-      Sentry.captureException(repairError, { contexts: { extractJsonPayload: { phase: 'repaired_parse', repairedTextLength: repaired.length } } });
+      Sentry.captureException(repairError, { contexts: { extractJsonPayload: { phase: 'repaired_parse', repairedTextLength: repaired.length, finishReason: finishReason || 'unknown' } } });
       const repairMessage = repairError instanceof Error ? repairError.message : String(repairError);
-      console.error('[extractJsonPayload]', { message: repairMessage, phase: 'repaired_parse' });
+      console.error('[extractJsonPayload]', { message: repairMessage, phase: 'repaired_parse', finishReason });
       return { parsed: null, repaired: null };
     }
   }
@@ -198,8 +198,11 @@ function safeParse(text: string, phase: string): { parsed: Partial<UCISPayloadV2
 
 function sanitizePersona(parsed: Partial<UCISPayloadV2>): void {
   if (!parsed.persona) return;
-  if (!parsed.persona.primary || typeof parsed.persona.primary !== 'object' || !('id' in parsed.persona.primary)) {
-    delete parsed.persona;
+  if (!parsed.persona.cognitiveLenses || !Array.isArray(parsed.persona.cognitiveLenses)) {
+    parsed.persona.cognitiveLenses = [];
+  }
+  if (!parsed.persona.selectionRationale || typeof parsed.persona.selectionRationale !== 'string') {
+    parsed.persona.selectionRationale = '';
   }
 }
 
@@ -207,7 +210,7 @@ function sanitizePersona(parsed: Partial<UCISPayloadV2>): void {
  * Attempt to extract JSON payload from finalText.
  * Returns null if finalText is not valid v2.0 JSON.
  */
-export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | null {
+export function extractJsonPayload(finalText: string, finishReason?: string): Partial<UCISPayloadV2> | null {
   if (!finalText) return null;
 
   try {
@@ -215,7 +218,8 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
     if (!bounds) {
       console.debug('[extractJsonPayload] No JSON bounds found', {
         finalTextLength: finalText.length,
-        textPreview: finalText.slice(0, 200)
+        textPreview: finalText.slice(0, 200),
+        finishReason: finishReason || 'unknown',
       });
       return null;
     }
@@ -228,11 +232,12 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
       cleanText = trailingChars.has(nextChar) ? cleanText.slice(start, end + 1) : cleanText.slice(start);
     }
 
-    const { parsed } = safeParse(cleanText, 'initial_parse');
+    const { parsed } = safeParse(cleanText, 'initial_parse', finishReason);
     if (!parsed) {
       console.debug('[extractJsonPayload] Parse failed for extracted JSON', {
         extractedLength: cleanText.length,
-        extractedPreview: cleanText.slice(0, 300)
+        extractedPreview: cleanText.slice(0, 300),
+        finishReason: finishReason || 'unknown',
       });
       return null;
     }
@@ -241,7 +246,8 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
       sanitizePersona(parsed);
       console.debug('[extractJsonPayload] Successfully extracted v2.0 payload with dimensions', {
         dimensionCount: parsed.dimensions.length,
-        schemaVersion: parsed.schemaVersion
+        schemaVersion: parsed.schemaVersion,
+        finishReason: finishReason || 'unknown',
       });
       return parsed;
     }
@@ -250,12 +256,13 @@ export function extractJsonPayload(finalText: string): Partial<UCISPayloadV2> | 
       hasSchemaVersion: 'schemaVersion' in parsed,
       schemaVersion: parsed.schemaVersion,
       isDimensionsArray: Array.isArray(parsed.dimensions),
-      hasDimensions: 'dimensions' in parsed
+      hasDimensions: 'dimensions' in parsed,
+      finishReason: finishReason || 'unknown',
     });
   } catch (error: unknown) {
-    Sentry.captureException(error, { contexts: { extractJsonPayload: { finalTextLength: finalText.length } } });
+    Sentry.captureException(error, { contexts: { extractJsonPayload: { finalTextLength: finalText.length, finishReason: finishReason || 'unknown' } } });
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[extractJsonPayload]', { message, finalTextLength: finalText.length });
+    console.error('[extractJsonPayload]', { message, finalTextLength: finalText.length, finishReason });
   }
   return null;
 }
