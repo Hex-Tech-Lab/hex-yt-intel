@@ -19,6 +19,7 @@ import { IntelligencePanel } from '@/components/templates/console/IntelligencePa
 import { ChatDock } from '@/components/templates/console/ChatDock';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
 import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
+import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 
 // Lazy load visualization components to reduce initial bundle size
 const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
@@ -34,7 +35,6 @@ import { useExecutiveDigest } from '@/hooks/useExecutiveDigest';
 import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
 import { extractVideoId } from '@/lib/youtube';
 import { useExistingAnalysisCheck } from '@/hooks/useExistingAnalysisCheck';
-import { StatusBadge } from '@/components/templates/_shared/primitives';
 import { UsageTab } from '@/components/templates/console/UsageTab';
 import { SettingsPanel } from '@/components/containers/dashboard/SettingsPanel';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -515,12 +515,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                       {partialInfo && (
                         <div
                           role="status"
-                          className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-3 py-2 text-xs leading-relaxed text-[var(--ink-secondary)]"
+                          className="rounded-lg border border-[var(--warn)]/60 bg-[var(--warn)]/10 px-3.5 py-2.5 text-xs leading-relaxed text-[var(--ink-main)] shadow-[0_0_14px_rgba(245,158,11,0.25)] flex items-center gap-2.5"
                         >
-                          <span className="font-mono font-semibold text-[var(--accent-ink)]">Partial analysis</span>
-                          {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
-                          <span className="text-[var(--ink-muted)]">Missing: {partialInfo.missing.join(', ')}.</span>
-                          {' Use Re-analyze to attempt the rest.'}
+                          <Icon icon="solar:danger-triangle-linear" size={16} className="text-[var(--warn)] flex-shrink-0" />
+                          <div>
+                            <span className="font-mono font-bold text-[var(--warn)]">Partial analysis warning</span>
+                            {` — ${partialInfo.presentCount} of ${TOTAL_DIMENSIONS} dimensions generated. `}
+                            <span className="text-[var(--ink-muted)]">Missing: {partialInfo.missing.join(', ')}.</span>
+                            {' Use Re-analyze to attempt the rest.'}
+                          </div>
                         </div>
                       )}
                       {status === 'complete' && auxStatus && (

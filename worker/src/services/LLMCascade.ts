@@ -89,12 +89,13 @@ export class LLMCascade implements LLMCascadePort {
     onDelta: (text: string) => void,
     onStatus?: (status: StreamStatusEvent) => void,
     signal?: AbortSignal
-  ): Promise<{ started: boolean; finalText: string; modelUsed: string }> {
+  ): Promise<{ started: boolean; finalText: string; modelUsed: string; finishReason?: string }> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     let finalText = '';
     let modelUsed = '';
     let produced = false;
     let previousModel: string | null = null;
+    let finishReason: string | undefined = undefined;
 
     for (let tierIndex = 0; tierIndex < this.chain.length; tierIndex++) {
       const tier = this.chain[tierIndex];
@@ -130,6 +131,7 @@ export class LLMCascade implements LLMCascadePort {
         // skipcq: JS-0827
         console.log(`[LLMCascade] Stream ${streamId} succeeded with model=${name} durationMs=${durationMs} timestamp=${new Date().toISOString()}`);
         produced = true;
+        finishReason = result.finishReason;
         break;
       }
 
@@ -166,7 +168,7 @@ export class LLMCascade implements LLMCascadePort {
       previousModel = name;
     }
 
-    return { started: produced, finalText, modelUsed };
+    return { started: produced, finalText, modelUsed, finishReason };
   }
 
   /**

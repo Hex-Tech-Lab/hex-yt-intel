@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, ViewTransition } from 'react';
+import { useState, ViewTransition } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@astryxdesign/core/Button';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { MonoLabel, StatusBadge, GlowBorder, Icon, SynthesisStatus, CornerFrame } from '@/components/templates/_shared/primitives';
@@ -23,22 +24,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
   const streaming = status === "streaming";
   const disabled = streaming || !url || url.trim().length === 0;
 
-  const heroRef = useRef<HTMLDivElement>(null);
-  const [measuredHeight, setMeasuredHeight] = useState(0);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (heroRef.current) {
-      setMeasuredHeight(heroRef.current.scrollHeight);
-    }
-    const handleResize = () => {
-      if (heroRef.current) {
-        setMeasuredHeight(heroRef.current.scrollHeight);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [status]);
 
   const handleCopy = async () => {
     if (!url) return;
@@ -63,22 +49,34 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
           <StatusBadge status={status} />
         </div>
 
-        <div 
-          ref={heroRef}
-          className="overflow-hidden transition-[max-height,opacity] duration-300 ease-out"
-          style={{ 
-            maxHeight: status !== 'idle' ? '0px' : `${measuredHeight}px`, 
-            opacity: status !== 'idle' ? 0 : 1, 
-            marginBottom: status !== 'idle' ? 0 : 8
-          }}
-        >
-          <h1 className="hx-h1 max-w-[20ch]">
-            Drop a YouTube URL. Get a structured synthesis across 11 dimensions.
-          </h1>
-          <p className="hx-body-lg mt-1.5 max-w-[54ch]">
-            Transcript, claims, frameworks, and contrarian takes, mapped into your knowledge graph and searchable in seconds.
-          </p>
-        </div>
+        <AnimatePresence mode="wait">
+          {status === 'idle' && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="overflow-hidden mb-2"
+            >
+              <motion.h1
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.2, delay: 0.05 }}
+                className="hx-h1 max-w-[20ch]"
+              >
+                Drop a YouTube URL. Get a structured synthesis across 11 dimensions.
+              </motion.h1>
+              <motion.p
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+                className="hx-body-lg mt-1.5 max-w-[54ch]"
+              >
+                Transcript, claims, frameworks, and contrarian takes, mapped into your knowledge graph and searchable in seconds.
+              </motion.p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="mt-1.5 sm:mt-2">
           <CornerFrame tone={streaming ? "accent" : "line"}>
