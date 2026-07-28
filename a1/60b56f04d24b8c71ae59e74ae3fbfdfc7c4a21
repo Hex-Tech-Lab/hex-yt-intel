@@ -1,0 +1,23 @@
+web/app/api/admin/logs/cloudflare/route.ts
+  s_0eded1e9d0cab6::t_d8e243318a3e32 5,12
+  s_0eded1e9d0cab6::t_8ae28944e69cda 66-71
+web/app/api/admin/logs/supabase/route.ts
+  s_0eded1e9d0cab6::t_a24d1574eb38b5 5,12
+  s_0eded1e9d0cab6::t_952cba18f6dfa0 42-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a160b56f04d24b8c71ae59e74ae3fbfdfc7c4a21",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
