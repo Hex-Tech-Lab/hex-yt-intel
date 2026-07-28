@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-type LogTabKey = 'synthesis' | 'vercel' | 'supabase' | 'worker' | 'openrouter';
+type LogTabKey = 'synthesis' | 'qstash' | 'upstash-redis' | 'vercel' | 'supabase' | 'worker' | 'openrouter';
 type TimeRangeKey = '30m' | '1h' | 'today' | 'custom';
 
 interface TabConfig {
   key: LogTabKey;
   label: string;
   isLive: boolean;
+  endpoint?: string;
   reason?: string;
   helpText?: string;
 }
@@ -16,39 +17,82 @@ interface TabConfig {
 const TABS: TabConfig[] = [
   {
     key: 'synthesis',
-    label: 'Synthesis Log (In-App)',
+    label: 'Synthesis Log',
     isLive: true,
+    endpoint: '/api/admin/logs/synthesis',
     helpText: 'Live fetch: In-app synthesis executions and comment sampling runs from Supabase DB.',
+  },
+  {
+    key: 'qstash',
+    label: 'Upstash QStash',
+    isLive: true,
+    endpoint: '/api/admin/logs/qstash',
+    helpText: 'Live fetch: Upstash QStash event log history via QSTASH_TOKEN REST API.',
+  },
+  {
+    key: 'upstash-redis',
+    label: 'Upstash Redis',
+    isLive: true,
+    endpoint: '/api/admin/logs/upstash-redis',
+    helpText: 'Live fetch: Telemetry and database info metrics via UPSTASH_REDIS_REST_URL.',
   },
   {
     key: 'vercel',
     label: 'Vercel',
-    isLive: false,
-    reason: 'Missing VERCEL_TOKEN and VERCEL_PROJECT_ID environment variables for server-side API fetch.',
-    helpText: 'Paste Vercel dashboard runtime logs JSONL or raw export below.',
+    isLive: true,
+    endpoint: '/api/admin/logs/vercel',
+    reason: 'Requires VERCEL_TOKEN and VERCEL_PROJECT_ID environment variables in production.',
+    helpText: 'Live fetch (when configured) or paste Vercel dashboard runtime logs below.',
   },
   {
     key: 'supabase',
-    label: 'Supabase',
-    isLive: false,
-    reason: 'Missing SUPABASE_ACCESS_TOKEN for Supabase Management API (Postgres engine log download).',
-    helpText: 'Paste Supabase dashboard database or auth logs below.',
+    label: 'Supabase Engine',
+    isLive: true,
+    endpoint: '/api/admin/logs/supabase',
+    reason: 'Requires SUPABASE_ACCESS_TOKEN for Supabase Management API.',
+    helpText: 'Live fetch (when configured) or paste Supabase database logs below.',
   },
   {
     key: 'worker',
     label: 'Cloudflare Worker',
-    isLive: false,
-    reason: 'Missing CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.',
-    helpText: 'Paste wrangler tail or Cloudflare dashboard log output below.',
+    isLive: true,
+    endpoint: '/api/admin/logs/cloudflare',
+    reason: 'Requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in environment variables.',
+    helpText: 'Live fetch (when configured) or paste Cloudflare analytics log output below.',
   },
   {
     key: 'openrouter',
     label: 'OpenRouter',
     isLive: false,
-    reason: 'OpenRouter API provides no bulk text log download endpoint (Dashboard Web UI paste-in required).',
+    reason: 'OpenRouter API has no bulk log export endpoint (Dashboard paste-in only).',
     helpText: 'Paste OpenRouter dashboard generation or activity logs below.',
   },
 ];
+
+interface LogRow {
+  timestamp: string;
+  level: string;
+  source: string;
+  message: string;
+}
+
+function parseLogLine(line: string): LogRow {
+  const timeMatch = line.match(/^\[(.*?)\]\s*\[(.*?)\]\s*\[(.*?)\]\s*(.*)$/);
+  if (timeMatch) {
+    return {
+      timestamp: timeMatch[1] || '',
+      level: timeMatch[2] || 'INFO',
+      source: timeMatch[3] || 'app',
+      message: timeMatch[4] || '',
+    };
+  }
+  return {
+    timestamp: new Date().toISOString(),
+    level: 'INFO',
+    source: 'log',
+    message: line,
+  };
+}
 
 export function LogsViewerClient() {
   const [activeTab, setActiveTab] = useState<LogTabKey>('synthesis');
@@ -56,57 +100,58 @@ export function LogsViewerClient() {
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
 
-  const [synthesisLogs, setSynthesisLogs] = useState<string>('Loading live synthesis logs…');
-  const [loadingSynthesis, setLoadingSynthesis] = useState<boolean>(false);
-
-  const [pastedLogs, setPastedLogs] = useState<Record<LogTabKey, string>>({
-    synthesis: '',
+  const [tabLogs, setTabLogs] = useState<Record<LogTabKey, string>>({
+    synthesis: 'Loading synthesis logs…',
+    qstash: 'Loading QStash logs…',
+    'upstash-redis': 'Loading Redis telemetry…',
     vercel: '',
     supabase: '',
     worker: '',
     openrouter: '',
   });
 
+  const [loading, setLoading] = useState<boolean>(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  const fetchSynthesisLogs = useCallback(async () => {
-    setLoadingSynthesis(true);
+  const fetchTabLogs = useCallback(async (tab: TabConfig) => {
+    if (!tab.endpoint) return;
+    setLoading(true);
     try {
-      let url = `/api/admin/logs/synthesis?range=${timeRange}`;
-      if (timeRange === 'custom' && customStart) {
-        url += `&start=${encodeURIComponent(customStart)}`;
-      }
-      if (timeRange === 'custom' && customEnd) {
-        url += `&end=${encodeURIComponent(customEnd)}`;
-      }
+      let url = `${tab.endpoint}?range=${timeRange}`;
+      if (timeRange === 'custom' && customStart) url += `&start=${encodeURIComponent(customStart)}`;
+      if (timeRange === 'custom' && customEnd) url += `&end=${encodeURIComponent(customEnd)}`;
+
       const res = await fetch(url);
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Fetch failed' }));
-        throw new Error(err.error || `HTTP ${res.status}`);
+        setTabLogs((prev) => ({
+          ...prev,
+          [tab.key]: `[ERROR] ${data.error || `HTTP ${res.status}`}`,
+        }));
+      } else {
+        setTabLogs((prev) => ({
+          ...prev,
+          [tab.key]: data.logs || 'No log data returned.',
+        }));
       }
-      const data = await res.json();
-      setSynthesisLogs(data.logs || 'No logs returned.');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setSynthesisLogs(`[ERROR] ${msg}`);
+      setTabLogs((prev) => ({ ...prev, [tab.key]: `[ERROR] ${msg}` }));
     } finally {
-      setLoadingSynthesis(false);
+      setLoading(false);
     }
   }, [timeRange, customStart, customEnd]);
 
+  const currentTabConfig = TABS.find((t) => t.key === activeTab)!;
+
   useEffect(() => {
-    fetchSynthesisLogs();
-  }, [fetchSynthesisLogs]);
+    if (currentTabConfig.isLive && currentTabConfig.endpoint) {
+      fetchTabLogs(currentTabConfig);
+    }
+  }, [activeTab, timeRange, customStart, customEnd, fetchTabLogs, currentTabConfig]);
 
   const handlePasteChange = (tab: LogTabKey, value: string) => {
-    setPastedLogs((prev) => ({ ...prev, [tab]: value }));
-  };
-
-  const getTabLogContent = (tabKey: LogTabKey): string => {
-    if (tabKey === 'synthesis') {
-      return synthesisLogs;
-    }
-    return pastedLogs[tabKey] || '';
+    setTabLogs((prev) => ({ ...prev, [tab]: value }));
   };
 
   const showTooltip = (msg: string) => {
@@ -114,166 +159,176 @@ export function LogsViewerClient() {
     setTimeout(() => setCopyFeedback(null), 2500);
   };
 
-  const copyTabLogs = (tabKey: LogTabKey) => {
-    const text = getTabLogContent(tabKey);
+  const copyTabLogs = () => {
+    const text = tabLogs[activeTab] || '';
     if (!text.trim()) {
       showTooltip('Tab is empty!');
       return;
     }
     navigator.clipboard.writeText(text);
-    showTooltip(`Copied ${TABS.find((t) => t.key === tabKey)?.label} logs!`);
+    showTooltip(`Copied ${currentTabConfig.label} logs!`);
   };
 
-  const copyAllLogs = () => {
-    const sections: string[] = [];
-    TABS.forEach((tab) => {
-      const content = getTabLogContent(tab.key).trim();
-      sections.push(`=== ${tab.label.toUpperCase()} ===\n${content || '(No log data)'}`);
-    });
-    const combined = sections.join('\n\n');
-    navigator.clipboard.writeText(combined);
-    showTooltip('All tabs copied to clipboard!');
-  };
-
-  const currentTabConfig = TABS.find((t) => t.key === activeTab)!;
+  const rawContent = tabLogs[activeTab] || '';
+  const logRows: LogRow[] = rawContent
+    .split('\n')
+    .filter((l) => l.trim().length > 0)
+    .map(parseLogLine);
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto font-mono text-sm text-[var(--ink-main)]">
       {/* Header & Copy All */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[var(--ink-main)]">System Logs & Traceability</h1>
+          <h1 className="text-xl font-bold tracking-tight text-[var(--ink-main)]">System Logs & Multi-Provider Telemetry</h1>
           <p className="text-xs text-[var(--ink-muted)] mt-1">
-            Admin console for multi-provider telemetry, error diagnosis, and time-window log assembly.
+            Live telemetry and log assembly across Synthesis, QStash, Upstash Redis, Vercel, Supabase, Cloudflare Workers, and OpenRouter.
           </p>
         </div>
         <div className="flex items-center gap-3">
           {copyFeedback && (
-            <span className="text-xs px-2 py-1 bg-[var(--accent-glow)] text-[var(--accent-cyan)] rounded border border-[var(--accent-cyan)] animate-pulse">
-              {copyFeedback}
-            </span>
+            <span className="text-xs text-[var(--accent)] font-semibold animate-pulse">{copyFeedback}</span>
           )}
           <button
-            onClick={copyAllLogs}
-            className="px-4 py-2 bg-[var(--accent-cyan)] hover:opacity-90 text-[var(--bg-main)] font-semibold text-xs rounded transition-colors"
+            onClick={copyTabLogs}
+            className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--surface-raised)] border border-[var(--border-muted)] hover:border-[var(--accent)] transition-colors"
           >
-            Copy All Tabs
+            Copy Current Tab
           </button>
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs */}
-      <div className="flex flex-wrap border-b border-[var(--border-muted)] gap-1">
+      {/* Provider Tabs */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-muted)] pb-2">
         {TABS.map((tab) => {
           const isActive = tab.key === activeTab;
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 font-medium text-xs rounded-t border-t border-l border-r transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 isActive
-                  ? 'bg-[var(--bg-card)] border-[var(--border-muted)] text-[var(--accent-cyan)] border-b-transparent'
-                  : 'bg-[var(--bg-muted)] border-transparent text-[var(--ink-muted)] hover:text-[var(--ink-main)]'
+                  ? 'bg-[var(--accent-a10)] text-[var(--accent)] border border-[var(--accent)]'
+                  : 'bg-[var(--surface)] text-[var(--ink-muted)] hover:text-[var(--ink-main)] border border-[var(--border-muted)]'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span>{tab.label}</span>
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    tab.isLive ? 'bg-emerald-400' : 'bg-amber-400'
-                  }`}
-                  title={tab.isLive ? 'Live Fetch' : 'Paste-In'}
-                />
-              </div>
+              {tab.label}
+              {!tab.isLive && <span className="ml-1.5 text-[10px] opacity-60">(paste)</span>}
             </button>
           );
         })}
       </div>
 
-      {/* Time Range Controls */}
-      <div className="flex flex-wrap items-center gap-4 bg-[var(--bg-card)] p-3 rounded border border-[var(--border-muted)]">
-        <span className="text-xs font-semibold text-[var(--ink-muted)]">Time Window:</span>
-        <div className="flex gap-2">
-          {(['30m', '1h', 'today', 'custom'] as TimeRangeKey[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setTimeRange(r)}
-              className={`px-3 py-1 text-xs rounded border transition-colors ${
-                timeRange === r
-                  ? 'bg-[var(--accent-cyan)] text-[var(--bg-main)] border-[var(--accent-cyan)] font-bold'
-                  : 'bg-[var(--bg-muted)] text-[var(--ink-muted)] border-[var(--border-muted)] hover:text-[var(--ink-main)]'
-              }`}
-            >
-              {r === '30m' && 'Last 30 Min'}
-              {r === '1h' && 'Last 1 Hr'}
-              {r === 'today' && 'Today'}
-              {r === 'custom' && 'Custom Range'}
-            </button>
-          ))}
-        </div>
+      {/* Time Range Selector for Live Tabs */}
+      {currentTabConfig.isLive && (
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[var(--surface)] p-3 rounded-lg border border-[var(--border-muted)]">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--ink-muted)] font-semibold">Time Window:</span>
+            {(['30m', '1h', 'today', 'custom'] as TimeRangeKey[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => setTimeRange(r)}
+                className={`px-2.5 py-1 rounded text-xs ${
+                  timeRange === r
+                    ? 'bg-[var(--accent)] text-black font-bold'
+                    : 'bg-[var(--surface-raised)] text-[var(--ink-muted)] hover:text-[var(--ink-main)]'
+                }`}
+              >
+                {r === '30m' ? 'Last 30m' : r === '1h' ? 'Last 1h' : r === 'today' ? 'Today' : 'Custom'}
+              </button>
+            ))}
+          </div>
 
-        {timeRange === 'custom' && (
-          <div className="flex items-center gap-2 ml-auto">
-            <input
-              type="datetime-local"
-              value={customStart}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="px-2 py-1 text-xs bg-[var(--bg-main)] border border-[var(--border-muted)] rounded text-[var(--ink-main)]"
-            />
-            <span className="text-xs text-[var(--ink-muted)]">to</span>
-            <input
-              type="datetime-local"
-              value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              className="px-2 py-1 text-xs bg-[var(--bg-main)] border border-[var(--border-muted)] rounded text-[var(--ink-main)]"
+          {timeRange === 'custom' && (
+            <div className="flex items-center gap-2 text-xs">
+              <input
+                type="datetime-local"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="bg-[var(--bg)] border border-[var(--border-muted)] p-1 rounded text-[var(--ink-main)]"
+              />
+              <span>to</span>
+              <input
+                type="datetime-local"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="bg-[var(--bg)] border border-[var(--border-muted)] p-1 rounded text-[var(--ink-main)]"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Help/Reason Header */}
+      {currentTabConfig.helpText && (
+        <p className="text-xs text-[var(--ink-muted)] italic">{currentTabConfig.helpText}</p>
+      )}
+
+      {/* Structured Log Table / Output Area */}
+      <div className="border border-[var(--border-muted)] rounded-lg overflow-hidden bg-[var(--surface)]">
+        {loading ? (
+          <div className="p-8 text-center text-xs text-[var(--accent)] animate-pulse font-mono">
+            Fetching live {currentTabConfig.label} telemetry…
+          </div>
+        ) : !currentTabConfig.isLive ? (
+          <div className="p-4 flex flex-col gap-3">
+            {currentTabConfig.reason && (
+              <div className="text-xs p-2.5 rounded bg-[var(--accent-a10)] border border-[var(--accent)] text-[var(--ink-main)]">
+                {currentTabConfig.reason}
+              </div>
+            )}
+            <textarea
+              rows={16}
+              value={tabLogs[activeTab] || ''}
+              onChange={(e) => handlePasteChange(activeTab, e.target.value)}
+              placeholder={`Paste raw ${currentTabConfig.label} log export here…`}
+              className="w-full bg-[var(--bg)] border border-[var(--border-muted)] rounded p-3 text-xs font-mono text-[var(--ink-main)] focus:outline-none focus:border-[var(--accent)]"
             />
           </div>
-        )}
-
-        {currentTabConfig.isLive && (
-          <button
-            onClick={fetchSynthesisLogs}
-            disabled={loadingSynthesis}
-            className="ml-auto px-3 py-1 text-xs bg-[var(--bg-muted)] hover:bg-[var(--border-muted)] text-[var(--ink-main)] border border-[var(--border-muted)] rounded transition-colors disabled:opacity-50"
-          >
-            {loadingSynthesis ? 'Refreshing…' : 'Refresh Live'}
-          </button>
-        )}
-      </div>
-
-      {/* Tab Banner / Help Text */}
-      <div className="text-xs px-3 py-2 bg-[var(--bg-muted)] border border-[var(--border-muted)] rounded text-[var(--ink-muted)] flex items-center justify-between">
-        <span>{currentTabConfig.helpText}</span>
-        {!currentTabConfig.isLive && currentTabConfig.reason && (
-          <span className="text-[var(--warn)] font-medium">⚠️ {currentTabConfig.reason}</span>
-        )}
-      </div>
-
-      {/* Main Content Area */}
-      <div className="relative border border-[var(--border-muted)] rounded bg-[var(--bg-card)] p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[var(--ink-muted)] uppercase tracking-wider">
-            {currentTabConfig.label} Content
-          </span>
-          <button
-            onClick={() => copyTabLogs(activeTab)}
-            className="px-3 py-1 text-xs bg-[var(--bg-muted)] hover:bg-[var(--border-muted)] text-[var(--ink-main)] border border-[var(--border-muted)] rounded transition-colors"
-          >
-            Copy {currentTabConfig.label} Logs
-          </button>
-        </div>
-
-        {currentTabConfig.isLive ? (
-          <pre className="w-full h-96 p-3 bg-[var(--bg-main)] border border-[var(--border-muted)] rounded overflow-auto font-mono text-xs text-emerald-400 whitespace-pre-wrap">
-            {synthesisLogs}
-          </pre>
+        ) : logRows.length === 0 ? (
+          <div className="p-8 text-center text-xs text-[var(--ink-muted)] font-mono">
+            No telemetry rows in selected window.
+          </div>
         ) : (
-          <textarea
-            value={pastedLogs[activeTab]}
-            onChange={(e) => handlePasteChange(activeTab, e.target.value)}
-            placeholder={`Paste raw ${currentTabConfig.label} export or JSONL log lines here…`}
-            className="w-full h-96 p-3 bg-[var(--bg-main)] border border-[var(--border-muted)] rounded overflow-auto font-mono text-xs text-[var(--ink-main)] focus:outline-none focus:border-[var(--accent-cyan)] resize-y"
-          />
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-[var(--surface-raised)] border-b border-[var(--border-muted)] text-[var(--ink-muted)] font-semibold">
+                  <th className="py-2.5 px-3 w-[190px]">Timestamp</th>
+                  <th className="py-2.5 px-3 w-[90px]">Level</th>
+                  <th className="py-2.5 px-3 w-[150px]">Source</th>
+                  <th className="py-2.5 px-3">Message / Payload</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logRows.map((row, idx) => {
+                  const isErr = row.level.includes('ERR');
+                  const isWarn = row.level.includes('WARN');
+                  return (
+                    <tr
+                      key={idx}
+                      className={`border-b border-[var(--border-muted)]/50 ${
+                        idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'
+                      } ${isErr ? 'text-[var(--err)]' : isWarn ? 'text-[var(--warn)]' : ''}`}
+                    >
+                      <td className="py-2 px-3 whitespace-nowrap text-[var(--ink-muted)]">{row.timestamp}</td>
+                      <td className="py-2 px-3 font-bold">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                          isErr ? 'bg-red-950 text-red-400 border border-red-800' :
+                          isWarn ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                          'bg-cyan-950 text-cyan-400 border border-cyan-800'
+                        }`}>
+                          {row.level}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 font-semibold text-[var(--accent)]">{row.source}</td>
+                      <td className="py-2 px-3 font-mono break-all leading-relaxed">{row.message}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
