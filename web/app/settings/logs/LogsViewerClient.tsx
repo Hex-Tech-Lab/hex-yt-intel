@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-type LogTabKey = 'synthesis' | 'qstash' | 'upstash-redis' | 'vercel' | 'supabase' | 'worker' | 'openrouter';
+type LogTabKey = 'synthesis' | 'qstash' | 'upstash-redis' | 'upstash-vector' | 'vercel' | 'supabase' | 'worker' | 'openrouter';
 type TimeRangeKey = '30m' | '1h' | 'today' | 'custom';
 
 interface TabConfig {
@@ -35,6 +35,13 @@ const TABS: TabConfig[] = [
     isLive: true,
     endpoint: '/api/admin/logs/upstash-redis',
     helpText: 'Live fetch: Telemetry and database info metrics via UPSTASH_REDIS_REST_URL.',
+  },
+  {
+    key: 'upstash-vector',
+    label: 'Upstash Vector',
+    isLive: true,
+    endpoint: '/api/admin/logs/upstash-vector',
+    helpText: 'Live fetch: Index telemetry and dimension vector counts via UPSTASH_VECTOR_REST_URL.',
   },
   {
     key: 'vercel',
@@ -104,6 +111,7 @@ export function LogsViewerClient() {
     synthesis: 'Loading synthesis logs…',
     qstash: 'Loading QStash logs…',
     'upstash-redis': 'Loading Redis telemetry…',
+    'upstash-vector': 'Loading Vector index telemetry…',
     vercel: '',
     supabase: '',
     worker: '',
