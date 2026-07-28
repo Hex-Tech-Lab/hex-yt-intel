@@ -1,10 +1,71 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { LogsViewerClient } from '@/app/settings/logs/LogsViewerClient';
 import { AdminSettingsClient } from '@/app/admin/settings/AdminSettingsClient';
-import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
+
+interface UsageSummary {
+  tier: string;
+  analyses: { used: number; quota: number | null };
+  chatTurns: { synthesisConsole: number; atlas: number; total: number };
+  estimatedCostUsd: number;
+}
+
+/** Activity & Usage pane -- fetches the real per-user summary from
+ *  /api/usage/summary (own-user-only, already computes this from usage_logs)
+ *  instead of hardcoding placeholder numbers. */
+function UsagePane() {
+  const [data, setData] = useState<UsageSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/usage/summary')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((json) => { if (!cancelled) setData(json); })
+      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : String(err)); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (error) {
+    return <p className="text-xs text-[var(--err)]">Failed to load usage summary: {error}</p>;
+  }
+  if (!data) {
+    return <p className="text-xs text-[var(--ink-muted)]">Loading usage summary…</p>;
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border-muted)]">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Analyses this month</span>
+          <p className="text-xl font-bold text-[var(--accent)] mt-1">
+            {data.analyses.used}{data.analyses.quota !== null ? ` / ${data.analyses.quota}` : ' / Unlimited'}
+          </p>
+        </div>
+        <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border-muted)]">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Plan</span>
+          <p className="text-xl font-bold text-[var(--ink-main)] mt-1 capitalize">{data.tier}</p>
+        </div>
+        <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border-muted)]">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Chat turns</span>
+          <p className="text-xl font-bold text-[var(--ink-main)] mt-1">{data.chatTurns.total}</p>
+          <p className="text-[10px] text-[var(--ink-muted)] mt-1">
+            {data.chatTurns.synthesisConsole} console · {data.chatTurns.atlas} atlas
+          </p>
+        </div>
+        <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border-muted)]">
+          <span className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Est. cost this month</span>
+          <p className="text-xl font-bold text-[var(--ink-main)] mt-1">${data.estimatedCostUsd.toFixed(4)}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export type SettingsSubmenuKey = 'overview' | 'logs' | 'usage' | 'preferences' | 'admin-settings';
 
@@ -206,18 +267,7 @@ export function SettingsPanel({ initialSubmenu = 'overview' }: SettingsPanelProp
 
           {activeKey === 'logs' && <LogsViewerClient />}
 
-          {activeKey === 'usage' && (
-            <BillingDashboardClient
-              initialData={{
-                user: null,
-                tier: 'pro',
-                analysesUsed: 42,
-                analysesLimit: 100,
-                usageStats: { totalTokens: 1452000 },
-                invoices: [],
-              }}
-            />
-          )}
+          {activeKey === 'usage' && <UsagePane />}
 
           {activeKey === 'preferences' && (
             <div className="max-w-2xl mx-auto flex flex-col gap-6 p-4 bg-[var(--surface)] border border-[var(--border-muted)] rounded-xl">
