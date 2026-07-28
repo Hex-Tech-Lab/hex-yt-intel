@@ -1,0 +1,26 @@
+web/components/containers/dashboard/SettingsPanel.tsx
+  s_0eded1e9d0cab6::t_33f38c147d9f4f 5-7,9-12,16,19,23,25,30,32-46,50-52,54-55,57,59-61,64-114,116-120,123-124,126-165,168-211,213-215,218-235,237
+  s_0eded1e9d0cab6::t_15e4ab8b0ebd4a 212,216-217
+web/app/settings/logs/page.tsx
+  s_0eded1e9d0cab6::t_c1003b898c56f6 3,43
+web/app/settings/logs/LogsViewerClient.tsx
+  s_0eded1e9d0cab6::t_4c0a2528ac2f04 4-5,166-167,169-171,173-185,201,204-224
+web/app/settings/page.tsx
+  s_0eded1e9d0cab6::t_e7aec0439cbbfd 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d6bf96ca70b025d45f3519d7cf07e4d6bc976251",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
