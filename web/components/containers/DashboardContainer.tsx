@@ -36,6 +36,7 @@ import { extractVideoId } from '@/lib/youtube';
 import { useExistingAnalysisCheck } from '@/hooks/useExistingAnalysisCheck';
 import { StatusBadge } from '@/components/templates/_shared/primitives';
 import { UsageTab } from '@/components/templates/console/UsageTab';
+import { SettingsPanel } from '@/components/containers/dashboard/SettingsPanel';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { useKnowledgeGraph } from '@/hooks/useKnowledgeGraph';
 import { useRelations } from '@/hooks/useRelations';
@@ -548,6 +549,8 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         </div>
       ) : (activeNav as string) === 'history' ? (
         <AnalysisHistory onSelectAnalysis={() => setActiveNav('console')} />
+      ) : (activeNav as string) === 'settings' ? (
+        <SettingsPanel />
       ) : (
         <UsageTab />
       )}
