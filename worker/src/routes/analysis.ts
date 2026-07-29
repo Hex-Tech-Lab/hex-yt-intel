@@ -848,7 +848,18 @@ function buildStreamResponse(
               send({ type: "status", ...statusEvent });
             },
           },
-          httpConnSignal,
+          // Stream-persistence foundation (2026-07-29): httpConnSignal used to be
+          // forwarded here, which meant a client disconnect (navigating away,
+          // closing the tab/laptop) didn't just stop the SSE response -- it
+          // aborted the LLMCascade's own fetch to the model provider, killing
+          // generation outright. Now intentionally NOT forwarded: generation is
+          // bounded only by LLMCascade's own independent per-call timeout
+          // (LLMCascade.ts ~213-227, 120s default, unrelated to client
+          // connection state), so it keeps running via ctx.waitUntil regardless
+          // of whether anyone is still listening. httpConnSignal is still used
+          // below (the `settled`/early-interrupted-persist listener) for
+          // SSE/persist bookkeeping -- that's a separate, correct use, untouched.
+          undefined,
         );
 
         finishReason = result.finishReason;
