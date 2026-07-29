@@ -141,6 +141,13 @@ export async function middleware(request: NextRequest) {
     // handlers themselves own error-state handling and retry/backoff.
     '/api/analyses/persist',
     '/api/chat/persist',
+    // Admin logs snapshot: legitimate caller can be a machine/script with no
+    // browser session (the orchestrator polling its own logs). Gated by an
+    // HMAC signature (X-Snapshot-Sig/X-Snapshot-Exp) OR an admin session
+    // inside the handler itself (see verifySnapshotHmac in
+    // app/api/admin/logs/snapshot/route.ts) -- same pattern as the S2S
+    // persist routes above, this was just missed when the route was added.
+    '/api/admin/logs/snapshot',
   ];
 
   // Segment-boundary match so a public prefix can't unintentionally exempt a
