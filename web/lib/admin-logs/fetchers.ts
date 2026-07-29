@@ -260,19 +260,19 @@ export async function fetchSupabaseLogs(searchParams: URLSearchParams): Promise<
   const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
   try {
     const sql = `select timestamp, event_message from postgres_logs order by timestamp desc limit 100`;
-    const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/analytics/endpoints/logs.all`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ sql }),
+    const url = `https://api.supabase.com/v1/projects/${projectRef}/analytics/endpoints/logs.all?sql=${encodeURIComponent(sql)}`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
       throw new Error(`Supabase Management API returned status ${res.status}: ${errText}`);
     }
     const data = await res.json();
+    if (data.error) {
+      throw new Error(`Supabase analytics query failed: ${typeof data.error === 'string' ? data.error : JSON.stringify(data.error)}`);
+    }
     const resultList = Array.isArray(data.result) ? data.result : Array.isArray(data) ? data : [];
     const filteredList = resultList.filter((e: any) => {
       const ts = e.timestamp ? (typeof e.timestamp === 'number' ? e.timestamp / 1000 : new Date(e.timestamp).getTime()) : Date.now();
