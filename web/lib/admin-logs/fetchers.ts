@@ -343,3 +343,37 @@ export async function fetchCloudflareLogs(searchParams: URLSearchParams): Promis
     return { status: 500, body: { error: `Failed to fetch Cloudflare logs: ${message}` } };
   }
 }
+
+export async function fetchContractAuditLogs(searchParams: URLSearchParams): Promise<FetcherResult> {
+  try {
+    const service = getSupabaseServiceClient();
+    const limit = Number(searchParams.get('limit')) || 30;
+    const { data: runs, error } = await service
+      .from('contract_audit_runs')
+      .select('id, run_at, source, commit_sha, critical_count, warning_count, findings')
+      .order('run_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+
+    const logLines: string[] = [];
+    (runs || []).forEach((run) => {
+      const level = run.critical_count > 0 ? 'ERROR' : run.warning_count > 0 ? 'WARN' : 'INFO';
+      logLines.push(`[${run.run_at}] [${level}] [contract-audit:${run.source}] critical=${run.critical_count} warning=${run.warning_count} commit=${run.commit_sha || 'local'}`);
+      const findings = Array.isArray(run.findings) ? run.findings : [];
+      findings.forEach((f: any) => {
+        const fLevel = f.severity === 'critical' ? 'ERROR' : 'WARN';
+        logLines.push(`  [${fLevel}] ${f.rule} @ ${f.file}:${f.line} -- ${f.why}`);
+      });
+    });
+
+    const content = logLines.length > 0
+      ? logLines.join('\n')
+      : `[${new Date().toISOString()}] [INFO] No contract-auditor runs recorded yet. Run \`pnpm --filter @hex-yt-intel/web contract-audit\` locally, or wait for the next CI push to main.`;
+
+    return { status: 200, body: { totalEntries: logLines.length, logs: content, runs } };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, { tags: { operation: 'admin_contract_audit_logs' } });
+    return { status: 500, body: { error: `Failed to fetch contract audit logs: ${message}` } };
+  }
+}

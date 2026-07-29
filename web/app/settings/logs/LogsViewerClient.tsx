@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { IconButton, Tooltip } from '@astryxdesign/core';
 
-type LogTabKey = 'synthesis' | 'qstash' | 'upstash-redis' | 'upstash-vector' | 'vercel' | 'supabase' | 'worker' | 'openrouter';
+type LogTabKey = 'synthesis' | 'qstash' | 'upstash-redis' | 'upstash-vector' | 'vercel' | 'supabase' | 'worker' | 'openrouter' | 'contract-audit';
 type TimeRangeKey = '30m' | '1h' | 'today' | 'custom';
 
 interface TabConfig {
@@ -26,6 +26,13 @@ interface SnapshotHistoryRow {
 }
 
 const TABS: TabConfig[] = [
+  {
+    key: 'contract-audit',
+    label: 'Contract Audit',
+    isLive: true,
+    endpoint: '/api/admin/logs/contract-audit',
+    helpText: 'Live fetch: scripts/contract-auditor.ts run history from public.contract_audit_runs. Catches silent-success footguns, unverified external API contracts, and prompt templates that pre-script a failure outcome -- the class of bug that passes tsc/lint/qa-intel but still silently does the wrong thing. Runs in CI on every push to main and can be run locally with `pnpm --filter @hex-yt-intel/web contract-audit`.',
+  },
   {
     key: 'synthesis',
     label: 'Synthesis Log',
@@ -139,6 +146,7 @@ export function LogsViewerClient() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [tabLogs, setTabLogs] = useState<Record<LogTabKey, string>>({
+    'contract-audit': 'Loading contract audit history…',
     synthesis: 'Loading synthesis logs…',
     qstash: 'Loading QStash logs…',
     'upstash-redis': 'Loading Redis telemetry…',
