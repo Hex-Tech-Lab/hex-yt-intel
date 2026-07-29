@@ -1,0 +1,34 @@
+web/app/api/health/route.ts
+  s_0eded1e9d0cab6::t_d10b23ddde1648 12
+web/lib/admin-logs/fetchers.ts
+  s_0eded1e9d0cab6::t_0261be5f8888c8 380-419
+web/package.json
+  s_0eded1e9d0cab6::t_1d010c53ef67ff 3
+web/scripts/contract-auditor.ts
+  s_0eded1e9d0cab6::t_3ce8fefc9e8b8a 115
+  s_0eded1e9d0cab6::t_f8e321f1946f04 30,37-38
+  s_0eded1e9d0cab6::t_c605ecd207afd0 179-182,186-200,207,210-222,251-264
+  s_0eded1e9d0cab6::t_cde87452989a98 265
+web/app/api/admin/logs/openrouter/route.ts
+  s_0eded1e9d0cab6::t_bb7211c95bdc4b 1-21
+CHANGELOG.md
+  s_0eded1e9d0cab6::t_6d78a13743012a 1-47
+web/app/settings/logs/LogsViewerClient.tsx
+  s_0eded1e9d0cab6::t_d48bb82f403e4f 93-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6015e0dc03bf59e58ca79cd54e3a893d0fba3ba3",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
