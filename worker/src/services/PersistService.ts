@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/cloudflare';
 import { reconstructMarkdown, extractJsonPayload } from './MarkdownReconstructor';
 import { UCISPayloadSchema, ChunkPayloadSchema } from './ZodSchemas';
 import { signBoundContent } from '../crypto';
@@ -60,6 +61,18 @@ export class PersistService {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       } else {
         console.error('[persist] Zod validation failed:', result.error.format());
+        Sentry.captureMessage('PersistService: Zod validation failed', {
+          level: 'error',
+          contexts: {
+            persist: {
+              analysisId: options.analysisId,
+              videoId: options.videoId,
+              chunkIndex: options.chunkIndex,
+              totalChunks: options.totalChunks,
+              zodError: result.error.format(),
+            },
+          },
+        });
       }
     }
 
@@ -145,6 +158,19 @@ export class PersistService {
         await new Promise(r => setTimeout(r, 500 * (tryIndex + 1)));
       }
     }
+    Sentry.captureMessage('PersistService: persist exhausted all retries', {
+      level: 'error',
+      contexts: {
+        persist: {
+          analysisId: params.analysisId,
+          videoId: params.videoId,
+          status: params.status,
+          chunkIndex: params.chunkIndex,
+          totalChunks: params.totalChunks,
+          maxRetries,
+        },
+      },
+    });
     return false;
   }
 
@@ -172,13 +198,27 @@ export class PersistService {
       const result = ChunkPayloadSchema.safeParse(extracted);
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
+      } else {
+        console.error('[settle] Zod validation failed:', result.error.format());
+        Sentry.captureMessage('PersistService: settleAnalysis Zod validation failed', {
+          level: 'error',
+          contexts: {
+            settle: {
+              analysisId: options.analysisId,
+              videoId: options.videoId,
+              status: options.status,
+              zodError: result.error.format(),
+            },
+          },
+        });
       }
     }
 
     if (jsonPayload) {
       try {
         markdown = reconstructMarkdown(jsonPayload);
-      } catch {
+      } catch (error) {
+        console.error('[settle] reconstructMarkdown failed:', error);
         markdown = options.finalText;
       }
     }
@@ -219,5 +259,16 @@ export class PersistService {
         await new Promise(r => setTimeout(r, 500 * (tryIndex + 1)));
       }
     }
+    Sentry.captureMessage('PersistService: settleAnalysis exhausted all retries', {
+      level: 'error',
+      contexts: {
+        settle: {
+          analysisId: options.analysisId,
+          videoId: options.videoId,
+          status: options.status,
+          maxRetries,
+        },
+      },
+    });
   }
 }
