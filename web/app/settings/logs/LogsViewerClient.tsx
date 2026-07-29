@@ -506,7 +506,9 @@ export function LogsViewerClient() {
                         key={`${row.polledAt}-${idx}`}
                         className={`border-b border-[var(--border-muted)]/50 ${!row.ok ? 'bg-[var(--err)]/10 text-[var(--err)]' : idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'}`}
                       >
-                        <td className="py-2 px-3 whitespace-nowrap text-[var(--ink-muted)]">{row.polledAt}</td>
+                        <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)]" title={formatDualTimezone(row.polledAt).full}>
+                          {formatDualTimezone(row.polledAt).display}
+                        </td>
                         <td className="py-2 px-3 font-bold">{row.ok ? 'OK' : 'FAIL'}</td>
                         <td className="py-2 px-3 font-mono break-all">
                           {row.ok ? JSON.stringify(row.stats) : row.error}
