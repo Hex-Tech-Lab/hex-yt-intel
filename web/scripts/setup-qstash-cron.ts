@@ -4,8 +4,13 @@ const token = process.env.QSTASH_TOKEN;
 const productionUrl = process.env.PRODUCTION_URL;
 
 if (!token || !productionUrl) {
-  console.warn("Skipping QStash cron registration: Missing QSTASH_TOKEN or PRODUCTION_URL.");
-  process.exit(0);
+  // A cron-registration step that can't register crons must FAIL, not
+  // silently no-op with a passing exit code -- an empty/missing QSTASH_TOKEN
+  // here previously reported CI green while zero schedules were ever
+  // created (RCA 2026-07-29: the token had been rotated to an empty value
+  // and nothing caught it for weeks).
+  console.error("FATAL: Missing QSTASH_TOKEN or PRODUCTION_URL. Cannot register cron schedules.");
+  process.exit(1);
 }
 
 const client = new Client({ token });
