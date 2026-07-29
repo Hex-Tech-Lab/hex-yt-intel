@@ -90,9 +90,9 @@ const TABS: TabConfig[] = [
   {
     key: 'openrouter',
     label: 'OpenRouter',
-    isLive: false,
-    reason: 'OpenRouter API has no bulk log export endpoint (Dashboard paste-in only).',
-    helpText: 'Paste OpenRouter dashboard generation or activity logs below.',
+    isLive: true,
+    endpoint: '/api/admin/logs/openrouter',
+    helpText: 'Live fetch: OpenRouter Activity API (/v1/activity) via OPENROUTER_MANAGEMENT_KEY -- per-model request/token/cost usage. No per-request log lines (OpenRouter has no bulk log export API), only daily aggregates.',
   },
 ];
 
