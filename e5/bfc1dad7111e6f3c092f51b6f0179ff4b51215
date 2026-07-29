@@ -1,0 +1,24 @@
+worker/src/services/PersistService.ts
+  s_0eded1e9d0cab6::t_6b09ab3d647c7c 220-221
+  s_0eded1e9d0cab6::t_f5fa90b2d273a1 262-272
+  s_0eded1e9d0cab6::t_48b40699e049c5 64-75
+  s_0eded1e9d0cab6::t_0805cc73c8a3cf 201-213
+  s_0eded1e9d0cab6::t_dea9a360d823a1 161-173
+  s_0eded1e9d0cab6::t_92246d9cb91bfc 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e5bfc1dad7111e6f3c092f51b6f0179ff4b51215",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
