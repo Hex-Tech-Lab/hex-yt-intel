@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "test": "playwright test",
     "test:unit": "vitest run",
-    "setup:cron": "tsx scripts/setup-qstash-cron.ts"
+    "setup:cron": "tsx scripts/setup-qstash-cron.ts",
+    "contract-audit": "tsx scripts/contract-auditor.ts"
   },
   "dependencies": {
     "@astryxdesign/core": "^0.1.8",

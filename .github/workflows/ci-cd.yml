@@ -130,6 +130,12 @@ jobs:
       - name: Run QA Intel Quality Gate
         run: pnpm dlx tsx scripts/verify-quality-engine.ts
 
+      - name: Run Contract Auditor
+        run: pnpm --filter @hex-yt-intel/web run contract-audit
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PRODUCTION_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
