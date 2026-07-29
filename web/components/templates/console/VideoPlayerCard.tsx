@@ -221,6 +221,27 @@ export function VideoPlayerCard() {
           </a>
         </div>
       </div>
+      {interacted && !ready && !embedRestricted && !playbackError && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[rgb(11_14_20_/_0.85)] backdrop-blur-sm pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element -- external YouTube thumbnail */}
+          <img
+            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-20"
+          />
+          <div className="relative flex flex-col items-center gap-2">
+            <span className="flex items-center justify-center w-12 h-12 rounded-full bg-[var(--surface)] border border-[var(--accent)] text-[var(--accent)] animate-pulse">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 animate-spin">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            </span>
+            <span className="font-mono text-xs text-[var(--accent)] font-semibold animate-pulse">
+              Initializing YouTube Player…
+            </span>
+          </div>
+        </div>
+      )}
       {!interacted && !embedRestricted && (
         <button
           type="button"

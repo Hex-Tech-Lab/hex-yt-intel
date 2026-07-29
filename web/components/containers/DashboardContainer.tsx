@@ -21,6 +21,7 @@ import { ChatDock } from '@/components/templates/console/ChatDock';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
 import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
 import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
+import { useVideoStore } from '@/store/useVideoStore';
 
 // Lazy load visualization components to reduce initial bundle size
 const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
@@ -86,6 +87,16 @@ function cleanDimensionContent(raw: string): string {
 }
 
 export function DashboardContainer({ profile }: DashboardContainerProps) {
+  const { pendingNav, clearPendingNav } = useVideoStore();
+
+  useEffect(() => {
+    if (pendingNav) {
+      startTransition(() => {
+        setActiveNav(pendingNav);
+        clearPendingNav();
+      });
+    }
+  }, [pendingNav, clearPendingNav]);
   const setUserRole = useAnalysisStore((s) => s.setUserRole);
   const status = useAnalysisStore((s) => s.status);
   const analysisHistory = useAnalysisStore((s) => s.analysisHistory);

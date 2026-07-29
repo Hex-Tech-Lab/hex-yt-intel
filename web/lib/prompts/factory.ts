@@ -29,6 +29,16 @@ export interface GetUCISPromptParams {
   skipAllDimensionsInstruction?: boolean;
 }
 
+const formatDuration = (s?: number): string => {
+  if (s === undefined || s === null || isNaN(s)) return 'Unknown';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  return h > 0
+    ? `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+};
+
 /**
  * Centralized UCIS prompt factory
  * Injects metadata/persona context into the resolved system prompt template
@@ -45,13 +55,16 @@ export async function getUCISPrompt({
 }: GetUCISPromptParams): Promise<string> {
   const systemPrompt = promptOverride ?? (await resolveUCISPromptTemplate(version));
   const personas = rankPersonas(persona);
-  const metadataJson = JSON.stringify(metadata, null, 2);
+  const formattedDuration = duration !== undefined ? formatDuration(duration) : undefined;
+  const metadataWithDuration = { ...metadata, duration: formattedDuration };
+  const metadataJson = JSON.stringify(metadataWithDuration, null, 2);
 
   // Short-form detection: inject notice if video is < 3 minutes (180 seconds)
   const isShortForm = duration !== undefined && duration < 180;
   const shortFormNotice = isShortForm
     ? `\n**SHORT-FORM CONTENT NOTICE**: This is a short-form video (${Math.round(duration! / 60)}m ${duration! % 60}s). Output a highly condensed report. Skip complex matrices, scenario stress-testing, and deep temporal mapping unless explicitly supported by the transcript. Invoke the Insufficient Data Protocol (section 0.6) liberally if depth is unavailable.`
     : '';
+  const durationNotice = formattedDuration ? `\n**Video Duration**: ${formattedDuration}` : '';
 
   // DB-backed prompt template (not matching the legacy fallback static string)
   if (systemPrompt !== UCIS_V5_1_SYSTEM) {
@@ -69,7 +82,7 @@ ${metadataJson}
 **Persona Configuration**:
 ${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.weight}%)`).join('\n')}
 
-**Timezone**: ${timezone}${shortFormNotice}
+**Timezone**: ${timezone}${durationNotice}${shortFormNotice}
 
 **Transcript**:
 ${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}`;
@@ -93,7 +106,7 @@ ${metadataJson}
 **Persona Configuration**:
 ${personas.map((p) => `- ${p.personaId.toUpperCase()}: ${p.name} (Weight: ${p.weight}%)`).join('\n')}
 
-**Timezone**: ${timezone}${shortFormNotice}
+**Timezone**: ${timezone}${durationNotice}${shortFormNotice}
 
 **Transcript**:
 ${transcript.slice(0, 48000)}${transcript.length > 48000 ? '\n\n[...transcript truncated to 48K characters...]' : ''}${dimensionsInstruction}
