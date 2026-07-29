@@ -1,0 +1,28 @@
+web/app/api/admin/logs/sentry/route.ts
+  s_0eded1e9d0cab6::t_fac08516917889 1-21
+web/lib/admin-logs/fetchers.ts
+  s_0eded1e9d0cab6::t_a817af4da3ff9d 420-461
+web/app/settings/logs/LogsViewerClient.tsx
+  s_0eded1e9d0cab6::t_d41e7554377f24 113-120,124-127,132
+  s_0eded1e9d0cab6::t_9c13732cddd63f 7
+  s_0eded1e9d0cab6::t_9502a39938682e 143-156,159
+  s_0eded1e9d0cab6::t_853f64a6d9e060 182
+  s_0eded1e9d0cab6::t_eca6e9540ffa5e 30-35
+  s_0eded1e9d0cab6::t_476c4f545e9228 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "4d087dfe666824122c04b47adca90396158a379a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
