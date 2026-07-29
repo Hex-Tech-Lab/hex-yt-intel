@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { IconButton, Tooltip } from '@astryxdesign/core';
 
-type LogTabKey = 'synthesis' | 'qstash' | 'upstash-redis' | 'upstash-vector' | 'vercel' | 'supabase' | 'worker' | 'openrouter' | 'contract-audit';
+type LogTabKey = 'synthesis' | 'qstash' | 'upstash-redis' | 'upstash-vector' | 'vercel' | 'supabase' | 'worker' | 'openrouter' | 'contract-audit' | 'sentry';
 type TimeRangeKey = '30m' | '1h' | 'today' | 'custom';
 
 interface TabConfig {
@@ -26,6 +26,13 @@ interface SnapshotHistoryRow {
 }
 
 const TABS: TabConfig[] = [
+  {
+    key: 'sentry',
+    label: 'Sentry',
+    isLive: true,
+    endpoint: '/api/admin/logs/sentry',
+    helpText: 'Live fetch: unresolved Sentry issues (hex-org/hex-yt-intel) via the Issues API. Filtered by lastSeen against the selected time window.',
+  },
   {
     key: 'contract-audit',
     label: 'Contract Audit',
@@ -103,14 +110,26 @@ interface LogRow {
   message: string;
 }
 
+// Every fetcher's "nothing to show" fallback (e.g. "No Cloudflare worker
+// invocations returned.") is wrapped in the same [timestamp] [LEVEL] [source]
+// shape as a real event, stamped with the REQUEST time -- which renders as if
+// something specific happened just now, rather than "as of now, there is
+// nothing." Detect that shape and drop the misleading timestamp instead of
+// treating an absence-of-data marker as a dated event.
+const NO_DATA_MESSAGE_RE = /^No .+ (returned|recorded|found|entries)/i;
+
 function parseLogLine(line: string): LogRow {
   const timeMatch = line.match(/^\[(.*?)\]\s*\[(.*?)\]\s*\[(.*?)\]\s*(.*)$/);
   if (timeMatch) {
+    const message = timeMatch[4] || '';
+    if (NO_DATA_MESSAGE_RE.test(message)) {
+      return { timestamp: '', level: timeMatch[2] || 'INFO', source: timeMatch[3] || 'app', message };
+    }
     return {
       timestamp: timeMatch[1] || '',
       level: timeMatch[2] || 'INFO',
       source: timeMatch[3] || 'app',
-      message: timeMatch[4] || '',
+      message,
     };
   }
   return {
@@ -121,9 +140,23 @@ function parseLogLine(line: string): LogRow {
   };
 }
 
+/**
+ * Several DB timestamp columns feeding this UI (e.g. public.analyses.created_at/
+ * updated_at) are `timestamp without time zone` -- Postgres/PostgREST serializes
+ * them with no `Z`/offset (e.g. "2026-07-29T19:49:43.316351"), even though the
+ * app always writes them via now()/server time (genuinely UTC). `new Date()` on
+ * an offset-less ISO string is parsed as the BROWSER's local time, not UTC --
+ * silently shifting every such timestamp by the viewer's own UTC offset. Force
+ * UTC interpretation before parsing for any string that isn't already
+ * zone-qualified.
+ */
+function coerceToUtcIso(timestampStr: string): string {
+  return /[zZ]|[+-]\d{2}:?\d{2}$/.test(timestampStr) ? timestampStr : `${timestampStr}Z`;
+}
+
 function formatDualTimezone(timestampStr: string): { display: string; full: string } {
   try {
-    const d = new Date(timestampStr);
+    const d = new Date(coerceToUtcIso(timestampStr));
     if (isNaN(d.getTime())) return { display: timestampStr, full: timestampStr };
     const utcTime = d.toLocaleTimeString('en-US', { timeZone: 'UTC', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const caiTime = d.toLocaleTimeString('en-US', { timeZone: 'Africa/Cairo', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -146,6 +179,7 @@ export function LogsViewerClient() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [tabLogs, setTabLogs] = useState<Record<LogTabKey, string>>({
+    sentry: 'Loading Sentry issues…',
     'contract-audit': 'Loading contract audit history…',
     synthesis: 'Loading synthesis logs…',
     qstash: 'Loading QStash logs…',
