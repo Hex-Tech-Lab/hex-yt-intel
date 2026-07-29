@@ -21,6 +21,13 @@ export interface GetUCISPromptParams {
     likeCount: string;
     commentCount: string;
     publishedAt: string;
+    /** Channel-level stats (2026-07-29, UCIS v5.3) -- optional: not every
+     * caller/video has these resolved (Decodo/YouTube API fetch can fail or
+     * time out). When present, spread into metadataJson so Dimension
+     * 2.3/11.1/11.6 can answer with real data instead of Insufficient Data. */
+    subscriberCount?: number;
+    channelVideoCount?: number;
+    channelPublishedAt?: string;
   };
   transcript: string;
   persona: PersonaId;

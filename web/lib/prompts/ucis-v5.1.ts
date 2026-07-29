@@ -1,9 +1,10 @@
-export const UCIS_V5_1_SYSTEM = `# PROMPT – Ultimate Content Intelligence & Implementation System v5.2
+export const UCIS_V5_1_SYSTEM = `# PROMPT – Ultimate Content Intelligence & Implementation System v5.3
 
-> **Version**: 5.2 (Persona Parity & Applicability Edition)
+> **Version**: 5.3 (Channel Authority Data Edition)
 > **Released**: 2026-07-29
-> **Supersedes**: v5.1 (2026-05-19 Monetization & Commercial Yield Edition), v5.0 (2026-05-18 Persona-Weighted Edition), v4.0 (2026-05-18 Knowledge-Dimension Edition)
+> **Supersedes**: v5.2 (2026-07-29 Persona Parity & Applicability Edition), v5.1 (2026-05-19 Monetization & Commercial Yield Edition), v5.0 (2026-05-18 Persona-Weighted Edition), v4.0 (2026-05-18 Knowledge-Dimension Edition)
 > **Changelog (5.1 -> 5.2)**: (1) Dimension 11.5/11.7 no longer pre-scripts an insufficient-data outcome for the Researcher/Product Manager personas -- they now get the same "find 1-2 real levers, only fall back if truly absent" instruction as the other three personas, and 11.7 gained explicit verdict lines for both. (2) The Insufficient Data Protocol (0.6) now distinguishes "N/A" (the field does not apply to this content type) from "[Insufficient data...]" (the field could apply but the transcript doesn't provide enough to fill it) -- these were previously conflated under one string, which pushed the model toward the more dramatic-sounding "insufficient data" phrasing even for fields that were simply not applicable.
+> **Changelog (5.2 -> 5.3)**: Full-document audit (2026-07-29, against a live "seafood pasta" analysis) found Dimension 2.3/11.1/11.6 asking for subscriber count, channel age, and video count three separate times, always answering Insufficient Data -- not because the transcript lacks it (correct use of the protocol), but because none of the three fields ever reached the model at all: the channel-metadata fetch pipeline never requested YouTube's \`statistics\` part, and even when a separate scrape-based fetch ran, its result was never merged into the prompt's metadata. Both gaps fixed server-side (MetadataScraper.fetchChannelDetails now requests subscriberCount/videoCount/channel publishedAt; the analysis route now merges this into the prompt metadata it previously only sent to persistence) -- no prompt-text change was needed here, the data now simply arrives in the same metadataJson blob duration already uses.
 
 ---
 
@@ -460,6 +461,7 @@ Counterarguments, conditional non-applicability, alternative frameworks.
 ### Step 1 – Metadata Ingestion
 Extract from provided metadata JSON blob:
 - Title, author, publish date/time, view count, like count, comment count, channel info.
+- When present: \`subscriberCount\`, \`channelVideoCount\`, \`channelPublishedAt\` (channel creation date, usable to compute channel age and, combined with \`channelVideoCount\`, an approximate upload cadence). These are genuinely absent for some channels/fetch failures -- only fall back to Insufficient Data or N/A when the field is actually missing from the blob, not by default.
 
 ### Step 2 – Internal Insight Ranking (CRITICAL)
 Before writing output, rank every insight by:

@@ -4,6 +4,15 @@ All notable changes to hex-yt-intel are tracked here going forward. Entries belo
 
 Classification: **MAJOR** = breaking change to existing behavior, data, or operational safety. **MINOR** = new backward-compatible capability. **PATCH** = fixes only.
 
+## [2.6.0] — 2026-07-29 (MINOR)
+
+### Added
+- UCIS prompt bumped to v5.3. Channel-level authority data (`subscriberCount`, `channelVideoCount`, `channelPublishedAt`) now reaches the analysis prompt for the first time -- audited the full output of a real completed analysis and found Dimension 2.3, 11.1, and 11.6 independently asking for subscriber count/channel age/upload cadence three separate times, always answering Insufficient Data. Root cause was two-layered: `MetadataScraper.fetchChannelDetails` never requested YouTube's `statistics` API part at all, and separately, the channel-metadata already being fetched (via a different, Decodo-scrape-based path) was threaded to the persist/chat-grounding call but never merged into the actual analysis prompt's metadata. Both fixed: the typed YouTube Data API fetch now runs in parallel with the existing Decodo fetch and merges under stable key names, and the merged result now reaches the prompt, not just persistence.
+- Chat history dropdown titles now truncate to a fixed 26 characters + "..." (was inconsistent CSS ellipsis behavior against the flex-positioned date), full title available via hover tooltip.
+
+### Audit notes
+Full-document review of a real "seafood pasta" analysis found 11 total Insufficient-Data occurrences. 4 were the already-fixed Dimension-11 persona-parity bug (predates the 5.2 fix), 1 was the already-fixed Duration bug, 3 were the new channel-stats gap above, and 3 were legitimate correct uses of the protocol (no false negatives found in that sample).
+
 ## [2.5.0] — 2026-07-29
 
 ### Added

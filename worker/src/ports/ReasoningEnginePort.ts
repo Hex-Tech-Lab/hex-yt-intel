@@ -31,6 +31,10 @@ export interface EngineMetadata {
   viewCount: string | number;
   likeCount: string | number;
   commentCount: string | number;
+  /** Channel-level stats (2026-07-29, UCIS v5.3) -- see factory.ts GetUCISPromptParams.metadata. */
+  subscriberCount?: number;
+  channelVideoCount?: number;
+  channelPublishedAt?: string;
 }
 
 /** Domain input for a reasoning run. No HTTP, no transport — pure domain. */
