@@ -240,7 +240,7 @@ function truncateChannelMeta(
 
 async function fetchChannelMetaCached(
   channelId: string | undefined,
-  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY">,
+  env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
   cache?: UpstashCacheAdapter,
   config: typeof CHANNEL_META_CONFIG_FALLBACK = CHANNEL_META_CONFIG_FALLBACK,
 ): Promise<Record<string, unknown> | null> {
@@ -281,14 +281,29 @@ async function fetchChannelMetaCached(
       });
       return null;
     });
+  // RCA (2026-07-29): the UCIS prompt's Dimension 2.3/11.1/11.6 explicitly ask
+  // for subscriber count, channel age, and video count -- always Insufficient
+  // Data because Decodo's scrape above returns an opaque, untyped blob whose
+  // shape was never verified to contain these fields, and nothing else fetched
+  // them at all. Run alongside (not instead of) the Decodo fetch -- the typed,
+  // authoritative YouTube Data API call, merged in below under stable key
+  // names the prompt can rely on regardless of what Decodo's blob contains.
+  const statsFetchPromise = env.YOUTUBE_API_KEY
+    ? new MetadataScraper(env.YOUTUBE_API_KEY, env.RESIDENTIAL_PROXY_URL)
+        .fetchChannelDetails(channelId)
+        .catch((err) => {
+          console.warn(`[analyze-llm-stream] channel stats fetch failed for ${channelId}:`, err instanceof Error ? err.message : String(err));
+          return null;
+        })
+    : Promise.resolve(null);
   let timedOut = false;
-  const timeoutPromise = new Promise<null>((resolve) =>
+  const timeoutPromise = new Promise<[null, null]>((resolve) =>
     setTimeout(() => {
       timedOut = true;
-      resolve(null);
+      resolve([null, null]);
     }, config.timeoutMs)
   );
-  const raced = await Promise.race([fetchPromise, timeoutPromise]);
+  const [raced, stats] = await Promise.race([Promise.all([fetchPromise, statsFetchPromise]), timeoutPromise]);
   if (timedOut) {
     // RCA (2026-07-24): the other two failure paths in this function report to
     // Sentry; the race-timeout path silently returned null with no telemetry at
@@ -301,7 +316,18 @@ async function fetchChannelMetaCached(
       extra: { channelId, budgetMs: config.timeoutMs },
     });
   }
-  const result = truncateChannelMeta(raced, channelId, config);
+  // Merge under stable, verified key names -- separate from whatever Decodo's
+  // opaque scrape blob (raced) does or doesn't contain, so the prompt can
+  // reference these three fields with confidence regardless of Decodo's shape.
+  const merged: Record<string, unknown> | null = raced || stats
+    ? {
+        ...(raced || {}),
+        ...(stats?.subscriberCount !== undefined ? { subscriberCount: stats.subscriberCount } : {}),
+        ...(stats?.videoCount !== undefined ? { channelVideoCount: stats.videoCount } : {}),
+        ...(stats?.channelPublishedAt ? { channelPublishedAt: stats.channelPublishedAt } : {}),
+      }
+    : null;
+  const result = truncateChannelMeta(merged, channelId, config);
 
   if (result && cache) {
     cache.set(cacheKey, JSON.stringify(result), CHANNEL_META_CACHE_TTL).catch(() => {
@@ -798,7 +824,12 @@ function buildStreamResponse(
 
         const result = await engine.executeAndStream(
           {
-            metadata: req.metadata,
+            // resolvedChannelMeta (subscriberCount/channelVideoCount/channelPublishedAt,
+            // resolved above before this call) was previously only threaded to
+            // the persist call, never into the prompt itself -- the model asked
+            // for these fields explicitly (Dimension 2.3/11.1/11.6) and got
+            // Insufficient Data every time because they never arrived here.
+            metadata: { ...req.metadata, ...(resolvedChannelMeta || {}) },
             transcript: resolvedTranscript,
             persona: req.persona,
             timezone: req.timezone,

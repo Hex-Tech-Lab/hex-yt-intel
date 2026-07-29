@@ -506,17 +506,25 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           ) : (
             conversations.map((c) => {
               const formattedDate = c.updatedAt || c.createdAt ? new Date(c.updatedAt || c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+              const rawTitle = c.title || 'Untitled Chat';
+              // Explicit character truncation (not CSS text-ellipsis) so the
+              // title consistently reads "Name...· date" regardless of flex
+              // sibling widths -- CSS ellipsis truncates unpredictably when
+              // a fixed-width sibling (the date) competes for the same row.
+              const CHAT_TITLE_MAX_CHARS = 26;
+              const displayTitle = rawTitle.length > CHAT_TITLE_MAX_CHARS ? `${rawTitle.slice(0, CHAT_TITLE_MAX_CHARS)}...` : rawTitle;
               return (
                 <div key={c.id} className="flex items-center gap-1.5 px-1">
                   <button
                     onClick={() => { void selectConversation(c.id); setShowThreads(false); }}
+                    title={rawTitle}
                     className={`flex-1 min-w-0 text-left p-2 rounded-lg border-none cursor-pointer font-mono text-[11.5px] overflow-hidden flex items-center justify-between gap-2 transition-colors ${
                       c.id === activeId ? 'bg-[var(--accent-a12)] text-[var(--accent-ink)] font-bold' : 'bg-transparent text-[var(--ink-secondary)] hover:bg-[var(--surface)]'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
                       {c.analysisId && <Icon icon="solar:link-round-angle-linear" size={12} className="flex-shrink-0 opacity-70" />}
-                      <span className="overflow-hidden text-ellipsis whitespace-nowrap">{c.title || 'Untitled Chat'}</span>
+                      <span className="whitespace-nowrap">{displayTitle}</span>
                     </div>
                     {formattedDate && (
                       <span className="text-[10px] text-[var(--ink-muted)] font-normal flex-shrink-0">{formattedDate}</span>

@@ -52,8 +52,21 @@ export class MetadataScraper implements CommentIngestionPort {
   /**
    * Fetch channel details from YouTube API
    */
-  async fetchChannelDetails(channelId: string): Promise<{ title: string; description: string }> {
-    const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${this.apiKey}`;
+  async fetchChannelDetails(channelId: string): Promise<{
+    title: string;
+    description: string;
+    subscriberCount?: number;
+    videoCount?: number;
+    channelPublishedAt?: string;
+  }> {
+    // `statistics` added 2026-07-29: subscriberCount/videoCount were never
+    // fetched at all, and snippet.publishedAt (channel creation date, i.e.
+    // channel age) was fetched but discarded below -- the UCIS prompt's
+    // Dimension 2.3/11.1/11.6 explicitly ask for "subscriber count, channel
+    // age, upload cadence" and got Insufficient Data every time because none
+    // of the three ever reached the model, not because the data doesn't
+    // exist. See CHANGELOG.md 2.6.0 / UCIS v5.3.
+    const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${this.apiKey}`;
     const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
 
     if (!response.ok) {
@@ -65,14 +78,25 @@ export class MetadataScraper implements CommentIngestionPort {
         snippet?: {
           title?: string;
           description?: string;
+          publishedAt?: string;
+        };
+        statistics?: {
+          subscriberCount?: string;
+          videoCount?: string;
+          hiddenSubscriberCount?: boolean;
         };
       }>;
     };
-    const snippet = data.items?.[0]?.snippet;
+    const item = data.items?.[0];
+    const snippet = item?.snippet;
+    const statistics = item?.statistics;
 
     return {
       title: snippet?.title || 'Unknown Channel',
       description: snippet?.description || '',
+      subscriberCount: statistics && !statistics.hiddenSubscriberCount && statistics.subscriberCount ? Number(statistics.subscriberCount) : undefined,
+      videoCount: statistics?.videoCount ? Number(statistics.videoCount) : undefined,
+      channelPublishedAt: snippet?.publishedAt,
     };
   }
 
