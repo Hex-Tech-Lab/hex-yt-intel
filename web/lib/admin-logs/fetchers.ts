@@ -377,3 +377,43 @@ export async function fetchContractAuditLogs(searchParams: URLSearchParams): Pro
     return { status: 500, body: { error: `Failed to fetch contract audit logs: ${message}` } };
   }
 }
+
+export async function fetchOpenRouterLogs(searchParams: URLSearchParams): Promise<FetcherResult> {
+  const key = process.env.OPENROUTER_MANAGEMENT_KEY;
+  if (!key) {
+    return { status: 503, body: { error: 'OPENROUTER_MANAGEMENT_KEY is not configured in environment variables.' } };
+  }
+  const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/activity', {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`OpenRouter Activity API returned status ${res.status}: ${errText}`);
+    }
+    const data = await res.json();
+    const rows = Array.isArray(data.data) ? data.data : [];
+    const filtered = rows.filter((r: any) => {
+      const ts = r.date ? new Date(r.date).getTime() : Date.now();
+      return ts >= startTimeMs && ts <= endTimeMs;
+    });
+    const targetRows = filtered.length > 0 ? filtered : rows;
+    const logLines = targetRows.map((r: any) => {
+      const time = new Date(r.date || Date.now()).toISOString();
+      return `[${time}] [INFO] [openrouter:${r.model || r.model_permaslug || 'unknown'}] provider=${r.provider_name || 'unknown'} requests=${r.requests ?? 0} promptTokens=${r.prompt_tokens ?? 0} completionTokens=${r.completion_tokens ?? 0} reasoningTokens=${r.reasoning_tokens ?? 0} usage=$${(r.usage ?? 0).toFixed(4)}`;
+    });
+    return {
+      status: 200,
+      body: {
+        totalEntries: logLines.length,
+        logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No OpenRouter activity in selected time range.`,
+        rows: targetRows,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, { tags: { operation: 'admin_openrouter_logs' } });
+    return { status: 500, body: { error: `Failed to fetch OpenRouter activity: ${message}` } };
+  }
+}

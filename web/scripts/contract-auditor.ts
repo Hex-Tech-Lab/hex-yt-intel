@@ -27,12 +27,15 @@
  */
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
+import { createHash } from 'crypto';
 
 interface Finding {
   rule: string;
   severity: 'critical' | 'warning';
   file: string;
   line: number;
+  /** Stable identity across runs (rule+file+line), used to compute new/recurring/resolved against the previous run -- a raw findings dump tells you what's wrong TODAY, not whether it's the same thing you already knew about or a fresh regression. */
+  fingerprint?: string;
   why: string;
   snippet: string;
 }
@@ -109,7 +112,7 @@ const RISKY_HOSTS = [
   'qstash.upstash.io',
   'api.vercel.com',
   '.upstash.io',
-  'api.openrouter.ai',
+  'openrouter.ai',
   'api.cloudflare.com',
 ];
 function auditUnverifiedEndpoints(file: string, content: string, hasSiblingTest: boolean) {
@@ -173,26 +176,50 @@ for (const root of SCAN_ROOTS) {
   }
 }
 
+for (const f of findings) {
+  f.fingerprint = createHash('sha1').update(`${f.rule}:${f.file}:${f.line}`).digest('hex').slice(0, 12);
+}
+
 const criticalCount = findings.filter((f) => f.severity === 'critical').length;
 const warningCount = findings.filter((f) => f.severity === 'warning').length;
 
-const summary = {
-  runAt: new Date().toISOString(),
-  criticalCount,
-  warningCount,
-  findings,
-};
-
-console.log(JSON.stringify(summary, null, 2));
-console.error(`\nContract Auditor: ${criticalCount} critical, ${warningCount} warning finding(s).`);
+async function fetchPreviousFingerprints(url: string, serviceKey: string): Promise<Set<string> | null> {
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/contract_audit_runs?select=findings&order=run_at.desc&limit=1`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    const prevFindings = rows?.[0]?.findings;
+    if (!Array.isArray(prevFindings)) return null;
+    return new Set(prevFindings.map((f: any) => f.fingerprint).filter(Boolean));
+  } catch {
+    return null;
+  }
+}
 
 async function persistRun() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) {
     console.error('Contract Auditor: skipping DB persistence (no Supabase service credentials in this environment).');
+    printSummary(null);
     return;
   }
+
+  const prevFingerprints = await fetchPreviousFingerprints(url, serviceKey);
+  const currentFingerprints = new Set(findings.map((f) => f.fingerprint));
+  const remediation = prevFingerprints
+    ? {
+        newCount: findings.filter((f) => !prevFingerprints.has(f.fingerprint!)).length,
+        recurringCount: findings.filter((f) => prevFingerprints.has(f.fingerprint!)).length,
+        resolvedCount: [...prevFingerprints].filter((fp) => !currentFingerprints.has(fp)).length,
+      }
+    : null;
+
+  printSummary(remediation);
+
   try {
     const res = await fetch(`${url}/rest/v1/contract_audit_runs`, {
       method: 'POST',
@@ -219,6 +246,21 @@ async function persistRun() {
   } catch (err) {
     console.error('Contract Auditor: failed to persist run to Supabase:', err instanceof Error ? err.message : String(err));
   }
+}
+
+function printSummary(remediation: { newCount: number; recurringCount: number; resolvedCount: number } | null) {
+  const summary = {
+    runAt: new Date().toISOString(),
+    criticalCount,
+    warningCount,
+    remediation,
+    findings,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+  const remediationLine = remediation
+    ? ` (${remediation.newCount} new, ${remediation.recurringCount} recurring, ${remediation.resolvedCount} resolved since last run)`
+    : '';
+  console.error(`\nContract Auditor: ${criticalCount} critical, ${warningCount} warning finding(s)${remediationLine}.`);
 }
 
 persistRun().finally(() => {
