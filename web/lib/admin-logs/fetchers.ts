@@ -417,3 +417,45 @@ export async function fetchOpenRouterLogs(searchParams: URLSearchParams): Promis
     return { status: 500, body: { error: `Failed to fetch OpenRouter activity: ${message}` } };
   }
 }
+
+const SENTRY_ORG_SLUG = 'hex-org';
+const SENTRY_REGION_HOST = 'de.sentry.io';
+const SENTRY_PROJECT_ID = '4511384514461776';
+
+export async function fetchSentryLogs(searchParams: URLSearchParams): Promise<FetcherResult> {
+  const token = process.env.SENTRY_LOGS_AUTH_TOKEN;
+  if (!token) {
+    return { status: 503, body: { error: 'SENTRY_LOGS_AUTH_TOKEN is not configured in environment variables.' } };
+  }
+  try {
+    const url = `https://${SENTRY_REGION_HOST}/api/0/organizations/${SENTRY_ORG_SLUG}/issues/?project=${SENTRY_PROJECT_ID}&limit=50&sort=date&query=is:unresolved`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Sentry Issues API returned status ${res.status}: ${errText}`);
+    }
+    const issues = (await res.json()) as any[];
+    const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
+    const filtered = issues.filter((i) => {
+      const ts = i.lastSeen ? new Date(i.lastSeen).getTime() : Date.now();
+      return ts >= startTimeMs && ts <= endTimeMs;
+    });
+    const targetIssues = filtered.length > 0 ? filtered : issues;
+    const logLines = targetIssues.map((i) => {
+      const level = i.level === 'error' || i.level === 'fatal' ? 'ERROR' : i.level === 'warning' ? 'WARN' : 'INFO';
+      return `[${i.lastSeen}] [${level}] [sentry:${i.shortId}] count=${i.count} culprit=${i.culprit || 'unknown'} -- ${i.title} (${i.permalink})`;
+    });
+    return {
+      status: 200,
+      body: {
+        totalEntries: logLines.length,
+        logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No unresolved Sentry issues in selected time range.`,
+        issues: targetIssues,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, { tags: { operation: 'admin_sentry_logs' } });
+    return { status: 500, body: { error: `Failed to fetch Sentry issues: ${message}` } };
+  }
+}
