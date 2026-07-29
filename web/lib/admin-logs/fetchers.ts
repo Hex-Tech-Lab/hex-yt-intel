@@ -257,25 +257,36 @@ export async function fetchSupabaseLogs(searchParams: URLSearchParams): Promise<
   if (!token || !projectRef) {
     return { status: 503, body: { error: 'SUPABASE_ACCESS_TOKEN is missing or project reference could not be parsed.', missingEnvVars: ['SUPABASE_ACCESS_TOKEN'].filter((k) => !process.env[k]) } };
   }
+  const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
   try {
-    const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/logs?type=postgres`, { headers: { Authorization: `Bearer ${token}` } });
+    const sql = `select timestamp, event_message from postgres_logs order by timestamp desc limit 100`;
+    const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/analytics/endpoints/logs.all`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sql }),
+    });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
       throw new Error(`Supabase Management API returned status ${res.status}: ${errText}`);
     }
     const data = await res.json();
-    const rawList = Array.isArray(data.result) ? data.result : [];
-    const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
-    const resultList = rawList.filter((e: any) => {
-      const ts = e.timestamp ? e.timestamp / 1000 : Date.now();
+    const resultList = Array.isArray(data.result) ? data.result : Array.isArray(data) ? data : [];
+    const filteredList = resultList.filter((e: any) => {
+      const ts = e.timestamp ? (typeof e.timestamp === 'number' ? e.timestamp / 1000 : new Date(e.timestamp).getTime()) : Date.now();
       return ts >= startTimeMs && ts <= endTimeMs;
     });
-    const logLines = resultList.map((e: any) => {
-      const time = new Date(e.timestamp ? e.timestamp / 1000 : Date.now()).toISOString();
-      const level = e.event_message?.includes('ERROR') ? 'ERROR' : 'INFO';
-      return `[${time}] [${level}] [supabase:postgres] ${e.event_message || JSON.stringify(e)}`;
+    const targetList = filteredList.length > 0 ? filteredList : resultList;
+    const logLines = targetList.map((e: any) => {
+      const tsNum = typeof e.timestamp === 'number' ? e.timestamp / 1000 : new Date(e.timestamp || Date.now()).getTime();
+      const time = new Date(tsNum).toISOString();
+      const msg = e.event_message || e.message || JSON.stringify(e);
+      const level = msg.includes('ERROR') || msg.includes('FATAL') ? 'ERROR' : msg.includes('WARN') ? 'WARN' : 'INFO';
+      return `[${time}] [${level}] [supabase:postgres] ${msg}`;
     });
-    return { status: 200, body: { totalEntries: logLines.length, logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No Supabase log entries returned.`, resultList } };
+    return { status: 200, body: { totalEntries: logLines.length, logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No Supabase log entries returned.`, resultList: targetList } };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, { tags: { operation: 'admin_supabase_logs' } });

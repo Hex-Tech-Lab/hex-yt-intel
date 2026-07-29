@@ -491,32 +491,42 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
 
       {/* Thread switcher */}
       {showThreads && (
-        <div className="max-h-[200px] overflow-y-auto border-b border-[var(--line)] bg-[rgb(8_11_17_/_0.8)]">
-          {(() => {
-            const filteredConversations = [];
-            for (const itemConv of conversations) {
-              if (!videoId || itemConv.videoId === videoId || itemConv.id === activeId) {
-                filteredConversations.push(itemConv);
-              }
-            }
-            return (
-              <>
-                {filteredConversations.length === 0 && <div className="p-3 text-[var(--ink-muted)] font-mono text-[11px]">No conversations yet</div>}
-                {filteredConversations.map((c) => (
-            <div key={c.id} className="flex items-center gap-1.5 py-0.5 px-2">
-              <button
-                onClick={() => { void selectConversation(c.id); setShowThreads(false); }}
-                className={`flex-1 min-w-0 text-left p-2 rounded-lg border-none cursor-pointer font-mono text-[11.5px] overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-[7px] ${c.id === activeId ? 'bg-[var(--accent-a12)] text-[var(--accent-ink)]' : 'bg-transparent text-[var(--ink-secondary)]'}`}
-              >
-                {c.analysisId && <Icon icon="solar:link-round-angle-linear" size={12} className="flex-shrink-0 opacity-70" />}
-                <span className="overflow-hidden text-ellipsis">{c.title}</span>
-              </button>
-              <IconButton label="Delete conversation" variant="ghost" size="sm" icon={<Icon icon="solar:trash-bin-minimalistic-linear" size={12} />} onClick={() => void deleteConversation(c.id)} />
-            </div>
-                ))}
-              </>
-            );
-          })()}
+        <div className="max-h-[240px] overflow-y-auto border-b border-[var(--line)] bg-[rgb(8_11_17_/_0.95)] backdrop-blur-md p-1.5 flex flex-col gap-1">
+          <button
+            onClick={() => { void newConversation(); setShowThreads(false); }}
+            className="w-full text-left p-2 rounded-lg border border-dashed border-[var(--accent)]/50 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] cursor-pointer font-mono text-[11.5px] font-semibold flex items-center justify-between transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <Icon icon="solar:add-circle-linear" size={14} />
+              + Start New Chat Thread
+            </span>
+          </button>
+          {conversations.length === 0 ? (
+            <div className="p-3 text-[var(--ink-muted)] font-mono text-[11px]">No conversations yet</div>
+          ) : (
+            conversations.map((c) => {
+              const formattedDate = c.updatedAt || c.createdAt ? new Date(c.updatedAt || c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+              return (
+                <div key={c.id} className="flex items-center gap-1.5 px-1">
+                  <button
+                    onClick={() => { void selectConversation(c.id); setShowThreads(false); }}
+                    className={`flex-1 min-w-0 text-left p-2 rounded-lg border-none cursor-pointer font-mono text-[11.5px] overflow-hidden flex items-center justify-between gap-2 transition-colors ${
+                      c.id === activeId ? 'bg-[var(--accent-a12)] text-[var(--accent-ink)] font-bold' : 'bg-transparent text-[var(--ink-secondary)] hover:bg-[var(--surface)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {c.analysisId && <Icon icon="solar:link-round-angle-linear" size={12} className="flex-shrink-0 opacity-70" />}
+                      <span className="overflow-hidden text-ellipsis whitespace-nowrap">{c.title || 'Untitled Chat'}</span>
+                    </div>
+                    {formattedDate && (
+                      <span className="text-[10px] text-[var(--ink-muted)] font-normal flex-shrink-0">{formattedDate}</span>
+                    )}
+                  </button>
+                  <IconButton label="Delete conversation" variant="ghost" size="sm" icon={<Icon icon="solar:trash-bin-minimalistic-linear" size={12} />} onClick={() => void deleteConversation(c.id)} />
+                </div>
+              );
+            })
+          )}
         </div>
       )}
 

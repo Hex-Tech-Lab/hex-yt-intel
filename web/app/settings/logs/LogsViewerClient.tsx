@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { IconButton, Tooltip } from '@astryxdesign/core';
 
@@ -114,11 +114,29 @@ function parseLogLine(line: string): LogRow {
   };
 }
 
+function formatDualTimezone(timestampStr: string): { display: string; full: string } {
+  try {
+    const d = new Date(timestampStr);
+    if (isNaN(d.getTime())) return { display: timestampStr, full: timestampStr };
+    const utcTime = d.toLocaleTimeString('en-US', { timeZone: 'UTC', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const caiTime = d.toLocaleTimeString('en-US', { timeZone: 'Africa/Cairo', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return {
+      display: `${utcTime} UTC · ${caiTime} CAI`,
+      full: `${d.toISOString()} (Cairo: ${caiTime})`,
+    };
+  } catch {
+    return { display: timestampStr, full: timestampStr };
+  }
+}
+
 export function LogsViewerClient() {
   const [activeTab, setActiveTab] = useState<LogTabKey>('synthesis');
   const [timeRange, setTimeRange] = useState<TimeRangeKey>('1h');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
+
+  const [sortField, setSortField] = useState<'timestamp' | 'level' | 'source' | 'message'>('timestamp');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [tabLogs, setTabLogs] = useState<Record<LogTabKey, string>>({
     synthesis: 'Loading synthesis logs…',
@@ -224,10 +242,35 @@ export function LogsViewerClient() {
   };
 
   const rawContent = tabLogs[activeTab] || '';
-  const logRows: LogRow[] = rawContent
-    .split('\n')
-    .filter((l) => l.trim().length > 0)
-    .map(parseLogLine);
+  const logRows: LogRow[] = useMemo(() => {
+    return rawContent
+      .split('\n')
+      .filter((l) => l.trim().length > 0)
+      .map(parseLogLine);
+  }, [rawContent]);
+
+  const sortedRows = useMemo(() => {
+    return [...logRows].sort((a, b) => {
+      let valA: string | number = a[sortField] || '';
+      let valB: string | number = b[sortField] || '';
+      if (sortField === 'timestamp') {
+        valA = new Date(valA).getTime() || 0;
+        valB = new Date(valB).getTime() || 0;
+      }
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [logRows, sortField, sortOrder]);
+
+  const handleHeaderClick = (field: 'timestamp' | 'level' | 'source' | 'message') => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto font-mono text-sm text-[var(--ink-main)]">
@@ -358,17 +401,38 @@ export function LogsViewerClient() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-[var(--surface-raised)] border-b border-[var(--border-muted)] text-[var(--ink-muted)] font-semibold">
-                  <th className="py-2.5 px-3 w-[190px]">Timestamp</th>
-                  <th className="py-2.5 px-3 w-[90px]">Level</th>
-                  <th className="py-2.5 px-3 w-[150px]">Source</th>
-                  <th className="py-2.5 px-3">Message / Payload</th>
+                <tr className="bg-[var(--surface-raised)] border-b border-[var(--border-muted)] text-[var(--ink-muted)] font-semibold select-none">
+                  <th
+                    onClick={() => handleHeaderClick('timestamp')}
+                    className="py-2.5 px-3 w-[220px] cursor-pointer hover:text-[var(--accent)] transition-colors"
+                  >
+                    Timestamp {sortField === 'timestamp' ? (sortOrder === 'asc' ? '↑' : '↓') : <span className="opacity-30">↕</span>}
+                  </th>
+                  <th
+                    onClick={() => handleHeaderClick('level')}
+                    className="py-2.5 px-3 w-[90px] cursor-pointer hover:text-[var(--accent)] transition-colors"
+                  >
+                    Level {sortField === 'level' ? (sortOrder === 'asc' ? '↑' : '↓') : <span className="opacity-30">↕</span>}
+                  </th>
+                  <th
+                    onClick={() => handleHeaderClick('source')}
+                    className="py-2.5 px-3 w-[150px] cursor-pointer hover:text-[var(--accent)] transition-colors"
+                  >
+                    Source {sortField === 'source' ? (sortOrder === 'asc' ? '↑' : '↓') : <span className="opacity-30">↕</span>}
+                  </th>
+                  <th
+                    onClick={() => handleHeaderClick('message')}
+                    className="py-2.5 px-3 cursor-pointer hover:text-[var(--accent)] transition-colors"
+                  >
+                    Message / Payload {sortField === 'message' ? (sortOrder === 'asc' ? '↑' : '↓') : <span className="opacity-30">↕</span>}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {logRows.map((row, idx) => {
+                {sortedRows.map((row: LogRow, idx: number) => {
                   const isErr = row.level.includes('ERR');
                   const isWarn = row.level.includes('WARN') || row.message.includes('synthesis:FAILED') || row.message.includes('valid=false');
+                  const dualTime = formatDualTimezone(row.timestamp);
                   return (
                     <tr
                       key={idx}
@@ -378,7 +442,9 @@ export function LogsViewerClient() {
                         idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'
                       }`}
                     >
-                      <td className="py-2 px-3 whitespace-nowrap text-[var(--ink-muted)]">{row.timestamp}</td>
+                      <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)]" title={dualTime.full}>
+                        {dualTime.display}
+                      </td>
                       <td className="py-2 px-3 font-bold">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] ${
                           isErr ? 'bg-red-950 text-red-400 border border-red-800' :
