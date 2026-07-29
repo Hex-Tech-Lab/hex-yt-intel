@@ -1,0 +1,22 @@
+web/app/api/admin/logs/snapshot/route.ts
+  s_0eded1e9d0cab6::t_3e886045a688c3 39,41,44,46,48
+  s_0eded1e9d0cab6::t_3503206c705a48 64-65,68
+web/middleware.ts
+  s_0eded1e9d0cab6::t_36b4784427474c 144-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "c7afc02f2e17bf40c222ff6d7ecf134b8357099f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
