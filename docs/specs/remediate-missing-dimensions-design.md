@@ -64,17 +64,32 @@ web/scripts/setup-qstash-cron.ts
 
 ## `findAnalysesWithMissingDimensions`
 
-Query `analyses` where `billing_status IN ('completed', 'partial')` (never
-`processing` — that is the reaper's territory, not this one) and the
-stored `validation_report` / reconstructed markdown shows
-`completedDimensions.length < TOTAL_DIMENSIONS`. This is the same
+**Verified against production data (2026-07-30, 179 total analyses):**
+partial analyses are NOT tagged `billing_status = 'partial'` — the
+reaper's `buildSettlePatch` settles them to `billing_status = 'failed'`
+with `validation_report.status = 'partial'`. The correct target query is
+`billing_status = 'failed' AND validation_report->>'status' = 'partial'`
+(never `processing` — that is the reaper's territory, not this one), plus
+a markdown-length floor (`length(analysis_markdown) > 0`) to exclude total
+losses. Real distribution found: 8 `completed`/`partial` + 31
+`failed`/`partial` + 6 `failed`/null-with-content = **~45 of 179 analyses
+(25%)** have real partial content and no path back to completion today
+except a full re-run. This is not a rare edge case — it justifies
+building this now rather than leaving it as a spec.
+
+Also confirm `completedDimensions.length < TOTAL_DIMENSIONS` via the same
 dimension-counting logic `web/app/api/analyses/[id]/status/route.ts`
 already uses (`parseToUCISDimensions` → `completedDimensions`) — reuse
-that too rather than re-deriving dimension counts a third way.
+that too rather than re-deriving dimension counts a third way. The
+`validation_report.status = 'partial'` tag is the cheap first filter;
+the parsed dimension count is the authoritative check before spending a
+worker call on it.
 
 Cap the batch per run (`limit`, default e.g. 10) so one cron tick can't
 fan out unboundedly if a schema issue suddenly makes many analyses look
-incomplete at once.
+incomplete at once. At ~45 backlog rows today, a first backfill run will
+need several ticks regardless — don't try to clear the backlog in one
+invocation.
 
 ## `remediateAnalysis(gap)`
 
