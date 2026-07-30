@@ -259,6 +259,57 @@ function auditSilentCatchNoTelemetry(file: string, content: string) {
   }
 }
 
+// --- Rule 5: SILENT_ERROR_RETURN_NO_TELEMETRY -----------------------------
+// A return of a failure object (success/ok set to false) whose
+// enclosing block has no error-reporting call anywhere in it. This is the
+// non-exceptional sibling of SILENT_CATCH_NO_TELEMETRY: no throw happens, so
+// the catch-block heuristic never sees it, but the failure is just as
+// invisible. Confirmed pattern: LLMCascade.ts's callLLM/callLLMStream had 4
+// of these (non-2xx branches, empty-response branch) with zero telemetry --
+// found only via manual crash investigation, not tooling (fixed in
+// 23eb5a36). Narrow on purpose: only fires when the *entire* enclosing block
+// (walked backward to its opening brace, capped at 15 lines) lacks any
+// console.error/warn or Sentry call -- a block that already logs above the
+// return is left alone.
+function auditSilentErrorReturnNoTelemetry(file: string, content: string) {
+  const lines = content.split('\n');
+  const returnPattern = /\breturn\s*\{[^}]*\b(success|ok)\s*:\s*false\b/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    if (!returnPattern.test(line)) continue;
+
+    // Walk backward to find the start of the enclosing block: the nearest
+    // line above whose net brace balance (relative to the return line)
+    // opens the scope this return sits in.
+    let depth = 0;
+    let blockStart = -1;
+    for (let k = i; k >= 0 && i - k <= 15; k--) {
+      const kLine = lines[k] ?? '';
+      depth += (kLine.match(/\}/g) || []).length - (kLine.match(/\{/g) || []).length;
+      if (depth < 0) {
+        blockStart = k;
+        break;
+      }
+    }
+    if (blockStart === -1) continue; // no enclosing block found within the cap; skip rather than guess
+
+    const blockLines = lines.slice(blockStart, i + 1);
+    const joined = blockLines.join('\n');
+    const hasTelemetry = /console\.(error|warn)\(|Sentry\.(captureException|captureMessage)\(/.test(joined);
+    if (hasTelemetry) continue;
+
+    findings.push({
+      rule: 'SILENT_ERROR_RETURN_NO_TELEMETRY',
+      severity: 'warning',
+      file,
+      line: i + 1,
+      why: 'This return of a failure object (success/ok set to false) has no console.error/warn or Sentry.captureException/captureMessage call anywhere in its enclosing block -- a real failure path with no throw, so it is invisible to telemetry and to SILENT_CATCH_NO_TELEMETRY alike. Confirmed pattern: LLMCascade.ts had 4 of these across callLLM/callLLMStream (fixed in 23eb5a36).',
+      snippet: line.trim(),
+    });
+  }
+}
+
 for (const root of SCAN_ROOTS) {
   const dirFiles = [...walk(root)];
   const stems = new Set(dirFiles.map((f) => f.replace(/\.(test|spec)\.tsx?$/, '.___').replace(/\.tsx?$/, '')));
@@ -272,6 +323,7 @@ for (const root of SCAN_ROOTS) {
     auditUnverifiedEndpoints(relPath, content, hasSiblingTest);
     auditScriptedTemplateFailure(relPath, content);
     auditSilentCatchNoTelemetry(relPath, content);
+    auditSilentErrorReturnNoTelemetry(relPath, content);
   }
 }
 
