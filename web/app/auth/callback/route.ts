@@ -31,6 +31,16 @@ export async function GET(request: NextRequest) {
   const safeNext = getSafeRedirectPath(searchParams.get('next'), '/atlas');
 
   if (!code) {
+    // No `code` param at all -- either a bot/scanner probing this endpoint
+    // directly (matches the 2026-07-29 unexplained-login investigation's
+    // concern about automated traffic finding the app pre-launch) or a
+    // malformed/manually-typed URL. Previously had zero telemetry, unlike
+    // the below "code present but exchange failed" branch.
+    Sentry.captureMessage('auth-callback: no code param', {
+      level: 'info',
+      tags: { operation: 'auth-callback' },
+      extra: { userAgent: request.headers.get('user-agent') },
+    });
     return NextResponse.redirect(new URL('/auth/error?error=no_code', request.url));
   }
 
