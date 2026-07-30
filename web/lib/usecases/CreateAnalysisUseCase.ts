@@ -56,6 +56,8 @@ export interface UseCaseSuccess {
   id: string;
   analysisId: string;
   videoId: string;
+  /** Forwarded to OpenRouter's `user` field (worker-side) for abuse/security correlation. */
+  userId: string;
   status: 'processing';
   title: string;
   persona: PersonaId;
@@ -288,6 +290,12 @@ export class CreateAnalysisUseCase {
         id: stub.id,
         analysisId: stub.id,
         videoId,
+        // Forwarded to OpenRouter's `user` field (worker-side, LLMCascade.ts)
+        // so requests are correlatable back to the caller in OpenRouter's own
+        // activity dashboard -- added 2026-07-30 as a security-correlation
+        // capability, not currently used for authorization (Vercel already
+        // gated this request via requireAdmin/quota before reaching here).
+        userId: params.userId,
         status: 'processing',
         title: ingestionResult.metadata.title,
         metadata: jobMetadata,

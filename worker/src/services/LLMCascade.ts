@@ -46,15 +46,24 @@ export class LLMCascade implements LLMCascadePort {
   // the override source of truth; MODEL_CHAIN is the safety-net fallback.
   private chain: ReadonlyArray<{ model: string; name: string; providerOrder?: readonly string[] }>;
   private maxTokens: { haiku: number; default: number };
+  // Forwarded to OpenRouter's `user` field so requests are correlatable back
+  // to a caller in OpenRouter's own activity dashboard (2026-07-30, security
+  // correlation capability). Never used for authorization here -- Vercel
+  // already authenticated/quota-gated the request before it reached this
+  // worker. Undefined for background/system-triggered analyses with no
+  // human caller (e.g. reaper retries) -- OpenRouter's field is optional.
+  private userId?: string;
 
   constructor(
     apiKey: string,
     models?: string[],
     cascade?: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
-    maxOutputTokens?: { haiku: number; default: number }
+    maxOutputTokens?: { haiku: number; default: number },
+    userId?: string
   ) {
     this.apiKey = apiKey;
     this.maxTokens = maxOutputTokens ?? MAX_TOKENS_FALLBACK;
+    this.userId = userId;
     if (cascade && cascade.length > 0) {
       // Preferred path: full registry-resolved tiers, providerOrder included
       // directly -- correct even when multiple tiers share one model id
@@ -292,6 +301,7 @@ export class LLMCascade implements LLMCascadePort {
             { role: 'system', content: systemPrompt },
           ],
           ...(requestProvider ? { provider: requestProvider } : {}),
+          ...(this.userId ? { user: this.userId } : {}),
         }),
         signal: controller.signal,
       });
@@ -409,6 +419,7 @@ export class LLMCascade implements LLMCascadePort {
             { role: 'system', content: systemPrompt },
           ],
           ...(requestProvider ? { provider: requestProvider } : {}),
+          ...(this.userId ? { user: this.userId } : {}),
         }),
         signal: controller.signal,
       });

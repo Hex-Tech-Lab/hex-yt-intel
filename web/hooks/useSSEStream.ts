@@ -230,6 +230,7 @@ export function useSSEStream() {
                 const streamPayload: WorkerStreamRequest = {
                   videoId: job.videoId,
                   analysisId: job.analysisId || job.id,
+                  userId: job.userId,
                   transcript: job.transcript || '',
                   segments: job.segments,
                   metadata: job.metadata,

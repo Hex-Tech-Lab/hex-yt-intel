@@ -336,6 +336,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       anchor.click();
       document.body.removeChild(anchor);
       URL.revokeObjectURL(downloadUrl);
+      // Fire-and-forget: the Blob download above has no server round-trip,
+      // so without this the admin User Activity dashboard can never see a
+      // markdown download (only PDF export logs server-side directly).
+      fetch(`/api/analyses/${nucleusAnalysis.id}/download-event`, { method: 'POST' }).catch(() => {});
     }
   }, [nucleusAnalysis?.id, nucleusAnalysis?.title, analysis?.analysis_markdown]);
 

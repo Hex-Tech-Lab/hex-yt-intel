@@ -4,6 +4,7 @@ import { useState, useEffect, startTransition, ViewTransition } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { LogsViewerClient } from '@/app/settings/logs/LogsViewerClient';
 import { AdminSettingsClient } from '@/app/admin/settings/AdminSettingsClient';
+import { UsersAdminClient } from '@/app/admin/users/UsersAdminClient';
 
 interface UsageSummary {
   tier: string;
@@ -70,7 +71,7 @@ function UsagePane() {
   );
 }
 
-export type SettingsSubmenuKey = 'overview' | 'logs' | 'usage' | 'preferences' | 'admin-settings';
+export type SettingsSubmenuKey = 'overview' | 'logs' | 'usage' | 'preferences' | 'admin-settings' | 'admin-users';
 
 export interface SettingsItem {
   key: SettingsSubmenuKey;
@@ -107,6 +108,13 @@ export const SETTINGS_TREE: SettingsItem[] = [
     label: 'Admin Registry',
     description: 'System configuration registry keys and runtime overrides',
     icon: 'solar:key-minimalistic-linear',
+    category: 'SYSTEM REGISTRY',
+  },
+  {
+    key: 'admin-users',
+    label: 'User Activity',
+    description: 'Signups, sessions, videos analyzed, and reports downloaded per user',
+    icon: 'solar:users-group-rounded-linear',
     category: 'SYSTEM REGISTRY',
   },
 ];
@@ -212,6 +220,8 @@ export function SettingsContentPane({ activeKey, onNavigate }: SettingsContentPa
         )}
 
         {activeKey === 'admin-settings' && <AdminSettingsClient />}
+
+        {activeKey === 'admin-users' && <UsersAdminClient />}
       </div>
     </ViewTransition>
   );

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { getUserTier } from '@/lib/services/traffic';
+import { logUsage } from '@/lib/usage';
 import { ERROR_CODES } from '@/lib/error-codes';
 import PDFDocument from 'pdfkit';
 import { NextRequest, NextResponse } from 'next/server';
@@ -121,9 +122,11 @@ export async function GET(
           { status: 402 }
         );
       }
+      logReportDownload(userId, id, 'pdf-full');
       return exportFullPDF(analysis);
     }
 
+    logReportDownload(userId, id, 'pdf-summary');
     return exportSummaryPDF(analysis);
   } catch (error) {
     const errorCode = ERROR_CODES.UNHANDLED_EXCEPTION;
@@ -140,6 +143,17 @@ export async function GET(
       { status: isPdfError ? 400 : 500 }
     );
   }
+}
+
+/**
+ * Fire-and-forget usage_logs write so the admin User Activity dashboard can
+ * show "downloaded a report" -- neither PDF export nor the client-side MD
+ * blob download logged anything before this (confirmed via live query:
+ * zero 'report_download' rows existed). Never awaited, never allowed to
+ * fail the actual download the user is waiting on.
+ */
+function logReportDownload(userId: string, analysisId: string, format: 'pdf-summary' | 'pdf-full') {
+  logUsage({ userId, action: 'report_download', metadata: { analysisId, format } });
 }
 
 interface ExportableAnalysis {

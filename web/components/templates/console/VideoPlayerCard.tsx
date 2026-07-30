@@ -137,6 +137,10 @@ export function VideoPlayerCard() {
     }
     if (ready && playerRef.current) {
       playerRef.current.seekTo(seekTo);
+      // Not calling play() here: setSeekTo already flips isPlaying true in
+      // the store, and the isPlaying effect below (the single authority for
+      // "should the iframe be playing") will fire and call play() itself --
+      // calling it here too would be a second code path doing the same job.
       requestAnimationFrame(() => {
         clearSeek();
       });
