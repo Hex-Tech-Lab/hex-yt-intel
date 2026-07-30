@@ -31,6 +31,7 @@ design-system/*.zip
 # Private agent skills
 .gemini/skills/
 docs/skills/
+.agents/
 
 # Local-only sharing files
 docs/for_sharing/
