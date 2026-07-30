@@ -264,6 +264,42 @@ export async function deleteRedisKey(key: string): Promise<void> {
 }
 
 /**
+ * Acquire a distributed lock via atomic SET-if-not-exists-with-TTL. Used to
+ * serialize a run-level operation (e.g. a cron harness) across overlapping
+ * invocations -- unlike setRedisValue (plain SET, always overwrites), this
+ * only succeeds if no other holder currently owns the key, so exactly one
+ * concurrent caller ever acquires it. Falls back to a per-process in-memory
+ * lock when Redis is unavailable (best-effort only in that case -- does not
+ * protect against overlap across separate serverless instances).
+ */
+export async function acquireRedisLock(key: string, ttlSeconds: number): Promise<boolean> {
+  const redis = initializeRedis();
+
+  try {
+    if (redis && redisAvailable) {
+      const result = await redis.set(key, '1', { nx: true, ex: ttlSeconds });
+      return result === 'OK';
+    }
+  } catch (error) {
+    console.warn(`[redis.ts] Failed to acquire lock ${key}:`, error);
+    redisAvailable = false;
+  }
+
+  const existing = memoryCache.get(key);
+  if (existing && existing.expireAt > Date.now()) return false;
+  memoryCache.set(key, { value: '1', expireAt: Date.now() + ttlSeconds * 1000 });
+  return true;
+}
+
+/**
+ * Release a lock acquired via acquireRedisLock. Reuses deleteRedisKey rather
+ * than duplicating the Redis-vs-memory-fallback branching.
+ */
+export async function releaseRedisLock(key: string): Promise<void> {
+  await deleteRedisKey(key);
+}
+
+/**
  * Get current Redis status
  * Used for health checks and diagnostics
  */
