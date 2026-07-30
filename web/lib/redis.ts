@@ -9,6 +9,7 @@
  */
 
 import { Redis } from '@upstash/redis';
+import * as Sentry from '@sentry/nextjs';
 
 /**
  * In-memory fallback cache for when Redis is unavailable
@@ -261,6 +262,157 @@ export async function deleteRedisKey(key: string): Promise<void> {
   }
 
   memoryCache.delete(key);
+}
+
+/**
+ * Acquire a distributed lock via atomic SET-if-not-exists-with-TTL. Used to
+ * serialize a run-level operation (e.g. a cron harness) across overlapping
+ * invocations -- unlike setRedisValue (plain SET, always overwrites), this
+ * only succeeds if no other holder currently owns the key, so exactly one
+ * concurrent caller ever acquires it. Falls back to a per-process in-memory
+ * lock when Redis is unavailable (best-effort only in that case -- does not
+ * protect against overlap across separate serverless instances).
+ *
+ * Returns a unique per-acquisition token (not a plain boolean) that MUST be
+ * passed to releaseRedisLock. Without this, a holder whose TTL expired mid-
+ * run could unconditionally delete a DIFFERENT, newer holder's live lock on
+ * its own (late) release -- exactly re-opening the overlap this primitive
+ * exists to prevent. The token makes release a compare-and-delete: only the
+ * current owner's release actually clears the key.
+ */
+export async function acquireRedisLock(key: string, ttlSeconds: number): Promise<string | null> {
+  const redis = initializeRedis();
+  const token = crypto.randomUUID();
+
+  // Attempt Redis on every operation instead of relying solely on sticky gate
+  if (redis) {
+    try {
+      const result = await redis.set(key, token, { nx: true, ex: ttlSeconds });
+      return result === 'OK' ? token : null;
+    } catch (error) {
+      console.warn('[redis.ts] Failed to acquire lock', { key, error: error instanceof Error ? error.message : String(error) });
+      redisAvailable = false;
+      // Fall through to in-memory fallback below
+    }
+  }
+
+  // Degraded path: Redis is down, falling back to a per-process lock that
+  // does NOT protect against overlap across separate serverless instances.
+  // Surfaced to Sentry (not just console.warn) because this silently
+  // weakens whatever correctness guarantee the caller was relying on the
+  // lock for -- worth knowing about even though the harness's own guarded
+  // write is still a backstop against actual data corruption.
+  console.warn('[redis.ts] Redis unavailable, using in-memory lock fallback -- NOT cross-instance safe', { lockKey: key });
+  Sentry.captureMessage('acquireRedisLock: degraded to in-memory fallback', {
+    level: 'warning',
+    tags: { lockKey: key },
+  });
+
+  const existing = memoryCache.get(key);
+  if (existing && existing.expireAt > Date.now()) return null;
+  memoryCache.set(key, { value: token, expireAt: Date.now() + ttlSeconds * 1000 });
+  return token;
+}
+
+/**
+ * Release a lock acquired via acquireRedisLock. Compare-and-delete on the
+ * token returned by acquireRedisLock -- NOT a plain delete. A plain delete
+ * would let a holder whose TTL already expired (e.g. a run that overran
+ * HARNESS_LOCK_TTL_SECONDS) delete a completely different, newer holder's
+ * still-live lock when it finally gets around to releasing, defeating the
+ * whole point of the lock. The Lua script makes the read-then-delete
+ * atomic; a plain GET-then-DEL from application code would itself have a
+ * race window between the two calls.
+ */
+const RELEASE_IF_OWNER_SCRIPT = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+  return redis.call("DEL", KEYS[1])
+else
+  return 0
+end
+`;
+
+export async function releaseRedisLock(key: string, token: string): Promise<void> {
+  const redis = initializeRedis();
+
+  // Attempt Redis compare-and-delete on every operation to avoid leaking
+  // Redis-acquired locks into in-memory fallback path
+  if (redis) {
+    try {
+      await executeRedisScript(RELEASE_IF_OWNER_SCRIPT, [key], [token]);
+      return;
+    } catch (error) {
+      console.warn('[redis.ts] Failed to release Redis lock', { key, error: error instanceof Error ? error.message : String(error) });
+      redisAvailable = false;
+      // Fall through to in-memory fallback below
+    }
+  }
+
+  // Memory fallback: only clear if we're still the recorded owner.
+  const existing = memoryCache.get(key);
+  if (existing && existing.value === token) {
+    memoryCache.delete(key);
+  }
+}
+
+/**
+ * Atomic token-bucket check-and-deduct, denominated in whatever integer
+ * unit the caller chooses (USD cents for remediation's budget -- see ADR
+ * 019, docs/specs/ADR_019_REMEDIATION_BUDGET_TOKEN_BUCKET_2026-07-31.md).
+ * `capacity` may change between calls (the caller recomputes it from a
+ * live external balance) -- the script clamps stored tokens to the current
+ * capacity on every call, so a shrinking capacity self-corrects rather than
+ * leaving stale over-capacity tokens available.
+ *
+ * Fails CLOSED: any Redis failure (executeRedisScript's `-1` sentinel) is
+ * treated as "deny the spend", never "assume unlimited budget". This is a
+ * money-gating primitive, not a cache -- the failure mode has to be the
+ * conservative one.
+ */
+const TOKEN_BUCKET_SCRIPT = `
+local bucket = redis.call("HMGET", KEYS[1], "tokens", "lastRefillAt")
+local tokens = tonumber(bucket[1])
+local lastRefillAt = tonumber(bucket[2])
+local capacity = tonumber(ARGV[1])
+local refillRatePerMs = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+local cost = tonumber(ARGV[4])
+
+if tokens == nil then
+  tokens = capacity
+  lastRefillAt = now
+end
+
+local elapsed = now - lastRefillAt
+if elapsed > 0 then
+  tokens = math.min(capacity, tokens + elapsed * refillRatePerMs)
+  lastRefillAt = now
+end
+
+if tokens >= cost then
+  tokens = tokens - cost
+  redis.call("HMSET", KEYS[1], "tokens", tostring(tokens), "lastRefillAt", tostring(lastRefillAt))
+  redis.call("EXPIRE", KEYS[1], 5184000)
+  return 1
+end
+
+redis.call("HMSET", KEYS[1], "tokens", tostring(tokens), "lastRefillAt", tostring(lastRefillAt))
+redis.call("EXPIRE", KEYS[1], 5184000)
+return 0
+`;
+
+export async function tryConsumeTokenBucket(
+  key: string,
+  capacity: number,
+  refillRatePerMs: number,
+  cost: number
+): Promise<boolean> {
+  const result = await executeRedisScript(
+    TOKEN_BUCKET_SCRIPT,
+    [key],
+    [capacity, refillRatePerMs, Date.now(), cost]
+  );
+  return result === 1;
 }
 
 /**

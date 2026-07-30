@@ -3,6 +3,97 @@ import type { SourceFile } from "ts-morph";
 import type { Finding } from "../domain/Finding";
 import type { Rule, RuleContext } from "../domain/Rule";
 
+/**
+ * True if a same-file function/arrow-function/function-expression named
+ * `functionName` has text matching `pattern` anywhere in its body. Shared by
+ * functionBodyHasSentry and functionBodyHasAbortDetection below, so a catch
+ * block that DELEGATES to a shared helper (instead of inlining detection
+ * and/or reporting) still counts correctly on both checks -- RCA
+ * (2026-07-31): dimension-remediation.ts extracted a `reportAbortableError`
+ * helper to deduplicate two near-identical catch blocks (a real Codacy
+ * duplication finding), which moved BOTH the AbortError/isTimeout detection
+ * AND the Sentry.captureException call out of the catch blocks' own text --
+ * false-positiving this rule a third time, on two different checks at once.
+ * Resolving one level of call indirection is enough for this codebase's
+ * actual pattern (a local helper in the same file); this deliberately does
+ * NOT chase imports or multi-level call chains -- diminishing returns for a
+ * heuristic rule, and a real gap should still surface if the helper itself
+ * silently does nothing.
+ */
+function functionBodyMatches(source: SourceFile, functionName: string, pattern: RegExp): boolean {
+  let found = false;
+  source.forEachDescendant((node) => {
+    if (found) return;
+    if (Node.isFunctionDeclaration(node) && node.getName() === functionName) {
+      found = pattern.test(node.getBodyText() ?? "");
+      return;
+    }
+    if (Node.isVariableDeclaration(node) && node.getName() === functionName) {
+      const initializer = node.getInitializer();
+      if (initializer && (Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer))) {
+        found = pattern.test(initializer.getText());
+      }
+    }
+  });
+  return found;
+}
+
+function functionBodyHasSentry(source: SourceFile, functionName: string): boolean {
+  return functionBodyMatches(source, functionName, /Sentry\.(captureException|captureMessage)/);
+}
+
+function functionBodyHasAbortDetection(source: SourceFile, functionName: string): boolean {
+  return functionBodyMatches(source, functionName, /AbortError|isTimeout/);
+}
+
+/**
+ * AST-scoped check: traverse try-catch statements and identify catch blocks
+ * that handle timeout/abort errors, then verify those specific blocks contain
+ * Sentry reporting -- either directly, or via a same-file helper function
+ * call (see functionBodyHasSentry). Excludes comments and unrelated
+ * adjacent catch blocks.
+ */
+function checkSentryInAbortCatch(source: SourceFile): boolean {
+  let foundSentryInAbortCatch = false;
+
+  source.forEachDescendant((node) => {
+    if (node.getKind() !== SyntaxKind.CatchClause) return;
+
+    const catchClause = node;
+    const catchBlock = catchClause.getBlock();
+    if (!catchBlock) return;
+
+    const catchText = catchBlock.getText();
+    const calledNames = catchBlock.getDescendantsOfKind(SyntaxKind.CallExpression)
+      .map((call) => call.getExpression().getText())
+      .filter((name) => /^[a-zA-Z_$][\w$]*$/.test(name)); // plain identifiers only, not member expressions like console.error
+
+    // Check if this catch block mentions AbortError or isTimeout (the
+    // abort/timeout path) -- either directly, or via a same-file helper it
+    // delegates to (same one-level-of-indirection reasoning as the Sentry
+    // check below: a helper can own BOTH the detection and the reporting).
+    const isAbortRelated = /AbortError|isTimeout/.test(catchText)
+      || calledNames.some((name) => functionBodyHasAbortDetection(source, name));
+    if (!isAbortRelated) return;
+
+    // Within this abort-related catch block, check for Sentry calls (ignoring comments)
+    // Strip comments before checking
+    const statements = catchBlock.getStatements().map(s => s.getText()).join('\n');
+    if (/Sentry\.(captureException|captureMessage)/.test(statements)) {
+      foundSentryInAbortCatch = true;
+      return;
+    }
+
+    // No direct Sentry call -- check whether the catch block calls a
+    // same-file helper that itself reports to Sentry.
+    if (calledNames.some((name) => functionBodyHasSentry(source, name))) {
+      foundSentryInAbortCatch = true;
+    }
+  });
+
+  return foundSentryInAbortCatch;
+}
+
 export const StreamResilienceRule: Rule = {
   name: "stream-resilience-audit",
   scope: "file",
@@ -30,10 +121,26 @@ export const StreamResilienceRule: Rule = {
     // "settle"; there's no stream response at all). "Settle error state"
     // only means something for an actual ReadableStream/SSE response, so
     // require that evidence before the setTimeout+abort check even applies.
+    // (c) RCA (2026-07-30): a third legitimate settlement vocabulary --
+    // a server-side (cron/webhook) consumer of an SSE stream that isn't the
+    // web client (no settleAnalysis/setError, no UI state) and isn't the
+    // worker emitting frames (no `send({type:"error"})`). It "settles" by
+    // returning a typed failure result that its caller reports via Sentry
+    // and tallies -- e.g. dimension-remediation.ts's collectDimensionsFromWorker
+    // catches the AbortError, calls Sentry.captureException, and returns
+    // null, which the caller turns into RemediationStage.WorkerFailed. A
+    // Sentry report co-located with the abort/timeout catch is equally
+    // valid evidence of "not silently left in limbo" as the other two forms.
+    //
+    // AST-scoped inspection (replaces previous file-wide text regex):
+    // traverse try-catch blocks, identify timeout/abort-related catch blocks
+    // by their body content, and check if those specific catch blocks contain
+    // Sentry reporting. Excludes adjacent unrelated catch blocks and comments.
+    const hasSentryReportNearAbort = checkSentryInAbortCatch(source);
     const isStreamResponseHandler = /ReadableStream|text\/event-stream|EventSource|\.getReader\(\)|response\.body/.test(text);
     const hasWorkerErrorFrame = /send\(\s*\{\s*type:\s*["']error["']/.test(text);
 
-    if (isStreamResponseHandler && text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError') && !hasWorkerErrorFrame) {
+    if (isStreamResponseHandler && text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError') && !hasWorkerErrorFrame && !hasSentryReportNearAbort) {
       findings.push({
         file: filePath,
         severity: "high",
