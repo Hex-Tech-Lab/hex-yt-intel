@@ -19,6 +19,7 @@
  * The orchestrator (worker.ts) owns transport; this engine owns reasoning.
  */
 
+import * as Sentry from '@sentry/cloudflare';
 import { BracketBuffer } from './BracketBuffer';
 import type { ReasoningEnginePort, EngineContext, StreamHandlers, StreamResult, ExecuteResult } from '../ports/ReasoningEnginePort';
 import type { PromptBuilderPort } from '../ports/PromptBuilderPort';
@@ -139,6 +140,11 @@ export class ReasoningEngine implements ReasoningEnginePort {
       return { success: true, analysis: result.text, model: result.modelUsed, cached: false, valid: true };
     }
 
+    console.error('[ReasoningEngine.execute] All models in cascade failed or validation failed', { videoId: context.videoId });
+    Sentry.captureMessage('ReasoningEngine.execute: all cascade models failed or validation failed', {
+      level: 'error',
+      contexts: { reasoningEngine: { videoId: context.videoId } },
+    });
     return { success: false, error: 'All models in cascade failed or validation failed' };
   }
 }

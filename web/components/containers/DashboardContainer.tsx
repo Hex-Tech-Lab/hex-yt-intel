@@ -129,7 +129,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, []);
 
   useAutoRestoreAnalysis(url);
-  useStreamReattach(nucleusAnalysis?.id ?? (analysis as any)?.id ?? null, status);
+  useStreamReattach(nucleusAnalysis?.id ?? analysis?.id ?? null, status);
 
   // Memoized so the client instance (and therefore `handleSignOut`'s identity)
   // stays stable across renders — createClient() otherwise builds a new
