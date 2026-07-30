@@ -1,0 +1,24 @@
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_9209ed07549242 273
+  s_0eded1e9d0cab6::t_16d2bc5532a644 1-272,274-330
+web/scripts/setup-qstash-cron.ts
+  s_0eded1e9d0cab6::t_2fd55925247efe 27
+web/app/api/webhooks/remediate-dimensions/route.ts
+  s_0eded1e9d0cab6::t_69a249f9025f2e 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "82b6cf677b5ce74a0905cdd00bd9186c5b42656c",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
