@@ -4,9 +4,54 @@ import type { Finding } from "../domain/Finding";
 import type { Rule, RuleContext } from "../domain/Rule";
 
 /**
+ * True if a same-file function/arrow-function/function-expression named
+ * `functionName` has text matching `pattern` anywhere in its body. Shared by
+ * functionBodyHasSentry and functionBodyHasAbortDetection below, so a catch
+ * block that DELEGATES to a shared helper (instead of inlining detection
+ * and/or reporting) still counts correctly on both checks -- RCA
+ * (2026-07-31): dimension-remediation.ts extracted a `reportAbortableError`
+ * helper to deduplicate two near-identical catch blocks (a real Codacy
+ * duplication finding), which moved BOTH the AbortError/isTimeout detection
+ * AND the Sentry.captureException call out of the catch blocks' own text --
+ * false-positiving this rule a third time, on two different checks at once.
+ * Resolving one level of call indirection is enough for this codebase's
+ * actual pattern (a local helper in the same file); this deliberately does
+ * NOT chase imports or multi-level call chains -- diminishing returns for a
+ * heuristic rule, and a real gap should still surface if the helper itself
+ * silently does nothing.
+ */
+function functionBodyMatches(source: SourceFile, functionName: string, pattern: RegExp): boolean {
+  let found = false;
+  source.forEachDescendant((node) => {
+    if (found) return;
+    if (Node.isFunctionDeclaration(node) && node.getName() === functionName) {
+      found = pattern.test(node.getBodyText() ?? "");
+      return;
+    }
+    if (Node.isVariableDeclaration(node) && node.getName() === functionName) {
+      const initializer = node.getInitializer();
+      if (initializer && (Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer))) {
+        found = pattern.test(initializer.getText());
+      }
+    }
+  });
+  return found;
+}
+
+function functionBodyHasSentry(source: SourceFile, functionName: string): boolean {
+  return functionBodyMatches(source, functionName, /Sentry\.(captureException|captureMessage)/);
+}
+
+function functionBodyHasAbortDetection(source: SourceFile, functionName: string): boolean {
+  return functionBodyMatches(source, functionName, /AbortError|isTimeout/);
+}
+
+/**
  * AST-scoped check: traverse try-catch statements and identify catch blocks
  * that handle timeout/abort errors, then verify those specific blocks contain
- * Sentry reporting. Excludes comments and unrelated adjacent catch blocks.
+ * Sentry reporting -- either directly, or via a same-file helper function
+ * call (see functionBodyHasSentry). Excludes comments and unrelated
+ * adjacent catch blocks.
  */
 function checkSentryInAbortCatch(source: SourceFile): boolean {
   let foundSentryInAbortCatch = false;
@@ -19,17 +64,29 @@ function checkSentryInAbortCatch(source: SourceFile): boolean {
     if (!catchBlock) return;
 
     const catchText = catchBlock.getText();
+    const calledNames = catchBlock.getDescendantsOfKind(SyntaxKind.CallExpression)
+      .map((call) => call.getExpression().getText())
+      .filter((name) => /^[a-zA-Z_$][\w$]*$/.test(name)); // plain identifiers only, not member expressions like console.error
 
-    // Check if this catch block mentions AbortError or isTimeout (the abort/timeout path)
-    const isAbortRelated = /AbortError|isTimeout/.test(catchText);
+    // Check if this catch block mentions AbortError or isTimeout (the
+    // abort/timeout path) -- either directly, or via a same-file helper it
+    // delegates to (same one-level-of-indirection reasoning as the Sentry
+    // check below: a helper can own BOTH the detection and the reporting).
+    const isAbortRelated = /AbortError|isTimeout/.test(catchText)
+      || calledNames.some((name) => functionBodyHasAbortDetection(source, name));
     if (!isAbortRelated) return;
 
     // Within this abort-related catch block, check for Sentry calls (ignoring comments)
     // Strip comments before checking
     const statements = catchBlock.getStatements().map(s => s.getText()).join('\n');
-    const hasSentry = /Sentry\.(captureException|captureMessage)/.test(statements);
+    if (/Sentry\.(captureException|captureMessage)/.test(statements)) {
+      foundSentryInAbortCatch = true;
+      return;
+    }
 
-    if (hasSentry) {
+    // No direct Sentry call -- check whether the catch block calls a
+    // same-file helper that itself reports to Sentry.
+    if (calledNames.some((name) => functionBodyHasSentry(source, name))) {
       foundSentryInAbortCatch = true;
     }
   });

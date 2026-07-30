@@ -275,6 +275,20 @@ export async function findAnalysesWithMissingDimensions(opts?: {
 }
 
 /**
+ * Shared by both catch blocks in the worker-call/SSE-read path below (Codacy
+ * duplication finding) -- same isTimeout-detect + structured console.error +
+ * Sentry.captureException shape, differing only in the phase tag and log
+ * message.
+ */
+function reportAbortableError(err: unknown, phase: 'worker_call' | 'sse_read', analysisId: string, logMessage: string): void {
+  const isTimeout = err instanceof Error && err.name === 'AbortError';
+  console.error(logMessage, { analysisId, isTimeout, err: err instanceof Error ? err.message : String(err) });
+  Sentry.captureException(err, {
+    contexts: { remediation: { service: 'dimension-remediation', phase, timeout: String(isTimeout), analysisId } },
+  });
+}
+
+/**
  * Consume the worker's SSE stream server-side (no browser present in a cron
  * context) and accumulate the JSON fragments into one chunk-shaped payload,
  * matching what a single bundle stream produces for stitchChunksIntoPayload.
@@ -347,18 +361,7 @@ async function collectDimensionsFromWorker(
     });
   } catch (err) {
     if (connectionTimeoutId) clearTimeout(connectionTimeoutId);
-    const isTimeout = err instanceof Error && err.name === 'AbortError';
-    console.error('[dimension-remediation] worker call threw', { analysisId: gap.id, isTimeout, err: err instanceof Error ? err.message : String(err) });
-    Sentry.captureException(err, {
-      contexts: {
-        remediation: {
-          service: 'dimension-remediation',
-          phase: 'worker_call',
-          timeout: String(isTimeout),
-          analysisId: gap.id,
-        },
-      },
-    });
+    reportAbortableError(err, 'worker_call', gap.id, '[dimension-remediation] worker call threw');
     return null;
   }
 
@@ -452,18 +455,7 @@ async function readAndMergeWorkerStream(body: ReadableStream<Uint8Array>, gap: A
     }
     if (buffer.trim()) handleEvent(buffer);
   } catch (err) {
-    const isTimeout = err instanceof Error && err.name === 'AbortError';
-    console.error('[dimension-remediation] SSE read aborted or failed', { analysisId: gap.id, isTimeout, err: err instanceof Error ? err.message : String(err) });
-    Sentry.captureException(err, {
-      contexts: {
-        remediation: {
-          service: 'dimension-remediation',
-          phase: 'sse_read',
-          timeout: String(isTimeout),
-          analysisId: gap.id,
-        },
-      },
-    });
+    reportAbortableError(err, 'sse_read', gap.id, '[dimension-remediation] SSE read aborted or failed');
     return null;
   }
 
