@@ -6,7 +6,6 @@
         "code-review-graph",
         "serve"
       ],
-      "cwd": "/home/kellyb_dev/projects/hex-yt-intel",
       "type": "stdio"
     }
   }
