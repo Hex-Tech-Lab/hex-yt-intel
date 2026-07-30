@@ -1,0 +1,22 @@
+web/app/auth/callback/route.ts
+  s_0eded1e9d0cab6::t_1435ddcf18b159 34-43
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_d7af206823b1da 1039-1043
+  s_0eded1e9d0cab6::t_d883fe6b07e132 1044-1046
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "5542e5ac27117d19a837c2d259c7f042c0276f68",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
