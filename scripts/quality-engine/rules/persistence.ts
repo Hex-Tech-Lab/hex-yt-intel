@@ -57,7 +57,13 @@ export const RetryFlagInterferenceRule: IRule = {
     const text = source.getText();
 
     if (text.includes('maxRetries') || text.includes('atomic-persist')) {
-      const flagPatterns = text.match(/let\s+\w*(attempt|persisted|done)\w*\s*=/g) || [];
+      // RCA (2026-07-30): a bounded `for (let attempt = 0; attempt < maxRetries; ...)`
+      // loop counter matched the old any-initializer regex just as readily as the
+      // boolean early-return flag (persistAttempted/hasAttempted) this rule actually
+      // targets -- false-positived on web/lib/redis.ts's executeRedisScript, whose
+      // `attempt` is a plain retry-count index, not a flag gating an early return.
+      // Require a boolean-literal initializer so only the real "flag" shape matches.
+      const flagPatterns = text.match(/let\s+\w*(attempt|persisted|done)\w*\s*=\s*(true|false)\b/g) || [];
       if (flagPatterns.length > 0) {
         findings.push({
           file: filePath,

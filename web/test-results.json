@@ -1,8 +1,8 @@
 {
   "config": {
-    "configFile": "/home/kellyb_dev/projects/hex-yt-intel/web/playwright.config.ts",
-    "rootDir": "/home/kellyb_dev/projects/hex-yt-intel/web/tests",
-    "forbidOnly": false,
+    "configFile": "/home/jailuser/git/web/playwright.config.ts",
+    "rootDir": "/home/jailuser/git/web/tests",
+    "forbidOnly": true,
     "fullyParallel": true,
     "globalSetup": null,
     "globalTeardown": null,
@@ -14,13 +14,13 @@
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/home/kellyb_dev/projects/hex-yt-intel/web/test-results",
+        "outputDir": "/home/jailuser/git/web/test-results",
         "repeatEach": 1,
-        "retries": 0,
+        "retries": 2,
         "metadata": {},
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/home/kellyb_dev/projects/hex-yt-intel/web/tests",
+        "testDir": "/home/jailuser/git/web/tests",
         "testIgnore": [
           "**/pairwise_matrix/**"
         ],
@@ -52,14 +52,14 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.60.0",
-    "workers": 2,
+    "workers": 4,
     "webServer": {
       "command": "pnpm dev",
       "url": "http://localhost:3000",
-      "reuseExistingServer": true,
+      "reuseExistingServer": false,
       "env": {
         "NODE_ENV": "production",
-        "CI": "false",
+        "CI": "true",
         "GITHUB_ACTIONS": "false",
         "NEXT_PUBLIC_SUPABASE_URL": "https://placeholder-project.supabase.co",
         "NEXT_PUBLIC_SUPABASE_ANON_KEY": "placeholder-anon-key",
@@ -87,13 +87,13 @@
   "suites": [],
   "errors": [
     {
-      "message": "Error: Timed out waiting 180000ms from config.webServer.",
-      "stack": "Error: Timed out waiting 180000ms from config.webServer."
+      "message": "Error: Process from config.webServer was not able to start. Exit code: 1",
+      "stack": "Error: Process from config.webServer was not able to start. Exit code: 1"
     }
   ],
   "stats": {
-    "startTime": "2026-07-16T13:24:14.773Z",
-    "duration": 19016376.694,
+    "startTime": "2026-07-30T20:17:04.528Z",
+    "duration": 19384.999,
     "expected": 0,
     "skipped": 0,
     "unexpected": 0,

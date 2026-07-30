@@ -1,0 +1,15 @@
+---
+# TSQLLint (Microsoft T-SQL/SQL Server linter) has no business scanning this
+# repo's migrations -- hex-yt-intel is 100% PostgreSQL/Supabase, and
+# TSQLLint's suggested fix for its "Expected SET QUOTED_IDENTIFIER ON"
+# pattern (`SET QUOTED_IDENTIFIER ON; GO`) is invalid PostgreSQL syntax --
+# applying it would break the migration, not fix anything. Confirmed via
+# `grep -rl QUOTED_IDENTIFIER supabase/migrations/` returning zero matches:
+# no prior migration has ever satisfied this rule, because it was never
+# meant to apply here. Scoped to the engine + path, not a blanket
+# exclude_paths, so other real Codacy findings on migration files (SQL
+# injection patterns, etc.) still get checked.
+engines:
+  tsqllint:
+    exclude_paths:
+      - "supabase/migrations/**"
