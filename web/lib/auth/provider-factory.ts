@@ -1,4 +1,5 @@
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
+import * as Sentry from '@sentry/nextjs';
 
 export interface AuthSession {
   user: {
@@ -33,6 +34,8 @@ export async function signOut(): Promise<{ success: boolean; error?: string }> {
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[signOut]', errorMessage);
+    Sentry.captureException(error, { tags: { operation: 'sign-out' } });
     return { success: false, error: errorMessage };
   }
 }
