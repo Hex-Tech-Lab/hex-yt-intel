@@ -24,19 +24,18 @@
  * consumer with a different guarantee (regenerates content), and mixing
  * them would blur both.
  *
- * Concurrency: a single Redis run-level lock (see runRemediationHarness) is
- * the ONLY overlap guard, plus the existing guardBillingStatus write-time
- * check. An earlier version of this file also had a per-row Postgres
- * claim/lease -- removed after review: with the run-level lock guaranteeing
- * at most one harness invocation is ever active, no two callers can ever
- * reach a given row concurrently, so the claim was pure duplication of what
- * the lock (for cross-run safety) and guardBillingStatus (for the final
- * write) already cover between them. The lock earns its keep here in a way
- * analysis-reaper.ts's equivalent guardBillingStatus-only pattern doesn't
- * need to worry about: this module's per-row work fires a real paid
- * OpenRouter call before it ever reaches the write, so a lost race after
- * that call would waste money already spent, not just a discarded local
- * computation.
+ * Budget/concurrency (ADR 019, 2026-07-31 -- see
+ * docs/specs/ADR_019_REMEDIATION_BUDGET_TOKEN_BUCKET_2026-07-31.md):
+ * OpenRouter exposes no hard concurrency limit (rate_limit.requests is -1,
+ * deprecated, live-verified against the real account). The actual
+ * constraint is the account's monthly $ spend cap, shared with live paying
+ * traffic. Pacing is therefore a dollar-denominated token bucket (Redis Lua,
+ * see lib/redis.ts's tryConsumeTokenBucket), NOT a mutex lock + fixed batch
+ * size -- an earlier version of this file used a Redis run-level lock with
+ * a hardcoded limit=3; replaced because concurrency/throughput should fall
+ * out of budget availability, not an arbitrary picked number, and because
+ * money is spent per-candidate BEFORE the worker call, not gated by a
+ * cross-run mutex that says nothing about cost.
  */
 import * as Sentry from '@sentry/nextjs';
 
@@ -47,8 +46,9 @@ import { resolveAnalysisCascade } from '@/lib/config/cascade';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { stitchChunksIntoPayload, buildDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
-import { acquireRedisLock, releaseRedisLock } from '@/lib/redis';
+import { tryConsumeTokenBucket, incrementRedisValue } from '@/lib/redis';
 
 /**
  * Per-candidate outcome. Doubles as the tally key in RemediationSweepResult
@@ -57,6 +57,7 @@ import { acquireRedisLock, releaseRedisLock } from '@/lib/redis';
  * result can say what happened.
  */
 export enum RemediationStage {
+  BudgetExhausted = 'budget_exhausted', // token bucket had insufficient funds -- not an error, stop this cycle
   WorkerFailed = 'worker_failed',
   StitchFailed = 'stitch_failed',
   PersistRaced = 'persist_raced', // guarded write lost -- a concurrent Re-analyze won
@@ -65,26 +66,100 @@ export enum RemediationStage {
 }
 
 /**
- * Harness-level tuning. Kept as named constants, not magic numbers, per this
- * project's settings-registry convention -- these are cron/worker-call
- * pacing knobs, not user-facing config, so they live here rather than in the
- * DB-backed Settings Registry (that registry is for tunables an admin might
- * reasonably change at runtime; these are architectural safety limits).
+ * Every tunable here is a Settings Registry key (ADR 019) -- none of these
+ * are the value used at runtime, only the fallback if the registry itself
+ * is unreachable (SupabaseSettingsAdapter.getRegistrySettings's own
+ * contract: never cache/pin a fallback, retry the DB next call). Keep these
+ * fallbacks in sync with the migration's seeded defaults
+ * (20260731000000_remediation_budget_settings.sql), same convention
+ * analysis.maxOutputTokens.* already established.
  */
-const HARNESS_LOCK_KEY = 'lock:dimension-remediation-harness';
-// Just under the cron cadence (30 min, web/scripts/setup-qstash-cron.ts) so a
-// genuinely-stuck harness self-expires before the next tick would also skip
-// it forever.
-const HARNESS_LOCK_TTL_SECONDS = 25 * 60;
-// Delay between starting each candidate's worker call. At limit=10 candidates
-// this staggers the whole batch over ~40s rather than firing all 10 OpenRouter
-// calls simultaneously -- the concern that scales badly at 1,000 candidates,
-// not 10, but the pacing mechanism has to exist before the volume does.
-const STAGGER_MS = 4_000;
-// Maximum remediation attempts per analysis. Rows landing in StillPartial
-// increment a retry counter; once they hit this cap, they're excluded from
-// future sweeps to prevent unbounded LLM billing on persistently failing rows.
-const MAX_REMEDIATION_RETRIES = 3;
+const REGISTRY_FALLBACK = {
+  'remediation.enabled': true,
+  'remediation.budgetPercentOfRemaining': 10,
+  'remediation.hardCapUsdCents': 200,
+  'remediation.periodDays': 30,
+  'remediation.maxRetries': 3,
+} as const;
+
+const TOKEN_BUCKET_KEY = 'budget:dimension-remediation';
+const PENDULUM_COUNTER_KEY = 'counter:dimension-remediation-pendulum';
+// OpenRouter's own management API (GET /api/v1/auth/key) -- undocumented/
+// unversioned, same UNVERIFIED_ENDPOINT_NO_TEST risk class contract-auditor
+// already flags for other management APIs in this repo. If this ever 404s
+// or changes shape, fail closed (zero capacity), never assume unlimited --
+// see getRemainingBudgetCents.
+const OPENROUTER_KEY_INFO_URL = 'https://openrouter.ai/api/v1/auth/key';
+const OPENROUTER_BALANCE_CACHE_MS = 5 * 60_000;
+
+let cachedRemainingBudgetCents: { value: number; expiresAt: number } | null = null;
+
+/**
+ * Live remaining OpenRouter monthly balance, in cents. Cached briefly (5
+ * min) so every candidate in a run doesn't re-fetch it. Fails closed (0,
+ * not Infinity) on any error -- this feeds a money-gating token bucket, so
+ * the safe failure mode is "spend nothing", not "spend without limit".
+ */
+async function getRemainingBudgetCents(): Promise<number> {
+  const now = Date.now();
+  if (cachedRemainingBudgetCents && cachedRemainingBudgetCents.expiresAt > now) {
+    return cachedRemainingBudgetCents.value;
+  }
+  try {
+    const res = await fetch(OPENROUTER_KEY_INFO_URL, {
+      headers: { Authorization: `Bearer ${env.openrouterApiKey}` },
+    });
+    if (!res.ok) throw new Error(`OpenRouter key-info returned ${res.status}`);
+    const body = await res.json();
+    const remaining = Number(body?.data?.limit_remaining);
+    if (!Number.isFinite(remaining) || remaining < 0) throw new Error('OpenRouter key-info returned a non-numeric limit_remaining');
+    const cents = Math.round(remaining * 100);
+    cachedRemainingBudgetCents = { value: cents, expiresAt: now + OPENROUTER_BALANCE_CACHE_MS };
+    return cents;
+  } catch (err) {
+    console.error('[dimension-remediation] failed to fetch OpenRouter remaining balance, failing closed', { err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { tags: { service: 'dimension-remediation', phase: 'openrouter_balance' } });
+    return 0;
+  }
+}
+
+/**
+ * Resolve this run's token-bucket capacity/refill rate from the Settings
+ * Registry + OpenRouter's live remaining balance. Recomputed every harness
+ * invocation (not cached long-term) so a manual top-up or a registry change
+ * takes effect on the very next tick.
+ */
+async function resolveBudgetParams(): Promise<{ capacityCents: number; refillRatePerMsCents: number; enabled: boolean; maxRetries: number }> {
+  const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
+  const enabled = Boolean(settings['remediation.enabled']);
+  const percent = Number(settings['remediation.budgetPercentOfRemaining']) || 0;
+  const hardCapCents = Number(settings['remediation.hardCapUsdCents']) || 0;
+  const periodDays = Number(settings['remediation.periodDays']) || REGISTRY_FALLBACK['remediation.periodDays'];
+  const maxRetries = Number(settings['remediation.maxRetries']) || REGISTRY_FALLBACK['remediation.maxRetries'];
+
+  const remainingCents = await getRemainingBudgetCents();
+  const percentDerivedCents = Math.floor((percent / 100) * remainingCents);
+  const capacityCents = hardCapCents > 0 ? Math.min(percentDerivedCents, hardCapCents) : percentDerivedCents;
+  const refillRatePerMsCents = capacityCents / (periodDays * 86_400_000);
+
+  return { capacityCents, refillRatePerMsCents, enabled, maxRetries };
+}
+
+/**
+ * Rough cost estimate (cents) for regenerating N dimensions, priced at the
+ * cascade's cheapest resolved tier (LLMCascade tries tiers in order,
+ * cheapest first) -- deliberately conservative-optimistic: reserved BEFORE
+ * the call, not reconciled against actual token usage afterward (a stated
+ * v1 limitation, not a hidden one). ~2000 tokens/dimension (prompt +
+ * completion) is a rough content-length-based estimate, not a measured
+ * average -- revisit once real per-dimension token usage is logged.
+ */
+const ESTIMATED_TOKENS_PER_DIMENSION = 2_000;
+function estimateCostCents(dimensionCount: number, cascade: Array<{ cost?: number }>): number {
+  const cheapestCostPer1K = cascade.reduce((min, c) => (typeof c.cost === 'number' && c.cost < min ? c.cost : min), Infinity);
+  const costPer1K = Number.isFinite(cheapestCostPer1K) ? cheapestCostPer1K : 0.002; // fallback if cascade has no cost data at all
+  return Math.ceil(dimensionCount * (ESTIMATED_TOKENS_PER_DIMENSION / 1000) * costPer1K * 100);
+}
 
 export interface AnalysisGap {
   id: string;
@@ -111,10 +186,9 @@ export interface RemediationSweepResult {
   stillPartial: number;
   skipped: number;
   errored: number;
-  lockHeld: boolean;
+  budgetExhausted: boolean;
+  disabled: boolean;
 }
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Narrow an unknown jsonb value to a plain object, or {} for null/array/primitive. Shared by every read site that treats validation_report as a spreadable base. */
 function asReportObject(report: unknown): Record<string, unknown> {
@@ -145,9 +219,15 @@ export function computeMissingDimensions(markdown: string): number[] {
  * remediation candidate.
  */
 export async function findAnalysesWithMissingDimensions(opts?: {
+  /** DB fetch page size -- a query-size safety bound, not a processing-batch limit (that's budget-gated now, see runRemediationHarness). Same non-registry-backed precedent as analysis-reaper.ts's own `limit ?? 500`. */
   limit?: number;
+  /** Pendulum ordering (ADR 019): 'asc' = oldest-failed-first, 'desc' = newest-failed-first. Alternated per cycle by the caller so neither a long-stuck row nor a fresh failure is ever starved. */
+  order?: 'asc' | 'desc';
+  maxRetries?: number;
 }): Promise<AnalysisGap[]> {
-  const limit = opts?.limit ?? 3;
+  const limit = opts?.limit ?? 100;
+  const ascending = opts?.order !== 'desc';
+  const maxRetries = opts?.maxRetries ?? REGISTRY_FALLBACK['remediation.maxRetries'];
   const service = getSupabaseServiceClient();
 
   const { data, error } = await service
@@ -155,7 +235,7 @@ export async function findAnalysesWithMissingDimensions(opts?: {
     .select('id, video_id, title, channel_title, analysis_markdown, analysis_payload, validation_report, billing_status')
     .eq('billing_status', 'failed')
     .eq('validation_report->>status', 'partial')
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending })
     .limit(limit);
   if (error) throw error;
 
@@ -174,7 +254,7 @@ export async function findAnalysesWithMissingDimensions(opts?: {
     // Exclude rows that have exceeded the retry limit to prevent unbounded
     // LLM billing on persistently failing analyses
     const retryCount = typeof reportObj.remediation_retry_count === 'number' ? reportObj.remediation_retry_count : 0;
-    if (retryCount >= MAX_REMEDIATION_RETRIES) continue;
+    if (retryCount >= maxRetries) continue;
 
     gaps.push({
       id: (row as { id: string }).id,
@@ -216,6 +296,12 @@ async function collectDimensionsFromWorker(
   const body = {
     videoId: gap.videoId,
     analysisId: gap.id,
+    // ADR 019: tagged distinctly from a real end-user id (which live
+    // traffic populates this same field with) so remediation calls are
+    // filterable in OpenRouter's own dashboard by this prefix -- the
+    // concrete before/after metric for "how many of the partial-analysis
+    // population actually got fixed", not just inferred from our own DB.
+    userId: `remediation:${gap.id}`,
     transcript: '', // worker re-fetches when missing/placeholder -- same fallback the live route already relies on
     metadata: {
       title: gap.title,
@@ -395,19 +481,28 @@ async function readAndMergeWorkerStream(body: ReadableStream<Uint8Array>, gap: A
 }
 
 /**
- * Remediate a single gap: call the worker for just the missing dimensions,
+ * Remediate a single gap: reserve its estimated cost from the token bucket
+ * (atomic, fails closed), call the worker for just the missing dimensions,
  * stitch the result in with the existing content, persist if it actually
  * improved the analysis. The final write is guarded on
  * `billing_status = 'failed'` so a concurrent legitimate "Re-analyze" (which
  * would move the row to `processing` then `completed`) always wins -- this
- * is the sole race guard; see the module doc for why a separate per-row
- * claim was removed as redundant with it under the run-level lock.
+ * is the sole per-row race guard; there is no run-level mutex anymore (ADR
+ * 019) -- the token bucket's atomicity is what prevents overlapping callers
+ * from double-spending the same budget, not a lock on the harness itself.
  */
 export async function remediateAnalysis(
   gap: AnalysisGap,
   models: string[],
-  cascade: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>
+  cascade: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
+  budget: { capacityCents: number; refillRatePerMsCents: number }
 ): Promise<RemediationResult> {
+  const estimatedCostCents = estimateCostCents(gap.missingDimensions.length, cascade);
+  const affordable = await tryConsumeTokenBucket(TOKEN_BUCKET_KEY, budget.capacityCents, budget.refillRatePerMsCents, estimatedCostCents);
+  if (!affordable) {
+    return { analysisId: gap.id, stage: RemediationStage.BudgetExhausted, dimensionsRequested: gap.missingDimensions };
+  }
+
   const persistenceAdapter = new SupabasePersistenceAdapter();
 
   const newChunk = await collectDimensionsFromWorker(gap, models, cascade);
@@ -488,80 +583,73 @@ export async function remediateAnalysis(
 }
 
 /**
- * Harness: owns run-level concurrency, not just per-row correctness.
+ * Harness (ADR 019): owns budget-gated pacing, not run-level mutual
+ * exclusion. There is no lock -- the token bucket's own atomicity is what
+ * prevents overlapping invocations from double-spending, so overlapping
+ * calls are safe by construction rather than something a lock has to
+ * prevent. This is what lets throughput scale with backlog size: an empty
+ * bucket naturally self-throttles (BudgetExhausted stops the loop early,
+ * cheaply, without an error), a full one processes as many candidates as
+ * it can afford in one pass -- never a fixed "N every tick" regardless of
+ * whether the backlog is 45 or 4,500.
  *
- * 1. Run-level lock (Redis, NX+TTL): at most one harness invocation is ever
- *    active at a time, repo-wide. If a scheduled tick fires while a previous
- *    run is still in flight (a slow run, or the interval being tightened to
- *    5/2/3 min because the backlog turned out to be worse than expected),
- *    the new invocation exits immediately instead of double-processing the
- *    same candidates (and, since each candidate fires a real paid worker
- *    call, double-paying for it). This is the ONLY overlap guard -- see the
- *    module doc for why a second per-row claim was removed as redundant.
- * 2. Staggered pacing (STAGGER_MS between candidates): candidates are
- *    processed sequentially, not via Promise.all, specifically so this
- *    doesn't fire N simultaneous OpenRouter calls. At limit=10 this is
- *    already true by construction (a plain for-loop is sequential), but the
- *    delay is explicit so the pacing is a real, tunable property of the
- *    harness rather than an accident of not having parallelized yet -- the
- *    thing to widen if a future limit=1000 needs batched concurrency instead
- *    of pure sequential staggering.
+ * Candidate order alternates oldest-first/newest-first each invocation
+ * ("pendulum", ADR 019) via a Redis counter, so neither a long-stuck row
+ * nor a fresh failure is ever permanently starved.
  *
  * The model cascade is resolved once per harness run, not once per
  * candidate -- it doesn't vary within a run, so resolving it inside the
  * per-candidate path would just be N redundant identical config reads.
  */
-export async function runRemediationHarness(opts?: { limit?: number }): Promise<RemediationSweepResult> {
-  const lockToken = await acquireRedisLock(HARNESS_LOCK_KEY, HARNESS_LOCK_TTL_SECONDS);
-  if (!lockToken) {
-    console.log('[dimension-remediation] harness already running, skipping this tick', { lockKey: HARNESS_LOCK_KEY });
-    return { scanned: 0, remediated: 0, stillPartial: 0, skipped: 0, errored: 0, lockHeld: false };
+export async function runRemediationHarness(): Promise<RemediationSweepResult> {
+  const budget = await resolveBudgetParams();
+  if (!budget.enabled) {
+    console.log('[dimension-remediation] disabled via remediation.enabled, skipping');
+    return { scanned: 0, remediated: 0, stillPartial: 0, skipped: 0, errored: 0, budgetExhausted: false, disabled: true };
   }
 
-  try {
-    const gaps = await findAnalysesWithMissingDimensions(opts);
-    const result: RemediationSweepResult = { scanned: gaps.length, remediated: 0, stillPartial: 0, skipped: 0, errored: 0, lockHeld: true };
-    if (gaps.length === 0) return result;
+  const pendulumTick = await incrementRedisValue(PENDULUM_COUNTER_KEY);
+  const order = pendulumTick % 2 === 0 ? 'asc' : 'desc';
 
-    const cascade = await resolveAnalysisCascade();
-    const models = cascade.map((c) => c.model);
+  const gaps = await findAnalysesWithMissingDimensions({ order, maxRetries: budget.maxRetries });
+  const result: RemediationSweepResult = { scanned: gaps.length, remediated: 0, stillPartial: 0, skipped: 0, errored: 0, budgetExhausted: false, disabled: false };
+  if (gaps.length === 0) return result;
 
-    for (let i = 0; i < gaps.length; i++) {
-      const gap = gaps[i]!;
-      try {
-        const outcome = await remediateAnalysis(gap, models, cascade);
-        console.log('[dimension-remediation] candidate processed', { analysisId: gap.id, stage: outcome.stage });
-        switch (outcome.stage) {
-          case RemediationStage.Remediated:
-            result.remediated++;
-            break;
-          case RemediationStage.StillPartial:
-            result.stillPartial++;
-            break;
-          case RemediationStage.PersistRaced:
-            result.skipped++;
-            break;
-          default:
-            result.errored++;
-        }
-      } catch (err) {
-        Sentry.captureException(err, {
-          contexts: {
-            remediation: {
-              service: 'dimension-remediation',
-              analysisId: gap.id,
-            },
+  const cascade = await resolveAnalysisCascade();
+  const models = cascade.map((c) => c.model);
+
+  for (const gap of gaps) {
+    try {
+      const outcome = await remediateAnalysis(gap, models, cascade, budget);
+      console.log('[dimension-remediation] candidate processed', { analysisId: gap.id, stage: outcome.stage, order });
+      switch (outcome.stage) {
+        case RemediationStage.Remediated:
+          result.remediated++;
+          break;
+        case RemediationStage.StillPartial:
+          result.stillPartial++;
+          break;
+        case RemediationStage.PersistRaced:
+          result.skipped++;
+          break;
+        case RemediationStage.BudgetExhausted:
+          result.budgetExhausted = true;
+          console.log('[dimension-remediation] budget exhausted, stopping this cycle', { processed: result.remediated + result.stillPartial + result.skipped + result.errored, scanned: gaps.length });
+          return result; // stop the loop -- no point checking remaining candidates, the bucket won't refill mid-cycle
+        default:
+          result.errored++;
+      }
+    } catch (err) {
+      Sentry.captureException(err, {
+        contexts: {
+          remediation: {
+            service: 'dimension-remediation',
+            analysisId: gap.id,
           },
-        });
-        result.errored++;
-      }
-
-      if (i < gaps.length - 1) {
-        await sleep(STAGGER_MS);
-      }
+        },
+      });
+      result.errored++;
     }
-    return result;
-  } finally {
-    await releaseRedisLock(HARNESS_LOCK_KEY, lockToken);
   }
+  return result;
 }

@@ -24,7 +24,15 @@ const SCHEDULES: Array<{ id: string; cron: string; path: string }> = [
   { id: "transcript-purger", cron: "*/15 * * * *", path: "/api/webhooks/transcript-purge" }, // every 15 min purge expired 72h
   { id: "transcript-compliance-check", cron: "0 2 * * *", path: "/api/webhooks/compliance-check" }, // daily 2 AM compliance
   { id: "upstash-snapshot-poll", cron: "*/15 * * * *", path: "/api/webhooks/upstash-snapshot-poll" }, // every 15 min Redis/Vector telemetry trend
-  { id: "dimension-remediation", cron: "*/30 * * * *", path: "/api/webhooks/remediate-dimensions" }, // every 30 min, lower urgency than the 15-min stuck-analysis reaper
+  // ADR 019: budget-gated (token bucket), not batch-gated, so a tick is
+  // cheap (one query, no-op) when the bucket is empty or backlog is zero --
+  // 5 min instead of the original 30 so revenue-blocking fixes land fast
+  // when budget IS available, without needing a bigger per-tick candidate
+  // count. Cron cadence itself isn't a Settings Registry key (QStash
+  // schedules are static cron expressions, not re-read at runtime; changing
+  // this requires re-running this script) -- flagged as a known gap, not
+  // silently accepted as equivalent to the DB-backed tunables.
+  { id: "dimension-remediation", cron: "*/5 * * * *", path: "/api/webhooks/remediate-dimensions" },
 ];
 
 async function setupCron() {

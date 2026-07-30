@@ -356,6 +356,66 @@ export async function releaseRedisLock(key: string, token: string): Promise<void
 }
 
 /**
+ * Atomic token-bucket check-and-deduct, denominated in whatever integer
+ * unit the caller chooses (USD cents for remediation's budget -- see ADR
+ * 019, docs/specs/ADR_019_REMEDIATION_BUDGET_TOKEN_BUCKET_2026-07-31.md).
+ * `capacity` may change between calls (the caller recomputes it from a
+ * live external balance) -- the script clamps stored tokens to the current
+ * capacity on every call, so a shrinking capacity self-corrects rather than
+ * leaving stale over-capacity tokens available.
+ *
+ * Fails CLOSED: any Redis failure (executeRedisScript's `-1` sentinel) is
+ * treated as "deny the spend", never "assume unlimited budget". This is a
+ * money-gating primitive, not a cache -- the failure mode has to be the
+ * conservative one.
+ */
+const TOKEN_BUCKET_SCRIPT = `
+local bucket = redis.call("HMGET", KEYS[1], "tokens", "lastRefillAt")
+local tokens = tonumber(bucket[1])
+local lastRefillAt = tonumber(bucket[2])
+local capacity = tonumber(ARGV[1])
+local refillRatePerMs = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+local cost = tonumber(ARGV[4])
+
+if tokens == nil then
+  tokens = capacity
+  lastRefillAt = now
+end
+
+local elapsed = now - lastRefillAt
+if elapsed > 0 then
+  tokens = math.min(capacity, tokens + elapsed * refillRatePerMs)
+  lastRefillAt = now
+end
+
+if tokens >= cost then
+  tokens = tokens - cost
+  redis.call("HMSET", KEYS[1], "tokens", tostring(tokens), "lastRefillAt", tostring(lastRefillAt))
+  redis.call("EXPIRE", KEYS[1], 5184000)
+  return 1
+end
+
+redis.call("HMSET", KEYS[1], "tokens", tostring(tokens), "lastRefillAt", tostring(lastRefillAt))
+redis.call("EXPIRE", KEYS[1], 5184000)
+return 0
+`;
+
+export async function tryConsumeTokenBucket(
+  key: string,
+  capacity: number,
+  refillRatePerMs: number,
+  cost: number
+): Promise<boolean> {
+  const result = await executeRedisScript(
+    TOKEN_BUCKET_SCRIPT,
+    [key],
+    [capacity, refillRatePerMs, Date.now(), cost]
+  );
+  return result === 1;
+}
+
+/**
  * Get current Redis status
  * Used for health checks and diagnostics
  */
