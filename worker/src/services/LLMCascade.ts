@@ -311,7 +311,21 @@ export class LLMCascade implements LLMCascadePort {
       if (!response.ok || !response.body) {
         clearTimeout(totalTimer);
         const errBody = await response.text().catch(() => '');
-        return { started: false, text: '', error: `${response.status}: ${errBody.slice(0, 160)}` };
+        const errorMsg = `${response.status}: ${errBody.slice(0, 160)}`;
+        // Non-2xx OpenRouter response was previously silently swallowed into
+        // this return value with no telemetry anywhere -- if this rejected
+        // every tier in a cascade (e.g. all 5 parallel bundle streams for one
+        // analysis), the whole analysis fails with zero chunks and zero
+        // trace in Sentry or anywhere else. RCA 2026-07-30 (video
+        // ib74sLgjIBM): confirmed the `user` field itself isn't the cause
+        // (live-tested against OpenRouter directly, succeeds), but this gap
+        // means we still can't see WHY a provider/model tier got rejected.
+        console.error('[LLMCascade.callLLMStream]', { model, requestModel, errorMsg });
+        Sentry.captureMessage('LLMCascade.callLLMStream: OpenRouter non-2xx response', {
+          level: 'error',
+          contexts: { llmCascade: { model, requestModel, status: response.status, errBody: errBody.slice(0, 500) } },
+        });
+        return { started: false, text: '', error: errorMsg };
       }
 
       const reader = response.body.getReader();
@@ -361,7 +375,16 @@ export class LLMCascade implements LLMCascadePort {
       clearTimeout(handshakeTimer);
       clearTimeout(totalTimer);
       const message = error instanceof Error ? error.message : 'Unknown error';
-      return { started, text, error: message === 'The operation was aborted' ? 'Request timeout' : message, finishReason };
+      const isTimeout = message === 'The operation was aborted';
+      console.error('[LLMCascade.callLLMStream]', { model, requestModel, message, isTimeout });
+      // Deliberately not Sentry.captureException for a plain abort/timeout --
+      // those are expected under normal cascade operation (handshake/total
+      // budget exceeded) and would be pure noise at volume. Anything else
+      // here (a genuine unexpected throw) is real and worth seeing.
+      if (!isTimeout) {
+        Sentry.captureException(error, { contexts: { llmCascade: { model, requestModel } } });
+      }
+      return { started, text, error: isTimeout ? 'Request timeout' : message, finishReason };
     } finally {
       clearTimeout(handshakeTimer);
       clearTimeout(totalTimer);
@@ -426,20 +449,36 @@ export class LLMCascade implements LLMCascadePort {
 
       if (!response.ok) {
         const error = await response.text();
-        return { success: false, error: `${response.status}: ${error.slice(0, 200)}` };
+        const errorMsg = `${response.status}: ${error.slice(0, 200)}`;
+        console.error('[LLMCascade.callLLM]', { model: requestModel, errorMsg });
+        Sentry.captureMessage('LLMCascade.callLLM: OpenRouter non-2xx response', {
+          level: 'error',
+          contexts: { llmCascade: { model: requestModel, status: response.status, errBody: error.slice(0, 500) } },
+        });
+        return { success: false, error: errorMsg };
       }
 
       const data = (await response.json()) as { choices: Array<{ message: { content: string } }> };
       const text = data.choices?.[0]?.message?.content;
 
       if (!text) {
+        console.error('[LLMCascade.callLLM] Empty response from LLM', { model: requestModel });
+        Sentry.captureMessage('LLMCascade.callLLM: Empty response from LLM', {
+          level: 'error',
+          contexts: { llmCascade: { model: requestModel } },
+        });
         return { success: false, error: 'Empty response from LLM' };
       }
 
       return { success: true, text };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      return { success: false, error: message === 'The operation was aborted' ? 'Request timeout' : message };
+      const isTimeout = message === 'The operation was aborted';
+      console.error('[LLMCascade.callLLM]', { model: requestModel, message, isTimeout });
+      if (!isTimeout) {
+        Sentry.captureException(error, { contexts: { llmCascade: { model: requestModel } } });
+      }
+      return { success: false, error: isTimeout ? 'Request timeout' : message };
     } finally {
       clearTimeout(timeout);
     }
