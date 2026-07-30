@@ -1,0 +1,21 @@
+web/lib/prompts/chat-grounding.ts
+  s_0eded1e9d0cab6::t_dbdd262b4eb0c9 13
+supabase/migrations/20260731020000_chat_grounding_credit_cost_v3.sql
+  s_0eded1e9d0cab6::t_27064743fefb08 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "c9f627d3f85faab4cfe85dd0685a9b0945f278a4",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
