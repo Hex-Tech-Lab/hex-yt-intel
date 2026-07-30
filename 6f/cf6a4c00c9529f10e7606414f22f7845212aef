@@ -1,0 +1,25 @@
+web/scripts/contract-auditor.ts
+  s_0eded1e9d0cab6::t_1c9ebe98b234b1 302-307,311-320,329-330
+  s_0eded1e9d0cab6::t_8dc6b8f61f3e64 366-375
+  s_0eded1e9d0cab6::t_865483484ed9dc 251-252,257-258
+  s_0eded1e9d0cab6::t_aafcb941f5b570 187-210
+worker/src/services/ReasoningEngine.ts
+  s_0eded1e9d0cab6::t_95452b902d64b4 22
+  s_0eded1e9d0cab6::t_a548b559b3cad5 143-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "6fcf6a4c00c9529f10e7606414f22f7845212aef",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
