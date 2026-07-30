@@ -1,0 +1,30 @@
+worker/src/services/MarkdownReconstructor.ts
+  s_0eded1e9d0cab6::t_c50544a2a330d0 2
+  s_0eded1e9d0cab6::t_ecd8cbae344a14 187-197,199-201,204-206,208-211,213,215
+  s_0eded1e9d0cab6::t_b839170b8be74a 202-203
+docs/SESSION_WAVES_2026-07-30.md
+  s_0eded1e9d0cab6::t_13933734db7335 3-4
+worker/package.json
+  s_0eded1e9d0cab6::t_ed3ab91a47c23e 26
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_a01d2d7dbf58ea 1039-1041
+  s_0eded1e9d0cab6::t_1006d5b4a74dba 1031-1038
+pnpm-lock.yaml
+  s_0eded1e9d0cab6::t_029c3f00837a29 256-258,4237-4240,9008,9028,9043,9050,9065,9972-9973
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "59f499361e9e804d126d206995288304e58fcde5",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
