@@ -1,0 +1,78 @@
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_964c478e1559c5 72-75
+  s_0eded1e9d0cab6::t_f206e33e5e12ca 1026
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_0eded1e9d0cab6::t_861d90d048a805 293-298
+  s_0eded1e9d0cab6::t_c800b645703d87 59-60
+docs/SESSION_WAVES_2026-07-30.md
+  s_0eded1e9d0cab6::t_1a80dc7e6b029d 1-68
+web/app/api/admin/users/route.ts
+  s_0eded1e9d0cab6::t_1ef301811f7a28 1-35
+web/app/api/analyses/[id]/download-event/route.ts
+  s_0eded1e9d0cab6::t_69e6502ac7d1d9 16
+  s_0eded1e9d0cab6::t_7778258754aaf9 1-3,6-15,17-26,29-33
+  s_0eded1e9d0cab6::t_98a640864501d9 4-5,27-28
+web/components/containers/dashboard/SettingsPanel.tsx
+  s_0eded1e9d0cab6::t_4a1f03315f1690 223-224
+  s_0eded1e9d0cab6::t_7f96bbfc7856b9 7
+  s_0eded1e9d0cab6::t_0024428ffb3c57 113-119
+  s_0eded1e9d0cab6::t_400b3b22e34968 74
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_fa5e3b6ee731f8 233
+web/store/useVideoStore.ts
+  s_0eded1e9d0cab6::t_d8e68c065d6e8a 19-25
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_3d33c152aa02fe 1027-1030
+web/app/api/analyses/[id]/export/route.ts
+  s_0eded1e9d0cab6::t_8f19e352f1187d 5
+  s_0eded1e9d0cab6::t_a51a0fa2f4bfbc 125,129
+  s_0eded1e9d0cab6::t_c3e0b35e9319a3 156
+  s_0eded1e9d0cab6::t_15d0f62acbfc0d 148-155,157-158
+supabase/migrations/20260730000000_admin_user_activity.sql
+  s_0eded1e9d0cab6::t_6ebf2aebb91f09 1-32,34-81,83-98
+  s_0eded1e9d0cab6::t_f1023525d3fb31 33
+  s_0eded1e9d0cab6::t_84d8973c07f5ba 82
+web/next-env.d.ts
+  s_0eded1e9d0cab6::t_bea09c475997a3 3
+web/components/templates/console/VideoPlayerCard.tsx
+  s_0eded1e9d0cab6::t_4d1cff23291500 140-143
+web/scripts/contract-auditor.ts
+  s_0eded1e9d0cab6::t_f346a285007438 274
+  s_0eded1e9d0cab6::t_9697390b1f0ec0 194-226
+  s_0eded1e9d0cab6::t_fbc8cffefce99f 21-31
+  s_0eded1e9d0cab6::t_f56c3743e59c13 175-193,227-261
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_856e015569b3a8 339-342
+worker/src/services/LLMCascade.ts
+  s_0eded1e9d0cab6::t_8e5a4b98d6e272 49-55,61-62,66
+  s_0eded1e9d0cab6::t_d8cfe110caea8e 304,422
+web/app/api/admin/users/[id]/route.ts
+  s_0eded1e9d0cab6::t_47e03c4d600ba2 1-15,17-59
+  s_0eded1e9d0cab6::t_0edcb9dae75b76 16
+web/app/admin/users/UsersAdminClient.tsx
+  s_0eded1e9d0cab6::t_772a784fb7a342 1-2,4-126,128-143,145-147,151-153,155,157-159,161-170,172,174-176,178-197,199,201-203,209,211-223,226-228,230-236
+  s_0eded1e9d0cab6::t_f20f500e627189 127
+  s_0eded1e9d0cab6::t_9fe350fd87adfc 3
+  s_0eded1e9d0cab6::t_feafd457b5d251 205-208,210,224-225
+  s_0eded1e9d0cab6::t_6aa6aff56e7e71 144
+  s_0eded1e9d0cab6::t_eab2fd9de5fdbe 148-150,154,156,160,171,173,177,198,200,204
+  s_0eded1e9d0cab6::t_2d7fb72502ff27 229
+web/lib/types/contracts.ts
+  s_0eded1e9d0cab6::t_cc575f22421055 226-229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "09207f9a554f9dd485f7dbc5f924b55dbf80d31e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
