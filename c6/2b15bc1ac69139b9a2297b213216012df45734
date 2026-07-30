@@ -1,0 +1,27 @@
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_cc3235818b324d 364
+  s_0eded1e9d0cab6::t_6b93e4d7ccac77 458
+  s_0eded1e9d0cab6::t_5693a48b21305f 278-290
+  s_0eded1e9d0cab6::t_0322cc943e6154 277
+scripts/quality-engine/rules/streaming.ts
+  s_0eded1e9d0cab6::t_196fcb28e8d773 67-69,71-76
+  s_0eded1e9d0cab6::t_0f159f3f8b8d51 8-16,23,28,34,39-46
+  s_0eded1e9d0cab6::t_977df5e591e1c0 7,17-22,24-27,29-33,35-38,47-48,52-54,82-85,87-89
+  s_0eded1e9d0cab6::t_4d2bbebf681674 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "c62b15bc1ac69139b9a2297b213216012df45734",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
