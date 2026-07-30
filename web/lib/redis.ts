@@ -9,6 +9,7 @@
  */
 
 import { Redis } from '@upstash/redis';
+import * as Sentry from '@sentry/nextjs';
 
 /**
  * In-memory fallback cache for when Redis is unavailable
@@ -284,6 +285,18 @@ export async function acquireRedisLock(key: string, ttlSeconds: number): Promise
     console.warn(`[redis.ts] Failed to acquire lock ${key}:`, error);
     redisAvailable = false;
   }
+
+  // Degraded path: Redis is down, falling back to a per-process lock that
+  // does NOT protect against overlap across separate serverless instances.
+  // Surfaced to Sentry (not just console.warn) because this silently
+  // weakens whatever correctness guarantee the caller was relying on the
+  // lock for -- worth knowing about even though the harness's own guarded
+  // write is still a backstop against actual data corruption.
+  console.warn(`[redis.ts] Redis unavailable, using in-memory lock fallback for ${key} -- NOT cross-instance safe`);
+  Sentry.captureMessage('acquireRedisLock: degraded to in-memory fallback', {
+    level: 'warning',
+    tags: { lockKey: key },
+  });
 
   const existing = memoryCache.get(key);
   if (existing && existing.expireAt > Date.now()) return false;

@@ -17,7 +17,10 @@ import * as Sentry from '@sentry/nextjs';
 
 export async function POST(request: NextRequest) {
   try {
-    const bodyText = await request.clone().text();
+    // No .clone() needed -- unlike some sibling webhook routes, nothing else
+    // in this handler reads `request` after this line, so consuming the
+    // body once directly is sufficient.
+    const bodyText = await request.text();
 
     const signature = request.headers.get('upstash-signature') || '';
     const verified = await verifyQStashSignature(signature, bodyText);

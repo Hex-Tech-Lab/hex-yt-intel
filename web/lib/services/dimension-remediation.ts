@@ -224,13 +224,34 @@ async function collectDimensionsFromWorker(
     exp: token.exp,
   };
 
-  const res = await fetch(`${env.cloudflareWorkerUrl}/analyze-llm-stream`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  // Bounds the whole call (handshake + full SSE read) to the project's own
+  // documented Worker budget (CLAUDE.md Law #2: "Token Streaming Window:
+  // ... 90-second (Worker) maximum read") -- without this, a stalled worker
+  // response would hang the harness indefinitely while it holds the
+  // run-level lock, blocking every later candidate and risking the lock's
+  // own TTL expiring mid-run.
+  const WORKER_CALL_TIMEOUT_MS = 90_000;
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), WORKER_CALL_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${env.cloudflareWorkerUrl}/analyze-llm-stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: abortController.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const isTimeout = err instanceof Error && err.name === 'AbortError';
+    console.error('[dimension-remediation] worker call threw', { analysisId: gap.id, isTimeout, err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { tags: { service: 'dimension-remediation', phase: 'worker_call', timeout: String(isTimeout) }, extra: { analysisId: gap.id } });
+    return null;
+  }
 
   if (!res.ok || !res.body) {
+    clearTimeout(timeoutId);
     const errText = await res.text().catch(() => '');
     console.error('[dimension-remediation] worker call failed', { analysisId: gap.id, status: res.status, errText: errText.slice(0, 500) });
     Sentry.captureMessage('dimension-remediation: worker non-2xx response', {
@@ -243,6 +264,7 @@ async function collectDimensionsFromWorker(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let skippedFragmentCount = 0;
   const chunk: Record<string, unknown> = { dimensions: [] as unknown[] };
 
   const mergeFragment = (frag: Record<string, unknown>) => {
@@ -267,19 +289,33 @@ async function collectDimensionsFromWorker(
     try {
       mergeFragment(JSON.parse(jsonStr));
     } catch (parseErr) {
+      skippedFragmentCount++;
       console.warn('[dimension-remediation] unparseable SSE fragment, skipping', { analysisId: gap.id, err: parseErr instanceof Error ? parseErr.message : String(parseErr) });
     }
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const events = buffer.split(/\r?\n\r?\n/);
-    buffer = events.pop() ?? '';
-    for (const event of events) handleEvent(event);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split(/\r?\n\r?\n/);
+      buffer = events.pop() ?? '';
+      for (const event of events) handleEvent(event);
+    }
+    if (buffer.trim()) handleEvent(buffer);
+  } catch (err) {
+    const isTimeout = err instanceof Error && err.name === 'AbortError';
+    console.error('[dimension-remediation] SSE read aborted or failed', { analysisId: gap.id, isTimeout, err: err instanceof Error ? err.message : String(err) });
+    Sentry.captureException(err, { tags: { service: 'dimension-remediation', phase: 'sse_read', timeout: String(isTimeout) }, extra: { analysisId: gap.id } });
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  if (buffer.trim()) handleEvent(buffer);
+
+  if (skippedFragmentCount > 0) {
+    console.warn('[dimension-remediation] some SSE fragments were unparseable', { analysisId: gap.id, skippedFragmentCount });
+  }
 
   return (chunk.dimensions as unknown[]).length > 0 ? chunk : null;
 }

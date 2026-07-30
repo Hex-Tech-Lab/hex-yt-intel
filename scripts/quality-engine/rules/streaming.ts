@@ -30,10 +30,21 @@ export const StreamResilienceRule: Rule = {
     // "settle"; there's no stream response at all). "Settle error state"
     // only means something for an actual ReadableStream/SSE response, so
     // require that evidence before the setTimeout+abort check even applies.
+    // (c) RCA (2026-07-30): a third legitimate settlement vocabulary --
+    // a server-side (cron/webhook) consumer of an SSE stream that isn't the
+    // web client (no settleAnalysis/setError, no UI state) and isn't the
+    // worker emitting frames (no `send({type:"error"})`). It "settles" by
+    // returning a typed failure result that its caller reports via Sentry
+    // and tallies -- e.g. dimension-remediation.ts's collectDimensionsFromWorker
+    // catches the AbortError, calls Sentry.captureException, and returns
+    // null, which the caller turns into RemediationStage.WorkerFailed. A
+    // Sentry report co-located with the abort/timeout catch is equally
+    // valid evidence of "not silently left in limbo" as the other two forms.
+    const hasSentryReportNearAbort = /catch[\s\S]{0,300}?(AbortError|isTimeout)[\s\S]{0,300}?Sentry\.(captureException|captureMessage)/.test(text);
     const isStreamResponseHandler = /ReadableStream|text\/event-stream|EventSource|\.getReader\(\)|response\.body/.test(text);
     const hasWorkerErrorFrame = /send\(\s*\{\s*type:\s*["']error["']/.test(text);
 
-    if (isStreamResponseHandler && text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError') && !hasWorkerErrorFrame) {
+    if (isStreamResponseHandler && text.includes('setTimeout') && text.includes('abort') && !text.includes('settleAnalysis') && !text.includes('setError') && !hasWorkerErrorFrame && !hasSentryReportNearAbort) {
       findings.push({
         file: filePath,
         severity: "high",
