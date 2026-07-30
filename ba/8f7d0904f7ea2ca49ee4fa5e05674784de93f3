@@ -1,0 +1,32 @@
+web/lib/__tests__/dimension-remediation.test.ts
+  s_0eded1e9d0cab6::t_82f0ee0873e406 1-46
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_f75647a3d5b1cf 110-121
+  s_0eded1e9d0cab6::t_49d1831a985892 177-232
+  s_0eded1e9d0cab6::t_f801b3b7a84c05 330-334,339-341,349-350
+  s_0eded1e9d0cab6::t_ae4498c257d75f 109,176,403-408,413,420-469,471-473
+  s_0eded1e9d0cab6::t_22e4c8b4231627 370-371
+  s_0eded1e9d0cab6::t_2ccb12b996c735 36-76,92,104-107
+  s_0eded1e9d0cab6::t_1baac7a1623cbb 152-153
+  s_0eded1e9d0cab6::t_fff0d7d6d44610 108
+  s_0eded1e9d0cab6::t_1e81761714f5a6 233
+web/app/api/webhooks/remediate-dimensions/route.ts
+  s_0eded1e9d0cab6::t_c1aa395a1eaab9 29
+  s_0eded1e9d0cab6::t_4fb9be730b4335 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "ba8f7d0904f7ea2ca49ee4fa5e05674784de93f3",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
