@@ -69,6 +69,10 @@ interface AnalysisRequest {
 interface StreamRequest {
   videoId: string;
   analysisId: string;
+  // Forwarded to OpenRouter's `user` field for abuse-correlation (2026-07-30).
+  // Optional and never trusted for authorization -- Vercel already
+  // authenticated/quota-gated the caller before this request was signed.
+  userId?: string;
   transcript: string;
   segments?: Array<{ start: number; duration: number; text: string }>;
   metadata: {
@@ -1019,7 +1023,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
       ? new WorkerPromptConfigAdapter({ url: upstashUrl, token: upstashToken })
       : undefined;
 
-  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens), new ValidationService(), cache);
+  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId), new ValidationService(), cache);
 
   const persistController = new AbortController();
   const httpConnSignal = c.req.raw['signal'];

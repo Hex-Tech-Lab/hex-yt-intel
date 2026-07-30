@@ -223,6 +223,10 @@ export interface CommentsSyncPoolConfig {
 export interface WorkerStreamRequest {
   videoId: string;
   analysisId: string;
+  // Forwarded to OpenRouter's `user` field (worker-side, LLMCascade.ts) for
+  // abuse/security correlation -- see worker/src/routes/analysis.ts's
+  // StreamRequest.userId. Optional; never used for authorization.
+  userId?: string;
   transcript: string;
   segments?: Array<{ start: number; duration: number; text: string }>;
   metadata: AnalysisJobMetadata;

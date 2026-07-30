@@ -18,6 +18,17 @@
  *     of five personas while the other three are told to find a real
  *     answer -- a template defect that LOOKS like a data problem in output
  *     but is actually an authoring gap.
+ *   - SILENT_CATCH_NO_TELEMETRY: worker/src/services/PersistService.ts had
+ *     4 failure paths (Zod validation rejects, retries exhausted on both
+ *     persist() and settleAnalysis()) that only `console.error`'d into the
+ *     raw Cloudflare Worker console -- invisible to Sentry, invisible to
+ *     every admin Logs UI tab. Root cause of a chunk (analysis_chunks
+ *     chunk_index=4) that silently vanished with zero trace anywhere,
+ *     producing a wrong "2 dimensions missing" banner instead of the real
+ *     3. Fixed in commit e5bfc1da (2026-07-29) -- this rule exists so a
+ *     regression, or the next instance of the same pattern in a different
+ *     file, is caught by a standing static check, not by qa-intel only
+ *     running against a file someone happened to point it at.
  *
  * This is intentionally a small, high-precision ruleset, not a general
  * linter -- false positives here train people to ignore the tool, which
@@ -161,6 +172,93 @@ function auditScriptedTemplateFailure(file: string, content: string) {
   }
 }
 
+// --- Rule 4: SILENT_CATCH_NO_TELEMETRY -----------------------------------
+// A `catch` block (with or without a bound error variable) whose body
+// contains NO error-reporting call at all -- no console.error/warn, no
+// Sentry.captureException/captureMessage, nothing. Such a catch either
+// swallows the failure completely or only re-throws/returns, so the
+// failure mode this branch exists to handle becomes permanently invisible
+// to every telemetry surface the moment it fires in production. Narrow
+// heuristic on purpose: matches the catch header, then the first non-blank
+// line of the block body -- a single obviously-benign statement (bare
+// `return`/`continue`/`break`, or an assignment ending the block) doesn't
+// trip it, since plenty of catches legitimately just fall back to a
+// default with the error already handled elsewhere in the retry loop.
+function auditSilentCatchNoTelemetry(file: string, content: string) {
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const catchMatch = /\bcatch\s*(\([^)]*\))?\s*\{/.exec(line);
+    if (!catchMatch) continue;
+
+    // Single-line form: `catch { ... }` opens and closes on the same line
+    // (net brace depth 0) -- the most common shape for a deliberately
+    // terse silent-ignore, e.g. `catch { /* ignore parse errors */ }`.
+    // Check the text after the opening brace on this line directly instead
+    // of falling into the multi-line walker below, which would otherwise
+    // never run for a same-line block and skip it entirely.
+    const afterBrace = line.slice(catchMatch.index + catchMatch[0].length);
+    const singleLineBody = /\}\s*$/.test(afterBrace) ? afterBrace.replace(/\}\s*$/, '') : null;
+    if (singleLineBody !== null) {
+      const hasTelemetry = /console\.(error|warn)\(|Sentry\.(captureException|captureMessage)\(/.test(singleLineBody);
+      if (hasTelemetry) continue;
+      const trimmed = singleLineBody.trim();
+      const isTrivial = trimmed === '' || /^\/[/*]/.test(trimmed) || /^(return|continue|break|throw)\b/.test(trimmed);
+      if (isTrivial && trimmed !== '') continue; // comment-only or control-flow-only: allowed
+      if (trimmed === '') {
+        // Fully empty `catch {}` -- worse than a documented ignore, still flag it.
+      } else if (isTrivial) {
+        continue;
+      }
+      findings.push({
+        rule: 'SILENT_CATCH_NO_TELEMETRY',
+        severity: 'warning',
+        file,
+        line: i + 1,
+        why: 'This catch block has no console.error/warn or Sentry.captureException/captureMessage call -- the failure it exists to handle is invisible to every telemetry surface. Confirmed pattern: worker/src/services/PersistService.ts had 4 of these, one of which was the root cause of a chunk that silently vanished with zero trace anywhere (fixed in e5bfc1da).',
+        snippet: line.trim(),
+      });
+      continue;
+    }
+
+    // Multi-line form: collect the catch block body by brace depth, capped
+    // at 15 lines so a huge block doesn't false-negative on telemetry
+    // buried far below.
+    let depth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+    const body: string[] = [];
+    let j = i + 1;
+    while (j < lines.length && depth > 0 && body.length < 15) {
+      const bodyLine = lines[j] ?? '';
+      depth += (bodyLine.match(/\{/g) || []).length - (bodyLine.match(/\}/g) || []).length;
+      if (depth <= 0) break;
+      body.push(bodyLine);
+      j++;
+    }
+    if (body.length === 0) continue;
+
+    const joined = body.join('\n');
+    const hasTelemetry = /console\.(error|warn)\(|Sentry\.(captureException|captureMessage)\(/.test(joined);
+    if (hasTelemetry) continue;
+
+    // Benign no-op bodies: a single control-flow statement or a plain
+    // fallback assignment/return with nothing else going on.
+    const meaningfulLines = body.map((l) => l.trim()).filter((l) => l.length > 0);
+    const isTrivialFallback =
+      meaningfulLines.length <= 1 &&
+      /^(return|continue|break|throw)\b|^[a-zA-Z_$][\w.$]*\s*=\s*[^;]+;?$/.test(meaningfulLines[0] ?? '');
+    if (isTrivialFallback) continue;
+
+    findings.push({
+      rule: 'SILENT_CATCH_NO_TELEMETRY',
+      severity: 'warning',
+      file,
+      line: i + 1,
+      why: 'This catch block has no console.error/warn or Sentry.captureException/captureMessage call anywhere in its body -- the failure it exists to handle is invisible to every telemetry surface. Confirmed pattern: worker/src/services/PersistService.ts had 4 of these, one of which was the root cause of a chunk that silently vanished with zero trace anywhere (fixed in e5bfc1da).',
+      snippet: line.trim(),
+    });
+  }
+}
+
 for (const root of SCAN_ROOTS) {
   const dirFiles = [...walk(root)];
   const stems = new Set(dirFiles.map((f) => f.replace(/\.(test|spec)\.tsx?$/, '.___').replace(/\.tsx?$/, '')));
@@ -173,6 +271,7 @@ for (const root of SCAN_ROOTS) {
     auditSilentSuccess(relPath, content);
     auditUnverifiedEndpoints(relPath, content, hasSiblingTest);
     auditScriptedTemplateFailure(relPath, content);
+    auditSilentCatchNoTelemetry(relPath, content);
   }
 }
 
