@@ -1,0 +1,36 @@
+web/scripts/contract-auditor.ts
+  s_0eded1e9d0cab6::t_537a9dfdd67cbf 262,264-306,308-312
+  s_0eded1e9d0cab6::t_86aab40ab38482 263
+  s_0eded1e9d0cab6::t_99815a83c702d0 307
+  s_0eded1e9d0cab6::t_1b9a535f0c7f27 326
+.mcp.json
+  s_0eded1e9d0cab6::t_cbeacfb62385d8 1-13
+skills-lock.json
+  s_0eded1e9d0cab6::t_2c45b560a3f394 9,28-32
+  s_0eded1e9d0cab6::t_3bd45a8257661a 16-21
+  s_0eded1e9d0cab6::t_23a3aaaebed4b2 10-15,33-44
+  s_0eded1e9d0cab6::t_195e11600cda9a 22-27
+  s_0eded1e9d0cab6::t_d07a79298005b9 1-8,45-47
+.gitignore
+  s_0eded1e9d0cab6::t_cbeacfb62385d8 45-46
+CLAUDE.md
+  s_0eded1e9d0cab6::t_cbeacfb62385d8 137-175
+.claude/settings.json
+  s_0eded1e9d0cab6::t_6dc7ac902f6a8e 18-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "923abe7027d3a886bd8d991d084f2c26064d8452",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
