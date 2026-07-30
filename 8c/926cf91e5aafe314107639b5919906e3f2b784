@@ -1,0 +1,26 @@
+scripts/quality-engine/rules/persistence.ts
+  s_0eded1e9d0cab6::t_4125f3e245609e 60-66
+web/lib/redis.ts
+  s_0eded1e9d0cab6::t_38d612e1e60957 275-281,283,285,289-290,310-312
+  s_0eded1e9d0cab6::t_08e932ecc47b43 316-323,325-345
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_415c87dcb4e157 270-282,284-291
+  s_0eded1e9d0cab6::t_e72903ca6b2709 445-446
+  s_0eded1e9d0cab6::t_03f5d525c08da8 488
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "8c926cf91e5aafe314107639b5919906e3f2b784",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
