@@ -1,0 +1,28 @@
+web/app/api/webhooks/remediate-dimensions/route.ts
+  s_0eded1e9d0cab6::t_937172979ec811 40
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_ac008a3891bed0 158-163
+  s_0eded1e9d0cab6::t_9a0f3a7472d897 501,503
+  s_0eded1e9d0cab6::t_48948961d6b8b4 623
+  s_0eded1e9d0cab6::t_2f8d45058951eb 121
+  s_0eded1e9d0cab6::t_683b3c7510b3f4 627
+web/lib/redis.ts
+  s_0eded1e9d0cab6::t_1277dd67b66c1a 293
+  s_0eded1e9d0cab6::t_d138b6a5d026cb 345
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "1abba41604d7958d8ea8424c8db1c077e7ffbf7d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
