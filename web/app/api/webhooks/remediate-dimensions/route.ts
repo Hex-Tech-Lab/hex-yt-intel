@@ -22,10 +22,11 @@ export const maxDuration = 300;
  * docs/specs/remediate-missing-dimensions-design.md. Signature-verified
  * before doing any work.
  */
+import * as Sentry from '@sentry/nextjs';
 import { NextRequest, NextResponse } from 'next/server';
+
 import { verifyQStashSignature } from '@/lib/qstash-client';
 import { runRemediationHarness } from '@/lib/services/dimension-remediation';
-import * as Sentry from '@sentry/nextjs';
 
 export async function POST(request: NextRequest) {
   try {

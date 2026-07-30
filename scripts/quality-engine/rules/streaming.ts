@@ -3,6 +3,40 @@ import type { SourceFile } from "ts-morph";
 import type { Finding } from "../domain/Finding";
 import type { Rule, RuleContext } from "../domain/Rule";
 
+/**
+ * AST-scoped check: traverse try-catch statements and identify catch blocks
+ * that handle timeout/abort errors, then verify those specific blocks contain
+ * Sentry reporting. Excludes comments and unrelated adjacent catch blocks.
+ */
+function checkSentryInAbortCatch(source: SourceFile): boolean {
+  let foundSentryInAbortCatch = false;
+
+  source.forEachDescendant((node) => {
+    if (node.getKind() !== SyntaxKind.CatchClause) return;
+
+    const catchClause = node;
+    const catchBlock = catchClause.getBlock();
+    if (!catchBlock) return;
+
+    const catchText = catchBlock.getText();
+
+    // Check if this catch block mentions AbortError or isTimeout (the abort/timeout path)
+    const isAbortRelated = /AbortError|isTimeout/.test(catchText);
+    if (!isAbortRelated) return;
+
+    // Within this abort-related catch block, check for Sentry calls (ignoring comments)
+    // Strip comments before checking
+    const statements = catchBlock.getStatements().map(s => s.getText()).join('\n');
+    const hasSentry = /Sentry\.(captureException|captureMessage)/.test(statements);
+
+    if (hasSentry) {
+      foundSentryInAbortCatch = true;
+    }
+  });
+
+  return foundSentryInAbortCatch;
+}
+
 export const StreamResilienceRule: Rule = {
   name: "stream-resilience-audit",
   scope: "file",
@@ -40,7 +74,12 @@ export const StreamResilienceRule: Rule = {
     // null, which the caller turns into RemediationStage.WorkerFailed. A
     // Sentry report co-located with the abort/timeout catch is equally
     // valid evidence of "not silently left in limbo" as the other two forms.
-    const hasSentryReportNearAbort = /catch[\s\S]{0,300}?(AbortError|isTimeout)[\s\S]{0,300}?Sentry\.(captureException|captureMessage)/.test(text);
+    //
+    // AST-scoped inspection (replaces previous file-wide text regex):
+    // traverse try-catch blocks, identify timeout/abort-related catch blocks
+    // by their body content, and check if those specific catch blocks contain
+    // Sentry reporting. Excludes adjacent unrelated catch blocks and comments.
+    const hasSentryReportNearAbort = checkSentryInAbortCatch(source);
     const isStreamResponseHandler = /ReadableStream|text\/event-stream|EventSource|\.getReader\(\)|response\.body/.test(text);
     const hasWorkerErrorFrame = /send\(\s*\{\s*type:\s*["']error["']/.test(text);
 

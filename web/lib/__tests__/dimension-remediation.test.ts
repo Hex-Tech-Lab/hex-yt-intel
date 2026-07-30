@@ -7,6 +7,7 @@
  * remediate-missing-dimensions-design.md, not unit tests.
  */
 import { describe, it, expect } from 'vitest';
+
 import { computeMissingDimensions } from '@/lib/services/dimension-remediation';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 

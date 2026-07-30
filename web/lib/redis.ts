@@ -284,14 +284,16 @@ export async function acquireRedisLock(key: string, ttlSeconds: number): Promise
   const redis = initializeRedis();
   const token = crypto.randomUUID();
 
-  try {
-    if (redis && redisAvailable) {
+  // Attempt Redis on every operation instead of relying solely on sticky gate
+  if (redis) {
+    try {
       const result = await redis.set(key, token, { nx: true, ex: ttlSeconds });
       return result === 'OK' ? token : null;
+    } catch (error) {
+      console.warn(`[redis.ts] Failed to acquire lock ${key}:`, error);
+      redisAvailable = false;
+      // Fall through to in-memory fallback below
     }
-  } catch (error) {
-    console.warn(`[redis.ts] Failed to acquire lock ${key}:`, error);
-    redisAvailable = false;
   }
 
   // Degraded path: Redis is down, falling back to a per-process lock that
@@ -333,9 +335,17 @@ end
 export async function releaseRedisLock(key: string, token: string): Promise<void> {
   const redis = initializeRedis();
 
-  if (redis && redisAvailable) {
-    await executeRedisScript(RELEASE_IF_OWNER_SCRIPT, [key], [token]);
-    return;
+  // Attempt Redis compare-and-delete on every operation to avoid leaking
+  // Redis-acquired locks into in-memory fallback path
+  if (redis) {
+    try {
+      await executeRedisScript(RELEASE_IF_OWNER_SCRIPT, [key], [token]);
+      return;
+    } catch (error) {
+      console.warn(`[redis.ts] Failed to release Redis lock ${key}:`, error);
+      redisAvailable = false;
+      // Fall through to in-memory fallback below
+    }
   }
 
   // Memory fallback: only clear if we're still the recorded owner.

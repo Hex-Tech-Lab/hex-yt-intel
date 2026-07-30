@@ -94,7 +94,7 @@ invocation.
 ## `remediateAnalysis(gap)`
 
 1. Compute `missingDimensions = allDimensions - gap.completedDimensions`.
-2. Call the worker's existing `/analyze` (bundle) endpoint once with
+2. Call the worker's existing `/analyze-llm-stream` (bundle) endpoint once with
    `dimensions: missingDimensions` — same shape as any other bundle call,
    just scoped to the gap instead of a fixed 1/5 partition.
 3. On success, run `stitchChunksIntoPayload` against

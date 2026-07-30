@@ -39,6 +39,7 @@
  * computation.
  */
 import * as Sentry from '@sentry/nextjs';
+
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { env } from '@/lib/env';
 import { signStreamToken } from '@/lib/stream-token';
@@ -80,6 +81,10 @@ const HARNESS_LOCK_TTL_SECONDS = 25 * 60;
 // calls simultaneously -- the concern that scales badly at 1,000 candidates,
 // not 10, but the pacing mechanism has to exist before the volume does.
 const STAGGER_MS = 4_000;
+// Maximum remediation attempts per analysis. Rows landing in StillPartial
+// increment a retry counter; once they hit this cap, they're excluded from
+// future sweeps to prevent unbounded LLM billing on persistently failing rows.
+const MAX_REMEDIATION_RETRIES = 3;
 
 export interface AnalysisGap {
   id: string;
@@ -142,7 +147,7 @@ export function computeMissingDimensions(markdown: string): number[] {
 export async function findAnalysesWithMissingDimensions(opts?: {
   limit?: number;
 }): Promise<AnalysisGap[]> {
-  const limit = opts?.limit ?? 10;
+  const limit = opts?.limit ?? 3;
   const service = getSupabaseServiceClient();
 
   const { data, error } = await service
@@ -163,7 +168,13 @@ export async function findAnalysesWithMissingDimensions(opts?: {
     if (missingDimensions.length === 0) continue; // shouldn't happen given the status filter, but never remediate a row that's actually already whole
 
     const report = (row as { validation_report?: unknown }).validation_report;
-    const reportMetadata = asReportObject(report).metadata as Record<string, unknown> | undefined;
+    const reportObj = asReportObject(report);
+    const reportMetadata = reportObj.metadata as Record<string, unknown> | undefined;
+
+    // Exclude rows that have exceeded the retry limit to prevent unbounded
+    // LLM billing on persistently failing analyses
+    const retryCount = typeof reportObj.remediation_retry_count === 'number' ? reportObj.remediation_retry_count : 0;
+    if (retryCount >= MAX_REMEDIATION_RETRIES) continue;
 
     gaps.push({
       id: (row as { id: string }).id,
@@ -224,15 +235,18 @@ async function collectDimensionsFromWorker(
     exp: token.exp,
   };
 
-  // Bounds the whole call (handshake + full SSE read) to the project's own
-  // documented Worker budget (CLAUDE.md Law #2: "Token Streaming Window:
-  // ... 90-second (Worker) maximum read") -- without this, a stalled worker
-  // response would hang the harness indefinitely while it holds the
-  // run-level lock, blocking every later candidate and risking the lock's
-  // own TTL expiring mid-run.
-  const WORKER_CALL_TIMEOUT_MS = 90_000;
+  // Stratified dual-timeout architecture (CLAUDE.md Law #2):
+  // - Connection handshake: 3-second hard timeout
+  // - Token streaming window: 90-second maximum read (Worker budget)
+  const CONNECTION_TIMEOUT_MS = 3_000;
+  const STREAMING_TIMEOUT_MS = 90_000;
   const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), WORKER_CALL_TIMEOUT_MS);
+
+  // Connection timeout aborts stalled handshakes
+  let connectionTimeoutId: NodeJS.Timeout | null = setTimeout(
+    () => abortController.abort(),
+    CONNECTION_TIMEOUT_MS
+  );
 
   let res: Response;
   try {
@@ -243,15 +257,32 @@ async function collectDimensionsFromWorker(
       signal: abortController.signal,
     });
   } catch (err) {
-    clearTimeout(timeoutId);
+    if (connectionTimeoutId) clearTimeout(connectionTimeoutId);
     const isTimeout = err instanceof Error && err.name === 'AbortError';
     console.error('[dimension-remediation] worker call threw', { analysisId: gap.id, isTimeout, err: err instanceof Error ? err.message : String(err) });
-    Sentry.captureException(err, { tags: { service: 'dimension-remediation', phase: 'worker_call', timeout: String(isTimeout) }, extra: { analysisId: gap.id } });
+    Sentry.captureException(err, {
+      contexts: {
+        remediation: {
+          service: 'dimension-remediation',
+          phase: 'worker_call',
+          timeout: String(isTimeout),
+          analysisId: gap.id,
+        },
+      },
+    });
     return null;
   }
 
+  // Clear connection timeout and replace with streaming timeout
+  if (connectionTimeoutId) clearTimeout(connectionTimeoutId);
+  connectionTimeoutId = null;
+  const streamingTimeoutId = setTimeout(
+    () => abortController.abort(),
+    STREAMING_TIMEOUT_MS
+  );
+
   if (!res.ok || !res.body) {
-    clearTimeout(timeoutId);
+    clearTimeout(streamingTimeoutId);
     const errText = await res.text().catch(() => '');
     console.error('[dimension-remediation] worker call failed', { analysisId: gap.id, status: res.status, errText: errText.slice(0, 500) });
     Sentry.captureMessage('dimension-remediation: worker non-2xx response', {
@@ -264,7 +295,7 @@ async function collectDimensionsFromWorker(
   try {
     return await readAndMergeWorkerStream(res.body, gap);
   } finally {
-    clearTimeout(timeoutId);
+    clearTimeout(streamingTimeoutId);
   }
 }
 
@@ -334,7 +365,16 @@ async function readAndMergeWorkerStream(body: ReadableStream<Uint8Array>, gap: A
   } catch (err) {
     const isTimeout = err instanceof Error && err.name === 'AbortError';
     console.error('[dimension-remediation] SSE read aborted or failed', { analysisId: gap.id, isTimeout, err: err instanceof Error ? err.message : String(err) });
-    Sentry.captureException(err, { tags: { service: 'dimension-remediation', phase: 'sse_read', timeout: String(isTimeout) }, extra: { analysisId: gap.id } });
+    Sentry.captureException(err, {
+      contexts: {
+        remediation: {
+          service: 'dimension-remediation',
+          phase: 'sse_read',
+          timeout: String(isTimeout),
+          analysisId: gap.id,
+        },
+      },
+    });
     return null;
   }
 
@@ -342,8 +382,12 @@ async function readAndMergeWorkerStream(body: ReadableStream<Uint8Array>, gap: A
     console.warn('[dimension-remediation] some SSE fragments were unparseable', { analysisId: gap.id, skippedFragmentCount });
     Sentry.captureMessage('dimension-remediation: unparseable SSE fragments', {
       level: 'warning',
-      tags: { analysisId: gap.id },
-      extra: { skippedFragmentCount },
+      contexts: {
+        remediation: {
+          analysisId: gap.id,
+          skippedFragmentCount,
+        },
+      },
     });
   }
 
@@ -399,8 +443,12 @@ export async function remediateAnalysis(
   const { dimensionStatus, validationStatus, billingStatus } = buildDimensionStatus(stitchResult.payload);
   const dimensionCountAfter = dimensionStatus.filter((d) => d.status === 'done').length;
   const nowIso = new Date().toISOString();
+  const isStillPartial = dimensionCountAfter < TOTAL_DIMENSIONS;
+  const existingReport = asReportObject(gap.validationReport);
+  const currentRetryCount = typeof existingReport.remediation_retry_count === 'number' ? existingReport.remediation_retry_count : 0;
+
   const newReport = {
-    ...asReportObject(gap.validationReport),
+    ...existingReport,
     validation_status: validationStatus,
     status: validationStatus,
     billing_status: billingStatus,
@@ -409,6 +457,9 @@ export async function remediateAnalysis(
     remediated: true,
     remediated_at: nowIso,
     remediated_dimensions: gap.missingDimensions,
+    // Increment retry counter only if still partial, to bound retries on
+    // persistently failing rows
+    remediation_retry_count: isStillPartial ? currentRetryCount + 1 : currentRetryCount,
   };
 
   const { updated } = await persistenceAdapter.updateAnalysisResult({
@@ -494,7 +545,14 @@ export async function runRemediationHarness(opts?: { limit?: number }): Promise<
             result.errored++;
         }
       } catch (err) {
-        Sentry.captureException(err, { tags: { service: 'dimension-remediation' }, extra: { analysisId: gap.id } });
+        Sentry.captureException(err, {
+          contexts: {
+            remediation: {
+              service: 'dimension-remediation',
+              analysisId: gap.id,
+            },
+          },
+        });
         result.errored++;
       }
 
