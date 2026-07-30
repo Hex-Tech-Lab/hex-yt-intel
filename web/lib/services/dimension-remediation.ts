@@ -261,25 +261,41 @@ async function collectDimensionsFromWorker(
     return null;
   }
 
-  const reader = res.body.getReader();
+  try {
+    return await readAndMergeWorkerStream(res.body, gap);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Reads the worker's SSE response body and merges its fragments into one
+ * chunk-shaped object. Split out of collectDimensionsFromWorker so that
+ * function stays to request-construction + fetch-with-timeout, and this one
+ * owns only stream decoding/merging -- CodeFactor flagged the unsplit
+ * version as high-complexity, and the two concerns (network call lifecycle
+ * vs. wire-format parsing) were genuinely separable, not artificially split.
+ *
+ * Field mapping here MUST match UCISStreamFragmentSchema
+ * (web/lib/validators/synthesis.ts) exactly -- the wire shape is NOT the
+ * same as UCISPayloadV2's persisted shape. A dimension fragment carries the
+ * dimension NUMBER in a field literally named `dimension` plus separate
+ * `name`/`content` fields -- stitchChunksIntoPayload needs a dimension
+ * OBJECT ({number, name, content}), so it has to be reassembled here, not
+ * passed through as the bare number. persona's payload field is `config`,
+ * classification's is `data`, and knowledge graph arrives as `kg` with
+ * top-level `nodes`/`edges`/`rootId` (not a nested `knowledgeGraph` object).
+ * There is no `monetizationVerdict` stream fragment type at all -- it's a
+ * UCISPayloadV2 persisted-payload field, never emitted on the wire, so
+ * there is nothing to merge from a fresh worker call.
+ */
+async function readAndMergeWorkerStream(body: ReadableStream<Uint8Array>, gap: AnalysisGap): Promise<Record<string, unknown> | null> {
+  const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   let skippedFragmentCount = 0;
   const chunk: Record<string, unknown> = { dimensions: [] as unknown[] };
 
-  // Field mapping here MUST match UCISStreamFragmentSchema
-  // (web/lib/validators/synthesis.ts) exactly -- the wire shape is NOT the
-  // same as UCISPayloadV2's persisted shape. A dimension fragment carries
-  // the dimension NUMBER in a field literally named `dimension` plus
-  // separate `name`/`content` fields -- stitchChunksIntoPayload needs a
-  // dimension OBJECT ({number, name, content}), so it has to be
-  // reassembled here, not passed through as the bare number. persona's
-  // payload field is `config`, classification's is `data`, and knowledge
-  // graph arrives as `kg` with top-level `nodes`/`edges`/`rootId` (not a
-  // nested `knowledgeGraph` object). There is no `monetizationVerdict`
-  // stream fragment type at all -- it's a UCISPayloadV2 persisted-payload
-  // field, never emitted on the wire, so there is nothing to merge from a
-  // fresh worker call.
   const mergeFragment = (frag: Record<string, unknown>) => {
     if (frag.type === 'dimension' && typeof frag.dimension === 'number' && typeof frag.content === 'string') {
       (chunk.dimensions as unknown[]).push({ number: frag.dimension, name: frag.name ?? `Dimension ${frag.dimension}`, content: frag.content });
@@ -320,12 +336,15 @@ async function collectDimensionsFromWorker(
     console.error('[dimension-remediation] SSE read aborted or failed', { analysisId: gap.id, isTimeout, err: err instanceof Error ? err.message : String(err) });
     Sentry.captureException(err, { tags: { service: 'dimension-remediation', phase: 'sse_read', timeout: String(isTimeout) }, extra: { analysisId: gap.id } });
     return null;
-  } finally {
-    clearTimeout(timeoutId);
   }
 
   if (skippedFragmentCount > 0) {
     console.warn('[dimension-remediation] some SSE fragments were unparseable', { analysisId: gap.id, skippedFragmentCount });
+    Sentry.captureMessage('dimension-remediation: unparseable SSE fragments', {
+      level: 'warning',
+      tags: { analysisId: gap.id },
+      extra: { skippedFragmentCount },
+    });
   }
 
   return (chunk.dimensions as unknown[]).length > 0 ? chunk : null;
@@ -444,7 +463,7 @@ export async function remediateAnalysis(
 export async function runRemediationHarness(opts?: { limit?: number }): Promise<RemediationSweepResult> {
   const lockToken = await acquireRedisLock(HARNESS_LOCK_KEY, HARNESS_LOCK_TTL_SECONDS);
   if (!lockToken) {
-    console.log('[dimension-remediation] harness already running, skipping this tick');
+    console.log('[dimension-remediation] harness already running, skipping this tick', { lockKey: HARNESS_LOCK_KEY });
     return { scanned: 0, remediated: 0, stillPartial: 0, skipped: 0, errored: 0, lockHeld: false };
   }
 

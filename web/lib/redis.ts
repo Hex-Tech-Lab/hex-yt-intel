@@ -300,7 +300,7 @@ export async function acquireRedisLock(key: string, ttlSeconds: number): Promise
   // weakens whatever correctness guarantee the caller was relying on the
   // lock for -- worth knowing about even though the harness's own guarded
   // write is still a backstop against actual data corruption.
-  console.warn(`[redis.ts] Redis unavailable, using in-memory lock fallback for ${key} -- NOT cross-instance safe`);
+  console.warn('[redis.ts] Redis unavailable, using in-memory lock fallback -- NOT cross-instance safe', { lockKey: key });
   Sentry.captureMessage('acquireRedisLock: degraded to in-memory fallback', {
     level: 'warning',
     tags: { lockKey: key },
