@@ -1,0 +1,42 @@
+web/lib/redis.ts
+  s_0eded1e9d0cab6::t_a96c5d1dcbd9a2 359-417
+  s_0eded1e9d0cab6::t_013b8f82d5d221 358
+web/scripts/setup-qstash-cron.ts
+  s_0eded1e9d0cab6::t_3c1ec517489358 27-35
+docs/specs/ADR_019_REMEDIATION_BUDGET_TOKEN_BUCKET_2026-07-31.md
+  s_0eded1e9d0cab6::t_a81f1ffa11d263 1-116
+CLAUDE.md
+  s_0eded1e9d0cab6::t_34bbabd4f50b1a 58
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_cfd10689f9ea4e 586-594,596-598,604-608,611-616,618-640,642-651,654
+  s_0eded1e9d0cab6::t_bad11239ec7f10 299-304
+  s_0eded1e9d0cab6::t_515c862a24125a 49
+  s_0eded1e9d0cab6::t_81bd2f8605315f 27-38,51
+  s_0eded1e9d0cab6::t_a1faf4c20d1ab5 60
+  s_0eded1e9d0cab6::t_39440497629d8d 222,224-226,228-230,238,257
+  s_0eded1e9d0cab6::t_e856c8d4d00ef9 69-75,77-162
+  s_0eded1e9d0cab6::t_46367fb6948952 189-190
+  s_0eded1e9d0cab6::t_3f352a32b0007b 484-485,490-492,497-498,500-505
+web/app/api/webhooks/remediate-dimensions/route.ts
+  s_0eded1e9d0cab6::t_65fe8c29283883 6-12,20-22
+  s_0eded1e9d0cab6::t_f5fd31c40a9ee7 48
+supabase/migrations/20260731000000_remediation_budget_settings.sql
+  s_0eded1e9d0cab6::t_4ed3e177b12649 1-46,56-65,68-69
+  s_0eded1e9d0cab6::t_49204b403c9303 47-55,66-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "39fdcfd5453c1083801a1b969d59e4640db1d415",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
