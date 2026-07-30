@@ -1,5 +1,7 @@
 # Session Waves — 2026-07-30
 
+**Pushed to main: commit `09207f9a`** (Waves A/C/D/E). CI run in flight — do not push again until it resolves (cancel-in-progress concurrency group).
+
 Running checklist so nothing found mid-review gets lost. Update in place; don't create a new file per wave.
 
 ## Wave A — Persist-failure observability (DONE)
