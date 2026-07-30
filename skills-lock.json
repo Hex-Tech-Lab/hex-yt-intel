@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "baoyu-youtube-transcript": {
+      "source": "jimliu/baoyu-skills",
+      "sourceType": "github",
+      "skillPath": "skills/baoyu-youtube-transcript/SKILL.md",
+      "computedHash": "27582028cbdd9c81232fba1aafbfa609e4dc1167bff4f2e89ca48a3ecd07049b"
+    },
+    "build-graph": {
+      "source": "tirth8205/code-review-graph",
+      "sourceType": "github",
+      "skillPath": "skills/build-graph/SKILL.md",
+      "computedHash": "78d738cc25bb6ec563184f87d49255d289fd0f151b9c0f4702a3ad08a56b6db4"
+    },
+    "evaluator-calibration": {
+      "source": "archive228/loopkit",
+      "sourceType": "github",
+      "skillPath": "skills/evaluator-calibration/SKILL.md",
+      "computedHash": "dce2d196e20db03baa976dcfa44519712c357fc4e41c6b56efebde741f696895"
+    },
+    "owasp-top-10": {
+      "source": "nickcrew/claude-ctx-plugin",
+      "sourceType": "github",
+      "skillPath": "skills/owasp-top-10/SKILL.md",
+      "computedHash": "44c94b9b29269e1bfa33eafddea1c019ea1b3104f6c640ac2e56b97331572d62"
+    },
+    "planetscale-postgres-safety-review": {
+      "source": "planetscale/skills",
+      "sourceType": "github",
+      "skillPath": "03-postgres-safety-review/SKILL.md",
+      "computedHash": "c362081f6ff9d43a303b0673db9268ce58edaa0979661120fce9d0cc4b2e9d81"
+    },
+    "review-delta": {
+      "source": "tirth8205/code-review-graph",
+      "sourceType": "github",
+      "skillPath": "skills/review-delta/SKILL.md",
+      "computedHash": "8712780168006f1bf32aa15b35f5dc44a6ba115eadd5d4f2e13a5ea18d867282"
+    },
+    "review-pr": {
+      "source": "tirth8205/code-review-graph",
+      "sourceType": "github",
+      "skillPath": "skills/review-pr/SKILL.md",
+      "computedHash": "f56138b42ab0e64d1ee59faed8e9523d691e0baa6ab9ca474040a46dc0e23a00"
+    }
+  }
+}
