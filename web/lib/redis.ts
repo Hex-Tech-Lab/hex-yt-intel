@@ -272,14 +272,22 @@ export async function deleteRedisKey(key: string): Promise<void> {
  * concurrent caller ever acquires it. Falls back to a per-process in-memory
  * lock when Redis is unavailable (best-effort only in that case -- does not
  * protect against overlap across separate serverless instances).
+ *
+ * Returns a unique per-acquisition token (not a plain boolean) that MUST be
+ * passed to releaseRedisLock. Without this, a holder whose TTL expired mid-
+ * run could unconditionally delete a DIFFERENT, newer holder's live lock on
+ * its own (late) release -- exactly re-opening the overlap this primitive
+ * exists to prevent. The token makes release a compare-and-delete: only the
+ * current owner's release actually clears the key.
  */
-export async function acquireRedisLock(key: string, ttlSeconds: number): Promise<boolean> {
+export async function acquireRedisLock(key: string, ttlSeconds: number): Promise<string | null> {
   const redis = initializeRedis();
+  const token = crypto.randomUUID();
 
   try {
     if (redis && redisAvailable) {
-      const result = await redis.set(key, '1', { nx: true, ex: ttlSeconds });
-      return result === 'OK';
+      const result = await redis.set(key, token, { nx: true, ex: ttlSeconds });
+      return result === 'OK' ? token : null;
     }
   } catch (error) {
     console.warn(`[redis.ts] Failed to acquire lock ${key}:`, error);
@@ -299,17 +307,42 @@ export async function acquireRedisLock(key: string, ttlSeconds: number): Promise
   });
 
   const existing = memoryCache.get(key);
-  if (existing && existing.expireAt > Date.now()) return false;
-  memoryCache.set(key, { value: '1', expireAt: Date.now() + ttlSeconds * 1000 });
-  return true;
+  if (existing && existing.expireAt > Date.now()) return null;
+  memoryCache.set(key, { value: token, expireAt: Date.now() + ttlSeconds * 1000 });
+  return token;
 }
 
 /**
- * Release a lock acquired via acquireRedisLock. Reuses deleteRedisKey rather
- * than duplicating the Redis-vs-memory-fallback branching.
+ * Release a lock acquired via acquireRedisLock. Compare-and-delete on the
+ * token returned by acquireRedisLock -- NOT a plain delete. A plain delete
+ * would let a holder whose TTL already expired (e.g. a run that overran
+ * HARNESS_LOCK_TTL_SECONDS) delete a completely different, newer holder's
+ * still-live lock when it finally gets around to releasing, defeating the
+ * whole point of the lock. The Lua script makes the read-then-delete
+ * atomic; a plain GET-then-DEL from application code would itself have a
+ * race window between the two calls.
  */
-export async function releaseRedisLock(key: string): Promise<void> {
-  await deleteRedisKey(key);
+const RELEASE_IF_OWNER_SCRIPT = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+  return redis.call("DEL", KEYS[1])
+else
+  return 0
+end
+`;
+
+export async function releaseRedisLock(key: string, token: string): Promise<void> {
+  const redis = initializeRedis();
+
+  if (redis && redisAvailable) {
+    await executeRedisScript(RELEASE_IF_OWNER_SCRIPT, [key], [token]);
+    return;
+  }
+
+  // Memory fallback: only clear if we're still the recorded owner.
+  const existing = memoryCache.get(key);
+  if (existing && existing.value === token) {
+    memoryCache.delete(key);
+  }
 }
 
 /**

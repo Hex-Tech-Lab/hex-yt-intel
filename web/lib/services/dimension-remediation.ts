@@ -267,17 +267,28 @@ async function collectDimensionsFromWorker(
   let skippedFragmentCount = 0;
   const chunk: Record<string, unknown> = { dimensions: [] as unknown[] };
 
+  // Field mapping here MUST match UCISStreamFragmentSchema
+  // (web/lib/validators/synthesis.ts) exactly -- the wire shape is NOT the
+  // same as UCISPayloadV2's persisted shape. A dimension fragment carries
+  // the dimension NUMBER in a field literally named `dimension` plus
+  // separate `name`/`content` fields -- stitchChunksIntoPayload needs a
+  // dimension OBJECT ({number, name, content}), so it has to be
+  // reassembled here, not passed through as the bare number. persona's
+  // payload field is `config`, classification's is `data`, and knowledge
+  // graph arrives as `kg` with top-level `nodes`/`edges`/`rootId` (not a
+  // nested `knowledgeGraph` object). There is no `monetizationVerdict`
+  // stream fragment type at all -- it's a UCISPayloadV2 persisted-payload
+  // field, never emitted on the wire, so there is nothing to merge from a
+  // fresh worker call.
   const mergeFragment = (frag: Record<string, unknown>) => {
-    if (frag.type === 'dimension' && frag.dimension) {
-      (chunk.dimensions as unknown[]).push(frag.dimension);
-    } else if (frag.type === 'persona' && frag.persona) {
-      chunk.persona = frag.persona;
-    } else if (frag.type === 'classification' && frag.classification) {
-      chunk.classification = frag.classification;
-    } else if (frag.type === 'monetizationVerdict' && frag.monetizationVerdict) {
-      chunk.monetizationVerdict = frag.monetizationVerdict;
-    } else if (frag.type === 'knowledgeGraph' && frag.knowledgeGraph) {
-      chunk.knowledgeGraph = frag.knowledgeGraph;
+    if (frag.type === 'dimension' && typeof frag.dimension === 'number' && typeof frag.content === 'string') {
+      (chunk.dimensions as unknown[]).push({ number: frag.dimension, name: frag.name ?? `Dimension ${frag.dimension}`, content: frag.content });
+    } else if (frag.type === 'persona' && frag.config) {
+      chunk.persona = frag.config;
+    } else if (frag.type === 'classification' && frag.data) {
+      chunk.classification = frag.data;
+    } else if (frag.type === 'kg' && Array.isArray(frag.nodes)) {
+      chunk.knowledgeGraph = { nodes: frag.nodes, edges: frag.edges ?? [], rootId: frag.rootId ?? null };
     }
   };
 
@@ -431,8 +442,8 @@ export async function remediateAnalysis(
  * per-candidate path would just be N redundant identical config reads.
  */
 export async function runRemediationHarness(opts?: { limit?: number }): Promise<RemediationSweepResult> {
-  const lockAcquired = await acquireRedisLock(HARNESS_LOCK_KEY, HARNESS_LOCK_TTL_SECONDS);
-  if (!lockAcquired) {
+  const lockToken = await acquireRedisLock(HARNESS_LOCK_KEY, HARNESS_LOCK_TTL_SECONDS);
+  if (!lockToken) {
     console.log('[dimension-remediation] harness already running, skipping this tick');
     return { scanned: 0, remediated: 0, stillPartial: 0, skipped: 0, errored: 0, lockHeld: false };
   }
@@ -474,6 +485,6 @@ export async function runRemediationHarness(opts?: { limit?: number }): Promise<
     }
     return result;
   } finally {
-    await releaseRedisLock(HARNESS_LOCK_KEY);
+    await releaseRedisLock(HARNESS_LOCK_KEY, lockToken);
   }
 }
