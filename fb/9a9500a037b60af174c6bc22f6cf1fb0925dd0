@@ -1,0 +1,22 @@
+web/scripts/contract-auditor.ts
+  s_0eded1e9d0cab6::t_86aab40ab38482 263
+  s_0eded1e9d0cab6::t_1b9a535f0c7f27 326
+  s_0eded1e9d0cab6::t_537a9dfdd67cbf 262,264-306,308-312
+  s_0eded1e9d0cab6::t_99815a83c702d0 307
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "fb9a9500a037b60af174c6bc22f6cf1fb0925dd0",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
