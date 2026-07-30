@@ -24,6 +24,7 @@ const SCHEDULES: Array<{ id: string; cron: string; path: string }> = [
   { id: "transcript-purger", cron: "*/15 * * * *", path: "/api/webhooks/transcript-purge" }, // every 15 min purge expired 72h
   { id: "transcript-compliance-check", cron: "0 2 * * *", path: "/api/webhooks/compliance-check" }, // daily 2 AM compliance
   { id: "upstash-snapshot-poll", cron: "*/15 * * * *", path: "/api/webhooks/upstash-snapshot-poll" }, // every 15 min Redis/Vector telemetry trend
+  { id: "dimension-remediation", cron: "*/30 * * * *", path: "/api/webhooks/remediate-dimensions" }, // every 30 min, lower urgency than the 15-min stuck-analysis reaper
 ];
 
 async function setupCron() {
