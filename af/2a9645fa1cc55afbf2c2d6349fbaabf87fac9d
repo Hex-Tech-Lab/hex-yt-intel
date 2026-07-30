@@ -1,0 +1,21 @@
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_fc0411dc7661d2 26-39,53-56,62-63,114-118,166,187-196,262-273,278-280,282,288-294,296-300,305,310-315,321-322,330,337,359-362,367,381-384,392-395,407-410,415-429
+docs/specs/remediate-missing-dimensions-design.md
+  s_0eded1e9d0cab6::t_4d540458be1656 107-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "af2a9645fa1cc55afbf2c2d6349fbaabf87fac9d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
