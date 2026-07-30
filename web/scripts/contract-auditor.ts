@@ -200,6 +200,29 @@ function stripStringsAndCommentsForBraceCounting(line: string): string {
   return stripped;
 }
 
+/**
+ * Single source of truth for "does this code call a real telemetry sink",
+ * shared by every rule below that needs it -- previously duplicated as three
+ * separately-maintained copies of the same regex, which is exactly the kind
+ * of drift risk that would let this whole rule class silently fall behind
+ * actual observability practice as new call sites are added.
+ *
+ * Covers: console.error/warn, Sentry.captureException/captureMessage, and
+ * the bare (non-method) `logError(...)` call from
+ * web/lib/services/error-handler.ts -- a real, repo-wide, console-backed
+ * telemetry helper (confirmed by reading its implementation: it dispatches
+ * to console.error/warn/info internally), so a file whose only reporting is
+ * `logError(...)` was previously invisible to this rule.
+ *
+ * Deliberately does NOT match `.logError(` (with a preceding dot) --
+ * useAnalysisStore's `store.logError(message)` / `analysisStore.getState()
+ * .logError(...)` is a DIFFERENT function of the same name that only
+ * appends to a client-side UI terminal-log list. It reports nothing to any
+ * durable telemetry surface, so treating it as equivalent would silently
+ * exempt real silent-failure cases that happen to also touch the UI log.
+ */
+const TELEMETRY_CALL_PATTERN = /console\.(error|warn)\(|Sentry\.(captureException|captureMessage)\(|(?<!\.)\blogError\(/;
+
 function countBraces(line: string): { open: number; close: number } {
   const cleaned = stripStringsAndCommentsForBraceCounting(line);
   return {
@@ -224,7 +247,7 @@ function auditSilentCatchNoTelemetry(file: string, content: string) {
     const afterBrace = line.slice(catchMatch.index + catchMatch[0].length);
     const singleLineBody = /\}\s*$/.test(afterBrace) ? afterBrace.replace(/\}\s*$/, '') : null;
     if (singleLineBody !== null) {
-      const hasTelemetry = /console\.(error|warn)\(|Sentry\.(captureException|captureMessage)\(/.test(singleLineBody);
+      const hasTelemetry = TELEMETRY_CALL_PATTERN.test(singleLineBody);
       if (hasTelemetry) continue;
       const trimmed = singleLineBody.trim();
       const isTrivial = trimmed === '' || /^\/[/*]/.test(trimmed) || /^(return|continue|break|throw)\b/.test(trimmed);
@@ -263,7 +286,7 @@ function auditSilentCatchNoTelemetry(file: string, content: string) {
     if (body.length === 0) continue;
 
     const joined = body.join('\n');
-    const hasTelemetry = /console\.(error|warn)\(|Sentry\.(captureException|captureMessage)\(/.test(joined);
+    const hasTelemetry = TELEMETRY_CALL_PATTERN.test(joined);
     if (hasTelemetry) continue;
 
     // Benign no-op bodies: a single control-flow statement or a plain
@@ -337,7 +360,7 @@ function auditSilentErrorReturnNoTelemetry(file: string, content: string) {
 
     const blockLines = lines.slice(blockStart, i + 1);
     const joined = blockLines.join('\n');
-    const hasTelemetry = /console\.(error|warn)\(|Sentry\.(captureException|captureMessage)\(/.test(joined);
+    const hasTelemetry = TELEMETRY_CALL_PATTERN.test(joined);
     if (hasTelemetry) continue;
 
     findings.push({
