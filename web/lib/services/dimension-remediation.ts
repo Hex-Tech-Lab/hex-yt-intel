@@ -33,6 +33,47 @@ import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { stitchChunksIntoPayload, buildDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
+import { acquireRedisLock, releaseRedisLock } from '@/lib/redis';
+
+/**
+ * Explicit per-candidate state machine. Each candidate moves through these
+ * stages in order; the harness records which stage it reached so a failure
+ * anywhere is attributable, not just a generic "errored".
+ */
+export enum RemediationStage {
+  Found = 'found',
+  Claimed = 'claimed',
+  ClaimFailed = 'claim_failed', // lost the per-row race -- another run/cron tick owns it
+  WorkerCalled = 'worker_called',
+  WorkerFailed = 'worker_failed',
+  Stitched = 'stitched',
+  StitchFailed = 'stitch_failed',
+  Persisted = 'persisted',
+  PersistRaced = 'persist_raced', // guarded write lost -- a concurrent Re-analyze won
+}
+
+/**
+ * Harness-level tuning. Kept as named constants, not magic numbers, per this
+ * project's settings-registry convention -- these are cron/worker-call
+ * pacing knobs, not user-facing config, so they live here rather than in the
+ * DB-backed Settings Registry (that registry is for tunables an admin might
+ * reasonably change at runtime; these are architectural safety limits).
+ */
+const HARNESS_LOCK_KEY = 'lock:dimension-remediation-harness';
+// Just under the cron cadence (30 min, web/scripts/setup-qstash-cron.ts) so a
+// genuinely-stuck harness self-expires before the next tick would also skip
+// it forever.
+const HARNESS_LOCK_TTL_SECONDS = 25 * 60;
+// Per-row claim lease -- independent of the run-level lock above. Defense in
+// depth: protects against two DIFFERENT lock holders somehow existing at
+// once (e.g. a manual invocation during a scheduled run's window), not the
+// primary overlap guard.
+const CLAIM_STALE_MINUTES = 10;
+// Delay between starting each candidate's worker call. At limit=10 candidates
+// this staggers the whole batch over ~40s rather than firing all 10 OpenRouter
+// calls simultaneously -- the concern that scales badly at 1,000 candidates,
+// not 10, but the pacing mechanism has to exist before the volume does.
+const STAGGER_MS = 4_000;
 
 export interface AnalysisGap {
   id: string;
@@ -48,6 +89,7 @@ export interface AnalysisGap {
 
 export interface RemediationResult {
   analysisId: string;
+  stage: RemediationStage;
   outcome: 'remediated' | 'still_partial' | 'skipped_raced' | 'worker_error' | 'stitch_failed';
   dimensionsRequested: number[];
   dimensionCountAfter?: number;
@@ -59,6 +101,24 @@ export interface RemediationSweepResult {
   stillPartial: number;
   skipped: number;
   errored: number;
+  lockHeld: boolean;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Pure: given an analysis's markdown, return which of the 1..TOTAL_DIMENSIONS
+ * dimension numbers are absent. Exported for unit testing, same pattern as
+ * analysis-reaper.ts's decideReapOutcome.
+ */
+export function computeMissingDimensions(markdown: string): number[] {
+  const parsed = parseToUCISDimensions(markdown);
+  const completedDimensions = new Set(Object.keys(parsed).map(Number));
+  const missing: number[] = [];
+  for (let d = 1; d <= TOTAL_DIMENSIONS; d++) {
+    if (!completedDimensions.has(d)) missing.push(d);
+  }
+  return missing;
 }
 
 /**
@@ -89,14 +149,8 @@ export async function findAnalysesWithMissingDimensions(opts?: {
     const markdown = (row as { analysis_markdown?: string }).analysis_markdown ?? '';
     if (!markdown.trim()) continue; // total loss -- only a full re-run helps, not this path
 
-    const parsed = parseToUCISDimensions(markdown);
-    const completedDimensions = Object.keys(parsed).map(Number);
-    if (completedDimensions.length >= TOTAL_DIMENSIONS) continue; // shouldn't happen given the status filter, but never remediate a row that's actually already whole
-
-    const missingDimensions: number[] = [];
-    for (let d = 1; d <= TOTAL_DIMENSIONS; d++) {
-      if (!completedDimensions.includes(d)) missingDimensions.push(d);
-    }
+    const missingDimensions = computeMissingDimensions(markdown);
+    if (missingDimensions.length === 0) continue; // shouldn't happen given the status filter, but never remediate a row that's actually already whole
 
     const report = (row as { validation_report?: unknown }).validation_report;
     const reportMetadata =
@@ -117,6 +171,64 @@ export async function findAnalysesWithMissingDimensions(opts?: {
     });
   }
   return gaps;
+}
+
+/**
+ * Atomically claim a row for remediation: guarded UPDATE that only succeeds
+ * if the row is still `billing_status='failed'` AND no other claim is
+ * currently active (validation_report.remediation_claimed_at is null or
+ * older than CLAIM_STALE_MINUTES). Two concurrent claim attempts on the same
+ * row serialize on Postgres's own row lock during the UPDATE -- only one can
+ * win, the loser's WHERE re-evaluates against the now-committed row and
+ * matches zero rows. Same single-winner guarded-UPDATE pattern
+ * analysis-reaper.ts already uses, just with a lease field instead of
+ * billing_status as the guard (a full remediation run may take longer than
+ * the reaper's one-shot UPDATE, so billing_status alone can't distinguish
+ * "not started" from "in progress").
+ */
+async function claimGap(gap: AnalysisGap): Promise<boolean> {
+  const service = getSupabaseServiceClient();
+  const nowIso = new Date().toISOString();
+  const staleCutoff = new Date(Date.now() - CLAIM_STALE_MINUTES * 60_000).toISOString();
+  const baseReport =
+    gap.validationReport && typeof gap.validationReport === 'object' && !Array.isArray(gap.validationReport)
+      ? (gap.validationReport as Record<string, unknown>)
+      : {};
+
+  const { count, error } = await service
+    .from('analyses')
+    .update(
+      { validation_report: { ...baseReport, remediation_claimed_at: nowIso } },
+      { count: 'exact' }
+    )
+    .eq('id', gap.id)
+    .eq('billing_status', 'failed')
+    .or(`validation_report->>remediation_claimed_at.is.null,validation_report->>remediation_claimed_at.lt.${staleCutoff}`);
+
+  if (error) {
+    Sentry.captureException(error, { tags: { service: 'dimension-remediation', phase: 'claim' }, extra: { analysisId: gap.id } });
+    return false;
+  }
+  return (count ?? 0) > 0;
+}
+
+/** Clear a claim after a failed remediation attempt so the next tick can retry immediately, rather than waiting out CLAIM_STALE_MINUTES. */
+async function releaseClaim(gap: AnalysisGap): Promise<void> {
+  const service = getSupabaseServiceClient();
+  const baseReport =
+    gap.validationReport && typeof gap.validationReport === 'object' && !Array.isArray(gap.validationReport)
+      ? (gap.validationReport as Record<string, unknown>)
+      : {};
+  const { remediation_claimed_at: _drop, ...withoutClaim } = baseReport as Record<string, unknown> & { remediation_claimed_at?: unknown };
+  const { error } = await service
+    .from('analyses')
+    .update({ validation_report: withoutClaim })
+    .eq('id', gap.id)
+    .eq('billing_status', 'failed');
+  if (error) {
+    // Non-fatal: worst case the claim just expires naturally after CLAIM_STALE_MINUTES.
+    console.warn('[dimension-remediation] releaseClaim failed, will expire naturally', { analysisId: gap.id, error: error.message });
+  }
 }
 
 /**
@@ -215,30 +327,18 @@ async function collectDimensionsFromWorker(
 }
 
 /**
- * Remediate a single gap: call the worker for just the missing dimensions,
- * stitch the result in with the existing content, persist if it actually
- * improved the analysis. Idempotent and race-safe: re-checks the gap still
- * exists before calling the worker, and guards the final write on
- * `billing_status = 'failed'` so a concurrent legitimate "Re-analyze" (which
- * would move the row to `processing` then `completed`) always wins.
+ * Remediate a single gap: claim it atomically, call the worker for just the
+ * missing dimensions, stitch the result in with the existing content,
+ * persist if it actually improved the analysis. Every exit path is tagged
+ * with the RemediationStage it reached, so a run's results are attributable
+ * to a specific step, not just pass/fail.
  */
 export async function remediateAnalysis(gap: AnalysisGap): Promise<RemediationResult> {
-  const service = getSupabaseServiceClient();
   const persistenceAdapter = new SupabasePersistenceAdapter();
 
-  // Re-check: another remediation tick or the user's own Re-analyze could
-  // have already resolved this since the sweep query ran.
-  const { data: current, error: fetchErr } = await service
-    .from('analyses')
-    .select('billing_status')
-    .eq('id', gap.id)
-    .maybeSingle();
-  if (fetchErr) {
-    Sentry.captureException(fetchErr, { tags: { service: 'dimension-remediation' }, extra: { analysisId: gap.id } });
-    return { analysisId: gap.id, outcome: 'worker_error', dimensionsRequested: gap.missingDimensions };
-  }
-  if (!current || current.billing_status !== 'failed') {
-    return { analysisId: gap.id, outcome: 'skipped_raced', dimensionsRequested: gap.missingDimensions };
+  const claimed = await claimGap(gap);
+  if (!claimed) {
+    return { analysisId: gap.id, stage: RemediationStage.ClaimFailed, outcome: 'skipped_raced', dimensionsRequested: gap.missingDimensions };
   }
 
   const cascade = await resolveAnalysisCascade();
@@ -246,7 +346,8 @@ export async function remediateAnalysis(gap: AnalysisGap): Promise<RemediationRe
 
   const newChunk = await collectDimensionsFromWorker(gap, models, cascade);
   if (!newChunk) {
-    return { analysisId: gap.id, outcome: 'worker_error', dimensionsRequested: gap.missingDimensions };
+    await releaseClaim(gap);
+    return { analysisId: gap.id, stage: RemediationStage.WorkerFailed, outcome: 'worker_error', dimensionsRequested: gap.missingDimensions };
   }
 
   // Existing content, wrapped as a "chunk" so stitchChunksIntoPayload's
@@ -266,7 +367,8 @@ export async function remediateAnalysis(gap: AnalysisGap): Promise<RemediationRe
       level: 'error',
       contexts: { remediation: { analysisId: gap.id } },
     });
-    return { analysisId: gap.id, outcome: 'stitch_failed', dimensionsRequested: gap.missingDimensions };
+    await releaseClaim(gap);
+    return { analysisId: gap.id, stage: RemediationStage.StitchFailed, outcome: 'stitch_failed', dimensionsRequested: gap.missingDimensions };
   }
 
   const { dimensionStatus, validationStatus, billingStatus } = buildDimensionStatus(stitchResult.payload);
@@ -298,33 +400,76 @@ export async function remediateAnalysis(gap: AnalysisGap): Promise<RemediationRe
     guardBillingStatus: 'failed',
   });
   if (!updated) {
-    return { analysisId: gap.id, outcome: 'skipped_raced', dimensionsRequested: gap.missingDimensions };
+    // Guarded write lost to a concurrent legitimate change (e.g. a
+    // "Re-analyze" that moved the row off billing_status='failed' between
+    // our claim and this write). Leave the claim in place rather than
+    // releasing it -- the row is no longer a remediation candidate at all,
+    // so there is nothing to retry.
+    return { analysisId: gap.id, stage: RemediationStage.PersistRaced, outcome: 'skipped_raced', dimensionsRequested: gap.missingDimensions };
   }
 
   return {
     analysisId: gap.id,
+    stage: RemediationStage.Persisted,
     outcome: dimensionCountAfter >= TOTAL_DIMENSIONS ? 'remediated' : 'still_partial',
     dimensionsRequested: gap.missingDimensions,
     dimensionCountAfter,
   };
 }
 
-/** Sweep and remediate a batch of gaps. Safe to run repeatedly. */
-export async function sweepMissingDimensions(opts?: { limit?: number }): Promise<RemediationSweepResult> {
-  const gaps = await findAnalysesWithMissingDimensions(opts);
-  const result: RemediationSweepResult = { scanned: gaps.length, remediated: 0, stillPartial: 0, skipped: 0, errored: 0 };
-
-  for (const gap of gaps) {
-    try {
-      const outcome = await remediateAnalysis(gap);
-      if (outcome.outcome === 'remediated') result.remediated++;
-      else if (outcome.outcome === 'still_partial') result.stillPartial++;
-      else if (outcome.outcome === 'skipped_raced') result.skipped++;
-      else result.errored++;
-    } catch (err) {
-      Sentry.captureException(err, { tags: { service: 'dimension-remediation' }, extra: { analysisId: gap.id } });
-      result.errored++;
-    }
+/**
+ * Harness: owns run-level concurrency, not just per-row correctness.
+ *
+ * 1. Run-level lock (Redis, NX+TTL): at most one harness invocation is ever
+ *    active at a time, repo-wide. If a scheduled tick fires while a previous
+ *    run is still in flight (a slow run, or the interval being tightened to
+ *    5/2/3 min because the backlog turned out to be worse than expected),
+ *    the new invocation exits immediately instead of double-processing the
+ *    same candidates. This is the PRIMARY overlap guard.
+ * 2. Per-row claim (see claimGap): defense in depth, not the primary
+ *    mechanism -- covers a manual invocation racing a scheduled one, which
+ *    the run-level lock alone wouldn't catch if triggered from two different
+ *    processes without going through this same lock key.
+ * 3. Staggered pacing (STAGGER_MS between candidates): candidates are
+ *    processed sequentially, not via Promise.all, specifically so this
+ *    doesn't fire N simultaneous OpenRouter calls. At limit=10 this is
+ *    already true by construction (a plain for-loop is sequential), but the
+ *    delay is explicit so the pacing is a real, tunable property of the
+ *    harness rather than an accident of not having parallelized yet -- the
+ *    thing to widen if a future limit=1000 needs batched concurrency instead
+ *    of pure sequential staggering.
+ */
+export async function runRemediationHarness(opts?: { limit?: number }): Promise<RemediationSweepResult> {
+  const lockAcquired = await acquireRedisLock(HARNESS_LOCK_KEY, HARNESS_LOCK_TTL_SECONDS);
+  if (!lockAcquired) {
+    console.log('[dimension-remediation] harness already running, skipping this tick');
+    return { scanned: 0, remediated: 0, stillPartial: 0, skipped: 0, errored: 0, lockHeld: false };
   }
-  return result;
+
+  try {
+    const gaps = await findAnalysesWithMissingDimensions(opts);
+    const result: RemediationSweepResult = { scanned: gaps.length, remediated: 0, stillPartial: 0, skipped: 0, errored: 0, lockHeld: true };
+
+    for (let i = 0; i < gaps.length; i++) {
+      const gap = gaps[i]!;
+      try {
+        const outcome = await remediateAnalysis(gap);
+        console.log('[dimension-remediation] candidate processed', { analysisId: gap.id, stage: outcome.stage, outcome: outcome.outcome });
+        if (outcome.outcome === 'remediated') result.remediated++;
+        else if (outcome.outcome === 'still_partial') result.stillPartial++;
+        else if (outcome.outcome === 'skipped_raced') result.skipped++;
+        else result.errored++;
+      } catch (err) {
+        Sentry.captureException(err, { tags: { service: 'dimension-remediation' }, extra: { analysisId: gap.id } });
+        result.errored++;
+      }
+
+      if (i < gaps.length - 1) {
+        await sleep(STAGGER_MS);
+      }
+    }
+    return result;
+  } finally {
+    await releaseRedisLock(HARNESS_LOCK_KEY);
+  }
 }

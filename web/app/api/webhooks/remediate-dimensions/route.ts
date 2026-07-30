@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyQStashSignature } from '@/lib/qstash-client';
-import { sweepMissingDimensions } from '@/lib/services/dimension-remediation';
+import { runRemediationHarness } from '@/lib/services/dimension-remediation';
 import * as Sentry from '@sentry/nextjs';
 
 export async function POST(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Invalid QStash signature' }, { status: 401 });
     }
 
-    const result = await sweepMissingDimensions({ limit: 10 });
+    const result = await runRemediationHarness({ limit: 10 });
     console.log('[remediate-dimensions-webhook] sweep complete', result);
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
