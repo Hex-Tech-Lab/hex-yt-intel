@@ -104,10 +104,18 @@ invocation.
 4. Persist via the same `AnalysisPersistencePort` write path
    `CreateAnalysisUseCase` and the reaper both already use — no new
    persistence code.
-5. Idempotency: before calling the worker, re-check the gap still exists
-   (another remediation tick, or the user's own "Re-analyze", could have
-   already filled it) — cheap read-before-write, same pattern
-   `sweepStuckAnalyses` already uses to avoid double-settling a row.
+5. Idempotency/concurrency: **implemented as a harness**, not a bare loop.
+   A single Redis run-level lock (NX+TTL) guarantees at most one harness
+   invocation is ever active repo-wide — the primary guard against two
+   overlapping cron ticks double-processing (and double-paying for) the
+   same candidates. The final write is guarded on `billing_status='failed'`
+   (same single-winner pattern `sweepStuckAnalyses` uses) so a concurrent
+   "Re-analyze" always wins. Candidates within a run are processed
+   sequentially with an explicit stagger delay between worker calls, so a
+   larger batch never fires many simultaneous OpenRouter calls. (An earlier
+   draft also had a per-row Postgres claim/lease; removed after review as
+   redundant once the run-level lock guarantees no two callers can ever
+   reach the same row concurrently.)
 
 ## Failure handling
 
