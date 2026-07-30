@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/cloudflare';
+import { jsonrepair } from 'jsonrepair';
 
 /**
  * MarkdownReconstructor — Dual-Write Persistence Adapter
@@ -183,14 +184,35 @@ function safeParse(text: string, phase: string, finishReason?: string): { parsed
     Sentry.captureException(error, { contexts: { extractJsonPayload: { phase, textLength: text.length, finishReason: finishReason || 'unknown' } } });
     const message = error instanceof Error ? error.message : String(error);
     console.error('[extractJsonPayload]', { message, phase, finishReason });
+
+    // repairUnclosedJson only fixes truncated/unclosed structures (appends
+    // missing closing braces) -- it does nothing for a mid-document syntax
+    // break (unescaped quote/control char inside a string value), which is
+    // the OTHER real failure class observed in production (RCA 2026-07-30,
+    // Sentry HEX-YT-INTEL-3E: finishReason='stop', not truncation, error at
+    // byte 8104 of a 9266-char document). Try the cheap targeted fix first;
+    // fall back to jsonrepair's general-purpose lenient parser for anything
+    // else -- it independently handles both classes plus trailing commas,
+    // single quotes, etc., so it's also a safety net if repairUnclosedJson's
+    // own output is itself malformed in a way jsonrepair can still recover.
     const repaired = repairUnclosedJson(text);
-    if (!repaired) return { parsed: null, repaired: null };
+    if (repaired) {
+      try {
+        return { parsed: JSON.parse(repaired) as Partial<UCISPayloadV2>, repaired };
+      } catch (repairedParseError) {
+        console.debug('[extractJsonPayload] repairUnclosedJson output still invalid, falling back to jsonrepair', { phase, finishReason, message: repairedParseError instanceof Error ? repairedParseError.message : String(repairedParseError) });
+      }
+    }
+
     try {
-      return { parsed: JSON.parse(repaired) as Partial<UCISPayloadV2>, repaired };
+      const jsonrepaired = jsonrepair(text);
+      const parsed = JSON.parse(jsonrepaired) as Partial<UCISPayloadV2>;
+      console.warn('[extractJsonPayload] Recovered via jsonrepair after repairUnclosedJson failed/was inapplicable', { phase, finishReason, originalLength: text.length });
+      return { parsed, repaired: jsonrepaired };
     } catch (repairError) {
-      Sentry.captureException(repairError, { contexts: { extractJsonPayload: { phase: 'repaired_parse', repairedTextLength: repaired.length, finishReason: finishReason || 'unknown' } } });
+      Sentry.captureException(repairError, { contexts: { extractJsonPayload: { phase: 'jsonrepair_failed', textLength: text.length, finishReason: finishReason || 'unknown' } } });
       const repairMessage = repairError instanceof Error ? repairError.message : String(repairError);
-      console.error('[extractJsonPayload]', { message: repairMessage, phase: 'repaired_parse', finishReason });
+      console.error('[extractJsonPayload]', { message: repairMessage, phase: 'jsonrepair_failed', finishReason });
       return { parsed: null, repaired: null };
     }
   }
