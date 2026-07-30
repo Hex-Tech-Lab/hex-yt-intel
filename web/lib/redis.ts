@@ -290,7 +290,7 @@ export async function acquireRedisLock(key: string, ttlSeconds: number): Promise
       const result = await redis.set(key, token, { nx: true, ex: ttlSeconds });
       return result === 'OK' ? token : null;
     } catch (error) {
-      console.warn(`[redis.ts] Failed to acquire lock ${key}:`, error);
+      console.warn('[redis.ts] Failed to acquire lock', { key, error: error instanceof Error ? error.message : String(error) });
       redisAvailable = false;
       // Fall through to in-memory fallback below
     }
@@ -342,7 +342,7 @@ export async function releaseRedisLock(key: string, token: string): Promise<void
       await executeRedisScript(RELEASE_IF_OWNER_SCRIPT, [key], [token]);
       return;
     } catch (error) {
-      console.warn(`[redis.ts] Failed to release Redis lock ${key}:`, error);
+      console.warn('[redis.ts] Failed to release Redis lock', { key, error: error instanceof Error ? error.message : String(error) });
       redisAvailable = false;
       // Fall through to in-memory fallback below
     }

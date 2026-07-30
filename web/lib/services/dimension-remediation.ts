@@ -118,7 +118,7 @@ async function getRemainingBudgetCents(): Promise<number> {
     return cents;
   } catch (err) {
     console.error('[dimension-remediation] failed to fetch OpenRouter remaining balance, failing closed', { err: err instanceof Error ? err.message : String(err) });
-    Sentry.captureException(err, { tags: { service: 'dimension-remediation', phase: 'openrouter_balance' } });
+    Sentry.captureException(err, { contexts: { remediation: { service: 'dimension-remediation', phase: 'openrouter_balance' } } });
     return 0;
   }
 }
@@ -155,9 +155,12 @@ async function resolveBudgetParams(): Promise<{ capacityCents: number; refillRat
  * average -- revisit once real per-dimension token usage is logged.
  */
 const ESTIMATED_TOKENS_PER_DIMENSION = 2_000;
-function estimateCostCents(dimensionCount: number, cascade: Array<{ cost?: number }>): number {
-  const cheapestCostPer1K = cascade.reduce((min, c) => (typeof c.cost === 'number' && c.cost < min ? c.cost : min), Infinity);
-  const costPer1K = Number.isFinite(cheapestCostPer1K) ? cheapestCostPer1K : 0.002; // fallback if cascade has no cost data at all
+/** cascade's cheapest resolved cost/1K tokens -- computed once per harness run by the caller, not re-scanned per candidate (same "resolve once per run" convention the module already applies to cascade/models). */
+function cheapestCostPer1K(cascade: Array<{ cost?: number }>): number {
+  const cheapest = cascade.reduce((min, c) => (typeof c.cost === 'number' && c.cost < min ? c.cost : min), Infinity);
+  return Number.isFinite(cheapest) ? cheapest : 0.002; // fallback if cascade has no cost data at all
+}
+function estimateCostCents(dimensionCount: number, costPer1K: number): number {
   return Math.ceil(dimensionCount * (ESTIMATED_TOKENS_PER_DIMENSION / 1000) * costPer1K * 100);
 }
 
@@ -495,9 +498,9 @@ export async function remediateAnalysis(
   gap: AnalysisGap,
   models: string[],
   cascade: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
-  budget: { capacityCents: number; refillRatePerMsCents: number }
+  budget: { capacityCents: number; refillRatePerMsCents: number; costPer1K: number }
 ): Promise<RemediationResult> {
-  const estimatedCostCents = estimateCostCents(gap.missingDimensions.length, cascade);
+  const estimatedCostCents = estimateCostCents(gap.missingDimensions.length, budget.costPer1K);
   const affordable = await tryConsumeTokenBucket(TOKEN_BUCKET_KEY, budget.capacityCents, budget.refillRatePerMsCents, estimatedCostCents);
   if (!affordable) {
     return { analysisId: gap.id, stage: RemediationStage.BudgetExhausted, dimensionsRequested: gap.missingDimensions };
@@ -617,10 +620,11 @@ export async function runRemediationHarness(): Promise<RemediationSweepResult> {
 
   const cascade = await resolveAnalysisCascade();
   const models = cascade.map((c) => c.model);
+  const budgetWithCost = { ...budget, costPer1K: cheapestCostPer1K(cascade) };
 
   for (const gap of gaps) {
     try {
-      const outcome = await remediateAnalysis(gap, models, cascade, budget);
+      const outcome = await remediateAnalysis(gap, models, cascade, budgetWithCost);
       console.log('[dimension-remediation] candidate processed', { analysisId: gap.id, stage: outcome.stage, order });
       switch (outcome.stage) {
         case RemediationStage.Remediated:

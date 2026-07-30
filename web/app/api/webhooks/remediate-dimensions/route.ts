@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('upstash-signature') || '';
     const verified = await verifyQStashSignature(signature, bodyText);
     if (!verified) {
-      console.warn('[remediate-dimensions-webhook] QStash signature verification failed');
+      console.warn('[remediate-dimensions-webhook] QStash signature verification failed', { hasSignatureHeader: Boolean(signature) });
       Sentry.captureMessage('remediate-dimensions-webhook: QStash signature verification failed', {
         level: 'warning',
         tags: { endpoint: '/api/webhooks/remediate-dimensions' },
