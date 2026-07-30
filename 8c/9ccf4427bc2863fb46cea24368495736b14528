@@ -1,0 +1,23 @@
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_88e88dcac02c6a 25,132
+web/hooks/useAutoRestoreAnalysis.ts
+  s_0eded1e9d0cab6::t_384cff5403d492 151-155
+web/hooks/useStreamReattach.ts
+  s_0eded1e9d0cab6::t_6857cb41ca322c 1-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8c9ccf4427bc2863fb46cea24368495736b14528",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
