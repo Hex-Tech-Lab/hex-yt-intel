@@ -184,6 +184,30 @@ function auditScriptedTemplateFailure(file: string, content: string) {
 // `return`/`continue`/`break`, or an assignment ending the block) doesn't
 // trip it, since plenty of catches legitimately just fall back to a
 // default with the error already handled elsewhere in the retry loop.
+/**
+ * Rough strip of string-literal contents and `//` line comments before
+ * brace-counting, so a `{`/`}` character sitting inside a string constant or
+ * a comment doesn't throw off the block-scope depth heuristics below. Not a
+ * real tokenizer (doesn't know about a `//` inside a string, or multi-line
+ * template literals) -- but removes the common false-positive/negative
+ * source cheaply, which is all these already-heuristic rules need.
+ */
+function stripStringsAndCommentsForBraceCounting(line: string): string {
+  let stripped = line.replace(/\/\/.*$/, '');
+  stripped = stripped.replace(/"(?:[^"\\]|\\.)*"/g, '""');
+  stripped = stripped.replace(/'(?:[^'\\]|\\.)*'/g, "''");
+  stripped = stripped.replace(/`(?:[^`\\]|\\.)*`/g, '``');
+  return stripped;
+}
+
+function countBraces(line: string): { open: number; close: number } {
+  const cleaned = stripStringsAndCommentsForBraceCounting(line);
+  return {
+    open: (cleaned.match(/\{/g) || []).length,
+    close: (cleaned.match(/\}/g) || []).length,
+  };
+}
+
 function auditSilentCatchNoTelemetry(file: string, content: string) {
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i++) {
@@ -224,12 +248,14 @@ function auditSilentCatchNoTelemetry(file: string, content: string) {
     // Multi-line form: collect the catch block body by brace depth, capped
     // at 15 lines so a huge block doesn't false-negative on telemetry
     // buried far below.
-    let depth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+    const openLineBraces = countBraces(line);
+    let depth = openLineBraces.open - openLineBraces.close;
     const body: string[] = [];
     let j = i + 1;
     while (j < lines.length && depth > 0 && body.length < 15) {
       const bodyLine = lines[j] ?? '';
-      depth += (bodyLine.match(/\{/g) || []).length - (bodyLine.match(/\}/g) || []).length;
+      const bodyBraces = countBraces(bodyLine);
+      depth += bodyBraces.open - bodyBraces.close;
       if (depth <= 0) break;
       body.push(bodyLine);
       j++;
@@ -273,11 +299,25 @@ function auditSilentCatchNoTelemetry(file: string, content: string) {
 // return is left alone.
 function auditSilentErrorReturnNoTelemetry(file: string, content: string) {
   const lines = content.split('\n');
-  const returnPattern = /\breturn\s*\{[^}]*\b(success|ok)\s*:\s*false\b/;
+  // Trigger: just the opening of a `return { ... }` object literal -- this
+  // reliably sits on one line even when the object body is multi-line
+  // (Prettier's default formatting). The full success/ok:false check runs
+  // against a forward-joined window below, not this line alone.
+  const returnOpenPattern = /\breturn\s*\{/;
+  const failureFieldPattern = /\b(success|ok)\s*:\s*false\b/;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? '';
-    if (!returnPattern.test(line)) continue;
+    if (!returnOpenPattern.test(line)) continue;
+
+    // RCA (2026-07-30): the original version tested returnPattern against
+    // `line` alone, so `return {\n  success: false,\n  ...\n};` -- the
+    // common multi-line object-literal shape -- was invisible to this rule
+    // entirely. Join the return line plus up to 6 following lines (enough
+    // for a typical 2-4-field failure object) before checking for the
+    // success/ok:false field.
+    const forwardWindow = lines.slice(i, Math.min(i + 7, lines.length)).join('\n');
+    if (!failureFieldPattern.test(forwardWindow)) continue;
 
     // Walk backward to find the start of the enclosing block: the nearest
     // line above whose net brace balance (relative to the return line)
@@ -286,7 +326,8 @@ function auditSilentErrorReturnNoTelemetry(file: string, content: string) {
     let blockStart = -1;
     for (let k = i; k >= 0 && i - k <= 15; k--) {
       const kLine = lines[k] ?? '';
-      depth += (kLine.match(/\}/g) || []).length - (kLine.match(/\{/g) || []).length;
+      const kBraces = countBraces(kLine);
+      depth += kBraces.close - kBraces.open;
       if (depth < 0) {
         blockStart = k;
         break;
@@ -322,8 +363,16 @@ for (const root of SCAN_ROOTS) {
     auditSilentSuccess(relPath, content);
     auditUnverifiedEndpoints(relPath, content, hasSiblingTest);
     auditScriptedTemplateFailure(relPath, content);
-    auditSilentCatchNoTelemetry(relPath, content);
-    auditSilentErrorReturnNoTelemetry(relPath, content);
+    // Self-exemption: this file's own source unavoidably contains the exact
+    // pattern strings these two rules search for (their regex literals ARE
+    // e.g. `return {` and `success: false`/`catch {`) -- not a wording
+    // issue that can be dodged, it's structural to scanning your own
+    // detection logic. Every other rule is safe to self-scan.
+    const isContractAuditorItself = relPath === 'web/scripts/contract-auditor.ts';
+    if (!isContractAuditorItself) {
+      auditSilentCatchNoTelemetry(relPath, content);
+      auditSilentErrorReturnNoTelemetry(relPath, content);
+    }
   }
 }
 
