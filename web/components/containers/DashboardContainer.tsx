@@ -22,6 +22,7 @@ import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion'
 import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
 import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
+import { useStreamReattach } from '@/hooks/useStreamReattach';
 
 // Lazy load visualization components to reduce initial bundle size
 const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
@@ -128,6 +129,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   }, []);
 
   useAutoRestoreAnalysis(url);
+  useStreamReattach(nucleusAnalysis?.id ?? (analysis as any)?.id ?? null, status);
 
   // Memoized so the client instance (and therefore `handleSignOut`'s identity)
   // stays stable across renders — createClient() otherwise builds a new

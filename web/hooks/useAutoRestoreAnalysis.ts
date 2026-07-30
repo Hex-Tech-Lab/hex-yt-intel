@@ -148,6 +148,11 @@ export function useAutoRestoreAnalysis(url: string) {
             // Sync status to UI (either complete, error, partial, or processing/analyzing)
             if (data.status === 'processing' || restoreData.analysisStatus === 'incomplete') {
               setStatus('analyzing');
+              const analysisStore = useAnalysisStore.getState();
+              if (analysisStore.terminalLines.length === 0) {
+                analysisStore.logInfo(`Re-attached to active background analysis (${restoreData.id.slice(0, 8)}...)`);
+                analysisStore.logInfo(`Monitoring edge generator progress across ${restoreData.dimensionsReceived?.length || 0}/11 dimensions...`);
+              }
             } else if (restoreData.analysisStatus === 'complete') {
               setStatus('complete');
             } else if (restoreData.analysisStatus === 'failed' || restoreData.analysisStatus === 'error') {
