@@ -1,0 +1,24 @@
+web/lib/prompts/chat-grounding.ts
+  s_0eded1e9d0cab6::t_a7d2646a308cab 13
+supabase/migrations/20260731010000_chat_grounding_timestamps_v2.sql
+  s_0eded1e9d0cab6::t_a819dd8bf628c9 1-36
+web/lib/config/prompts.ts
+  s_0eded1e9d0cab6::t_1f9579e63410ac 19
+  s_0eded1e9d0cab6::t_b91f7778334df4 20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "69f915326c2f263bd6a9a66d1a18edc58a40aead",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
