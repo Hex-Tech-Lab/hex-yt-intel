@@ -27,7 +27,13 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     env: {
-      NODE_ENV: 'production',
+      // Deliberately NOT 'production': middleware.ts's dev-only auth
+      // bypass is gated on NODE_ENV !== 'production' (see DEV_BYPASS_TOKEN
+      // below), so 'production' here silently blocked every local
+      // Playwright run needing an authenticated page. Verified live: with
+      // 'test', the middleware bypass fires correctly (confirmed via its
+      // own log line) where 'production' did not.
+      NODE_ENV: 'test',
       CI: process.env.CI || 'false',
       GITHUB_ACTIONS: process.env.GITHUB_ACTIONS || 'false',
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co',
