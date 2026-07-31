@@ -252,6 +252,12 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     });
   }
 
+  // True once a NEWER restoreAnalysis call has superseded this one -- the
+  // single check point every stale-request guard below funnels through, so
+  // the race-safety logic can't be missed on a future edit to just one of
+  // the four call sites.
+  const isStaleRestore = (analysisId: string) => latestRestoreRequestRef.current !== analysisId;
+
   const restoreAnalysis = async (analysisId: string) => {
     latestRestoreRequestRef.current = analysisId;
     setLoadingId(analysisId);
@@ -262,10 +268,10 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       // A newer restore was requested while this fetch was in flight -- discard
       // this response so it can't clobber the newer selection's data (the race
       // this whole ref exists to prevent).
-      if (latestRestoreRequestRef.current !== analysisId) return;
+      if (isStaleRestore(analysisId)) return;
       if (!res.ok) throw new Error(`Restoration failed (HTTP ${res.status})`);
       const data = await res.json();
-      if (latestRestoreRequestRef.current !== analysisId) return;
+      if (isStaleRestore(analysisId)) return;
 
       const dimensions = parseToUCISDimensions(data.analysis_markdown || '');
 
@@ -354,7 +360,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         }
       })();
     } catch (err) {
-      if (latestRestoreRequestRef.current !== analysisId) return;
+      if (isStaleRestore(analysisId)) return;
       console.error('Error restoring analysis:', err);
       setRestoreError(err instanceof Error ? err.message : 'Unknown restoration error');
       setStatus('error');
@@ -363,7 +369,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       // superseded this one -- otherwise a stale finally block from request A
       // could flip off the spinner/loading flag for the still-in-flight
       // request B.
-      if (latestRestoreRequestRef.current === analysisId) {
+      if (!isStaleRestore(analysisId)) {
         setLoadingId(null);
         setIsLoading(false);
       }
