@@ -1,0 +1,31 @@
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_941ab33617bb91 42
+  s_0eded1e9d0cab6::t_053477e0011e9c 55
+  s_0eded1e9d0cab6::t_3f8af3a2228b20 451
+  s_0eded1e9d0cab6::t_5f6a04fd8d7127 1
+  s_0eded1e9d0cab6::t_36db63e1300411 461-462,467
+web/hooks/useStreamReattach.ts
+  s_0eded1e9d0cab6::t_6d3e0b9ac1cb6d 104
+  s_0eded1e9d0cab6::t_08fe36cf573d47 14-20,22,32
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_5fc5d403546220 95-103,114
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_ed4b1a5793e59a 118
+  s_0eded1e9d0cab6::t_76fc0f91ec617f 132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "b70359603fbf444d1ed6dc5ed6292fba35956060",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
