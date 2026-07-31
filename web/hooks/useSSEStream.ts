@@ -454,6 +454,19 @@ export function useSSEStream() {
   };
 
   const stopAnalysis = () => {
+    // ADR 020 Phase 1: explicit cancel signal, fire-and-forget -- distinct
+    // from the abortControllerRef.current.abort() below, which only stops
+    // THIS client's own connection (the worker deliberately ignores that,
+    // see the 2026-07-29 httpConnSignal decoupling that lets a stream
+    // survive plain navigation-away). This POST tells the worker the user
+    // explicitly wants generation stopped, via a Redis flag it polls.
+    const cancelAnalysisId = useSynthesisNucleus.getState().analysis?.id ?? useAnalysisStore.getState().analysis?.id;
+    if (cancelAnalysisId) {
+      fetch(`/api/analyses/${cancelAnalysisId}/cancel`, { method: 'POST' }).catch((err) => {
+        console.debug('[useSSEStream] Cancel signal failed to send (best-effort):', err);
+      });
+    }
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;

@@ -12,4 +12,6 @@ export interface PersistenceRepositoryPort {
   fingerprint(prompt: string): Promise<string>;
   /** Build the cache key from prompt hash, transcript length, and video id. */
   buildKey(promptHash: string, transcriptLength: number, videoId: string): string;
+  /** Whether an explicit client-initiated cancel flag is set for this analysis (see web's POST /api/analyses/[id]/cancel). */
+  isCancelled(analysisId: string): Promise<boolean>;
 }

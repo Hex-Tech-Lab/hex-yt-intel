@@ -823,6 +823,29 @@ function buildStreamResponse(
         return;
       }
 
+      // Dedicated cancel signal (Phase 1, ADR 020) -- deliberately separate from
+      // httpConnSignal. httpConnSignal fires on ANY disconnect (navigation away,
+      // tab close, network drop) and must NOT abort generation (2026-07-29 fix,
+      // preserves reattach-after-navigation). This one only fires when the user
+      // explicitly clicks "stop" (POST /api/analyses/[id]/cancel sets a Redis
+      // flag; stopAnalysis() in useSSEStream.ts calls it before aborting the
+      // client's own fetch). Polled rather than pushed since there's no
+      // persistent connection into a CF Worker isolate to push through.
+      const cancelController = new AbortController();
+      let pollingActive = true;
+      if (cache) {
+        waitUntil((async () => {
+          while (pollingActive) {
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            if (!pollingActive) break;
+            if (await cache.isCancelled(req.analysisId)) {
+              cancelController.abort();
+              break;
+            }
+          }
+        })());
+      }
+
       try {
         send({ type: "status", stage: "starting", videoId: req.videoId });
 
@@ -852,20 +875,14 @@ function buildStreamResponse(
               send({ type: "status", ...statusEvent });
             },
           },
-          // Stream-persistence foundation (2026-07-29): httpConnSignal used to be
-          // forwarded here, which meant a client disconnect (navigating away,
-          // closing the tab/laptop) didn't just stop the SSE response -- it
-          // aborted the LLMCascade's own fetch to the model provider, killing
-          // generation outright. Now intentionally NOT forwarded: generation is
-          // bounded only by LLMCascade's own independent per-call timeout
-          // (LLMCascade.ts ~213-227, 120s default, unrelated to client
-          // connection state), so it keeps running via ctx.waitUntil regardless
-          // of whether anyone is still listening. httpConnSignal is still used
-          // below (the `settled`/early-interrupted-persist listener) for
-          // SSE/persist bookkeeping -- that's a separate, correct use, untouched.
-          undefined,
+          // httpConnSignal is deliberately NOT forwarded here (2026-07-29 fix,
+          // see comment above buildStreamResponse's cancel-poll setup) -- a
+          // client disconnect from navigation/tab-close must not kill
+          // generation, only an explicit cancel (cancelController) does.
+          cancelController.signal,
         );
 
+        pollingActive = false;
         finishReason = result.finishReason;
 
         if (!result.produced && !result.finalText) {
@@ -878,6 +895,7 @@ function buildStreamResponse(
       } catch (error) {
         send({ type: "error", error: error instanceof Error ? error.message : "stream failed" });
       } finally {
+        pollingActive = false;
         if (!settled) {
           // Intentionally not awaited: waitUntil keeps this alive in the background;
           // this stream doesn't relay persist status to the client (unlike chat-stream.ts).

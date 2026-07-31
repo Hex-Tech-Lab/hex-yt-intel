@@ -64,4 +64,25 @@ export class UpstashCacheAdapter implements PersistenceRepositoryPort {
       console.warn('[UpstashCacheAdapter] Upstash SET failed, analysis succeeded but not cached');
     }
   }
+
+  /**
+   * Checks the `cancel:{analysisId}` flag web's POST /api/analyses/[id]/cancel
+   * writes on explicit user stop. Fails open (false) on any Redis error --
+   * same as get() above -- a transient Redis outage must never abort an
+   * in-flight, already-paying-for generation as a side effect.
+   */
+  async isCancelled(analysisId: string): Promise<boolean> {
+    try {
+      const response = await rawFetch(`${this.url}/get/cancel:${analysisId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${this.token}` },
+      });
+      if (!response.ok) return false;
+      const data = (await response.json()) as { result: string | null };
+      return data.result === 'true';
+    } catch (error) {
+      console.warn('[UpstashCacheAdapter] Upstash GET (isCancelled) failed, proceeding as not-cancelled', error);
+      return false;
+    }
+  }
 }
