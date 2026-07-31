@@ -70,7 +70,6 @@ export async function GET(
       completedDimensions,
       completedCount: completedDimensions.length,
       analysisMarkdown: reconstructedMarkdown,
-      analysisPayload: analysis.analysis_payload || null,
       updatedAt: analysis.updated_at || analysis.created_at,
     });
   } catch (err: unknown) {

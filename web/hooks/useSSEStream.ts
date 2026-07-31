@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useChatStore } from '@/store/useChatStore';
@@ -39,6 +39,7 @@ export function useSSEStream() {
   const { initializeAnalysis: initSynthesis, reset: resetSynthesis } = useSynthesisNucleus();
   const abortControllerRef = useRef<AbortController | null>(null);
   const processingRef = useRef(false);
+  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -51,6 +52,7 @@ export function useSSEStream() {
   const startAnalysis = async (url: string, timezone: string, forceRefresh: boolean = false) => {
     if (processingRef.current) return;
     processingRef.current = true;
+    setIsLiveStreaming(true);
 
     // 1. Abort any previous stream to prevent bifurcation
     if (abortControllerRef.current) {
@@ -446,6 +448,7 @@ export function useSSEStream() {
         );
       } finally {
         processingRef.current = false;
+        setIsLiveStreaming(false);
       }
     }, 0);
   };
@@ -455,9 +458,11 @@ export function useSSEStream() {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    processingRef.current = false;
+    setIsLiveStreaming(false);
     setIsLoading(false);
     setStatus('idle');
   };
 
-  return { startAnalysis, stopAnalysis };
+  return { startAnalysis, stopAnalysis, isLiveStreaming };
 }

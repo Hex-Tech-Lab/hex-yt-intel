@@ -11,8 +11,15 @@ import type { AnalysisStatus } from '@/lib/types';
  * navigating away during background execution), polls /api/analyses/[id]/status
  * to observe progress, stream terminal logs, and hydrate completed dimensions
  * without re-triggering an LLM cascade or double-charging.
+ *
+ * Gated on isLiveStreaming: 'analyzing' status is set both by a fresh
+ * client-initiated stream (useSSEStream already owns live updates via SSE)
+ * and by auto-restore detecting an in-progress background run (this hook's
+ * actual job). Without the gate, this hook's 2.5s poll would also fire
+ * during a live client stream and call initializeAnalysis/initSynthesis on
+ * every tick, stomping the SSE-driven store state mid-stream.
  */
-export function useStreamReattach(analysisId: string | null, status: AnalysisStatus) {
+export function useStreamReattach(analysisId: string | null, status: AnalysisStatus, isLiveStreaming: boolean) {
   const lastCountRef = useRef<number>(-1);
   const setStatus = useAnalysisStore((s) => s.setStatus);
   const initializeAnalysis = useAnalysisStore((s) => s.initializeAnalysis);
@@ -22,7 +29,7 @@ export function useStreamReattach(analysisId: string | null, status: AnalysisSta
   const initSynthesis = useSynthesisNucleus((s) => s.initializeAnalysis);
 
   useEffect(() => {
-    if (!analysisId || status !== 'analyzing') {
+    if (!analysisId || status !== 'analyzing' || isLiveStreaming) {
       lastCountRef.current = -1;
       return;
     }
@@ -94,5 +101,5 @@ export function useStreamReattach(analysisId: string | null, status: AnalysisSta
       cancelled = true;
       clearInterval(timer);
     };
-  }, [analysisId, status, setStatus, initializeAnalysis, initSynthesis, logOk, logError, logInfo]);
+  }, [analysisId, status, isLiveStreaming, setStatus, initializeAnalysis, initSynthesis, logOk, logError, logInfo]);
 }
