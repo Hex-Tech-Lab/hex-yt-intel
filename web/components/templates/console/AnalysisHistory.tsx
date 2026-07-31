@@ -317,6 +317,17 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         onSelectAnalysis?.();
       });
 
+      // Clear the chat panel immediately, synchronously, before the async
+      // lookup below even starts -- otherwise the PREVIOUS analysis's chat
+      // (activeId + its messages) stays visibly active for the whole
+      // loadConversations()+lookup round trip, and indefinitely if that
+      // lookup ever throws (the catch below only logs, it doesn't reset
+      // anything -- previously relying on this same setState call, but only
+      // reached deep in the async path, sometimes not at all). Real bug,
+      // live-reported 2026-08-01: switching from a Japanese to a German
+      // video via History left the chat showing the Japanese conversation.
+      useChatStore.setState({ activeId: null });
+
       // Pre-ground the chat conversation for the restored analysis in the background
       void (async () => {
         try {
