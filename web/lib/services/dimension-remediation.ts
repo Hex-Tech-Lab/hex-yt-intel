@@ -90,21 +90,19 @@ const PENDULUM_COUNTER_KEY = 'counter:dimension-remediation-pendulum';
 // or changes shape, fail closed (zero capacity), never assume unlimited --
 // see getRemainingBudgetCents.
 const OPENROUTER_KEY_INFO_URL = 'https://openrouter.ai/api/v1/auth/key';
-const OPENROUTER_BALANCE_CACHE_MS = 5 * 60_000;
-
-let cachedRemainingBudgetCents: { value: number; expiresAt: number } | null = null;
 
 /**
- * Live remaining OpenRouter monthly balance, in cents. Cached briefly (5
- * min) so every candidate in a run doesn't re-fetch it. Fails closed (0,
- * not Infinity) on any error -- this feeds a money-gating token bucket, so
- * the safe failure mode is "spend nothing", not "spend without limit".
+ * Live remaining OpenRouter monthly balance, in cents. Fetched fresh on
+ * every call -- deliberately NOT cached. A module-level cache is a
+ * no-op on Vercel cold starts but on warm-instance reuse it would persist
+ * across separate serverless invocations (separate QStash ticks), risking
+ * a stale balance feeding the money-gating token bucket. resolveBudgetParams
+ * already calls this exactly once per harness run, so the real cost is one
+ * HTTP round-trip per tick -- cheap enough not to need caching. Fails closed
+ * (0, not Infinity) on any error -- the safe failure mode is "spend
+ * nothing", not "spend without limit".
  */
 async function getRemainingBudgetCents(): Promise<number> {
-  const now = Date.now();
-  if (cachedRemainingBudgetCents && cachedRemainingBudgetCents.expiresAt > now) {
-    return cachedRemainingBudgetCents.value;
-  }
   try {
     const res = await fetch(OPENROUTER_KEY_INFO_URL, {
       headers: { Authorization: `Bearer ${env.openrouterApiKey}` },
@@ -113,9 +111,7 @@ async function getRemainingBudgetCents(): Promise<number> {
     const body = await res.json();
     const remaining = Number(body?.data?.limit_remaining);
     if (!Number.isFinite(remaining) || remaining < 0) throw new Error('OpenRouter key-info returned a non-numeric limit_remaining');
-    const cents = Math.round(remaining * 100);
-    cachedRemainingBudgetCents = { value: cents, expiresAt: now + OPENROUTER_BALANCE_CACHE_MS };
-    return cents;
+    return Math.round(remaining * 100);
   } catch (err) {
     console.error('[dimension-remediation] failed to fetch OpenRouter remaining balance, failing closed', { err: err instanceof Error ? err.message : String(err) });
     Sentry.captureException(err, { contexts: { remediation: { service: 'dimension-remediation', phase: 'openrouter_balance' } } });
