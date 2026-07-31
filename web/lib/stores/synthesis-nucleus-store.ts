@@ -45,6 +45,23 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
     ...readSubStores(),
 
     initializeAnalysis: (payload: Partial<UCISPayload> & { analysisPayload?: any }) => {
+      // Switching to a genuinely different analysis (e.g. selecting a
+      // different video from History) must clear the PREVIOUS analysis's
+      // persona/knowledgeGraph/classification/monetizationVerdict before
+      // conditionally repopulating below -- otherwise a field the new
+      // payload doesn't carry (e.g. no knowledgeGraph for this video) just
+      // leaves the old video's stale value sitting here, displayed as if it
+      // belonged to the new video. Real bug, live-reported 2026-08-01:
+      // switching from a Japanese to a German video via History left the
+      // graphs/classification showing the Japanese analysis's data even
+      // though the header/title/dimensions updated correctly (those already
+      // had their own fresh-id reset in analysis-state-store.ts).
+      const existingId = useAnalysisStateStore.getState().analysis?.id;
+      const isSwitchingAnalysis = Boolean(payload.id && existingId && payload.id !== existingId);
+      if (isSwitchingAnalysis) {
+        useAnalysisMetadataStore.getState().reset();
+      }
+
       useAnalysisStateStore.getState().initializeAnalysis(payload);
       useAnalysisStreamingStore.getState().clearStreamError();
       const ap = payload.analysisPayload;
