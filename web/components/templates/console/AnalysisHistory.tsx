@@ -205,6 +205,15 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     }
   }, [currentPage]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  // Tracks which analysisId was MOST RECENTLY requested via restoreAnalysis,
+  // independent of React state timing. Guards against the multi-click race
+  // where clicking history item A then (before A's fetch resolves) item B
+  // starts a second overlapping restoreAnalysis call -- without this, whichever
+  // fetch resolves LAST wins and gets applied to the stores, regardless of
+  // click order. Same "is this still the active request" precedent as
+  // useSSEStream.ts's myController/currentSignal guard, adapted to a plain id
+  // comparison since restoreAnalysis has no cancellable network primitive.
+  const latestRestoreRequestRef = useRef<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 10;
 
@@ -243,14 +252,26 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     });
   }
 
+  // True once a NEWER restoreAnalysis call has superseded this one -- the
+  // single check point every stale-request guard below funnels through, so
+  // the race-safety logic can't be missed on a future edit to just one of
+  // the four call sites.
+  const isStaleRestore = (analysisId: string) => latestRestoreRequestRef.current !== analysisId;
+
   const restoreAnalysis = async (analysisId: string) => {
+    latestRestoreRequestRef.current = analysisId;
     setLoadingId(analysisId);
     setRestoreError(null);
     setIsLoading(true);
     try {
       const res = await fetch(`/api/analyses/${analysisId}`);
+      // A newer restore was requested while this fetch was in flight -- discard
+      // this response so it can't clobber the newer selection's data (the race
+      // this whole ref exists to prevent).
+      if (isStaleRestore(analysisId)) return;
       if (!res.ok) throw new Error(`Restoration failed (HTTP ${res.status})`);
       const data = await res.json();
+      if (isStaleRestore(analysisId)) return;
 
       const dimensions = parseToUCISDimensions(data.analysis_markdown || '');
 
@@ -350,12 +371,19 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
         }
       })();
     } catch (err) {
+      if (isStaleRestore(analysisId)) return;
       console.error('Error restoring analysis:', err);
       setRestoreError(err instanceof Error ? err.message : 'Unknown restoration error');
       setStatus('error');
     } finally {
-      setLoadingId(null);
-      setIsLoading(false);
+      // Only clear the shared loading/spinner state if no newer restore has
+      // superseded this one -- otherwise a stale finally block from request A
+      // could flip off the spinner/loading flag for the still-in-flight
+      // request B.
+      if (!isStaleRestore(analysisId)) {
+        setLoadingId(null);
+        setIsLoading(false);
+      }
     }
   };
 
