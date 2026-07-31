@@ -837,13 +837,20 @@ function buildStreamResponse(
         waitUntil((async () => {
           while (pollingActive) {
             await new Promise((resolve) => setTimeout(resolve, 3000));
-            if (!pollingActive) break;
-            if (await cache.isCancelled(req.analysisId)) {
+            if (pollingActive && (await cache.isCancelled(req.analysisId))) {
+              console.info('[analyze-llm-stream] Explicit cancel flag consumed, aborting generation', { analysisId: req.analysisId });
               cancelController.abort();
               break;
             }
           }
         })());
+      } else {
+        // Same graceful-degrade convention this file already uses for every
+        // other optional Redis feature when UPSTASH_REDIS_REST_URL/TOKEN
+        // aren't configured -- but unlike a cache-miss, this one silently
+        // disables a safety feature (spend stops on cancel), so it gets a
+        // log the others don't.
+        console.warn('[analyze-llm-stream] No cache adapter configured -- explicit cancellation will not stop this generation', { analysisId: req.analysisId });
       }
 
       try {

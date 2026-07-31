@@ -480,7 +480,11 @@ export function useSSEStream() {
     // wrong analysis.
     const cancelAnalysisId = activeAnalysisIdRef.current;
     if (cancelAnalysisId) {
-      fetch(`/api/analyses/${cancelAnalysisId}/cancel`, { method: 'POST' }).catch((err) => {
+      // keepalive: true -- a user clicking stop often navigates away
+      // immediately after; without this, some browsers cancel an in-flight
+      // fetch on unmount/navigation before the POST reaches the server,
+      // silently defeating the exact scenario this signal exists for.
+      fetch(`/api/analyses/${cancelAnalysisId}/cancel`, { method: 'POST', keepalive: true }).catch((err) => {
         console.debug('[useSSEStream] Cancel signal failed to send (best-effort):', err);
       });
     }

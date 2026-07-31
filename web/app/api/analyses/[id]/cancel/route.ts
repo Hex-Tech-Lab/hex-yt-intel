@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import * as Sentry from '@sentry/nextjs';
 import { verifyResourceOwnership } from '@/lib/services/ownership';
 import { setRedisValue } from '@/lib/redis';
+
+const analysisIdSchema = z.string().uuid();
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -26,6 +29,16 @@ export async function POST(
 ) {
   const { id: analysisId } = await params;
 
+  // Validated before use in a Redis key (worker's UpstashCacheAdapter.isCancelled
+  // reads the same `cancel:{id}` namespace this shares with unrelated
+  // `cache:*`/other-prefixed keys on the same Redis instance) -- ownership
+  // verification below already scopes this to a real, owned analysis, but
+  // this is cheap defense-in-depth against a malformed id ever reaching the
+  // key-building step at all.
+  if (!analysisIdSchema.safeParse(analysisId).success) {
+    return NextResponse.json({ error: 'Invalid analysis id' }, { status: 400 });
+  }
+
   try {
     const { error } = await verifyResourceOwnership<any>(analysisId, 'analyses', 'id, user_id');
 
@@ -40,6 +53,7 @@ export async function POST(
     }
 
     await setRedisValue(`cancel:${analysisId}`, true, CANCEL_FLAG_TTL_SECONDS);
+    console.info('[cancelAnalysis] Cancel flag set', { analysisId });
 
     return NextResponse.json({ cancelled: true });
   } catch (err: unknown) {
