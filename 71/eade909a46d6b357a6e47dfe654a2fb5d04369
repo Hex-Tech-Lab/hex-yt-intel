@@ -1,0 +1,33 @@
+docs/specs/ADR_020_CANCELLATION_COST_LEDGER_PRICING_REGISTRY_2026-08-01.md
+  s_0eded1e9d0cab6::t_4dcb34cc39d31f 1-51
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_13f1c410917cbf 898
+  s_0eded1e9d0cab6::t_1d56c690d40551 826-838,840-848
+  s_0eded1e9d0cab6::t_70317243d101a9 878-882,885
+  s_0eded1e9d0cab6::t_260430a6e072b7 839
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_2d82215bcbf91c 457-469
+worker/src/ports/PersistenceRepositoryPort.ts
+  s_0eded1e9d0cab6::t_662ff027e8d91c 15-16
+worker/src/services/UpstashCacheAdapter.ts
+  s_0eded1e9d0cab6::t_b066e244ce9d70 83-84
+  s_0eded1e9d0cab6::t_2d903b2d12af2a 67-82,85-87
+web/app/api/analyses/[id]/cancel/route.ts
+  s_0eded1e9d0cab6::t_9855b5480e1b89 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "71eade909a46d6b357a6e47dfe654a2fb5d04369",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
