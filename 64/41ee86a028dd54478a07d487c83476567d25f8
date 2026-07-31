@@ -1,0 +1,23 @@
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_a8610d66ca5759 41-49
+  s_0eded1e9d0cab6::t_71cc7789ecb852 201
+  s_0eded1e9d0cab6::t_430b725be152d6 474-481
+  s_0eded1e9d0cab6::t_c8769160e5ce56 191
+  s_0eded1e9d0cab6::t_e27af913a89173 492
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "6441ee86a028dd54478a07d487c83476567d25f8",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
