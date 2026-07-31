@@ -26,7 +26,9 @@ begin
     update public.prompt_definitions
     set secret_id = v_secret_id,
         version = 3,
-        description = 'Chat grounding instruction core, v3. Source of truth as of 2026-07-31 -- edit via the settings/prompts admin surface, not by re-deploying code.'
-    where key = 'prompt.chat_grounding.instructions';
+        description = 'Chat grounding instruction core, v3. Source of truth as of 2026-07-31 -- edit via the settings/prompts admin surface, not by re-deploying code.',
+        updated_at = now()
+    where key = 'prompt.chat_grounding.instructions'
+      and version = 2;
   end if;
 end $$;
