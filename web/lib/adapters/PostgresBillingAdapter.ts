@@ -52,7 +52,11 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
 
       const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
       const chargeOnCancel = Boolean(settings['billing.chargeOnCancel']);
-      const processingGraceWindowMs = Number(settings['billing.quota.processingGraceWindowMs']) || REGISTRY_FALLBACK['billing.quota.processingGraceWindowMs'];
+      // NOT `|| fallback` -- 0 is a valid configured value (disable the
+      // grace window entirely), and `0 || fallback` would silently discard
+      // it back to 900_000. Only NaN (missing/non-numeric) falls back.
+      const rawGraceWindow = Number(settings['billing.quota.processingGraceWindowMs']);
+      const processingGraceWindowMs = Number.isNaN(rawGraceWindow) ? REGISTRY_FALLBACK['billing.quota.processingGraceWindowMs'] : rawGraceWindow;
 
       const activeCount = data.filter((a) => {
         if (a.billingStatus === 'completed') return true;

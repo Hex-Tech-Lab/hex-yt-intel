@@ -349,11 +349,18 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       // video via History left the chat showing the Japanese conversation.
       useChatStore.setState({ activeId: null });
 
-      // Pre-ground the chat conversation for the restored analysis in the background
+      // Pre-ground the chat conversation for the restored analysis in the background.
+      // Guarded by isStaleRestore the same way the outer fetch is (real bug,
+      // live-reported 2026-08-01): cycling through multiple History items in
+      // quick succession fires one of these IIFEs per click with no ordering
+      // between them -- without this check, whichever one's loadConversations()
+      // resolves LAST wins the chat panel, regardless of click order.
       void (async () => {
         try {
+          if (isStaleRestore(analysisId)) return;
           const chatStore = useChatStore.getState();
           await chatStore.loadConversations();
+          if (isStaleRestore(analysisId)) return;
           const cleanVid = data.videoId?.replace(/_archived_.*$/, '');
           const existing = chatStore.conversations.find(
             (c) => c.analysisId === data.id || c.videoId === data.videoId || (cleanVid && c.videoId?.replace(/_archived_.*$/, '') === cleanVid)
@@ -362,8 +369,9 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             if (existing.analysisId !== data.id) {
               await chatStore.updateConversationAnalysisId(existing.id, data.id);
             }
+            if (isStaleRestore(analysisId)) return;
             await chatStore.selectConversation(existing.id);
-          } else {
+          } else if (!isStaleRestore(analysisId)) {
             useChatStore.setState({ activeId: null });
           }
         } catch (e) {

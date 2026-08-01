@@ -37,7 +37,10 @@ const OPEN_KEY = 'hx-chatdock-open';
  * `readoutComponents`) so it isn't recreated per message per render.
  * Astryx `Markdown` has no table/list override slots (unlike react-markdown) --
  * lists/tables fall back to Astryx's own built-in styling, same tradeoff
- * already accepted in SelectedDimensionReadout.
+ * already accepted in SelectedDimensionReadout. Table column widths are
+ * instead reshaped from outside via the `chat-answer-table` global CSS class
+ * (app/globals.css) using plain th/td element selectors, since there's no
+ * React-level way to hint per-column width for a Markdown-rendered table.
  */
 const chatMarkdownComponents: MarkdownComponents = {
   paragraph: ({ children }) => (
@@ -151,11 +154,28 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
 
       const state = useChatStore.getState();
       
-      // If we have an analysis or videoId context, try to ground in that thread
+      // If we have an analysis or videoId context, try to ground in that thread.
+      // Matching a video visit to its existing conversation ONLY -- never
+      // auto-creates one. Live-reported bug (2026-08-01): visiting a video
+      // was silently creating a new chat_conversations row with no user
+      // action, producing spurious "sessions" in history that were really
+      // just re-visits of the same video. Creation now only happens from
+      // the explicit "new chat" button (see newConversation() call below).
       if (analysisId || videoId) {
+        // Strips the _archived_... suffix a re-analyzed video's videoId can
+        // carry, same normalization AnalysisHistory.tsx's restoreAnalysis
+        // already applies for this exact match -- without it, a re-analyzed
+        // video's archived-variant videoId fails this match and looks like
+        // a "new" video with no existing conversation.
+        const cleanVideoId = videoId?.replace(/_archived_.*$/, '');
         let existing: (typeof state.conversations)[number] | undefined;
         for (const itemConv of state.conversations) {
-          if ((analysisId && itemConv.analysisId === analysisId) || (videoId && itemConv.videoId === videoId)) {
+          const itemCleanVideoId = itemConv.videoId?.replace(/_archived_.*$/, '');
+          if (
+            (analysisId && itemConv.analysisId === analysisId) ||
+            (videoId && itemConv.videoId === videoId) ||
+            (cleanVideoId && itemCleanVideoId === cleanVideoId)
+          ) {
             existing = itemConv;
             break;
           }
@@ -167,12 +187,10 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
             void useChatStore.getState().updateConversationAnalysisId(existing.id, analysisId);
           }
           await selectConversation(existing.id);
-        } else if (analysisId) {
-          // Clear any previous conversation first to prevent stale chat from loading
-          useChatStore.setState({ activeId: null });
-          await newConversation({ analysisId });
         } else {
-          // VideoId exists but no analysisId (yet) - reset activeId
+          // No existing conversation for this video -- leave empty rather
+          // than auto-creating one. The user's explicit "new chat" button
+          // is the only place newConversation() should be called from.
           useChatStore.setState({ activeId: null });
         }
       } else {
@@ -566,7 +584,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 variant="filled"
                 className={isUser
                   ? '!rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words !p-3.5 !py-2.5 !px-3.5'
-                  : 'prose prose-invert !rounded-lg max-w-[85%] prose-p:text-xs prose-p:leading-relaxed prose-p:my-1 prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words !p-3.5 !py-2.5 !px-3.5'
+                  : 'chat-answer-table prose prose-invert !rounded-lg max-w-[92%] prose-p:text-xs prose-p:leading-relaxed prose-p:my-1 prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words !p-3.5 !py-2.5 !px-3.5'
                 }
                 metadata={
                   body ? (

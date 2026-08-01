@@ -164,11 +164,18 @@ export function useAutoRestoreAnalysis(url: string) {
             }
           });
 
-          // Ground/Select the chat session in the background
+          // Ground/Select the chat session in the background. Guarded by the
+          // same `cancelled` flag the outer effect already uses (real bug,
+          // live-reported 2026-08-01): this inner IIFE previously had no
+          // ordering guard of its own, so a fast effect re-run (e.g. rapid
+          // videoId changes) could let a stale lookup win the chat panel
+          // after a newer one already resolved.
           void (async () => {
             try {
+              if (cancelled) return;
               const chatStore = useChatStore.getState();
               await chatStore.loadConversations();
+              if (cancelled) return;
               const existing = chatStore.conversations.find((c) =>
                 c.analysisId === restoreData.id || c.videoId === restoreData.videoId
               );
@@ -176,8 +183,9 @@ export function useAutoRestoreAnalysis(url: string) {
                 if (existing.analysisId !== restoreData.id) {
                   await chatStore.updateConversationAnalysisId(existing.id, restoreData.id);
                 }
+                if (cancelled) return;
                 await chatStore.selectConversation(existing.id);
-              } else {
+              } else if (!cancelled) {
                 useChatStore.setState({ activeId: null });
               }
             } catch (e) {
