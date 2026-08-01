@@ -1,0 +1,21 @@
+web/store/useChatStore.ts
+  s_0eded1e9d0cab6::t_637c0ec2761e3d 440-449
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_d2fbbff7a9f182 260-274
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "196be59708c24b15f3788f177553307911c5f7a5",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
