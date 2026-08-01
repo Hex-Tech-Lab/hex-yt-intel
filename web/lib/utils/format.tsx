@@ -1,4 +1,7 @@
 import React from 'react';
+import { truncateCitationPoints } from '@/lib/utils/citation-truncate';
+
+export { truncateCitationPoints, EXPAND_MARKER_PATTERN } from '@/lib/utils/citation-truncate';
 
 /**
  * Preprocesses markdown content from the assistant to convert non-standard elements:
@@ -100,6 +103,12 @@ export function preprocessMarkdown(content: string): string {
 
   let contentWithTables = lines.join('\n');
   contentWithTables = linkifyTimestamps(contentWithTables);
+  // Runs last, after linkifyTimestamps -- truncating a Point cell's raw text
+  // before timestamps are linkified could cut a `[⏱ 12:10](#t=730)` link in
+  // half; running last keeps whatever ends up in the DOM syntactically
+  // intact (a truncation boundary landing inside a link is still possible
+  // in principle, just far rarer than doing this first).
+  contentWithTables = truncateCitationPoints(contentWithTables);
 
   return contentWithTables;
 }

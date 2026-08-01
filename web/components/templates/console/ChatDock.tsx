@@ -16,10 +16,12 @@ import {
   useImperativeAlertDialog,
   type ChatComposerInputHandle,
   type MarkdownComponents,
+  type MarkdownInlinePlugin,
 } from '@astryxdesign/core';
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
+import { EXPAND_MARKER_PATTERN } from '@/lib/utils/citation-truncate';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
 import { findMatchingConversation, filterConversationsForContext } from '@/lib/utils/find-chat-conversation';
 import { TimestampLink } from '@/components/TimestampLink';
@@ -34,14 +36,52 @@ export interface ChatDockProps {
 const OPEN_KEY = 'hx-chatdock-open';
 
 /**
+ * Truncated citation-Point cells (see truncateCitationPoints, format.tsx)
+ * embed an `⟦EXPAND:<percent-encoded rest>⟧` marker in place of the cut
+ * text. Astryx's `inlinePlugins` matches that marker against parsed text
+ * nodes (verified live to fire inside table cells, not just prose) and
+ * swaps it for this toggle -- the full text isn't hidden with CSS, it's
+ * simply absent from the DOM until the user asks for it, same as a
+ * Facebook/X "See more". No Astryx internals touched: inlinePlugins is an
+ * extension point Astryx already ships.
+ */
+function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const rest = expanded ? decodeURIComponent(encodedRest) : '';
+  return (
+    <>
+      {rest}
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        className="text-[var(--accent)] hover:underline ml-1 font-medium"
+      >
+        {expanded ? 'less' : '…more'}
+      </button>
+    </>
+  );
+}
+
+const chatInlinePlugins: MarkdownInlinePlugin[] = [
+  {
+    pattern: EXPAND_MARKER_PATTERN,
+    render: (match, key) => <ExpandableCitationPoint key={key} encodedRest={match[1] ?? ''} />,
+  },
+];
+
+/**
  * Hoisted to module scope (mirrors SelectedDimensionReadout's
  * `readoutComponents`) so it isn't recreated per message per render.
- * Astryx `Markdown` has no table/list override slots (unlike react-markdown) --
- * lists/tables fall back to Astryx's own built-in styling, same tradeoff
- * already accepted in SelectedDimensionReadout. Table column widths are
- * instead reshaped from outside via the `chat-answer-table` global CSS class
- * (app/globals.css) using plain th/td element selectors, since there's no
- * React-level way to hint per-column width for a Markdown-rendered table.
+ * Astryx `Markdown` has no table/list component-override slots (unlike
+ * react-markdown) -- lists/tables fall back to Astryx's own built-in
+ * styling, same tradeoff already accepted in SelectedDimensionReadout.
+ * Table column widths are instead reshaped from outside via the
+ * `chat-answer-table` global CSS class (app/globals.css) using plain th/td
+ * element selectors, since there's no React-level way to hint per-column
+ * width for a Markdown-rendered table. Per-cell CONTENT truncation (the
+ * citation Point column) goes through `chatInlinePlugins` above instead --
+ * that IS a real React-level override point Astryx exposes, just scoped to
+ * text-node patterns rather than table structure.
  */
 const chatMarkdownComponents: MarkdownComponents = {
   paragraph: ({ children }) => (
@@ -599,7 +639,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 {isUser ? (
                   body
                 ) : (
-                  <Markdown components={chatMarkdownComponents} density="compact">
+                  <Markdown components={chatMarkdownComponents} inlinePlugins={chatInlinePlugins} density="compact">
                     {preprocessMarkdown(body)}
                   </Markdown>
                 )}

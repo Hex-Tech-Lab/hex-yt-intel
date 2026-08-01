@@ -690,22 +690,24 @@ button:focus-visible,
   width: 99%;
   min-width: 220px;
 }
-/* REMOVED 2026-08-01 (cubic review, PR #177): a 2-line visual clamp on this
-   column was attempted here via `-webkit-line-clamp` on the cell's
-   children, but it's not fixable as pure CSS against Astryx's actual
-   markup: Astryx's TableCell renders plain text directly as a bare text
-   node child of <td> (confirmed in node_modules/@astryxdesign/core's
-   bundle -- `children:x` with no wrapper element), so no selector can
-   target it for clamping in the common (plain-text) case. The same
-   `.chat-answer-table` class is also used for the full transcript table,
-   where chat-grounding's prompt contract requires every quoted line to be
-   shown in full, never truncated -- a clamp that DID happen to match
-   (e.g. a cell with bold/italic children, which Astryx does wrap) would
-   silently violate that contract for transcript rows. Doing this correctly
-   would need DOM post-processing of the renderer's output, already judged
-   too invasive elsewhere in this file -- if a visual cap is still wanted,
-   scope it to a dedicated class applied only to citation-point tables
-   (never transcript tables), and prefer overflow with an expand affordance
-   over hard truncation of grounded content. */
+/* REPLACED 2026-08-01 (cubic review, PR #177): a 2-line visual clamp was
+   attempted here via `-webkit-line-clamp`, but it's not fixable as pure
+   CSS against Astryx's actual markup -- Astryx's TableCell renders plain
+   text directly as a bare text node child of <td> (confirmed in
+   node_modules/@astryxdesign/core's bundle -- `children:x`, no wrapper
+   element), so no selector can target it for clamping in the common
+   (plain-text) case. The same `.chat-answer-table` class is also used for
+   the full transcript table, where chat-grounding's prompt contract
+   requires every quoted line shown in full -- a clamp that DID happen to
+   match (e.g. bold/italic cell content, which Astryx does wrap) would
+   silently violate that contract for transcript rows.
+   Real fix lives at the STRING level instead, before Astryx ever renders:
+   `truncateCitationPoints()` (web/lib/utils/format.tsx) truncates only rows
+   under a `| Timestamp | Point |` header -- structurally never the
+   transcript table -- and encodes the cut text into an `⟦EXPAND:...⟧`
+   marker. ChatDock's `chatInlinePlugins` (an Astryx `inlinePlugins`
+   extension point, not a CSS trick or an Astryx-internals change) renders
+   that marker as a real "…more" toggle: the full text is simply absent
+   from the DOM until requested, same as a Facebook/X "See more". */
 
 
