@@ -1,7 +1,5 @@
 import React from 'react';
 
-export { truncateCitationPoints, EXPAND_MARKER_PATTERN } from '@/lib/utils/citation-truncate';
-
 /**
  * Preprocesses markdown content from the assistant to convert non-standard elements:
  * 1. Convert unicode bullets (•/●) into standard markdown list items (-).

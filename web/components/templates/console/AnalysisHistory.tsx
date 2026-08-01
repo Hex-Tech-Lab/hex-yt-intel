@@ -396,7 +396,17 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             if (existing.analysisId !== data.id) {
               await chatStore.updateConversationAnalysisId(existing.id, data.id, { epoch });
             }
-            if (isStaleRestore(analysisId)) return;
+            // `isStaleRestore` alone isn't enough here: it's a LOCAL ref
+            // this component owns, but restoreEpoch is bumped by every
+            // restore call site (ChatDock, useAutoRestoreAnalysis,
+            // useSSEStream too). updateConversationAnalysisId's own epoch
+            // check protects its PATCH from a newer restore elsewhere, but
+            // that PATCH could still no-op (stale epoch) while
+            // isStaleRestore here stays false -- without also checking the
+            // shared epoch, selectConversation would still fire and could
+            // win the chat panel for a thread this restore no longer has
+            // authority over (cubic review, PR #177).
+            if (isStaleRestore(analysisId) || useChatStore.getState().restoreEpoch !== epoch) return;
             await chatStore.selectConversation(existing.id);
           } else if (!isStaleRestore(analysisId)) {
             useChatStore.setState({ activeId: null });

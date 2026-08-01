@@ -206,7 +206,18 @@ export function useAutoRestoreAnalysis(url: string) {
                 if (existing.analysisId !== restoreData.id) {
                   await chatStore.updateConversationAnalysisId(existing.id, restoreData.id, { epoch });
                 }
-                if (cancelled) return;
+                // `cancelled` alone isn't enough here: it's a LOCAL ref this
+                // hook instance owns, but restoreEpoch is bumped by every
+                // restore call site (ChatDock, AnalysisHistory,
+                // useSSEStream too). updateConversationAnalysisId's own
+                // epoch check protects its PATCH from a newer restore
+                // elsewhere, but that PATCH could still no-op (stale epoch)
+                // while `cancelled` here stays false -- without also
+                // checking the shared epoch, selectConversation would still
+                // fire and could win the chat panel for a thread this
+                // restore no longer has authority over (cubic review, PR
+                // #177).
+                if (cancelled || useChatStore.getState().restoreEpoch !== epoch) return;
                 await chatStore.selectConversation(existing.id);
               } else if (!cancelled) {
                 useChatStore.setState({ activeId: null });

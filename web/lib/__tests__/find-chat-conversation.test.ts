@@ -76,18 +76,17 @@ describe('findMatchingConversation', () => {
     expect(result?.id).toBe('exact');
   });
 
-  it('does not treat a short/non-11-char videoId as archived-suffixed', () => {
-    // Regression test: cubic review, PR #177 -- the old unanchored regex
-    // stripped anything matching /_archived_.*$/ regardless of what came
-    // before it, which could truncate an unrelated id containing that
-    // literal substring. A videoId shorter than 11 chars should never be
-    // treated as "real id + archived suffix" and must pass through matching
-    // untouched (no false match).
+  it('strips the archived suffix unconditionally, matching SQL, even for a short/non-11-char videoId', () => {
+    // Regression test: cubic review, PR #177 re-audit -- stripArchivedVideoIdSuffix
+    // mirrors the SQL SSOT's unconditional `regexp_replace(video_id,
+    // '_archived_.*$', '')` exactly, matching regardless of prefix length.
+    // A short videoId with the archived suffix must still match its
+    // stripped form, the same as a real 11-char YouTube id would.
     const target = conv({ id: 'target', videoId: 'short_archived_1' });
-    const result = findMatchingConversation([target], null, 'short_archived_1');
-    expect(result?.id).toBe('target');
-    const noMatch = findMatchingConversation([target], null, 'short');
-    expect(noMatch).toBeUndefined();
+    const exact = findMatchingConversation([target], null, 'short_archived_1');
+    expect(exact?.id).toBe('target');
+    const stripped = findMatchingConversation([target], null, 'short');
+    expect(stripped?.id).toBe('target');
   });
 });
 

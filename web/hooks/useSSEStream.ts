@@ -219,9 +219,16 @@ export function useSSEStream() {
                       // only calls `.abort()` on the controller, it never
                       // reassigns the ref, so identity still matches after
                       // unmount. `myController.signal.aborted` catches that
-                      // case too -- both checks needed (cubic review, PR
-                      // #177).
-                      const isStale = () => myController.signal.aborted || abortControllerRef.current !== myController;
+                      // case too. Also checks the SHARED restoreEpoch, not
+                      // just this stream's own controller state -- a
+                      // different restore call site (ChatDock, History,
+                      // useAutoRestoreAnalysis) can supersede this one even
+                      // while this stream's own controller is still live
+                      // (cubic review, PR #177).
+                      const isStale = () =>
+                        myController.signal.aborted ||
+                        abortControllerRef.current !== myController ||
+                        useChatStore.getState().restoreEpoch !== epoch;
                       await useChatStore.getState().loadConversations();
                       if (isStale()) return;
                       const chatStore = useChatStore.getState();

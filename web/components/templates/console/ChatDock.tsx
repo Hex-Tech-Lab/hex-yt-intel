@@ -257,7 +257,13 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           if (!cancelled && analysisId && existing.analysisId !== analysisId) {
             void useChatStore.getState().updateConversationAnalysisId(existing.id, analysisId, { epoch });
           }
-          if (cancelled) return;
+          // `cancelled` alone isn't enough: it's a LOCAL ref this effect
+          // owns, but restoreEpoch is bumped by every restore call site
+          // (AnalysisHistory, useAutoRestoreAnalysis, useSSEStream too).
+          // Without also checking the shared epoch, selectConversation
+          // could still fire and win the chat panel for a thread this
+          // effect no longer has authority over (cubic review, PR #177).
+          if (cancelled || useChatStore.getState().restoreEpoch !== epoch) return;
           await selectConversation(existing.id);
         } else {
           // No existing conversation for this video -- leave empty rather
