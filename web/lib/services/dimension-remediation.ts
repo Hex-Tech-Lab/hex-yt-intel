@@ -74,15 +74,15 @@ export enum RemediationStage {
  * (20260731000000_remediation_budget_settings.sql), same convention
  * analysis.maxOutputTokens.* already established.
  */
+// remediation.periodDays (continuous refill window) removed entirely
+// (migration 20260801100213) rather than left as a no-op -- the
+// 2026-08-01 calendar-boundary reset decision made it inert, and per ADR
+// 019's own "never leave a dead tunable" convention, a still-editable
+// setting with zero effect is worse than no setting (cubic review, PR #176).
 const REGISTRY_FALLBACK = {
   'remediation.enabled': true,
   'remediation.budgetPercentOfRemaining': 10,
   'remediation.hardCapUsdCents': 200,
-  // Unused as of the 2026-08-01 calendar-boundary reset decision -- the
-  // budget now hard-resets on day 1 of each UTC month (resolveBudgetParams'
-  // periodAnchorMs), not a continuous refill over N days. Left in the
-  // registry as a documented no-op rather than a migration to remove it.
-  'remediation.periodDays': 30,
   'remediation.maxRetries': 3,
 } as const;
 

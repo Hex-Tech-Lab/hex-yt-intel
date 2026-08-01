@@ -375,17 +375,9 @@ export async function releaseRedisLock(key: string, token: string): Promise<void
  * Fails CLOSED: any Redis failure (executeRedisScript's `-1` sentinel) is
  * treated as "deny the spend", never "assume unlimited budget". This is a
  * money-gating primitive, not a cache -- the failure mode has to be the
- * conservative one.
+ * conservative one. See dimension-remediation.ts's resolveBudgetParams for
+ * how periodAnchorMs is computed (start of the current calendar month).
  */
-// Calendar-boundary hard reset (user decision, 2026-08-01), not a continuous
-// rolling-window refill -- the bucket fills to full capacity exactly once,
-// the moment the FIRST call after a period boundary (periodAnchorMs) lands,
-// then only drains until the next boundary. No partial/linear refill within
-// a period. Replaced the previous linear elapsed-time refill because that
-// model let the bucket drain to near-zero on day 1 and never meaningfully
-// recover before the next reset -- see dimension-remediation.ts's
-// resolveBudgetParams for how periodAnchorMs is computed (start of the
-// current calendar month).
 const TOKEN_BUCKET_SCRIPT = `
 local bucket = redis.call("HMGET", KEYS[1], "tokens", "lastResetAt")
 local tokens = tonumber(bucket[1])
@@ -397,7 +389,20 @@ local cost = tonumber(ARGV[4])
 
 if tokens == nil or lastResetAt == nil or lastResetAt < periodAnchorMs then
   tokens = capacity
-  lastResetAt = now
+  -- Only commit the reset (lastResetAt = now) when capacity > 0. A
+  -- transient OpenRouter balance-fetch failure resolves capacity to 0
+  -- (fail-closed, see getRemainingBudgetCents) -- if that happened to be
+  -- the FIRST call after crossing a period boundary and we recorded the
+  -- reset anyway, lastResetAt would sit inside the new period forever and
+  -- no later call (even with a successful balance fetch) would ever see
+  -- lastResetAt < periodAnchorMs again -- permanently zeroing the budget
+  -- for the whole period instead of just this one denied call (cubic
+  -- review, PR #176). Leaving lastResetAt at its stale pre-boundary value
+  -- keeps every subsequent call retrying the reset until one actually
+  -- succeeds with real capacity.
+  if capacity > 0 then
+    lastResetAt = now
+  end
 else
   -- No refill within a period, but still self-correct DOWN if capacity
   -- shrank since the last call (capacity is recomputed live from
