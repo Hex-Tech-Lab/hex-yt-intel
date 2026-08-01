@@ -1,0 +1,32 @@
+web/hooks/useAuxElementStatus.ts
+  s_0eded1e9d0cab6::t_75b98e297ac8a8 53
+  s_0eded1e9d0cab6::t_e07168f567f705 4
+web/lib/__tests__/aux-status-from-report.test.ts
+  s_0eded1e9d0cab6::t_98e33355d27e99 1-78
+web/lib/utils/aux-status-from-report.ts
+  s_0eded1e9d0cab6::t_3a6193acf1da44 22-26,37-56,59
+web/app/globals.css
+  s_0eded1e9d0cab6::t_906e0e7a842613 693-709
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_e5343fd54bdda0 213-220,224-225,231
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_bc2ba026059b59 387-393
+web/hooks/useAutoRestoreAnalysis.ts
+  s_0eded1e9d0cab6::t_4a7c2172cd29aa 192-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "94fb62917afd45bf3e5be3e5fb75b3f9d460974d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
