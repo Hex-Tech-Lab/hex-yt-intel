@@ -8,6 +8,7 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
 import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
 import { extractVideoId } from '@/lib/youtube';
+import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 
 /**
  * Hook managing Server-Sent Event streaming for analysis generation.
@@ -208,21 +209,39 @@ export function useSSEStream() {
                   archiveCurrentAnalysis();
                   void (async () => {
                     try {
+                      // Bumped as early as possible so a still-in-flight
+                      // OLDER stream's later updateConversationAnalysisId
+                      // call sees a stale epoch and no-ops its PATCH (see
+                      // restoreEpoch doc, useChatStore.ts).
+                      const epoch = useChatStore.getState().beginRestoreEpoch();
+                      // `abortControllerRef.current !== myController` alone
+                      // doesn't catch unmount/navigation: the cleanup effect
+                      // only calls `.abort()` on the controller, it never
+                      // reassigns the ref, so identity still matches after
+                      // unmount. `myController.signal.aborted` catches that
+                      // case too. Also checks the SHARED restoreEpoch, not
+                      // just this stream's own controller state -- a
+                      // different restore call site (ChatDock, History,
+                      // useAutoRestoreAnalysis) can supersede this one even
+                      // while this stream's own controller is still live
+                      // (cubic review, PR #177).
+                      const isStale = () =>
+                        myController.signal.aborted ||
+                        abortControllerRef.current !== myController ||
+                        useChatStore.getState().restoreEpoch !== epoch;
+                      await useChatStore.getState().loadConversations();
+                      if (isStale()) return;
                       const chatStore = useChatStore.getState();
-                      await chatStore.loadConversations();
                       const currentVid = job.videoId;
                       const currentAnalId = job.analysisId || job.id;
-                      let existingConv: (typeof chatStore.conversations)[number] | undefined;
-                      for (const convRecord of chatStore.conversations) {
-                        if (convRecord.analysisId === currentAnalId || convRecord.videoId === currentVid) {
-                          existingConv = convRecord;
-                          break;
-                        }
-                      }
+                      // Delegates to the shared matcher (archived-suffix stripping +
+                      // priority ordering) rather than a hand-rolled copy.
+                      const existingConv = findMatchingConversation(chatStore.conversations, currentAnalId, currentVid);
                       if (existingConv) {
                         if (existingConv.analysisId !== currentAnalId) {
-                          await chatStore.updateConversationAnalysisId(existingConv.id, currentAnalId);
+                          await chatStore.updateConversationAnalysisId(existingConv.id, currentAnalId, { epoch });
                         }
+                        if (isStale()) return;
                         await chatStore.selectConversation(existingConv.id);
                       }
                     } catch (e) {

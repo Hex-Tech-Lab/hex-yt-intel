@@ -657,8 +657,32 @@ button:focus-visible,
   width: 100%;
 }
 .chat-answer-table th:first-child,
+.chat-answer-table td:first-child,
+.chat-answer-table th:first-child *,
+.chat-answer-table td:first-child * {
+  /* !important: Astryx's markdown renderer (@astryxdesign/core, minified
+     third-party bundle) wraps table-cell text in its own nested element(s)
+     with their own white-space/wrap styling that plain descendant
+     inheritance doesn't reliably beat -- user report 2026-08-01: the
+     timestamp column was still wrapping onto 2 lines despite this same
+     rule already being set on the <td> itself. Forcing through the cell's
+     own children, not just the cell, is the fix; matches this file's
+     existing "reshaped from outside via plain element selectors" pattern
+     for overriding a component with no style-override API.
+     KNOWN LIMITATION (altitude review, PR #177): this is a `!important`
+     specificity fight against a vendor component's internal markup, not a
+     structural fix -- Astryx's Markdown component has no cell-render/
+     className override slot to hook into instead (confirmed, see the
+     top-of-file comment on this class), and DOM post-processing the
+     renderer's output was judged too invasive/risky for the benefit. Note
+     the `*` selector above already matches descendants at ANY depth, not
+     just one level -- a future Astryx version nesting text deeper needs no
+     new selector; only re-verify the vendor's actual markup/styling still
+     loses this specificity fight after a version bump touching tables. */
+  white-space: nowrap !important;
+}
+.chat-answer-table th:first-child,
 .chat-answer-table td:first-child {
-  white-space: nowrap;
   width: 1%;
 }
 .chat-answer-table th:nth-child(2),
@@ -666,5 +690,24 @@ button:focus-visible,
   width: 99%;
   min-width: 220px;
 }
+/* REPLACED 2026-08-01 (cubic review, PR #177): a 2-line visual clamp was
+   attempted here via `-webkit-line-clamp`, but it's not fixable as pure
+   CSS against Astryx's actual markup -- Astryx's TableCell renders plain
+   text directly as a bare text node child of <td> (confirmed in
+   node_modules/@astryxdesign/core's bundle -- `children:x`, no wrapper
+   element), so no selector can target it for clamping in the common
+   (plain-text) case. The same `.chat-answer-table` class is also used for
+   the full transcript table, where chat-grounding's prompt contract
+   requires every quoted line shown in full -- a clamp that DID happen to
+   match (e.g. bold/italic cell content, which Astryx does wrap) would
+   silently violate that contract for transcript rows.
+   Real fix lives at the STRING level instead, before Astryx ever renders:
+   `truncateCitationPoints()` (web/lib/utils/format.tsx) truncates only rows
+   under a `| Timestamp | Point |` header -- structurally never the
+   transcript table -- and encodes the cut text into an `⟦EXPAND:...⟧`
+   marker. ChatDock's `chatInlinePlugins` (an Astryx `inlinePlugins`
+   extension point, not a CSS trick or an Astryx-internals change) renders
+   that marker as a real "…more" toggle: the full text is simply absent
+   from the DOM until requested, same as a Facebook/X "See more". */
 
 

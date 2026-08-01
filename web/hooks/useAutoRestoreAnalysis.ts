@@ -6,6 +6,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
+import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 
 /**
  * Auto-restores an already-analyzed video from cache when a URL is pasted.
@@ -173,17 +174,50 @@ export function useAutoRestoreAnalysis(url: string) {
           void (async () => {
             try {
               if (cancelled) return;
-              const chatStore = useChatStore.getState();
-              await chatStore.loadConversations();
+              // Bumped as early as possible so a still-in-flight OLDER
+              // restore's later updateConversationAnalysisId call sees a
+              // stale epoch and no-ops its PATCH -- tightens the P1 TOCTOU
+              // gap the `cancelled` checks below can't fully close on their
+              // own (see restoreEpoch doc, useChatStore.ts).
+              const epoch = useChatStore.getState().beginRestoreEpoch();
+              await useChatStore.getState().loadConversations();
               if (cancelled) return;
-              const existing = chatStore.conversations.find((c) =>
-                c.analysisId === restoreData.id || c.videoId === restoreData.videoId
-              );
+              // Fetch a FRESH snapshot after the await -- Zustand's getState()
+              // returns a point-in-time object; the pre-await `chatStore`
+              // variable would still reference the OLD (often empty, first
+              // page load) conversations array even after loadConversations()
+              // resolves and calls set() internally. This meant the match
+              // below ran against a stale/empty list on every page
+              // load/hard refresh, the exact trigger this hook fires on --
+              // likely the real root cause of the live-reported "still wrong
+              // after refresh" bug, more fundamental than the archived-suffix
+              // fix alone (cubic/Qodo review, PR #177).
+              const chatStore = useChatStore.getState();
+              const existing = findMatchingConversation(chatStore.conversations, restoreData.id, restoreData.videoId);
               if (existing) {
-                if (existing.analysisId !== restoreData.id) {
-                  await chatStore.updateConversationAnalysisId(existing.id, restoreData.id);
-                }
+                // Cancellation check BEFORE the PATCH, not after -- same
+                // narrow race as AnalysisHistory.tsx's restore IIFE (cubic
+                // review, PR #177): updateConversationAnalysisId() is a
+                // persisted DB write, so issuing it unconditionally after
+                // this effect has already been cancelled/superseded could
+                // permanently rebind a shared conversation to the wrong,
+                // stale analysis.
                 if (cancelled) return;
+                if (existing.analysisId !== restoreData.id) {
+                  await chatStore.updateConversationAnalysisId(existing.id, restoreData.id, { epoch });
+                }
+                // `cancelled` alone isn't enough here: it's a LOCAL ref this
+                // hook instance owns, but restoreEpoch is bumped by every
+                // restore call site (ChatDock, AnalysisHistory,
+                // useSSEStream too). updateConversationAnalysisId's own
+                // epoch check protects its PATCH from a newer restore
+                // elsewhere, but that PATCH could still no-op (stale epoch)
+                // while `cancelled` here stays false -- without also
+                // checking the shared epoch, selectConversation would still
+                // fire and could win the chat panel for a thread this
+                // restore no longer has authority over (cubic review, PR
+                // #177).
+                if (cancelled || useChatStore.getState().restoreEpoch !== epoch) return;
                 await chatStore.selectConversation(existing.id);
               } else if (!cancelled) {
                 useChatStore.setState({ activeId: null });

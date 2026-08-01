@@ -100,6 +100,15 @@ export function preprocessMarkdown(content: string): string {
 
   let contentWithTables = lines.join('\n');
   contentWithTables = linkifyTimestamps(contentWithTables);
+  // Deliberately does NOT call truncateCitationPoints here -- preprocessMarkdown
+  // is shared by every markdown-rendering caller (ChatDock AND
+  // SelectedDimensionReadout), but the `⟦EXPAND:...⟧` marker
+  // truncateCitationPoints embeds is only rendered correctly by callers that
+  // also register ChatDock's `chatInlinePlugins`. SelectedDimensionReadout
+  // doesn't, so baking truncation in here would have shown a raw, unrendered
+  // marker string in dimension content instead of the intended toggle
+  // (cubic review, PR #177). ChatDock calls truncateCitationPoints itself,
+  // explicitly, right where the matching plugin is wired -- see ChatDock.tsx.
 
   return contentWithTables;
 }

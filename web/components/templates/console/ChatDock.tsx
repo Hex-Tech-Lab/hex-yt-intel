@@ -16,11 +16,14 @@ import {
   useImperativeAlertDialog,
   type ChatComposerInputHandle,
   type MarkdownComponents,
+  type MarkdownInlinePlugin,
 } from '@astryxdesign/core';
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
+import { EXPAND_MARKER_PATTERN, truncateCitationPoints } from '@/lib/utils/citation-truncate';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
+import { findMatchingConversation, filterConversationsForContext } from '@/lib/utils/find-chat-conversation';
 import { TimestampLink } from '@/components/TimestampLink';
 import { showToast, copyChatAsMarkdown, exportChatAsMarkdown, type ChatMessageForExport } from '@/lib/dashboard/export';
 
@@ -33,14 +36,86 @@ export interface ChatDockProps {
 const OPEN_KEY = 'hx-chatdock-open';
 
 /**
+ * Registered as `inlinePlugins` on the `<Markdown>` below. Declared BEFORE
+ * `ExpandableCitationPoint` even though its `render` callback references
+ * that component: `ExpandableCitationPoint` is a `function` declaration,
+ * which hoists, so referencing it here (textually earlier) is completely
+ * safe -- unlike the reverse arrangement this file used to have (this
+ * `const` read from inside `ExpandableCitationPoint`, which appeared
+ * first), which was equally safe at RUNTIME (both are only evaluated once
+ * React actually renders, well after the whole module has loaded) but was
+ * flagged by static analysis as "used before defined" since `const`
+ * doesn't hoist the way `function` does (DeepSource JS-0002, PR #177).
+ */
+const chatInlinePlugins: MarkdownInlinePlugin[] = [
+  {
+    pattern: EXPAND_MARKER_PATTERN,
+    render: (match, key) => <ExpandableCitationPoint key={key} encodedRest={match[1] ?? ''} />,
+  },
+];
+
+/**
+ * Truncated citation-Point cells (see truncateCitationPoints, format.tsx)
+ * embed an `⟦EXPAND:<percent-encoded rest>⟧` marker in place of the cut
+ * text. Astryx's `inlinePlugins` matches that marker against parsed text
+ * nodes (verified live to fire inside table cells, not just prose) and
+ * swaps it for this toggle -- the full text isn't hidden with CSS, it's
+ * simply absent from the DOM until the user asks for it, same as a
+ * Facebook/X "See more". No Astryx internals touched: inlinePlugins is an
+ * extension point Astryx already ships.
+ *
+ * The `encodedRest` payload is only ever PRODUCED by truncateCitationPoints,
+ * but this plugin matches the marker pattern against arbitrary rendered
+ * text, including a hand-authored or corrupted `⟦EXPAND:...⟧` string in an
+ * assistant response -- decodeURIComponent throws URIError on malformed
+ * percent-encoding, so it's wrapped rather than trusted (cubic review, PR
+ * #177).
+ *
+ * The expanded tail is rendered through a nested <Markdown>, not as raw
+ * text: truncateCitationPoints runs after linkifyTimestamps, so the cut
+ * text can itself contain markdown link syntax (e.g. another in-sentence
+ * timestamp reference) -- rendering it as a literal string would show that
+ * syntax raw instead of as a clickable link (cubic review, PR #177).
+ */
+function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
+  const [expanded, setExpanded] = useState(false);
+  let rest = '';
+  if (expanded) {
+    try {
+      rest = decodeURIComponent(encodedRest);
+    } catch (e) {
+      console.debug('[ChatDock] Malformed EXPAND marker, showing empty expansion:', e);
+    }
+  }
+  return (
+    <>
+      {expanded && rest ? <Markdown inlinePlugins={chatInlinePlugins} display="inline">{rest}</Markdown> : null}
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-label={expanded ? 'Hide full citation point' : 'Show full citation point'}
+        onClick={() => setExpanded((e) => !e)}
+        className="text-[var(--accent)] hover:underline ml-1 font-medium"
+      >
+        {expanded ? 'less' : '…more'}
+      </button>
+    </>
+  );
+}
+
+/**
  * Hoisted to module scope (mirrors SelectedDimensionReadout's
  * `readoutComponents`) so it isn't recreated per message per render.
- * Astryx `Markdown` has no table/list override slots (unlike react-markdown) --
- * lists/tables fall back to Astryx's own built-in styling, same tradeoff
- * already accepted in SelectedDimensionReadout. Table column widths are
- * instead reshaped from outside via the `chat-answer-table` global CSS class
- * (app/globals.css) using plain th/td element selectors, since there's no
- * React-level way to hint per-column width for a Markdown-rendered table.
+ * Astryx `Markdown` has no table/list component-override slots (unlike
+ * react-markdown) -- lists/tables fall back to Astryx's own built-in
+ * styling, same tradeoff already accepted in SelectedDimensionReadout.
+ * Table column widths are instead reshaped from outside via the
+ * `chat-answer-table` global CSS class (app/globals.css) using plain th/td
+ * element selectors, since there's no React-level way to hint per-column
+ * width for a Markdown-rendered table. Per-cell CONTENT truncation (the
+ * citation Point column) goes through `chatInlinePlugins` above instead --
+ * that IS a real React-level override point Astryx exposes, just scoped to
+ * text-node patterns rather than table structure.
  */
 const chatMarkdownComponents: MarkdownComponents = {
   paragraph: ({ children }) => (
@@ -112,6 +187,10 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     [messages]
   );
   const activeConv = useMemo(() => conversations.find((c) => c.id === activeId) || null, [conversations, activeId]);
+  const threadsForContext = useMemo(
+    () => filterConversationsForContext(conversations, analysisId, videoId),
+    [conversations, analysisId, videoId]
+  );
   const [copiedAllHeader, setCopiedAllHeader] = useState(false);
   const handleCopyAllHeader = () => {
     copyChatAsMarkdown(exportableMessages, activeConv?.title);
@@ -148,6 +227,11 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
 
     let cancelled = false;
     void (async () => {
+      // Bumped as early as possible in this restore attempt so a
+      // still-in-flight OLDER attempt's later updateConversationAnalysisId
+      // call sees a stale epoch and no-ops its PATCH (see restoreEpoch doc,
+      // useChatStore.ts).
+      const epoch = useChatStore.getState().beginRestoreEpoch();
       await loadConversations();
       if (cancelled) return;
       requestAnimationFrame(() => inputHandleRef.current?.focus());
@@ -162,30 +246,24 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
       // just re-visits of the same video. Creation now only happens from
       // the explicit "new chat" button (see newConversation() call below).
       if (analysisId || videoId) {
-        // Strips the _archived_... suffix a re-analyzed video's videoId can
-        // carry, same normalization AnalysisHistory.tsx's restoreAnalysis
-        // already applies for this exact match -- without it, a re-analyzed
-        // video's archived-variant videoId fails this match and looks like
-        // a "new" video with no existing conversation.
-        const cleanVideoId = videoId?.replace(/_archived_.*$/, '');
-        let existing: (typeof state.conversations)[number] | undefined;
-        for (const itemConv of state.conversations) {
-          const itemCleanVideoId = itemConv.videoId?.replace(/_archived_.*$/, '');
-          if (
-            (analysisId && itemConv.analysisId === analysisId) ||
-            (videoId && itemConv.videoId === videoId) ||
-            (cleanVideoId && itemCleanVideoId === cleanVideoId)
-          ) {
-            existing = itemConv;
-            break;
-          }
-        }
+        const existing = findMatchingConversation(state.conversations, analysisId, videoId);
         if (existing) {
           // If the conversation matched by videoId but has a different analysisId (due to re-analysis),
-          // update it in-place and save to database.
-          if (analysisId && existing.analysisId !== analysisId) {
-            void useChatStore.getState().updateConversationAnalysisId(existing.id, analysisId);
+          // update it in-place and save to database. Cancelled check before
+          // the PATCH, not after -- it's a persisted DB write, so firing it
+          // unconditionally after this effect has already been superseded
+          // by a newer video/analysisId change could rebind a shared
+          // conversation to the wrong (stale) analysis.
+          if (!cancelled && analysisId && existing.analysisId !== analysisId) {
+            void useChatStore.getState().updateConversationAnalysisId(existing.id, analysisId, { epoch });
           }
+          // `cancelled` alone isn't enough: it's a LOCAL ref this effect
+          // owns, but restoreEpoch is bumped by every restore call site
+          // (AnalysisHistory, useAutoRestoreAnalysis, useSSEStream too).
+          // Without also checking the shared epoch, selectConversation
+          // could still fire and win the chat panel for a thread this
+          // effect no longer has authority over (cubic review, PR #177).
+          if (cancelled || useChatStore.getState().restoreEpoch !== epoch) return;
           await selectConversation(existing.id);
         } else {
           // No existing conversation for this video -- leave empty rather
@@ -194,8 +272,14 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           useChatStore.setState({ activeId: null });
         }
       } else {
-        // No analysis context — clear activeId so chat starts empty until user picks a thread
+        // No analysis/video context (general chat) -- restore the
+        // browser's last-active conversation instead of forcing empty.
+        // loadConversations() deliberately never writes activeId itself
+        // (see useChatStore.ts) specifically so a context-scoped restore
+        // like the branch above can never be raced/overwritten by it; this
+        // is the one place that opts INTO the localStorage-based restore.
         useChatStore.setState({ activeId: null });
+        await useChatStore.getState().restoreLastActiveConversation({ epoch });
       }
       
       if (cancelled) return;
@@ -372,12 +456,19 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     if (!t || sending) return;
     setLocalInput('');
     scrollToBottom(); // user just sent — always follow to the bottom
-    await sendMessage(t, { analysisId: analysisId ?? null });
+    await sendMessage(t, { analysisId: analysisId ?? null, videoId: videoId ?? null });
   };
 
   const handleNew = async () => {
     setShowThreads(false);
-    await newConversation({ analysisId: null });
+    // Ground the explicitly-created new chat in whatever video/analysis is
+    // currently open -- previously passed analysisId: null unconditionally,
+    // so clicking "New Chat" while viewing a video created a conversation
+    // NOT associated with it. That orphaned conversation would then never
+    // resurface when revisiting the video (the match logic correctly
+    // wouldn't find it), while a real one appeared to be "missing" --
+    // live-reported 2026-08-01.
+    await newConversation({ analysisId: analysisId ?? null, videoId: videoId ?? null });
     requestAnimationFrame(() => inputHandleRef.current?.focus());
   };
 
@@ -511,7 +602,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
       {showThreads && (
         <div className="max-h-[240px] overflow-y-auto border-b border-[var(--line)] bg-[rgb(8_11_17_/_0.95)] backdrop-blur-md p-1.5 flex flex-col gap-1">
           <button
-            onClick={() => { void newConversation(); setShowThreads(false); }}
+            onClick={() => { void newConversation({ analysisId: analysisId ?? null, videoId: videoId ?? null }); setShowThreads(false); }}
             className="w-full text-left p-2 rounded-lg border border-dashed border-[var(--accent)]/50 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] cursor-pointer font-mono text-[11.5px] font-semibold flex items-center justify-between transition-colors"
           >
             <span className="flex items-center gap-1.5">
@@ -519,10 +610,10 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               + Start New Chat Thread
             </span>
           </button>
-          {conversations.length === 0 ? (
+          {threadsForContext.length === 0 ? (
             <div className="p-3 text-[var(--ink-muted)] font-mono text-[11px]">No conversations yet</div>
           ) : (
-            conversations.map((c) => {
+            threadsForContext.map((c) => {
               const formattedDate = c.updatedAt || c.createdAt ? new Date(c.updatedAt || c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
               const rawTitle = c.title || 'Untitled Chat';
               // Explicit character truncation (not CSS text-ellipsis) so the
@@ -604,8 +695,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 {isUser ? (
                   body
                 ) : (
-                  <Markdown components={chatMarkdownComponents} density="compact">
-                    {preprocessMarkdown(body)}
+                  <Markdown components={chatMarkdownComponents} inlinePlugins={chatInlinePlugins} density="compact">
+                    {truncateCitationPoints(preprocessMarkdown(body))}
                   </Markdown>
                 )}
               </ChatMessageBubble>

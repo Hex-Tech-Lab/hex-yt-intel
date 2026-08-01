@@ -12,6 +12,7 @@ import { useInputStore } from '@/store/useInputStore';
 import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
+import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 import type { HistoryOverviewItem } from '@/lib/ports';
@@ -256,6 +257,17 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   // single check point every stale-request guard below funnels through, so
   // the race-safety logic can't be missed on a future edit to just one of
   // the four call sites.
+  //
+  // FIXED 2026-08-02 (live prod report: chat sessions still mixed up after
+  // PR #177 merged): this guard used to only protect the explicit activeId
+  // assignment each closure makes after its own isStaleRestore check -- it
+  // did NOT protect against useChatStore.getState().loadConversations()
+  // itself, which used to unconditionally write activeId as a side effect
+  // BEFORE that check ran, so a stale click's internal write could still
+  // land on top of a newer click's correct one. Root-caused and fixed at
+  // the source: loadConversations() no longer writes activeId at all (see
+  // useChatStore.ts) -- it only loads/merges the conversation list, so
+  // there is nothing left for a stale closure to race against.
   const isStaleRestore = (analysisId: string) => latestRestoreRequestRef.current !== analysisId;
 
   const restoreAnalysis = async (analysisId: string) => {
@@ -358,18 +370,43 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       void (async () => {
         try {
           if (isStaleRestore(analysisId)) return;
-          const chatStore = useChatStore.getState();
-          await chatStore.loadConversations();
+          // Bumped as early as possible so a still-in-flight OLDER restore's
+          // later updateConversationAnalysisId call sees a stale epoch and
+          // no-ops its PATCH -- tightens the P1 TOCTOU gap the isStaleRestore
+          // checks below can't fully close on their own (see restoreEpoch
+          // doc, useChatStore.ts).
+          const epoch = useChatStore.getState().beginRestoreEpoch();
+          await useChatStore.getState().loadConversations();
           if (isStaleRestore(analysisId)) return;
-          const cleanVid = data.videoId?.replace(/_archived_.*$/, '');
-          const existing = chatStore.conversations.find(
-            (c) => c.analysisId === data.id || c.videoId === data.videoId || (cleanVid && c.videoId?.replace(/_archived_.*$/, '') === cleanVid)
-          );
+          // Fresh snapshot after the await, not the pre-await one --
+          // Zustand's getState() is point-in-time, so reusing a captured
+          // reference across the await would see the conversations array as
+          // it was BEFORE loadConversations()'s set() call landed (cubic/Qodo
+          // review, PR #177).
+          const chatStore = useChatStore.getState();
+          const existing = findMatchingConversation(chatStore.conversations, data.id, data.videoId);
           if (existing) {
-            if (existing.analysisId !== data.id) {
-              await chatStore.updateConversationAnalysisId(existing.id, data.id);
-            }
+            // Stale check BEFORE the PATCH, not after -- an older restore's
+            // updateConversationAnalysisId() call is a persisted DB write, not
+            // just local UI state; issuing it unconditionally could permanently
+            // rebind a shared conversation to the WRONG (older) analysis if a
+            // newer restore has already superseded this one by the time this
+            // closure resumes (cubic review, PR #177).
             if (isStaleRestore(analysisId)) return;
+            if (existing.analysisId !== data.id) {
+              await chatStore.updateConversationAnalysisId(existing.id, data.id, { epoch });
+            }
+            // `isStaleRestore` alone isn't enough here: it's a LOCAL ref
+            // this component owns, but restoreEpoch is bumped by every
+            // restore call site (ChatDock, useAutoRestoreAnalysis,
+            // useSSEStream too). updateConversationAnalysisId's own epoch
+            // check protects its PATCH from a newer restore elsewhere, but
+            // that PATCH could still no-op (stale epoch) while
+            // isStaleRestore here stays false -- without also checking the
+            // shared epoch, selectConversation would still fire and could
+            // win the chat panel for a thread this restore no longer has
+            // authority over (cubic review, PR #177).
+            if (isStaleRestore(analysisId) || useChatStore.getState().restoreEpoch !== epoch) return;
             await chatStore.selectConversation(existing.id);
           } else if (!isStaleRestore(analysisId)) {
             useChatStore.setState({ activeId: null });

@@ -23,11 +23,30 @@ vi.mock('@/lib/chat/outbox', () => ({
 // Track SSE event callbacks so tests can inject events
 let fetchMock: ReturnType<typeof vi.fn>;
 
+// This suite runs under vitest's 'node' environment (no jsdom), so neither
+// `window` nor `localStorage` exist as globals. restoreLastActiveConversation
+// early-returns on `typeof window === 'undefined'`, so the epoch-race test
+// below needs both stubbed -- a minimal in-memory Storage is enough, no jsdom
+// dependency required.
+function createMemoryStorage(): Storage {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => void store.set(key, value),
+    removeItem: (key: string) => void store.delete(key),
+    clear: () => store.clear(),
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    get length() { return store.size; },
+  };
+}
+
 describe('useChatStore race conditions', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     fetchMock = vi.fn();
     global.fetch = fetchMock;
+    vi.stubGlobal('window', globalThis);
+    vi.stubGlobal('localStorage', createMemoryStorage());
 
     // Reset store
     useChatStore.getState().reset();
@@ -36,6 +55,7 @@ describe('useChatStore race conditions', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   /**
@@ -161,5 +181,82 @@ describe('useChatStore race conditions', () => {
     // B's state should still be 'saving'
     expect(useChatStore.getState().persistState).toBe('saving');
     expect(useChatStore.getState().activePersistRequestId).toBe('req-B');
+  });
+
+  /**
+   * Blind Spot #6: loadConversations() must never write activeId itself.
+   *
+   * Live prod report (2026-08-02, after PR #177 merged): chat sessions still
+   * showed unrelated-to-video content. Root cause -- loadConversations()
+   * used to force-write `activeId` to null whenever ITS OWN fetched
+   * conversation list didn't contain the currently-active id, even if a
+   * second, faster-resolving loadConversations() call (for a different,
+   * newer video) had already set the CORRECT activeId in the meantime. Every
+   * real caller (ChatDock, AnalysisHistory, useAutoRestoreAnalysis,
+   * useSSEStream) already re-derives and explicitly sets activeId itself
+   * after awaiting loadConversations(), so the fix removes the internal
+   * write entirely rather than trying to out-race it with more guards.
+   */
+  it('never writes activeId as a side effect, regardless of what activeId was set to mid-fetch', async () => {
+    // Direct contract test, not a caller-simulation: seed activeId to a
+    // conversation NOT present in the store's current `conversations` (so
+    // the priorActiveId merge-back can't rescue it) and NOT present in the
+    // fetch response either, then call loadConversations(). The prior
+    // implementation would force this to null (its own restoredId logic
+    // requires the id to be findable in the post-merge list, which it
+    // deliberately isn't here); the fixed implementation must leave
+    // activeId completely untouched, since list-loading and active-thread
+    // selection are now two separate concerns.
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ conversations: [{ id: 'conv-other', userId: 'u1', title: 'Other', analysisId: null, videoId: null, createdAt: '', updatedAt: '', lastMessageAt: '' }] }),
+    });
+    useChatStore.setState({ activeId: 'conv-mid-fetch', conversations: [] });
+
+    await useChatStore.getState().loadConversations();
+
+    expect(useChatStore.getState().activeId).toBe('conv-mid-fetch');
+  });
+
+  /**
+   * Blind Spot #7: restoreLastActiveConversation() must not overwrite a
+   * newer, context-scoped restore that already selected the correct
+   * conversation.
+   *
+   * code-reviewer finding, 2026-08-02: restoreLastActiveConversation() was
+   * added (alongside the loadConversations() fix above) specifically to
+   * preserve general-chat localStorage restore now that loadConversations()
+   * no longer writes activeId -- but it shipped without the same epoch
+   * guard updateConversationAnalysisId already has, reintroducing the exact
+   * "stale restore overwrites a newer correct one" race in the one call
+   * site missing it. ChatDock's own general-chat branch is a real repro:
+   * user opens the dock with no video (kicks off this restore), then
+   * immediately navigates to a video before this restore's own await
+   * resolves -- the video-scoped restore must win.
+   */
+  it('does not let a stale epoch select a conversation via restoreLastActiveConversation', async () => {
+    // Matches the real call pattern exactly: ChatDock's general-chat branch
+    // always sets activeId to null in the SAME synchronous stretch right
+    // before calling this, so the pre-existing `if (get().activeId) return`
+    // guard can never trip here by construction -- the epoch check is the
+    // ONLY thing that can stop a stale call from selecting. (An earlier
+    // draft of this test accidentally exercised that other guard instead of
+    // the epoch check by pre-seeding activeId to a truthy value -- fixed to
+    // isolate the actual mechanism under test.)
+    const savedConv = { id: 'conv-general', userId: 'u1', title: 'General', analysisId: null, videoId: null, createdAt: '', updatedAt: '', lastMessageAt: '' };
+    localStorage.setItem('hex_yt_last_active_conv', savedConv.id);
+    useChatStore.setState({ conversations: [savedConv], activeId: null });
+
+    const store = useChatStore.getState();
+    const staleEpoch = store.beginRestoreEpoch(); // this (older) attempt's token
+    store.beginRestoreEpoch(); // a newer restore attempt has since started
+
+    await useChatStore.getState().restoreLastActiveConversation({ epoch: staleEpoch });
+
+    // The stale epoch must have short-circuited BEFORE selectConversation --
+    // activeId stays null, leaving room for the newer (in-flight) restore
+    // to set the correct one instead of this stale general-chat
+    // conversation winning the race.
+    expect(useChatStore.getState().activeId).toBe(null);
   });
 });

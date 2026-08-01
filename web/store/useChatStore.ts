@@ -45,12 +45,26 @@ interface ChatState {
   setChatOpen: (open: boolean) => void;
   setPersistState: (persistState: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted', requestId?: string | null) => void;
 
+  // Monotonic token each of the four chat-restore call sites (ChatDock's
+  // open effect, AnalysisHistory, useAutoRestoreAnalysis, useSSEStream's
+  // post-analysis reload) bumps via beginRestoreEpoch() at the START of a
+  // new restore attempt. updateConversationAnalysisId checks it immediately
+  // before firing its PATCH -- narrows (does not fully close; true
+  // compare-and-swap needs server-side enforcement) the window where an
+  // older restore's persisted DB write can land after a newer restore has
+  // already won, since the check now happens right next to the network
+  // call itself instead of a caller-side check made long before the PATCH
+  // was actually issued.
+  restoreEpoch: number;
+  beginRestoreEpoch: () => number;
+
   loadConversations: () => Promise<void>;
+  restoreLastActiveConversation: (opts?: { epoch?: number }) => Promise<void>;
   selectConversation: (id: string) => Promise<void>;
   newConversation: (opts?: { analysisId?: string | null; videoId?: string | null; title?: string }) => Promise<string | null>;
-  sendMessage: (text: string, opts?: { analysisId?: string | null }) => Promise<void>;
+  sendMessage: (text: string, opts?: { analysisId?: string | null; videoId?: string | null }) => Promise<void>;
   renameConversation: (id: string, title: string) => Promise<void>;
-  updateConversationAnalysisId: (id: string, analysisId: string) => Promise<void>;
+  updateConversationAnalysisId: (id: string, analysisId: string, opts?: { epoch?: number }) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
   bindNetwork: () => void;
   flushOutbox: () => Promise<void>;
@@ -379,6 +393,12 @@ export const useChatStore = create<ChatState>((set, get) => {
     isChatOpen: false,
     persistState: 'idle',
     activePersistRequestId: null,
+    restoreEpoch: 0,
+    beginRestoreEpoch: () => {
+      const next = get().restoreEpoch + 1;
+      set({ restoreEpoch: next });
+      return next;
+    },
     setChatOpen: (open: boolean) => set({ isChatOpen: open }),
     setPersistState: (persistState, requestId) => {
       if (requestId) {
@@ -412,36 +432,101 @@ export const useChatStore = create<ChatState>((set, get) => {
       }
     },
 
+    // Deliberately NEVER writes `activeId` -- ONLY loads/merges the
+    // conversation list. Every real caller (ChatDock's open effect,
+    // AnalysisHistory's restore, useAutoRestoreAnalysis, useSSEStream's
+    // post-analysis reload) already re-derives and explicitly sets the
+    // correct activeId itself after awaiting this call, scoped to whatever
+    // video/analysis context is actually current at that point.
+    //
+    // Real, still-live bug (2026-08-02, live prod test after PR #177):
+    // this function used to ALSO force-write activeId from its own local
+    // view of `conversations` -- but that view only reflects whatever this
+    // ONE call's fetch happened to see. If a second, faster-resolving
+    // loadConversations() call (for a DIFFERENT, newer video) already set
+    // the CORRECT activeId in the meantime, this call's completion would
+    // still wipe it to null just because ITS OWN fetched list didn't
+    // happen to contain that id -- a classic "last writer wins on a field
+    // it shouldn't be writing" bug, not a timing edge case. Every prior
+    // attempt at this (isStaleRestore checks in the three callers) patched
+    // around the SYMPTOM without addressing that loadConversations() itself
+    // was the one making the incorrect write. Removing the write here
+    // removes the entire race, not just this instance of it.
     loadConversations: async () => {
       set({ loadingList: true, error: null });
       try {
-        const { conversations } = await api<{ conversations: ChatConversation[] }>('/api/chat/conversations');
-        let restoredId: string | null = get().activeId;
-        if (!restoredId && typeof window !== 'undefined') {
-          try {
-            const savedId = localStorage.getItem('hex_yt_last_active_conv');
-            if (savedId && conversations.some((c) => c.id === savedId)) {
-              restoredId = savedId;
-            }
-          } catch (e) {
-            console.debug('[ChatStore] Read last_active_conv failed:', e);
-          }
+        const { conversations: fetched } = await api<{ conversations: ChatConversation[] }>('/api/chat/conversations');
+        const priorActiveId = get().activeId;
+        // Live-reported bug (2026-08-01): a fresh GET can lag behind a
+        // just-created conversation (newConversation()'s own optimistic
+        // local insert vs. this route's read) -- if the currently-active
+        // conversation isn't in the fresh list yet, keep the locally-known
+        // copy merged in rather than silently dropping it from the list.
+        // (This only affects the `conversations` array now, never
+        // `activeId` itself -- see above.)
+        //
+        // KNOWN LIMITATION (altitude review, PR #177): this only protects
+        // priorActiveId's conversation specifically, not general
+        // read-your-writes consistency -- any OTHER locally-known
+        // conversation (e.g. one just renamed, or created but not
+        // currently active) that isn't yet visible to this same GET is
+        // still silently dropped by the reassignment below. A deeper fix
+        // would track all pending/unconfirmed local mutations (e.g. a
+        // pendingIds set populated on optimistic insert, cleared once seen
+        // in a fetch) and reconcile the whole set here. Not built now --
+        // this covers the exact reported symptom.
+        //
+        // KNOWN LIMITATION (cubic review, PR #177): this merge can't
+        // distinguish "not yet visible due to read-after-write lag" from
+        // "deleted server-side in another tab/device" -- both look like
+        // "priorActiveId absent from the fresh fetch". A cross-tab/device
+        // delete of the currently-active conversation would get silently
+        // resurrected into the LIST here (though never into `activeId`,
+        // which this function no longer writes) until the next successful
+        // loadConversations() catches up. Narrow; not fixed now.
+        let conversations = fetched;
+        if (priorActiveId && !fetched.some((c) => c.id === priorActiveId)) {
+          const stillLocal = get().conversations.find((c) => c.id === priorActiveId);
+          if (stillLocal) conversations = [stillLocal, ...fetched];
         }
-        // Deliberately does NOT default to the first conversation when there's
-        // no active/restored id -- an unrelated video's thread must never
-        // auto-open (ADR 009 ownership binding). Only a saved id for THIS
-        // browser's own last session is trusted as a restore source.
-        set({
-          conversations,
-          loadingList: false,
-          activeId: restoredId && conversations.some((c) => c.id === restoredId) ? restoredId : null,
-        });
-        if (restoredId && conversations.some((c) => c.id === restoredId) && !get().messagesByConv[restoredId]) {
-          void get().selectConversation(restoredId);
-        }
+        set({ conversations, loadingList: false });
       } catch (e) {
         set({ loadingList: false, error: e instanceof Error ? e.message : 'Failed to load chats' });
       }
+    },
+
+    /**
+     * Explicit, opt-in restore of the browser's last-active conversation
+     * from localStorage -- ONLY meaningful when there's no video/analysis
+     * context to ground against (general chat). Separated out of
+     * loadConversations() itself (see the comment there) so this is a
+     * deliberate action a caller takes, not an automatic side effect that
+     * can race with a context-scoped restore.
+     *
+     * Takes the same `{ epoch }` guard as updateConversationAnalysisId, for
+     * the same reason (code-reviewer finding, 2026-08-02): this function's
+     * own `await` (inside selectConversation) is a window a NEWER,
+     * context-scoped restore (e.g. the user navigating from general chat to
+     * a video) can complete inside of -- without the epoch check, this
+     * call's eventual `selectConversation` would unconditionally overwrite
+     * that newer, correct activeId with an unrelated general-chat
+     * conversation, reintroducing the exact race class this session's other
+     * fixes were built to eliminate, in the one call site that was missing
+     * the guard.
+     */
+    restoreLastActiveConversation: async (opts) => {
+      if (typeof window === 'undefined') return;
+      if (get().activeId) return;
+      let savedId: string | null = null;
+      try {
+        savedId = localStorage.getItem('hex_yt_last_active_conv');
+      } catch (e) {
+        console.debug('[ChatStore] Read last_active_conv failed:', e);
+        return;
+      }
+      if (!savedId || !get().conversations.some((c) => c.id === savedId)) return;
+      if (opts?.epoch !== undefined && opts.epoch !== get().restoreEpoch) return;
+      await get().selectConversation(savedId);
     },
 
     selectConversation: async (id) => {
@@ -486,7 +571,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       if (!trimmed || get().sending) return;
 
       let convId = get().activeId;
-      if (!convId) convId = await get().newConversation({ analysisId: opts?.analysisId ?? null });
+      if (!convId) convId = await get().newConversation({ analysisId: opts?.analysisId ?? null, videoId: opts?.videoId ?? null });
       if (!convId) return;
 
       const clientMsgId = newClientMsgId();
@@ -518,7 +603,14 @@ export const useChatStore = create<ChatState>((set, get) => {
       }
     },
 
-    updateConversationAnalysisId: async (id, analysisId) => {
+    updateConversationAnalysisId: async (id, analysisId, opts) => {
+      // Checked right before both the optimistic write and the PATCH --
+      // not a full CAS (a concurrent PATCH already in flight when a newer
+      // epoch starts can still land after), but the check now sits next to
+      // the actual network call rather than long before it in caller code,
+      // which is the tightest client-only guard available (see restoreEpoch
+      // doc above).
+      if (opts?.epoch !== undefined && opts.epoch !== get().restoreEpoch) return;
       set((s) => ({ conversations: s.conversations.map((c) => (c.id === id ? { ...c, analysisId } : c)) }));
       try {
         await api(`/api/chat/conversations/${id}`, { method: 'PATCH', body: JSON.stringify({ analysisId }) });

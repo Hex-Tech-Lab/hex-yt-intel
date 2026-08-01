@@ -13,6 +13,7 @@ import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { isPersistedValidationReport } from '@/lib/types/validation-report';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
 import { mapHistoryOverviewRow, type RawHistoryOverviewRow } from '@/lib/utils/history-overview';
+import { stripArchivedVideoIdSuffix } from '@/lib/utils/archived-video-id';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import type { ClientPlatform } from '@/lib/utils/client-platform';
 
@@ -562,7 +563,7 @@ export class SupabaseAnalysisAdapter {
       // transcripts are stored under the clean video_id (see upsertTranscript /
       // web/app/api/analyses/persist/route.ts), so an archived analysis row would
       // otherwise silently miss its own transcript on every grounding fetch.
-      const cleanVideoId = data.video_id ? data.video_id.replace(/_archived_.*$/, '') : null;
+      const cleanVideoId = stripArchivedVideoIdSuffix(data.video_id) ?? null;
       if (cleanVideoId) {
         const { data: txData } = await service
           .from('transcripts')
