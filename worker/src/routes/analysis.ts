@@ -697,6 +697,11 @@ function buildStreamResponse(
   }
 
   let finishReason: string | undefined = undefined;
+  // ADR 020 Phase 3: real OpenRouter usage/cost for the cost ledger, captured
+  // from the same executeAndStream() result finishReason/modelUsed already
+  // come from -- see result.tokensUsed/costUsd below.
+  let tokensUsed: number | undefined;
+  let costUsd: number | undefined;
   // ADR 020 Phase 2: set true when cancelController (declared below, inside
   // the stream's start() handler) actually fires. Declared here, at the
   // same outer scope as atomicPersist, so persist()'s closure -- built
@@ -714,6 +719,8 @@ function buildStreamResponse(
         finalText,
         modelUsed,
         finishReason,
+        tokensUsed,
+        costUsd,
         cancelled: wasCancelled,
         activeSecret: signingKey,
         appUrl: url,
@@ -899,6 +906,8 @@ function buildStreamResponse(
         pollingActive = false;
         wasCancelled = cancelController.signal.aborted;
         finishReason = result.finishReason;
+        tokensUsed = result.tokensUsed;
+        costUsd = result.costUsd;
 
         if (!result.produced && !result.finalText) {
           send({ type: "error", error: "All models in cascade failed to produce output" });

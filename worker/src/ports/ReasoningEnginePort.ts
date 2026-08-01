@@ -77,6 +77,10 @@ export interface StreamResult {
   finishReason?: string;
   valid: boolean;
   produced: boolean;
+  /** Total prompt+completion tokens reported by OpenRouter's final usage chunk (ADR 020 Phase 3). */
+  tokensUsed?: number;
+  /** Actual USD cost reported by OpenRouter's final usage chunk (ADR 020 Phase 3). */
+  costUsd?: number;
 }
 
 /** Result of a non-streaming reasoning run. */

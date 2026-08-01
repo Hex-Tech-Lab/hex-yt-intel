@@ -328,7 +328,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseBillingAdapter.getMonthlyAnalyses(params);
   }
 
-  logUsageEvent(params: { userId: string; action: string; metadata: any }): Promise<void> {
+  logUsageEvent(params: { userId: string; action: string; metadata: any; tokensUsed?: number; costUsd?: number }): Promise<void> {
     return SupabaseBillingAdapter.logUsageEvent(params);
   }
 
@@ -343,6 +343,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     dimensionsCovered: number[];
     payload: any;
     status: 'completed' | 'failed' | 'interrupted';
+    tokensUsed?: number;
+    costUsd?: number;
   }): Promise<void> {
     try {
       const service = getSupabaseServiceClient();
@@ -354,6 +356,8 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
           dimensions_covered: params.dimensionsCovered,
           payload: params.payload ?? {},
           status: params.status,
+          tokens_used: params.tokensUsed ?? 0,
+          cost_usd: params.costUsd ?? 0,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'analysis_id,chunk_index'
@@ -374,12 +378,12 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
 
   async findAnalysisChunks(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null }> | null> {
+  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analysis_chunks')
-        .select('chunk_index, dimensions_covered, payload, status, updated_at')
+        .select('chunk_index, dimensions_covered, payload, status, updated_at, tokens_used, cost_usd')
         .eq('analysis_id', params.analysisId);
 
       if (error) {

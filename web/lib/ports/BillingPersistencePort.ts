@@ -47,5 +47,7 @@ export interface BillingPersistencePort {
     userId: string;
     action: string;
     metadata: any;
+    tokensUsed?: number;
+    costUsd?: number;
   }): Promise<void>;
 }

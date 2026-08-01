@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
 interface UserActivityRow {
   id: string;
@@ -14,6 +14,17 @@ interface UserActivityRow {
   last_session_at: string | null;
   last_session_ip: string | null;
   last_session_user_agent: string | null;
+  // ADR 020 Phase 3: real OpenRouter cost/token totals, summed server-side
+  // (admin_list_users_activity RPC) from usage_logs.action='analysis_completed'.
+  total_cost_usd: number;
+  total_tokens_used: number;
+}
+
+type SortKey = 'cost_desc' | 'cost_asc' | 'signup_desc' | 'name_asc';
+
+function fmtCost(usd: number): string {
+  if (usd === 0) return '$0.00';
+  return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
 }
 
 interface UserSession {
@@ -65,6 +76,8 @@ export function UsersAdminClient() {
   const [detail, setDetail] = useState<Record<string, UserDetail>>({});
   const [detailLoading, setDetailLoading] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('cost_desc');
 
   useEffect(() => {
     fetch('/api/admin/users')
@@ -94,19 +107,59 @@ export function UsersAdminClient() {
       .finally(() => setDetailLoading(null));
   };
 
+  // Derived during render (react-best-practices rerender-derived-state-no-effect),
+  // not in an effect -- this is a pure filter+sort over already-fetched data.
+  const visibleUsers = useMemo(() => {
+    if (!users) return null;
+    const q = search.trim().toLowerCase();
+    const filtered = q
+      ? users.filter((u) => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q))
+      : users;
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortKey) {
+        case 'cost_desc': return b.total_cost_usd - a.total_cost_usd;
+        case 'cost_asc': return a.total_cost_usd - b.total_cost_usd;
+        case 'name_asc': return (a.name || a.email || '').localeCompare(b.name || b.email || '');
+        case 'signup_desc': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        default: return 0;
+      }
+    });
+    return sorted;
+  }, [users, search, sortKey]);
+
   if (error) {
     return <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--warn)] text-[var(--warn)] text-xs font-mono">Failed to load users: {error}</div>;
   }
 
-  if (!users) {
+  if (!users || !visibleUsers) {
     return <div className="p-4 text-xs font-mono text-[var(--ink-muted)]">Loading users…</div>;
   }
 
   return (
     <div className="flex flex-col gap-3 font-mono text-xs">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-[var(--ink-main)]">User Activity ({users.length})</h2>
-        <p className="text-[10px] text-[var(--ink-muted)]">Signup, sessions (IP/UA), videos analyzed, reports downloaded</p>
+        <h2 className="text-sm font-bold text-[var(--ink-main)]">User Activity ({visibleUsers.length}{visibleUsers.length !== users.length ? ` of ${users.length}` : ''})</h2>
+        <p className="text-[10px] text-[var(--ink-muted)]">Signup, sessions (IP/UA), videos analyzed, reports downloaded, OpenRouter cost</p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name or email…"
+          className="flex-1 rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]"
+        />
+        <select
+          value={sortKey}
+          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          className="rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] outline-none focus:border-[var(--accent)]"
+        >
+          <option value="cost_desc">Sort: cost (high → low)</option>
+          <option value="cost_asc">Sort: cost (low → high)</option>
+          <option value="signup_desc">Sort: newest signup</option>
+          <option value="name_asc">Sort: name (A → Z)</option>
+        </select>
       </div>
 
       <div className="rounded-xl border border-[var(--border-muted)] overflow-hidden">
@@ -117,13 +170,14 @@ export function UsersAdminClient() {
               <th className="px-3 py-2">Tier</th>
               <th className="px-3 py-2">Signed up</th>
               <th className="px-3 py-2">Analyses</th>
+              <th className="px-3 py-2">Cost</th>
               <th className="px-3 py-2">Last session</th>
               <th className="px-3 py-2">Last IP</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {visibleUsers.map((u) => (
               <Fragment key={u.id}>
                 <tr
                   onClick={() => toggleExpand(u.id)}
@@ -136,13 +190,19 @@ export function UsersAdminClient() {
                   <td className="px-3 py-2 capitalize">{u.tier || '—'}</td>
                   <td className="px-3 py-2">{fmt(u.created_at)}</td>
                   <td className="px-3 py-2">{u.analyses_count}</td>
+                  <td className="px-3 py-2">
+                    <span className="text-[var(--ink-main)]">{fmtCost(u.total_cost_usd)}</span>
+                    {u.total_tokens_used > 0 && (
+                      <span className="text-[var(--ink-muted)]"> · {u.total_tokens_used.toLocaleString()} tok</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2">{fmt(u.last_session_at)}</td>
                   <td className="px-3 py-2">{u.last_session_ip || '—'}</td>
                   <td className="px-3 py-2 text-[var(--accent)]">{expandedId === u.id ? '▾' : '▸'}</td>
                 </tr>
                 {expandedId === u.id && (
                   <tr className="border-t border-[var(--border-muted)] bg-[rgb(11_14_20_/_0.5)]">
-                    <td colSpan={7} className="px-3 py-3">
+                    <td colSpan={8} className="px-3 py-3">
                       {detailLoading === u.id && <div className="text-[var(--ink-muted)]">Loading…</div>}
                       {detailError[u.id] && <div className="text-[var(--warn)]">{detailError[u.id]}</div>}
                       {detail[u.id] && (() => {

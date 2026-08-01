@@ -115,6 +115,8 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
     tier: UserTier;
     email?: string;
     analysisId?: string;
+    tokensUsed?: number;
+    costUsd?: number;
   }): Promise<void> {
     try {
       await this.persistence.logUsageEvent({
@@ -125,6 +127,8 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
           ...(params.analysisId ? { analysisId: params.analysisId } : {}),
           timestamp: new Date().toISOString(),
         },
+        tokensUsed: params.tokensUsed,
+        costUsd: params.costUsd,
       });
     } catch (logErr) {
       console.warn('[PostgresBillingAdapter] Failed to log analysis_completed usage event:', logErr);

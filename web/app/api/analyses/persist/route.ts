@@ -157,6 +157,12 @@ export async function POST(request: NextRequest) {
       // AFTER most dimensions already streamed, which would otherwise look
       // "valid" by content alone and get silently marked 'completed'.
       cancelled: z.boolean().optional().default(false),
+      // ADR 020 Phase 3: real OpenRouter usage/cost for the cost ledger.
+      // Unsigned (not part of `canonical` below) -- purely accounting
+      // telemetry, unlike `cancelled` which decides billing_status and is
+      // therefore integrity-sensitive.
+      tokensUsed: z.number().int().min(0).optional(),
+      costUsd: z.number().min(0).optional(),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
@@ -204,6 +210,8 @@ export async function POST(request: NextRequest) {
         exp,
         status,
         cancelled,
+        tokensUsed,
+        costUsd,
         chunkIndex,
         totalChunks,
         segments,
@@ -346,6 +354,8 @@ export async function POST(request: NextRequest) {
             dimensionsCovered,
             payload,
             status,
+            tokensUsed,
+            costUsd,
           }),
           2
         );
@@ -632,8 +642,15 @@ export async function POST(request: NextRequest) {
             // request for the same analysisId could in theory reach this
             // gate more than once -- harmless for a pure usage-log row (not
             // a decrementing counter), so no idempotency guard is added.
+            // ADR 020 Phase 3: sum real per-chunk OpenRouter usage/cost --
+            // each of the (up to 5) chunks is its own independent LLM call
+            // with its own tokensUsed/costUsd, so the analysis's true total
+            // cost is the sum across all of them, not just this final chunk.
+            const totalTokensUsed = finalChunks.reduce((sum, c) => sum + (c.tokens_used ?? 0), 0);
+            const totalCostUsd = finalChunks.reduce((sum, c) => sum + (c.cost_usd ?? 0), 0);
+
             getUserTier(row.userId)
-              .then((tier) => billingQuotaPort.consumeQuota({ userId: row.userId, tier, analysisId }))
+              .then((tier) => billingQuotaPort.consumeQuota({ userId: row.userId, tier, analysisId, tokensUsed: totalTokensUsed, costUsd: totalCostUsd }))
               .catch(e => {
                 console.warn('[analyses/persist] Failed to log analysis_completed usage event (chunked path)', { analysisId, error: String(e) });
               });
@@ -899,7 +916,7 @@ export async function POST(request: NextRequest) {
         // call site above -- see the comment there for the retry-safety
         // and non-blocking reasoning.
         getUserTier(row.userId)
-          .then((tier) => billingQuotaPort.consumeQuota({ userId: row.userId, tier, analysisId }))
+          .then((tier) => billingQuotaPort.consumeQuota({ userId: row.userId, tier, analysisId, tokensUsed, costUsd }))
           .catch(e => {
             console.warn('[analyses/persist] Failed to log analysis_completed usage event', { analysisId, error: String(e) });
           });

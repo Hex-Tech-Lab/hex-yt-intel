@@ -24,6 +24,12 @@ export interface PersistOptions {
   // dimensions already streamed, which would otherwise look "valid" by
   // content alone and get silently marked 'completed'.
   cancelled?: boolean;
+  // ADR 020 Phase 3: real OpenRouter usage/cost, not signed/verified since
+  // billing decisions never depend on these (billing_status is driven by
+  // valid/cancelled only) -- this is accounting telemetry, not an integrity-
+  // sensitive field like `cancelled` was (see canonical/signBoundContent below).
+  tokensUsed?: number;
+  costUsd?: number;
   activeSecret: string;
   appUrl: string;
   validate12D: (text: string) => boolean;
@@ -124,6 +130,8 @@ export class PersistService {
     modelUsed: string;
     status: 'completed' | 'interrupted';
     cancelled?: boolean;
+    tokensUsed?: number;
+    costUsd?: number;
     activeSecret: string;
     appUrl: string;
     valid: boolean;
@@ -154,6 +162,8 @@ export class PersistService {
             exp: params.exp,
             status: params.status,
             cancelled: params.cancelled,
+            tokensUsed: params.tokensUsed,
+            costUsd: params.costUsd,
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,
             segments: params.segments,
