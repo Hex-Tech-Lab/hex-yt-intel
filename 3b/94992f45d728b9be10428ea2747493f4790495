@@ -1,0 +1,31 @@
+web/app/globals.css
+  s_0eded1e9d0cab6::t_bf50ee7e23063b 641-669
+web/hooks/useAutoRestoreAnalysis.ts
+  s_0eded1e9d0cab6::t_5a385eda983f57 167-172,175,178,186,188
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_1c9aface47facb 157-163,165-170,173-178,191-193
+  s_0eded1e9d0cab6::t_7eb8de544dc3c8 587
+  s_0eded1e9d0cab6::t_55980ea32c1add 40-43
+web/hooks/useAuxElementStatus.ts
+  s_0eded1e9d0cab6::t_cc782db5455b4b 51-64,71-79,82-84,94
+web/lib/adapters/PostgresBillingAdapter.ts
+  s_0eded1e9d0cab6::t_28c7a2a16e8a8f 55-59
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_17695aaef58ad2 352-357,360,363,372,374
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "3b94992f45d728b9be10428ea2747493f4790495",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
