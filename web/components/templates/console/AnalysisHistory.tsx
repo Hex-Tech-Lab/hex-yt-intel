@@ -12,6 +12,7 @@ import { useInputStore } from '@/store/useInputStore';
 import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
+import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
 import { ExecutiveSummary, type ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 import type { HistoryOverviewItem } from '@/lib/ports';
@@ -361,10 +362,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           const chatStore = useChatStore.getState();
           await chatStore.loadConversations();
           if (isStaleRestore(analysisId)) return;
-          const cleanVid = data.videoId?.replace(/_archived_.*$/, '');
-          const existing = chatStore.conversations.find(
-            (c) => c.analysisId === data.id || c.videoId === data.videoId || (cleanVid && c.videoId?.replace(/_archived_.*$/, '') === cleanVid)
-          );
+          const existing = findMatchingConversation(chatStore.conversations, data.id, data.videoId);
           if (existing) {
             if (existing.analysisId !== data.id) {
               await chatStore.updateConversationAnalysisId(existing.id, data.id);

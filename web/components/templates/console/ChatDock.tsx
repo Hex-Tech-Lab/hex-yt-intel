@@ -21,6 +21,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
+import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 import { TimestampLink } from '@/components/TimestampLink';
 import { showToast, copyChatAsMarkdown, exportChatAsMarkdown, type ChatMessageForExport } from '@/lib/dashboard/export';
 
@@ -162,24 +163,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
       // just re-visits of the same video. Creation now only happens from
       // the explicit "new chat" button (see newConversation() call below).
       if (analysisId || videoId) {
-        // Strips the _archived_... suffix a re-analyzed video's videoId can
-        // carry, same normalization AnalysisHistory.tsx's restoreAnalysis
-        // already applies for this exact match -- without it, a re-analyzed
-        // video's archived-variant videoId fails this match and looks like
-        // a "new" video with no existing conversation.
-        const cleanVideoId = videoId?.replace(/_archived_.*$/, '');
-        let existing: (typeof state.conversations)[number] | undefined;
-        for (const itemConv of state.conversations) {
-          const itemCleanVideoId = itemConv.videoId?.replace(/_archived_.*$/, '');
-          if (
-            (analysisId && itemConv.analysisId === analysisId) ||
-            (videoId && itemConv.videoId === videoId) ||
-            (cleanVideoId && itemCleanVideoId === cleanVideoId)
-          ) {
-            existing = itemConv;
-            break;
-          }
-        }
+        const existing = findMatchingConversation(state.conversations, analysisId, videoId);
         if (existing) {
           // If the conversation matched by videoId but has a different analysisId (due to re-analysis),
           // update it in-place and save to database.

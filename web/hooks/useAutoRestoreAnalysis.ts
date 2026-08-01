@@ -6,6 +6,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
+import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 
 /**
  * Auto-restores an already-analyzed video from cache when a URL is pasted.
@@ -176,9 +177,7 @@ export function useAutoRestoreAnalysis(url: string) {
               const chatStore = useChatStore.getState();
               await chatStore.loadConversations();
               if (cancelled) return;
-              const existing = chatStore.conversations.find((c) =>
-                c.analysisId === restoreData.id || c.videoId === restoreData.videoId
-              );
+              const existing = findMatchingConversation(chatStore.conversations, restoreData.id, restoreData.videoId);
               if (existing) {
                 if (existing.analysisId !== restoreData.id) {
                   await chatStore.updateConversationAnalysisId(existing.id, restoreData.id);
