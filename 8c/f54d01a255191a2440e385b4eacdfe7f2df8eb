@@ -1,0 +1,31 @@
+web/lib/__tests__/archived-video-id.test.ts
+  s_0eded1e9d0cab6::t_9c1404c2a3be77 18-27
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_217849383a3e14 222-231
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_9e65a027e38e71 399-409
+web/lib/__tests__/find-chat-conversation.test.ts
+  s_0eded1e9d0cab6::t_2c600c0a3181d2 79-84,86-89
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_005d0bedee4281 260-266
+web/hooks/useAutoRestoreAnalysis.ts
+  s_0eded1e9d0cab6::t_b0cf274c4f9397 209-220
+web/lib/utils/archived-video-id.ts
+  s_0eded1e9d0cab6::t_215c91f3ed8f73 12-29,33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "8cf54d01a255191a2440e385b4eacdfe7f2df8eb",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
