@@ -1,0 +1,46 @@
+web/lib/prompts/chat-grounding.ts
+  s_0eded1e9d0cab6::t_d148f55899d9e1 13
+web/lib/utils/find-chat-conversation.ts
+  s_0eded1e9d0cab6::t_6a0e50d05a8ed3 5-14,16,21-25,60-68,70,90
+  s_0eded1e9d0cab6::t_10576b871aca96 72-75,83-88
+  s_0eded1e9d0cab6::t_a5f4cdf93b3263 2,17-20,59,76-82,89
+  s_0eded1e9d0cab6::t_3d5f41716c7b32 71
+web/app/globals.css
+  s_0eded1e9d0cab6::t_9afc4b8a53bbe2 671-680
+  s_0eded1e9d0cab6::t_72e7e47ed32ac3 692-701
+  s_0eded1e9d0cab6::t_2776f5f390987e 660-670,681-683
+web/store/useChatStore.ts
+  s_0eded1e9d0cab6::t_3479e729f6268d 418-428,440-444
+  s_0eded1e9d0cab6::t_f401183aead9dd 429-439
+web/lib/__tests__/find-chat-conversation.test.ts
+  s_0eded1e9d0cab6::t_7f0493f648828e 2
+  s_0eded1e9d0cab6::t_63b9644c253854 72-97
+web/app/api/analyses/[id]/route.ts
+  s_0eded1e9d0cab6::t_7c977573937590 6
+  s_0eded1e9d0cab6::t_238028a1eb7c81 110-114
+web/lib/utils/archived-video-id.ts
+  s_0eded1e9d0cab6::t_8e167fe663c69c 1-15
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_81eb7ece249fd1 24
+  s_0eded1e9d0cab6::t_3d765f24c2ac45 517,520
+  s_0eded1e9d0cab6::t_401a91c416d972 116-119
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_0eded1e9d0cab6::t_570d6541daddaa 16
+  s_0eded1e9d0cab6::t_b60449689d4b62 566
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "f659948462c5c25aacd8816077552fca739da61f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
