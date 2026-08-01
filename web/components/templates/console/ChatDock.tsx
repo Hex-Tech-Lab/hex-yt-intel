@@ -44,15 +44,40 @@ const OPEN_KEY = 'hx-chatdock-open';
  * simply absent from the DOM until the user asks for it, same as a
  * Facebook/X "See more". No Astryx internals touched: inlinePlugins is an
  * extension point Astryx already ships.
+ *
+ * The `encodedRest` payload is only ever PRODUCED by truncateCitationPoints,
+ * but this plugin matches the marker pattern against arbitrary rendered
+ * text, including a hand-authored or corrupted `⟦EXPAND:...⟧` string in an
+ * assistant response -- decodeURIComponent throws URIError on malformed
+ * percent-encoding, so it's wrapped rather than trusted (cubic review, PR
+ * #177).
+ *
+ * The expanded tail is rendered through a nested <Markdown>, not as raw
+ * text: truncateCitationPoints runs after linkifyTimestamps, so the cut
+ * text can itself contain markdown link syntax (e.g. another in-sentence
+ * timestamp reference) -- rendering it as a literal string would show that
+ * syntax raw instead of as a clickable link (cubic review, PR #177).
+ * `chatInlinePlugins` is referenced here even though it's declared below --
+ * safe because this function only runs at React render time, well after
+ * the module has finished evaluating top to bottom.
  */
 function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
   const [expanded, setExpanded] = useState(false);
-  const rest = expanded ? decodeURIComponent(encodedRest) : '';
+  let rest = '';
+  if (expanded) {
+    try {
+      rest = decodeURIComponent(encodedRest);
+    } catch (e) {
+      console.debug('[ChatDock] Malformed EXPAND marker, showing empty expansion:', e);
+    }
+  }
   return (
     <>
-      {rest}
+      {expanded && rest ? <Markdown inlinePlugins={chatInlinePlugins} display="inline">{rest}</Markdown> : null}
       <button
         type="button"
+        aria-expanded={expanded}
+        aria-label={expanded ? 'Hide full citation point' : 'Show full citation point'}
         onClick={() => setExpanded((e) => !e)}
         className="text-[var(--accent)] hover:underline ml-1 font-medium"
       >
