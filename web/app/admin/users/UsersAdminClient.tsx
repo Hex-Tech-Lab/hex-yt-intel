@@ -115,6 +115,9 @@ export function UsersAdminClient() {
     const filtered = q
       ? users.filter((u) => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q))
       : users;
+    // Array.prototype.toSorted() (ES2023) isn't available under this repo's
+    // pinned `lib: ["ES2020", ...]` target -- spread+sort is the correct
+    // ES2020-safe immutable-sort form here.
     const sorted = [...filtered].sort((a, b) => {
       switch (sortKey) {
         case 'cost_desc': return b.total_cost_usd - a.total_cost_usd;
