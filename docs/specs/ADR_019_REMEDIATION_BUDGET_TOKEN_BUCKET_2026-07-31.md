@@ -37,7 +37,7 @@ feature is a literal constant.
 ### Token bucket mechanics
 
 - **Capacity** (USD, cents) = `min(budgetPercentOfRemaining% × OpenRouter's live remaining balance, hardCapUsdCents)`. `hardCapUsdCents = 0` means no hard cap — percentage alone governs. The live remaining balance is re-fetched periodically (not a one-time snapshot), so a manual top-up raises the ceiling automatically without a config change.
-- **Refill rate** = `capacity / periodDays` (USD/day), continuous — the bucket refills a little every check, not in a discrete monthly cliff.
+- **Refill**: superseded 2026-08-01 (see Addendum below) — replaced by a calendar-boundary hard reset, not a continuous rate.
 - **Burst is free, not a separate parameter.** A full bucket (start of period, or after idle time) can spend up to its entire capacity immediately — this is "fix it fast." As tokens deplete, spend throttles down to the steady refill rate. The ratio of capacity to refill rate *is* the recency bias; no 4th knob needed.
 - **Concurrency ceiling falls out of the budget, not a picked integer.** However many candidates the bucket can currently afford is exactly how many run in parallel this cycle.
 - Implemented as an atomic Redis Lua script (reusing `executeRedisScript`, the same primitive `RedisTrafficAdapter.ts`'s sliding-window rate limiter already uses — same infra, different algorithm) so concurrent invocations can't double-spend the same tokens.
@@ -49,11 +49,12 @@ feature is a literal constant.
 | `remediation.enabled` | `true` | Kill switch, no redeploy needed |
 | `remediation.budgetPercentOfRemaining` | `10` | % of OpenRouter's live remaining monthly balance |
 | `remediation.hardCapUsdCents` | `200` ($2.00) | Absolute ceiling regardless of percentage; `0` = unlimited |
-| `remediation.periodDays` | `30` | Refill window, matches OpenRouter's own monthly reset cadence |
+| `remediation.maxRetries` | `3` | Max remediation attempts per analysis before it's excluded from future sweeps |
 
-All four are live-editable from the settings page immediately, same as
+All are live-editable from the settings page immediately, same as
 every other registry-backed tunable — never hardcode a replacement
-constant at the call site.
+constant at the call site. (`remediation.periodDays` was removed 2026-08-01,
+see Addendum — do not re-add it without also re-adding a reader for it.)
 
 ### Candidate selection: "pendulum"
 
@@ -114,3 +115,31 @@ stable).
   philosophy) — if it ever 404s or its shape changes, the bucket must
   fail closed (zero capacity, not unlimited) rather than silently
   assume unlimited budget.
+
+## Addendum (2026-08-01): calendar-boundary reset, not continuous refill
+
+User decision: the budget should reset in full on day 1 of each UTC
+calendar month, not refill continuously over `remediation.periodDays`.
+Confirmed live this session that the continuous-refill model let the
+bucket drain to near-zero on its first burst and never meaningfully
+recover before the next reset — a real 27-item backlog sat untouched.
+
+- `tryConsumeTokenBucket` (`web/lib/redis.ts`) now takes `periodAnchorMs`
+  (start of the current period) instead of a refill rate: resets to full
+  `capacity` on the first call after crossing that boundary, otherwise
+  only clamps tokens DOWN if capacity shrank (never refills mid-period).
+- `resolveBudgetParams` (`dimension-remediation.ts`) computes
+  `periodAnchorMs` as `Date.UTC(year, month, 1)` — no registry setting for
+  the reset cadence; it's fixed to the calendar month, not admin-tunable.
+- `remediation.periodDays` removed from the Settings Registry entirely
+  (migration `20260801100213_remediation_remove_dead_period_days.sql`) —
+  it became a silent, still-editable no-op under the new model, which is
+  worse than no setting (an admin editing it would believe they're
+  changing the reset cadence when nothing reads it).
+- **Failure-mode fix (cubic review, PR #176)**: the reset only commits
+  (`lastResetAt = now`) when `capacity > 0`. A transient OpenRouter
+  balance-fetch failure on the first call after a boundary resolves
+  capacity to 0 (fail-closed) — without this guard, that single failure
+  would have permanently zeroed the budget for the entire month, since no
+  later call (even with a successful fetch) would ever see a stale-enough
+  `lastResetAt` to retry the reset.

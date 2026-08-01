@@ -74,11 +74,15 @@ export enum RemediationStage {
  * (20260731000000_remediation_budget_settings.sql), same convention
  * analysis.maxOutputTokens.* already established.
  */
+// remediation.periodDays (continuous refill window) removed entirely
+// (migration 20260801100213) rather than left as a no-op -- the
+// 2026-08-01 calendar-boundary reset decision made it inert, and per ADR
+// 019's own "never leave a dead tunable" convention, a still-editable
+// setting with zero effect is worse than no setting (cubic review, PR #176).
 const REGISTRY_FALLBACK = {
   'remediation.enabled': true,
   'remediation.budgetPercentOfRemaining': 10,
   'remediation.hardCapUsdCents': 200,
-  'remediation.periodDays': 30,
   'remediation.maxRetries': 3,
 } as const;
 
@@ -125,20 +129,34 @@ async function getRemainingBudgetCents(): Promise<number> {
  * invocation (not cached long-term) so a manual top-up or a registry change
  * takes effect on the very next tick.
  */
-async function resolveBudgetParams(): Promise<{ capacityCents: number; refillRatePerMsCents: number; enabled: boolean; maxRetries: number }> {
+/**
+ * Start of the current UTC calendar month, in epoch ms. Deliberately NOT
+ * folded into resolveBudgetParams's single per-harness-run resolution --
+ * unlike capacityCents (needs a real OpenRouter API call, so resolved once
+ * per tick is the right cost/freshness tradeoff), this is pure Date math
+ * with zero I/O cost, so every candidate in a sweep computes it fresh. A
+ * long-running sweep (up to maxDuration=300s) that happens to straddle a
+ * UTC month boundary mid-loop would otherwise reuse a stale periodAnchorMs
+ * captured before the boundary for every remaining candidate in that tick
+ * (cubic review, PR #176) -- cheap enough to just not have that gap at all.
+ */
+function currentPeriodAnchorMs(): number {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0);
+}
+
+async function resolveBudgetParams(): Promise<{ capacityCents: number; enabled: boolean; maxRetries: number }> {
   const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
   const enabled = Boolean(settings['remediation.enabled']);
   const percent = Number(settings['remediation.budgetPercentOfRemaining']) || 0;
   const hardCapCents = Number(settings['remediation.hardCapUsdCents']) || 0;
-  const periodDays = Number(settings['remediation.periodDays']) || REGISTRY_FALLBACK['remediation.periodDays'];
   const maxRetries = Number(settings['remediation.maxRetries']) || REGISTRY_FALLBACK['remediation.maxRetries'];
 
   const remainingCents = await getRemainingBudgetCents();
   const percentDerivedCents = Math.floor((percent / 100) * remainingCents);
   const capacityCents = hardCapCents > 0 ? Math.min(percentDerivedCents, hardCapCents) : percentDerivedCents;
-  const refillRatePerMsCents = capacityCents / (periodDays * 86_400_000);
 
-  return { capacityCents, refillRatePerMsCents, enabled, maxRetries };
+  return { capacityCents, enabled, maxRetries };
 }
 
 /**
@@ -486,10 +504,10 @@ export async function remediateAnalysis(
   gap: AnalysisGap,
   models: string[],
   cascade: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
-  budget: { capacityCents: number; refillRatePerMsCents: number; costPer1K: number }
+  budget: { capacityCents: number; costPer1K: number }
 ): Promise<RemediationResult> {
   const estimatedCostCents = estimateCostCents(gap.missingDimensions.length, budget.costPer1K);
-  const affordable = await tryConsumeTokenBucket(TOKEN_BUCKET_KEY, budget.capacityCents, budget.refillRatePerMsCents, estimatedCostCents);
+  const affordable = await tryConsumeTokenBucket(TOKEN_BUCKET_KEY, budget.capacityCents, currentPeriodAnchorMs(), estimatedCostCents);
   if (!affordable) {
     return { analysisId: gap.id, stage: RemediationStage.BudgetExhausted, dimensionsRequested: gap.missingDimensions };
   }
