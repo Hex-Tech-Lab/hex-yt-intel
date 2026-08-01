@@ -1,5 +1,4 @@
 import React from 'react';
-import { truncateCitationPoints } from '@/lib/utils/citation-truncate';
 
 export { truncateCitationPoints, EXPAND_MARKER_PATTERN } from '@/lib/utils/citation-truncate';
 
@@ -103,12 +102,15 @@ export function preprocessMarkdown(content: string): string {
 
   let contentWithTables = lines.join('\n');
   contentWithTables = linkifyTimestamps(contentWithTables);
-  // Runs last, after linkifyTimestamps -- truncating a Point cell's raw text
-  // before timestamps are linkified could cut a `[⏱ 12:10](#t=730)` link in
-  // half; running last keeps whatever ends up in the DOM syntactically
-  // intact (a truncation boundary landing inside a link is still possible
-  // in principle, just far rarer than doing this first).
-  contentWithTables = truncateCitationPoints(contentWithTables);
+  // Deliberately does NOT call truncateCitationPoints here -- preprocessMarkdown
+  // is shared by every markdown-rendering caller (ChatDock AND
+  // SelectedDimensionReadout), but the `⟦EXPAND:...⟧` marker
+  // truncateCitationPoints embeds is only rendered correctly by callers that
+  // also register ChatDock's `chatInlinePlugins`. SelectedDimensionReadout
+  // doesn't, so baking truncation in here would have shown a raw, unrendered
+  // marker string in dimension content instead of the intended toggle
+  // (cubic review, PR #177). ChatDock calls truncateCitationPoints itself,
+  // explicitly, right where the matching plugin is wired -- see ChatDock.tsx.
 
   return contentWithTables;
 }

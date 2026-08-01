@@ -21,7 +21,7 @@ import {
 import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
-import { EXPAND_MARKER_PATTERN } from '@/lib/utils/citation-truncate';
+import { EXPAND_MARKER_PATTERN, truncateCitationPoints } from '@/lib/utils/citation-truncate';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
 import { findMatchingConversation, filterConversationsForContext } from '@/lib/utils/find-chat-conversation';
 import { TimestampLink } from '@/components/TimestampLink';
@@ -681,7 +681,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                   body
                 ) : (
                   <Markdown components={chatMarkdownComponents} inlinePlugins={chatInlinePlugins} density="compact">
-                    {preprocessMarkdown(body)}
+                    {truncateCitationPoints(preprocessMarkdown(body))}
                   </Markdown>
                 )}
               </ChatMessageBubble>
