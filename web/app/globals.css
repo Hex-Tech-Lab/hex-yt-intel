@@ -638,4 +638,33 @@ button:focus-visible,
   }
 }
 
+/*
+ * Chat citation tables (timestamp + point/description). The Astryx `Markdown`
+ * component has no `table` override slot (see chatMarkdownComponents comment
+ * in ChatDock.tsx), so its rendered <table>/<th>/<td> markup can only be
+ * reshaped from outside via plain element selectors, not React props. Real
+ * user report: timestamp and content columns were both squeezed narrow with
+ * "no reason" -- the assistant bubble's own max-width was capping available
+ * space, and Astryx's per-column `min-width` hint (a floor, not a ratio) let
+ * the browser's table auto-layout split remaining space close to evenly
+ * instead of giving the content column the room the min-width difference
+ * implied. Fix: size the first (timestamp) column to its own content and
+ * never wrap it; give the second (content) column the rest of the row so it
+ * wraps comfortably across ~2 lines instead of one cramped column.
+ */
+.chat-answer-table table {
+  table-layout: auto;
+  width: 100%;
+}
+.chat-answer-table th:first-child,
+.chat-answer-table td:first-child {
+  white-space: nowrap;
+  width: 1%;
+}
+.chat-answer-table th:nth-child(2),
+.chat-answer-table td:nth-child(2) {
+  width: 99%;
+  min-width: 220px;
+}
+
 
