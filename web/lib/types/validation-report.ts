@@ -29,8 +29,13 @@ export type ValidationReportStatus = 'done' | 'partial' | 'failed' | 'error' | '
  * - 'processing': Analysis in progress, not yet billable
  * - 'completed': Analysis complete, quota consumed / ready to charge
  * - 'failed': Analysis failed, no charge
+ * - 'cancelled': User explicitly stopped generation (ADR 020 Phase 2,
+ *   migration 20260801000412) -- distinct from 'failed' (system didn't
+ *   deliver) since this is a user choice, not a system failure. Whether it
+ *   counts against quota is the billing.chargeOnCancel setting, not this
+ *   type -- see PostgresBillingAdapter.checkGate.
  */
-export type BillingStatus = 'processing' | 'completed' | 'failed';
+export type BillingStatus = 'processing' | 'completed' | 'failed' | 'cancelled';
 
 /**
  * Per-dimension completion status.
@@ -91,7 +96,7 @@ export function isPersistedValidationReport(obj: unknown): obj is PersistedValid
   const billingStatus = (obj as any).billing_status;
 
   const validValidationStatuses: ValidationReportStatus[] = ['done', 'partial', 'failed', 'error', 'interrupted', 'processing'];
-  const validBillingStatuses: BillingStatus[] = ['processing', 'completed', 'failed'];
+  const validBillingStatuses: BillingStatus[] = ['processing', 'completed', 'failed', 'cancelled'];
 
   // Check new validation_status field
   if (validationStatus !== undefined && validationStatus !== null) {

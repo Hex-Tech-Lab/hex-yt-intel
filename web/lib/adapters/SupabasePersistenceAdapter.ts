@@ -308,7 +308,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseBillingAdapter.updateUserTier(params);
   }
 
-  updateBillingStatus(params: { analysisId: string; status: 'processing' | 'completed' | 'failed' }): Promise<void> {
+  updateBillingStatus(params: { analysisId: string; status: 'processing' | 'completed' | 'failed' | 'cancelled' }): Promise<void> {
     return SupabaseBillingAdapter.updateBillingStatus(params);
   }
 

@@ -46,7 +46,7 @@ export class SupabaseBillingAdapter {
    */
   static async updateBillingStatus(params: {
     analysisId: string;
-    status: 'processing' | 'completed' | 'failed';
+    status: 'processing' | 'completed' | 'failed' | 'cancelled';
   }): Promise<void> {
     try {
       const service = getSupabaseServiceClient();

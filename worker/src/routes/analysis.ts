@@ -697,6 +697,12 @@ function buildStreamResponse(
   }
 
   let finishReason: string | undefined = undefined;
+  // ADR 020 Phase 2: set true when cancelController (declared below, inside
+  // the stream's start() handler) actually fires. Declared here, at the
+  // same outer scope as atomicPersist, so persist()'s closure -- built
+  // before cancelController exists -- still sees the latest value at call
+  // time via normal JS closure-over-outer-scope semantics.
+  let wasCancelled = false;
 
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
@@ -708,6 +714,7 @@ function buildStreamResponse(
         finalText,
         modelUsed,
         finishReason,
+        cancelled: wasCancelled,
         activeSecret: signingKey,
         appUrl: url,
         validate12D: (text: string) => engine.validate12D(text, req.dimensions?.length),
@@ -890,6 +897,7 @@ function buildStreamResponse(
         );
 
         pollingActive = false;
+        wasCancelled = cancelController.signal.aborted;
         finishReason = result.finishReason;
 
         if (!result.produced && !result.finalText) {
@@ -900,6 +908,10 @@ function buildStreamResponse(
 
         send({ type: "complete", model: result.modelUsed, valid: result.valid, videoId: req.videoId, analysisId: req.analysisId });
       } catch (error) {
+        // An abort can propagate as a thrown error rather than a clean
+        // return depending on how deep it unwinds through LLMCascade's
+        // fetch chain -- check here too, not just the success path above.
+        if (cancelController.signal.aborted) wasCancelled = true;
         send({ type: "error", error: error instanceof Error ? error.message : "stream failed" });
       } finally {
         pollingActive = false;
