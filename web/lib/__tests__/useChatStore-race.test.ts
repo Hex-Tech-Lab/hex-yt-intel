@@ -162,4 +162,56 @@ describe('useChatStore race conditions', () => {
     expect(useChatStore.getState().persistState).toBe('saving');
     expect(useChatStore.getState().activePersistRequestId).toBe('req-B');
   });
+
+  /**
+   * Blind Spot #6: loadConversations() must never write activeId itself.
+   *
+   * Live prod report (2026-08-02, after PR #177 merged): chat sessions still
+   * showed unrelated-to-video content. Root cause -- loadConversations()
+   * used to force-write `activeId` to null whenever ITS OWN fetched
+   * conversation list didn't contain the currently-active id, even if a
+   * second, faster-resolving loadConversations() call (for a different,
+   * newer video) had already set the CORRECT activeId in the meantime. Every
+   * real caller (ChatDock, AnalysisHistory, useAutoRestoreAnalysis,
+   * useSSEStream) already re-derives and explicitly sets activeId itself
+   * after awaiting loadConversations(), so the fix removes the internal
+   * write entirely rather than trying to out-race it with more guards.
+   */
+  it('does not let a slow, older loadConversations() resolution overwrite a newer explicit activeId', async () => {
+    const conversationA = { id: 'conv-A', userId: 'u1', title: 'A', analysisId: 'a1', videoId: 'v1', createdAt: '', updatedAt: '', lastMessageAt: '' };
+    const conversationB = { id: 'conv-B', userId: 'u1', title: 'B', analysisId: 'a2', videoId: 'v2', createdAt: '', updatedAt: '', lastMessageAt: '' };
+
+    // Older call (for video A) resolves LAST, and its own fetch never saw
+    // conv-B (a different, newer video's conversation).
+    let resolveOlder!: (v: { conversations: typeof conversationA[] }) => void;
+    const olderResponse = new Promise<{ conversations: typeof conversationA[] }>((resolve) => {
+      resolveOlder = resolve;
+    });
+    fetchMock.mockImplementationOnce(() =>
+      olderResponse.then((body) => ({ ok: true, json: async () => body }))
+    );
+    // Newer call (for video B) resolves FIRST.
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve({ ok: true, json: async () => ({ conversations: [conversationB] }) })
+    );
+
+    const olderCall = useChatStore.getState().loadConversations(); // video A, slow
+    const newerCall = useChatStore.getState().loadConversations(); // video B, fast
+
+    await newerCall;
+    // Simulates the real caller (e.g. ChatDock's open effect) explicitly
+    // grounding activeId in the newer, correct conversation right after its
+    // own loadConversations() resolves.
+    useChatStore.setState({ activeId: 'conv-B' });
+    expect(useChatStore.getState().activeId).toBe('conv-B');
+
+    // The older, video-A call finally resolves.
+    resolveOlder({ conversations: [conversationA] });
+    await olderCall;
+
+    // activeId must still be conv-B -- the older call's completion must not
+    // have touched it, even though conv-B isn't in that call's own fetched
+    // list.
+    expect(useChatStore.getState().activeId).toBe('conv-B');
+  });
 });
