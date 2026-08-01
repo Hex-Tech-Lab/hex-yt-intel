@@ -1,0 +1,28 @@
+web/lib/__tests__/useChatStore-race.test.ts
+  s_0eded1e9d0cab6::t_8db2fb7a2b7c65 237-245,251-252,256-260
+  s_0eded1e9d0cab6::t_e75c97eb853b88 220-236,246-250,253-255,261
+  s_0eded1e9d0cab6::t_4c685c89ca5eb8 26-42,48-49,58
+web/store/useChatStore.ts
+  s_0eded1e9d0cab6::t_d2902c34ad83b7 62
+  s_0eded1e9d0cab6::t_b0100abe51c276 505-515,517
+web/lib/utils/citation-truncate.ts
+  s_0eded1e9d0cab6::t_21e92c42a7ee72 36-43,57,60-64,69
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_d9ed8504303763 267
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "c8404dd7585349b4988b1179658cc10169059da7",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
