@@ -78,6 +78,10 @@ const REGISTRY_FALLBACK = {
   'remediation.enabled': true,
   'remediation.budgetPercentOfRemaining': 10,
   'remediation.hardCapUsdCents': 200,
+  // Unused as of the 2026-08-01 calendar-boundary reset decision -- the
+  // budget now hard-resets on day 1 of each UTC month (resolveBudgetParams'
+  // periodAnchorMs), not a continuous refill over N days. Left in the
+  // registry as a documented no-op rather than a migration to remove it.
   'remediation.periodDays': 30,
   'remediation.maxRetries': 3,
 } as const;
@@ -125,20 +129,26 @@ async function getRemainingBudgetCents(): Promise<number> {
  * invocation (not cached long-term) so a manual top-up or a registry change
  * takes effect on the very next tick.
  */
-async function resolveBudgetParams(): Promise<{ capacityCents: number; refillRatePerMsCents: number; enabled: boolean; maxRetries: number }> {
+async function resolveBudgetParams(): Promise<{ capacityCents: number; periodAnchorMs: number; enabled: boolean; maxRetries: number }> {
   const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
   const enabled = Boolean(settings['remediation.enabled']);
   const percent = Number(settings['remediation.budgetPercentOfRemaining']) || 0;
   const hardCapCents = Number(settings['remediation.hardCapUsdCents']) || 0;
-  const periodDays = Number(settings['remediation.periodDays']) || REGISTRY_FALLBACK['remediation.periodDays'];
   const maxRetries = Number(settings['remediation.maxRetries']) || REGISTRY_FALLBACK['remediation.maxRetries'];
 
   const remainingCents = await getRemainingBudgetCents();
   const percentDerivedCents = Math.floor((percent / 100) * remainingCents);
   const capacityCents = hardCapCents > 0 ? Math.min(percentDerivedCents, hardCapCents) : percentDerivedCents;
-  const refillRatePerMsCents = capacityCents / (periodDays * 86_400_000);
+  // Calendar-boundary hard reset (user decision, 2026-08-01): the budget
+  // fills to full capacityCents once, on day 1 of each UTC calendar month,
+  // rather than refilling continuously over remediation.periodDays -- that
+  // setting is now unused (kept in the registry as a documented no-op
+  // rather than a migration to remove it) since the reset cadence is fixed
+  // to the calendar month, not admin-configurable in days.
+  const now = new Date();
+  const periodAnchorMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0);
 
-  return { capacityCents, refillRatePerMsCents, enabled, maxRetries };
+  return { capacityCents, periodAnchorMs, enabled, maxRetries };
 }
 
 /**
@@ -486,10 +496,10 @@ export async function remediateAnalysis(
   gap: AnalysisGap,
   models: string[],
   cascade: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
-  budget: { capacityCents: number; refillRatePerMsCents: number; costPer1K: number }
+  budget: { capacityCents: number; periodAnchorMs: number; costPer1K: number }
 ): Promise<RemediationResult> {
   const estimatedCostCents = estimateCostCents(gap.missingDimensions.length, budget.costPer1K);
-  const affordable = await tryConsumeTokenBucket(TOKEN_BUCKET_KEY, budget.capacityCents, budget.refillRatePerMsCents, estimatedCostCents);
+  const affordable = await tryConsumeTokenBucket(TOKEN_BUCKET_KEY, budget.capacityCents, budget.periodAnchorMs, estimatedCostCents);
   if (!affordable) {
     return { analysisId: gap.id, stage: RemediationStage.BudgetExhausted, dimensionsRequested: gap.missingDimensions };
   }

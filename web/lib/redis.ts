@@ -359,44 +359,61 @@ export async function releaseRedisLock(key: string, token: string): Promise<void
  * Atomic token-bucket check-and-deduct, denominated in whatever integer
  * unit the caller chooses (USD cents for remediation's budget -- see ADR
  * 019, docs/specs/ADR_019_REMEDIATION_BUDGET_TOKEN_BUCKET_2026-07-31.md).
- * `capacity` may change between calls (the caller recomputes it from a
- * live external balance) -- the script clamps stored tokens to the current
- * capacity on every call, so a shrinking capacity self-corrects rather than
- * leaving stale over-capacity tokens available.
+ *
+ * Calendar-boundary hard reset (user decision, 2026-08-01): `periodAnchorMs`
+ * is the start of the caller's current billing period (e.g. midnight UTC on
+ * the 1st of the month) -- the bucket fills to full `capacity` exactly once,
+ * on the first call after crossing that boundary, then only drains until
+ * the next one. No linear/continuous refill within a period (the original
+ * design refilled smoothly over `periodDays`, but that let the bucket drain
+ * near-zero early and never meaningfully recover before the next reset).
+ * `capacity` may still change between calls within a period (the caller
+ * recomputes it from a live external balance) -- stored tokens clamp DOWN
+ * to a shrinking capacity, but never grow back up until the next period
+ * boundary.
  *
  * Fails CLOSED: any Redis failure (executeRedisScript's `-1` sentinel) is
  * treated as "deny the spend", never "assume unlimited budget". This is a
  * money-gating primitive, not a cache -- the failure mode has to be the
  * conservative one.
  */
+// Calendar-boundary hard reset (user decision, 2026-08-01), not a continuous
+// rolling-window refill -- the bucket fills to full capacity exactly once,
+// the moment the FIRST call after a period boundary (periodAnchorMs) lands,
+// then only drains until the next boundary. No partial/linear refill within
+// a period. Replaced the previous linear elapsed-time refill because that
+// model let the bucket drain to near-zero on day 1 and never meaningfully
+// recover before the next reset -- see dimension-remediation.ts's
+// resolveBudgetParams for how periodAnchorMs is computed (start of the
+// current calendar month).
 const TOKEN_BUCKET_SCRIPT = `
-local bucket = redis.call("HMGET", KEYS[1], "tokens", "lastRefillAt")
+local bucket = redis.call("HMGET", KEYS[1], "tokens", "lastResetAt")
 local tokens = tonumber(bucket[1])
-local lastRefillAt = tonumber(bucket[2])
+local lastResetAt = tonumber(bucket[2])
 local capacity = tonumber(ARGV[1])
-local refillRatePerMs = tonumber(ARGV[2])
+local periodAnchorMs = tonumber(ARGV[2])
 local now = tonumber(ARGV[3])
 local cost = tonumber(ARGV[4])
 
-if tokens == nil then
+if tokens == nil or lastResetAt == nil or lastResetAt < periodAnchorMs then
   tokens = capacity
-  lastRefillAt = now
-end
-
-local elapsed = now - lastRefillAt
-if elapsed > 0 then
-  tokens = math.min(capacity, tokens + elapsed * refillRatePerMs)
-  lastRefillAt = now
+  lastResetAt = now
+else
+  -- No refill within a period, but still self-correct DOWN if capacity
+  -- shrank since the last call (capacity is recomputed live from
+  -- OpenRouter's remaining balance every tick) -- preserves the original
+  -- script's over-capacity clamp without reintroducing linear refill.
+  tokens = math.min(tokens, capacity)
 end
 
 if tokens >= cost then
   tokens = tokens - cost
-  redis.call("HMSET", KEYS[1], "tokens", tostring(tokens), "lastRefillAt", tostring(lastRefillAt))
+  redis.call("HMSET", KEYS[1], "tokens", tostring(tokens), "lastResetAt", tostring(lastResetAt))
   redis.call("EXPIRE", KEYS[1], 5184000)
   return 1
 end
 
-redis.call("HMSET", KEYS[1], "tokens", tostring(tokens), "lastRefillAt", tostring(lastRefillAt))
+redis.call("HMSET", KEYS[1], "tokens", tostring(tokens), "lastResetAt", tostring(lastResetAt))
 redis.call("EXPIRE", KEYS[1], 5184000)
 return 0
 `;
@@ -404,13 +421,13 @@ return 0
 export async function tryConsumeTokenBucket(
   key: string,
   capacity: number,
-  refillRatePerMs: number,
+  periodAnchorMs: number,
   cost: number
 ): Promise<boolean> {
   const result = await executeRedisScript(
     TOKEN_BUCKET_SCRIPT,
     [key],
-    [capacity, refillRatePerMs, Date.now(), cost]
+    [capacity, periodAnchorMs, Date.now(), cost]
   );
   return result === 1;
 }
