@@ -45,13 +45,26 @@ interface ChatState {
   setChatOpen: (open: boolean) => void;
   setPersistState: (persistState: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted', requestId?: string | null) => void;
 
+  // Monotonic token each of the four chat-restore call sites (ChatDock's
+  // open effect, AnalysisHistory, useAutoRestoreAnalysis, useSSEStream's
+  // post-analysis reload) bumps via beginRestoreEpoch() at the START of a
+  // new restore attempt. updateConversationAnalysisId checks it immediately
+  // before firing its PATCH -- narrows (does not fully close; true
+  // compare-and-swap needs server-side enforcement) the window where an
+  // older restore's persisted DB write can land after a newer restore has
+  // already won, since the check now happens right next to the network
+  // call itself instead of a caller-side check made long before the PATCH
+  // was actually issued.
+  restoreEpoch: number;
+  beginRestoreEpoch: () => number;
+
   loadConversations: () => Promise<void>;
   restoreLastActiveConversation: () => Promise<void>;
   selectConversation: (id: string) => Promise<void>;
   newConversation: (opts?: { analysisId?: string | null; videoId?: string | null; title?: string }) => Promise<string | null>;
   sendMessage: (text: string, opts?: { analysisId?: string | null; videoId?: string | null }) => Promise<void>;
   renameConversation: (id: string, title: string) => Promise<void>;
-  updateConversationAnalysisId: (id: string, analysisId: string) => Promise<void>;
+  updateConversationAnalysisId: (id: string, analysisId: string, opts?: { epoch?: number }) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
   bindNetwork: () => void;
   flushOutbox: () => Promise<void>;
@@ -380,6 +393,12 @@ export const useChatStore = create<ChatState>((set, get) => {
     isChatOpen: false,
     persistState: 'idle',
     activePersistRequestId: null,
+    restoreEpoch: 0,
+    beginRestoreEpoch: () => {
+      const next = get().restoreEpoch + 1;
+      set({ restoreEpoch: next });
+      return next;
+    },
     setChatOpen: (open: boolean) => set({ isChatOpen: open }),
     setPersistState: (persistState, requestId) => {
       if (requestId) {
@@ -572,7 +591,14 @@ export const useChatStore = create<ChatState>((set, get) => {
       }
     },
 
-    updateConversationAnalysisId: async (id, analysisId) => {
+    updateConversationAnalysisId: async (id, analysisId, opts) => {
+      // Checked right before both the optimistic write and the PATCH --
+      // not a full CAS (a concurrent PATCH already in flight when a newer
+      // epoch starts can still land after), but the check now sits next to
+      // the actual network call rather than long before it in caller code,
+      // which is the tightest client-only guard available (see restoreEpoch
+      // doc above).
+      if (opts?.epoch !== undefined && opts.epoch !== get().restoreEpoch) return;
       set((s) => ({ conversations: s.conversations.map((c) => (c.id === id ? { ...c, analysisId } : c)) }));
       try {
         await api(`/api/chat/conversations/${id}`, { method: 'PATCH', body: JSON.stringify({ analysisId }) });
