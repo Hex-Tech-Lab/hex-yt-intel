@@ -193,6 +193,11 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
 
     let cancelled = false;
     void (async () => {
+      // Bumped as early as possible in this restore attempt so a
+      // still-in-flight OLDER attempt's later updateConversationAnalysisId
+      // call sees a stale epoch and no-ops its PATCH (see restoreEpoch doc,
+      // useChatStore.ts).
+      const epoch = useChatStore.getState().beginRestoreEpoch();
       await loadConversations();
       if (cancelled) return;
       requestAnimationFrame(() => inputHandleRef.current?.focus());
@@ -216,7 +221,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           // by a newer video/analysisId change could rebind a shared
           // conversation to the wrong (stale) analysis.
           if (!cancelled && analysisId && existing.analysisId !== analysisId) {
-            void useChatStore.getState().updateConversationAnalysisId(existing.id, analysisId);
+            void useChatStore.getState().updateConversationAnalysisId(existing.id, analysisId, { epoch });
           }
           if (cancelled) return;
           await selectConversation(existing.id);

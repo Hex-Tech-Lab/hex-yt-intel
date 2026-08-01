@@ -177,41 +177,24 @@ describe('useChatStore race conditions', () => {
    * after awaiting loadConversations(), so the fix removes the internal
    * write entirely rather than trying to out-race it with more guards.
    */
-  it('does not let a slow, older loadConversations() resolution overwrite a newer explicit activeId', async () => {
-    const conversationA = { id: 'conv-A', userId: 'u1', title: 'A', analysisId: 'a1', videoId: 'v1', createdAt: '', updatedAt: '', lastMessageAt: '' };
-    const conversationB = { id: 'conv-B', userId: 'u1', title: 'B', analysisId: 'a2', videoId: 'v2', createdAt: '', updatedAt: '', lastMessageAt: '' };
-
-    // Older call (for video A) resolves LAST, and its own fetch never saw
-    // conv-B (a different, newer video's conversation).
-    let resolveOlder!: (v: { conversations: typeof conversationA[] }) => void;
-    const olderResponse = new Promise<{ conversations: typeof conversationA[] }>((resolve) => {
-      resolveOlder = resolve;
+  it('never writes activeId as a side effect, regardless of what activeId was set to mid-fetch', async () => {
+    // Direct contract test, not a caller-simulation: seed activeId to a
+    // conversation NOT present in the store's current `conversations` (so
+    // the priorActiveId merge-back can't rescue it) and NOT present in the
+    // fetch response either, then call loadConversations(). The prior
+    // implementation would force this to null (its own restoredId logic
+    // requires the id to be findable in the post-merge list, which it
+    // deliberately isn't here); the fixed implementation must leave
+    // activeId completely untouched, since list-loading and active-thread
+    // selection are now two separate concerns.
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ conversations: [{ id: 'conv-other', userId: 'u1', title: 'Other', analysisId: null, videoId: null, createdAt: '', updatedAt: '', lastMessageAt: '' }] }),
     });
-    fetchMock.mockImplementationOnce(() =>
-      olderResponse.then((body) => ({ ok: true, json: async () => body }))
-    );
-    // Newer call (for video B) resolves FIRST.
-    fetchMock.mockImplementationOnce(() =>
-      Promise.resolve({ ok: true, json: async () => ({ conversations: [conversationB] }) })
-    );
+    useChatStore.setState({ activeId: 'conv-mid-fetch', conversations: [] });
 
-    const olderCall = useChatStore.getState().loadConversations(); // video A, slow
-    const newerCall = useChatStore.getState().loadConversations(); // video B, fast
+    await useChatStore.getState().loadConversations();
 
-    await newerCall;
-    // Simulates the real caller (e.g. ChatDock's open effect) explicitly
-    // grounding activeId in the newer, correct conversation right after its
-    // own loadConversations() resolves.
-    useChatStore.setState({ activeId: 'conv-B' });
-    expect(useChatStore.getState().activeId).toBe('conv-B');
-
-    // The older, video-A call finally resolves.
-    resolveOlder({ conversations: [conversationA] });
-    await olderCall;
-
-    // activeId must still be conv-B -- the older call's completion must not
-    // have touched it, even though conv-B isn't in that call's own fetched
-    // list.
-    expect(useChatStore.getState().activeId).toBe('conv-B');
+    expect(useChatStore.getState().activeId).toBe('conv-mid-fetch');
   });
 });

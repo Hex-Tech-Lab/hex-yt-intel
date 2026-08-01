@@ -370,6 +370,12 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       void (async () => {
         try {
           if (isStaleRestore(analysisId)) return;
+          // Bumped as early as possible so a still-in-flight OLDER restore's
+          // later updateConversationAnalysisId call sees a stale epoch and
+          // no-ops its PATCH -- tightens the P1 TOCTOU gap the isStaleRestore
+          // checks below can't fully close on their own (see restoreEpoch
+          // doc, useChatStore.ts).
+          const epoch = useChatStore.getState().beginRestoreEpoch();
           await useChatStore.getState().loadConversations();
           if (isStaleRestore(analysisId)) return;
           // Fresh snapshot after the await, not the pre-await one --
@@ -388,7 +394,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
             // closure resumes (cubic review, PR #177).
             if (isStaleRestore(analysisId)) return;
             if (existing.analysisId !== data.id) {
-              await chatStore.updateConversationAnalysisId(existing.id, data.id);
+              await chatStore.updateConversationAnalysisId(existing.id, data.id, { epoch });
             }
             if (isStaleRestore(analysisId)) return;
             await chatStore.selectConversation(existing.id);

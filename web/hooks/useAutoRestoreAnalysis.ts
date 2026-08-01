@@ -174,6 +174,12 @@ export function useAutoRestoreAnalysis(url: string) {
           void (async () => {
             try {
               if (cancelled) return;
+              // Bumped as early as possible so a still-in-flight OLDER
+              // restore's later updateConversationAnalysisId call sees a
+              // stale epoch and no-ops its PATCH -- tightens the P1 TOCTOU
+              // gap the `cancelled` checks below can't fully close on their
+              // own (see restoreEpoch doc, useChatStore.ts).
+              const epoch = useChatStore.getState().beginRestoreEpoch();
               await useChatStore.getState().loadConversations();
               if (cancelled) return;
               // Fetch a FRESH snapshot after the await -- Zustand's getState()
@@ -198,7 +204,7 @@ export function useAutoRestoreAnalysis(url: string) {
                 // stale analysis.
                 if (cancelled) return;
                 if (existing.analysisId !== restoreData.id) {
-                  await chatStore.updateConversationAnalysisId(existing.id, restoreData.id);
+                  await chatStore.updateConversationAnalysisId(existing.id, restoreData.id, { epoch });
                 }
                 if (cancelled) return;
                 await chatStore.selectConversation(existing.id);
