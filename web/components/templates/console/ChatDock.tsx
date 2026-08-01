@@ -36,6 +36,25 @@ export interface ChatDockProps {
 const OPEN_KEY = 'hx-chatdock-open';
 
 /**
+ * Registered as `inlinePlugins` on the `<Markdown>` below. Declared BEFORE
+ * `ExpandableCitationPoint` even though its `render` callback references
+ * that component: `ExpandableCitationPoint` is a `function` declaration,
+ * which hoists, so referencing it here (textually earlier) is completely
+ * safe -- unlike the reverse arrangement this file used to have (this
+ * `const` read from inside `ExpandableCitationPoint`, which appeared
+ * first), which was equally safe at RUNTIME (both are only evaluated once
+ * React actually renders, well after the whole module has loaded) but was
+ * flagged by static analysis as "used before defined" since `const`
+ * doesn't hoist the way `function` does (DeepSource JS-0002, PR #177).
+ */
+const chatInlinePlugins: MarkdownInlinePlugin[] = [
+  {
+    pattern: EXPAND_MARKER_PATTERN,
+    render: (match, key) => <ExpandableCitationPoint key={key} encodedRest={match[1] ?? ''} />,
+  },
+];
+
+/**
  * Truncated citation-Point cells (see truncateCitationPoints, format.tsx)
  * embed an `⟦EXPAND:<percent-encoded rest>⟧` marker in place of the cut
  * text. Astryx's `inlinePlugins` matches that marker against parsed text
@@ -57,9 +76,6 @@ const OPEN_KEY = 'hx-chatdock-open';
  * text can itself contain markdown link syntax (e.g. another in-sentence
  * timestamp reference) -- rendering it as a literal string would show that
  * syntax raw instead of as a clickable link (cubic review, PR #177).
- * `chatInlinePlugins` is referenced here even though it's declared below --
- * safe because this function only runs at React render time, well after
- * the module has finished evaluating top to bottom.
  */
 function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -86,13 +102,6 @@ function ExpandableCitationPoint({ encodedRest }: { encodedRest: string }) {
     </>
   );
 }
-
-const chatInlinePlugins: MarkdownInlinePlugin[] = [
-  {
-    pattern: EXPAND_MARKER_PATTERN,
-    render: (match, key) => <ExpandableCitationPoint key={key} encodedRest={match[1] ?? ''} />,
-  },
-];
 
 /**
  * Hoisted to module scope (mirrors SelectedDimensionReadout's
