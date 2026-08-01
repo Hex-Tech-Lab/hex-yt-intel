@@ -129,7 +129,23 @@ async function getRemainingBudgetCents(): Promise<number> {
  * invocation (not cached long-term) so a manual top-up or a registry change
  * takes effect on the very next tick.
  */
-async function resolveBudgetParams(): Promise<{ capacityCents: number; periodAnchorMs: number; enabled: boolean; maxRetries: number }> {
+/**
+ * Start of the current UTC calendar month, in epoch ms. Deliberately NOT
+ * folded into resolveBudgetParams's single per-harness-run resolution --
+ * unlike capacityCents (needs a real OpenRouter API call, so resolved once
+ * per tick is the right cost/freshness tradeoff), this is pure Date math
+ * with zero I/O cost, so every candidate in a sweep computes it fresh. A
+ * long-running sweep (up to maxDuration=300s) that happens to straddle a
+ * UTC month boundary mid-loop would otherwise reuse a stale periodAnchorMs
+ * captured before the boundary for every remaining candidate in that tick
+ * (cubic review, PR #176) -- cheap enough to just not have that gap at all.
+ */
+function currentPeriodAnchorMs(): number {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0);
+}
+
+async function resolveBudgetParams(): Promise<{ capacityCents: number; enabled: boolean; maxRetries: number }> {
   const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
   const enabled = Boolean(settings['remediation.enabled']);
   const percent = Number(settings['remediation.budgetPercentOfRemaining']) || 0;
@@ -139,16 +155,8 @@ async function resolveBudgetParams(): Promise<{ capacityCents: number; periodAnc
   const remainingCents = await getRemainingBudgetCents();
   const percentDerivedCents = Math.floor((percent / 100) * remainingCents);
   const capacityCents = hardCapCents > 0 ? Math.min(percentDerivedCents, hardCapCents) : percentDerivedCents;
-  // Calendar-boundary hard reset (user decision, 2026-08-01): the budget
-  // fills to full capacityCents once, on day 1 of each UTC calendar month,
-  // rather than refilling continuously over remediation.periodDays -- that
-  // setting is now unused (kept in the registry as a documented no-op
-  // rather than a migration to remove it) since the reset cadence is fixed
-  // to the calendar month, not admin-configurable in days.
-  const now = new Date();
-  const periodAnchorMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0);
 
-  return { capacityCents, periodAnchorMs, enabled, maxRetries };
+  return { capacityCents, enabled, maxRetries };
 }
 
 /**
@@ -496,10 +504,10 @@ export async function remediateAnalysis(
   gap: AnalysisGap,
   models: string[],
   cascade: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
-  budget: { capacityCents: number; periodAnchorMs: number; costPer1K: number }
+  budget: { capacityCents: number; costPer1K: number }
 ): Promise<RemediationResult> {
   const estimatedCostCents = estimateCostCents(gap.missingDimensions.length, budget.costPer1K);
-  const affordable = await tryConsumeTokenBucket(TOKEN_BUCKET_KEY, budget.capacityCents, budget.periodAnchorMs, estimatedCostCents);
+  const affordable = await tryConsumeTokenBucket(TOKEN_BUCKET_KEY, budget.capacityCents, currentPeriodAnchorMs(), estimatedCostCents);
   if (!affordable) {
     return { analysisId: gap.id, stage: RemediationStage.BudgetExhausted, dimensionsRequested: gap.missingDimensions };
   }
