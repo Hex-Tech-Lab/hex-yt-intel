@@ -525,6 +525,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         return;
       }
       if (!savedId || !get().conversations.some((c) => c.id === savedId)) return;
+      if (opts?.epoch !== undefined && opts.epoch !== get().restoreEpoch) return;
       await get().selectConversation(savedId);
     },
 
