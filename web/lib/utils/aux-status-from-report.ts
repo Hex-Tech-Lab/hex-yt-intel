@@ -18,11 +18,19 @@
  * SQL and TS can't literally share code, but TS callers should never
  * duplicate each other.
  */
-export function auxStatusFromValidationReport(report: {
+export interface AuxStatusReportInput {
   metadata?: { description?: string };
   channelMeta?: Record<string, unknown> | null;
   comments?: unknown[] | null;
-} | null | undefined): { hasDescription: boolean; hasChannelMeta: boolean; hasComments: boolean } {
+}
+
+export interface AuxStatusResult {
+  hasDescription: boolean;
+  hasChannelMeta: boolean;
+  hasComments: boolean;
+}
+
+export function auxStatusFromValidationReport(report: AuxStatusReportInput | null | undefined): AuxStatusResult {
   const r = report ?? {};
   const descStr = r.metadata?.description ?? '';
   const hasDescription = typeof descStr === 'string' && descStr.trim().length > 0;
