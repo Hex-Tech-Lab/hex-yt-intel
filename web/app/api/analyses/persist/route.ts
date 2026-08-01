@@ -245,13 +245,21 @@ export async function POST(request: NextRequest) {
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
 
-      // cancelled included here (ADR 020 Phase 2 security fix) -- must stay
-      // in lockstep with PersistService.ts's signer. It decides
-      // billing_status below (`cancelled ? 'cancelled' : ...`), so it needs
-      // the same integrity guarantee as markdown/payload, not to arrive as
-      // an unsigned field an attacker could tack onto a legitimately-signed
-      // completed-analysis body to relabel it after the fact.
-      const canonical = JSON.stringify({ markdown, payload: payload ?? null, cancelled });
+      // cancelled/tokensUsed/costUsd included here (ADR 020 Phase 2/3
+      // security fix) -- must stay in lockstep with PersistService.ts's
+      // signer, field-for-field including the ?? null coercions (any
+      // mismatch, e.g. ?? undefined here vs ?? null there, changes the
+      // JSON.stringify output and every legitimate signature would fail
+      // verification). cancelled decides billing_status below; tokensUsed/
+      // costUsd feed the admin cost ledger -- all three need the same
+      // integrity guarantee as markdown/payload (cubic review, PR #175).
+      const canonical = JSON.stringify({
+        markdown,
+        payload: payload ?? null,
+        cancelled,
+        tokensUsed: tokensUsed ?? null,
+        costUsd: costUsd ?? null,
+      });
       let isSigValid = false;
       try {
         isSigValid = await verifyContentSig(canonical, contentSig, exp !== undefined ? { purpose: 'persist', id: analysisId, exp } : undefined);

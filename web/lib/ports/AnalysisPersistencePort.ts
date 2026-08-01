@@ -175,11 +175,14 @@ export interface AnalysisPersistencePort {
     dimensionsCovered: number[];
     payload: any;
     status: 'completed' | 'failed' | 'interrupted';
+    // ADR 020 Phase 3: real OpenRouter usage/cost for this chunk's LLM call.
+    tokensUsed?: number;
+    costUsd?: number;
   }): Promise<void>;
 
   findAnalysisChunks(params: {
     analysisId: string;
-  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null }> | null>;
+  }): Promise<Array<{ chunk_index: number; dimensions_covered: number[]; payload: Record<string, unknown>; status: 'completed' | 'failed' | 'interrupted'; updated_at: string | null; tokens_used?: number; cost_usd?: number }> | null>;
 
   /**
    * Find analysis by share token for public view.

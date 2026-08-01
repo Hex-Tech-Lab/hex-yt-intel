@@ -60,6 +60,12 @@ begin
     order by created_at desc
     limit 1
   ) s on true
+  -- NOTE: usage_logs has an established 30-day purge policy (pg_cron job
+  -- 'purge-usage-logs-daily', add_health_ledger_and_log_purging.sql), shared
+  -- with the existing Usage tab's getUsageEventCounts. total_cost_usd/
+  -- total_tokens_used are therefore a ROLLING 30-day total, not a lifetime
+  -- ledger -- surfaced honestly as "Cost (30d)" in the admin UI rather than
+  -- fighting the established retention policy (cubic review, PR #175).
   left join lateral (
     select sum(cost_usd) as total_cost_usd, sum(tokens_used) as total_tokens_used
     from public.usage_logs

@@ -24,6 +24,9 @@ type SortKey = 'cost_desc' | 'cost_asc' | 'signup_desc' | 'name_asc';
 
 function fmtCost(usd: number): string {
   if (usd === 0) return '$0.00';
+  // A nonzero cost below $0.0001 would round to "$0.0000" at 4 decimals,
+  // silently hiding a real recorded OpenRouter charge (cubic review, PR #175).
+  if (usd < 0.0001) return '<$0.0001';
   return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
 }
 
@@ -190,7 +193,7 @@ export function UsersAdminClient() {
               <th className="px-3 py-2">Tier</th>
               <th className="px-3 py-2">Signed up</th>
               <th className="px-3 py-2">Analyses</th>
-              <th className="px-3 py-2">Cost</th>
+              <th className="px-3 py-2" title="usage_logs rows purge after 30 days -- this is a rolling window, not a lifetime total">Cost (30d)</th>
               <th className="px-3 py-2">Last session</th>
               <th className="px-3 py-2">Last IP</th>
               <th className="px-3 py-2" />
