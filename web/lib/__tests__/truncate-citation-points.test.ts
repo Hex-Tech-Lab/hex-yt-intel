@@ -12,12 +12,12 @@ describe('truncateCitationPoints', () => {
   });
 
   it('truncates a long Point cell at a word boundary and embeds an EXPAND marker', () => {
-    const long = 'a'.repeat(20) + ' ' + 'b'.repeat(150);
+    const long = `${'a'.repeat(20)} ${'b'.repeat(150)}`;
     const result = truncateCitationPoints(citationTable(long));
     expect(result).toContain('⟦EXPAND:');
     const match = [...result.matchAll(EXPAND_MARKER_PATTERN)][0];
     expect(match).toBeTruthy();
-    const decoded = decodeURIComponent(match![1]!);
+    const decoded = decodeURIComponent(match?.[1] ?? '');
     // The tail must live inside the marker payload, not as visible text
     // before it -- the "head" text preceding the marker is the part
     // actually rendered without a click.
