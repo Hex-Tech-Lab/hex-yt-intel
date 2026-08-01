@@ -80,12 +80,19 @@ export function findMatchingConversation(
  * (e.g. a fitness-topic thread) appeared in the list while viewing a
  * political-news video -- looked like disorganized "individual turns"
  * instead of a clean per-video session list.
+ *
+ * No context (both analysisId and videoId null/undefined) means "general
+ * chat", not "nothing" -- returns every conversation unfiltered. Filtering
+ * to nothing here made the thread switcher hide every existing
+ * conversation, including general-chat threads, whenever no video/analysis
+ * was active (cubic/Qodo review, PR #177).
  */
 export function filterConversationsForContext(
   conversations: ChatConversation[],
   analysisId: string | null | undefined,
   videoId: string | null | undefined
 ): ChatConversation[] {
+  if (!analysisId && !videoId) return conversations;
   const cleanVideoId = stripArchivedVideoIdSuffix(videoId);
   return conversations.filter((c) => matchTier(c, analysisId, videoId, cleanVideoId) > 0);
 }

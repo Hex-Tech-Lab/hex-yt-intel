@@ -8,6 +8,7 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
 import { useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
 import { extractVideoId } from '@/lib/youtube';
+import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
 
 /**
  * Hook managing Server-Sent Event streaming for analysis generation.
@@ -208,17 +209,16 @@ export function useSSEStream() {
                   archiveCurrentAnalysis();
                   void (async () => {
                     try {
+                      await useChatStore.getState().loadConversations();
                       const chatStore = useChatStore.getState();
-                      await chatStore.loadConversations();
                       const currentVid = job.videoId;
                       const currentAnalId = job.analysisId || job.id;
-                      let existingConv: (typeof chatStore.conversations)[number] | undefined;
-                      for (const convRecord of chatStore.conversations) {
-                        if (convRecord.analysisId === currentAnalId || convRecord.videoId === currentVid) {
-                          existingConv = convRecord;
-                          break;
-                        }
-                      }
+                      // 4th independent hand-rolled copy of this match logic, found via
+                      // cubic/Qodo review (PR #177) -- no archived-suffix stripping and
+                      // no priority ordering, same failure mode as the other three
+                      // call sites this session already consolidated onto
+                      // findMatchingConversation.
+                      const existingConv = findMatchingConversation(chatStore.conversations, currentAnalId, currentVid);
                       if (existingConv) {
                         if (existingConv.analysisId !== currentAnalId) {
                           await chatStore.updateConversationAnalysisId(existingConv.id, currentAnalId);

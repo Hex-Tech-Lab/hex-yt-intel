@@ -9,7 +9,15 @@
  * the same "duplicated convention drifts out of sync" failure mode this
  * session's chat-restore bug came from. Do not re-duplicate; import this.
  */
+// YouTube video IDs are a fixed 11-char base64url string, so only strip when
+// the suffix follows a real 11-char ID prefix -- an unanchored replace would
+// truncate a (hypothetical but possible) real ID shaped like
+// `_archived_<1 char>` down to '', corrupting it instead of leaving it
+// untouched (cubic review, PR #177).
+const ARCHIVED_SUFFIX_RE = /^([A-Za-z0-9_-]{11})_archived_.*$/;
+
 export function stripArchivedVideoIdSuffix(videoId: string | null | undefined): string | undefined {
   if (!videoId) return undefined;
-  return videoId.replace(/_archived_.*$/, '');
+  const match = videoId.match(ARCHIVED_SUFFIX_RE);
+  return match ? match[1] : videoId;
 }
