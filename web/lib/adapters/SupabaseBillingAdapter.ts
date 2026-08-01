@@ -251,6 +251,12 @@ export class SupabaseBillingAdapter {
     userId: string;
     action: string;
     metadata: any;
+    // ADR 020 Phase 3: real OpenRouter usage/cost for the per-user cost
+    // ledger. usage_logs is append-only (one row per analysis completion),
+    // so no accumulation/race handling is needed -- the admin cost list
+    // just SUMs cost_usd grouped by user_id.
+    tokensUsed?: number;
+    costUsd?: number;
   }): Promise<void> {
     try {
       const service = getSupabaseServiceClient();
@@ -260,10 +266,22 @@ export class SupabaseBillingAdapter {
           user_id: params.userId,
           action: params.action,
           metadata: params.metadata,
+          tokens_used: params.tokensUsed ?? 0,
+          cost_usd: params.costUsd ?? 0,
           created_at: new Date().toISOString(),
         });
 
       if (error) {
+        // ADR 020 Phase 3 review fix: idx_usage_logs_analysis_completed_dedup
+        // (unique on metadata->>'analysisId' where action='analysis_completed')
+        // rejects a second cost-log row for an analysisId that already has
+        // one -- expected and benign when the worker retries a persist call
+        // whose response was lost after the DB write already succeeded, not
+        // a real failure worth Sentry noise or a caller-visible throw.
+        if (error.code === '23505') {
+          console.debug('[SupabaseBillingAdapter] logUsageEvent: duplicate analysis_completed event ignored', { userId: params.userId, action: params.action });
+          return;
+        }
         console.error('[SupabaseBillingAdapter] logUsageEvent failed:', error.message);
         throw error;
       }

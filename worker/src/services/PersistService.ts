@@ -24,6 +24,12 @@ export interface PersistOptions {
   // dimensions already streamed, which would otherwise look "valid" by
   // content alone and get silently marked 'completed'.
   cancelled?: boolean;
+  // ADR 020 Phase 3: real OpenRouter usage/cost, not signed/verified since
+  // billing decisions never depend on these (billing_status is driven by
+  // valid/cancelled only) -- this is accounting telemetry, not an integrity-
+  // sensitive field like `cancelled` was (see canonical/signBoundContent below).
+  tokensUsed?: number;
+  costUsd?: number;
   activeSecret: string;
   appUrl: string;
   validate12D: (text: string) => boolean;
@@ -92,12 +98,20 @@ export class PersistService {
     }
 
     const valid = options.validate12D(markdown);
-    // cancelled is included here (ADR 020 Phase 2 security fix) -- it
-    // decides billing_status server-side (route.ts: `cancelled ? 'cancelled'
-    // : ...`), so it must be covered by the signature like markdown/payload,
-    // not sent as a plain unsigned field an attacker could tack onto an
-    // otherwise-legitimately-signed completed-analysis body.
-    const canonical = JSON.stringify({ markdown, payload: jsonPayload, cancelled: options.cancelled ?? false });
+    // cancelled/tokensUsed/costUsd are all included here (ADR 020 Phase 2/3
+    // security fix) -- cancelled decides billing_status server-side
+    // (route.ts: `cancelled ? 'cancelled' : ...`), and tokensUsed/costUsd
+    // feed the admin cost ledger. All three must be covered by the
+    // signature like markdown/payload, not sent as plain unsigned fields an
+    // attacker who observes one legitimately-signed request could alter on
+    // a replay within the signature's TTL window (cubic review, PR #175).
+    const canonical = JSON.stringify({
+      markdown,
+      payload: jsonPayload,
+      cancelled: options.cancelled ?? false,
+      tokensUsed: options.tokensUsed ?? null,
+      costUsd: options.costUsd ?? null,
+    });
     // Bind the signature to this analysis id and an expiry so an observed persist
     // body can't be replayed indefinitely or against a different analysis. Must
     // stay in lockstep with verifyContentSig() on the Vercel side.
@@ -124,6 +138,8 @@ export class PersistService {
     modelUsed: string;
     status: 'completed' | 'interrupted';
     cancelled?: boolean;
+    tokensUsed?: number;
+    costUsd?: number;
     activeSecret: string;
     appUrl: string;
     valid: boolean;
@@ -154,6 +170,8 @@ export class PersistService {
             exp: params.exp,
             status: params.status,
             cancelled: params.cancelled,
+            tokensUsed: params.tokensUsed,
+            costUsd: params.costUsd,
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,
             segments: params.segments,

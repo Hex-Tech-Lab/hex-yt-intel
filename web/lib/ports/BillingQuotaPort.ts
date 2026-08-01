@@ -25,6 +25,10 @@ export interface BillingQuotaPort {
     tier: UserTier;
     email?: string;
     analysisId?: string;
+    // ADR 020 Phase 3: real OpenRouter usage/cost, logged onto the same
+    // analysis_completed usage_logs row -- optional/additive like analysisId.
+    tokensUsed?: number;
+    costUsd?: number;
   }): Promise<void>;
 
   /**

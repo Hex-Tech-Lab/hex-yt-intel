@@ -98,13 +98,22 @@ export class LLMCascade implements LLMCascadePort {
     onDelta: (text: string) => void,
     onStatus?: (status: StreamStatusEvent) => void,
     signal?: AbortSignal
-  ): Promise<{ started: boolean; finalText: string; modelUsed: string; finishReason?: string }> {
+  ): Promise<{
+    started: boolean;
+    finalText: string;
+    modelUsed: string;
+    finishReason?: string;
+    tokensUsed?: number;
+    costUsd?: number;
+  }> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     let finalText = '';
     let modelUsed = '';
     let produced = false;
     let previousModel: string | null = null;
     let finishReason: string | undefined = undefined;
+    let tokensUsed: number | undefined;
+    let costUsd: number | undefined;
 
     for (let tierIndex = 0; tierIndex < this.chain.length; tierIndex++) {
       const tier = this.chain[tierIndex];
@@ -141,6 +150,8 @@ export class LLMCascade implements LLMCascadePort {
         console.log(`[LLMCascade] Stream ${streamId} succeeded with model=${name} durationMs=${durationMs} timestamp=${new Date().toISOString()}`);
         produced = true;
         finishReason = result.finishReason;
+        tokensUsed = result.tokensUsed;
+        costUsd = result.costUsd;
         break;
       }
 
@@ -177,7 +188,7 @@ export class LLMCascade implements LLMCascadePort {
       previousModel = name;
     }
 
-    return { started: produced, finalText, modelUsed, finishReason };
+    return { started: produced, finalText, modelUsed, finishReason, tokensUsed, costUsd };
   }
 
   /**
@@ -222,7 +233,7 @@ export class LLMCascade implements LLMCascadePort {
     timeoutMs = 120000,
     signal?: AbortSignal,
     providerOrder?: string[]
-  ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string }> {
+  ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string; tokensUsed?: number; costUsd?: number }> {
     const controller = new AbortController();
     const handshakeTimer = setTimeout(() => {
       // skipcq: JS-0827
@@ -237,6 +248,8 @@ export class LLMCascade implements LLMCascadePort {
     let text = '';
     let started = false;
     let finishReason: string | undefined;
+    let tokensUsed: number | undefined;
+    let costUsd: number | undefined;
 
     const onAbort = () => controller.abort();
     if (signal) {
@@ -347,6 +360,25 @@ export class LLMCascade implements LLMCascadePort {
             const reason = json.choices?.[0]?.finish_reason;
             if (reason) finishReason = reason;
 
+            // ADR 020 Phase 3: OpenRouter always includes a final SSE chunk
+            // with `usage` (no `choices[].delta`) right before [DONE] on
+            // streaming requests -- no request-side opt-in needed (the old
+            // `usage: { include: true }` / `stream_options.include_usage`
+            // request fields are deprecated no-ops, confirmed against
+            // OpenRouter's usage-accounting docs 2026-08-01). `usage.cost`
+            // is OpenRouter's actual billed USD (post cascade/free-tier
+            // discounts), not a client-side token-count estimate.
+            // Type-guarded, not a raw passthrough -- a malformed/missing
+            // usage.cost from OpenRouter (e.g. null) would otherwise reach
+            // the persist route's Zod schema (z.number().min(0).optional(),
+            // which rejects null, only undefined) and fail the ENTIRE
+            // persist call over a cost-telemetry glitch, losing the actual
+            // analysis content. Better to silently drop just the cost data.
+            if (json.usage) {
+              if (typeof json.usage.total_tokens === 'number') tokensUsed = json.usage.total_tokens;
+              if (typeof json.usage.cost === 'number') costUsd = json.usage.cost;
+            }
+
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
               started = true;
@@ -370,7 +402,7 @@ export class LLMCascade implements LLMCascadePort {
         }
       }
       clearTimeout(totalTimer);
-      return { started, text, finishReason };
+      return { started, text, finishReason, tokensUsed, costUsd };
     } catch (error) {
       clearTimeout(handshakeTimer);
       clearTimeout(totalTimer);
