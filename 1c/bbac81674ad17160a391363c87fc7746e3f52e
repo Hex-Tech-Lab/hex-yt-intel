@@ -1,0 +1,48 @@
+web/app/api/analyses/persist/route.ts
+  s_0eded1e9d0cab6::t_010fe780f00fbb 206
+  s_0eded1e9d0cab6::t_b3c9ac7b5abfbc 780-783
+  s_0eded1e9d0cab6::t_3e82a01924652c 240-246
+  s_0eded1e9d0cab6::t_f9bebe059c8071 154-159
+  s_0eded1e9d0cab6::t_9a2068eb0897f7 553-556
+web/lib/types/validation-report.ts
+  s_0eded1e9d0cab6::t_a856ee3dccce2a 32-36,38
+  s_0eded1e9d0cab6::t_4361608723c088 99
+web/lib/adapters/SupabaseBillingAdapter.ts
+  s_0eded1e9d0cab6::t_586ca6ac27e18b 49
+supabase/migrations/20260801000833_billing_quota_grace_window_setting.sql
+  s_0eded1e9d0cab6::t_a4994046017a86 1-15
+worker/src/services/PersistService.ts
+  s_0eded1e9d0cab6::t_28642a45e557fe 126
+  s_0eded1e9d0cab6::t_70505cf4c91481 21-26
+  s_0eded1e9d0cab6::t_f89c0dad569d39 156
+  s_0eded1e9d0cab6::t_f82d4fe4fac6f0 95-100
+web/lib/adapters/PostgresBillingAdapter.ts
+  s_0eded1e9d0cab6::t_7900381581f65b 53-56,59-62,65
+  s_0eded1e9d0cab6::t_0d54d5f08b0d46 4,14-20
+  s_0eded1e9d0cab6::t_3e19d531ecbe89 21-22
+supabase/migrations/20260801000412_billing_status_add_cancelled.sql
+  s_0eded1e9d0cab6::t_031cfaf78a9459 1-32
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_0eded1e9d0cab6::t_e618109fe78603 311
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_f3361908a5c42a 700-705
+  s_0eded1e9d0cab6::t_1727f319ef79fb 717
+  s_0eded1e9d0cab6::t_c198e8327884a1 911-914
+  s_0eded1e9d0cab6::t_4be7fe06640f2e 900
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "1cbbac81674ad17160a391363c87fc7746e3f52e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
