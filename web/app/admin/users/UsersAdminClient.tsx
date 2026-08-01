@@ -150,6 +150,9 @@ export function UsersAdminClient() {
     return <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--warn)] text-[var(--warn)] text-xs font-mono">Failed to load users: {error}</div>;
   }
 
+  // Both checks needed despite visibleUsers being null exactly when users is
+  // null -- TS narrows each variable independently, and both are read below
+  // (users.length in the header, visibleUsers in the table).
   if (!users || !visibleUsers) {
     return <div className="p-4 text-xs font-mono text-[var(--ink-muted)]">Loading users…</div>;
   }
