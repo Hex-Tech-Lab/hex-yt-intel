@@ -151,6 +151,12 @@ export async function POST(request: NextRequest) {
       // for backward compat with a worker that hasn't shipped the bound signer yet.
       exp: z.number().int().optional(),
       status: z.enum(['completed', 'failed', 'interrupted']).optional().default('completed'),
+      // ADR 020 Phase 2: explicit "the user clicked stop" signal from the
+      // worker (analysis.ts's cancelController). Overrides the normal
+      // content-based billing_status computation below -- a user can cancel
+      // AFTER most dimensions already streamed, which would otherwise look
+      // "valid" by content alone and get silently marked 'completed'.
+      cancelled: z.boolean().optional().default(false),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
@@ -197,6 +203,7 @@ export async function POST(request: NextRequest) {
         contentSig,
         exp,
         status,
+        cancelled,
         chunkIndex,
         totalChunks,
         segments,
@@ -230,7 +237,13 @@ export async function POST(request: NextRequest) {
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
 
-      const canonical = JSON.stringify({ markdown, payload: payload ?? null });
+      // cancelled included here (ADR 020 Phase 2 security fix) -- must stay
+      // in lockstep with PersistService.ts's signer. It decides
+      // billing_status below (`cancelled ? 'cancelled' : ...`), so it needs
+      // the same integrity guarantee as markdown/payload, not to arrive as
+      // an unsigned field an attacker could tack onto a legitimately-signed
+      // completed-analysis body to relabel it after the fact.
+      const canonical = JSON.stringify({ markdown, payload: payload ?? null, cancelled });
       let isSigValid = false;
       try {
         isSigValid = await verifyContentSig(canonical, contentSig, exp !== undefined ? { purpose: 'persist', id: analysisId, exp } : undefined);
@@ -537,7 +550,10 @@ export async function POST(request: NextRequest) {
             ...priorReport,
             validation_status: finalStatus,
             status: finalStatus,
-            billing_status: isStitchedValid ? billingStatus : 'failed',
+            // cancelled overrides content-based computation entirely -- the
+            // user explicitly stopped this, regardless of how much content
+            // happened to complete first (ADR 020 Phase 2).
+            billing_status: cancelled ? 'cancelled' : isStitchedValid ? billingStatus : 'failed',
             dimension_status: dimensionStatus,
             model_used: model || null,
             valid: isStitchedValid && finalStatus === 'done',
@@ -761,7 +777,10 @@ export async function POST(request: NextRequest) {
         ...priorReport,
         validation_status: reportValidationStatus,
         status: reportValidationStatus, // Legacy field for backward compat
-        billing_status: payloadToEvaluate !== undefined ? billingStatus : priorReport.billing_status,
+        // cancelled overrides content-based computation entirely -- the
+        // user explicitly stopped this, regardless of how much content
+        // happened to complete first (ADR 020 Phase 2).
+        billing_status: cancelled ? 'cancelled' : payloadToEvaluate !== undefined ? billingStatus : priorReport.billing_status,
         dimension_status: payloadToEvaluate !== undefined ? dimensionStatus : priorReport.dimension_status,
         model_used: model || null,
         valid: reportValidationStatus === 'done' && validationPassed,

@@ -1,6 +1,7 @@
 import type { QuotaGateResult, BillingQuotaPort, QuotaEndpoint } from '@/lib/ports';
 import type { UserTier } from '@/lib/types/billing';
 import { SupabasePersistenceAdapter } from './SupabasePersistenceAdapter';
+import { SupabaseSettingsAdapter } from './SupabaseSettingsAdapter';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
@@ -8,6 +9,15 @@ const MONTHLY_QUOTAS = {
   free: 3,
   pro: null,
   enterprise: null,
+} as const;
+
+// ADR 020 Phase 2: fallbacks only -- the registry (setting_definitions) is
+// the live source of truth, same pattern as dimension-remediation.ts's
+// REGISTRY_FALLBACK. Never trust these values directly; always read through
+// SupabaseSettingsAdapter.getRegistrySettings.
+const REGISTRY_FALLBACK = {
+  'billing.chargeOnCancel': true,
+  'billing.quota.processingGraceWindowMs': 900_000,
 } as const;
 
 export class PostgresBillingAdapter implements BillingQuotaPort {
@@ -40,12 +50,19 @@ export class PostgresBillingAdapter implements BillingQuotaPort {
       const data = await this.persistence.getMonthlyAnalyses({ userId, since: startOfMonth });
       if (!data) return { allowed: true }; // Fail open
 
+      const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
+      const chargeOnCancel = Boolean(settings['billing.chargeOnCancel']);
+      const processingGraceWindowMs = Number(settings['billing.quota.processingGraceWindowMs']) || REGISTRY_FALLBACK['billing.quota.processingGraceWindowMs'];
+
       const activeCount = data.filter((a) => {
         if (a.billingStatus === 'completed') return true;
+        // ADR 020 Phase 2: a user-cancelled analysis counts against quota
+        // too, per the gym-class decision -- but only if the registry
+        // setting says so, never hardcoded true.
+        if (a.billingStatus === 'cancelled') return chargeOnCancel;
         if (a.billingStatus === 'processing') {
           const createdTime = new Date(a.createdAt).getTime();
-          const fifteenMinutes = 15 * 60 * 1000;
-          return Date.now() - createdTime < fifteenMinutes;
+          return Date.now() - createdTime < processingGraceWindowMs;
         }
         return false;
       }).length;

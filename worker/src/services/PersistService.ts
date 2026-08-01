@@ -18,6 +18,12 @@ export interface PersistOptions {
   modelUsed: string;
   finishReason?: string;
   status: 'completed' | 'interrupted';
+  // ADR 020 Phase 2: explicit "the user clicked stop" signal, threaded
+  // through end-to-end rather than inferred from dimension-completeness
+  // content heuristics on the Vercel side -- a user can cancel AFTER most
+  // dimensions already streamed, which would otherwise look "valid" by
+  // content alone and get silently marked 'completed'.
+  cancelled?: boolean;
   activeSecret: string;
   appUrl: string;
   validate12D: (text: string) => boolean;
@@ -86,7 +92,12 @@ export class PersistService {
     }
 
     const valid = options.validate12D(markdown);
-    const canonical = JSON.stringify({ markdown, payload: jsonPayload });
+    // cancelled is included here (ADR 020 Phase 2 security fix) -- it
+    // decides billing_status server-side (route.ts: `cancelled ? 'cancelled'
+    // : ...`), so it must be covered by the signature like markdown/payload,
+    // not sent as a plain unsigned field an attacker could tack onto an
+    // otherwise-legitimately-signed completed-analysis body.
+    const canonical = JSON.stringify({ markdown, payload: jsonPayload, cancelled: options.cancelled ?? false });
     // Bind the signature to this analysis id and an expiry so an observed persist
     // body can't be replayed indefinitely or against a different analysis. Must
     // stay in lockstep with verifyContentSig() on the Vercel side.
@@ -112,6 +123,7 @@ export class PersistService {
     jsonPayload: Record<string, unknown> | null;
     modelUsed: string;
     status: 'completed' | 'interrupted';
+    cancelled?: boolean;
     activeSecret: string;
     appUrl: string;
     valid: boolean;
@@ -141,6 +153,7 @@ export class PersistService {
             contentSig: params.contentSig,
             exp: params.exp,
             status: params.status,
+            cancelled: params.cancelled,
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,
             segments: params.segments,
