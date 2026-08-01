@@ -38,6 +38,15 @@ export function useSSEStream() {
 
   const { initializeAnalysis: initSynthesis, reset: resetSynthesis } = useSynthesisNucleus();
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Snapshot of the analysisId THIS hook instance's own stream is running,
+  // captured at stream start -- deliberately not read live from the store in
+  // stopAnalysis, because navigating to a different analysis (e.g. clicking
+  // a history item) while this stream is still in flight repoints the store
+  // to that other analysis's id without stopping this stream (processingRef
+  // only blocks starting a NEW stream, not the store being repointed). A
+  // live store read in stopAnalysis would then send the cancel signal to the
+  // wrong analysis.
+  const activeAnalysisIdRef = useRef<string | null>(null);
   const processingRef = useRef(false);
   const [isLiveStreaming, setIsLiveStreaming] = useState(false);
 
@@ -179,6 +188,7 @@ export function useSSEStream() {
               }
 
               store.logInfo(`Connecting to Cloudflare edge worker for unified intelligence synthesis...`);
+              activeAnalysisIdRef.current = job.analysisId || job.id;
               initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result');
               initSynthesis(job);
               setStatus('analyzing');
@@ -188,6 +198,7 @@ export function useSSEStream() {
               const settleAnalysis = (finalStatus: 'complete' | 'error', errorMsg?: string) => {
                 if (hasSettled) return;
                 hasSettled = true;
+                activeAnalysisIdRef.current = null;
 
                 if (finalStatus === 'complete') {
                   store.logOk(`Analysis stream completed successfully.`);
@@ -454,10 +465,35 @@ export function useSSEStream() {
   };
 
   const stopAnalysis = () => {
+    // ADR 020 Phase 1: explicit cancel signal, fire-and-forget -- distinct
+    // from the abortControllerRef.current.abort() below, which only stops
+    // THIS client's own connection (the worker deliberately ignores that,
+    // see the 2026-07-29 httpConnSignal decoupling that lets a stream
+    // survive plain navigation-away). This POST tells the worker the user
+    // explicitly wants generation stopped, via a Redis flag it polls.
+    //
+    // Uses activeAnalysisIdRef (snapshotted at stream start), NOT a live
+    // store read: processingRef only blocks starting a NEW stream while one
+    // is in flight, it does NOT stop the store being repointed to a
+    // different analysis (e.g. clicking a history item) while this stream
+    // keeps running in the background. A live read here could cancel the
+    // wrong analysis.
+    const cancelAnalysisId = activeAnalysisIdRef.current;
+    if (cancelAnalysisId) {
+      // keepalive: true -- a user clicking stop often navigates away
+      // immediately after; without this, some browsers cancel an in-flight
+      // fetch on unmount/navigation before the POST reaches the server,
+      // silently defeating the exact scenario this signal exists for.
+      fetch(`/api/analyses/${cancelAnalysisId}/cancel`, { method: 'POST', keepalive: true }).catch((err) => {
+        console.debug('[useSSEStream] Cancel signal failed to send (best-effort):', err);
+      });
+    }
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    activeAnalysisIdRef.current = null;
     processingRef.current = false;
     setIsLiveStreaming(false);
     setIsLoading(false);
