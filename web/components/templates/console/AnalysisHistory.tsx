@@ -384,6 +384,13 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           const chatStore = useChatStore.getState();
           const existing = findMatchingConversation(chatStore.conversations, data.id, data.videoId);
           if (existing) {
+            // Stale check BEFORE the PATCH, not after -- an older restore's
+            // updateConversationAnalysisId() call is a persisted DB write, not
+            // just local UI state; issuing it unconditionally could permanently
+            // rebind a shared conversation to the WRONG (older) analysis if a
+            // newer restore has already superseded this one by the time this
+            // closure resumes (cubic review, PR #177).
+            if (isStaleRestore(analysisId)) return;
             if (existing.analysisId !== data.id) {
               await chatStore.updateConversationAnalysisId(existing.id, data.id);
             }

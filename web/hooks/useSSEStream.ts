@@ -210,19 +210,25 @@ export function useSSEStream() {
                   void (async () => {
                     try {
                       await useChatStore.getState().loadConversations();
+                      // Bail if a NEWER startAnalysis() call has since replaced this
+                      // stream's controller -- this IIFE is unawaited/uncancelled, so
+                      // without this check a slow load resolving after a subsequent
+                      // analysis has already started would rebind/select ITS chat
+                      // panel onto this older stream's conversation instead (cubic
+                      // review, PR #177). Reuses the same abortControllerRef identity
+                      // check the cancel path below already relies on.
+                      if (abortControllerRef.current !== myController) return;
                       const chatStore = useChatStore.getState();
                       const currentVid = job.videoId;
                       const currentAnalId = job.analysisId || job.id;
-                      // 4th independent hand-rolled copy of this match logic, found via
-                      // cubic/Qodo review (PR #177) -- no archived-suffix stripping and
-                      // no priority ordering, same failure mode as the other three
-                      // call sites this session already consolidated onto
-                      // findMatchingConversation.
+                      // Delegates to the shared matcher (archived-suffix stripping +
+                      // priority ordering) rather than a hand-rolled copy.
                       const existingConv = findMatchingConversation(chatStore.conversations, currentAnalId, currentVid);
                       if (existingConv) {
                         if (existingConv.analysisId !== currentAnalId) {
                           await chatStore.updateConversationAnalysisId(existingConv.id, currentAnalId);
                         }
+                        if (abortControllerRef.current !== myController) return;
                         await chatStore.selectConversation(existingConv.id);
                       }
                     } catch (e) {

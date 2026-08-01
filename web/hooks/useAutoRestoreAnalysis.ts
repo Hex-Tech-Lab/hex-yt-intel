@@ -189,6 +189,14 @@ export function useAutoRestoreAnalysis(url: string) {
               const chatStore = useChatStore.getState();
               const existing = findMatchingConversation(chatStore.conversations, restoreData.id, restoreData.videoId);
               if (existing) {
+                // Cancellation check BEFORE the PATCH, not after -- same
+                // narrow race as AnalysisHistory.tsx's restore IIFE (cubic
+                // review, PR #177): updateConversationAnalysisId() is a
+                // persisted DB write, so issuing it unconditionally after
+                // this effect has already been cancelled/superseded could
+                // permanently rebind a shared conversation to the wrong,
+                // stale analysis.
+                if (cancelled) return;
                 if (existing.analysisId !== restoreData.id) {
                   await chatStore.updateConversationAnalysisId(existing.id, restoreData.id);
                 }

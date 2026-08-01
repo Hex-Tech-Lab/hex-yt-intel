@@ -19,7 +19,11 @@
  * duplicate each other.
  */
 export interface AuxStatusReportInput {
-  metadata?: { description?: string };
+  // Persisted JSON, not a type guarantee -- SQL reads this via `->>`, which
+  // accepts and text-coerces any JSON scalar/object/array, not just strings.
+  // Typing this as `string` would contradict jsonTextValue()'s own coercion
+  // logic below and make it look like dead code (cubic review, PR #177).
+  metadata?: { description?: unknown };
   channelMeta?: Record<string, unknown> | null;
   comments?: unknown[] | null;
 }
@@ -30,15 +34,29 @@ export interface AuxStatusResult {
   hasComments: boolean;
 }
 
+/**
+ * Mirrors Postgres's `->>` text-extraction operator: a JSON string passes
+ * through as-is; a scalar (number/boolean) becomes its text representation;
+ * an object/array becomes its JSON text representation (e.g. `[]`, `{}`,
+ * `{"a":1}`) -- NOT the empty string. `String([])` is `''` in JS, which
+ * would disagree with `->>` (which yields the non-empty text `'[]'`) for a
+ * description that happens to be a JSON array (cubic review, PR #177); this
+ * function exists specifically so that case isn't silently wrong.
+ */
+function jsonTextValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '';
+  }
+}
+
 export function auxStatusFromValidationReport(report: AuxStatusReportInput | null | undefined): AuxStatusResult {
   const r = report ?? {};
-  // SQL reads this via `->>'description'`, which coerces ANY JSON scalar
-  // (number, boolean) to text before trimming -- a non-string description
-  // still counts as non-empty there. Gating on `typeof === 'string'`
-  // instead of coercing would disagree with SQL for that payload shape
-  // (cubic review, PR #177): mirror `->>` with String() so the same value
-  // is judged the same way on both sides, no `typeof` branch.
-  const descStr = String(r.metadata?.description ?? '');
+  const descStr = jsonTextValue(r.metadata?.description);
   // Postgres's `trim(both from ...)` (used by the SQL SSOT) strips only the
   // ASCII space character by default -- JS's .trim() strips ALL Unicode
   // whitespace (tabs, newlines, etc.), a wider set. A description that's

@@ -690,21 +690,22 @@ button:focus-visible,
   width: 99%;
   min-width: 220px;
 }
-/* User request 2026-08-01: cap the description/transcript column at 2 lines
-   visually (the model can't reliably self-limit line count in its own
-   output, so this is enforced at render time) -- overflow content is
-   still fully present in the DOM/markdown, just visually truncated.
-   Clamp is applied to the CELL'S CHILDREN, not the <td> itself: setting
-   `display: -webkit-box` directly on a <td> overrides its table-cell
-   display, breaking the column-width rules above and the table grid
-   (cubic review, PR #177). The `*` selector matches Astryx's nested
-   text-wrapper element(s), same pattern as the first-column nowrap rule
-   above, so the <td> keeps `display: table-cell`. */
-.chat-answer-table td:nth-child(2) > * {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+/* REMOVED 2026-08-01 (cubic review, PR #177): a 2-line visual clamp on this
+   column was attempted here via `-webkit-line-clamp` on the cell's
+   children, but it's not fixable as pure CSS against Astryx's actual
+   markup: Astryx's TableCell renders plain text directly as a bare text
+   node child of <td> (confirmed in node_modules/@astryxdesign/core's
+   bundle -- `children:x` with no wrapper element), so no selector can
+   target it for clamping in the common (plain-text) case. The same
+   `.chat-answer-table` class is also used for the full transcript table,
+   where chat-grounding's prompt contract requires every quoted line to be
+   shown in full, never truncated -- a clamp that DID happen to match
+   (e.g. a cell with bold/italic children, which Astryx does wrap) would
+   silently violate that contract for transcript rows. Doing this correctly
+   would need DOM post-processing of the renderer's output, already judged
+   too invasive elsewhere in this file -- if a visual cap is still wanted,
+   scope it to a dedicated class applied only to citation-point tables
+   (never transcript tables), and prefer overflow with an expand affordance
+   over hard truncation of grounded content. */
 
 
