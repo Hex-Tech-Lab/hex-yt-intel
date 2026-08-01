@@ -1,0 +1,23 @@
+supabase/migrations/20260801100213_remediation_remove_dead_period_days.sql
+  s_0eded1e9d0cab6::t_06b3ff5a505348 7-15
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_d2b86ddd86b9aa 159
+  s_0eded1e9d0cab6::t_1c9b199ecdd468 507,510
+  s_0eded1e9d0cab6::t_f6b82681f15a0b 132-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "f027f636442beab1e363d77d00d76baee1f20316",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
