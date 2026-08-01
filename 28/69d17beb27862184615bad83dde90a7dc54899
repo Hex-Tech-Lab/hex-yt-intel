@@ -1,0 +1,27 @@
+web/lib/redis.ts
+  s_0eded1e9d0cab6::t_4715dc79a9a39b 378-379,392-405
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_ca38e88e6f0d8a 77-81
+supabase/migrations/20260801100213_remediation_remove_dead_period_days.sql
+  s_0eded1e9d0cab6::t_b445effb291711 1-8
+docs/specs/ADR_019_REMEDIATION_BUDGET_TOKEN_BUCKET_2026-07-31.md
+  s_0eded1e9d0cab6::t_1351f152a00226 40
+  s_0eded1e9d0cab6::t_ce39ca838392a1 52,54,56-57
+  s_0eded1e9d0cab6::t_6902b7b8f5db06 118-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "2869d17beb27862184615bad83dde90a7dc54899",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
