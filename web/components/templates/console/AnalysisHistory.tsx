@@ -359,9 +359,14 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
       void (async () => {
         try {
           if (isStaleRestore(analysisId)) return;
-          const chatStore = useChatStore.getState();
-          await chatStore.loadConversations();
+          await useChatStore.getState().loadConversations();
           if (isStaleRestore(analysisId)) return;
+          // Fresh snapshot after the await, not the pre-await one --
+          // Zustand's getState() is point-in-time, so reusing a captured
+          // reference across the await would see the conversations array as
+          // it was BEFORE loadConversations()'s set() call landed (cubic/Qodo
+          // review, PR #177).
+          const chatStore = useChatStore.getState();
           const existing = findMatchingConversation(chatStore.conversations, data.id, data.videoId);
           if (existing) {
             if (existing.analysisId !== data.id) {

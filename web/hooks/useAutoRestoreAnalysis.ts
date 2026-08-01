@@ -174,9 +174,19 @@ export function useAutoRestoreAnalysis(url: string) {
           void (async () => {
             try {
               if (cancelled) return;
-              const chatStore = useChatStore.getState();
-              await chatStore.loadConversations();
+              await useChatStore.getState().loadConversations();
               if (cancelled) return;
+              // Fetch a FRESH snapshot after the await -- Zustand's getState()
+              // returns a point-in-time object; the pre-await `chatStore`
+              // variable would still reference the OLD (often empty, first
+              // page load) conversations array even after loadConversations()
+              // resolves and calls set() internally. This meant the match
+              // below ran against a stale/empty list on every page
+              // load/hard refresh, the exact trigger this hook fires on --
+              // likely the real root cause of the live-reported "still wrong
+              // after refresh" bug, more fundamental than the archived-suffix
+              // fix alone (cubic/Qodo review, PR #177).
+              const chatStore = useChatStore.getState();
               const existing = findMatchingConversation(chatStore.conversations, restoreData.id, restoreData.videoId);
               if (existing) {
                 if (existing.analysisId !== restoreData.id) {

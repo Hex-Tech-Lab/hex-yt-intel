@@ -48,7 +48,7 @@ interface ChatState {
   loadConversations: () => Promise<void>;
   selectConversation: (id: string) => Promise<void>;
   newConversation: (opts?: { analysisId?: string | null; videoId?: string | null; title?: string }) => Promise<string | null>;
-  sendMessage: (text: string, opts?: { analysisId?: string | null }) => Promise<void>;
+  sendMessage: (text: string, opts?: { analysisId?: string | null; videoId?: string | null }) => Promise<void>;
   renameConversation: (id: string, title: string) => Promise<void>;
   updateConversationAnalysisId: (id: string, analysisId: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
@@ -486,7 +486,7 @@ export const useChatStore = create<ChatState>((set, get) => {
       if (!trimmed || get().sending) return;
 
       let convId = get().activeId;
-      if (!convId) convId = await get().newConversation({ analysisId: opts?.analysisId ?? null });
+      if (!convId) convId = await get().newConversation({ analysisId: opts?.analysisId ?? null, videoId: opts?.videoId ?? null });
       if (!convId) return;
 
       const clientMsgId = newClientMsgId();

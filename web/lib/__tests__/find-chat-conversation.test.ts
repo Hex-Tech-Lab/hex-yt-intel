@@ -1,0 +1,71 @@
+import { describe, it, expect } from 'vitest';
+import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
+import type { ChatConversation } from '@/lib/types/chat';
+
+function conv(overrides: Partial<ChatConversation>): ChatConversation {
+  return {
+    id: 'conv-id',
+    userId: 'user-1',
+    title: 'Untitled',
+    analysisId: null,
+    videoId: null,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    lastMessageAt: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+describe('findMatchingConversation', () => {
+  it('matches by exact analysisId', () => {
+    const target = conv({ id: 'target', analysisId: 'a1' });
+    const result = findMatchingConversation([conv({ id: 'other', analysisId: 'a2' }), target], 'a1', 'v1');
+    expect(result?.id).toBe('target');
+  });
+
+  it('matches by exact videoId when no analysisId match', () => {
+    const target = conv({ id: 'target', analysisId: 'a-other', videoId: 'v1' });
+    const result = findMatchingConversation([target], 'a1', 'v1');
+    expect(result?.id).toBe('target');
+  });
+
+  it('matches by archived-suffix-stripped videoId on the query side', () => {
+    const target = conv({ id: 'target', videoId: 'v1' });
+    const result = findMatchingConversation([target], null, 'v1_archived_1785407155.751134');
+    expect(result?.id).toBe('target');
+  });
+
+  it('matches by archived-suffix-stripped videoId on the stored side', () => {
+    const target = conv({ id: 'target', videoId: 'v1_archived_1785407155.751134' });
+    const result = findMatchingConversation([target], null, 'v1');
+    expect(result?.id).toBe('target');
+  });
+
+  it('returns undefined when nothing matches', () => {
+    const result = findMatchingConversation([conv({ id: 'other', analysisId: 'a-other', videoId: 'v-other' })], 'a1', 'v1');
+    expect(result).toBeUndefined();
+  });
+
+  it('returns undefined for null/undefined analysisId and videoId', () => {
+    const result = findMatchingConversation([conv({ id: 'other' })], null, undefined);
+    expect(result).toBeUndefined();
+  });
+
+  it('prioritizes exact analysisId over a looser videoId match earlier in the array', () => {
+    // Regression test: cubic/Qodo review, PR #177 -- a single OR'd .find()
+    // let array order decide the winner instead of match specificity, so an
+    // older conversation matching only by videoId could beat a newer, more
+    // specific analysisId match and get incorrectly rebound.
+    const looseVideoMatch = conv({ id: 'loose', analysisId: 'a-old', videoId: 'v1' });
+    const exactAnalysisMatch = conv({ id: 'exact', analysisId: 'a1', videoId: 'v-different' });
+    const result = findMatchingConversation([looseVideoMatch, exactAnalysisMatch], 'a1', 'v1');
+    expect(result?.id).toBe('exact');
+  });
+
+  it('prioritizes exact videoId over archived-suffix-stripped match', () => {
+    const strippedMatch = conv({ id: 'stripped', videoId: 'v1_archived_999' });
+    const exactMatch = conv({ id: 'exact', videoId: 'v1' });
+    const result = findMatchingConversation([strippedMatch, exactMatch], null, 'v1');
+    expect(result?.id).toBe('exact');
+  });
+});

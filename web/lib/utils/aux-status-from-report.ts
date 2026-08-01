@@ -33,7 +33,13 @@ export interface AuxStatusResult {
 export function auxStatusFromValidationReport(report: AuxStatusReportInput | null | undefined): AuxStatusResult {
   const r = report ?? {};
   const descStr = r.metadata?.description ?? '';
-  const hasDescription = typeof descStr === 'string' && descStr.trim().length > 0;
+  // Postgres's `trim(both from ...)` (used by the SQL SSOT) strips only the
+  // ASCII space character by default -- JS's .trim() strips ALL Unicode
+  // whitespace (tabs, newlines, etc.), a wider set. A description that's
+  // only tabs/newlines would disagree between the two (cubic review, PR
+  // #177): SQL would count it as non-empty content, JS .trim() would zero
+  // it out. Matching SQL's narrower default keeps the two in lockstep.
+  const hasDescription = typeof descStr === 'string' && descStr.replace(/^ +| +$/g, '').length > 0;
   const hasChannelMeta = Boolean(
     r.channelMeta &&
     typeof r.channelMeta === 'object' &&

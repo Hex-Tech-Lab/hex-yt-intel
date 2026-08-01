@@ -356,12 +356,19 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     if (!t || sending) return;
     setLocalInput('');
     scrollToBottom(); // user just sent — always follow to the bottom
-    await sendMessage(t, { analysisId: analysisId ?? null });
+    await sendMessage(t, { analysisId: analysisId ?? null, videoId: videoId ?? null });
   };
 
   const handleNew = async () => {
     setShowThreads(false);
-    await newConversation({ analysisId: null });
+    // Ground the explicitly-created new chat in whatever video/analysis is
+    // currently open -- previously passed analysisId: null unconditionally,
+    // so clicking "New Chat" while viewing a video created a conversation
+    // NOT associated with it. That orphaned conversation would then never
+    // resurface when revisiting the video (the match logic correctly
+    // wouldn't find it), while a real one appeared to be "missing" --
+    // live-reported 2026-08-01.
+    await newConversation({ analysisId: analysisId ?? null, videoId: videoId ?? null });
     requestAnimationFrame(() => inputHandleRef.current?.focus());
   };
 
@@ -495,7 +502,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
       {showThreads && (
         <div className="max-h-[240px] overflow-y-auto border-b border-[var(--line)] bg-[rgb(8_11_17_/_0.95)] backdrop-blur-md p-1.5 flex flex-col gap-1">
           <button
-            onClick={() => { void newConversation(); setShowThreads(false); }}
+            onClick={() => { void newConversation({ analysisId: analysisId ?? null, videoId: videoId ?? null }); setShowThreads(false); }}
             className="w-full text-left p-2 rounded-lg border border-dashed border-[var(--accent)]/50 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] cursor-pointer font-mono text-[11.5px] font-semibold flex items-center justify-between transition-colors"
           >
             <span className="flex items-center gap-1.5">
