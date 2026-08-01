@@ -368,9 +368,15 @@ export class LLMCascade implements LLMCascadePort {
             // OpenRouter's usage-accounting docs 2026-08-01). `usage.cost`
             // is OpenRouter's actual billed USD (post cascade/free-tier
             // discounts), not a client-side token-count estimate.
+            // Type-guarded, not a raw passthrough -- a malformed/missing
+            // usage.cost from OpenRouter (e.g. null) would otherwise reach
+            // the persist route's Zod schema (z.number().min(0).optional(),
+            // which rejects null, only undefined) and fail the ENTIRE
+            // persist call over a cost-telemetry glitch, losing the actual
+            // analysis content. Better to silently drop just the cost data.
             if (json.usage) {
-              tokensUsed = json.usage.total_tokens;
-              costUsd = json.usage.cost;
+              if (typeof json.usage.total_tokens === 'number') tokensUsed = json.usage.total_tokens;
+              if (typeof json.usage.cost === 'number') costUsd = json.usage.cost;
             }
 
             const delta = json.choices?.[0]?.delta?.content;

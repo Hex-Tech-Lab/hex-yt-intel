@@ -85,7 +85,20 @@ export function UsersAdminClient() {
         if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
         return res.json();
       })
-      .then((data: { users: UserActivityRow[] }) => setUsers(data.users))
+      .then((data: { users: UserActivityRow[] }) => {
+        // PostgREST serializes `numeric` and `bigint` (int8) columns as JSON
+        // strings, not numbers, to avoid JS float/int precision loss --
+        // total_cost_usd (numeric) and total_tokens_used (bigint, from
+        // SUM(integer) in admin_list_users_activity) both arrive as strings.
+        // Normalize once here so the rest of the component can trust these
+        // are real numbers (fmtCost's .toFixed() would otherwise throw).
+        const normalized = data.users.map((u) => ({
+          ...u,
+          total_cost_usd: Number(u.total_cost_usd) || 0,
+          total_tokens_used: Number(u.total_tokens_used) || 0,
+        }));
+        setUsers(normalized);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
 
@@ -146,14 +159,18 @@ export function UsersAdminClient() {
       </div>
 
       <div className="flex items-center gap-2">
+        <label htmlFor="users-admin-search" className="sr-only">Search users by name or email</label>
         <input
+          id="users-admin-search"
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or email…"
           className="flex-1 rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]"
         />
+        <label htmlFor="users-admin-sort" className="sr-only">Sort users</label>
         <select
+          id="users-admin-sort"
           value={sortKey}
           onChange={(e) => setSortKey(e.target.value as SortKey)}
           className="rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] outline-none focus:border-[var(--accent)]"

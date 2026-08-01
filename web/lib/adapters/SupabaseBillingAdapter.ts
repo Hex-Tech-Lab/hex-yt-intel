@@ -272,6 +272,16 @@ export class SupabaseBillingAdapter {
         });
 
       if (error) {
+        // ADR 020 Phase 3 review fix: idx_usage_logs_analysis_completed_dedup
+        // (unique on metadata->>'analysisId' where action='analysis_completed')
+        // rejects a second cost-log row for an analysisId that already has
+        // one -- expected and benign when the worker retries a persist call
+        // whose response was lost after the DB write already succeeded, not
+        // a real failure worth Sentry noise or a caller-visible throw.
+        if (error.code === '23505') {
+          console.debug('[SupabaseBillingAdapter] logUsageEvent: duplicate analysis_completed event ignored', { userId: params.userId, action: params.action });
+          return;
+        }
         console.error('[SupabaseBillingAdapter] logUsageEvent failed:', error.message);
         throw error;
       }
