@@ -257,6 +257,21 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
   // single check point every stale-request guard below funnels through, so
   // the race-safety logic can't be missed on a future edit to just one of
   // the four call sites.
+  //
+  // KNOWN LIMITATION (cubic/Qodo review, PR #177): this guard only protects
+  // the explicit activeId assignment each closure makes after its own
+  // isStaleRestore check -- it does NOT protect against
+  // useChatStore.getState().loadConversations() itself, which unconditionally
+  // writes activeId as a side effect (restoring from localStorage) BEFORE
+  // that check runs. If a stale click's loadConversations() call happens to
+  // resolve AFTER a newer click has already finished and set the correct
+  // activeId, the stale call's internal write can still land on top of it --
+  // isStaleRestore only stops the stale closure's OWN follow-up write, not
+  // loadConversations()'s. Fixing this fully needs request-scoped writes
+  // inside loadConversations() itself (or a compare-and-swap on activeId),
+  // not just a caller-side guard; not built now given the narrow window
+  // required (two History clicks in quick succession with reordered network
+  // responses) -- revisit if this proves to be a live symptom.
   const isStaleRestore = (analysisId: string) => latestRestoreRequestRef.current !== analysisId;
 
   const restoreAnalysis = async (analysisId: string) => {

@@ -437,6 +437,16 @@ export const useChatStore = create<ChatState>((set, get) => {
         // once seen in a fetch) and reconcile the whole set here, not just
         // activeId. Not built now -- this fix covers the exact reported
         // symptom; broaden it if another field exhibits the same race.
+        //
+        // KNOWN LIMITATION (cubic review, PR #177): this merge can't
+        // distinguish "not yet visible due to read-after-write lag" from
+        // "deleted server-side in another tab/device" -- both look like
+        // "priorActiveId absent from the fresh fetch". A cross-tab/device
+        // delete of the currently-active conversation would get silently
+        // resurrected here until the next successful loadConversations()
+        // catches up. Narrow (requires a second tab/device deleting the
+        // exact conversation this one has active); not fixed now since a
+        // correct fix needs the same pending-mutation tracking noted above.
         let conversations = fetched;
         if (priorActiveId && !fetched.some((c) => c.id === priorActiveId)) {
           const stillLocal = get().conversations.find((c) => c.id === priorActiveId);
