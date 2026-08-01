@@ -210,10 +210,15 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         const existing = findMatchingConversation(state.conversations, analysisId, videoId);
         if (existing) {
           // If the conversation matched by videoId but has a different analysisId (due to re-analysis),
-          // update it in-place and save to database.
-          if (analysisId && existing.analysisId !== analysisId) {
+          // update it in-place and save to database. Cancelled check before
+          // the PATCH, not after -- it's a persisted DB write, so firing it
+          // unconditionally after this effect has already been superseded
+          // by a newer video/analysisId change could rebind a shared
+          // conversation to the wrong (stale) analysis.
+          if (!cancelled && analysisId && existing.analysisId !== analysisId) {
             void useChatStore.getState().updateConversationAnalysisId(existing.id, analysisId);
           }
+          if (cancelled) return;
           await selectConversation(existing.id);
         } else {
           // No existing conversation for this video -- leave empty rather
@@ -222,8 +227,14 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           useChatStore.setState({ activeId: null });
         }
       } else {
-        // No analysis context — clear activeId so chat starts empty until user picks a thread
+        // No analysis/video context (general chat) -- restore the
+        // browser's last-active conversation instead of forcing empty.
+        // loadConversations() deliberately never writes activeId itself
+        // (see useChatStore.ts) specifically so a context-scoped restore
+        // like the branch above can never be raced/overwritten by it; this
+        // is the one place that opts INTO the localStorage-based restore.
         useChatStore.setState({ activeId: null });
+        await useChatStore.getState().restoreLastActiveConversation();
       }
       
       if (cancelled) return;

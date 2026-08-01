@@ -46,6 +46,7 @@ interface ChatState {
   setPersistState: (persistState: 'idle' | 'saving' | 'saved' | 'failed' | 'aborted', requestId?: string | null) => void;
 
   loadConversations: () => Promise<void>;
+  restoreLastActiveConversation: () => Promise<void>;
   selectConversation: (id: string) => Promise<void>;
   newConversation: (opts?: { analysisId?: string | null; videoId?: string | null; title?: string }) => Promise<string | null>;
   sendMessage: (text: string, opts?: { analysisId?: string | null; videoId?: string | null }) => Promise<void>;
@@ -412,6 +413,26 @@ export const useChatStore = create<ChatState>((set, get) => {
       }
     },
 
+    // Deliberately NEVER writes `activeId` -- ONLY loads/merges the
+    // conversation list. Every real caller (ChatDock's open effect,
+    // AnalysisHistory's restore, useAutoRestoreAnalysis, useSSEStream's
+    // post-analysis reload) already re-derives and explicitly sets the
+    // correct activeId itself after awaiting this call, scoped to whatever
+    // video/analysis context is actually current at that point.
+    //
+    // Real, still-live bug (2026-08-02, live prod test after PR #177):
+    // this function used to ALSO force-write activeId from its own local
+    // view of `conversations` -- but that view only reflects whatever this
+    // ONE call's fetch happened to see. If a second, faster-resolving
+    // loadConversations() call (for a DIFFERENT, newer video) already set
+    // the CORRECT activeId in the meantime, this call's completion would
+    // still wipe it to null just because ITS OWN fetched list didn't
+    // happen to contain that id -- a classic "last writer wins on a field
+    // it shouldn't be writing" bug, not a timing edge case. Every prior
+    // attempt at this (isStaleRestore checks in the three callers) patched
+    // around the SYMPTOM without addressing that loadConversations() itself
+    // was the one making the incorrect write. Removing the write here
+    // removes the entire race, not just this instance of it.
     loadConversations: async () => {
       set({ loadingList: true, error: null });
       try {
@@ -421,63 +442,60 @@ export const useChatStore = create<ChatState>((set, get) => {
         // just-created conversation (newConversation()'s own optimistic
         // local insert vs. this route's read) -- if the currently-active
         // conversation isn't in the fresh list yet, keep the locally-known
-        // copy merged in rather than silently dropping activeId. Dropping
-        // it meant the NEXT message the user sent found no active
-        // conversation and spawned a brand new one, producing two
-        // conversations seconds apart that the user never deliberately
-        // created (this is the lazy-create path in sendMessage()).
+        // copy merged in rather than silently dropping it from the list.
+        // (This only affects the `conversations` array now, never
+        // `activeId` itself -- see above.)
         //
         // KNOWN LIMITATION (altitude review, PR #177): this only protects
-        // activeId specifically, not general read-your-writes consistency --
-        // any OTHER locally-known conversation (e.g. one just renamed, or
-        // created but not currently active) that isn't yet visible to this
-        // same GET is still silently dropped by the reassignment below. A
-        // deeper fix would track all pending/unconfirmed local mutations
-        // (e.g. a pendingIds set populated on optimistic insert, cleared
-        // once seen in a fetch) and reconcile the whole set here, not just
-        // activeId. Not built now -- this fix covers the exact reported
-        // symptom; broaden it if another field exhibits the same race.
+        // priorActiveId's conversation specifically, not general
+        // read-your-writes consistency -- any OTHER locally-known
+        // conversation (e.g. one just renamed, or created but not
+        // currently active) that isn't yet visible to this same GET is
+        // still silently dropped by the reassignment below. A deeper fix
+        // would track all pending/unconfirmed local mutations (e.g. a
+        // pendingIds set populated on optimistic insert, cleared once seen
+        // in a fetch) and reconcile the whole set here. Not built now --
+        // this covers the exact reported symptom.
         //
         // KNOWN LIMITATION (cubic review, PR #177): this merge can't
         // distinguish "not yet visible due to read-after-write lag" from
         // "deleted server-side in another tab/device" -- both look like
         // "priorActiveId absent from the fresh fetch". A cross-tab/device
         // delete of the currently-active conversation would get silently
-        // resurrected here until the next successful loadConversations()
-        // catches up. Narrow (requires a second tab/device deleting the
-        // exact conversation this one has active); not fixed now since a
-        // correct fix needs the same pending-mutation tracking noted above.
+        // resurrected into the LIST here (though never into `activeId`,
+        // which this function no longer writes) until the next successful
+        // loadConversations() catches up. Narrow; not fixed now.
         let conversations = fetched;
         if (priorActiveId && !fetched.some((c) => c.id === priorActiveId)) {
           const stillLocal = get().conversations.find((c) => c.id === priorActiveId);
           if (stillLocal) conversations = [stillLocal, ...fetched];
         }
-        let restoredId: string | null = get().activeId;
-        if (!restoredId && typeof window !== 'undefined') {
-          try {
-            const savedId = localStorage.getItem('hex_yt_last_active_conv');
-            if (savedId && conversations.some((c) => c.id === savedId)) {
-              restoredId = savedId;
-            }
-          } catch (e) {
-            console.debug('[ChatStore] Read last_active_conv failed:', e);
-          }
-        }
-        // Deliberately does NOT default to the first conversation when there's
-        // no active/restored id -- an unrelated video's thread must never
-        // auto-open (ADR 009 ownership binding). Only a saved id for THIS
-        // browser's own last session is trusted as a restore source.
-        set({
-          conversations,
-          loadingList: false,
-          activeId: restoredId && conversations.some((c) => c.id === restoredId) ? restoredId : null,
-        });
-        if (restoredId && conversations.some((c) => c.id === restoredId) && !get().messagesByConv[restoredId]) {
-          void get().selectConversation(restoredId);
-        }
+        set({ conversations, loadingList: false });
       } catch (e) {
         set({ loadingList: false, error: e instanceof Error ? e.message : 'Failed to load chats' });
       }
+    },
+
+    /**
+     * Explicit, opt-in restore of the browser's last-active conversation
+     * from localStorage -- ONLY meaningful when there's no video/analysis
+     * context to ground against (general chat). Separated out of
+     * loadConversations() itself (see the comment there) so this is a
+     * deliberate action a caller takes, not an automatic side effect that
+     * can race with a context-scoped restore.
+     */
+    restoreLastActiveConversation: async () => {
+      if (typeof window === 'undefined') return;
+      if (get().activeId) return;
+      let savedId: string | null = null;
+      try {
+        savedId = localStorage.getItem('hex_yt_last_active_conv');
+      } catch (e) {
+        console.debug('[ChatStore] Read last_active_conv failed:', e);
+        return;
+      }
+      if (!savedId || !get().conversations.some((c) => c.id === savedId)) return;
+      await get().selectConversation(savedId);
     },
 
     selectConversation: async (id) => {

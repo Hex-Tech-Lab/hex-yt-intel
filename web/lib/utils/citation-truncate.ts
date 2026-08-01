@@ -41,11 +41,18 @@ export function truncateCitationPoints(markdown: string): string {
   const isDelimiterRow = (line: string) => /^\|[ \t|:-]+\|$/.test(line.trim());
   const isTableRow = (line: string) => line.trim().startsWith('|') && line.trim().endsWith('|');
 
+  // DeepSource flagged the earlier `lines[i]!` non-null assertions -- using
+  // `?? ''` at each read instead avoids asserting past what TS already
+  // knows is possibly undefined, with no behavior change (an out-of-range
+  // index reading as '' fails isPointHeader/isDelimiterRow/isTableRow the
+  // same way undefined would have).
   for (let i = 0; i < lines.length - 1; i++) {
-    if (!isPointHeader(lines[i]!) || !isDelimiterRow(lines[i + 1]!)) continue;
+    const headerLine = lines[i] ?? '';
+    const delimiterLine = lines[i + 1] ?? '';
+    if (!isPointHeader(headerLine) || !isDelimiterRow(delimiterLine)) continue;
     let j = i + 2;
-    while (j < lines.length && isTableRow(lines[j]!)) {
-      const cells = lines[j]!.split('|');
+    while (j < lines.length && isTableRow(lines[j] ?? '')) {
+      const cells = (lines[j] ?? '').split('|');
       // cells[0] is '' (before the leading |), cells[1] is Timestamp,
       // cells[2] is Point, cells[3] is '' (after the trailing |).
       const point = (cells[2] ?? '').trim();
