@@ -1,0 +1,28 @@
+web/lib/utils/find-chat-conversation.ts
+  s_0eded1e9d0cab6::t_9505265a25ae97 1-37
+web/hooks/useAutoRestoreAnalysis.ts
+  s_0eded1e9d0cab6::t_c75dc2d5c1e59b 9
+  s_0eded1e9d0cab6::t_8a0689f3327812 180
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_24eb0f6820abf1 365
+  s_0eded1e9d0cab6::t_ffa4007b1b9ec9 15
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_b0a978277f0d7e 166
+  s_0eded1e9d0cab6::t_b7e0dcc8276877 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "f1f08eea82264b2239b33389f311394993989c4f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
