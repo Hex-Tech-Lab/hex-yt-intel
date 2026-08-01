@@ -33,6 +33,14 @@ const CITATION_POINT_TRUNCATE_AT = 140;
  * the DOM until requested, same as a Facebook/X "See more", never hidden
  * with CSS overflow.
  */
+// Splits a table row on unescaped `|` only -- a naive `line.split('|')`
+// would treat a markdown-escaped `\|` inside cell content as a real column
+// delimiter, shifting which cell is actually the Point column and emitting
+// the escaped fragment as a spurious extra column (cubic review, PR #177).
+function splitTableRow(line: string): string[] {
+  return line.split(/(?<!\\)\|/);
+}
+
 export function truncateCitationPoints(markdown: string): string {
   if (!markdown) return '';
   const lines = markdown.split(/\r?\n/);
@@ -46,13 +54,19 @@ export function truncateCitationPoints(markdown: string): string {
   // knows is possibly undefined, with no behavior change (an out-of-range
   // index reading as '' fails isPointHeader/isDelimiterRow/isTableRow the
   // same way undefined would have).
+  let inFence = false;
   for (let i = 0; i < lines.length - 1; i++) {
     const headerLine = lines[i] ?? '';
+    // A fenced code example that happens to contain a citation-table-shaped
+    // header must not be truncated -- it's a code sample, never rendered
+    // citation content (cubic review, PR #177).
+    if (headerLine.trim().startsWith('```')) inFence = !inFence;
+    if (inFence) continue;
     const delimiterLine = lines[i + 1] ?? '';
     if (!isPointHeader(headerLine) || !isDelimiterRow(delimiterLine)) continue;
     let j = i + 2;
     while (j < lines.length && isTableRow(lines[j] ?? '')) {
-      const cells = (lines[j] ?? '').split('|');
+      const cells = splitTableRow(lines[j] ?? '');
       // cells[0] is '' (before the leading |), cells[1] is Timestamp,
       // cells[2] is Point, cells[3] is '' (after the trailing |).
       const point = (cells[2] ?? '').trim();

@@ -264,7 +264,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         // like the branch above can never be raced/overwritten by it; this
         // is the one place that opts INTO the localStorage-based restore.
         useChatStore.setState({ activeId: null });
-        await useChatStore.getState().restoreLastActiveConversation();
+        await useChatStore.getState().restoreLastActiveConversation({ epoch });
       }
       
       if (cancelled) return;

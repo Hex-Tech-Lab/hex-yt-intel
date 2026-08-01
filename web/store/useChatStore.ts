@@ -59,7 +59,7 @@ interface ChatState {
   beginRestoreEpoch: () => number;
 
   loadConversations: () => Promise<void>;
-  restoreLastActiveConversation: () => Promise<void>;
+  restoreLastActiveConversation: (opts?: { epoch?: number }) => Promise<void>;
   selectConversation: (id: string) => Promise<void>;
   newConversation: (opts?: { analysisId?: string | null; videoId?: string | null; title?: string }) => Promise<string | null>;
   sendMessage: (text: string, opts?: { analysisId?: string | null; videoId?: string | null }) => Promise<void>;
@@ -502,8 +502,19 @@ export const useChatStore = create<ChatState>((set, get) => {
      * loadConversations() itself (see the comment there) so this is a
      * deliberate action a caller takes, not an automatic side effect that
      * can race with a context-scoped restore.
+     *
+     * Takes the same `{ epoch }` guard as updateConversationAnalysisId, for
+     * the same reason (code-reviewer finding, 2026-08-02): this function's
+     * own `await` (inside selectConversation) is a window a NEWER,
+     * context-scoped restore (e.g. the user navigating from general chat to
+     * a video) can complete inside of -- without the epoch check, this
+     * call's eventual `selectConversation` would unconditionally overwrite
+     * that newer, correct activeId with an unrelated general-chat
+     * conversation, reintroducing the exact race class this session's other
+     * fixes were built to eliminate, in the one call site that was missing
+     * the guard.
      */
-    restoreLastActiveConversation: async () => {
+    restoreLastActiveConversation: async (opts) => {
       if (typeof window === 'undefined') return;
       if (get().activeId) return;
       let savedId: string | null = null;
