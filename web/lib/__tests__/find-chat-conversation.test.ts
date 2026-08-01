@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
+import { findMatchingConversation, filterConversationsForContext } from '@/lib/utils/find-chat-conversation';
 import type { ChatConversation } from '@/lib/types/chat';
 
 function conv(overrides: Partial<ChatConversation>): ChatConversation {
@@ -67,5 +67,31 @@ describe('findMatchingConversation', () => {
     const exactMatch = conv({ id: 'exact', videoId: 'v1' });
     const result = findMatchingConversation([strippedMatch, exactMatch], null, 'v1');
     expect(result?.id).toBe('exact');
+  });
+});
+
+describe('filterConversationsForContext', () => {
+  it('excludes conversations from unrelated videos/analyses', () => {
+    // Regression test: live-reported 2026-08-01 (screenshot) -- the thread
+    // switcher rendered the user's entire global conversation list, so a
+    // completely unrelated video's thread appeared while viewing another.
+    const thisVideo = conv({ id: 'this-video', analysisId: 'a1', videoId: 'v1' });
+    const unrelated = conv({ id: 'unrelated', analysisId: 'a-other', videoId: 'v-other' });
+    const result = filterConversationsForContext([thisVideo, unrelated], 'a1', 'v1');
+    expect(result.map((c) => c.id)).toEqual(['this-video']);
+  });
+
+  it('includes all conversations matching by analysisId, videoId, or stripped videoId', () => {
+    const byAnalysis = conv({ id: 'by-analysis', analysisId: 'a1', videoId: 'v-other' });
+    const byVideo = conv({ id: 'by-video', analysisId: 'a-other', videoId: 'v1' });
+    const byStripped = conv({ id: 'by-stripped', analysisId: 'a-other2', videoId: 'v1_archived_123' });
+    const unrelated = conv({ id: 'unrelated', analysisId: 'a-unrelated', videoId: 'v-unrelated' });
+    const result = filterConversationsForContext([byAnalysis, byVideo, byStripped, unrelated], 'a1', 'v1');
+    expect(result.map((c) => c.id).sort()).toEqual(['by-analysis', 'by-stripped', 'by-video']);
+  });
+
+  it('returns an empty array when nothing is grounded and no matches exist', () => {
+    const result = filterConversationsForContext([conv({ id: 'other', analysisId: 'a-other', videoId: 'v-other' })], 'a1', 'v1');
+    expect(result).toEqual([]);
   });
 });

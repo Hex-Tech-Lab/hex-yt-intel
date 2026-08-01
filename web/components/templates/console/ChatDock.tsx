@@ -21,7 +21,7 @@ import { useChatStore } from '@/store/useChatStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { preprocessMarkdown, parseAnsiToReact } from '@/lib/utils/format';
 import { generateFollowupPrompts } from '@/lib/utils/generate-followup-prompts';
-import { findMatchingConversation } from '@/lib/utils/find-chat-conversation';
+import { findMatchingConversation, filterConversationsForContext } from '@/lib/utils/find-chat-conversation';
 import { TimestampLink } from '@/components/TimestampLink';
 import { showToast, copyChatAsMarkdown, exportChatAsMarkdown, type ChatMessageForExport } from '@/lib/dashboard/export';
 
@@ -113,6 +113,10 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
     [messages]
   );
   const activeConv = useMemo(() => conversations.find((c) => c.id === activeId) || null, [conversations, activeId]);
+  const threadsForContext = useMemo(
+    () => filterConversationsForContext(conversations, analysisId, videoId),
+    [conversations, analysisId, videoId]
+  );
   const [copiedAllHeader, setCopiedAllHeader] = useState(false);
   const handleCopyAllHeader = () => {
     copyChatAsMarkdown(exportableMessages, activeConv?.title);
@@ -510,10 +514,10 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
               + Start New Chat Thread
             </span>
           </button>
-          {conversations.length === 0 ? (
+          {threadsForContext.length === 0 ? (
             <div className="p-3 text-[var(--ink-muted)] font-mono text-[11px]">No conversations yet</div>
           ) : (
-            conversations.map((c) => {
+            threadsForContext.map((c) => {
               const formattedDate = c.updatedAt || c.createdAt ? new Date(c.updatedAt || c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
               const rawTitle = c.title || 'Untitled Chat';
               // Explicit character truncation (not CSS text-ellipsis) so the

@@ -1,15 +1,28 @@
 import type { ChatConversation } from '@/lib/types/chat';
+import { stripArchivedVideoIdSuffix } from '@/lib/utils/archived-video-id';
 
 /**
- * A re-analysis writes a NEW analyses row whose videoId carries this suffix
- * for the superseded version (see CreateAnalysisUseCase) -- centralized here
- * so every consumer of the archived-videoId convention strips it identically
- * instead of each hand-rolling the same regex.
+ * Single match-tier primitive both findMatchingConversation (pick the
+ * highest-tier winner) and filterConversationsForContext (keep anything
+ * above tier 0) are built from -- altitude review, PR #177: an earlier
+ * version of this file hand-rolled the match condition twice (once inline
+ * in each function), which is exactly the "independently duplicated match
+ * logic" failure mode this file exists to eliminate. One tier function now;
+ * do not re-implement the match condition a second time in this file.
+ *
+ * 3 = exact analysisId, 2 = exact videoId, 1 = archived-suffix-stripped
+ * videoId match, 0 = no match.
  */
-const ARCHIVED_VIDEO_ID_SUFFIX = /_archived_.*$/;
-
-function stripArchivedSuffix(videoId: string | null | undefined): string | undefined {
-  return videoId?.replace(ARCHIVED_VIDEO_ID_SUFFIX, '');
+function matchTier(
+  c: ChatConversation,
+  analysisId: string | null | undefined,
+  videoId: string | null | undefined,
+  cleanVideoId: string | undefined
+): 0 | 1 | 2 | 3 {
+  if (analysisId && c.analysisId === analysisId) return 3;
+  if (videoId && c.videoId === videoId) return 2;
+  if (cleanVideoId && stripArchivedVideoIdSuffix(c.videoId) === cleanVideoId) return 1;
+  return 0;
 }
 
 /**
@@ -43,17 +56,36 @@ export function findMatchingConversation(
   analysisId: string | null | undefined,
   videoId: string | null | undefined
 ): ChatConversation | undefined {
-  if (analysisId) {
-    const byAnalysisId = conversations.find((c) => c.analysisId === analysisId);
-    if (byAnalysisId) return byAnalysisId;
+  const cleanVideoId = stripArchivedVideoIdSuffix(videoId);
+  let best: ChatConversation | undefined;
+  let bestTier = 0;
+  for (const c of conversations) {
+    const tier = matchTier(c, analysisId, videoId, cleanVideoId);
+    if (tier > bestTier) {
+      best = c;
+      bestTier = tier;
+      if (bestTier === 3) break; // can't beat the top tier
+    }
   }
-  if (videoId) {
-    const byVideoId = conversations.find((c) => c.videoId === videoId);
-    if (byVideoId) return byVideoId;
-  }
-  const cleanVideoId = stripArchivedSuffix(videoId);
-  if (cleanVideoId) {
-    return conversations.find((c) => stripArchivedSuffix(c.videoId) === cleanVideoId);
-  }
-  return undefined;
+  return best;
+}
+
+/**
+ * ALL conversations grounded in this analysis/video (across re-analyses),
+ * for the thread-switcher dropdown -- NOT the single best match
+ * findMatchingConversation returns (priority order doesn't apply here,
+ * every match is wanted). Real bug, live-reported 2026-08-01 (screenshot):
+ * the thread switcher rendered the user's ENTIRE global conversation list
+ * with zero filtering, so a completely unrelated video's conversation
+ * (e.g. a fitness-topic thread) appeared in the list while viewing a
+ * political-news video -- looked like disorganized "individual turns"
+ * instead of a clean per-video session list.
+ */
+export function filterConversationsForContext(
+  conversations: ChatConversation[],
+  analysisId: string | null | undefined,
+  videoId: string | null | undefined
+): ChatConversation[] {
+  const cleanVideoId = stripArchivedVideoIdSuffix(videoId);
+  return conversations.filter((c) => matchTier(c, analysisId, videoId, cleanVideoId) > 0);
 }

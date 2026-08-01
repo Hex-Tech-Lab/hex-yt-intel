@@ -415,7 +415,33 @@ export const useChatStore = create<ChatState>((set, get) => {
     loadConversations: async () => {
       set({ loadingList: true, error: null });
       try {
-        const { conversations } = await api<{ conversations: ChatConversation[] }>('/api/chat/conversations');
+        const { conversations: fetched } = await api<{ conversations: ChatConversation[] }>('/api/chat/conversations');
+        const priorActiveId = get().activeId;
+        // Live-reported bug (2026-08-01): a fresh GET can lag behind a
+        // just-created conversation (newConversation()'s own optimistic
+        // local insert vs. this route's read) -- if the currently-active
+        // conversation isn't in the fresh list yet, keep the locally-known
+        // copy merged in rather than silently dropping activeId. Dropping
+        // it meant the NEXT message the user sent found no active
+        // conversation and spawned a brand new one, producing two
+        // conversations seconds apart that the user never deliberately
+        // created (this is the lazy-create path in sendMessage()).
+        //
+        // KNOWN LIMITATION (altitude review, PR #177): this only protects
+        // activeId specifically, not general read-your-writes consistency --
+        // any OTHER locally-known conversation (e.g. one just renamed, or
+        // created but not currently active) that isn't yet visible to this
+        // same GET is still silently dropped by the reassignment below. A
+        // deeper fix would track all pending/unconfirmed local mutations
+        // (e.g. a pendingIds set populated on optimistic insert, cleared
+        // once seen in a fetch) and reconcile the whole set here, not just
+        // activeId. Not built now -- this fix covers the exact reported
+        // symptom; broaden it if another field exhibits the same race.
+        let conversations = fetched;
+        if (priorActiveId && !fetched.some((c) => c.id === priorActiveId)) {
+          const stillLocal = get().conversations.find((c) => c.id === priorActiveId);
+          if (stillLocal) conversations = [stillLocal, ...fetched];
+        }
         let restoredId: string | null = get().activeId;
         if (!restoredId && typeof window !== 'undefined') {
           try {
