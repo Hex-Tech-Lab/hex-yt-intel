@@ -209,15 +209,21 @@ export function useSSEStream() {
                   archiveCurrentAnalysis();
                   void (async () => {
                     try {
+                      // Bumped as early as possible so a still-in-flight
+                      // OLDER stream's later updateConversationAnalysisId
+                      // call sees a stale epoch and no-ops its PATCH (see
+                      // restoreEpoch doc, useChatStore.ts).
+                      const epoch = useChatStore.getState().beginRestoreEpoch();
+                      // `abortControllerRef.current !== myController` alone
+                      // doesn't catch unmount/navigation: the cleanup effect
+                      // only calls `.abort()` on the controller, it never
+                      // reassigns the ref, so identity still matches after
+                      // unmount. `myController.signal.aborted` catches that
+                      // case too -- both checks needed (cubic review, PR
+                      // #177).
+                      const isStale = () => myController.signal.aborted || abortControllerRef.current !== myController;
                       await useChatStore.getState().loadConversations();
-                      // Bail if a NEWER startAnalysis() call has since replaced this
-                      // stream's controller -- this IIFE is unawaited/uncancelled, so
-                      // without this check a slow load resolving after a subsequent
-                      // analysis has already started would rebind/select ITS chat
-                      // panel onto this older stream's conversation instead (cubic
-                      // review, PR #177). Reuses the same abortControllerRef identity
-                      // check the cancel path below already relies on.
-                      if (abortControllerRef.current !== myController) return;
+                      if (isStale()) return;
                       const chatStore = useChatStore.getState();
                       const currentVid = job.videoId;
                       const currentAnalId = job.analysisId || job.id;
@@ -226,9 +232,9 @@ export function useSSEStream() {
                       const existingConv = findMatchingConversation(chatStore.conversations, currentAnalId, currentVid);
                       if (existingConv) {
                         if (existingConv.analysisId !== currentAnalId) {
-                          await chatStore.updateConversationAnalysisId(existingConv.id, currentAnalId);
+                          await chatStore.updateConversationAnalysisId(existingConv.id, currentAnalId, { epoch });
                         }
-                        if (abortControllerRef.current !== myController) return;
+                        if (isStale()) return;
                         await chatStore.selectConversation(existingConv.id);
                       }
                     } catch (e) {
