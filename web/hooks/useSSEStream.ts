@@ -306,7 +306,15 @@ export function useSSEStream() {
                   if (fetchErr.name === 'AbortError') {
                     throw new Error(timedOut ? 'Handshake timed out after 25s.' : 'Request aborted.');
                   }
-                  throw fetchErr;
+                  // Raw browser fetch failures (TypeError: Failed to fetch, etc.)
+                  // give no RCA signal on their own -- capture with bundle/host
+                  // context so transient connectivity blips are distinguishable
+                  // from a systemic worker outage in Sentry.
+                  Sentry.captureException(fetchErr, {
+                    tags: { component: 'useSSEStream', phase: 'worker-fetch' },
+                    extra: { bundleIndex: i, workerHost: (() => { try { return new URL(job.stream.url).host; } catch { return 'unknown'; } })() },
+                  });
+                  throw new Error(`Network error contacting worker (bundle ${i + 1}): ${fetchErr.message || fetchErr.name || 'unknown'}`);
                 } finally {
                   clearTimeout(timeoutId);
                 }
@@ -433,6 +441,15 @@ export function useSSEStream() {
                   streamFetches.map((p, idx) => p.catch((err) => {
                     if (currentSignal.aborted || hasSettled) return;
                     store.logError(`Stream ${idx + 1} failed: ${err.message}`);
+                    // Non-fetch failures (stream read errors, JSON parse
+                    // failures inside the reader loop) never pass through the
+                    // worker-fetch Sentry.captureException above -- capture
+                    // here too so every settle-on-error path has telemetry,
+                    // not just the initial connection.
+                    Sentry.captureException(err, {
+                      tags: { component: 'useSSEStream', phase: 'stream-runtime' },
+                      extra: { bundleIndex: idx },
+                    });
                     handleStreamError(idx, err.message);
                   }))
                 );
