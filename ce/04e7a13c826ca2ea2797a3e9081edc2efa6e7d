@@ -1,0 +1,19 @@
+supabase/migrations/20260802174534_chat_grounding_resync_v9_pipe_escape.sql
+  s_0eded1e9d0cab6::t_3b74ab59895faa 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "ce04e7a13c826ca2ea2797a3e9081edc2efa6e7d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
