@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo, startTransition } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, startTransition } from 'react';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 import { entityHex, entityRgb } from '@/lib/design/entity-colors';
 
@@ -245,21 +245,6 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     return placed;
   }, [graph.nodes, size.w, size.h]);
 
-  // Store layout in ref for imperative access, and repaint immediately.
-  // CodeRabbit review, PR #181: the entrance-animation effect is now gated
-  // on wordsLayoutKey (a stable id+label key) rather than this array's
-  // reference, so a resize that shifts word positions without changing the
-  // word set no longer restarts the animation -- but nothing else was
-  // repainting the canvas for that case either, leaving stale pixel
-  // positions on screen until an incidental mouse move. drawCanvasRef.current
-  // is safe to call here even though its own declaration appears later in
-  // this component: useRef(drawCanvas) already initializes `.current`
-  // synchronously during render, before any effect runs.
-  useEffect(() => {
-    wordsLayoutRef.current = wordsLayout;
-    drawCanvasRef.current();
-  }, [wordsLayout]);
-
   // CodeRabbit review, PR #181: `wordsLayout` is a useMemo keyed partly on
   // `size.w` (ResizeObserver-driven), so a resize that doesn't actually
   // change which words are present still produces a NEW array reference --
@@ -274,11 +259,51 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // extracted from the SAME underlying node all share that node's id (see
   // the tokenMap construction above), so an id-only key could fail to
   // detect a genuine content change if the id sequence happened to repeat
-  // (second CodeRabbit finding on this same PR).
+  // (second CodeRabbit finding on this same PR). Declared before the
+  // layout-sync effect below (not after, as an earlier version of this fix
+  // had it) since a dependency array is evaluated during render, unlike an
+  // effect body -- referencing it before this point is a real TDZ
+  // compile error, not just an ordering style nit.
   const wordsLayoutKey = useMemo(
     () => wordsLayout.map((w) => `${w.id}:${w.label}`).join(','),
     [wordsLayout]
   );
+
+  // Store layout in ref for imperative access, and repaint immediately.
+  // CodeRabbit review, PR #181: the entrance-animation effect is now gated
+  // on wordsLayoutKey (a stable id+label key) rather than this array's
+  // reference, so a resize that shifts word positions without changing the
+  // word set no longer restarts the animation -- but nothing else was
+  // repainting the canvas for that case either, leaving stale pixel
+  // positions on screen until an incidental mouse move. drawCanvasRef.current
+  // is safe to call here even though its own declaration appears later in
+  // this component: useRef(drawCanvas) already initializes `.current`
+  // synchronously during render, before any effect runs.
+  // Cubic review, PR #181: this repaint can fire with a STALE
+  // wordProgressRef when the word SET itself changed (not just
+  // repositioned) -- a word id that previously finished animating
+  // (progress=1) and reappears in a genuinely new word set would flash at
+  // full opacity here, then visibly snap back to 0 and re-animate once the
+  // entrance-animation effect's first rAF frame overwrites it. Clearing
+  // wordProgressRef whenever wordsLayoutKey actually changes (not on every
+  // wordsLayout reference change, which also fires on position-only resize
+  // updates) makes this repaint consistent with what the animation effect
+  // is about to do, instead of racing it for one frame.
+  const prevWordsLayoutKeyRef = useRef<string | null>(null);
+  // Cubic review, PR #181 (second finding): changing the canvas's
+  // width/height attribute (driven by `size` from ResizeObserver) clears
+  // its bitmap synchronously in the browser, but a plain useEffect runs
+  // AFTER the browser paints -- so a resize could show one blank/stale
+  // frame before this redraw catches up. useLayoutEffect runs synchronously
+  // before paint, closing that gap.
+  useLayoutEffect(() => {
+    wordsLayoutRef.current = wordsLayout;
+    if (prevWordsLayoutKeyRef.current !== wordsLayoutKey) {
+      wordProgressRef.current = {};
+      prevWordsLayoutKeyRef.current = wordsLayoutKey;
+    }
+    drawCanvasRef.current();
+  }, [wordsLayout, wordsLayoutKey]);
 
   // Track animation progress per word id
   const wordProgressRef = useRef<Record<string, number>>({});
