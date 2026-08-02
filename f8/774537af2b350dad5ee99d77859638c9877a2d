@@ -1,0 +1,24 @@
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_00dae8684c6b2a 25
+web/lib/usecases/ProcessChatMessageUseCase.ts
+  s_0eded1e9d0cab6::t_53564b97c80171 51
+  s_0eded1e9d0cab6::t_bdbcfeacb50123 497
+worker/src/chat-stream.ts
+  s_0eded1e9d0cab6::t_9c5c314a3283e3 51-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "f8774537af2b350dad5ee99d77859638c9877a2d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
