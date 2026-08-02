@@ -158,7 +158,14 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
       console.error('[SupabasePersistenceAdapter] update_analysis_result_atomic failed:', rpcError.message);
       throw rpcError;
     }
-    const updated = Array.isArray(rpcRows) ? rpcRows[0]?.updated : (rpcRows as any)?.updated;
+    // `returns table(...)` RPCs always come back as an array (0 or 1 row here,
+    // since p_analysis_id is a PK match) -- fail loudly on anything else
+    // rather than silently falling back, since this boolean drives whether
+    // the guarded-write side effects below run at all.
+    if (!Array.isArray(rpcRows)) {
+      throw new Error(`[SupabasePersistenceAdapter] update_analysis_result_atomic returned unexpected shape: ${typeof rpcRows}`);
+    }
+    const updated = rpcRows[0]?.updated ?? false;
 
     // Guarded call that lost the race (a concurrent writer already moved this
     // row off guardBillingStatus): stop here. Applying KG/chunk side-effects
