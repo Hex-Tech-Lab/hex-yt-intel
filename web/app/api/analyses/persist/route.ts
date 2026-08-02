@@ -604,7 +604,17 @@ export async function POST(request: NextRequest) {
             // cancelled overrides content-based computation entirely -- the
             // user explicitly stopped this, regardless of how much content
             // happened to complete first (ADR 020 Phase 2).
-            billing_status: cancelled ? 'cancelled' : isStitchedValid ? billingStatus : 'failed',
+            //
+            // FIX (2026-08-03): billing_status must be driven by buildDimensionStatus's
+            // billingStatus (which independently inspects dimension completeness), NOT by
+            // isStitchedValid. When UCISPayloadV2Schema.safeParse fails on KG-node or
+            // persona metadata fields, the dimensions themselves may be fully complete —
+            // forcing 'failed' here silently discards usable content and leaves the row
+            // permanently invisible to the reaper (which only sweeps billing_status='processing').
+            // isStitchedValid correctly governs validationStatus (line above) and valid
+            // (line below), but must not override the dimension-completeness billing signal.
+            // Mirrors Path 2's correct semantics at persist/route.ts:841.
+            billing_status: cancelled ? 'cancelled' : billingStatus,
             dimension_status: dimensionStatus,
             model_used: model || null,
             valid: isStitchedValid && finalStatus === 'done',
