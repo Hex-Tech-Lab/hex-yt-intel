@@ -4,6 +4,7 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/templates/_shared/primitives';
+import { showToast } from '@/lib/dashboard/toast-bridge';
 
 function AtlasLoadingSkeleton() {
   return (
@@ -30,24 +31,47 @@ export function AtlasClient() {
     if (!videoUrl.trim()) return;
 
     setIsSubmitting(true);
-    try {
-      // Dispatch the payload directly to your streaming API endpoint
-      const response = await fetch("/api/analyses/persist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: videoUrl }),
-      });
 
-      if (!response.ok) throw new Error("Ingestion payload distribution failed");
+    // Retry policy: matches MetadataScraper.fetchComments (worker/src/services/MetadataScraper.ts)
+    // — max 2 attempts, no backoff (low-traffic path), 4xx client errors are
+    // treated as non-retryable (a retry can't fix a bad request), everything
+    // else (5xx, network failure) gets one immediate retry.
+    const maxAttempts = 2;
+    let lastError: unknown = null;
 
-      const data = await response.json();
-      
-      // Navigate to the live 11-dimension stream view instantly
-      router.push(`/analyses/${data.analysisId}`);
-    } catch (error) {
-      console.error("[ATLAS_INGESTION_ERROR]:", error);
-      setIsSubmitting(false);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // Dispatch the payload directly to your streaming API endpoint
+        const response = await fetch("/api/analyses/persist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: videoUrl }),
+        });
+
+        if (!response.ok) {
+          if (response.status >= 400 && response.status < 500) {
+            throw new Error(`Ingestion payload distribution failed: ${response.status}`);
+          }
+          lastError = new Error(`Ingestion payload distribution failed: ${response.status}`);
+          if (attempt < maxAttempts) continue;
+          throw lastError;
+        }
+
+        const data = await response.json();
+
+        // Navigate to the live 11-dimension stream view instantly
+        router.push(`/analyses/${data.analysisId}`);
+        return;
+      } catch (error) {
+        lastError = error;
+        const isClientError = error instanceof Error && /: 4\d\d$/.test(error.message);
+        if (isClientError || attempt >= maxAttempts) break;
+      }
     }
+
+    console.error("[ATLAS_INGESTION_ERROR]:", lastError);
+    showToast('Could not start analysis. Please try again.', 'error');
+    setIsSubmitting(false);
   };
 
   return (
