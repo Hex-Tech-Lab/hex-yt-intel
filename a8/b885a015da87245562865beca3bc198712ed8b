@@ -1,0 +1,21 @@
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_6dfe4621b5056a 687-697
+web/app/globals.css
+  s_0eded1e9d0cab6::t_756277a341fe53 658-665
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "a8b885a015da87245562865beca3bc198712ed8b",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
