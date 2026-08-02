@@ -25,7 +25,9 @@ once the corresponding commit lands, the commit hash is the permanent record.
 - **File**: `web/app/api/admin/settings/route.ts` (new file, GET-only, contains zero `.insert`/`.upsert`/`.update` calls)
 - **Symptom**: 3x "Data Integrity: DB operation without validation" (high severity) fired on a file whose only Supabase calls are `.select().order()` and `.select().eq().is()` -- pure reads.
 - **Root cause**: the data-integrity rule appears to match on `supabase.from(...)` generically without checking which method (`.select` vs `.insert`/`.upsert`/`.update`) follows, so any DB call in a file gets flagged as an unvalidated write.
-- **Not fixed yet** — needs the rule to only fire when the call chain actually contains a write method.
+- **Still not fixed as of 2026-08-02 full-repo re-scan** — same 3x false positive reconfirmed on the same file, no regression, just still open.
+- **2026-08-02 addendum — rule also false-positives on real writes with no user input**: 3 more files flagged (`web/app/api/admin/stats/route.ts`, `web/app/api/billing/checkout/route.ts`, `web/app/api/webhooks/upstash-snapshot-poll/route.ts`), each with one genuine `.insert()`, but every inserted field is either a literal, a server/session-derived value, or already Zod-validated earlier in the same handler — no raw external input reaches the DB in any of the four flagged files. The rule needs two fixes, not one: (1) only fire on write methods (`.insert`/`.upsert`/`.update`), and (2) within a write call, only fire when at least one inserted field traces back to unvalidated request input (body/query/headers) rather than session data, constants, or a variable already passed through `.parse()`/`.safeParse()` earlier in the function.
+- **Not fixed yet** — needs the rule to only fire when the call chain actually contains a write method AND that write includes at least one field sourced from unvalidated request input.
 
 ### 2026-07-25 — secrets-exposure "token" pattern false-positives on pagination cursors
 - **Rule**: the Sentry/telemetry secrets-exposure check (`scripts/quality-engine/rules/security.ts`, "Secrets Exposure: Sensitive data in telemetry")
@@ -34,6 +36,18 @@ once the corresponding commit lands, the commit hash is the permanent record.
 - **Fix**: added a `PAGINATION_TOKEN_NAME` regex (`^(page|next|prev|previous|continuation|cursor)token$`) that exempts only the `token` pattern's benign name-shape from the hit, applied narrowly (not a blanket allowlist token, still catches `accessToken`/`authToken`/etc.).
 - **Verified**: working-tree scan on the real file now shows zero secrets-exposure findings; a synthetic `accessToken` case in a throwaway file still fires correctly (isolated, not committed).
 - **Commit**: (pending — see next commit in this session)
+
+### 2026-08-02 — POST-307-redirect detector doesn't distinguish which exported handler it matched inside
+- **File**: `web/app/api/auth/signin/route.ts`
+- **Symptom**: "Auth: POST 307 redirect preserves POST method" (high severity) fired even though the file's `POST()` handler correctly uses a 303 redirect; only the separate `GET()` handler (harmless — GET redirecting to GET) uses 307.
+- **Root cause**: the check appears to scan the whole file for `307` co-occurring with `POST` textually, rather than scoping to the body of the exported `POST` function specifically.
+- **Not fixed yet** — needs the rule to parse per-function (or at minimum scope its 307 search to text between the `export function POST` declaration and the next top-level export) instead of whole-file co-occurrence.
+
+### 2026-08-02 — InformationDisclosureRule flags any `userId` in a log call, no exemption for server-side correlation-ID logging
+- **File**: `web/lib/skills/wiki-builder/wiki-builder.ts`
+- **Symptom**: "Information Disclosure: Sensitive paths/IDs in error logs" (high severity) fired twice on `console.error`/`Sentry.captureException` calls that log `userId` — this is server-side-only structured logging for traceability (this repo's own convention per CLAUDE.md's "always use correlation IDs"), not a leak to any client or untrusted surface.
+- **Root cause**: the rule's sensitive-pattern list includes bare `userId` with no distinction from actual secrets (tokens/keys/passwords) and no awareness that server-side console/Sentry logs aren't attacker-visible the way a client-facing error response would be.
+- **Not fixed yet** — needs either (a) removing `userId` from the sensitive-pattern list entirely (it's an identifier, not a credential — `SecretsExposureRule` already covers real token/key leaks separately), or (b) exempting `console.*`/`Sentry.*` calls specifically since those never reach an end user.
 
 ## Resolved
 
