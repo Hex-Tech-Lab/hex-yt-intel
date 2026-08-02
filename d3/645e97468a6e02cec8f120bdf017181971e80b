@@ -1,0 +1,32 @@
+supabase/migrations/20260802122401_analyses_add_last_viewed_at.sql
+  s_0eded1e9d0cab6::t_eed4e1cf44dfe9 1-26
+web/lib/ports/AnalysisPersistencePort.ts
+  s_0eded1e9d0cab6::t_94e12149e50f66 44-45
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_4315eb940624ad 733-744
+supabase/migrations/20260802122420_history_overview_function_v10_add_last_viewed_at.sql
+  s_0eded1e9d0cab6::t_5cb5bddba42c1b 1-117
+web/lib/utils/history-overview.ts
+  s_0eded1e9d0cab6::t_f4d53f668f6b0a 60
+  s_0eded1e9d0cab6::t_2091c4f2446fa1 17
+web/lib/__tests__/history-overview.test.ts
+  s_0eded1e9d0cab6::t_5a4bb71fb283fd 40
+  s_0eded1e9d0cab6::t_c325cf9b7a0a67 65
+  s_0eded1e9d0cab6::t_891a4ebbe8ec0c 85-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d3645e97468a6e02cec8f120bdf017181971e80b",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
