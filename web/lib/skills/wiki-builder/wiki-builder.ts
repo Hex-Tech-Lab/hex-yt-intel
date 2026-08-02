@@ -507,6 +507,14 @@ export async function getAllActiveUsers(
 
     if (error) {
       console.warn('[wiki-builder] Error querying users:', error.message);
+      // Previously console-only -- this silently skips the entire monthly
+      // wiki run for this page of users with nothing visible in Sentry
+      // search/alerting (same gap as MetadataScraper.ts, item 14).
+      Sentry.captureMessage('wiki-builder: getAllActiveUsers query failed', {
+        level: 'warning',
+        tags: { service: 'wiki-builder' },
+        extra: { limit, offset, error: error.message },
+      });
       // Fallback: return empty list
       return { users: [], totalCount: 0 };
     }
@@ -518,6 +526,10 @@ export async function getAllActiveUsers(
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('[wiki-builder] Failed to fetch users:', msg);
+    Sentry.captureException(error, {
+      tags: { service: 'wiki-builder' },
+      extra: { limit, offset },
+    });
     return { users: [], totalCount: 0 };
   }
 }

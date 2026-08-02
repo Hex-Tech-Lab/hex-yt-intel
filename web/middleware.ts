@@ -88,6 +88,14 @@ async function hasSupabaseAuth(
       if (bearerError || !bearerUser) {
         diag.outcome = 'bearer_invalid';
         diag.supabaseError = bearerError?.message ?? null;
+        // Previously silent -- a rejected Bearer token is a machine/API
+        // caller with a genuinely bad credential (expired, forged, wrong
+        // env), not routine anonymous browser traffic. console.warn only
+        // here (not Sentry.captureMessage): the caller (middleware()) already
+        // reports to Sentry for any request that had a real credential
+        // (hadCredential branch below), so a second report here would double
+        // up. This keeps the failure visible in logs without duplicate noise.
+        console.warn('[middleware] auth-diag bearer_invalid', diag);
         return { ok: false, diag };
       }
       return { ok: true, diag };
