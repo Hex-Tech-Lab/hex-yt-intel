@@ -100,6 +100,8 @@ export class GenerateExecutiveDigestUseCase {
         system: systemPrompt,
         user: buildExecutiveDigestUserMessage(markdown),
         models,
+        analysisId,
+        requestingUserId: userId,
       });
       text = completion.text;
       model = completion.model;

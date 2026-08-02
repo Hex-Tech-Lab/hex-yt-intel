@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     const embeddingResult = await trackExternalCall(
       'openai',
       'text-embedding-3-small',
-      () => generateEmbedding(markdown),
+      () => generateEmbedding(markdown, userId),
       { analysisId }
     );
 

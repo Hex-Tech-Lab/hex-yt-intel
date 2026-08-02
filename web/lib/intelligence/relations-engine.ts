@@ -57,7 +57,8 @@ async function* callStanceModelStream(
   apiKey: string,
   handshakeTimeoutMs: number = 8000,
   externalSignal?: AbortSignal,
-  providerOrder?: string[]
+  providerOrder?: string[],
+  userId?: string
 ): AsyncGenerator<string> {
   const controller = new AbortController();
   const handshakeTimer = setTimeout(() => controller.abort(), handshakeTimeoutMs);
@@ -89,6 +90,7 @@ async function* callStanceModelStream(
           allow_fallbacks: false,
           ...(providerOrder ? { order: providerOrder } : {}),
         },
+        ...(userId ? { user: userId } : {}),
       }),
       signal: controller.signal,
     });
@@ -137,7 +139,8 @@ async function* callStanceModelStream(
 export async function* computeStanceRelationsStream(
   dims: StanceDimension[],
   apiKey: string,
-  handshakeSignal?: AbortSignal
+  handshakeSignal?: AbortSignal,
+  userId?: string
 ): AsyncGenerator<{ type: 'insight', insight: RelationInsight } | { type: 'model', model: string }> {
   const usable = dims.filter((d) => d.content && d.content.trim().length >= 12);
   if (usable.length < 2 || !apiKey) return;
@@ -164,7 +167,8 @@ export async function* computeStanceRelationsStream(
         apiKey,
         8000,
         handshakeSignal,
-        item.providerOrder as string[] | undefined
+        item.providerOrder as string[] | undefined,
+        userId
       )) {
         fullText += delta;
       }

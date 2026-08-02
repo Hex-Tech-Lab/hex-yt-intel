@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     // 4. Generate embedding for query
     let queryEmbedding: number[];
     try {
-      queryEmbedding = await generateQueryEmbedding(query);
+      queryEmbedding = await generateQueryEmbedding(query, userId);
       if (!queryEmbedding || queryEmbedding.length === 0) {
         throw new Error('Empty embedding result');
       }
@@ -237,9 +237,9 @@ export async function POST(request: NextRequest) {
  * Generate embedding for search query via OpenRouter
  * Uses text-embedding-3-small model for 1536-dimensional vectors
  */
-async function generateQueryEmbedding(query: string): Promise<number[]> {
+async function generateQueryEmbedding(query: string, userId?: string): Promise<number[]> {
   try {
-    const result = await generateEmbedding(query);
+    const result = await generateEmbedding(query, userId);
     return result.embedding;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
-import { auxStatusFromValidationReport, type AuxStatusReportInput } from '@/lib/utils/aux-status-from-report';
+import { auxStatusFromAnalysisPayload, type AuxStatusPayloadInput } from '@/lib/utils/aux-status-from-report';
 
 export interface AuxElementStatus {
   description: boolean;
@@ -50,8 +50,8 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
         const data = await res.json();
         if (cancelled) return;
 
-        const report = data.validation_report as AuxStatusReportInput | null | undefined;
-        const { hasDescription, hasChannelMeta, hasComments } = auxStatusFromValidationReport(report);
+        const payload = data.analysis_payload as AuxStatusPayloadInput | null | undefined;
+        const { hasDescription, hasChannelMeta, hasComments } = auxStatusFromAnalysisPayload(payload);
 
         setAuxStatus({
           description: hasDescription,

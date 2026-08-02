@@ -96,6 +96,7 @@ async function streamChatCascade(
   onDelta: (chunk: string) => void,
   models?: string[],
   cascade?: Array<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
+  userId?: string,
 ): Promise<{ content: string; servedByModel: string | null; servedByProvider: string | null; attempts: string[] }> {
   const attempts: string[] = [];
   const messages: Array<{ role: string; content: string }> = [{ role: "system", content: CHAT_PROTOCOL }];
@@ -140,6 +141,7 @@ async function streamChatCascade(
           stream: true,
           reasoning: { effort: "low" },
           messages,
+          ...(userId ? { user: userId } : {}),
           provider: {
             sort: "latency",
             allow_fallbacks: false,
@@ -366,7 +368,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
       try {
         const result = await streamChatCascade(apiKey, grounding, history, (chunk) => {
           send({ type: "delta", content: chunk, requestId: req.requestId });
-        }, req.models, req.cascade);
+        }, req.models, req.cascade, req.userId);
         full = result.content;
         servedByModel = result.servedByModel;
         servedByProvider = result.servedByProvider;
