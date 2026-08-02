@@ -250,6 +250,14 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     wordsLayoutRef.current = wordsLayout;
   }, [wordsLayout]);
 
+  // Track animation progress per word id
+  const wordProgressRef = useRef<Record<string, number>>({});
+  const animFrameRef = useRef<number | null>(null);
+  // Flips true once the empty-state pulse has run past EMPTY_PULSE_TIMEOUT_MS
+  // with no words -- stops the rAF loop and swaps to a static "no data"
+  // message instead of pulsing "Synthesizing..." forever.
+  const emptyTimedOutRef = useRef(false);
+
   // Imperative canvas draw — no React re-render needed for hover
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -259,34 +267,124 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     ctx.clearRect(0, 0, size.w, size.h);
 
+    const words = wordsLayoutRef.current;
+
+    if (words.length === 0) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '12px Inter, sans-serif';
+      if (emptyTimedOutRef.current) {
+        // Timed out with no data -- this is a genuinely empty analysis, not
+        // one still synthesizing. Static text, no more animation.
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
+        ctx.fillText('No cloud structure yet', size.w / 2, size.h / 2);
+      } else {
+        const now = Date.now() / 1000;
+        const alpha = 0.35 + 0.35 * Math.sin(now * 3);
+        ctx.fillStyle = `rgba(148, 163, 184, ${alpha})`;
+        ctx.fillText('Synthesizing word cloud...', size.w / 2, size.h / 2);
+      }
+      ctx.restore();
+      return;
+    }
+
     const radius = radiusRef.current;
 
-    wordsLayoutRef.current.forEach((word) => {
+    words.forEach((word) => {
+      const progress = wordProgressRef.current[word.id] ?? 1;
+      if (progress <= 0) return;
+
       const isSelected = selectedId === word.id;
       const isHovered = hoveredWordIdRef.current === word.id;
       const active = isSelected || isHovered;
       const rgb = entityRgb(word.type);
 
+      const scale = 0.5 + 0.5 * progress;
+      const alpha = progress;
+
+      ctx.save();
+      ctx.translate(word.x, word.y);
+      ctx.scale(scale, scale);
+
       ctx.beginPath();
       // Slightly-rounded rectangle chip (design-system radius), not a pill.
-      ctx.roundRect(word.x - word.w / 2, word.y - word.h / 2, word.w, word.h, radius);
-      ctx.fillStyle = `rgb(${rgb} / ${active ? 0.25 : 0.12})`;
+      ctx.roundRect(-word.w / 2, -word.h / 2, word.w, word.h, radius);
+      ctx.fillStyle = `rgb(${rgb} / ${(active ? 0.25 : 0.12) * alpha})`;
       ctx.fill();
-      ctx.strokeStyle = active ? entityHex(word.type) : `rgb(${rgb} / 0.3)`;
+      ctx.strokeStyle = active ? entityHex(word.type) : `rgb(${rgb} / ${0.3 * alpha})`;
       ctx.lineWidth = active ? 1.5 : 0.8;
       ctx.stroke();
 
       ctx.fillStyle = active ? inkRef.current : entityHex(word.type);
+      ctx.globalAlpha = alpha;
       ctx.font = `${active ? '700' : '600'} ${word.fontSize}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(word.label, word.x, word.y);
+      ctx.fillText(word.label, 0, 0);
+
+      ctx.restore();
     });
   }, [selectedId, size]);
 
-  // Redraw when layout changes, selection changes, or dimensions are built.
-  // Include wordsLayout in dependencies to trigger redraw when layout is computed.
-  useEffect(() => { drawCanvas(); }, [drawCanvas, wordsLayout]);
+  // Staggered pop-in reveal animation & empty pulse loop
+  useEffect(() => {
+    if (wordsLayout.length === 0) {
+      // Bounded, not indefinite: an analysis that completes with genuinely
+      // zero entities would otherwise pulse "Synthesizing..." forever and
+      // burn an rAF loop forever, since this component has no isAnalyzing/
+      // status prop to distinguish "still working" from "permanently empty".
+      let active = true;
+      const startedAt = Date.now();
+      const EMPTY_PULSE_TIMEOUT_MS = 8000;
+      const loop = () => {
+        if (!active) return;
+        if (Date.now() - startedAt > EMPTY_PULSE_TIMEOUT_MS) {
+          emptyTimedOutRef.current = true;
+          drawCanvas();
+          return;
+        }
+        drawCanvas();
+        animFrameRef.current = requestAnimationFrame(loop);
+      };
+      emptyTimedOutRef.current = false;
+      loop();
+      return () => {
+        active = false;
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      };
+    }
+
+    const startTime = performance.now();
+    let active = true;
+
+    const animate = (now: number) => {
+      if (!active) return;
+      const elapsed = now - startTime;
+
+      let allComplete = true;
+      wordsLayout.forEach((word, idx) => {
+        const delay = (idx / Math.max(1, wordsLayout.length)) * 350;
+        const p = Math.min(1, Math.max(0, (elapsed - delay) / 250));
+        const eased = 1 - Math.pow(1 - p, 3);
+        wordProgressRef.current[word.id] = eased;
+        if (eased < 1) allComplete = false;
+      });
+
+      drawCanvas();
+
+      if (!allComplete) {
+        animFrameRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      active = false;
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [wordsLayout, drawCanvas]);
 
   // Click & hover mouse coordinate tracking
   const getWordAtCoords = useCallback((clientX: number, clientY: number): PlacedWord | null => {
@@ -331,21 +429,16 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       className="w-full relative bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg border border-[var(--line-faint)] overflow-hidden"
       style={{ height: 220, minHeight: 220, maxHeight: 220 }}
     >
-      {(graph.nodes ?? []).length > 0 ? (
-        <canvas
-          ref={canvasRef}
-          width={size.w}
-          height={size.h}
-          onMouseMove={handleMouseMove}
-          onMouseOut={() => { hoveredWordIdRef.current = null; drawCanvas(); }}
-          onClick={handleMouseClick}
-          className="block w-full h-full js-word-cloud-canvas"
-        />
-      ) : (
-        <div className="flex h-full items-center justify-center text-[var(--ink-muted)] font-mono text-xs">
-          No cloud structure yet
-        </div>
-      )}
+      <canvas
+        ref={canvasRef}
+        width={size.w}
+        height={size.h}
+        onMouseMove={handleMouseMove}
+        onMouseOut={() => { hoveredWordIdRef.current = null; drawCanvas(); }}
+        onClick={handleMouseClick}
+        className="block w-full h-full js-word-cloud-canvas"
+      />
     </div>
   );
 }
+

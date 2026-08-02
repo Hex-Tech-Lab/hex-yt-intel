@@ -224,6 +224,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     {
       id: 'word-cloud',
       title: 'Word Cloud',
+      defaultOpen: true,
       content: () => (
         <WordCloud graph={graph} selectedId={selectedNodeId} onSelect={handleSelectNode} />
       ),
