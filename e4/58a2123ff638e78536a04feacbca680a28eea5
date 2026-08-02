@@ -1,0 +1,40 @@
+docs/architecture-index.md
+  s_0eded1e9d0cab6::t_fdb25899d52009 396
+web/app/atlas/AtlasClient.tsx
+  s_0eded1e9d0cab6::t_ffd443df5412a2 8-15,20
+  s_0eded1e9d0cab6::t_ee9c98b30ad384 7
+CLAUDE.md
+  s_0eded1e9d0cab6::t_4b00366615aa76 76
+AGENTS.md
+  s_0eded1e9d0cab6::t_2087ec01c3a779 93
+docs/PR-4-FRONTEND-SCOPE.md
+  s_0eded1e9d0cab6::t_185a0093438c75 19
+docs/PRD.md
+  s_0eded1e9d0cab6::t_185a0093438c75 204
+GEMINI.md
+  s_0eded1e9d0cab6::t_06cf2bccc291fd 28
+docs/architecture/WORD_CLOUD_LIBRARY_COMPARISON_2026-08-02.md
+  s_0eded1e9d0cab6::t_1383b6de29b009 1-46
+docs/reference/PR_REVIEW_WORKFLOW_V2.md
+  s_0eded1e9d0cab6::t_ea6d290d32d61d 38
+docs/reference/BLACKBOX.md
+  s_0eded1e9d0cab6::t_8096594e099d0c 120
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_58b5ac4318c679 1047
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "e458a2123ff638e78536a04feacbca680a28eea5",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
