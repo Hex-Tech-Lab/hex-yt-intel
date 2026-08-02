@@ -496,7 +496,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 16, opacity: 0 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px]"
+          className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px] [transform:translateZ(0)] [-webkit-transform:translateZ(0)] [-webkit-backface-visibility:hidden]"
         >
           <button
             onClick={() => startTransition(() => setOpen(true))}
@@ -522,7 +522,7 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 28, opacity: 0, scale: 0.98 }}
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        className={`w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] flex flex-col origin-bottom ${
+        className={`w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] flex flex-col origin-bottom [transform:translateZ(0)] [-webkit-transform:translateZ(0)] [-webkit-backface-visibility:hidden] ${
           // 'full' overlays the entire main column (absolute within the
           // relative <main>) instead of using a fixed viewport calc: a flow
           // child taller than the space under the header gets its bottom (the
