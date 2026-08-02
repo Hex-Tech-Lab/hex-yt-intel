@@ -93,7 +93,13 @@ export class CommentClassifier implements CommentClassificationPort {
           continue;
         }
 
-        const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+        const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }>; provider?: string };
+        // Worker has no DB access (ADR 005) to check the
+        // observability.logProviderAttribution setting live -- logs
+        // unconditionally (console.log only, cheap, no Sentry volume).
+        if (typeof data.provider === 'string') {
+          console.log(`[CommentClassifier] Requested provider=${entry.providerOrder?.[0] ?? 'default'} model=${entry.model}, OpenRouter served via provider=${data.provider}`);
+        }
         const raw = data.choices?.[0]?.message?.content?.trim() ?? "";
         const parsed = parseClassifications(raw, comments.length);
         if (!parsed) {

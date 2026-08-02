@@ -254,6 +254,7 @@ export class LLMCascade implements LLMCascadePort {
     let tokensUsed: number | undefined;
     let costUsd: number | undefined;
     let generationId: string | undefined;
+    let loggedProviderAttribution = false;
 
     const onAbort = () => controller.abort();
     if (signal) {
@@ -387,6 +388,13 @@ export class LLMCascade implements LLMCascadePort {
             // resolved against OpenRouter's own record instead of a
             // timestamp-based guess (2026-08-02 directive).
             if (typeof json.id === 'string' && !generationId) generationId = json.id;
+            // Worker has no DB access (ADR 005) to check the
+            // observability.logProviderAttribution setting live -- logs
+            // unconditionally (console.log only, cheap, no Sentry volume).
+            if (!loggedProviderAttribution && typeof json.provider === 'string') {
+              loggedProviderAttribution = true;
+              console.log(`[LLMCascade] Requested provider=${providerOrder?.[0] ?? 'default'} model=${model}, OpenRouter served via provider=${json.provider}`);
+            }
 
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {

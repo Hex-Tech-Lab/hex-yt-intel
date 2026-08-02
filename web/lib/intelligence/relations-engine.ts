@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
 import { resolveStanceCascade } from '@/lib/config/cascade';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { translateModelId } from '@/lib/utils/model-id-translator';
 
 // See /docs/intelligence/relations-engine.md
@@ -59,7 +60,8 @@ async function* callStanceModelStream(
   handshakeTimeoutMs: number = 8000,
   externalSignal?: AbortSignal,
   providerOrder?: string[],
-  userId?: string
+  userId?: string,
+  logProviderAttribution: boolean = true
 ): AsyncGenerator<string> {
   const controller = new AbortController();
   // Cubic review, PR #178: both the handshake timeout and a caller-driven
@@ -137,7 +139,7 @@ async function* callStanceModelStream(
           // so a requested-vs-served mismatch (e.g. providerOrder:['groq']
           // but provider actually served by Cerebras) is visible going
           // forward instead of invisible-by-design (2026-08-02).
-          if (!loggedProvider && parsed.provider) {
+          if (logProviderAttribution && !loggedProvider && parsed.provider) {
             loggedProvider = true;
             console.log(`[relations/engine] Requested provider=${providerOrder?.[0] ?? 'default'} model=${model}, OpenRouter served via provider=${parsed.provider}`);
           }
@@ -191,6 +193,10 @@ export async function* computeStanceRelationsStream(
   const labelOf = new Map(usable.map((d) => [d.number, d.name]));
   const prompt = buildPrompt(usable);
   const stanceModels = await resolveStanceCascade();
+  const { 'observability.logProviderAttribution': logProviderAttribution } = await SupabaseSettingsAdapter.getRegistrySettings(
+    ['observability.logProviderAttribution'],
+    { 'observability.logProviderAttribution': true }
+  );
 
   for (let idx = 0; idx < stanceModels.length; idx++) {
     const item = stanceModels[idx]!;
@@ -211,7 +217,8 @@ export async function* computeStanceRelationsStream(
         8000,
         handshakeSignal,
         item.providerOrder as string[] | undefined,
-        userId
+        userId,
+        logProviderAttribution as boolean
       )) {
         fullText += delta;
       }
