@@ -308,6 +308,8 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
         } catch (e) {
           /* client gone */
+          // skipcq: JS-0827
+          console.warn("[chat-stream] client disconnected during sendEvent", e instanceof Error ? e.message : String(e));
         }
       };
 

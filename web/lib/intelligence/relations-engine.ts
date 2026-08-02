@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
 import { resolveStanceCascade } from '@/lib/config/cascade';
@@ -122,12 +123,26 @@ async function* callStanceModelStream(
           const parsed = JSON.parse(data);
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) yield content;
-        } catch { /* ignore parse errors in chunks */ }
+        } catch (e) {
+          // A partial/malformed SSE data chunk mid-stream is expected and
+          // recoverable (the next chunk continues the stream) -- logged at
+          // debug rather than swallowed silently (qa-intel review, PR #178).
+          console.debug('[relations/engine] Skipped unparseable chunk:', e);
+        }
       }
     }
   } catch (err) {
     const isAbort = (err as Error)?.name === 'AbortError';
     console.warn(`[relations/engine] Model ${model} ${isAbort ? 'handshake timed out (8s)' : 'failed'}:`, err instanceof Error ? err.message : String(err));
+    // This generator's caller (computeStanceRelationsStream) cascades to the
+    // next model on any failure -- console.warn alone left this silent to
+    // monitoring, the same "server-side stream consumer" settlement gap
+    // qa-intel's StreamResilienceRule flags elsewhere in this codebase
+    // (dimension-remediation.ts's collectDimensionsFromWorker). Reporting to
+    // Sentry here, co-located with the abort/timeout catch, is that same
+    // established pattern -- not a UI settle call (there's no UI here), but
+    // still "not silently left in limbo".
+    Sentry.captureException(err, { contexts: { relationsEngine: { model, isAbort } } });
   } finally {
     clearTimeout(handshakeTimer);
     if (externalSignal) {
