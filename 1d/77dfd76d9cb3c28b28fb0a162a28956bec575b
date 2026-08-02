@@ -1,0 +1,49 @@
+web/components/templates/console/WordCloud.tsx
+  s_0eded1e9d0cab6::t_2d60b257df9a34 57
+  s_0eded1e9d0cab6::t_0a41e6c6fe0177 46-51
+  s_0eded1e9d0cab6::t_99e9f31edcf4bf 45,52-56,58
+web/components/templates/console/MindMap.tsx
+  s_0eded1e9d0cab6::t_0a41e6c6fe0177 37-42
+  s_0eded1e9d0cab6::t_2d60b257df9a34 47
+  s_0eded1e9d0cab6::t_90bc54804692f1 36,43-46,48
+.memory/AGENT_LEDGER.md
+  s_e9e3f5fb6615b8::t_70f3755703ba06 1048-1056
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_02b936ebbefb17 26,190-204
+web/components/dashboard/RightPanelAccordion.tsx
+  s_0eded1e9d0cab6::t_de63fe780c6105 6,26-27,41-62
+web/store/useVideoStore.ts
+  s_0eded1e9d0cab6::t_9de73e900d6504 7,10-11,21,23-24
+web/app/globals.css
+  s_0eded1e9d0cab6::t_e78a48d2041497 377,379-386
+web/components/TimestampLink.tsx
+  s_0eded1e9d0cab6::t_6e88c851536cc0 21
+web/components/organisms/ExecutiveSummary.tsx
+  s_0eded1e9d0cab6::t_19d52c83fb87c9 204,207
+web/components/templates/console/AnalysisHero.tsx
+  s_0eded1e9d0cab6::t_6ffd2ecf83f43b 112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "1d77dfd76d9cb3c28b28fb0a162a28956bec575b",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_e9e3f5fb6615b8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a07d44247a0c2bf48",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
