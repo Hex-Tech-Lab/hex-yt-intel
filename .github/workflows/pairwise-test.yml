@@ -1,9 +1,15 @@
 name: Pairwise Test Matrix (Waves 1-4)
 
+# DISABLED 2026-08-02: this has failed every weekly run for a month+ (checked
+# back to 2026-07-05) in ~11-14s -- not test failures, the job errors before
+# `playwright test tests/pairwise_matrix/` can even run because that directory
+# (and tests/pairwise/) was never built. Only Phase 1 (spec doc + fixture
+# scaffolding, docs/testing/PAIRWISE_TEST_MATRIX_WAVES_1_4.md, 2026-05-22) was
+# ever done; the matrix itself is also stale (29/38 cases reference NextAuth,
+# removed by ADR 001's Supabase-only auth migration). Kept as workflow_dispatch
+# only so the fixture scaffolding (tests/fixtures/, tests/pairwise/config.ts)
+# stays runnable by hand if/when this gets rebuilt for the current stack.
 on:
-  schedule:
-    # Weekly comprehensive test run (Sunday 1:00 AM UTC)
-    - cron: '0 1 * * 0'
   workflow_dispatch: # Allow manual triggering if needed
 
 concurrency:
