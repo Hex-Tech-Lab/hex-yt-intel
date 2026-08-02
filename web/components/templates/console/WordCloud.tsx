@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo, startTransition } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo, startTransition } from 'react';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
 import { entityHex, entityRgb } from '@/lib/design/entity-colors';
 
@@ -245,10 +245,79 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     return placed;
   }, [graph.nodes, size.w, size.h]);
 
-  // Store layout in ref for imperative access
-  useEffect(() => {
+  // CodeRabbit review, PR #181: `wordsLayout` is a useMemo keyed partly on
+  // `size.w` (ResizeObserver-driven), so a resize that doesn't actually
+  // change which words are present still produces a NEW array reference --
+  // e.g. dragging a window edge. The entrance-animation effect below only
+  // needs to restart when the actual SET of words changes; gating it on a
+  // stable key instead of the array reference stops window-resize from
+  // replaying the whole pop-in animation. Safe because the animation loop
+  // itself only reads `word.id`/index for stagger timing (position is
+  // always read fresh from wordsLayoutRef in drawCanvas, never from this
+  // closure), so a key-only dependency can't leave stale positions on
+  // screen. Includes `label`, not just `id`: multiple distinct tokens
+  // extracted from the SAME underlying node all share that node's id (see
+  // the tokenMap construction above), so an id-only key could fail to
+  // detect a genuine content change if the id sequence happened to repeat
+  // (second CodeRabbit finding on this same PR). Declared before the
+  // layout-sync effect below (not after, as an earlier version of this fix
+  // had it) since a dependency array is evaluated during render, unlike an
+  // effect body -- referencing it before this point is a real TDZ
+  // compile error, not just an ordering style nit.
+  const wordsLayoutKey = useMemo(
+    () => wordsLayout.map((w) => `${w.id}:${w.label}`).join(','),
+    [wordsLayout]
+  );
+
+  // Store layout in ref for imperative access, and repaint immediately.
+  // CodeRabbit review, PR #181: the entrance-animation effect is now gated
+  // on wordsLayoutKey (a stable id+label key) rather than this array's
+  // reference, so a resize that shifts word positions without changing the
+  // word set no longer restarts the animation -- but nothing else was
+  // repainting the canvas for that case either, leaving stale pixel
+  // positions on screen until an incidental mouse move. drawCanvasRef.current
+  // is safe to call here even though its own declaration appears later in
+  // this component: useRef(drawCanvas) already initializes `.current`
+  // synchronously during render, before any effect runs.
+  // Cubic review, PR #181: this repaint can fire with a STALE
+  // wordProgressRef when the word SET itself changed (not just
+  // repositioned) -- a word id that previously finished animating
+  // (progress=1) and reappears in a genuinely new word set would flash at
+  // full opacity here, then visibly snap back to 0 and re-animate once the
+  // entrance-animation effect's first rAF frame overwrites it. Clearing
+  // wordProgressRef whenever wordsLayoutKey actually changes (not on every
+  // wordsLayout reference change, which also fires on position-only resize
+  // updates) makes this repaint consistent with what the animation effect
+  // is about to do, instead of racing it for one frame.
+  const prevWordsLayoutKeyRef = useRef<string | null>(null);
+  // Cubic review, PR #181 (second finding): changing the canvas's
+  // width/height attribute (driven by `size` from ResizeObserver) clears
+  // its bitmap synchronously in the browser, but a plain useEffect runs
+  // AFTER the browser paints -- so a resize could show one blank/stale
+  // frame before this redraw catches up. useLayoutEffect runs synchronously
+  // before paint, closing that gap.
+  useLayoutEffect(() => {
     wordsLayoutRef.current = wordsLayout;
-  }, [wordsLayout]);
+    if (prevWordsLayoutKeyRef.current !== wordsLayoutKey) {
+      wordProgressRef.current = {};
+      prevWordsLayoutKeyRef.current = wordsLayoutKey;
+    }
+    drawCanvasRef.current();
+  }, [wordsLayout, wordsLayoutKey]);
+
+  // Track animation progress per word id
+  const wordProgressRef = useRef<Record<string, number>>({});
+  const animFrameRef = useRef<number | null>(null);
+  // Flips true once the empty-state pulse has run past EMPTY_PULSE_TIMEOUT_MS
+  // with no words -- stops the rAF loop and swaps to a static "no data"
+  // message instead of pulsing "Synthesizing..." forever.
+  const emptyTimedOutRef = useRef(false);
+  // React-state mirror of emptyTimedOutRef, for the accessible label only
+  // (CodeRabbit review, PR #181): the canvas has no text content a screen
+  // reader can read, so this state drives an aria-label that announces
+  // word count / synthesizing / empty, updating on the same transition the
+  // ref-only canvas repaint already reacts to.
+  const [isEmptyTimedOut, setIsEmptyTimedOut] = useState(false);
 
   // Imperative canvas draw — no React re-render needed for hover
   const drawCanvas = useCallback(() => {
@@ -259,34 +328,160 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     ctx.clearRect(0, 0, size.w, size.h);
 
+    const words = wordsLayoutRef.current;
+
+    if (words.length === 0) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '12px Inter, sans-serif';
+      if (emptyTimedOutRef.current) {
+        // Timed out with no data -- this is a genuinely empty analysis, not
+        // one still synthesizing. Static text, no more animation.
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
+        ctx.fillText('No cloud structure yet', size.w / 2, size.h / 2);
+      } else {
+        const now = Date.now() / 1000;
+        const alpha = 0.35 + 0.35 * Math.sin(now * 3);
+        ctx.fillStyle = `rgba(148, 163, 184, ${alpha})`;
+        ctx.fillText('Synthesizing word cloud...', size.w / 2, size.h / 2);
+      }
+      ctx.restore();
+      return;
+    }
+
     const radius = radiusRef.current;
 
-    wordsLayoutRef.current.forEach((word) => {
+    words.forEach((word) => {
+      // CodeRabbit review, PR #181: the initial drawCanvas() call (fired
+      // from the drawCanvasRef-sync effect) can run before the entrance
+      // animation's first requestAnimationFrame tick populates
+      // wordProgressRef -- defaulting to 1 there made brand-new words flash
+      // fully visible for one frame before actually animating in. 0 is the
+      // honest "hasn't started yet" state.
+      const progress = wordProgressRef.current[word.id] ?? 0;
+      if (progress <= 0) return;
+
       const isSelected = selectedId === word.id;
       const isHovered = hoveredWordIdRef.current === word.id;
       const active = isSelected || isHovered;
       const rgb = entityRgb(word.type);
 
+      const scale = 0.5 + 0.5 * progress;
+      const alpha = progress;
+
+      ctx.save();
+      ctx.translate(word.x, word.y);
+      ctx.scale(scale, scale);
+
       ctx.beginPath();
       // Slightly-rounded rectangle chip (design-system radius), not a pill.
-      ctx.roundRect(word.x - word.w / 2, word.y - word.h / 2, word.w, word.h, radius);
-      ctx.fillStyle = `rgb(${rgb} / ${active ? 0.25 : 0.12})`;
+      ctx.roundRect(-word.w / 2, -word.h / 2, word.w, word.h, radius);
+      ctx.fillStyle = `rgb(${rgb} / ${(active ? 0.25 : 0.12) * alpha})`;
       ctx.fill();
-      ctx.strokeStyle = active ? entityHex(word.type) : `rgb(${rgb} / 0.3)`;
+      ctx.strokeStyle = active ? entityHex(word.type) : `rgb(${rgb} / ${0.3 * alpha})`;
       ctx.lineWidth = active ? 1.5 : 0.8;
       ctx.stroke();
 
       ctx.fillStyle = active ? inkRef.current : entityHex(word.type);
+      ctx.globalAlpha = alpha;
       ctx.font = `${active ? '700' : '600'} ${word.fontSize}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(word.label, word.x, word.y);
+      ctx.fillText(word.label, 0, 0);
+
+      ctx.restore();
     });
   }, [selectedId, size]);
 
-  // Redraw when layout changes, selection changes, or dimensions are built.
-  // Include wordsLayout in dependencies to trigger redraw when layout is computed.
-  useEffect(() => { drawCanvas(); }, [drawCanvas, wordsLayout]);
+  // react-best-practices self-review finding (2026-08-02): the entrance
+  // animation effect below used to list `drawCanvas` directly in its deps.
+  // drawCanvas is recreated whenever selectedId changes (e.g. clicking a
+  // word), which restarted the whole stagger-animation effect -- including
+  // resetting `startTime` -- so selecting a word replayed the pop-in
+  // animation for every word from scratch. Route calls through a ref so the
+  // effect only restarts when the actual word data changes.
+  const drawCanvasRef = useRef(drawCanvas);
+  useEffect(() => {
+    drawCanvasRef.current = drawCanvas;
+    // Repaint once on any change drawCanvas itself reacts to (selectedId or
+    // size) -- clicking a word to select it must still update the highlight
+    // immediately, without waiting for a stray mouse-move to trigger it or
+    // (worse) going through the entrance-animation effect, which would
+    // restart the pop-in for every word again.
+    drawCanvas();
+  }, [drawCanvas]);
+
+  // Staggered pop-in reveal animation & empty pulse loop
+  useEffect(() => {
+    if (wordsLayout.length === 0) {
+      // Bounded, not indefinite: an analysis that completes with genuinely
+      // zero entities would otherwise pulse "Synthesizing..." forever and
+      // burn an rAF loop forever, since this component has no isAnalyzing/
+      // status prop to distinguish "still working" from "permanently empty".
+      let active = true;
+      const startedAt = Date.now();
+      const EMPTY_PULSE_TIMEOUT_MS = 8000;
+      // /simplify efficiency finding (2026-08-02): this is a slow sine
+      // pulse (one cycle per ~2s) -- redrawing the full canvas at 60fps for
+      // it is wasted work (font-string realloc + clearRect + fill/stroke,
+      // every 16ms, for up to 8s per empty analysis). ~24fps is visually
+      // indistinguishable for a pulse this slow.
+      const PULSE_FRAME_INTERVAL_MS = 1000 / 24;
+      let lastFrameAt = 0;
+      const loop = (now: number) => {
+        if (!active) return;
+        if (Date.now() - startedAt > EMPTY_PULSE_TIMEOUT_MS) {
+          emptyTimedOutRef.current = true;
+          setIsEmptyTimedOut(true);
+          drawCanvasRef.current();
+          return;
+        }
+        if (now - lastFrameAt >= PULSE_FRAME_INTERVAL_MS) {
+          lastFrameAt = now;
+          drawCanvasRef.current();
+        }
+        animFrameRef.current = requestAnimationFrame(loop);
+      };
+      emptyTimedOutRef.current = false;
+      setIsEmptyTimedOut(false);
+      loop(performance.now());
+      return () => {
+        active = false;
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      };
+    }
+
+    const startTime = performance.now();
+    let active = true;
+
+    const animate = (now: number) => {
+      if (!active) return;
+      const elapsed = now - startTime;
+
+      let allComplete = true;
+      wordsLayout.forEach((word, idx) => {
+        const delay = (idx / Math.max(1, wordsLayout.length)) * 350;
+        const p = Math.min(1, Math.max(0, (elapsed - delay) / 250));
+        const eased = 1 - Math.pow(1 - p, 3);
+        wordProgressRef.current[word.id] = eased;
+        if (eased < 1) allComplete = false;
+      });
+
+      drawCanvasRef.current();
+
+      if (!allComplete) {
+        animFrameRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      active = false;
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [wordsLayoutKey]);
 
   // Click & hover mouse coordinate tracking
   const getWordAtCoords = useCallback((clientX: number, clientY: number): PlacedWord | null => {
@@ -298,6 +493,16 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     return (
       wordsLayout.find((word) => {
+        // Ignore words still mid entrance-animation (or not yet started) --
+        // their final bounding box is hit-tested here even though they're
+        // barely/not visible during the ~600ms stagger-in window, letting a
+        // click land on a word that isn't really there yet. Defaulting to 0
+        // (not 1) for words with no progress entry yet matches drawCanvas's
+        // own default (CodeRabbit review, PR #181) -- a brand-new word
+        // should never be hit-testable before it's actually started
+        // animating in.
+        const progress = wordProgressRef.current[word.id] ?? 0;
+        if (progress < 0.5) return false;
         return (
           clickX >= word.x - word.w / 2 &&
           clickX <= word.x + word.w / 2 &&
@@ -325,27 +530,49 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     });
   };
 
+  // CodeRabbit review, PR #181: `selectedId` truthiness alone doesn't mean
+  // a rendered term matches it -- selectedId can reference a node with zero
+  // words currently in wordsLayout, or (since multiple tokens can share one
+  // node's id) more than one. Counting actual matches keeps the label
+  // honest, including the zero case.
+  const selectedWordCount = selectedId ? wordsLayout.filter((w) => w.id === selectedId).length : 0;
+  const canvasAccessibleLabel =
+    wordsLayout.length > 0
+      ? `Word cloud showing ${wordsLayout.length} key term${wordsLayout.length === 1 ? '' : 's'}${
+          selectedWordCount > 0 ? `, ${selectedWordCount} term${selectedWordCount === 1 ? '' : 's'} selected` : ''
+        }`
+      : isEmptyTimedOut
+        ? 'Word cloud: no data available for this analysis'
+        : 'Word cloud: synthesizing';
+
   return (
     <div
       ref={containerRef}
       className="w-full relative bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg border border-[var(--line-faint)] overflow-hidden"
       style={{ height: 220, minHeight: 220, maxHeight: 220 }}
     >
-      {(graph.nodes ?? []).length > 0 ? (
-        <canvas
-          ref={canvasRef}
-          width={size.w}
-          height={size.h}
-          onMouseMove={handleMouseMove}
-          onMouseOut={() => { hoveredWordIdRef.current = null; drawCanvas(); }}
-          onClick={handleMouseClick}
-          className="block w-full h-full js-word-cloud-canvas"
-        />
-      ) : (
-        <div className="flex h-full items-center justify-center text-[var(--ink-muted)] font-mono text-xs">
-          No cloud structure yet
-        </div>
-      )}
+      <canvas
+        ref={canvasRef}
+        width={size.w}
+        height={size.h}
+        onMouseMove={handleMouseMove}
+        onMouseOut={() => { hoveredWordIdRef.current = null; drawCanvas(); }}
+        onClick={handleMouseClick}
+        className="block w-full h-full js-word-cloud-canvas"
+        role="img"
+        aria-label={canvasAccessibleLabel}
+      />
+      {/* web-design-guidelines review (2026-08-02): aria-label alone is a
+          static accessible name -- changing it (synthesizing -> N words ->
+          selection changes) does NOT trigger a screen-reader announcement,
+          only aria-live regions do. The canvas's own aria-label above still
+          describes it correctly whenever it's discovered/focused; this
+          visually-hidden live region is what actually announces the state
+          transitions. */}
+      <div aria-live="polite" className="sr-only">
+        {canvasAccessibleLabel}
+      </div>
     </div>
   );
 }
+
