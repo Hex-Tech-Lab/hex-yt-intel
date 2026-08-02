@@ -48,6 +48,8 @@ interface ChatStreamRequest {
   conversationId: string;
   userId: string;
   grounding: string;
+  // User's subscription tier at request time, for SSE meta-frame observability (Tech Debt Ledger #16).
+  tier?: string;
   history: Array<{ role: string; content: string }>;
   // Per-tier chat cascade resolved by the bouncer (app_settings); bound into the HMAC.
   models?: string[];

@@ -48,6 +48,7 @@ export interface ProcessChatMessageSuccess {
   payload?: {
     conversationId: string;
     userId: string;
+    tier: UserTier;
     grounding: string;
     history: Array<{ role: string; content: string }>;
     models: string[];
@@ -493,6 +494,7 @@ export class ProcessChatMessageUseCase {
         payload: {
           conversationId,
           userId,
+          tier,
           grounding,
           history: history.map((m) => ({ role: m.role, content: m.content })),
           models: chatModels,
