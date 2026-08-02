@@ -62,10 +62,17 @@ async function* callStanceModelStream(
   userId?: string
 ): AsyncGenerator<string> {
   const controller = new AbortController();
-  const handshakeTimer = setTimeout(() => controller.abort(), handshakeTimeoutMs);
+  // Cubic review, PR #178: both the handshake timeout and a caller-driven
+  // cancellation (externalSignal, e.g. the client disconnected/navigated
+  // away) abort the SAME controller, so `err.name === 'AbortError'` alone
+  // can't tell them apart at the catch site below. Tracking which one fired
+  // so an expected external cancellation doesn't get reported to Sentry as
+  // if it were a genuine handshake failure.
+  let abortReason: 'timeout' | 'external' | null = null;
+  const handshakeTimer = setTimeout(() => { abortReason = 'timeout'; controller.abort(); }, handshakeTimeoutMs);
 
   // Listen to external signal (e.g., from route handler) and abort if signaled
-  const abortListener = () => controller.abort();
+  const abortListener = () => { abortReason = 'external'; controller.abort(); };
   if (externalSignal) {
     externalSignal.addEventListener('abort', abortListener);
   }
@@ -142,7 +149,15 @@ async function* callStanceModelStream(
     // Sentry here, co-located with the abort/timeout catch, is that same
     // established pattern -- not a UI settle call (there's no UI here), but
     // still "not silently left in limbo".
-    Sentry.captureException(err, { contexts: { relationsEngine: { model, isAbort } } });
+    //
+    // Exception: a caller-driven cancellation (abortReason === 'external',
+    // e.g. the client disconnected) is expected behavior, not a failure --
+    // reporting it to Sentry would just be cancellation noise obscuring
+    // genuinely actionable handshake timeouts/failures (Cubic review, PR
+    // #178).
+    if (abortReason !== 'external') {
+      Sentry.captureException(err, { contexts: { relationsEngine: { model, isAbort, abortReason } } });
+    }
   } finally {
     clearTimeout(handshakeTimer);
     if (externalSignal) {
