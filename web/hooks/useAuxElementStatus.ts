@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
-import { auxStatusFromValidationReport, type AuxStatusReportInput } from '@/lib/utils/aux-status-from-report';
+import { auxStatusFromAnalysisPayload } from '@/lib/utils/aux-status-from-report';
+import type { AuxStatusPayloadInput } from '@/lib/utils/aux-status-from-report';
 
 export interface AuxElementStatus {
   description: boolean;
@@ -50,8 +51,19 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
         const data = await res.json();
         if (cancelled) return;
 
-        const report = data.validation_report as AuxStatusReportInput | null | undefined;
-        const { hasDescription, hasChannelMeta, hasComments } = auxStatusFromValidationReport(report);
+        // Cubic review, PR #178 (investigated, not applied): flagged that
+        // rows with analysis_payload = null show every chip inactive with
+        // no validation_report fallback. Checked live: the 32 real
+        // completed/null-payload rows in prod are all June-era analyses
+        // (validation_report.stale_after ~2026-06), predating the
+        // channelMeta/comments features entirely (shipped 2026-07-24+) --
+        // their validation_report.metadata only holds YouTube video stats
+        // (title/duration/viewCount), never channelMeta/comments/
+        // description. A fallback to validation_report would find nothing
+        // for any of them; "all chips inactive" is the honest state for
+        // these rows, not a bug. Not adding dead fallback code.
+        const payload = data.analysis_payload as AuxStatusPayloadInput | null | undefined;
+        const { hasDescription, hasChannelMeta, hasComments } = auxStatusFromAnalysisPayload(payload);
 
         setAuxStatus({
           description: hasDescription,

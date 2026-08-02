@@ -30,7 +30,7 @@ const RETRY_DELAY_MS = 1000;
  * @param text - Input text to embed
  * @returns Promise with embedding vector and cost tracking
  */
-export async function generateEmbedding(text: string): Promise<EmbeddingResult> {
+export async function generateEmbedding(text: string, userId?: string): Promise<EmbeddingResult> {
   if (!text || text.trim().length === 0) {
     throw new Error('Cannot generate embedding for empty text');
   }
@@ -62,6 +62,7 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
         body: JSON.stringify({
           model: EMBEDDING_MODEL,
           input: truncatedText,
+          ...(userId ? { user: userId } : {}),
         }),
         signal: controller.signal,
       });

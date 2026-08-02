@@ -18,6 +18,15 @@ export interface TextCompletionPort {
     /** Cascade entries, tried in order until one returns text; each carries its own provider routing. */
     models: readonly CompletionModel[];
     maxTokens?: number;
+    analysisId?: string;
+    /**
+     * The requesting account's id, forwarded to OpenRouter's `user` field for
+     * per-account cost/activity correlation in OpenRouter's own dashboard --
+     * distinct from `user` above (that's the chat message content, an
+     * unfortunate but pre-existing name collision with OpenRouter's own
+     * request field naming).
+     */
+    requestingUserId?: string;
   }): Promise<{ text: string; model: string }>;
 }
 

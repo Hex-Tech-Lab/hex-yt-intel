@@ -135,7 +135,7 @@ export async function GET(
         serverInFlight.set(cacheKey, computePromise);
 
         try {
-          for await (const chunk of computeStanceRelationsStream(dimensions, apiKey, _request.signal)) {
+          for await (const chunk of computeStanceRelationsStream(dimensions, apiKey, _request.signal, user.id)) {
             if (chunk.type === 'model') {
               modelUsed = chunk.model;
               send({ type: 'status', stage: 'computing', model: chunk.model });

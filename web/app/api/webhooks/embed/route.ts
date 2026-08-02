@@ -57,6 +57,20 @@ export async function POST(request: NextRequest) {
     userId = payload.userId;
     const { markdown } = payload;
 
+    // CodeRabbit review, PR #178: `EmbeddingPayload` is a TS type assertion
+    // on JSON.parse's output, which gives zero runtime guarantee -- a
+    // malformed/buggy QStash producer message could carry a missing or
+    // empty userId straight through to OpenRouter's cost-attribution `user`
+    // field and this route's own usage logging, silently corrupting cost
+    // tracking for whichever account ends up misattributed (or none at
+    // all). QStash signature verification (above) proves the request came
+    // from our own producer, but not that the producer's payload itself was
+    // well-formed.
+    if (!userId || typeof userId !== 'string') {
+      console.warn('[embed-webhook] Rejected: missing or invalid userId in payload', { analysisId });
+      return NextResponse.json({ error: 'Invalid payload: userId is required' }, { status: 400 });
+    }
+
     // Check if Upstash Vector credentials are placeholder/missing (e.g. in preview/dev).
     // initializeVectorIndex centralizes the missing/placeholder credential validation.
     if (!vectorIndex) {
@@ -102,7 +116,7 @@ export async function POST(request: NextRequest) {
     const embeddingResult = await trackExternalCall(
       'openai',
       'text-embedding-3-small',
-      () => generateEmbedding(markdown),
+      () => generateEmbedding(markdown, userId),
       { analysisId }
     );
 

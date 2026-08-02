@@ -1,29 +1,45 @@
 /**
  * Single source of truth (TypeScript side) for "does this analysis's
- * persisted validation_report have a description / channel meta / comments"
+ * persisted analysis_payload have a description / channel meta / comments"
  * -- MUST mirror get_user_history_overview's has_description/
  * has_channel_meta/has_comments SQL logic EXACTLY (supabase/migrations/
- * 20260724100000_history_overview_function_v6_aux_status.sql): same source
- * (validation_report only, never analysis_payload or live videoMetadata/
- * title fallbacks), same truthiness rules (non-empty trimmed string /
- * non-empty object / non-empty array).
+ * 20260802114813_history_overview_function_v7_aux_status_from_payload.sql),
+ * same truthiness rules (non-empty trimmed string / non-empty object /
+ * non-empty array).
  *
- * Real bug, live-reported 2026-08-01: the History list (reading the SQL
- * function's strict truth) and useAuxElementStatus (previously falling back
- * to vm?.title / vm?.channelTitle / commentCount>0 as loose stand-ins)
- * disagreed for the SAME completed analysis -- History correctly showed
- * non-green chips, Synth Console incorrectly showed all green. Extracted to
- * one named function (was inline in the hook) so any future TypeScript-side
- * caller reuses this instead of hand-rewriting the mirror a second time --
- * SQL and TS can't literally share code, but TS callers should never
- * duplicate each other.
+ * RELOCATED 2026-08-02 (live report): this used to read validation_report,
+ * which was the SQL function's original source too (v6) -- but RCA found
+ * 34 of 37 recently-completed analyses had neither `channelMeta` nor
+ * `comments` keys in validation_report at all, including analyses completed
+ * the same day, despite the console showing 100% dimension completion and
+ * chat successfully answering from this same data. The persist route's
+ * `newReport` construction DOES include these fields when its write path is
+ * reached, but empirically isn't landing for most live completions (root
+ * write-path gap not fully resolved, flagged as a follow-up). analysis_payload
+ * (videoMetadata/channelMeta/comments), by contrast, IS reliably populated on
+ * every successful completion -- stitch-analysis-chunks.ts writes it
+ * unconditionally as part of the UCISPayloadV2 the console reads directly.
+ * Both this function and the SQL function were moved to read from there
+ * instead, fixing the symptom for every affected row with no backfill
+ * needed.
+ *
+ * Real bug, live-reported 2026-08-01 (the original chip-desync report that
+ * led to extracting this function in the first place): the History list
+ * (reading the SQL function's strict truth) and useAuxElementStatus
+ * (previously falling back to vm?.title / vm?.channelTitle /
+ * commentCount>0 as loose stand-ins) disagreed for the SAME completed
+ * analysis -- History correctly showed non-green chips, Synth Console
+ * incorrectly showed all green. Extracted to one named function (was inline
+ * in the hook) so any future TypeScript-side caller reuses this instead of
+ * hand-rewriting the mirror a second time -- SQL and TS can't literally
+ * share code, but TS callers should never duplicate each other.
  */
-export interface AuxStatusReportInput {
+export interface AuxStatusPayloadInput {
   // Persisted JSON, not a type guarantee -- SQL reads this via `->>`, which
   // accepts and text-coerces any JSON scalar/object/array, not just strings.
   // Typing this as `string` would contradict jsonTextValue()'s own coercion
   // logic below and make it look like dead code (cubic review, PR #177).
-  metadata?: { description?: unknown };
+  videoMetadata?: { description?: unknown };
   channelMeta?: Record<string, unknown> | null;
   comments?: unknown[] | null;
 }
@@ -54,9 +70,9 @@ function jsonTextValue(value: unknown): string {
   }
 }
 
-export function auxStatusFromValidationReport(report: AuxStatusReportInput | null | undefined): AuxStatusResult {
-  const r = report ?? {};
-  const descStr = jsonTextValue(r.metadata?.description);
+export function auxStatusFromAnalysisPayload(payload: AuxStatusPayloadInput | null | undefined): AuxStatusResult {
+  const r = payload ?? {};
+  const descStr = jsonTextValue(r.videoMetadata?.description);
   // Postgres's `trim(both from ...)` (used by the SQL SSOT) strips only the
   // ASCII space character by default -- JS's .trim() strips ALL Unicode
   // whitespace (tabs, newlines, etc.), a wider set. A description that's

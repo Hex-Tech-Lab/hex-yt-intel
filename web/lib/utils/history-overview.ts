@@ -14,6 +14,7 @@ export interface RawHistoryOverviewRow {
   channel_title: string | null;
   first_analyzed_at: string;
   last_analyzed_at: string;
+  last_viewed_at: string | null;
   times_analyzed: number | string;
   views: number | string;
   best_dimensions: number | null;
@@ -56,6 +57,7 @@ export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOvervi
     channelTitle: row.channel_title ?? null,
     firstAnalyzedAt: row.first_analyzed_at,
     lastAnalyzedAt: row.last_analyzed_at,
+    lastViewedAt: row.last_viewed_at,
     timesAnalyzed: Number(row.times_analyzed) || 0,
     views: Number(row.views) || 0,
     bestDimensions: row.best_dimensions ?? 0,

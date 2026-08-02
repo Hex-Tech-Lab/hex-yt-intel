@@ -37,6 +37,7 @@ function baseRow(overrides: Partial<RawHistoryOverviewRow> = {}): RawHistoryOver
     channel_title: 'Some Channel',
     first_analyzed_at: '2026-06-01T00:00:00Z',
     last_analyzed_at: '2026-06-02T00:00:00Z',
+    last_viewed_at: '2026-06-03T00:00:00Z',
     times_analyzed: 3,
     views: 5,
     best_dimensions: 11,
@@ -61,6 +62,7 @@ describe('mapHistoryOverviewRow', () => {
       channelTitle: 'Some Channel',
       firstAnalyzedAt: '2026-06-01T00:00:00Z',
       lastAnalyzedAt: '2026-06-02T00:00:00Z',
+      lastViewedAt: '2026-06-03T00:00:00Z',
       timesAnalyzed: 3,
       views: 5,
       bestDimensions: 11,
@@ -78,6 +80,11 @@ describe('mapHistoryOverviewRow', () => {
   it('nulls clientPlatform for rows predating the column', () => {
     const item = mapHistoryOverviewRow(baseRow({ client_platform: null }));
     expect(item.clientPlatform).toBeNull();
+  });
+
+  it('nulls lastViewedAt for rows never viewed since the column was added', () => {
+    const item = mapHistoryOverviewRow(baseRow({ last_viewed_at: null }));
+    expect(item.lastViewedAt).toBeNull();
   });
 
   it('coerces PostgREST bigint strings (count/sum) to numbers', () => {

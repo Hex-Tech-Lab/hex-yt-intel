@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import type { RelationInsight } from '@/lib/types/knowledge-graph';
 import { resolveStanceCascade } from '@/lib/config/cascade';
@@ -57,13 +58,21 @@ async function* callStanceModelStream(
   apiKey: string,
   handshakeTimeoutMs: number = 8000,
   externalSignal?: AbortSignal,
-  providerOrder?: string[]
+  providerOrder?: string[],
+  userId?: string
 ): AsyncGenerator<string> {
   const controller = new AbortController();
-  const handshakeTimer = setTimeout(() => controller.abort(), handshakeTimeoutMs);
+  // Cubic review, PR #178: both the handshake timeout and a caller-driven
+  // cancellation (externalSignal, e.g. the client disconnected/navigated
+  // away) abort the SAME controller, so `err.name === 'AbortError'` alone
+  // can't tell them apart at the catch site below. Tracking which one fired
+  // so an expected external cancellation doesn't get reported to Sentry as
+  // if it were a genuine handshake failure.
+  let abortReason: 'timeout' | 'external' | null = null;
+  const handshakeTimer = setTimeout(() => { abortReason = 'timeout'; controller.abort(); }, handshakeTimeoutMs);
 
   // Listen to external signal (e.g., from route handler) and abort if signaled
-  const abortListener = () => controller.abort();
+  const abortListener = () => { abortReason = 'external'; controller.abort(); };
   if (externalSignal) {
     externalSignal.addEventListener('abort', abortListener);
   }
@@ -89,6 +98,7 @@ async function* callStanceModelStream(
           allow_fallbacks: false,
           ...(providerOrder ? { order: providerOrder } : {}),
         },
+        ...(userId ? { user: userId } : {}),
       }),
       signal: controller.signal,
     });
@@ -120,12 +130,34 @@ async function* callStanceModelStream(
           const parsed = JSON.parse(data);
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) yield content;
-        } catch { /* ignore parse errors in chunks */ }
+        } catch (e) {
+          // A partial/malformed SSE data chunk mid-stream is expected and
+          // recoverable (the next chunk continues the stream) -- logged at
+          // debug rather than swallowed silently (qa-intel review, PR #178).
+          console.debug('[relations/engine] Skipped unparseable chunk:', e);
+        }
       }
     }
   } catch (err) {
     const isAbort = (err as Error)?.name === 'AbortError';
     console.warn(`[relations/engine] Model ${model} ${isAbort ? 'handshake timed out (8s)' : 'failed'}:`, err instanceof Error ? err.message : String(err));
+    // This generator's caller (computeStanceRelationsStream) cascades to the
+    // next model on any failure -- console.warn alone left this silent to
+    // monitoring, the same "server-side stream consumer" settlement gap
+    // qa-intel's StreamResilienceRule flags elsewhere in this codebase
+    // (dimension-remediation.ts's collectDimensionsFromWorker). Reporting to
+    // Sentry here, co-located with the abort/timeout catch, is that same
+    // established pattern -- not a UI settle call (there's no UI here), but
+    // still "not silently left in limbo".
+    //
+    // Exception: a caller-driven cancellation (abortReason === 'external',
+    // e.g. the client disconnected) is expected behavior, not a failure --
+    // reporting it to Sentry would just be cancellation noise obscuring
+    // genuinely actionable handshake timeouts/failures (Cubic review, PR
+    // #178).
+    if (abortReason !== 'external') {
+      Sentry.captureException(err, { contexts: { relationsEngine: { model, isAbort, abortReason } } });
+    }
   } finally {
     clearTimeout(handshakeTimer);
     if (externalSignal) {
@@ -137,7 +169,8 @@ async function* callStanceModelStream(
 export async function* computeStanceRelationsStream(
   dims: StanceDimension[],
   apiKey: string,
-  handshakeSignal?: AbortSignal
+  handshakeSignal?: AbortSignal,
+  userId?: string
 ): AsyncGenerator<{ type: 'insight', insight: RelationInsight } | { type: 'model', model: string }> {
   const usable = dims.filter((d) => d.content && d.content.trim().length >= 12);
   if (usable.length < 2 || !apiKey) return;
@@ -164,7 +197,8 @@ export async function* computeStanceRelationsStream(
         apiKey,
         8000,
         handshakeSignal,
-        item.providerOrder as string[] | undefined
+        item.providerOrder as string[] | undefined,
+        userId
       )) {
         fullText += delta;
       }

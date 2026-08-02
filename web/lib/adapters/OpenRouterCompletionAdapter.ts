@@ -19,7 +19,8 @@ type ChatMessage = { role: string; content: string };
 async function requestCompletion(
   entry: CompletionModel,
   messages: readonly ChatMessage[],
-  maxTokens: number
+  maxTokens: number,
+  userId?: string
 ): Promise<string> {
   const response = await fetch(OPENROUTER_URL, {
     method: 'POST',
@@ -35,6 +36,7 @@ async function requestCompletion(
       temperature: 0.3,
       max_tokens: maxTokens,
       ...(entry.providerOrder ? { provider: { order: entry.providerOrder, allow_fallbacks: true } } : {}),
+      ...(userId ? { user: userId } : {}),
     }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
@@ -60,8 +62,9 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
     models: readonly CompletionModel[];
     maxTokens?: number;
     analysisId?: string;
+    requestingUserId?: string;
   }): Promise<{ text: string; model: string }> {
-    const { system, user, models, maxTokens = DEFAULT_MAX_TOKENS, analysisId } = params;
+    const { system, user, models, maxTokens = DEFAULT_MAX_TOKENS, analysisId, requestingUserId } = params;
     const digestId = analysisId || `digest-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     console.log(`[digest] Generating Dimension 0 analysis for analysisId=${digestId} timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
@@ -81,7 +84,7 @@ export class OpenRouterCompletionAdapter implements TextCompletionPort {
       const attemptStartTime = Date.now();
 
       try {
-        const text = await requestCompletion(entry, messages, maxTokens);
+        const text = await requestCompletion(entry, messages, maxTokens, requestingUserId);
         if (text.length > 0) {
           const durationMs = Date.now() - attemptStartTime;
           console.log(`[digest] Dimension 0 completed with model=${entry.model} durationMs=${durationMs} timestamp=${new Date().toISOString()}`); // skipcq: JS-0827
