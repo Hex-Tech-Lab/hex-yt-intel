@@ -1,0 +1,11 @@
+-- owasp-top-10 finding (PR #179 self-review): Postgres grants EXECUTE on new
+-- functions to PUBLIC by default. This project has no blanket default-privileges
+-- revoke -- every sensitive function revokes anon/authenticated explicitly
+-- (see 20260602_revoke_anon_privileges.sql). update_analysis_result_atomic was
+-- missing that revoke, so it was callable by any authenticated (or anon, if the
+-- anon key permits RPC calls) user via PostgREST with an arbitrary analysisId
+-- and no ownership check -- a broken-access-control gap (any user could
+-- overwrite another user's analysis row). This function is only ever meant to
+-- be called server-side via the service-role client, which is unaffected by
+-- this revoke.
+revoke execute on function public.update_analysis_result_atomic(uuid, text, jsonb, text, boolean, jsonb, text, text) from anon, authenticated, public;

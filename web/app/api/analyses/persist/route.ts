@@ -93,6 +93,30 @@ const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promi
  * @param channelTitle - Optional creator/channel name
  * @returns Sanitized markdown filename with timestamp
  */
+/**
+ * Build the channelMeta/comments slice of a validation_report PATCH.
+ *
+ * RCA (2026-08-02): `update_analysis_result_atomic` merges this patch onto
+ * the DB row via `coalesce(...) || patch` -- any key PRESENT in the patch
+ * overwrites the column's current value, even if that value is fresher
+ * (written by a concurrent request) than what this request has. Spreading
+ * `...priorReport` and then falling back to `priorReport.channelMeta` when
+ * this request has no fresh value re-includes a stale, point-in-time-SELECT
+ * snapshot as if it were current -- clobbering a concurrent writer's real
+ * update. The fix is to OMIT the key entirely when this request has no
+ * fresh value, so the atomic merge leaves whatever is already in the column
+ * untouched.
+ */
+function withFreshAuxMetadata(
+  channelMeta: unknown,
+  comments: unknown
+): { channelMeta?: unknown; comments?: unknown } {
+  const patch: { channelMeta?: unknown; comments?: unknown } = {};
+  if (channelMeta != null) patch.channelMeta = channelMeta;
+  if (comments != null) patch.comments = comments;
+  return patch;
+}
+
 function buildValidationFilename(title: string, channelTitle?: string | null): string {
   /**
    * Convert text to URL-safe slug by removing special characters.
@@ -564,8 +588,9 @@ export async function POST(request: NextRequest) {
 
           const { dimensionStatus, validationStatus: computedValidationStatus, billingStatus } = buildDimensionStatus(stitchedPayload);
           const finalStatus = isStitchedValid ? computedValidationStatus : 'partial';
+          const { channelMeta: _priorChannelMeta, comments: _priorComments, ...priorReportSansAux } = priorReport as any;
           const newReport: PersistedValidationReport = {
-            ...priorReport,
+            ...priorReportSansAux,
             validation_status: finalStatus,
             status: finalStatus,
             // cancelled overrides content-based computation entirely -- the
@@ -575,8 +600,7 @@ export async function POST(request: NextRequest) {
             dimension_status: dimensionStatus,
             model_used: model || null,
             valid: isStitchedValid && finalStatus === 'done',
-            channelMeta: channelMeta ?? priorReport.channelMeta ?? null,
-            comments: comments ?? priorReport.comments ?? null,
+            ...withFreshAuxMetadata(channelMeta, comments),
           };
 
           await retryWithBackoff(
@@ -798,8 +822,9 @@ export async function POST(request: NextRequest) {
       // Use computed validation status only if we have a payload to evaluate; otherwise preserve finalStatus
       const reportValidationStatus = payloadToEvaluate !== undefined && computedValidationStatus ? computedValidationStatus : finalStatus;
 
+      const { channelMeta: _priorChannelMeta2, comments: _priorComments2, ...priorReportSansAux2 } = priorReport as any;
       const newReport: PersistedValidationReport = {
-        ...priorReport,
+        ...priorReportSansAux2,
         validation_status: reportValidationStatus,
         status: reportValidationStatus, // Legacy field for backward compat
         // cancelled overrides content-based computation entirely -- the
@@ -809,8 +834,7 @@ export async function POST(request: NextRequest) {
         dimension_status: payloadToEvaluate !== undefined ? dimensionStatus : priorReport.dimension_status,
         model_used: model || null,
         valid: reportValidationStatus === 'done' && validationPassed,
-        channelMeta: channelMeta ?? priorReport.channelMeta ?? null,
-        comments: comments ?? priorReport.comments ?? null,
+        ...withFreshAuxMetadata(channelMeta, comments),
       };
 
       await retryWithBackoff(
