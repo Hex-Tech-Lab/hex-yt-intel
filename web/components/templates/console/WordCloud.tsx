@@ -327,6 +327,16 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     });
   }, [selectedId, size]);
 
+  // react-best-practices self-review finding (2026-08-02): the entrance
+  // animation effect below used to list `drawCanvas` directly in its deps.
+  // drawCanvas is recreated whenever selectedId changes (e.g. clicking a
+  // word), which restarted the whole stagger-animation effect -- including
+  // resetting `startTime` -- so selecting a word replayed the pop-in
+  // animation for every word from scratch. Route calls through a ref so the
+  // effect only restarts when the actual word data changes.
+  const drawCanvasRef = useRef(drawCanvas);
+  useEffect(() => { drawCanvasRef.current = drawCanvas; }, [drawCanvas]);
+
   // Staggered pop-in reveal animation & empty pulse loop
   useEffect(() => {
     if (wordsLayout.length === 0) {
@@ -341,10 +351,10 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         if (!active) return;
         if (Date.now() - startedAt > EMPTY_PULSE_TIMEOUT_MS) {
           emptyTimedOutRef.current = true;
-          drawCanvas();
+          drawCanvasRef.current();
           return;
         }
-        drawCanvas();
+        drawCanvasRef.current();
         animFrameRef.current = requestAnimationFrame(loop);
       };
       emptyTimedOutRef.current = false;
@@ -371,7 +381,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         if (eased < 1) allComplete = false;
       });
 
-      drawCanvas();
+      drawCanvasRef.current();
 
       if (!allComplete) {
         animFrameRef.current = requestAnimationFrame(animate);
@@ -384,7 +394,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       active = false;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [wordsLayout, drawCanvas]);
+  }, [wordsLayout]);
 
   // Click & hover mouse coordinate tracking
   const getWordAtCoords = useCallback((clientX: number, clientY: number): PlacedWord | null => {
