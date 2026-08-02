@@ -30,8 +30,22 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
 
     requestAnimationFrame(() => closeBtnRef.current?.focus());
 
-    // Set overlay open after mount to avoid inert double-click trap
-    setOverlayOpen(true, 'dimension-drawer');
+    // Below the xl breakpoint (Tailwind default 1280px) this drawer is a
+    // full off-canvas overlay that visually covers <main>, so trapping
+    // interaction there via `inert` (driven by isAnyOverlayOpen in
+    // DashboardLayout) is correct. At xl+ this drawer is only ever as wide
+    // as the 390px right-panel column (see `w-[min(90vw,390px)]` below) and
+    // never overlaps <main> or the left sidebar -- inerting them there
+    // locked the whole center panel (including video playback/scroll)
+    // behind a single dimension click, which is the reported bug. Only
+    // mark the global overlay open on breakpoints where it actually
+    // overlays something else.
+    const desktopQuery = window.matchMedia('(min-width: 1280px)');
+    const syncOverlayForBreakpoint = () => {
+      setOverlayOpen(!desktopQuery.matches, 'dimension-drawer');
+    };
+    syncOverlayForBreakpoint();
+    desktopQuery.addEventListener('change', syncOverlayForBreakpoint);
 
     const keyHandlers: Record<string, () => void> = {
       Escape: () => onClose(),
@@ -81,7 +95,14 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('pointerdown', handlePointerDown);
-      setOverlayOpen(false);
+      desktopQuery.removeEventListener('change', syncOverlayForBreakpoint);
+      // Ownership-aware close (useUIStore fix, PR review): pass this
+      // component's own id so the store only clears the global overlay
+      // flag if THIS drawer still owns it -- otherwise a second overlay
+      // (e.g. ExpandedPanelOverlay) that opened while this one was mounted
+      // would have its `inert` protection silently clobbered by this
+      // drawer's unmount.
+      setOverlayOpen(false, 'dimension-drawer');
       const prev = previousFocusRef.current;
       requestAnimationFrame(() => prev?.focus());
     };
