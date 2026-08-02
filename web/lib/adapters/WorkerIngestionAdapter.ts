@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { env } from '@/lib/env';
 import { detectPersona } from '@/lib/prompts';
 import type { VideoMetadata, IngestionResult, MetadataIngestionPort, TranscriptSegment } from '@/lib/ports';
@@ -33,21 +34,33 @@ async function fetchWorkerTranscript(videoId: string): Promise<{ transcript: str
   const workerUrl = env.cloudflareWorkerUrl;
   if (!workerUrl) throw new Error('Worker URL not configured');
 
-  const response = await fetch(`${workerUrl}/fetch-transcript`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ videoId }),
-  });
+  try {
+    const response = await fetch(`${workerUrl}/fetch-transcript`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoId }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`Worker returned ${response.status} fetching transcript`);
+    if (!response.ok) {
+      throw new Error(`Worker returned ${response.status} fetching transcript`);
+    }
+
+    // The worker's TranscriptExtractor.fetch() (spread via `...result` in
+    // /fetch-transcript) already includes timed `segments` -- previously only
+    // `data.transcript` was read here, discarding them at this boundary.
+    const data = await response.json();
+    return { transcript: data.transcript || '', segments: Array.isArray(data.segments) ? data.segments : undefined };
+  } catch (error) {
+    // A rejection here previously vanished into Promise.allSettled with zero
+    // telemetry, silently degrading to "no transcript" -- indistinguishable
+    // from the video genuinely having no captions. Surface it.
+    Sentry.captureException(error, {
+      tags: { component: 'WorkerIngestionAdapter', phase: 'fetch-transcript' },
+      extra: { videoId },
+    });
+    console.error('[fetchWorkerTranscript] Failed', { videoId, error: error instanceof Error ? error.message : String(error) });
+    throw error;
   }
-
-  // The worker's TranscriptExtractor.fetch() (spread via `...result` in
-  // /fetch-transcript) already includes timed `segments` -- previously only
-  // `data.transcript` was read here, discarding them at this boundary.
-  const data = await response.json();
-  return { transcript: data.transcript || '', segments: Array.isArray(data.segments) ? data.segments : undefined };
 }
 
 async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetadataResponse> {
@@ -106,10 +119,20 @@ async function fetchWorkerMetadata(videoId: string): Promise<WorkerMetadataRespo
     clearTimeout(timeout);
 
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Worker request timeout');
+      const timeoutErr = new Error('Worker request timeout');
+      Sentry.captureException(timeoutErr, { tags: { component: 'WorkerIngestionAdapter', phase: 'fetch-metadata' }, extra: { videoId } });
+      throw timeoutErr;
     }
 
-    throw new Error('Failed to fetch metadata from Worker');
+    // Previously discarded the real `error` (network error, SSRF rejection,
+    // non-OK status) behind a generic message with no telemetry -- preserve
+    // the original cause and report it.
+    Sentry.captureException(error, {
+      tags: { component: 'WorkerIngestionAdapter', phase: 'fetch-metadata' },
+      extra: { videoId },
+    });
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to fetch metadata from Worker: ${message}`);
   }
 }
 
@@ -121,7 +144,25 @@ export class WorkerIngestionAdapter implements MetadataIngestionPort {
     ]);
 
     if (metadataResult.status === 'rejected') {
-      throw new Error('Failed to fetch video metadata');
+      // metadataResult.reason already carries a descriptive message and was
+      // already reported to Sentry inside fetchWorkerMetadata's own catch --
+      // rethrow it directly instead of replacing it with a generic string.
+      throw metadataResult.reason instanceof Error
+        ? metadataResult.reason
+        : new Error('Failed to fetch video metadata');
+    }
+
+    if (transcriptResult.status === 'rejected') {
+      // Already reported to Sentry inside fetchWorkerTranscript's own catch.
+      // Falling back to an empty transcript here is intentional (metadata
+      // alone is still useful), but log so this degraded path is visible --
+      // previously this branch was completely silent, making a transient
+      // worker failure indistinguishable from the video genuinely having no
+      // captions.
+      console.warn('[WorkerIngestionAdapter] Transcript fetch failed, continuing with metadata only', {
+        videoId,
+        reason: transcriptResult.reason instanceof Error ? transcriptResult.reason.message : String(transcriptResult.reason),
+      });
     }
 
     const meta = metadataResult.value;

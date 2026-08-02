@@ -1,68 +1,70 @@
 # Tech Debt Ledger
 
-Generated from a full-repo `qa-intel --mode full` + `contract-auditor` sweep on
-2026-08-02, post-merge of PRs #183-187. All findings below are **pre-existing**
-(present in `main` before this session's PRs, not introduced by them) — 0
-critical, 21 high (qa-intel), 31 warning (contract-auditor).
+A **dynamic, priority-sorted roster** — not static P0/P1/P2 buckets. Every item
+carries a numeric score computed from the rubric below; new findings insert at
+their computed rank, not appended at the bottom. Re-sort whenever an item's
+status or score changes.
 
-Scored by **priority = severity × blast radius × exploitability/user impact**.
-Fix top-down; each item lists file(s), the concrete failure mode, and rough
-effort.
+## Scoring rubric
 
-## P0 — verified 2026-08-02, all three are false positives (no fix needed)
+`score = Severity(1-3) × Blast Radius(1-3) × Impact(1-3)` — max 27.
 
-| # | Finding | File(s) | Verification |
-|---|---|---|---|
-| 1 | YAML injection (unescaped values) | `web/app/api/chat/capture-question/route.ts` | Already fixed — `escapeYamlValue()` helper at line 151-156 quotes/escapes every front-matter value, explicitly labeled "P0 Security Fix" in a comment. qa-intel's regex flags the raw `key: value` template literal shape without seeing the escape call feeding it. |
-| 2 | POST 307 redirect preserves method | `web/app/api/auth/signin/route.ts` | Already correct — `POST()` uses **303** (line 26), only the separate `GET()` handler uses 307 (harmless: GET→GET). qa-intel matched "307" textually near "POST" without distinguishing the two exported handlers. |
-| 3 | Sensitive `userId` in error logs | `web/lib/skills/wiki-builder/wiki-builder.ts` | Server-side-only `console.error`/`Sentry.captureException` correlation-ID logging (not user-facing, not a secret) — matches this repo's own "always use correlation IDs for traceability" convention. qa-intel's `InformationDisclosureRule` treats any `userId` token in a log line as sensitive regardless of context. |
+- **Severity**: 1 = cosmetic/style, 2 = degraded behavior, 3 = wrong output / security / data loss
+- **Blast radius**: 1 = single file, narrow feature, 2 = one module/feature area, 3 = core/every-request path (analysis creation, auth, billing)
+- **Impact**: 1 = no user-visible effect, 2 = user sees a degraded/confusing outcome, 3 = user gets an actively wrong answer, loses data, or a security boundary is crossed
 
-**Action**: none required on the code. Consider tightening qa-intel's `InformationDisclosureRule`/307-redirect regex to reduce this false-positive rate (rule maintenance itself is a P2, tracked below).
+`status`: `open` | `fixed` | `false-positive` | `deferred` (needs a larger contract change or explicit user call)
 
-## P1 — schedule this sprint (real but needs judgment / bigger surface)
+## Roster (sorted by score, descending)
 
-| # | Finding | File(s) | Failure scenario | Effort |
-|---|---|---|---|---|
-| 5 | Stream timeout abort doesn't settle error state — **currently dormant, not dead** | `web/lib/services/openrouter.ts` | `callOpenRouter`/`AnalysisEngineError` have zero *current* callers (verified via exhaustive grep), but ADR 011 explicitly documents this file as the intentional Vercel single-model-completion fallback path ("chat completions, if ever used") — do **not** delete. On final-tier `AbortError` it does correctly `throw err` (not a silent swallow — qa-intel's title is slightly misleading), but no caller exists yet to catch that throw and settle UI/DB state, so the finding is real but only activates the day this fallback path gets wired up. Track as "verify error-state settling when this path is activated," not an active bug today. | — (no action until wired up) |
-| 6 | Persist call, no retry/error-state | `web/app/atlas/AtlasClient.tsx`, `web/lib/services/sentry-telemetry.ts` | Transient network blip = permanently lost write, no user-visible failure | M |
-| 7 | ~~Empty catch swallows error~~ **FIXED 1/4, other 3 verified intentional** | `web/lib/chat/outbox.ts` (fixed), `web/lib/adapters/YouTubePlayerAdapter.ts`, `web/hooks/useSearch.ts`, `web/hooks/useRelations.ts` | `outbox.ts`'s `write()` catch had genuine data-loss risk (chat message silently not persisted on quota/private-mode failure) — added `console.warn`. The other 3 flagged catches all already carry explanatory comments for a legitimate silent-fallback pattern next to a **sibling catch in the same file that already logs properly**: `YouTubePlayerAdapter.ts:141` ignores a best-effort cleanup `destroy()` call inside an already-logged error path; `useSearch.ts:132` swallows a non-JSON error-response body (falls through to a generic message, real error still logged at line 160); `useRelations.ts:89` skips one malformed SSE chunk mid-stream (`/* partial */`, expected during streaming, loop continues). qa-intel flags each catch independently without checking for sibling logging in the same function/file — same rule-quality gap as items 1-4/12. | Done |
+| Score | # | Finding | File(s) | Status | Note |
+|---|---|---|---|---|---|
+| 27 | 1 | Transcript-fetch network failure silently misreported as "no captions" | `web/lib/adapters/WorkerIngestionAdapter.ts` | **fixed** | `fetchWorkerTranscript()` had no try/catch; a rejected promise fell through `Promise.allSettled` to an empty transcript with **zero logging** — indistinguishable from the video genuinely having no captions, which the UI reports as a normal (non-error) outcome. Every single analysis creation goes through this path. Fixed: try/catch + `Sentry.captureException` + `console.warn` on the fallback branch; metadata-fetch rejection now preserves the real error instead of a generic string. Regression test added: `web/lib/__tests__/WorkerIngestionAdapter.test.ts` (4 cases). |
+| 18 | 13 | Worker-side `TranscriptExtractor.ts`: 11 catch blocks, 0 logging calls | `worker/src/services/TranscriptExtractor.ts` | **open — top of next wave** | Worst logging-to-catch ratio in the repo (verified via grep count, not yet read line-by-line). Core ingestion path on the Worker side — same failure class as item 1 but unaudited. First stop for the dedicated network-error-RCA wave. |
+| 12 | 2 | Per-bundle stream network failures had zero Sentry telemetry | `web/hooks/useSSEStream.ts` | **fixed** | Raw `fetch()` failures to the CF worker re-thrown as-is with no context; `abortOnPartialFailure` (default `true`) aborted the whole analysis on one bundle's transient network error with only "network error" to go on. Fixed: `Sentry.captureException` at both the connection-failure site (bundle index + worker host) and the aggregate per-stream catch (covers read/parse failures too); error message now names the bundle. Prompted by a live incident (video `LTNVA2iP9YU`, 2026-08-02). |
+| 8 | 14 | `MetadataScraper.ts`: 6 catch blocks, 1 logging call | `worker/src/services/MetadataScraper.ts` | open | Second-worst ratio on the worker side. Not yet read line-by-line — triage next in the same wave as item 13. |
+| 8 | 15 | `CommentClassifier.ts`: 2 catch blocks, 0 logging calls | `worker/src/services/CommentClassifier.ts` | open | Comments-sampling path, not the core analysis path — lower blast radius than 13/14 but same pattern. |
+| 8 | 6 | Persist call, no retry/error-state | `web/app/atlas/AtlasClient.tsx`, `web/lib/services/sentry-telemetry.ts` | open | Transient network blip = permanently lost write, no user-visible failure. Needs judgment on retry count/backoff, not a one-line fix — scope before starting. |
+| 8 | 10 | `SILENT_ERROR_RETURN_NO_TELEMETRY` | `web/lib/utils/require-admin.ts` (×2), `web/middleware.ts`, `web/lib/skills/wiki-builder/wiki-builder.ts` (×2) | open | Same class as the already-fixed `LLMCascade.ts` pattern (commit `23eb5a36`) — failure objects returned with no throw/log. `require-admin.ts`/`middleware.ts` are auth-adjacent — fix those two before `wiki-builder.ts` within this item. |
+| 5 | 5 | `openrouter.ts` stream-timeout error-state settling | `web/lib/services/openrouter.ts` | **deferred** | `callOpenRouter` has zero current callers (verified via exhaustive grep), but ADR 011 explicitly documents it as the intentional dormant Vercel single-model-completion fallback ("chat completions, if ever used") — **do not delete**. On final-tier `AbortError` it already correctly `throw`s (not a silent swallow). No caller exists yet to catch that throw and settle UI/DB state — re-verify the day this path gets wired up, not before. |
+| 2 | 11 | `UNVERIFIED_ENDPOINT_NO_TEST` (hardcoded OpenRouter URLs) | `web/lib/intelligence/relations-engine.ts`, `web/lib/services/dimension-remediation.ts`, `web/lib/services/openrouter.ts`, `worker/src/chat-stream.ts`, `worker/src/services/CommentClassifier.ts`, `worker/src/services/LLMCascade.ts` | open | 6 sites, no contract test against OpenRouter's request/response shape. Not urgent — cheap insurance, one shared contract test would cover all 6. |
+| 2 | 12 | qa-intel rule-quality: false positives found this scan | `scripts/verify-quality-engine.ts` (`InformationDisclosureRule`, POST-307 detector, `DataIntegrityRule`, empty-catch detector) | open | Low individual score but high leverage — fixing these reduces noise on every future scan. See `docs/qa-intel/RULESET_LESSONS_LEDGER.md` for the 5 specific false-positive entries logged 2026-08-02. |
+| 1 | 8 | Empty catch in test file | `worker/src/__tests__/TranscriptExtractor.test.ts` (×3) | open | Test-only, no prod blast radius. |
+| 1 | 9 | Persist call in test file | `web/lib/__tests__/SupabaseTranscriptAdapter.test.ts` | open | Test-only. |
 
-### 4 — DEMOTED to false positive (verified 2026-08-02)
+### Already resolved this scan, not re-scored
 
-`web/app/api/admin/settings/route.ts` (×3), `web/app/api/admin/stats/route.ts`,
-`web/app/api/billing/checkout/route.ts`, `web/app/api/webhooks/upstash-snapshot-poll/route.ts`
+- **Item 7** — `web/lib/chat/outbox.ts`'s `write()` catch: real data-loss risk (chat message silently not persisted on quota/private-mode failure), **fixed** with a `console.warn`. The other 3 originally-flagged empty-catch sites (`YouTubePlayerAdapter.ts:141`, `useSearch.ts:132`, `useRelations.ts:89`) were verified **false-positive** — each has an explanatory comment and a sibling catch in the same function that already logs the real failure.
+- **Item 4** — "DB write with no schema validation" (`admin/settings`, `admin/stats`, `billing/checkout`, `upstash-snapshot-poll`): verified **false-positive** — `admin/settings` is pure reads (matches an already-known 2026-07-25 qa-intel bug, still unfixed at the rule level); the other three insert only server-computed/already-validated fields, no raw external input reaches the DB.
+- **Items 1-3** (P0 in the prior version of this ledger) — YAML injection, POST-307, `userId`-in-logs: all verified **false-positive**, logged to the ruleset ledger.
 
-- `admin/settings` has **zero** `.insert`/`.upsert`/`.update` calls — pure `.select()` reads. This is the exact bug already tracked in `docs/qa-intel/RULESET_LESSONS_LEDGER.md` (2026-07-25 entry, "fires on read-only .select() calls") — **still unfixed as of this scan**.
-- `admin/stats` and `billing/checkout` each have one real `.insert()` into `usage_logs`, but every field is server-computed (`userId` from the authenticated session, a static `action` string, `new Date().toISOString()`) — no raw client input reaches the row. `billing/checkout`'s only user-supplied fields (`successUrl`/`cancelUrl`) are already Zod-validated earlier in the handler (`validation.data.*`) before this insert.
-- `upstash-snapshot-poll` is QStash-signature-verified (401s on bad signature) and inserts only internally-computed poll results (`pollRedis()`/`pollVector()` return values), not raw request body content.
+## Network-Error RCA & Telemetry Wave (opened 2026-08-02, in progress)
 
-None of the four writes puts unvalidated external input into the DB. Rule needs
-a second fix beyond the 2026-07-25 one: also skip firing when every inserted
-field is either a literal, a server-derived value (session/auth/timestamp), or
-already passed through a Zod parse earlier in the same function — see ledger
-item 12 below.
+Triggered by a live incident where a single transient network failure aborted
+an entire analysis with only "network error" to diagnose it by, plus a
+confirmed-worse sibling bug (item 1) that silently misreported a network
+failure as a content fact. Scope: audit every `fetch()`/`catch` pair across
+`web/` and `worker/` for (a) swallowed error reasons, (b) missing telemetry,
+(c) misleading fallback behavior. Triage so far (fetch-count / catch-count /
+Sentry-or-log-count per file, `web/` only — `worker/` triage is partial):
 
-## P2 — track, fix opportunistically (test-file only or narrow blast radius)
-
-| # | Finding | File(s) | Note |
-|---|---|---|---|
-| 8 | Empty catch in test file | `worker/src/__tests__/TranscriptExtractor.test.ts` (×3) | Test-only, no prod blast radius — lowest priority of the empty-catch group |
-| 9 | Persist call in test file | `web/lib/__tests__/SupabaseTranscriptAdapter.test.ts` | Test-only |
-| 10 | `SILENT_ERROR_RETURN_NO_TELEMETRY` | `web/lib/skills/wiki-builder/wiki-builder.ts` (×2), `web/lib/utils/require-admin.ts` (×2), `web/middleware.ts` | Same class as the fixed `LLMCascade.ts` pattern (commit `23eb5a36`) — failure objects returned with no throw/log, invisible to telemetry. `require-admin.ts` and `middleware.ts` are auth-adjacent, worth prioritizing above wiki-builder within this tier |
-| 11 | `UNVERIFIED_ENDPOINT_NO_TEST` (OpenRouter) | `web/lib/intelligence/relations-engine.ts`, `web/lib/services/dimension-remediation.ts`, `web/lib/services/openrouter.ts`, `worker/src/chat-stream.ts`, `worker/src/services/CommentClassifier.ts`, `worker/src/services/LLMCascade.ts` | Hardcoded OpenRouter API paths, no contract test — matches the class of bug that already silently 404'd for Supabase `logs.all`/QStash schedule endpoints once. Not urgent (external API is stable) but cheap insurance: one shared contract test asserting the request shape against OpenRouter's OpenAPI spec would cover all 6 sites |
-
-| 12 | qa-intel false-positive rate | `scripts/verify-quality-engine.ts` rules `InformationDisclosureRule`, POST-307 detector | Both fired on already-correct code (see P0 verification above) — narrow the regex to check which exported handler function a "307" match sits inside, and exempt `userId`/similar identifier logging from the sensitive-pattern list unless paired with a real secret pattern (token/key/password) | S |
+- `web/lib/admin-logs/fetchers.ts` — 8/19/11 (healthy ratio, not flagged)
+- `web/lib/adapters/WorkerIngestionAdapter.ts` — was 4/1/0, **now fixed** (item 1)
+- `web/hooks/useSSEStream.ts` — was 3/10/4, **now fixed** (item 2)
+- `web/lib/services/dimension-remediation.ts` — 2/7/4 (healthy, not flagged)
+- Remaining `web/` files with 0 Sentry near their catch (`useAutoRestoreAnalysis.ts`, `useStreamReattach.ts`, `UsersAdminClient.tsx`, `AdminSettingsClient.tsx`, `LogsViewerClient.tsx`, `UpstashVectorAdapter.ts`, and ~15 single-fetch hooks) were individually inspected — all use intentional `console.debug`/best-effort patterns on non-critical/background paths (chat session restoration, status polling) or are low-blast-radius admin UI. Not re-flagged; re-check only if one becomes a reported incident.
+- **`worker/` side is the next stop** — items 13-15 above are grep-count triage only, not yet read line-by-line. Do that read before writing any fix.
 
 ## Not re-litigated here
 
 CodeFactor complexity/style findings on `DimensionDrawer.tsx` /
 `ExpandedPanelOverlay.tsx` (missing JSDoc, non-null assertions, cyclomatic
 complexity 8) surfaced during PR #183/#185 review — already logged as
-pre-existing, non-blocking, not duplicated into this ledger to avoid two
-sources of truth. See PR #183/#185 review threads.
+pre-existing, non-blocking, not duplicated into this ledger. See PR #183/#185
+review threads.
 
 ## Next scan
 
 Re-run `pnpm tsx scripts/verify-quality-engine.ts --mode full` and
-`pnpm tsx web/scripts/contract-auditor.ts` after clearing P0/P1 to confirm no
-regressions and pick up P2 progress.
+`pnpm tsx web/scripts/contract-auditor.ts` after clearing the top of the
+roster to confirm no regressions and re-sort.
