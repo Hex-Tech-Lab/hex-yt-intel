@@ -1,0 +1,25 @@
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0eded1e9d0cab6::t_acd0dc51fb1220 40-51
+  s_0eded1e9d0cab6::t_0e399c3ae0a4de 28-30
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_3152ac6b36d549 1-11,21-28,44-53,56-68
+  s_0eded1e9d0cab6::t_59a8bc8962540d 29-43
+  s_0eded1e9d0cab6::t_078ba6954b565f 12-20
+  s_0eded1e9d0cab6::t_39b443afcaffbf 54-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "1abb3d0c778558205c0166411f71a3d810e93038",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
