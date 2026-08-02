@@ -70,6 +70,16 @@ export class MetadataScraper implements CommentIngestionPort {
     const response = await fetchWithProxy(url, { headers: { 'User-Agent': getRandomUserAgent() } }, this.residentialProxyUrl);
 
     if (!response.ok) {
+      // Every other method in this file reports its failures to Sentry;
+      // this one didn't -- both current callers do console.warn/error the
+      // caught error, so it isn't silently lost, but it was invisible to
+      // Sentry's search/alerting unlike every sibling method here.
+      const bodyText = await response.text().catch(() => '');
+      Sentry.captureMessage(`fetchChannelDetails non-ok: ${channelId}`, {
+        level: 'warning',
+        tags: { operation: 'fetch-channel-details', status: String(response.status) },
+        extra: { channelId, status: response.status, statusText: response.statusText, body: bodyText.slice(0, 300) },
+      });
       throw new Error(`YouTube API channel fetch failed: ${response.status}`);
     }
 
