@@ -164,9 +164,13 @@ describe('tryChunkRecovery — partial-set salvage', () => {
     };
   }
 
-  async function loadWithMocks(chunkRows: ChunkRow[]) {
+  async function loadWithMocks(
+    chunkRows: ChunkRow[],
+    configureMock?: (mock: ReturnType<typeof vi.fn>) => void,
+  ) {
     vi.resetModules();
     const updateAnalysisResultMock = vi.fn().mockResolvedValue({ updated: true });
+    configureMock?.(updateAnalysisResultMock);
 
     vi.doMock('@/lib/supabase', () => ({
       getSupabaseServiceClient: () => ({
@@ -243,5 +247,66 @@ describe('tryChunkRecovery — partial-set salvage', () => {
     expect(result).toEqual({ outcome: 'failed' });
     const callArgs = updateAnalysisResultMock.mock.calls[0][0];
     expect(callArgs.validationReport.reaped_via).toBe('chunk_recovery');
+  });
+
+  it('ignores a completed chunk with a malformed (missing/non-array) dimensions payload when salvaging a partial set', async () => {
+    // chunk_index 2 exists and is 'completed' but its payload.dimensions is
+    // null -- malformed, not simply missing. Its "would-be" dimension (8) is
+    // deliberately the one NOT covered by the 4 valid chunks below, so if the
+    // filter in tryChunkRecovery failed to exclude it, dimension 8 would show
+    // up in the stitched result and the salvage would (wrongly) read as the
+    // full 11/11 set instead of a 10/11 partial.
+    const malformedChunk = makeChunk(2, [8], { payload: { dimensions: null } });
+    const validRows = [
+      makeChunk(1, [1]),
+      makeChunk(3, [2, 4, 6]),
+      makeChunk(4, [5, 7, 10]),
+      makeChunk(5, [3, 9, 11]),
+    ];
+    const rows = [malformedChunk, ...validRows];
+    const { tryChunkRecovery, persistenceAdapter, updateAnalysisResultMock } = await loadWithMocks(rows);
+
+    const result = await tryChunkRecovery('analysis-5', null, persistenceAdapter);
+
+    expect(result).toEqual({ outcome: 'completed' });
+    const callArgs = updateAnalysisResultMock.mock.calls[0][0];
+    expect(callArgs.payload.dimensions).toHaveLength(TOTAL_DIMENSIONS - 1); // 10, not 11
+    expect(callArgs.payload.dimensions.some((d: { number: number }) => d.number === 8)).toBe(false);
+    expect(callArgs.validationReport.status).toBe('partial'); // not 'done' -- proves dim 8 didn't leak in
+  });
+
+  it('retries updateAnalysisResult on a transient failure and still salvages on the second attempt', async () => {
+    const rows = [
+      makeChunk(1, [1]),
+      makeChunk(3, [2, 4, 6]),
+      makeChunk(4, [5, 7, 10]),
+      makeChunk(5, [3, 9, 11]),
+    ];
+    const { tryChunkRecovery, persistenceAdapter, updateAnalysisResultMock } = await loadWithMocks(rows, mock => {
+      mock.mockReset();
+      mock.mockRejectedValueOnce(new Error('transient write failure')).mockResolvedValueOnce({ updated: true });
+    });
+
+    const result = await tryChunkRecovery('analysis-6', null, persistenceAdapter);
+
+    expect(result).toEqual({ outcome: 'completed' });
+    expect(updateAnalysisResultMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('propagates the error after exhausting retries on a permanent updateAnalysisResult failure (caller falls back to markdown path)', async () => {
+    const rows = [
+      makeChunk(1, [1]),
+      makeChunk(3, [2, 4, 6]),
+      makeChunk(4, [5, 7, 10]),
+      makeChunk(5, [3, 9, 11]),
+    ];
+    const { tryChunkRecovery, persistenceAdapter, updateAnalysisResultMock } = await loadWithMocks(rows, mock => {
+      mock.mockReset();
+      mock.mockRejectedValue(new Error('permanent write failure'));
+    });
+
+    await expect(tryChunkRecovery('analysis-7', null, persistenceAdapter)).rejects.toThrow('permanent write failure');
+    // Bounded retry (maxAttempts=2): exactly 2 attempts, not an unbounded loop.
+    expect(updateAnalysisResultMock).toHaveBeenCalledTimes(2);
   });
 });

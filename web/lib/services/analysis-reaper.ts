@@ -20,7 +20,8 @@ import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
 import { stitchChunksIntoPayload, buildDimensionStatus, extractDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
-import type { BillingStatus, ValidationReportStatus } from '@/lib/types/validation-report';
+import type { BillingStatus, ValidationReportStatus, DimensionStatus } from '@/lib/types/validation-report';
+import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 
 /**
  * Minimum dimensions for a partial analysis to be salvaged as `completed`.
@@ -47,7 +48,7 @@ export const REAP_GRACE_MINUTES = 30;
  * (in sweepStuckAnalyses) falls through to the markdown-based path exactly
  * as it already does for any other chunk-recovery failure.
  */
-async function retryWithBackoff<T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> {
+const retryWithBackoff = async <T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> => {
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -60,7 +61,7 @@ async function retryWithBackoff<T>(fn: () => Promise<T>, maxAttempts = 2): Promi
     }
   }
   throw lastError;
-}
+};
 
 export type ReapOutcome = 'completed' | 'failed';
 
@@ -172,6 +173,27 @@ export function chunksAreFullyComplete(chunkRows: ChunkRow[]): boolean {
 }
 
 /**
+ * Decide the salvage report fields for a stitched chunk-recovery payload.
+ * Extracted from tryChunkRecovery purely to keep that function's cyclomatic
+ * complexity down (DeepSource flagged 19/"high risk" pre-extraction) -- the
+ * two branches are the two distinct policies described where this is called
+ * from: strict 100%-or-failed for a full chunk set, threshold-based salvage
+ * for a partial one.
+ */
+function decideChunkSalvagePolicy(
+  stitchedPayload: UCISPayloadV2,
+  isFullSet: boolean,
+  dimensionCount: number,
+): { dimensionStatus: DimensionStatus[]; validationStatus: ValidationReportStatus; billingStatus: BillingStatus } {
+  if (isFullSet) return buildDimensionStatus(stitchedPayload);
+  return {
+    dimensionStatus: extractDimensionStatus(stitchedPayload),
+    validationStatus: dimensionCount >= TOTAL_DIMENSIONS ? 'done' : 'partial',
+    billingStatus: dimensionCount >= MIN_SALVAGEABLE_DIMENSIONS ? 'completed' : 'failed',
+  };
+}
+
+/**
  * Attempts chunk-based recovery for a single stuck row: if every bundle-
  * stream chunk is present and complete in `analysis_chunks` (the row was
  * fully generated, but the parent row's own finalize/stitch write was
@@ -249,18 +271,16 @@ export async function tryChunkRecovery(
       : {};
   const nowIso = new Date().toISOString();
 
-  // Full set: keep the existing strict "100% or it doesn't bill" policy
-  // (buildDimensionStatus). Partial set: mirror decideReapOutcome's own
-  // MIN_SALVAGEABLE_DIMENSIONS threshold -- the same policy this reaper
-  // already applies on the markdown-only path -- so the two salvage paths
-  // don't silently disagree on what counts as a usable partial.
-  const { dimensionStatus, validationStatus, billingStatus } = isFullSet
-    ? buildDimensionStatus(stitchResult.payload)
-    : {
-        dimensionStatus: extractDimensionStatus(stitchResult.payload),
-        validationStatus: (dimensionCount >= TOTAL_DIMENSIONS ? 'done' : 'partial') as ValidationReportStatus,
-        billingStatus: (dimensionCount >= MIN_SALVAGEABLE_DIMENSIONS ? 'completed' : 'failed') as BillingStatus,
-      };
+  // Full set: keep the existing strict "100% or it doesn't bill" policy.
+  // Partial set: mirror decideReapOutcome's own MIN_SALVAGEABLE_DIMENSIONS
+  // threshold -- the same policy this reaper already applies on the
+  // markdown-only path -- so the two salvage paths don't silently disagree
+  // on what counts as a usable partial.
+  const { dimensionStatus, validationStatus, billingStatus } = decideChunkSalvagePolicy(
+    stitchResult.payload,
+    isFullSet,
+    dimensionCount,
+  );
 
   const newReport = {
     ...baseReport,
