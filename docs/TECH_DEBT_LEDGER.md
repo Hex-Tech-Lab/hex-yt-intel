@@ -23,7 +23,7 @@ effort.
 
 | # | Finding | File(s) | Failure scenario | Effort |
 |---|---|---|---|---|
-| 5 | Stream timeout abort doesn't settle error state | `web/lib/services/openrouter.ts` | Abort fires on timeout but no `settleAnalysis('error', ...)` — analysis stuck in "processing" limbo client-side until the reaper (PR #187) eventually sweeps it | S |
+| 5 | Stream timeout abort doesn't settle error state — **currently dormant, not dead** | `web/lib/services/openrouter.ts` | `callOpenRouter`/`AnalysisEngineError` have zero *current* callers (verified via exhaustive grep), but ADR 011 explicitly documents this file as the intentional Vercel single-model-completion fallback path ("chat completions, if ever used") — do **not** delete. On final-tier `AbortError` it does correctly `throw err` (not a silent swallow — qa-intel's title is slightly misleading), but no caller exists yet to catch that throw and settle UI/DB state, so the finding is real but only activates the day this fallback path gets wired up. Track as "verify error-state settling when this path is activated," not an active bug today. | — (no action until wired up) |
 | 6 | Persist call, no retry/error-state | `web/app/atlas/AtlasClient.tsx`, `web/lib/services/sentry-telemetry.ts` | Transient network blip = permanently lost write, no user-visible failure | M |
 | 7 | Empty catch swallows error | `web/lib/chat/outbox.ts`, `web/lib/adapters/YouTubePlayerAdapter.ts`, `web/hooks/useSearch.ts`, `web/hooks/useRelations.ts` | Real fetch/clipboard/persist failures vanish with zero telemetry — indistinguishable from success in prod | S each |
 
