@@ -1,0 +1,53 @@
+worker/src/chat-stream.ts
+  s_0eded1e9d0cab6::t_4a870ab2d6451c 371
+  s_0eded1e9d0cab6::t_5d73689f58637e 99
+  s_0eded1e9d0cab6::t_2c302e54e6bc3d 144
+web/lib/adapters/OpenRouterCompletionAdapter.ts
+  s_0eded1e9d0cab6::t_788daa07bf54ae 87
+  s_0eded1e9d0cab6::t_e151734ba5f152 65,67
+  s_0eded1e9d0cab6::t_a546fb42abeeeb 22-23,39
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_0eded1e9d0cab6::t_b1203c2470b7d3 103-104
+web/lib/__tests__/aux-status-from-report.test.ts
+  s_0eded1e9d0cab6::t_41907b2aeb01d6 2,4,6-7,12,16,20,24,28-29,35-36,40-41,47,51,55-56,60,66,70,74-75
+web/app/api/search/route.ts
+  s_0eded1e9d0cab6::t_82ded4dcdb0e35 101
+  s_0eded1e9d0cab6::t_acbcde761be65f 240,242
+web/lib/ports/ExecutiveDigestPorts.ts
+  s_0eded1e9d0cab6::t_5179766ff285b0 21-29
+web/lib/embeddings.ts
+  s_0eded1e9d0cab6::t_ad196274c4ceab 33
+  s_0eded1e9d0cab6::t_5cccb8059d66fc 65
+web/hooks/useAuxElementStatus.ts
+  s_0eded1e9d0cab6::t_64381a9782b7d8 53-54
+  s_0eded1e9d0cab6::t_5bd4600df10d95 4
+supabase/migrations/20260802114813_history_overview_function_v7_aux_status_from_payload.sql
+  s_0eded1e9d0cab6::t_d74b6e4963ddba 1-119
+web/lib/utils/aux-status-from-report.ts
+  s_0eded1e9d0cab6::t_e00150fadd6915 3,6-8,10-35,37,42,73-75
+web/app/api/webhooks/embed/route.ts
+  s_0eded1e9d0cab6::t_4230c0dd13317c 105
+web/app/api/analyses/[id]/relations/route.ts
+  s_0eded1e9d0cab6::t_43e746dcf3f835 138
+web/lib/intelligence/relations-engine.ts
+  s_0eded1e9d0cab6::t_9ebac39572b530 93
+  s_0eded1e9d0cab6::t_a7f50abbe6c315 170-171
+  s_0eded1e9d0cab6::t_f7db730dc1825e 60-61
+  s_0eded1e9d0cab6::t_f15be3724945c8 142-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "b92b751e6d5f541f9384725f006b185750cdd313",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
