@@ -393,7 +393,7 @@ grep -r "from.*useAnalysisStore\|import.*useAnalysisStore" web/app/api
 - React + React-DOM: 40 kB
 - Zustand: 2 kB
 - Sentry SDK: 50+ kB (only production builds)
-- Tailwind CSS + shadcn/ui: ~60 kB
+- Tailwind CSS + Astryx (`@astryxdesign/core`/`theme-neutral`): ~60 kB (stack corrected 2026-08-02 — shadcn/ui was never actually the live UI system despite earlier docs; its dead `web/components/ui/` primitives were unused and deleted)
 
 **Total Uncompressed**: ~152 kB  
 **Gzipped**: ~35 kB (acceptable for Next.js app)

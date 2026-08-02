@@ -16,7 +16,7 @@ PR-4 consolidates frontend layer hardening:
 - Error boundary & error state handling
 - Accessibility improvements (WCAG 2.1 AA)
 - Performance optimization (React.memo, useMemo, code splitting)
-- Tailwind + shadcn/ui consistency (design system consolidation)
+- Tailwind + Astryx consistency (design system consolidation) -- historical note: shadcn/ui was the original target here but was dropped in favor of Astryx by 2026-08-02
 
 ## Related Commits
 

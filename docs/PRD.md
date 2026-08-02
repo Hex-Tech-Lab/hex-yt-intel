@@ -201,7 +201,7 @@ MONTHLY              ANNUAL (Save ~30%)
 | Caching | Upstash Redis (rate limiting, sessions) |
 | Observability | Sentry (error tracking, $10/mo) |
 | Hosting | Vercel (Next.js) + Supabase (DB) |
-| Styling | Tailwind + shadcn/ui |
+| Styling | Tailwind + Astryx (@astryxdesign/core/theme-neutral) -- NOT shadcn/ui, dropped 2026-08-02 |
 
 ### Data Model (Team-Enabled)
 ```sql

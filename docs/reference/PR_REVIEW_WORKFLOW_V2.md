@@ -35,7 +35,7 @@ This workflow governs all feature development. It is self-improving and context-
 3.  **Full-Stack Pattern Audit**:
     *   **DB**: Supabase RLS, partitioning, `auth.uid()` checks.
     *   **Logic**: 11-dimension parallel streaming stability.
-    *   **UI**: Tailwind/shadcn alignment, zero-CLS markdown rendering.
+    *   **UI**: Tailwind/Astryx alignment (NOT shadcn — dropped 2026-08-02), zero-CLS markdown rendering.
 4.  **Triple-Gate**: `rm -rf node_modules pnpm-lock.yaml && pnpm install && pnpm build`.
 
 ---

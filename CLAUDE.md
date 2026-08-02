@@ -73,7 +73,7 @@ Full rationale for 008–010 in `docs/history/HANDOVER_2026-07-07-CHAT-SECURITY-
 ## 5. THE FROZEN STACK PROTOCOL (GCT Aligned — 2026-05-23)
 
 **Package Management**: `pnpm` only  
-**CSS Framework**: Tailwind CSS + shadcn/ui exclusively
+**CSS Framework**: Tailwind CSS + Astryx (`@astryxdesign/core`, `@astryxdesign/theme-neutral`) exclusively — **NOT shadcn/ui**. shadcn was dropped entirely; `web/components/ui/` (the shadcn primitives) was confirmed dead (zero real imports) and deleted 2026-08-02. Before claiming a UI library is in use anywhere in this repo, verify actual imports (`grep -rl "from '@astryxdesign\|from '@/components/ui"`), not file/dependency presence — this exact stale claim caused a wrong instruction to an FE agent this session.
 
 ### Runtime & Build Infrastructure
 (Exact pinned versions live in package.json / web/package.json — source of truth, don't duplicate here.)

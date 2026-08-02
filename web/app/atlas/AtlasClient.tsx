@@ -4,12 +4,20 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/templates/_shared/primitives';
-import { Skeleton } from '@/components/ui/skeleton';
+
+function AtlasLoadingSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4 p-4 border border-gray-700 rounded-lg">
+      <div className="h-4 bg-gray-700 rounded w-3/4" />
+      <div className="h-64 bg-gray-700 rounded w-full" />
+    </div>
+  );
+}
 
 // Lazy load the GlobalKnowledgeMap component
 const GlobalKnowledgeMap = dynamic(
   () => import('@/components/organisms/GlobalKnowledgeMap').then(mod => mod.GlobalKnowledgeMap),
-  { ssr: false, loading: () => <div className="absolute inset-0 flex items-center justify-center"><Skeleton /></div> }
+  { ssr: false, loading: () => <div className="absolute inset-0 flex items-center justify-center"><AtlasLoadingSkeleton /></div> }
 );
 
 export function AtlasClient() {

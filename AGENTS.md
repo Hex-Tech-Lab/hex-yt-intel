@@ -90,7 +90,7 @@ worker/
 - **Law #2**: Dual timeouts — 3s connection / 25s (Vercel) or 90s (Worker) streaming
 - **Law #3**: All routes MUST stream responses to extend connection lifetime
 - **Law #4**: Hybrid Edge — Vercel ~8s (auth/quota) → CF Worker ~58s (LLM) → S2S `/persist` (HMAC)
-- **Frozen stack**: pnpm only, Tailwind + shadcn/ui only, Node 24.16.0 LTS
+- **Frozen stack**: pnpm only, Tailwind + Astryx (`@astryxdesign/core`/`theme-neutral`) — NOT shadcn/ui, dropped and deleted 2026-08-02 — Node 24.16.0 LTS
 
 ---
 

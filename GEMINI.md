@@ -25,7 +25,7 @@
 ## 2. THE FROZEN DESIGN SYSTEM & CODE QUALITY GATES (GCT Aligned — 2026-05-23)
 
 **Package Management**: `pnpm` only (exact version: 11.1.3)  
-**CSS Framework**: Tailwind CSS + shadcn/ui exclusively  
+**CSS Framework**: Tailwind CSS + Astryx (`@astryxdesign/core`, `@astryxdesign/theme-neutral`) exclusively — NOT shadcn/ui, dropped and its dead `web/components/ui/` primitives deleted 2026-08-02  
 **Runtime**: Node.js 24.16.0 LTS (pinned for CI/deployment)
 
 ### Frozen Infrastructure Coordinates (CC Authority)

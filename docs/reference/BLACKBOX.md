@@ -117,7 +117,7 @@ pnpm type-check && pnpm lint && pnpm build
 
 ### Key Conventions
 1. **Package Management**: pnpm only (version 11.1.3)
-2. **CSS Framework**: Tailwind CSS + shadcn/ui exclusively
+2. **CSS Framework**: Tailwind CSS + Astryx (`@astryxdesign/core`/`theme-neutral`) exclusively — NOT shadcn/ui, dropped 2026-08-02
 3. **Runtime**: Node.js 24.16.0 LTS (pinned for CI/deployment)
 4. **TypeScript**: 5.6.2 (strict mode enabled)
 5. **State Management**: Zustand + Zod (always aligned versions)
