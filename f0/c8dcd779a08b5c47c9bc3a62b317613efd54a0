@@ -1,0 +1,20 @@
+web/components/templates/console/MindMap.tsx
+  s_0eded1e9d0cab6::t_fa73a038b3e19d 223-228,230-232,234
+  s_0eded1e9d0cab6::t_02227a69a4a0d4 407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "f0c8dcd779a08b5c47c9bc3a62b317613efd54a0",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
