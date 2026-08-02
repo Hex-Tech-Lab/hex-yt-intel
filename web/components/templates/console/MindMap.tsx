@@ -33,6 +33,19 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   const panStartRef = useRef({ x: 0, y: 0 });
   const dragMovedRef = useRef(false);
 
+  // Reset layout position, zoom level, and collapsed node state whenever a new graph/video is loaded or restored from history
+  // Deliberately keyed on rootId alone, not graph.nodes -- nodes is a
+  // mutable array that grows on every incremental KG fragment during live
+  // synthesis (confirmed: ~35 separate node/edge-count updates in one
+  // analysis), so including it would reset pan/zoom/state on every single
+  // node arriving, not just on an actual video switch. rootId is set once
+  // from the first KG fragment and stays stable for the rest of that video.
+  useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    setCollapsedNodes({});
+  }, [graph?.rootId]);
+
   // Hierarchy score: lower is higher in the tree (Theme -> Concept -> Implementation -> Detail)
   const typePriority = useMemo((): Record<string, number> => ({
     trend: 0,        // Theme level

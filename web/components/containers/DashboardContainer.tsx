@@ -23,6 +23,7 @@ import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
 import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
+import { parseTimestamp } from '@/components/TimestampLink';
 
 // Lazy load visualization components to reduce initial bundle size
 const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
@@ -186,7 +187,21 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   const handleSelectNode = useCallback((id: string | null) => {
     startTransition(() => setSelectedNodeId(id));
-  }, []);
+    if (!id) return;
+
+    const { entityTimeSeekEnabled, setSeekTo } = useVideoStore.getState();
+    if (entityTimeSeekEnabled && graph.nodes) {
+      const node = graph.nodes.find((n) => n.id === id);
+      if (node) {
+        const textToSearch = `${node.content || ''} ${node.label || ''} ${(node.keyTerms || []).join(' ')}`;
+        const match = textToSearch.match(/\b(?:\d{1,2}:)?\d{1,2}:\d{2}\b/);
+        if (match) {
+          const secs = parseTimestamp(match[0]);
+          if (secs >= 0) setSeekTo(secs);
+        }
+      }
+    }
+  }, [graph.nodes]);
 
   // Define Right Panel Accordion Items
   const handleExpandPanel = useCallback((id: string, mode: string) => {

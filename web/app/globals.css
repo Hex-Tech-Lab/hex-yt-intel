@@ -374,10 +374,16 @@
   will-change: transform;
 }
 
-/* Astryx Toast dark theme override — force dark surface + crisp text
-   Target outer toast container only to eliminate double-border. */
-div[data-toast-id],
+/* Astryx Toast dark theme override — force dark surface + crisp text */
 div[data-astryx-toast-fallback] {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+div[data-toast-id],
+div[data-astryx-toast-fallback] div,
+div[data-astryx-toast-fallback] [role="status"],
+div[data-astryx-toast-fallback] [role="alert"] {
   background-color: #161b26 !important;
   color: #f1f5f9 !important;
   border: 1px solid var(--line) !important;

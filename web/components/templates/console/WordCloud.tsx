@@ -42,6 +42,20 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     if (ink) inkRef.current = ink;
   }, []);
 
+  // Reset animation progress and timeout refs whenever a new video/graph is loaded or restored from history
+  // Deliberately keyed on rootId alone, not graph.nodes -- nodes is a
+  // mutable array that grows on every incremental KG fragment during live
+  // synthesis (confirmed: ~35 separate node/edge-count updates in one
+  // analysis), so including it would reset pan/zoom/state on every single
+  // node arriving, not just on an actual video switch. rootId is set once
+  // from the first KG fragment and stays stable for the rest of that video.
+  useEffect(() => {
+    wordProgressRef.current = {};
+    wordStartedAtRef.current = {};
+    emptyTimedOutRef.current = false;
+    setIsEmptyTimedOut(false);
+  }, [graph?.rootId]);
+
   // Resize handling
   useEffect(() => {
     if (!containerRef.current) return;

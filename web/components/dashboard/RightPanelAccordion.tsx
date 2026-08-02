@@ -3,6 +3,7 @@
 import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/components/templates/_shared/primitives';
+import { useVideoStore } from '@/store/useVideoStore';
 
 export interface AccordionItem {
   id: string;
@@ -22,6 +23,8 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
   );
 
   const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
+  const entityTimeSeekEnabled = useVideoStore((s) => s.entityTimeSeekEnabled);
+  const toggleEntityTimeSeek = useVideoStore((s) => s.toggleEntityTimeSeek);
 
   const toggleItem = (id: string) => {
     setOpenStates((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -35,6 +38,28 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
 
   return (
     <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between px-3.5 py-2.5 border border-[var(--line)] rounded-lg bg-[var(--surface)] text-xs shadow-sm">
+        <span className="flex items-center gap-1.5 font-medium text-[var(--ink)]">
+          <Icon icon="solar:clock-circle-linear" size={14} className="text-[var(--accent)]" />
+          Entity Click Time-Seek
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={entityTimeSeekEnabled}
+          onClick={toggleEntityTimeSeek}
+          title="Enable/disable time-seeking when clicking entities in Knowledge Graph, Mind Map, or Word Cloud"
+          className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+            entityTimeSeekEnabled ? 'bg-[var(--ok,#22c55e)]' : 'bg-gray-600/60 dark:bg-slate-700'
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              entityTimeSeekEnabled ? 'translate-x-4' : 'translate-x-0'
+            }`}
+          />
+        </button>
+      </div>
       {items.map((item, index) => (
         <motion.div
           key={item.id}

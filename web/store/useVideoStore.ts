@@ -4,8 +4,11 @@ export interface VideoState {
   isPlaying: boolean;
   seekTo: number | null;
   pendingNav: 'console' | null;
+  entityTimeSeekEnabled: boolean;
   setPlaying: (isPlaying: boolean) => void;
   setSeekTo: (seconds: number) => void;
+  setEntityTimeSeekEnabled: (enabled: boolean) => void;
+  toggleEntityTimeSeek: () => void;
   clearPendingNav: () => void;
   clearSeek: () => void;
   reset: () => void;
@@ -15,7 +18,10 @@ export const useVideoStore = create<VideoState>((set) => ({
   isPlaying: false,
   seekTo: null,
   pendingNav: null,
+  entityTimeSeekEnabled: false,
   setPlaying: (isPlaying) => set({ isPlaying }),
+  setEntityTimeSeekEnabled: (enabled) => set({ entityTimeSeekEnabled: enabled }),
+  toggleEntityTimeSeek: () => set((s) => ({ entityTimeSeekEnabled: !s.entityTimeSeekEnabled })),
   // A timestamp click always means "play from here" -- without this, a
   // click before the video's ever been manually started mounts the YouTube
   // player, queues the seek, but never calls play() (VideoPlayerCard's
