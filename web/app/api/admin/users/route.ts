@@ -28,7 +28,17 @@ export async function GET(): Promise<NextResponse> {
 
   if (error) {
     Sentry.captureException(error, { tags: { operation: 'admin_list_users_activity' } });
-    return NextResponse.json({ error: 'Failed to load users' }, { status: 500 });
+    // Surface the real Postgres error (code + message) instead of a bare
+    // "Failed to load users" -- the client prefixes this with its own
+    // "Failed to load users: " label, so a matching generic string here
+    // rendered as the doubled, unhelpful "Failed to load users: Failed to
+    // load users" (RCA 2026-08-02: admin_list_users_activity was raising
+    // "column reference \"created_at\" is ambiguous" and this message hid
+    // it completely).
+    return NextResponse.json(
+      { error: error.message ? `${error.code ? `[${error.code}] ` : ''}${error.message}` : 'Failed to load users' },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ users: data ?? [] });
