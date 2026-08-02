@@ -93,7 +93,13 @@ export function DimensionDrawer({ dimension, onClose }: DimensionDrawerProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('pointerdown', handlePointerDown);
-      setOverlayOpen(false);
+      // Ownership-aware close (useUIStore fix, PR review): pass this
+      // component's own id so the store only clears the global overlay
+      // flag if THIS drawer still owns it -- otherwise a second overlay
+      // (e.g. ExpandedPanelOverlay) that opened while this one was mounted
+      // would have its `inert` protection silently clobbered by this
+      // drawer's unmount.
+      setOverlayOpen(false, 'dimension-drawer');
       const prev = previousFocusRef.current;
       requestAnimationFrame(() => prev?.focus());
     };

@@ -107,7 +107,12 @@ export function ExpandedPanelOverlay({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('pointerdown', handlePointerDown);
-      setOverlayOpen(false);
+      // Ownership-aware close (useUIStore fix): only clear the global
+      // overlay flag if this panel still owns it, so a differently-owned
+      // overlay that opened while this one was mounted (e.g.
+      // DimensionDrawer) doesn't have its `inert` protection clobbered by
+      // this panel's unmount.
+      setOverlayOpen(false, panelId);
       const prev = previousFocusRef.current;
       requestAnimationFrame(() => prev?.focus());
     };
