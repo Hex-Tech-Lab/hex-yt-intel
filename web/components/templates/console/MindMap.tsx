@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { Tooltip } from '@astryxdesign/core';
 import { entityHex, entityRgb } from '@/lib/design/entity-colors';
 import type { KnowledgeGraph } from '@/lib/types/knowledge-graph';
@@ -23,6 +23,15 @@ interface MindNode {
 
 export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
   const [collapsedNodes, setCollapsedNodes] = useState<Record<string, boolean>>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Pan & Zoom state
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const panStartRef = useRef({ x: 0, y: 0 });
+  const dragMovedRef = useRef(false);
 
   // Hierarchy score: lower is higher in the tree (Theme -> Concept -> Implementation -> Detail)
   const typePriority = useMemo((): Record<string, number> => ({
@@ -181,16 +190,131 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     return { nodes: nodesList, links: linksList, w: maxX, h: Math.max(300, maxY) };
   }, [treeData, collapsedNodes, typePriority]);
 
+  // Fit to view calculation for currently visible (expanded) nodes
+  const fitToView = useCallback(() => {
+    if (!layout || !layout.nodes || layout.nodes.length === 0 || !containerRef.current) return;
+    const container = containerRef.current;
+    const containerW = container.clientWidth || 600;
+    const containerH = container.clientHeight || 420;
+
+    const minX = Math.min(...layout.nodes.map((n) => n.x));
+    const maxX = Math.max(...layout.nodes.map((n) => n.x + 160));
+    const minY = Math.min(...layout.nodes.map((n) => n.y));
+    const maxY = Math.max(...layout.nodes.map((n) => n.y + 32));
+
+    const boundsW = Math.max(1, maxX - minX);
+    const boundsH = Math.max(1, maxY - minY);
+
+    const padding = 32;
+    const availableW = Math.max(100, containerW - padding * 2);
+    const availableH = Math.max(100, containerH - padding * 2);
+
+    const scaleX = availableW / boundsW;
+    const scaleY = availableH / boundsH;
+    const targetZoom = Math.min(2.5, Math.max(0.4, Math.min(scaleX, scaleY)));
+
+    const targetPanX = containerW / 2 - (minX + boundsW / 2) * targetZoom;
+    const targetPanY = containerH / 2 - (minY + boundsH / 2) * targetZoom;
+
+    setZoom(targetZoom);
+    setPan({ x: targetPanX, y: targetPanY });
+  }, [layout]);
+
+  // Run fitToView on initial render
+  useEffect(() => {
+    fitToView();
+  }, [fitToView]);
+
+  // Handle non-passive wheel zoom
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.15 : 0.85;
+
+      setZoom((prevZoom) => {
+        const newZoom = Math.min(3, Math.max(0.3, prevZoom * factor));
+        const actualFactor = newZoom / prevZoom;
+        setPan((prevPan) => ({
+          x: mouseX - (mouseX - prevPan.x) * actualFactor,
+          y: mouseY - (mouseY - prevPan.y) * actualFactor,
+        }));
+        return newZoom;
+      });
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  // Global mousemove/mouseup listeners while dragging
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      if (Math.hypot(dx, dy) > 4) {
+        dragMovedRef.current = true;
+      }
+      setPan({
+        x: panStartRef.current.x + dx,
+        y: panStartRef.current.y + dy,
+      });
+    };
+
+    const handleWindowMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [isDragging]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    dragMovedRef.current = false;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    panStartRef.current = { ...pan };
+    setIsDragging(true);
+  };
+
+  const handleNodeClick = (nodeId: string) => {
+    if (dragMovedRef.current) return;
+    onSelect(nodeId === selectedId ? null : nodeId);
+  };
+
   if (!layout) {
     return <div className="p-4 text-center text-[var(--ink-muted)]">No mind map data</div>;
   }
 
   return (
     <div
-      className="relative w-full overflow-auto hx-custom-scrollbar border border-[var(--line-faint)] bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg js-mind-map-container"
-      style={{ maxHeight: '420px', padding: '8px' }}
+      ref={containerRef}
+      onMouseDown={handleMouseDown}
+      className={`relative w-full overflow-hidden border border-[var(--line-faint)] bg-[radial-gradient(circle_at_50%_40%,_rgb(15_23_42_/_0.2),_rgb(8_11_17_/_0.6))] rounded-lg js-mind-map-container select-none ${
+        isDragging ? 'cursor-grabbing' : 'cursor-grab'
+      }`}
+      style={{ height: '420px', maxHeight: '420px', padding: '8px' }}
     >
-      <div className="relative w-full h-full">
+      <div
+        style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: '0 0',
+          width: layout.w,
+          height: layout.h,
+          position: 'relative',
+          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+        }}
+        className="relative"
+      >
         <svg
           width={layout.w}
           height={layout.h}
@@ -214,58 +338,84 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
         </svg>
 
         <div style={{ width: layout.w, height: layout.h, position: 'relative' }} className="relative">
-        {layout.nodes.map(({ node, x, y }) => {
-          const isSelected = selectedId === node.id;
-          const isCollapsed = collapsedNodes[node.id];
-          const hasChildren = node.children.length > 0;
-          const typeRgb = entityRgb(node.type);
+          {layout.nodes.map(({ node, x, y }) => {
+            const isSelected = selectedId === node.id;
+            const isCollapsed = collapsedNodes[node.id];
+            const hasChildren = node.children.length > 0;
+            const typeRgb = entityRgb(node.type);
 
-          return (
-            <div
-              key={node.id}
-              onClick={() => onSelect(node.id === selectedId ? null : node.id)}
-              style={{
-                position: 'absolute',
-                left: x,
-                top: y,
-                width: 160,
-                cursor: 'pointer',
-                zIndex: isSelected ? 20 : 10,
-                color: entityHex(node.type),
-                background: `rgb(${typeRgb} / 0.12)`,
-                borderColor: isSelected ? 'var(--accent)' : `rgb(${typeRgb} / 0.5)`,
-              }}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg border text-[10.5px] font-sans leading-tight transition-all duration-200 ${
-                isSelected ? 'ring-2 ring-[var(--accent)] scale-[1.03] shadow-lg shadow-[var(--accent-glow)]' : 'hover:scale-[1.02]'
-              }`}
-            >
-              <div className="flex flex-col truncate pr-1">
-                <Tooltip content={node.label}>
-                  <span className="truncate font-bold">
-                    {node.label}
+            return (
+              <div
+                key={node.id}
+                onClick={() => handleNodeClick(node.id)}
+                style={{
+                  position: 'absolute',
+                  left: x,
+                  top: y,
+                  width: 160,
+                  cursor: 'pointer',
+                  zIndex: isSelected ? 20 : 10,
+                  color: entityHex(node.type),
+                  background: `rgb(${typeRgb} / 0.12)`,
+                  borderColor: isSelected ? 'var(--accent)' : `rgb(${typeRgb} / 0.5)`,
+                }}
+                className={`flex items-center justify-between px-3 py-2 rounded-lg border text-[10.5px] font-sans leading-tight transition-all duration-200 ${
+                  isSelected ? 'ring-2 ring-[var(--accent)] scale-[1.03] shadow-lg shadow-[var(--accent-glow)]' : 'hover:scale-[1.02]'
+                }`}
+              >
+                <div className="flex flex-col truncate pr-1">
+                  <Tooltip content={node.label}>
+                    <span className="truncate font-bold">
+                      {node.label}
+                    </span>
+                  </Tooltip>
+                  <span className="text-[8px] opacity-60 uppercase tracking-widest font-mono">
+                    {node.type}
                   </span>
-                </Tooltip>
-                <span className="text-[8px] opacity-60 uppercase tracking-widest font-mono">
-                  {node.type}
-                </span>
+                </div>
+                {hasChildren && (
+                  <button
+                    onClick={(e) => toggleCollapse(node.id, e)}
+                    className="flex-shrink-0 ml-1 hover:text-[var(--accent)] border-none bg-transparent cursor-pointer p-0 flex items-center justify-center"
+                  >
+                    <Icon 
+                      icon={isCollapsed ? 'solar:add-square-linear' : 'solar:minimize-square-linear'} 
+                      size={14} 
+                      style={{ color: isCollapsed ? 'var(--accent)' : 'inherit' }}
+                    />
+                  </button>
+                )}
               </div>
-              {hasChildren && (
-                <button
-                  onClick={(e) => toggleCollapse(node.id, e)}
-                  className="flex-shrink-0 ml-1 hover:text-[var(--accent)] border-none bg-transparent cursor-pointer p-0 flex items-center justify-center"
-                >
-                  <Icon 
-                    icon={isCollapsed ? 'solar:add-square-linear' : 'solar:minimize-square-linear'} 
-                    size={14} 
-                    style={{ color: isCollapsed ? 'var(--accent)' : 'inherit' }}
-                  />
-                </button>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-      </div>
+
+      {/* Fit-to-view control */}
+      <Tooltip content="Fit to view">
+        <button
+          onClick={fitToView}
+          type="button"
+          style={{
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            width: 28,
+            height: 28,
+            borderRadius: 4,
+            border: '1px solid var(--line)',
+            background: 'rgb(26 31 43 / 0.8)',
+            color: 'var(--ink-secondary)',
+            cursor: 'pointer',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 30,
+          }}
+          className="hover:text-[var(--ink)] hover:bg-[rgb(30,41,59,0.9)] transition-colors"
+        >
+          <Icon icon="solar:maximize-square-linear" size={14} />
+        </button>
+      </Tooltip>
     </div>
   );
 }
