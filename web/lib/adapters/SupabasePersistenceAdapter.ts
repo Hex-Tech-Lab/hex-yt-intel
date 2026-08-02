@@ -131,33 +131,40 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     const billingStatus = (params.validationReport as any)?.billing_status ||
       (params.validationPassed ? 'completed' : 'failed');
 
-    let updateQuery = service
-      .from('analyses')
-      .update({
-        analysis_markdown: params.markdown,
-        analysis_payload: params.payload ?? null,
-        model_used: params.model || 'edge-stream',
-        validation_passed: params.validationPassed,
-        validation_report: params.validationReport,
-        billing_status: billingStatus,
-        updated_at: new Date().toISOString(),
-      }, { count: 'exact' })
-      .eq('id', params.analysisId);
-    if (params.guardBillingStatus !== undefined) {
-      updateQuery = updateQuery.eq('billing_status', params.guardBillingStatus);
+    // RCA (2026-08-02): validation_report used to be a blind column
+    // overwrite here -- correct for a single writer, but this row can
+    // receive MULTIPLE concurrent calls (one per parallel-streamed chunk),
+    // and the caller-side merge (`field ?? priorReport.field`) was built
+    // from a point-in-time SELECT that a concurrent writer could commit
+    // ahead of, silently clobbering fields (channelMeta/comments) the
+    // caller didn't have fresh data for. `params.validationReport` is now
+    // treated as a PATCH, merged atomically inside a single UPDATE
+    // statement (update_analysis_result_atomic) alongside every other
+    // field this call touches -- one statement, not two, so there is no
+    // window for a crash or a concurrent writer to leave the row
+    // half-updated. Callers must omit keys they don't have fresh values
+    // for rather than re-including a potentially-stale prior value.
+    const { data: rpcRows, error: rpcError } = await service.rpc('update_analysis_result_atomic', {
+      p_analysis_id: params.analysisId,
+      p_markdown: params.markdown,
+      p_payload: params.payload ?? null,
+      p_model: params.model,
+      p_validation_passed: params.validationPassed,
+      p_validation_report_patch: params.validationReport,
+      p_billing_status: billingStatus,
+      p_guard_billing_status: params.guardBillingStatus ?? null,
+    });
+    if (rpcError) {
+      console.error('[SupabasePersistenceAdapter] update_analysis_result_atomic failed:', rpcError.message);
+      throw rpcError;
     }
-    const { error: analysisError, count } = await updateQuery;
-
-    if (analysisError) {
-      console.error('[SupabasePersistenceAdapter] updateAnalysisResult failed:', analysisError.message);
-      throw analysisError;
-    }
+    const updated = Array.isArray(rpcRows) ? rpcRows[0]?.updated : (rpcRows as any)?.updated;
 
     // Guarded call that lost the race (a concurrent writer already moved this
     // row off guardBillingStatus): stop here. Applying KG/chunk side-effects
     // below would write data for a row a different, possibly-conflicting
     // write already claimed.
-    if (params.guardBillingStatus !== undefined && !count) {
+    if (params.guardBillingStatus !== undefined && !updated) {
       return { updated: false };
     }
 
