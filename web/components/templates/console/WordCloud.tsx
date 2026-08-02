@@ -335,7 +335,15 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // animation for every word from scratch. Route calls through a ref so the
   // effect only restarts when the actual word data changes.
   const drawCanvasRef = useRef(drawCanvas);
-  useEffect(() => { drawCanvasRef.current = drawCanvas; }, [drawCanvas]);
+  useEffect(() => {
+    drawCanvasRef.current = drawCanvas;
+    // Repaint once on any change drawCanvas itself reacts to (selectedId or
+    // size) -- clicking a word to select it must still update the highlight
+    // immediately, without waiting for a stray mouse-move to trigger it or
+    // (worse) going through the entrance-animation effect, which would
+    // restart the pop-in for every word again.
+    drawCanvas();
+  }, [drawCanvas]);
 
   // Staggered pop-in reveal animation & empty pulse loop
   useEffect(() => {
@@ -406,6 +414,12 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     return (
       wordsLayout.find((word) => {
+        // Ignore words still mid entrance-animation (or not yet started) --
+        // their final bounding box is hit-tested here even though they're
+        // barely/not visible during the ~600ms stagger-in window, letting a
+        // click land on a word that isn't really there yet.
+        const progress = wordProgressRef.current[word.id] ?? 1;
+        if (progress < 0.5) return false;
         return (
           clickX >= word.x - word.w / 2 &&
           clickX <= word.x + word.w / 2 &&
