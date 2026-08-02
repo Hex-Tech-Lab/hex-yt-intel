@@ -46,6 +46,7 @@ import { resolveAnalysisCascade } from '@/lib/config/cascade';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { stitchChunksIntoPayload, buildDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { SupabaseBillingAdapter } from '@/lib/adapters/SupabaseBillingAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 import { tryConsumeTokenBucket, incrementRedisValue } from '@/lib/redis';
@@ -180,6 +181,7 @@ function estimateCostCents(dimensionCount: number, costPer1K: number): number {
 
 export interface AnalysisGap {
   id: string;
+  userId: string;
   videoId: string;
   title: string;
   channelTitle: string;
@@ -249,7 +251,7 @@ export async function findAnalysesWithMissingDimensions(opts?: {
 
   const { data, error } = await service
     .from('analyses')
-    .select('id, video_id, title, channel_title, analysis_markdown, analysis_payload, validation_report, billing_status')
+    .select('id, video_id, title, channel_title, analysis_markdown, analysis_payload, validation_report, billing_status, user_id')
     .eq('billing_status', 'failed')
     .eq('validation_report->>status', 'partial')
     .order('created_at', { ascending })
@@ -275,6 +277,7 @@ export async function findAnalysesWithMissingDimensions(opts?: {
 
     gaps.push({
       id: (row as { id: string }).id,
+      userId: (row as { user_id: string }).user_id,
       videoId: (row as { video_id: string }).video_id,
       title: (row as { title?: string }).title ?? '',
       channelTitle: (row as { channel_title?: string }).channel_title ?? '',
@@ -511,6 +514,29 @@ export async function remediateAnalysis(
   if (!affordable) {
     return { analysisId: gap.id, stage: RemediationStage.BudgetExhausted, dimensionsRequested: gap.missingDimensions };
   }
+
+  // Real gap found live (2026-08-02): the token bucket tracked spend
+  // in-memory (Redis) only -- console.log was the sole record of what
+  // remediation actually spent, with no queryable audit trail. Logged here,
+  // right after the budget is actually committed (not at the end, so a
+  // later worker/persist failure still leaves a record that spend
+  // happened -- the OpenRouter charge is incurred at the worker-call stage
+  // regardless of downstream outcome). costUsd is the ESTIMATE the budget
+  // check itself used (estimateCostCents), not an OpenRouter-reported
+  // actual -- this harness doesn't get real token/cost figures back from
+  // its SSE consumption today; logged as an estimate rather than a false
+  // precision. Attributed to the real analysis owner (gap.userId), distinct
+  // from the `remediation:<id>` tag sent to OpenRouter's own `user` field
+  // above (that one is for filtering in OpenRouter's dashboard, this one is
+  // for the per-user cost ledger admin_list_users_activity reads from).
+  await SupabaseBillingAdapter.logUsageEvent({
+    userId: gap.userId,
+    action: 'dimension_remediation',
+    metadata: { analysisId: gap.id, dimensionsRequested: gap.missingDimensions },
+    costUsd: estimatedCostCents / 100,
+  }).catch((e) => {
+    console.error('[dimension-remediation] usage_logs write failed (non-fatal, remediation continues):', e instanceof Error ? e.message : String(e));
+  });
 
   const persistenceAdapter = new SupabasePersistenceAdapter();
 

@@ -709,7 +709,17 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                     <MetricChip icon="solar:eye-linear" title="Times opened">
                       {item.views} views
                     </MetricChip>
-                    <MetricChip icon="solar:calendar-minimalistic-linear" title="Last analyzed">
+                    <MetricChip icon="solar:flag-linear" title="First analyzed">
+                      {new Date(item.firstAnalyzedAt).toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                      })}
+                    </MetricChip>
+                    <MetricChip icon="solar:calendar-minimalistic-linear" title="Last analyzed (most recent re-run)">
                       {new Date(item.lastAnalyzedAt).toLocaleString(undefined, {
                         year: 'numeric',
                         month: 'short',
