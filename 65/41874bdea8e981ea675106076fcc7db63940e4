@@ -1,0 +1,22 @@
+web/lib/intelligence/relations-engine.ts
+  s_0eded1e9d0cab6::t_f106378a1ee147 1
+  s_0eded1e9d0cab6::t_f05087e1493a03 126-131,137-145
+worker/src/chat-stream.ts
+  s_0eded1e9d0cab6::t_b1d769650ac2eb 311-312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6541874bdea8e981ea675106076fcc7db63940e4",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
