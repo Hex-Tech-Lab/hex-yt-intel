@@ -6,9 +6,9 @@
  * web/lib/types/validation-report.ts BillingStatus for the 2026-07-23 RCA on
  * why this is 3 states, not the previous 'pending'|'chargeable'|'charged'|'failed'.)
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { decideReapOutcome, buildSettlePatch, MIN_SALVAGEABLE_DIMENSIONS, chunksAreFullyComplete, type ChunkRow } from '@/lib/services/analysis-reaper';
-import { TOTAL_STREAMS } from '@/lib/config/synthesis';
+import { TOTAL_STREAMS, TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /** Build markdown containing exactly `n` UCIS dimension headers (1..n). */
 function markdownWithDimensions(n: number): string {
@@ -134,5 +134,114 @@ describe('chunksAreFullyComplete', () => {
 
   it('is false for an empty chunk list', () => {
     expect(chunksAreFullyComplete([])).toBe(false);
+  });
+});
+
+/**
+ * tryChunkRecovery — partial-chunk salvage path.
+ *
+ * RCA this exists for (2026-08-02, live production, video LTNVA2iP9YU): one
+ * of TOTAL_STREAMS bundle-stream requests (chunk 2) returned HTTP 200 to the
+ * browser but its worker-side persist call never landed a row in
+ * `analysis_chunks`. The row was left stuck in `processing` with 4/5 chunks
+ * (10/11 dimensions) genuinely complete. The OLD `tryChunkRecovery` bailed
+ * out entirely on any incompleteness (`chunksAreFullyComplete` required all
+ * TOTAL_STREAMS), falling through to the markdown-only path -- which sees 0
+ * dimensions for a chunked analysis (analysis_markdown is never populated
+ * until final stitch) and reaps the row as `failed` with nothing, discarding
+ * 10 genuinely-complete dimensions. These tests guard the fix: a partial set
+ * meeting MIN_SALVAGEABLE_DIMENSIONS is now stitched and salvaged instead of
+ * discarded, while a partial set below the threshold still correctly falls
+ * through (no regression).
+ */
+describe('tryChunkRecovery — partial-set salvage', () => {
+  function makeChunk(index: number, dims: number[], overrides?: Partial<ChunkRow>): ChunkRow {
+    return {
+      chunk_index: index,
+      status: 'completed',
+      payload: { dimensions: dims.map(n => ({ number: n, name: `D${n}`, content: `Body for dimension ${n} with enough length.` })) },
+      ...overrides,
+    };
+  }
+
+  async function loadWithMocks(chunkRows: ChunkRow[]) {
+    vi.resetModules();
+    const updateAnalysisResultMock = vi.fn().mockResolvedValue({ updated: true });
+
+    vi.doMock('@/lib/supabase', () => ({
+      getSupabaseServiceClient: () => ({
+        from: (_table: string) => ({
+          select: () => ({
+            eq: () => Promise.resolve({ data: chunkRows, error: null }),
+          }),
+        }),
+      }),
+    }));
+    vi.doMock('@/lib/adapters', () => ({
+      SupabasePersistenceAdapter: class {
+        updateAnalysisResult = updateAnalysisResultMock;
+      },
+    }));
+
+    const mod = await import('@/lib/services/analysis-reaper');
+    const { SupabasePersistenceAdapter } = await import('@/lib/adapters');
+    return { tryChunkRecovery: mod.tryChunkRecovery, persistenceAdapter: new SupabasePersistenceAdapter() as any, updateAnalysisResultMock };
+  }
+
+  it('salvages a 4/5-chunk (10/11-dimension) partial set that clears the salvage minimum', async () => {
+    // Mirrors the live incident: chunk 2 missing, chunks 1/3/4/5 present.
+    const rows = [
+      makeChunk(1, [1]),
+      makeChunk(3, [2, 4, 6]),
+      makeChunk(4, [5, 7, 10]),
+      makeChunk(5, [3, 9, 11]),
+    ];
+    const { tryChunkRecovery, persistenceAdapter, updateAnalysisResultMock } = await loadWithMocks(rows);
+
+    const result = await tryChunkRecovery('analysis-1', { persona: 'creator' }, persistenceAdapter);
+
+    expect(result).toEqual({ outcome: 'completed' });
+    expect(updateAnalysisResultMock).toHaveBeenCalledTimes(1);
+    const callArgs = updateAnalysisResultMock.mock.calls[0][0];
+    expect(callArgs.payload.dimensions).toHaveLength(TOTAL_DIMENSIONS - 1); // 10 dims recovered
+    expect(callArgs.validationReport.billing_status).toBe('completed');
+    expect(callArgs.validationReport.status).toBe('partial'); // not the full 11
+    expect(callArgs.validationReport.reaped_via).toBe('chunk_recovery_partial');
+    expect(callArgs.markdown.length).toBeGreaterThan(0); // content actually preserved, not discarded
+  });
+
+  it('falls through (returns null) when the partial set is below the salvage minimum', async () => {
+    // Only 1 dimension recovered -- below MIN_SALVAGEABLE_DIMENSIONS.
+    const rows = [makeChunk(1, [1])];
+    const { tryChunkRecovery, persistenceAdapter, updateAnalysisResultMock } = await loadWithMocks(rows);
+
+    const result = await tryChunkRecovery('analysis-2', null, persistenceAdapter);
+
+    expect(result).toBeNull();
+    expect(updateAnalysisResultMock).not.toHaveBeenCalled();
+  });
+
+  it('returns null when there are no completed chunks at all (nothing to salvage)', async () => {
+    const rows = [makeChunk(1, [1], { status: 'interrupted' })];
+    const { tryChunkRecovery, persistenceAdapter, updateAnalysisResultMock } = await loadWithMocks(rows);
+
+    const result = await tryChunkRecovery('analysis-3', null, persistenceAdapter);
+
+    expect(result).toBeNull();
+    expect(updateAnalysisResultMock).not.toHaveBeenCalled();
+  });
+
+  it('still applies the strict full-set policy (100%-or-failed billing) when all TOTAL_STREAMS chunks are complete', async () => {
+    const rows = Array.from({ length: TOTAL_STREAMS }, (_, i) => makeChunk(i + 1, [i + 1]));
+    const { tryChunkRecovery, persistenceAdapter, updateAnalysisResultMock } = await loadWithMocks(rows);
+
+    const result = await tryChunkRecovery('analysis-4', null, persistenceAdapter);
+
+    // Only TOTAL_STREAMS (5) dimensions recovered here, well under TOTAL_DIMENSIONS (11)
+    // -- the full-set path's buildDimensionStatus policy still fails billing
+    // in that case (unchanged behavior from before this fix).
+    expect(result).toEqual({ outcome: 'failed' });
+    const callArgs = updateAnalysisResultMock.mock.calls[0][0];
+    expect(callArgs.validationReport.reaped_via).toBe('chunk_recovery');
   });
 });

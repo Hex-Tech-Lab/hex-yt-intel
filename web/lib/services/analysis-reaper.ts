@@ -18,9 +18,9 @@ import * as Sentry from '@sentry/nextjs';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { countUcisDimensions } from '@/lib/utils/count-ucis-dimensions';
 import { TOTAL_DIMENSIONS, TOTAL_STREAMS, MIN_USABLE_DIMENSIONS } from '@/lib/config/synthesis';
-import { stitchChunksIntoPayload, buildDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
+import { stitchChunksIntoPayload, buildDimensionStatus, extractDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
-import type { BillingStatus } from '@/lib/types/validation-report';
+import type { BillingStatus, ValidationReportStatus } from '@/lib/types/validation-report';
 
 /**
  * Minimum dimensions for a partial analysis to be salvaged as `completed`.
@@ -36,6 +36,31 @@ export const MIN_SALVAGEABLE_DIMENSIONS = MIN_USABLE_DIMENSIONS;
  * legitimately in-flight analysis is never prematurely failed.
  */
 export const REAP_GRACE_MINUTES = 30;
+
+/**
+ * Small bounded retry for the recovery write path -- mirrors the same
+ * exponential-backoff pattern persist/route.ts already uses for its own
+ * Supabase writes (retryWithBackoff there), duplicated locally rather than
+ * imported since that one is a route-local helper, not a shared module.
+ * A transient failure here must not throw away an otherwise-successful
+ * salvage: on exhaustion it rethrows so the caller's existing try/catch
+ * (in sweepStuckAnalyses) falls through to the markdown-based path exactly
+ * as it already does for any other chunk-recovery failure.
+ */
+async function retryWithBackoff<T>(fn: () => Promise<T>, maxAttempts = 2): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, 300 * 2 ** attempt));
+      }
+    }
+  }
+  throw lastError;
+}
 
 export type ReapOutcome = 'completed' | 'failed';
 
@@ -157,12 +182,32 @@ export function chunksAreFullyComplete(chunkRows: ChunkRow[]): boolean {
  * (which would see an empty analysis_markdown and wrongly discard a
  * genuinely complete analysis as unsalvageable).
  *
- * Returns null when chunks aren't fully complete, or when the recovery
+ * RCA (2026-08-02, live production, video LTNVA2iP9YU): one of the 5 parallel
+ * bundle-stream requests (chunk 2) returned HTTP 200 to the browser but its
+ * worker-side `atomicPersist`/`persistAnalysisChunk` call never landed a row
+ * in `analysis_chunks` -- the browser never logged a "[Bundle 2] completed"
+ * nor an error event for it either (a separate, real client-side bug fixed
+ * alongside this one; see useSSEStream.ts). Server-side, this left the row
+ * stuck in `processing` with 4/5 chunks (10/11 dimensions) genuinely
+ * complete in `analysis_chunks`. Because `chunksAreFullyComplete` required
+ * all 5, the ORIGINAL version of this function returned null unconditionally
+ * on any incompleteness, falling through to the markdown-based salvage path
+ * below -- but `analysis_markdown` is NEVER populated for chunked analyses
+ * until the final stitch commits, so that path saw 0 dimensions and reaped
+ * the row as `failed` with nothing, discarding 10 genuinely-complete
+ * dimensions sitting right there in `analysis_chunks`. This partial-recovery
+ * branch mirrors `decideReapOutcome`'s existing MIN_SALVAGEABLE_DIMENSIONS
+ * threshold (the same policy the markdown path already uses for a "usable
+ * partial") so a majority-complete chunk set is salvaged into the row's own
+ * markdown/payload instead of being silently thrown away.
+ *
+ * Returns null when there is nothing worth salvaging (no completed chunks,
+ * or a completed set below MIN_SALVAGEABLE_DIMENSIONS), or when the recovery
  * attempt itself fails for any reason -- the caller falls through to the
- * existing markdown-based decision in both cases, so this path can only
- * ever ADD a recovery option, never take one away.
+ * existing markdown-based decision in all cases, so this path can only ever
+ * ADD a recovery option, never take one away.
  */
-async function tryChunkRecovery(
+export async function tryChunkRecovery(
   analysisId: string,
   existingReport: unknown,
   persistenceAdapter: SupabasePersistenceAdapter
@@ -175,18 +220,48 @@ async function tryChunkRecovery(
   if (error) throw error;
 
   const chunkRows = (data ?? []) as ChunkRow[];
-  if (!chunksAreFullyComplete(chunkRows)) return null;
+  const isFullSet = chunksAreFullyComplete(chunkRows);
 
-  const chunkMap = new Map<number, any>(chunkRows.map(c => [c.chunk_index, c.payload]));
+  // Partial set: only feed chunks that individually completed with a valid
+  // dimensions array into the stitch -- a chunk row that exists but never
+  // reached `status === 'completed'` (or lacks a dimensions array) carries no
+  // trustworthy content and must not be mixed into the salvage.
+  const usableRows = isFullSet
+    ? chunkRows
+    : chunkRows.filter(
+        c => c.status === 'completed' && Array.isArray((c.payload as { dimensions?: unknown } | null)?.dimensions)
+      );
+  if (usableRows.length === 0) return null;
+
+  const chunkMap = new Map<number, any>(usableRows.map(c => [c.chunk_index, c.payload]));
   const stitchResult = stitchChunksIntoPayload(chunkMap, TOTAL_STREAMS);
   if (!stitchResult.payload) return null;
 
-  const { dimensionStatus, validationStatus, billingStatus } = buildDimensionStatus(stitchResult.payload);
+  const dimensionCount = stitchResult.payload.dimensions?.length ?? 0;
+  // Below salvage threshold: not enough content to be worth anything -- fall
+  // through to the markdown-based path, which will (correctly) also fail the
+  // row since analysis_markdown was never populated for chunked analyses.
+  if (!isFullSet && dimensionCount < MIN_SALVAGEABLE_DIMENSIONS) return null;
+
   const baseReport =
     existingReport && typeof existingReport === 'object' && !Array.isArray(existingReport)
       ? (existingReport as Record<string, unknown>)
       : {};
   const nowIso = new Date().toISOString();
+
+  // Full set: keep the existing strict "100% or it doesn't bill" policy
+  // (buildDimensionStatus). Partial set: mirror decideReapOutcome's own
+  // MIN_SALVAGEABLE_DIMENSIONS threshold -- the same policy this reaper
+  // already applies on the markdown-only path -- so the two salvage paths
+  // don't silently disagree on what counts as a usable partial.
+  const { dimensionStatus, validationStatus, billingStatus } = isFullSet
+    ? buildDimensionStatus(stitchResult.payload)
+    : {
+        dimensionStatus: extractDimensionStatus(stitchResult.payload),
+        validationStatus: (dimensionCount >= TOTAL_DIMENSIONS ? 'done' : 'partial') as ValidationReportStatus,
+        billingStatus: (dimensionCount >= MIN_SALVAGEABLE_DIMENSIONS ? 'completed' : 'failed') as BillingStatus,
+      };
+
   const newReport = {
     ...baseReport,
     validation_status: validationStatus,
@@ -195,22 +270,25 @@ async function tryChunkRecovery(
     dimension_status: dimensionStatus,
     valid: stitchResult.validationPassed && validationStatus === 'done',
     reaped: true,
-    reaped_via: 'chunk_recovery',
+    reaped_via: isFullSet ? 'chunk_recovery' : 'chunk_recovery_partial',
     reaped_at: nowIso,
+    reaped_dimensions: dimensionCount,
   };
 
   // Guarded: only commits if this row is STILL `processing` -- same
   // single-winner race protection as the markdown-based path below, reused
   // (not re-implemented) via updateAnalysisResult's guardBillingStatus.
-  const { updated } = await persistenceAdapter.updateAnalysisResult({
-    analysisId,
-    markdown: stitchResult.markdown,
-    payload: stitchResult.payload,
-    model: null,
-    validationPassed: stitchResult.validationPassed,
-    validationReport: newReport,
-    guardBillingStatus: 'processing',
-  });
+  const { updated } = await retryWithBackoff(() =>
+    persistenceAdapter.updateAnalysisResult({
+      analysisId,
+      markdown: stitchResult.markdown,
+      payload: stitchResult.payload ?? null,
+      model: null,
+      validationPassed: stitchResult.validationPassed,
+      validationReport: newReport,
+      guardBillingStatus: 'processing',
+    })
+  );
   if (!updated) return null; // raced -- a concurrent legitimate settle won; caller treats this row as "handled"
 
   return { outcome: billingStatus === 'completed' ? 'completed' : 'failed' };
