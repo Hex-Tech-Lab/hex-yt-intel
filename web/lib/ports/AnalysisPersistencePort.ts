@@ -34,7 +34,7 @@ export interface AnalysisStub {
 export interface HistoryOverviewItem {
   /** Canonical video id with any `_archived_<ts>` suffix stripped. */
   baseVideoId: string;
-  /** Winner analysis id (most complete, newest on ties) — target for open/restore. */
+  /** The single most recent analysis attempt for this video (v11+) — target for open/restore. Was previously the "most complete" attempt (highest dimension count), which could silently point at an older run than lastAnalyzedAt implied; see history_overview_function_v11 migration. */
   analysisId: string;
   title: string;
   channelTitle: string | null;
@@ -49,18 +49,18 @@ export interface HistoryOverviewItem {
   views: number;
   /** Highest UCIS dimension count achieved across attempts (0..11). */
   bestDimensions: number;
-  /** UCIS dimension numbers present in the winner analysis, ascending. */
+  /** UCIS dimension numbers present in the latest analysis attempt, ascending. */
   presentDimensions: number[];
-  /** UCIS dimension numbers absent from the winner — offer to re-analyze these. */
+  /** UCIS dimension numbers absent from the latest attempt — offer to re-analyze these. */
   missingDimensions: number[];
-  /** Honest rollup: complete (validated) | partial (usable) | processing | failed. */
+  /** Honest rollup: complete (validated) | partial (usable) | processing | failed. Reflects the latest attempt's outcome, not the best-ever attempt. */
   status: 'complete' | 'partial' | 'processing' | 'failed';
-  /** Aux-element status row (Wave A4, mirrored from the console screen) for the winner analysis. */
+  /** Aux-element status row (Wave A4, mirrored from the console screen) for the latest analysis attempt. */
   hasDigest: boolean;
   hasDescription: boolean;
   hasChannelMeta: boolean;
   hasComments: boolean;
-  /** UA-derived device the winner analysis was run from. Null for rows predating this column. */
+  /** UA-derived device the latest analysis attempt was run from. Null for rows predating this column. */
   clientPlatform: ClientPlatform | null;
 }
 

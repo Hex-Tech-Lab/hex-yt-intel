@@ -457,6 +457,21 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
     return result;
   }, [items, filterStatus, debouncedSearch, sortBy]);
 
+  // Ordinal marker for the WIP/"Last Analyzed" card: which numbered row in the
+  // list below it corresponds to. Live report 2026-08-02: this used to always
+  // be "#1" (newest analysis sorted first), so users stopped expecting it to
+  // move -- now that get_user_history_overview's default sort/collapse can
+  // legitimately place the current video's row elsewhere in the page (e.g.
+  // re-viewing an older video bumps its lastAnalyzedAt without becoming most
+  // recently ANALYZED), the position needs to be surfaced explicitly rather
+  // than assumed. Matches by analysisId (the true latest attempt per video
+  // as of v11), not baseVideoId, so a superseded row can't be miscredited.
+  const wipListPosition = useMemo(() => {
+    if (!currentAnalysis?.id) return null;
+    const idx = filteredAndSorted.findIndex((it) => it.analysisId === currentAnalysis.id);
+    return idx === -1 ? null : idx + 1;
+  }, [filteredAndSorted, currentAnalysis?.id]);
+
   const totalPages = Math.ceil(filteredAndSorted.length / ITEMS_PER_PAGE);
   const paginatedItems = filteredAndSorted.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
 
@@ -584,6 +599,13 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                 <span className="text-[10px] font-mono text-[var(--ink-muted)]">Analysis complete</span>
               </>
             )}
+            {wipListPosition && (
+              <Tooltip content={`This is item #${wipListPosition} in the list below`}>
+                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider bg-[var(--ink-muted)]/10 text-[var(--ink-muted)]">
+                  ↓ #{wipListPosition} below
+                </span>
+              </Tooltip>
+            )}
           </div>
           <div className={`rounded-xl border-2 p-4 ${isActivelyAnalyzing ? 'border-[var(--accent)] bg-[var(--accent)]/5' : 'border-[var(--ok)]/40 bg-[var(--ok)]/5'}`}>
             {/* Title row */}
@@ -709,7 +731,17 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                     <MetricChip icon="solar:eye-linear" title="Times opened">
                       {item.views} views
                     </MetricChip>
-                    <MetricChip icon="solar:flag-linear" title="First analyzed">
+                    {/* Two timestamps only, each with a distinct icon-verb: magnifying-glass
+                        for "analyzed" (per user's explicit Sherlock-Holmes-loupe request,
+                        2026-08-02), eye for "viewed" (already used for the views-count chip
+                        below -- same verb, so reusing it here keeps the "viewed" concept in
+                        one icon rather than three). `lastAnalyzedAt` is deliberately NOT
+                        rendered as a third chip: it's redundant with firstAnalyzedAt for the
+                        common single-run case and, for a re-run, is already conveyed by the
+                        "N× analyzed" chip above -- a third near-duplicate date/time (as
+                        reported live: two stamps one second apart plus a third) read as
+                        confusing noise, not new information. */}
+                    <MetricChip icon="solar:magnifer-linear" title="First analyzed">
                       {new Date(item.firstAnalyzedAt).toLocaleString(undefined, {
                         year: 'numeric',
                         month: 'short',
@@ -719,19 +751,8 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                         hour12: true,
                       })}
                     </MetricChip>
-                    <MetricChip icon="solar:calendar-minimalistic-linear" title="Last analyzed (most recent re-run)">
-                      {new Date(item.lastAnalyzedAt).toLocaleString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: true,
-                      })}
-                    </MetricChip>
                     {item.lastViewedAt && (
-                      <MetricChip icon="solar:clock-circle-linear" title="Last viewed">
+                      <MetricChip icon="solar:eye-linear" title="Last viewed">
                         {new Date(item.lastViewedAt).toLocaleString(undefined, {
                           year: 'numeric',
                           month: 'short',
