@@ -245,9 +245,19 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     return placed;
   }, [graph.nodes, size.w, size.h]);
 
-  // Store layout in ref for imperative access
+  // Store layout in ref for imperative access, and repaint immediately.
+  // CodeRabbit review, PR #181: the entrance-animation effect is now gated
+  // on wordsLayoutKey (a stable id+label key) rather than this array's
+  // reference, so a resize that shifts word positions without changing the
+  // word set no longer restarts the animation -- but nothing else was
+  // repainting the canvas for that case either, leaving stale pixel
+  // positions on screen until an incidental mouse move. drawCanvasRef.current
+  // is safe to call here even though its own declaration appears later in
+  // this component: useRef(drawCanvas) already initializes `.current`
+  // synchronously during render, before any effect runs.
   useEffect(() => {
     wordsLayoutRef.current = wordsLayout;
+    drawCanvasRef.current();
   }, [wordsLayout]);
 
   // CodeRabbit review, PR #181: `wordsLayout` is a useMemo keyed partly on
@@ -255,12 +265,20 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // change which words are present still produces a NEW array reference --
   // e.g. dragging a window edge. The entrance-animation effect below only
   // needs to restart when the actual SET of words changes; gating it on a
-  // stable id-based key instead of the array reference stops window-resize
-  // from replaying the whole pop-in animation. Safe because the animation
-  // loop itself only reads `word.id`/index for stagger timing (position is
+  // stable key instead of the array reference stops window-resize from
+  // replaying the whole pop-in animation. Safe because the animation loop
+  // itself only reads `word.id`/index for stagger timing (position is
   // always read fresh from wordsLayoutRef in drawCanvas, never from this
-  // closure), so a key-only dependency can't leave stale positions on screen.
-  const wordsLayoutKey = useMemo(() => wordsLayout.map((w) => w.id).join(','), [wordsLayout]);
+  // closure), so a key-only dependency can't leave stale positions on
+  // screen. Includes `label`, not just `id`: multiple distinct tokens
+  // extracted from the SAME underlying node all share that node's id (see
+  // the tokenMap construction above), so an id-only key could fail to
+  // detect a genuine content change if the id sequence happened to repeat
+  // (second CodeRabbit finding on this same PR).
+  const wordsLayoutKey = useMemo(
+    () => wordsLayout.map((w) => `${w.id}:${w.label}`).join(','),
+    [wordsLayout]
+  );
 
   // Track animation progress per word id
   const wordProgressRef = useRef<Record<string, number>>({});
@@ -310,7 +328,13 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     const radius = radiusRef.current;
 
     words.forEach((word) => {
-      const progress = wordProgressRef.current[word.id] ?? 1;
+      // CodeRabbit review, PR #181: the initial drawCanvas() call (fired
+      // from the drawCanvasRef-sync effect) can run before the entrance
+      // animation's first requestAnimationFrame tick populates
+      // wordProgressRef -- defaulting to 1 there made brand-new words flash
+      // fully visible for one frame before actually animating in. 0 is the
+      // honest "hasn't started yet" state.
+      const progress = wordProgressRef.current[word.id] ?? 0;
       if (progress <= 0) return;
 
       const isSelected = selectedId === word.id;
@@ -437,8 +461,12 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         // Ignore words still mid entrance-animation (or not yet started) --
         // their final bounding box is hit-tested here even though they're
         // barely/not visible during the ~600ms stagger-in window, letting a
-        // click land on a word that isn't really there yet.
-        const progress = wordProgressRef.current[word.id] ?? 1;
+        // click land on a word that isn't really there yet. Defaulting to 0
+        // (not 1) for words with no progress entry yet matches drawCanvas's
+        // own default (CodeRabbit review, PR #181) -- a brand-new word
+        // should never be hit-testable before it's actually started
+        // animating in.
+        const progress = wordProgressRef.current[word.id] ?? 0;
         if (progress < 0.5) return false;
         return (
           clickX >= word.x - word.w / 2 &&
@@ -467,9 +495,17 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     });
   };
 
+  // CodeRabbit review, PR #181: `selectedId` truthiness alone doesn't mean
+  // a rendered term matches it -- selectedId can reference a node with zero
+  // words currently in wordsLayout, or (since multiple tokens can share one
+  // node's id) more than one. Counting actual matches keeps the label
+  // honest, including the zero case.
+  const selectedWordCount = selectedId ? wordsLayout.filter((w) => w.id === selectedId).length : 0;
   const canvasAccessibleLabel =
     wordsLayout.length > 0
-      ? `Word cloud showing ${wordsLayout.length} key term${wordsLayout.length === 1 ? '' : 's'}${selectedId ? ', one term selected' : ''}`
+      ? `Word cloud showing ${wordsLayout.length} key term${wordsLayout.length === 1 ? '' : 's'}${
+          selectedWordCount > 0 ? `, ${selectedWordCount} term${selectedWordCount === 1 ? '' : 's'} selected` : ''
+        }`
       : isEmptyTimedOut
         ? 'Word cloud: no data available for this analysis'
         : 'Word cloud: synthesizing';
