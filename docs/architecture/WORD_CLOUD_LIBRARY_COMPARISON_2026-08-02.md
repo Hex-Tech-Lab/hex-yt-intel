@@ -44,3 +44,34 @@ and click-to-filter integration for no bundle or capability win.
 **Net: no migration is justified right now.** Revisit only if the in-house spiral
 algorithm itself becomes a bottleneck (e.g., very large word counts, >200 entities)
 that a dedicated library demonstrably handles better.
+
+## Addendum: expanded candidate set (2026-08-02, second pass)
+
+The original comparison was challenged as potentially a strawman (only comparing
+against two under-maintained libraries). Re-evaluated against a wider set, **verified
+against this repo's actual `package.json` and current data volume**, not assumed:
+
+| Candidate | Verified bundle reality | Verdict |
+|---|---|---|
+| `@visx/wordcloud`, `react-wordcloud` | ~8-12 KB net-new, confirmed absent from `web/package.json` | Ruled out — real bundle cost, no offsetting benefit over the shipped in-house canvas (click-to-filter, chip shapes, animation all already exist) |
+| `echarts-wordcloud`, `chartjs-chart-wordcloud` | ~30-50+ KB net-new (neither `echarts` nor `chart.js` present anywhere in `web/package.json`) | Ruled out outright — directly conflicts with ADR-017 bundle sensitivity for zero capability gain |
+| In-house + Web Worker offload | Real technique, ~0.5 KB wrapper cost | **Not needed yet** — verified live: `WordCloud.tsx` hard-caps at 50 words (`sortedTokens.slice(0, 50)`, line 129); the stated motivation ("scaling beyond 200+ words") doesn't exist in this codebase today. Worth revisiting only if that cap is deliberately raised. |
+| `d3-hierarchy` (treemap / squarified layout) | **Near-zero marginal cost** — `d3` (`^7.9.0`, the full meta-package) and `d3-force` are already runtime dependencies (used by `KnowledgeGraphCanvas`'s `react-force-graph-2d`), so `d3-hierarchy` submodules ship as part of the same tree, not a new install | **Genuinely worth a design conversation** — see caveat below |
+
+### The one real open question: treemap is a different visual language, not just a cheaper spiral
+
+A squarified treemap or CSS flex/grid tag layout is deterministic and collision-free by
+construction (no spiral math needed at all), and — given `d3` is already present — would
+add close to nothing to the bundle. But it does not produce a "cloud": it produces a
+grid or nested-box layout, which reads as a different UI pattern to a user, not a
+performance-tier upgrade of the current one. Adopting it is a **design decision**
+(do we want a word cloud or a weighted tag grid?), not a technical one, and shouldn't be
+decided by bundle math alone.
+
+**Updated recommendation:** the original verdict stands for now — keep the in-house
+canvas spiral, since it is shipped, tested, and integrated. If a treemap/tag-grid visual
+is wanted for its own sake (not as a performance fix), that's a legitimate design
+proposal worth raising separately, since its incremental cost really is close to zero
+given `d3` is already a dependency — that's the one candidate from this expanded pass
+that changes the calculus. The Web Worker and heavier chart-library options don't apply
+at this repo's current scale/dependency footprint and shouldn't be pursued speculatively.
