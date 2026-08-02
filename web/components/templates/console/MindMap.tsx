@@ -220,10 +220,18 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
     setPan({ x: targetPanX, y: targetPanY });
   }, [layout]);
 
-  // Run fitToView on initial render
+  // Run fitToView once on initial render only. `fitToView` is recreated
+  // whenever `layout` changes (which happens on every collapse/expand), and
+  // firing it on every layout change would silently discard the user's own
+  // pan/zoom every time they toggle a node -- the fit-to-view control exists
+  // precisely so the user opts into that, not so it happens implicitly.
+  const hasFitOnceRef = useRef(false);
   useEffect(() => {
+    if (hasFitOnceRef.current) return;
+    if (!layout || !layout.nodes || layout.nodes.length === 0) return;
+    hasFitOnceRef.current = true;
     fitToView();
-  }, [fitToView]);
+  }, [fitToView, layout]);
 
   // Handle non-passive wheel zoom
   useEffect(() => {
@@ -396,6 +404,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
         <button
           onClick={fitToView}
           type="button"
+          aria-label="Fit to view"
           style={{
             position: 'absolute',
             bottom: 8,
