@@ -1,0 +1,21 @@
+web/components/templates/console/WordCloud.tsx
+  s_0eded1e9d0cab6::t_86ca57450126c3 330-339
+  s_0eded1e9d0cab6::t_313deb425075b4 354,357
+  s_0eded1e9d0cab6::t_e646e7e92f0886 384,397
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "a5d7065b2383e2a0e7b6e17b6139491c6f9a2907",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
