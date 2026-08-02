@@ -1,0 +1,28 @@
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_a9d22b0bb28817 26
+  s_0eded1e9d0cab6::t_10a16e505ff171 25
+web/lib/services/sentry-telemetry.ts
+  s_0eded1e9d0cab6::t_1b985ec1aaa334 74-81,83,85-90,92-98
+  s_0eded1e9d0cab6::t_400277e8de8423 41-68,71,73
+  s_0eded1e9d0cab6::t_b99c4f87013f0d 100-112,114-118
+  s_0eded1e9d0cab6::t_b9083cb7dcb4bd 99
+web/app/atlas/AtlasClient.tsx
+  s_0eded1e9d0cab6::t_efbeee23c17ce8 7
+  s_0eded1e9d0cab6::t_8f9e79a85888bf 35-40,42-69,71-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "0250c245a2a1dd77a20b906adad67eb48bfa3893",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
