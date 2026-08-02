@@ -731,7 +731,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                       })}
                     </MetricChip>
                     {item.lastViewedAt && (
-                      <MetricChip icon="solar:eye-linear" title="Last viewed">
+                      <MetricChip icon="solar:clock-circle-linear" title="Last viewed">
                         {new Date(item.lastViewedAt).toLocaleString(undefined, {
                           year: 'numeric',
                           month: 'short',
