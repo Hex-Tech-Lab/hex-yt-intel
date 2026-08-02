@@ -1,0 +1,26 @@
+worker/src/services/LLMCascade.ts
+  s_0eded1e9d0cab6::t_cf6685174ba208 257,391-397
+web/lib/intelligence/relations-engine.ts
+  s_0eded1e9d0cab6::t_9a83d170ee5e5f 5,63-64,142,196-199
+  s_0eded1e9d0cab6::t_09b769f3032446 220-221
+supabase/migrations/20260802214244_observability_log_provider_attribution_setting.sql
+  s_0eded1e9d0cab6::t_de6c3b958cad49 1-17
+worker/src/services/CommentClassifier.ts
+  s_0eded1e9d0cab6::t_052e16598163cf 96-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d82f7877261276fa1eddfed7b42f139b375c5ca7",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
