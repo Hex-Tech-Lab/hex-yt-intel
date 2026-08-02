@@ -655,6 +655,14 @@ button:focus-visible,
 .chat-answer-table table {
   table-layout: auto;
   width: 100%;
+  /* min-width prevents the browser's auto-layout from collapsing a
+     multi-column table (e.g. "transcript overview" Speaker/Time/Content,
+     not just the 2-col Timestamp/Point citation shape the rules below were
+     originally written for) to its intrinsic content width when the bubble
+     itself has room to spare -- width:100% alone only stretches, it never
+     forces a floor, so a table with all-short cells could still render
+     narrower than the 98%-wide bubble around it. */
+  min-width: 100%;
 }
 .chat-answer-table th:first-child,
 .chat-answer-table td:first-child,

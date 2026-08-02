@@ -684,7 +684,17 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
                 variant="filled"
                 className={isUser
                   ? '!rounded-lg max-w-[85%] text-[13.5px] leading-[1.6] bg-[var(--accent)] text-[var(--void)] whitespace-pre-wrap break-words !p-3.5 !py-2.5 !px-3.5'
-                  : 'chat-answer-table prose prose-invert !rounded-lg max-w-[92%] prose-p:text-xs prose-p:leading-relaxed prose-p:my-1 prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words !p-3.5 !py-2.5 !px-3.5'
+                  // max-w bumped 92% -> 98% (2026-08-02, live user report): the
+                  // assistant bubble was leaving a wide unused margin on desktop
+                  // for markdown-table responses ("how many comments?",
+                  // "transcript overview") even though the chat panel had real
+                  // horizontal room -- 92% was an arbitrary cap, not something
+                  // tables actually needed. 98% (not 100%) keeps a hairline gap
+                  // off the message-list edge so the bubble border doesn't
+                  // visually fuse with the scroll container on desktop; at
+                  // mobile widths this is still a percentage of the (already
+                  // narrow) panel, so it doesn't change small-viewport behavior.
+                  : 'chat-answer-table prose prose-invert !rounded-lg max-w-[98%] prose-p:text-xs prose-p:leading-relaxed prose-p:my-1 prose-headings:text-sm prose-headings:mt-2 prose-headings:mb-1 text-[13.5px] leading-[1.6] bg-[rgb(26_31_43_/_0.85)] text-[var(--ink-secondary)] border border-[var(--line)] break-words !p-3.5 !py-2.5 !px-3.5'
                 }
                 metadata={
                   body ? (
