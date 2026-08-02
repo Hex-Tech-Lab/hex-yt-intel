@@ -1,0 +1,23 @@
+web/components/templates/console/DimensionDrawer.tsx
+  s_0eded1e9d0cab6::t_d6402dd288c8e9 96-102
+web/components/containers/dashboard/ExpandedPanelOverlay.tsx
+  s_0eded1e9d0cab6::t_15fe556506e933 110-115
+web/store/useUIStore.ts
+  s_0eded1e9d0cab6::t_f632181ba62e24 22-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "e1bca839e5972869ceff3084bdbf76039f44c054",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
