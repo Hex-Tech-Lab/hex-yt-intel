@@ -111,10 +111,15 @@ describe('mapHistoryOverviewRow', () => {
     expect(item.missingDimensions).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 
-  it('falls back to a placeholder title and null channel', () => {
+  it('falls back to a video-id title when base_video_id is known, and null channel', () => {
     const item = mapHistoryOverviewRow(baseRow({ title: null, channel_title: null }));
-    expect(item.title).toBe('Untitled Analysis');
+    expect(item.title).toBe('Video (abc123)');
     expect(item.channelTitle).toBeNull();
+  });
+
+  it('falls back to a generic placeholder title when base_video_id is also missing', () => {
+    const item = mapHistoryOverviewRow(baseRow({ title: null, channel_title: null, base_video_id: '' }));
+    expect(item.title).toBe('Untitled Analysis');
   });
 
   it('sorts an out-of-order present_dimensions set', () => {
