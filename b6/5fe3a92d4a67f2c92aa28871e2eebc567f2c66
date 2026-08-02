@@ -1,0 +1,21 @@
+docs/history/STANCE_PROVIDER_INVESTIGATION_2026-08-02.md
+  s_0eded1e9d0cab6::t_28eca35c2b289d 1-63
+docs/history/OPENROUTER_COST_ESTIMATE_2026-08-02.md
+  s_0eded1e9d0cab6::t_f494e5993b4a55 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "b65fe3a92d4a67f2c92aa28871e2eebc567f2c66",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
