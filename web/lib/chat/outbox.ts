@@ -30,8 +30,8 @@ function read(): OutboxEntry[] {
 function write(entries: OutboxEntry[]): void {
   try {
     localStorage.setItem(OUTBOX_STORAGE_NAME, JSON.stringify(entries));
-  } catch {
-    /* quota / privacy mode — best effort */
+  } catch (err) {
+    console.warn('[outbox] failed to persist entry (quota exceeded or private mode)', err);
   }
 }
 

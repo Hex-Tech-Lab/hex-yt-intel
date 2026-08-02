@@ -49,6 +49,12 @@ once the corresponding commit lands, the commit hash is the permanent record.
 - **Root cause**: the rule's sensitive-pattern list includes bare `userId` with no distinction from actual secrets (tokens/keys/passwords) and no awareness that server-side console/Sentry logs aren't attacker-visible the way a client-facing error response would be.
 - **Not fixed yet** — needs either (a) removing `userId` from the sensitive-pattern list entirely (it's an identifier, not a credential — `SecretsExposureRule` already covers real token/key leaks separately), or (b) exempting `console.*`/`Sentry.*` calls specifically since those never reach an end user.
 
+### 2026-08-02 — empty-catch detector fires on documented intentional swallows, ignores sibling catch blocks in the same function that already log
+- **Files**: `web/lib/adapters/YouTubePlayerAdapter.ts:141`, `web/hooks/useSearch.ts:132`, `web/hooks/useRelations.ts:89`
+- **Symptom**: 3x "Error: Empty catch block swallows error silently" (high severity) fired on catch blocks that each already carry an explanatory comment (`/* ignore */`, `// Response body is not JSON...`, `/* partial */`) documenting a legitimate silent-fallback (best-effort cleanup, malformed-response fallthrough, expected partial-stream-chunk skip) — and in all three cases a sibling catch in the same function/file already does the real logging (Sentry + console.error) for the actual failure path.
+- **Root cause**: the rule matches any catch block with an empty/comment-only body regardless of (a) whether the body has an explanatory comment, or (b) whether the enclosing function already has proper error telemetry elsewhere for the failure that matters.
+- **Not fixed yet** — needs either an exemption for catch blocks whose body is a comment-only `/* ... */` (treat presence of an explanatory comment as evidence of an intentional, reviewed decision), or scope the check to fire only when NO catch in the same function logs anything.
+
 ## Resolved
 
 ### 2026-07-24 — `ReservedKeywordRule` false-positives on non-test files + property/type-literal names
