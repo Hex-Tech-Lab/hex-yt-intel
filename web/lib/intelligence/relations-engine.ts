@@ -69,6 +69,7 @@ async function* callStanceModelStream(
   // so an expected external cancellation doesn't get reported to Sentry as
   // if it were a genuine handshake failure.
   let abortReason: 'timeout' | 'external' | null = null;
+  let loggedProvider = false;
   const handshakeTimer = setTimeout(() => { abortReason = 'timeout'; controller.abort(); }, handshakeTimeoutMs);
 
   // Listen to external signal (e.g., from route handler) and abort if signaled
@@ -128,6 +129,18 @@ async function* callStanceModelStream(
         if (data === '[DONE]') break;
         try {
           const parsed = JSON.parse(data);
+          // Success path had zero attribution logging -- a tier "succeeding"
+          // in our own code only ever meant OpenRouter returned 200, never
+          // recorded WHICH provider actually served it. providerOrder is a
+          // request, not a guarantee; OpenRouter's own response echoes the
+          // actual serving provider on `parsed.provider`. Log once per call
+          // so a requested-vs-served mismatch (e.g. providerOrder:['groq']
+          // but provider actually served by Cerebras) is visible going
+          // forward instead of invisible-by-design (2026-08-02).
+          if (!loggedProvider && parsed.provider) {
+            loggedProvider = true;
+            console.log(`[relations/engine] Requested provider=${providerOrder?.[0] ?? 'default'} model=${model}, OpenRouter served via provider=${parsed.provider}`);
+          }
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) yield content;
         } catch (e) {
