@@ -1,0 +1,23 @@
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_0eded1e9d0cab6::t_b9b1e2694a106e 161-168
+supabase/migrations/20260802130619_update_analysis_result_atomic_null_patch_guard.sql
+  s_0eded1e9d0cab6::t_5ba36111dcd8ee 1-46
+supabase/migrations/20260802130715_history_overview_and_view_increment_revoke_public_exec.sql
+  s_0eded1e9d0cab6::t_e47eda80e6bf1d 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "0a897add50470b6f53d7fc7f67a8824a6ad9cf9e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
