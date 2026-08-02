@@ -1,0 +1,27 @@
+web/app/api/webhooks/embed/route.ts
+  s_0eded1e9d0cab6::t_e879faf958c61c 60-73
+web/hooks/useAuxElementStatus.ts
+  s_0eded1e9d0cab6::t_f7943f9af7b665 54-64
+  s_0eded1e9d0cab6::t_4a51251f9fc08b 4-5
+web/lib/intelligence/relations-engine.ts
+  s_0eded1e9d0cab6::t_346433581480ac 65-72,75
+  s_0eded1e9d0cab6::t_bd1d53b5951ce3 152-160
+supabase/migrations/20260802144609_admin_list_users_activity_include_remediation_cost.sql
+  s_0eded1e9d0cab6::t_53607dfda1f8ef 1-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "f8b8ae0e065a64f1d8e4558948bdc6c2fcd98e52",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
