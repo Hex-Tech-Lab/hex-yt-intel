@@ -1,0 +1,41 @@
+web/app/api/analyses/persist/route.ts
+  s_0eded1e9d0cab6::t_e9dc15867add34 410,859
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_4a02864f29da3c 654
+  s_0eded1e9d0cab6::t_8cda93a29daf7f 572
+  s_0eded1e9d0cab6::t_17eae8b48f91c0 187-189
+  s_0eded1e9d0cab6::t_e9afc047c9b63b 844-855
+  s_0eded1e9d0cab6::t_a2342618970246 570
+  s_0eded1e9d0cab6::t_ef53eea4605f9b 599
+  s_0eded1e9d0cab6::t_2b3e139fe168a9 622-626,639-640
+worker/src/ports/TranscriptProviderPort.ts
+  s_0eded1e9d0cab6::t_ab6bc4a80e8eef 19-25
+worker/src/__tests__/TranscriptExtractor.test.ts
+  s_0eded1e9d0cab6::t_766f5eb05cf3d0 7
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_2be1eef878a5ad 407-418
+worker/src/services/TranscriptExtractor.ts
+  s_0eded1e9d0cab6::t_df002370a0c8ea 80,90,100-107
+  s_0eded1e9d0cab6::t_f90d3ed78e0393 55,62,76
+  s_0eded1e9d0cab6::t_53f3f48c7f4ab5 343,368
+  s_0eded1e9d0cab6::t_f8a472146a4814 17-19
+  s_0eded1e9d0cab6::t_45ff277d4a78ca 304-311
+  s_0eded1e9d0cab6::t_7ae39001a9a3fc 34-39,48,52,57,66-75,79,89,99
+  s_0eded1e9d0cab6::t_155947e0799b7e 126,137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "dd3f4951cb64791c16c611822a74734be74ae962",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
