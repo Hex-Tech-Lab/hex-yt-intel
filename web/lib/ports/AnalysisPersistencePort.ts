@@ -180,6 +180,9 @@ export interface AnalysisPersistencePort {
     // ADR 020 Phase 3: real OpenRouter usage/cost for this chunk's LLM call.
     tokensUsed?: number;
     costUsd?: number;
+    // Exact traceability (2026-08-02): OpenRouter's own generation id for
+    // this exact chunk's call.
+    generationId?: string;
   }): Promise<void>;
 
   findAnalysisChunks(params: {

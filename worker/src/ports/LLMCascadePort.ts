@@ -25,6 +25,7 @@ export interface LLMCascadePort {
     finishReason?: string;
     tokensUsed?: number;
     costUsd?: number;
+    generationId?: string;
   }>;
 
   /**

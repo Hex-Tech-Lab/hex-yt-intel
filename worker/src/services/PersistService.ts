@@ -30,6 +30,10 @@ export interface PersistOptions {
   // sensitive field like `cancelled` was (see canonical/signBoundContent below).
   tokensUsed?: number;
   costUsd?: number;
+  // Exact traceability (2026-08-02 directive): OpenRouter's own
+  // generation id, so a cost/billing question can be resolved against
+  // OpenRouter's own record, not a timestamp-based guess.
+  generationId?: string;
   activeSecret: string;
   appUrl: string;
   validate12D: (text: string) => boolean;
@@ -111,6 +115,7 @@ export class PersistService {
       cancelled: options.cancelled ?? false,
       tokensUsed: options.tokensUsed ?? null,
       costUsd: options.costUsd ?? null,
+      generationId: options.generationId ?? null,
     });
     // Bind the signature to this analysis id and an expiry so an observed persist
     // body can't be replayed indefinitely or against a different analysis. Must
@@ -140,6 +145,7 @@ export class PersistService {
     cancelled?: boolean;
     tokensUsed?: number;
     costUsd?: number;
+    generationId?: string;
     activeSecret: string;
     appUrl: string;
     valid: boolean;
@@ -172,6 +178,7 @@ export class PersistService {
             cancelled: params.cancelled,
             tokensUsed: params.tokensUsed,
             costUsd: params.costUsd,
+            generationId: params.generationId,
             chunkIndex: params.chunkIndex,
             totalChunks: params.totalChunks,
             segments: params.segments,

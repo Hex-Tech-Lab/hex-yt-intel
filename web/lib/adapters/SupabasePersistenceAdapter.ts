@@ -359,6 +359,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     status: 'completed' | 'failed' | 'interrupted';
     tokensUsed?: number;
     costUsd?: number;
+    generationId?: string;
   }): Promise<void> {
     try {
       const service = getSupabaseServiceClient();
@@ -372,6 +373,7 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
           status: params.status,
           tokens_used: params.tokensUsed ?? 0,
           cost_usd: params.costUsd ?? 0,
+          openrouter_generation_id: params.generationId ?? null,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'analysis_id,chunk_index'

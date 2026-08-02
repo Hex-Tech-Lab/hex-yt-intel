@@ -187,6 +187,11 @@ export async function POST(request: NextRequest) {
       // therefore integrity-sensitive.
       tokensUsed: z.number().int().min(0).optional(),
       costUsd: z.number().min(0).optional(),
+      // Exact traceability (2026-08-02): OpenRouter's own generation id for
+      // this chunk's call. MUST stay in the signed canonical below in
+      // lockstep with PersistService.ts's signer (same hazard as
+      // tokensUsed/costUsd -- see canonical construction below).
+      generationId: z.string().optional(),
       chunkIndex: z.number().int().min(1).max(TOTAL_STREAMS).optional(),
       totalChunks: z.number().int().refine((val) => val === TOTAL_STREAMS, {
         message: `totalChunks must match active configuration matrix of ${TOTAL_STREAMS}`,
@@ -236,6 +241,7 @@ export async function POST(request: NextRequest) {
         cancelled,
         tokensUsed,
         costUsd,
+        generationId,
         chunkIndex,
         totalChunks,
         segments,
@@ -283,6 +289,7 @@ export async function POST(request: NextRequest) {
         cancelled,
         tokensUsed: tokensUsed ?? null,
         costUsd: costUsd ?? null,
+        generationId: generationId ?? null,
       });
       let isSigValid = false;
       try {
@@ -388,6 +395,7 @@ export async function POST(request: NextRequest) {
             status,
             tokensUsed,
             costUsd,
+            generationId,
           }),
           2
         );

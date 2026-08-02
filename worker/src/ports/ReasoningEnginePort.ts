@@ -81,6 +81,8 @@ export interface StreamResult {
   tokensUsed?: number;
   /** Actual USD cost reported by OpenRouter's final usage chunk (ADR 020 Phase 3). */
   costUsd?: number;
+  /** OpenRouter's own generation id for this call, for exact traceability (2026-08-02). */
+  generationId?: string;
 }
 
 /** Result of a non-streaming reasoning run. */

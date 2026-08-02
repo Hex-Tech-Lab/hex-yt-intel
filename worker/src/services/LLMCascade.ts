@@ -105,6 +105,7 @@ export class LLMCascade implements LLMCascadePort {
     finishReason?: string;
     tokensUsed?: number;
     costUsd?: number;
+    generationId?: string;
   }> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     let finalText = '';
@@ -114,6 +115,7 @@ export class LLMCascade implements LLMCascadePort {
     let finishReason: string | undefined = undefined;
     let tokensUsed: number | undefined;
     let costUsd: number | undefined;
+    let generationId: string | undefined;
 
     for (let tierIndex = 0; tierIndex < this.chain.length; tierIndex++) {
       const tier = this.chain[tierIndex];
@@ -152,6 +154,7 @@ export class LLMCascade implements LLMCascadePort {
         finishReason = result.finishReason;
         tokensUsed = result.tokensUsed;
         costUsd = result.costUsd;
+        generationId = result.generationId;
         break;
       }
 
@@ -188,7 +191,7 @@ export class LLMCascade implements LLMCascadePort {
       previousModel = name;
     }
 
-    return { started: produced, finalText, modelUsed, finishReason, tokensUsed, costUsd };
+    return { started: produced, finalText, modelUsed, finishReason, tokensUsed, costUsd, generationId };
   }
 
   /**
@@ -233,7 +236,7 @@ export class LLMCascade implements LLMCascadePort {
     timeoutMs = 120000,
     signal?: AbortSignal,
     providerOrder?: string[]
-  ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string; tokensUsed?: number; costUsd?: number }> {
+  ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string; tokensUsed?: number; costUsd?: number; generationId?: string }> {
     const controller = new AbortController();
     const handshakeTimer = setTimeout(() => {
       // skipcq: JS-0827
@@ -250,6 +253,7 @@ export class LLMCascade implements LLMCascadePort {
     let finishReason: string | undefined;
     let tokensUsed: number | undefined;
     let costUsd: number | undefined;
+    let generationId: string | undefined;
 
     const onAbort = () => controller.abort();
     if (signal) {
@@ -378,6 +382,11 @@ export class LLMCascade implements LLMCascadePort {
               if (typeof json.usage.total_tokens === 'number') tokensUsed = json.usage.total_tokens;
               if (typeof json.usage.cost === 'number') costUsd = json.usage.cost;
             }
+            // Exact traceability: OpenRouter's own generation id, present on
+            // every streamed chunk -- lets a future admin/billing dispute be
+            // resolved against OpenRouter's own record instead of a
+            // timestamp-based guess (2026-08-02 directive).
+            if (typeof json.id === 'string' && !generationId) generationId = json.id;
 
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
@@ -402,7 +411,7 @@ export class LLMCascade implements LLMCascadePort {
         }
       }
       clearTimeout(totalTimer);
-      return { started, text, finishReason, tokensUsed, costUsd };
+      return { started, text, finishReason, tokensUsed, costUsd, generationId };
     } catch (error) {
       clearTimeout(handshakeTimer);
       clearTimeout(totalTimer);
