@@ -1,0 +1,21 @@
+web/components/templates/console/DashboardLayout.tsx
+  s_0eded1e9d0cab6::t_d1a2e8fa0855ad 33-48,50,55,77,79,83
+web/components/templates/console/ChatDock.tsx
+  s_0eded1e9d0cab6::t_d1a2e8fa0855ad 499,525
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "4edc5b73a784f0ac0771aa6384b8e4b1cfb500e7",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
