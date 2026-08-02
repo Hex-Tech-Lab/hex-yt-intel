@@ -41,6 +41,8 @@ export interface HistoryOverviewItem {
   /** ISO 8601 of the earliest / latest analysis for this video. */
   firstAnalyzedAt: string;
   lastAnalyzedAt: string;
+  /** ISO 8601 of the most recent open across every attempt. Null if never viewed since last_viewed_at was added (no backfill for opens that predate the column). */
+  lastViewedAt: string | null;
   /** How many times this video was analyzed (including archived re-runs). */
   timesAnalyzed: number;
   /** Summed opens across every attempt. */

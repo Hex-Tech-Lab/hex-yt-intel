@@ -730,6 +730,18 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                         hour12: true,
                       })}
                     </MetricChip>
+                    {item.lastViewedAt && (
+                      <MetricChip icon="solar:eye-linear" title="Last viewed">
+                        {new Date(item.lastViewedAt).toLocaleString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                        })}
+                      </MetricChip>
+                    )}
                     <span className="ml-auto inline-flex items-center text-[var(--ink-muted)]">
                       <Icon icon={busy ? 'solar:refresh-linear' : 'solar:alt-arrow-right-linear'} size={16} className={busy ? 'hx-anispin text-[var(--accent)]' : ''} />
                     </span>
