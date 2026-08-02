@@ -14,6 +14,9 @@ import { fetchWithProxy } from './http-utils';
 import { getRandomUserAgent } from './user-agent';
 import type { TranscriptProviderPort, TranscriptResult } from '../ports/TranscriptProviderPort';
 
+/** Thrown only when a source affirmatively confirms zero caption tracks exist (see TranscriptResult.confirmedNoCaptions). */
+class NoCaptionsConfirmedError extends Error {}
+
 export class TranscriptExtractor implements TranscriptProviderPort {
   private residentialProxyUrl?: string;
   private decodoApiKey?: string;
@@ -28,6 +31,12 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       throw new Error(`Invalid video ID format: ${videoId}`);
     }
 
+    // Accumulates one entry per tier tried this run, so a single Sentry
+    // event at the end can show the FULL picture ("Decodo: 429, standard
+    // API: timeout, page HTML: no tracks found") instead of 3 separate,
+    // hard-to-correlate exception events that each only know their own tier.
+    const tierFailures: Array<{ tier: string; reason: string }> = [];
+
     if (this.decodoApiKey) {
       try {
         console.info(`[transcript] Trying Decodo for ${videoId}...`);
@@ -36,24 +45,39 @@ export class TranscriptExtractor implements TranscriptProviderPort {
         const msg = e instanceof Error ? e.message : String(e);
         console.warn(`[transcript] Decodo failed for ${videoId}: ${msg}`);
         captureException(e, { tags: { operation: 'transcript-decodo', videoId } });
+        tierFailures.push({ tier: 'decodo', reason: msg });
       }
     } else {
       console.warn(`[transcript] Decodo API key not configured, skipping`);
+      tierFailures.push({ tier: 'decodo', reason: 'not configured' });
     }
 
+    let confirmedNoCaptions = false;
     try {
-      return await this.fetchWithYouTubeNative(videoId);
+      return await this.fetchWithYouTubeNative(videoId, tierFailures);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.warn(`[transcript] YouTube fetch failed for ${videoId}: ${msg}`);
       captureException(e, { tags: { operation: 'transcript-youtube-native', videoId } });
+      confirmedNoCaptions = e instanceof NoCaptionsConfirmedError;
     }
 
     console.info(`[transcript] Trying Tertiary for ${videoId}...`);
-    return await this.fetchWithTertiary(videoId);
+    if (!confirmedNoCaptions) {
+      // Every tier failed and none confirmed the video simply has no
+      // captions -- this is the case that needs full RCA visibility, since
+      // it means our pipeline (not the video) is the problem.
+      captureMessage(`Transcript pipeline exhausted for ${videoId}`, {
+        level: 'error',
+        tags: { operation: 'transcript-pipeline-exhausted', videoId },
+        extra: { tierFailures },
+      });
+    }
+    return this.fetchWithTertiary(videoId, confirmedNoCaptions);
   }
 
-  private async fetchWithYouTubeNative(videoId: string): Promise<TranscriptResult> {
+  private async fetchWithYouTubeNative(videoId: string, tierFailures: Array<{ tier: string; reason: string }>): Promise<TranscriptResult> {
+    let standardApiConfirmedNone = false;
     try {
       const { langCode } = await this.fetchCaptionMetadata(videoId);
       const transcript = await this.fetchTranscriptContent(videoId, langCode);
@@ -62,6 +86,8 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       const msg = e instanceof Error ? e.message : String(e);
       console.warn(`[transcript] Standard API failed for ${videoId}: ${msg}`);
       captureException(e, { tags: { operation: 'transcript-standard-api', videoId } });
+      tierFailures.push({ tier: 'youtube-standard-api', reason: msg });
+      standardApiConfirmedNone = e instanceof NoCaptionsConfirmedError;
     }
 
     try {
@@ -70,6 +96,15 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       const msg = e instanceof Error ? e.message : String(e);
       console.warn(`[transcript] Page HTML extraction failed for ${videoId}: ${msg}`);
       captureException(e, { tags: { operation: 'transcript-page-html-yt-native', videoId } });
+      tierFailures.push({ tier: 'youtube-page-html', reason: msg });
+      // Only confirm "no captions" when BOTH independent sources (YouTube's
+      // caption-list API and the page's own ytInitialData) agree there are
+      // none -- either one alone failing for an unrelated reason (network,
+      // proxy, rate limit) must not produce a false "this video has no
+      // captions" claim.
+      if (standardApiConfirmedNone && e instanceof NoCaptionsConfirmedError) {
+        throw new NoCaptionsConfirmedError(e.message);
+      }
       throw e;
     }
   }
@@ -88,7 +123,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       const html = await response.text();
 
       const captionMatch = html.match(/"captionTracks":\s*(\[[\s\S]*?\])\s*,/);
-      if (!captionMatch) throw new Error('No caption tracks found in page');
+      if (!captionMatch) throw new NoCaptionsConfirmedError('No caption tracks found in page');
 
       const trackJson = captionMatch[1];
       if (!trackJson) throw new Error('Empty caption tracks JSON');
@@ -99,7 +134,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
         kind?: string;
       }>;
 
-      if (!tracks.length) throw new Error('Empty caption tracks');
+      if (!tracks.length) throw new NoCaptionsConfirmedError('Empty caption tracks');
 
       const preferredLangs = ['en', 'ar', 'en-auto', 'ar-auto'];
       const asrPref = preferredLangs.map(l => tracks.find(t => t.langCode === l && t.kind === 'asr')).find(Boolean);
@@ -266,11 +301,14 @@ export class TranscriptExtractor implements TranscriptProviderPort {
     }
   }
 
-  private fetchWithTertiary(videoId: string): TranscriptResult {
-    return { 
-      videoId, 
-      transcript: '[Transcript unavailable for this video - content ingestion failed across all available sources]', 
-      language: 'en' 
+  private fetchWithTertiary(videoId: string, confirmedNoCaptions: boolean): TranscriptResult {
+    return {
+      videoId,
+      transcript: confirmedNoCaptions
+        ? '[No captions available for this video]'
+        : '[Transcript unavailable for this video - content ingestion failed across all available sources]',
+      language: 'en',
+      confirmedNoCaptions,
     };
   }
 
@@ -302,7 +340,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       }
 
       const tracks = parsed.transcript_list?.track;
-      if (!tracks) throw new Error('No captions available for this video');
+      if (!tracks) throw new NoCaptionsConfirmedError('No captions available for this video');
 
       const trackList = Array.isArray(tracks) ? tracks : [tracks];
 
@@ -327,7 +365,7 @@ export class TranscriptExtractor implements TranscriptProviderPort {
       const first = trackList.find((t): t is Record<string, unknown> => typeof t === 'object' && !!langCode(t));
       if (first) return { langCode: langCode(first)! };
 
-      throw new Error('No captions available for this video');
+      throw new NoCaptionsConfirmedError('No captions available for this video');
     } catch (e) {
       throw e;
     } finally {

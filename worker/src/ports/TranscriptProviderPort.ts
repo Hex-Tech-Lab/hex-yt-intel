@@ -16,6 +16,13 @@ export interface TranscriptResult {
   transcript: string;
   language: string;
   segments?: TranscriptSegment[];
+  // True only when a source (YouTube's own caption-list API, or the page's
+  // own ytInitialData) affirmatively confirmed zero caption tracks exist --
+  // distinct from every fallback tier simply failing to reach an answer
+  // (network error, timeout, proxy/Decodo outage). Absent/false means "we
+  // don't know," which callers should treat as a retryable pipeline issue,
+  // not a permanent fact about the video.
+  confirmedNoCaptions?: boolean;
 }
 
 export interface TranscriptProviderPort {

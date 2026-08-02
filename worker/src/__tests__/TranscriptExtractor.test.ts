@@ -4,6 +4,7 @@ import { TranscriptExtractor } from '../services/TranscriptExtractor';
 // Mock Sentry
 vi.mock('@sentry/cloudflare', () => ({
   captureException: vi.fn(),
+  captureMessage: vi.fn(),
 }));
 
 // Mock http-utils and user-agent

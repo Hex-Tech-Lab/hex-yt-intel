@@ -407,7 +407,7 @@ export async function POST(request: NextRequest) {
         // duplication" — partial/interrupted analyses would silently stop getting a
         // transcript row at all, regressing the original P3 fix this exists for.
         const hasSegments = segments && segments.length > 0;
-        const hasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable');
+        const hasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable') && !transcript.includes('No captions available');
         if (hasSegments || hasFlatTranscript) {
           const segmentsText = hasSegments ? segments!.map((s: any) => s.text || '').join(' ').trim() : '';
           await SupabaseTranscriptAdapter.upsertTranscript({
@@ -856,7 +856,7 @@ export async function POST(request: NextRequest) {
       // See the comment at the chunk-path call site (~line 475) for the full
       // relationship — the two calls are deliberately not consolidated into one.
       const finalHasSegments = segments && segments.length > 0;
-      const finalHasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable');
+      const finalHasFlatTranscript = !!transcript && transcript.trim().length > 0 && !transcript.includes('Transcript unavailable') && !transcript.includes('No captions available');
       if ((finalHasSegments || finalHasFlatTranscript) && (finalStatus === 'done' || finalStatus === 'partial')) {
         await SupabaseTranscriptAdapter.upsertTranscript({
           videoId,

@@ -404,6 +404,18 @@ export function useSSEStream() {
                     );
                     return;
                   }
+                  // Distinct from the above: our transcript extraction
+                  // pipeline (Decodo + YouTube fallbacks) failed to reach an
+                  // answer at all -- this video may well have captions, we
+                  // just couldn't fetch them right now. Different advice:
+                  // retry this same video, not "try a different one."
+                  if (code === 'ERR_TRANSCRIPT_PIPELINE_UNAVAILABLE') {
+                    settleAnalysis(
+                      'error',
+                      "We couldn't retrieve this video's transcript right now — this looks like a temporary issue on our end, not a problem with the video. Please try again in a few minutes.",
+                    );
+                    return;
+                  }
                   if (ABORT_ON_PARTIAL_FAILURE) {
                     settleAnalysis('error', `Critical stream failure: [Bundle ${i + 1}] ${error}`);
                   } else {

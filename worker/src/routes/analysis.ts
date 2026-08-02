@@ -184,6 +184,9 @@ interface ResolvedTranscript {
   segments?: TranscriptSegment[];
   channelMeta?: Record<string, unknown> | null;
   comments?: VideoComment[] | null;
+  // See TranscriptResult.confirmedNoCaptions -- undefined/false means "we
+  // don't know why the transcript is missing," not "confirmed absent."
+  confirmedNoCaptions?: boolean;
 }
 
 /**
@@ -564,8 +567,9 @@ async function fetchTranscriptIfMissing(
   commentSamplePlan?: CommentSamplePlan,
   syncPoolConfig: typeof SYNC_POOL_CONFIG_FALLBACK = SYNC_POOL_CONFIG_FALLBACK,
 ): Promise<ResolvedTranscript> {
-  const isPlaceholder = transcript?.includes("Transcript unavailable for this video");
+  const isPlaceholder = transcript?.includes("Transcript unavailable for this video") || transcript?.includes("No captions available for this video");
   let segments: TranscriptSegment[] | undefined;
+  let confirmedNoCaptions = false;
 
   // Fetched unconditionally (independent of transcript cache/fetch branches below) --
   // previously this only ran inside the transcript-missing branch, so any analysis
@@ -592,7 +596,7 @@ async function fetchTranscriptIfMissing(
     if (cache) {
       try {
         const cached = await cache.get(cacheKey);
-        if (cached && cached.trim().length > 0 && !cached.includes("Transcript unavailable")) {
+        if (cached && cached.trim().length > 0 && !cached.includes("Transcript unavailable") && !cached.includes("No captions available")) {
           console.info(`[analyze-llm-stream] Transcript cache HIT for ${videoId}`);
           const [channelMeta, comments] = await Promise.all([channelMetaPromise, commentsPromise]);
           // Cache values written pre-fix are plain transcript strings, not JSON —
@@ -615,7 +619,11 @@ async function fetchTranscriptIfMissing(
     try {
       const extractor = new TranscriptExtractor(env.RESIDENTIAL_PROXY_URL, env.DECODO_API_KEY);
       const result = await extractor.fetch(videoId);
-      if (result.transcript && result.transcript.trim().length > 0 && !result.transcript.includes("Transcript unavailable")) {
+      // Gate on the explicit flag, not a substring match against the
+      // placeholder text -- a new placeholder string was added for the
+      // confirmed-no-captions case and a text-only check would silently
+      // miss it, caching a placeholder as if it were real content.
+      if (result.transcript && result.transcript.trim().length > 0 && !result.confirmedNoCaptions) {
         transcript = result.transcript;
         segments = result.segments;
         console.info(`[analyze-llm-stream] Fetch successful for ${videoId}`, { segmentCount: segments?.length ?? 0 });
@@ -628,6 +636,8 @@ async function fetchTranscriptIfMissing(
             console.warn(`[analyze-llm-stream] Transcript cache SET failed for ${videoId}`);
           });
         }
+      } else {
+        confirmedNoCaptions = result.confirmedNoCaptions === true;
       }
     } catch (e) {
       console.error(`[analyze-llm-stream] Fetch failed for ${videoId}: ${e instanceof Error ? e.message : "Unknown"}`);
@@ -641,7 +651,7 @@ async function fetchTranscriptIfMissing(
   if (channelMeta) {
     console.info(`[analyze-llm-stream] Channel metadata enriched for ${channelId}`);
   }
-  return { transcript, segments, channelMeta, comments };
+  return { transcript, segments, channelMeta, comments, confirmedNoCaptions };
 }
 
 /** Build SSE streaming response with real-time analysis deltas, status updates, and atomic persist coordination. */
@@ -831,8 +841,18 @@ function buildStreamResponse(
         resolvedComments = fetchResult.value.comments;
       }
 
-      if (!resolvedTranscript || !resolvedTranscript.trim() || resolvedTranscript.includes("Transcript unavailable") || resolvedTranscript.includes("content ingestion failed")) {
-        send({ type: "error", error: "No transcript available", code: "ERR_NO_TRANSCRIPT" });
+      if (!resolvedTranscript || !resolvedTranscript.trim() || resolvedTranscript.includes("Transcript unavailable") || resolvedTranscript.includes("content ingestion failed") || resolvedTranscript.includes("No captions available")) {
+        // Distinguish "YouTube itself confirmed zero caption tracks"
+        // (permanent -- a different video is the only fix) from "every
+        // fallback tier failed to reach an answer" (transient -- retrying
+        // this same video later often works). Same message for both was
+        // actively misleading in the outage case.
+        const confirmedNoCaptions = fetchResult.status === 'fulfilled' && fetchResult.value.confirmedNoCaptions === true;
+        if (confirmedNoCaptions) {
+          send({ type: "error", error: "No transcript available", code: "ERR_NO_TRANSCRIPT" });
+        } else {
+          send({ type: "error", error: "Transcript extraction temporarily unavailable", code: "ERR_TRANSCRIPT_PIPELINE_UNAVAILABLE" });
+        }
         controller.close();
         return;
       }
