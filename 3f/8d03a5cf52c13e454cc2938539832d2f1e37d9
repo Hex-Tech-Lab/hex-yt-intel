@@ -1,0 +1,19 @@
+.github/workflows/pairwise-test.yml
+  s_0eded1e9d0cab6::t_4a981cf9753f5c 3-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "3f8d03a5cf52c13e454cc2938539832d2f1e37d9",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
