@@ -397,7 +397,14 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       let active = true;
       const startedAt = Date.now();
       const EMPTY_PULSE_TIMEOUT_MS = 8000;
-      const loop = () => {
+      // /simplify efficiency finding (2026-08-02): this is a slow sine
+      // pulse (one cycle per ~2s) -- redrawing the full canvas at 60fps for
+      // it is wasted work (font-string realloc + clearRect + fill/stroke,
+      // every 16ms, for up to 8s per empty analysis). ~24fps is visually
+      // indistinguishable for a pulse this slow.
+      const PULSE_FRAME_INTERVAL_MS = 1000 / 24;
+      let lastFrameAt = 0;
+      const loop = (now: number) => {
         if (!active) return;
         if (Date.now() - startedAt > EMPTY_PULSE_TIMEOUT_MS) {
           emptyTimedOutRef.current = true;
@@ -405,12 +412,15 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           drawCanvasRef.current();
           return;
         }
-        drawCanvasRef.current();
+        if (now - lastFrameAt >= PULSE_FRAME_INTERVAL_MS) {
+          lastFrameAt = now;
+          drawCanvasRef.current();
+        }
         animFrameRef.current = requestAnimationFrame(loop);
       };
       emptyTimedOutRef.current = false;
       setIsEmptyTimedOut(false);
-      loop();
+      loop(performance.now());
       return () => {
         active = false;
         if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -527,6 +537,16 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         role="img"
         aria-label={canvasAccessibleLabel}
       />
+      {/* web-design-guidelines review (2026-08-02): aria-label alone is a
+          static accessible name -- changing it (synthesizing -> N words ->
+          selection changes) does NOT trigger a screen-reader announcement,
+          only aria-live regions do. The canvas's own aria-label above still
+          describes it correctly whenever it's discovered/focused; this
+          visually-hidden live region is what actually announces the state
+          transitions. */}
+      <div aria-live="polite" className="sr-only">
+        {canvasAccessibleLabel}
+      </div>
     </div>
   );
 }
