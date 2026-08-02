@@ -279,34 +279,45 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // is safe to call here even though its own declaration appears later in
   // this component: useRef(drawCanvas) already initializes `.current`
   // synchronously during render, before any effect runs.
-  // Cubic review, PR #181: this repaint can fire with a STALE
-  // wordProgressRef when the word SET itself changed (not just
-  // repositioned) -- a word id that previously finished animating
-  // (progress=1) and reappears in a genuinely new word set would flash at
-  // full opacity here, then visibly snap back to 0 and re-animate once the
-  // entrance-animation effect's first rAF frame overwrites it. Clearing
-  // wordProgressRef whenever wordsLayoutKey actually changes (not on every
-  // wordsLayout reference change, which also fires on position-only resize
-  // updates) makes this repaint consistent with what the animation effect
-  // is about to do, instead of racing it for one frame.
-  const prevWordsLayoutKeyRef = useRef<string | null>(null);
-  // Cubic review, PR #181 (second finding): changing the canvas's
-  // width/height attribute (driven by `size` from ResizeObserver) clears
-  // its bitmap synchronously in the browser, but a plain useEffect runs
-  // AFTER the browser paints -- so a resize could show one blank/stale
-  // frame before this redraw catches up. useLayoutEffect runs synchronously
-  // before paint, closing that gap.
+  // Live-test regression found 2026-08-02: during an in-progress analysis
+  // the knowledge graph streams in incrementally (one node/edge at a time,
+  // ~30 SSE updates for a single video), so wordsLayoutKey changes on
+  // nearly every chunk. The earlier "clear all progress on any key change"
+  // fix (below, superseded) was correct for the narrow "switched to a
+  // genuinely different analysis" case Cubic flagged, but during live
+  // streaming it meant the WHOLE cloud reset and replayed its entrance
+  // animation ~30 times in a row -- the reported "stuttering, words
+  // appearing then disappearing" bug. ponytail: this doesn't need a
+  // key-diff special case at all. Pruning only the ids that actually left
+  // the set (never bulk-clearing) gives the right behavior for both cases
+  // for free: incremental growth keeps already-visible words at their
+  // progress and only animates the new ones in; a genuinely different
+  // analysis's ids simply aren't in the old map to begin with.
   useLayoutEffect(() => {
     wordsLayoutRef.current = wordsLayout;
-    if (prevWordsLayoutKeyRef.current !== wordsLayoutKey) {
-      wordProgressRef.current = {};
-      prevWordsLayoutKeyRef.current = wordsLayoutKey;
+    const currentIds = new Set(wordsLayout.map((w) => w.id));
+    for (const id of Object.keys(wordProgressRef.current)) {
+      if (!currentIds.has(id)) delete wordProgressRef.current[id];
+    }
+    for (const id of Object.keys(wordStartedAtRef.current)) {
+      if (!currentIds.has(id)) delete wordStartedAtRef.current[id];
     }
     drawCanvasRef.current();
-  }, [wordsLayout, wordsLayoutKey]);
+  }, [wordsLayout]);
 
   // Track animation progress per word id
   const wordProgressRef = useRef<Record<string, number>>({});
+  // Per-word entrance-animation start time. Each word animates from ITS OWN
+  // first-seen moment, not a shared array-level timer -- during a live
+  // analysis the knowledge graph streams in one node at a time (~30 SSE
+  // updates for one video), so this effect legitimately restarts often.
+  // With a shared timer, every restart recomputed every word's progress
+  // (including already-visible ones) from idx-based delay against the
+  // CURRENT array size, causing the whole cloud to stutter/replay on every
+  // incremental update (live-test regression, 2026-08-02). Per-word start
+  // times mean a restart only assigns a start time to genuinely NEW words;
+  // already-animating ones are untouched.
+  const wordStartedAtRef = useRef<Record<string, number>>({});
   const animFrameRef = useRef<number | null>(null);
   // Flips true once the empty-state pulse has run past EMPTY_PULSE_TIMEOUT_MS
   // with no words -- stops the rAF loop and swaps to a static "no data"
@@ -452,17 +463,30 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       };
     }
 
-    const startTime = performance.now();
     let active = true;
+
+    // Assign a start time to any word that hasn't animated yet (words
+    // already in wordStartedAtRef -- from a previous run of this effect --
+    // keep their existing start time untouched). Stagger only among the
+    // words that are new IN THIS BATCH, not against the full current
+    // array's index -- during live streaming, "this batch" is usually just
+    // one word, so it gets no artificial delay; on initial load of a
+    // completed analysis, all words arrive in one batch and stagger
+    // together as before.
+    const now0 = performance.now();
+    const newWords = wordsLayout.filter((w) => wordStartedAtRef.current[w.id] === undefined);
+    newWords.forEach((word, idx) => {
+      wordStartedAtRef.current[word.id] = now0 + (idx / Math.max(1, newWords.length)) * 350;
+    });
 
     const animate = (now: number) => {
       if (!active) return;
-      const elapsed = now - startTime;
 
       let allComplete = true;
-      wordsLayout.forEach((word, idx) => {
-        const delay = (idx / Math.max(1, wordsLayout.length)) * 350;
-        const p = Math.min(1, Math.max(0, (elapsed - delay) / 250));
+      wordsLayout.forEach((word) => {
+        const startedAt = wordStartedAtRef.current[word.id] ?? now;
+        const elapsed = now - startedAt;
+        const p = Math.min(1, Math.max(0, elapsed / 250));
         const eased = 1 - Math.pow(1 - p, 3);
         wordProgressRef.current[word.id] = eased;
         if (eased < 1) allComplete = false;
