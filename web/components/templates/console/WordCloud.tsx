@@ -250,6 +250,18 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     wordsLayoutRef.current = wordsLayout;
   }, [wordsLayout]);
 
+  // CodeRabbit review, PR #181: `wordsLayout` is a useMemo keyed partly on
+  // `size.w` (ResizeObserver-driven), so a resize that doesn't actually
+  // change which words are present still produces a NEW array reference --
+  // e.g. dragging a window edge. The entrance-animation effect below only
+  // needs to restart when the actual SET of words changes; gating it on a
+  // stable id-based key instead of the array reference stops window-resize
+  // from replaying the whole pop-in animation. Safe because the animation
+  // loop itself only reads `word.id`/index for stagger timing (position is
+  // always read fresh from wordsLayoutRef in drawCanvas, never from this
+  // closure), so a key-only dependency can't leave stale positions on screen.
+  const wordsLayoutKey = useMemo(() => wordsLayout.map((w) => w.id).join(','), [wordsLayout]);
+
   // Track animation progress per word id
   const wordProgressRef = useRef<Record<string, number>>({});
   const animFrameRef = useRef<number | null>(null);
@@ -257,6 +269,12 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // with no words -- stops the rAF loop and swaps to a static "no data"
   // message instead of pulsing "Synthesizing..." forever.
   const emptyTimedOutRef = useRef(false);
+  // React-state mirror of emptyTimedOutRef, for the accessible label only
+  // (CodeRabbit review, PR #181): the canvas has no text content a screen
+  // reader can read, so this state drives an aria-label that announces
+  // word count / synthesizing / empty, updating on the same transition the
+  // ref-only canvas repaint already reacts to.
+  const [isEmptyTimedOut, setIsEmptyTimedOut] = useState(false);
 
   // Imperative canvas draw — no React re-render needed for hover
   const drawCanvas = useCallback(() => {
@@ -359,6 +377,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         if (!active) return;
         if (Date.now() - startedAt > EMPTY_PULSE_TIMEOUT_MS) {
           emptyTimedOutRef.current = true;
+          setIsEmptyTimedOut(true);
           drawCanvasRef.current();
           return;
         }
@@ -366,6 +385,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         animFrameRef.current = requestAnimationFrame(loop);
       };
       emptyTimedOutRef.current = false;
+      setIsEmptyTimedOut(false);
       loop();
       return () => {
         active = false;
@@ -402,7 +422,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       active = false;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [wordsLayout]);
+  }, [wordsLayoutKey]);
 
   // Click & hover mouse coordinate tracking
   const getWordAtCoords = useCallback((clientX: number, clientY: number): PlacedWord | null => {
@@ -447,6 +467,13 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     });
   };
 
+  const canvasAccessibleLabel =
+    wordsLayout.length > 0
+      ? `Word cloud showing ${wordsLayout.length} key term${wordsLayout.length === 1 ? '' : 's'}${selectedId ? ', one term selected' : ''}`
+      : isEmptyTimedOut
+        ? 'Word cloud: no data available for this analysis'
+        : 'Word cloud: synthesizing';
+
   return (
     <div
       ref={containerRef}
@@ -461,6 +488,8 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         onMouseOut={() => { hoveredWordIdRef.current = null; drawCanvas(); }}
         onClick={handleMouseClick}
         className="block w-full h-full js-word-cloud-canvas"
+        role="img"
+        aria-label={canvasAccessibleLabel}
       />
     </div>
   );
