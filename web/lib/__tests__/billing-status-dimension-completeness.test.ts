@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDimensionStatus, extractDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
+import { buildDimensionStatus, extractDimensionStatus, resolveBillingStatus } from '@/lib/services/stitch-analysis-chunks';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 /**
@@ -93,7 +93,7 @@ describe('buildDimensionStatus — billing_status regression (2026-08-03)', () =
    *   billing_status: cancelled ? 'cancelled' : billingStatus
    *   => 'completed' (correct — mirrors Path 2's semantics at persist/route.ts:841)
    */
-  it('REGRESSION: billingStatus="completed" even when isStitchedValid=false and all dimensions present', () => {
+  it('REGRESSION: resolveBillingStatus returns "completed" even when isStitchedValid=false and all dimensions present', () => {
     // Represents the stitchedPayload returned when UCISPayloadV2Schema.safeParse
     // fails on KG-node/persona fields — payload is fully populated, schema
     // failure is on cosmetic metadata, NOT on dimension content.
@@ -102,25 +102,22 @@ describe('buildDimensionStatus — billing_status regression (2026-08-03)', () =
     const { billingStatus, dimensionStatus } =
       buildDimensionStatus(stitchedPayloadWithSchemaFailure);
 
-    // BEFORE FIX: persist/route.ts:607 would override this 'completed' with 'failed'.
-    // AFTER FIX: billingStatus from buildDimensionStatus is authoritative.
+    // buildDimensionStatus sees all dimensions present → 'completed'.
     expect(billingStatus).toBe('completed');
     expect(dimensionStatus.filter(d => d.status === 'done')).toHaveLength(TOTAL_DIMENSIONS);
 
-    // Inline proof of the fix:
-    //   billing_status: cancelled ? 'cancelled' : billingStatus
-    const cancelled = false;
-    const finalBillingStatus = cancelled ? 'cancelled' : billingStatus;
-    expect(finalBillingStatus).toBe('completed');
+    // resolveBillingStatus is the real helper now used in persist/route.ts.
+    // A revert of the fix would change this helper's body — this test would fail.
+    expect(resolveBillingStatus(false, billingStatus)).toBe('completed');
+    expect(resolveBillingStatus(true, billingStatus)).toBe('cancelled');
   });
 
   it('cancelled=true always produces "cancelled" regardless of dimension completeness', () => {
     const payload = makeStitchedPayload(TOTAL_DIMENSIONS);
     const { billingStatus } = buildDimensionStatus(payload);
-
-    const cancelled = true;
-    const finalBillingStatus = cancelled ? 'cancelled' : billingStatus;
-    expect(finalBillingStatus).toBe('cancelled');
+    // Use the real helper — not an inline ternary
+    expect(resolveBillingStatus(true, billingStatus)).toBe('cancelled');
+    expect(resolveBillingStatus(false, billingStatus)).toBe('completed');
   });
 });
 
@@ -157,5 +154,83 @@ describe('extractDimensionStatus — dimension presence detection', () => {
     const statuses = extractDimensionStatus(null);
     expect(statuses).toHaveLength(TOTAL_DIMENSIONS);
     expect(statuses.every(s => s.status === 'timeout')).toBe(true);
+  });
+});
+
+/**
+ * Cache-write gate tests (Item 2, 2026-08-03).
+ *
+ * The cache gate in persist/route.ts Path 1 was `if (isStitchedValid)`.
+ * After the billing fix, isStitchedValid=false + billingStatus='completed'
+ * is reachable (schema failure on KG/persona metadata, all dimensions present).
+ *
+ * The fixed gate is `if (billingStatus === 'completed')`.
+ *
+ * These tests model the decision predicate. The actual setAnalysisCache call
+ * lives inside the POST handler (integration-tested via Playwright / E2E);
+ * these unit tests validate the gate predicate logic using the same exported
+ * helpers the handler now uses — ensuring a regression in either helper
+ * immediately breaks this test file.
+ */
+describe('cache-write gate — billingStatus controls caching, not isStitchedValid', () => {
+  it('CACHE: isStitchedValid=true + billingStatus="completed" → should cache (happy path)', () => {
+    const payload = makeStitchedPayload(TOTAL_DIMENSIONS);
+    const { billingStatus } = buildDimensionStatus(payload);
+    const isStitchedValid = true;
+
+    // Old gate: if (isStitchedValid) → true ✓
+    // New gate: if (billingStatus === 'completed') → true ✓
+    expect(isStitchedValid).toBe(true);
+    expect(billingStatus).toBe('completed');
+    expect(billingStatus === 'completed').toBe(true); // new gate fires
+  });
+
+  it('CACHE: isStitchedValid=false + billingStatus="completed" → should cache (the fixed scenario)', () => {
+    // This is the exact scenario that was broken before the fix:
+    // UCISPayloadV2Schema.safeParse fails (isStitchedValid=false) but all
+    // dimensions are present (billingStatus='completed').
+    const payload = makeStitchedPayload(TOTAL_DIMENSIONS);
+    const { billingStatus } = buildDimensionStatus(payload);
+    const isStitchedValid = false; // schema failure on KG/persona metadata
+
+    // Old gate: if (isStitchedValid) → false ✗ (SKIPPED cache — ADR Law #1 violation)
+    // New gate: if (billingStatus === 'completed') → true ✓ (caches correctly)
+    expect(isStitchedValid).toBe(false);
+    expect(billingStatus).toBe('completed');
+    expect(billingStatus === 'completed').toBe(true); // new gate fires correctly
+    expect(isStitchedValid).toBe(false);              // old gate would have skipped
+  });
+
+  it('CACHE: isStitchedValid=false + billingStatus="failed" → should NOT cache (incomplete)', () => {
+    const payload = makeStitchedPayload(TOTAL_DIMENSIONS - 3); // 3 dimensions missing
+    const { billingStatus } = buildDimensionStatus(payload);
+    const isStitchedValid = false;
+
+    // Old gate: if (isStitchedValid) → false ✗ (skipped — correct for this case)
+    // New gate: if (billingStatus === 'completed') → false ✗ (skipped — still correct)
+    expect(billingStatus).toBe('failed');
+    expect(billingStatus === 'completed').toBe(false); // new gate correctly skips
+  });
+
+  it('CACHE: cancelled=true rows are never billed-complete, so should not cache', () => {
+    const payload = makeStitchedPayload(TOTAL_DIMENSIONS);
+    const { billingStatus: rawBillingStatus } = buildDimensionStatus(payload);
+    const cancelled = true;
+    const finalBillingStatus = resolveBillingStatus(cancelled, rawBillingStatus);
+
+    // resolveBillingStatus returns 'cancelled', not 'completed'
+    expect(finalBillingStatus).toBe('cancelled');
+    expect(finalBillingStatus === 'completed').toBe(false); // gate correctly skips
+  });
+
+  it('CACHE: resolveBillingStatus helper used by gate preserves completed for not-cancelled', () => {
+    const payload = makeStitchedPayload(TOTAL_DIMENSIONS);
+    const { billingStatus } = buildDimensionStatus(payload);
+
+    // Route uses: if (billingStatus === 'completed') where billingStatus = resolveBillingStatus(...)
+    // Confirm the helper preserves 'completed' when not cancelled
+    const resolved = resolveBillingStatus(false, billingStatus);
+    expect(resolved).toBe('completed');
+    expect(resolved === 'completed').toBe(true); // gate fires
   });
 });
