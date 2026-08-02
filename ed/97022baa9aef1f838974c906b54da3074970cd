@@ -1,0 +1,24 @@
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_6f5e3f8c889bb4 227
+web/components/templates/console/WordCloud.tsx
+  s_0eded1e9d0cab6::t_52227830c4e96c 256-259
+  s_0eded1e9d0cab6::t_4e8e1ee85e57c4 333-336,338-339,342-346,350
+  s_0eded1e9d0cab6::t_6f5e3f8c889bb4 253-255,260,270-276,288-291,294-297,303-309,312-313,315,320,324-326,330-332,337,340-341,347-349,351-387,432-440,444
+  s_0eded1e9d0cab6::t_45e20c0b10999f 277-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "ed97022baa9aef1f838974c906b54da3074970cd",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
