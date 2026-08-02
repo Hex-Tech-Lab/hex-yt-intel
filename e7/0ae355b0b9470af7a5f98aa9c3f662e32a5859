@@ -1,0 +1,22 @@
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_6ad22413fdd85a 42
+  s_0eded1e9d0cab6::t_48d5589c93f162 57-60
+  s_0eded1e9d0cab6::t_90a5b4ddb0e7b4 29
+  s_0eded1e9d0cab6::t_d90b3722196b6d 30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "e70ae355b0b9470af7a5f98aa9c3f662e32a5859",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
