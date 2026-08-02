@@ -1,0 +1,28 @@
+supabase/migrations/20260802122006_usage_logs_action_check_add_dimension_remediation.sql
+  s_0eded1e9d0cab6::t_6d64a6534983e5 1-35
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_58aee73dfd62e5 49
+  s_0eded1e9d0cab6::t_411f59382d7e58 534-535
+  s_0eded1e9d0cab6::t_1f0d84103de807 280
+  s_0eded1e9d0cab6::t_ead742e0116751 184
+  s_0eded1e9d0cab6::t_41de75e3648433 518-533,536-540
+  s_0eded1e9d0cab6::t_d3123516fbfdf9 254
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_4a6b31fa6af02d 712-722
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "e7f51e6c84ca60072a14ddf5eaeebba8a7f8f4a7",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
