@@ -496,7 +496,15 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 16, opacity: 0 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px] [transform:translateZ(0)] [-webkit-transform:translateZ(0)] [-webkit-backface-visibility:hidden]"
+          // react-best-practices finding (2026-08-02): Framer Motion owns the
+          // `transform` CSS property on animated elements and writes it as an
+          // inline style, which silently overwrites a `[transform:translateZ(0)]`
+          // Tailwind class on the same element -- the GPU-compositing hint was
+          // dead on exactly the element it was meant to stabilize. transformTemplate
+          // is Framer Motion's supported way to append a static transform
+          // component alongside its own generated one instead of fighting it.
+          transformTemplate={(_props, generated) => `translateZ(0) ${generated}`}
+          className="flex-shrink-0 w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] h-[46px] flex items-center px-4 gap-[10px] [-webkit-backface-visibility:hidden]"
         >
           <button
             onClick={() => startTransition(() => setOpen(true))}
@@ -522,7 +530,8 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 28, opacity: 0, scale: 0.98 }}
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        className={`w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] flex flex-col origin-bottom [transform:translateZ(0)] [-webkit-transform:translateZ(0)] [-webkit-backface-visibility:hidden] ${
+        transformTemplate={(_props, generated) => `translateZ(0) ${generated}`}
+        className={`w-full border-t border-[var(--line)] bg-[rgb(11_14_20_/_0.97)] backdrop-blur-[12px] flex flex-col origin-bottom [-webkit-backface-visibility:hidden] ${
           // 'full' overlays the entire main column (absolute within the
           // relative <main>) instead of using a fixed viewport calc: a flow
           // child taller than the space under the header gets its bottom (the

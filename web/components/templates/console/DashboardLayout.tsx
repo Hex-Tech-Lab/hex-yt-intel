@@ -47,7 +47,12 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
 
   // Shared drawer chrome: off-canvas + slide on mobile/tablet, static grid column on lg+.
   const drawerBase =
-    'overflow-y-auto flex flex-col rounded-xl border border-[var(--line)] [overscroll-behavior:contain] [-webkit-overflow-scrolling:touch] [transform:translateZ(0)] [-webkit-transform:translateZ(0)] ' +
+    // touch-action is CSS-inherited: body gets touch-action:none while a
+    // drawer is open (below), which would otherwise compute through to the
+    // drawer's own scrollable content and block touch-scrolling inside the
+    // very drawer it's meant to keep usable. pan-y explicitly re-enables
+    // vertical touch scroll for this element regardless of the body's value.
+    'overflow-y-auto flex flex-col rounded-xl border border-[var(--line)] [touch-action:pan-y] [overscroll-behavior:contain] [-webkit-overflow-scrolling:touch] [transform:translateZ(0)] [-webkit-transform:translateZ(0)] ' +
     'fixed inset-y-1 z-50 w-[300px] max-w-[86vw] shadow-2xl transition-transform duration-300 ease-out ' +
     'xl:static xl:inset-auto xl:z-auto xl:w-full xl:max-w-none xl:h-full xl:shadow-none xl:translate-x-0 xl:transition-none';
 
