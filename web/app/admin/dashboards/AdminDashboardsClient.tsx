@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
+import { Badge, Card, Spinner } from '@astryxdesign/core';
 
 import { useAuth } from '@/hooks/useAuth';
 
@@ -20,15 +21,10 @@ interface HealthStatus {
 const StatusBadge = ({ status }: { status: 'ok' | 'error' }) => {
   const isOk = status === 'ok';
   return (
-    <span
-      className={`inline-block px-2 py-1 rounded text-sm font-medium ${
-        isOk
-          ? 'bg-green-100 text-green-800'
-          : 'bg-red-100 text-red-800'
-      }`}
-    >
-      {isOk ? '✓ OK' : '✗ Error'}
-    </span>
+    <Badge
+      variant={isOk ? 'success' : 'error'}
+      label={isOk ? '✓ OK' : '✗ Error'}
+    />
   );
 };
 
@@ -48,14 +44,14 @@ const MetricCard = ({
   const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
 
   return (
-    <div className="bg-surface p-4 rounded-lg border border-gray-200">
+    <Card padding={4}>
       <h3 className="text-sm font-medium text-gray-600">{title}</h3>
       <div className="mt-2 flex items-baseline justify-between">
         <span className="text-2xl font-bold text-gray-900">{value}</span>
         <span className="text-sm text-gray-500">{unit}</span>
       </div>
       {trend && <span className={`text-sm ${trendColor}`}>{trendIcon}</span>}
-    </div>
+    </Card>
   );
 };
 
@@ -108,8 +104,8 @@ export function AdminDashboardsClient() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="text-center">Loading...</div>
+      <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -138,7 +134,7 @@ export function AdminDashboardsClient() {
         {health && (
           <div className="mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">System Health</h2>
-            <div className="bg-surface rounded-lg border border-gray-200 p-6">
+            <Card padding={6}>
               <div className="mb-4">
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-medium">Overall Status</span>
@@ -200,7 +196,7 @@ export function AdminDashboardsClient() {
                   </p>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         )}
 

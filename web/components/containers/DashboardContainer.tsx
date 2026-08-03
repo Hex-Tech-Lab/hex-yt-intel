@@ -23,6 +23,7 @@ import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
 import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
+import { isStackedLayout } from '@/hooks/useIsStackedLayout';
 import { parseTimestamp } from '@/components/TimestampLink';
 import { findEntityTimestamp } from '@/lib/utils/entity-time-seek';
 
@@ -94,10 +95,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
 
   useEffect(() => {
     if (pendingNav) {
-      startTransition(() => {
-        setActiveNav(pendingNav);
-        clearPendingNav();
-      });
+      if (isStackedLayout()) {
+        startTransition(() => {
+          setActiveNav(pendingNav);
+        });
+      }
+      clearPendingNav();
     }
   }, [pendingNav, clearPendingNav]);
   const setUserRole = useAnalysisStore((s) => s.setUserRole);

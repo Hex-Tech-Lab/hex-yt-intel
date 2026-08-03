@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { Badge, Button } from '@astryxdesign/core';
 import { MonoLabel } from '@/components/templates/_shared/primitives';
 import { SubsystemHealth } from '@/lib/services/sentry-telemetry';
 
@@ -89,30 +89,10 @@ export function StatusDashboardClient({ initialSubsystems, globalStatus }: Props
             <h1 className="hx-display" style={{ margin: "12px 0 0", fontSize: 36 }}>System Status</h1>
           </div>
           <div style={{ textAlign: "right" }}>
-            <span style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              borderRadius: 9999,
-              background: globalStatus === 'operational' ? "rgb(16 185 129 / 0.1)" : globalStatus === 'degraded' ? "rgb(245 158 11 / 0.1)" : "rgb(239 68 68 / 0.1)",
-              border: `1px solid ${globalStatus === 'operational' ? "var(--ok)" : globalStatus === 'degraded' ? "var(--warn)" : "var(--err)"}`,
-              padding: "6px 14px",
-              fontFamily: "var(--font-mono)",
-              fontSize: 12,
-              fontWeight: 600,
-              color: globalStatus === 'operational' ? "var(--ok)" : globalStatus === 'degraded' ? "var(--warn)" : "var(--err)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em"
-            }}>
-              <span style={{ 
-                width: 8, 
-                height: 8, 
-                borderRadius: "50%", 
-                background: globalStatus === 'operational' ? "var(--ok)" : globalStatus === 'degraded' ? "var(--warn)" : "var(--err)", 
-                animation: "hx-pulse 1.5s infinite" 
-              }} />
-              {globalStatus === 'operational' ? 'All Systems Operational' : globalStatus === 'degraded' ? 'Minor Service Degradation' : 'Partial System Outage'}
-            </span>
+            <Badge
+              variant={globalStatus === 'operational' ? 'success' : globalStatus === 'degraded' ? 'warning' : 'error'}
+              label={globalStatus === 'operational' ? 'All Systems Operational' : globalStatus === 'degraded' ? 'Minor Service Degradation' : 'Partial System Outage'}
+            />
           </div>
         </div>
 
@@ -124,13 +104,9 @@ export function StatusDashboardClient({ initialSubsystems, globalStatus }: Props
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "var(--ink)" }}>{sub.name}</h3>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                    {sub.incidentCount > 0 && (
-                     <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: "var(--warn)", textTransform: "uppercase" }}>
-                       {sub.incidentCount} recent events
-                     </span>
+                     <Badge variant="warning" label={`${sub.incidentCount} recent events`} />
                    )}
-                   <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: sub.status === 'operational' ? "var(--ok)" : "var(--warn)" }}>
-                     {sub.uptime}% Uptime
-                   </span>
+                   <Badge variant="neutral" label={`${sub.uptime}% Uptime`} />
                 </div>
               </div>
               
@@ -160,8 +136,8 @@ export function StatusDashboardClient({ initialSubsystems, globalStatus }: Props
             Real-time telemetry provided by Sentry Cluster.
           </p>
           <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 24 }}>
-            <Link href="/" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none" }}>Back to Home</Link>
-            <a href="/api/health?format=json" style={{ fontSize: 12, color: "var(--ink-muted)", textDecoration: "none" }}>View Programmatic JSON</a>
+            <Button href="/" label="Back to Home" variant="ghost" />
+            <Button href="/api/health?format=json" label="View Programmatic JSON" variant="ghost" />
           </div>
         </div>
 

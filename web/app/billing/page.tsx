@@ -2,11 +2,11 @@ export const dynamic = 'force-dynamic';
 
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Button, Banner } from '@astryxdesign/core';
+import { Banner } from '@astryxdesign/core';
+import { ResponsiveHeader } from '@/components/organisms/ResponsiveHeader';
 import { stripe, STRIPE_PRICING } from '@/lib/stripe';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
 import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
-import { Icon } from '@/components/templates/_shared/primitives';
 import { Footer } from '@/components/Footer';
 
 async function getBillingData(userId: string) {
@@ -83,18 +83,7 @@ export default async function BillingPage() {
 
     return (
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--void)", color: "var(--ink)", fontFamily: "var(--font-sans)" }}>
-        <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 32px", borderBottom: "1px solid var(--line)", background: "rgb(17 20 29 / 0.7)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 20 }}>
-          <Link href="/?v=landing" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-            <span style={{ display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: 8, background: "var(--accent-strong)", color: "var(--void)" }}>
-              <Icon icon="solar:graph-up-linear" size={17} />
-            </span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
-          </Link>
-          <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <Button href="/pricing" label="Pricing" variant="secondary" />
-            <Button href="/dashboard" label="Dashboard" variant="primary" icon={<Icon icon="solar:bolt-linear" size={16} />} />
-          </nav>
-        </header>
+        <ResponsiveHeader user={user} />
 
         <main style={{ flex: 1, padding: "60px 32px", maxWidth: 1280, margin: "0 auto", width: "100%" }}>
           <div style={{ marginBottom: 48 }}>

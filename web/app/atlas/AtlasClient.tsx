@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import { Button } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { showToast } from '@/lib/dashboard/toast-bridge';
 
@@ -104,13 +105,13 @@ export function AtlasClient() {
               disabled={isSubmitting}
               className="flex-1 bg-transparent border-none p-3 text-[var(--ink)] placeholder-[var(--ink-muted)] outline-none font-mono text-sm"
             />
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-3 bg-[var(--accent)] text-[var(--void)] rounded-lg font-mono text-sm font-bold hover:opacity-90 transition-opacity"
-            >
-              {isSubmitting ? "Processing..." : "Analyze"}
-            </button>
+              variant="primary"
+              label={isSubmitting ? "Processing…" : "Analyze"}
+              isDisabled={isSubmitting}
+              isLoading={isSubmitting}
+            />
           </form>
         </div>
       </div>
