@@ -1,0 +1,22 @@
+web/app/admin/users/UsersAdminClient.tsx
+  h_60000122af7b55 5
+web/components/billing/billing-dashboard-client.tsx
+  h_60000122af7b55 10,266
+web/components/templates/console/UsageTab.tsx
+  h_60000122af7b55 5,60
+web/lib/__tests__/format-cost.test.ts
+  h_60000122af7b55 1-43
+web/lib/utils/format-cost.ts
+  h_60000122af7b55 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "878c22f22fc441c2f253e0d5c799381db2f56a5f",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
