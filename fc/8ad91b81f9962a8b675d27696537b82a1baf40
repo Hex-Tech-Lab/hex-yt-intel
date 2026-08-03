@@ -1,0 +1,14 @@
+web/app/auth/error/form.tsx
+  h_60000122af7b55 4,27-41,43-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "fc8ad91b81f9962a8b675d27696537b82a1baf40",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
