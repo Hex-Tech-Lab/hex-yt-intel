@@ -80,6 +80,28 @@ export function buildDimensionStatus(
 }
 
 /**
+ * Resolve the final billing_status for a persisted analysis row.
+ *
+ * Single source of truth for the "cancelled overrides content; otherwise
+ * dimension-completeness decides billing" rule. Extracted from the inline
+ * ternary that previously lived at two independent call sites in
+ * persist/route.ts (Path 1 ~line 617 and Path 2 ~line 851), allowing both
+ * to share the exact same logic and the test suite to exercise the real
+ * expression rather than re-implementing it inline.
+ *
+ * - `cancelled=true`  → always 'cancelled', regardless of dimensions
+ * - `cancelled=false` → billingStatus from buildDimensionStatus ('completed'
+ *   or 'failed' based on dimension count); never governed by schema validation
+ *   pass/fail, which only speaks to KG/persona metadata quality, not content.
+ */
+export function resolveBillingStatus(
+  cancelled: boolean,
+  billingStatus: BillingStatus
+): BillingStatus {
+  return cancelled ? 'cancelled' : billingStatus;
+}
+
+/**
  * Unified stitching logic: merge chunk payloads into a single analysis payload.
  * Used by the live persist route AND the stuck-analysis reaper's recovery path.
  */
