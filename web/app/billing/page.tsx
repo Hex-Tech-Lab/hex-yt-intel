@@ -1,11 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { Button, Banner } from '@astryxdesign/core';
 import { stripe, STRIPE_PRICING } from '@/lib/stripe';
 import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
 import { BillingDashboardClient } from '@/components/billing/billing-dashboard-client';
 import { Icon } from '@/components/templates/_shared/primitives';
-import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 
 async function getBillingData(userId: string) {
@@ -90,11 +91,8 @@ export default async function BillingPage() {
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
           </Link>
           <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none" }}>Pricing</Link>
-            <Link href="/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>
-              <Icon icon="solar:bolt-linear" size={16} />
-              Dashboard
-            </Link>
+            <Button href="/pricing" label="Pricing" variant="secondary" />
+            <Button href="/dashboard" label="Dashboard" variant="primary" icon={<Icon icon="solar:bolt-linear" size={16} />} />
           </nav>
         </header>
 
@@ -123,10 +121,13 @@ export default async function BillingPage() {
   } catch (error) {
     console.error('[/billing] Error:', error);
     return (
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--void)", color: "var(--ink)", fontFamily: "var(--font-sans)", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ padding: 24, borderRadius: 12, border: "1px solid var(--err)", background: "var(--surface)" }}>
-          <h1 style={{ fontSize: 20, fontWeight: 600, color: "var(--err)", margin: "0 0 8px 0" }}>Error Loading Billing</h1>
-          <p style={{ color: "var(--ink-secondary)", margin: 0, fontSize: 14 }}>Failed to load billing information. Please try again.</p>
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--void)", color: "var(--ink)", fontFamily: "var(--font-sans)", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ maxWidth: 480, width: "100%" }}>
+          <Banner
+            status="error"
+            title="Error Loading Billing"
+            description="Failed to load billing information. Please try again."
+          />
         </div>
       </div>
     );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { Banner, Button, Card } from '@astryxdesign/core';
 
 export default function AuthErrorForm() {
   const searchParams = useSearchParams();
@@ -24,18 +24,30 @@ export default function AuthErrorForm() {
   const message = error ? errorMessages[error] || errorMessages.default : errorMessages.default;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600">Authentication Error</h1>
-          <p className="mt-2 text-gray-600">{message}</p>
-        </div>
+    <div style={{
+      display: 'flex',
+      minHeight: '100vh',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--void)',
+      padding: 16,
+    }}>
+      <div style={{ width: '100%', maxWidth: 400 }}>
+        <Banner
+          status="error"
+          title="Authentication Error"
+          description={message}
+          style={{ marginBottom: 24 }}
+        />
 
-        <div className="rounded-lg bg-surface p-8 shadow-md text-center">
-          <Link href="/auth/signin" className="text-blue-600 hover:underline font-medium">
-            Try again
-          </Link>
-        </div>
+        <Card padding={8} style={{ textAlign: 'center' }}>
+          <Button
+            href="/auth/signin"
+            label="Try again"
+            variant="primary"
+            width="100%"
+          />
+        </Card>
       </div>
     </div>
   );

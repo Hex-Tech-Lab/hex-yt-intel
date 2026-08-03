@@ -1,11 +1,12 @@
 export const dynamic = 'force-dynamic';
 
+import Link from 'next/link';
+import { Button } from '@astryxdesign/core';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { PricingTableClient } from '@/components/billing/pricing-table-client';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { FaqAccordion } from '@/components/marketing/FaqAccordion';
 import { PricingComparisonTable } from '@/components/marketing/PricingComparisonTable';
-import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 
 async function getUserInfo() {
@@ -29,20 +30,12 @@ export default async function PricingPage() {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
         </Link>
         <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <Link href="/pricing" className="btn-secondary" style={{ textDecoration: "none" }}>
-            Pricing
-          </Link>
+          <Button href="/pricing" label="Pricing" variant="secondary" />
           {!userInfo && (
-            <Link href="/auth/signin" className="btn-primary" style={{ textDecoration: "none" }}>
-              <Icon icon="solar:sun-bold-duotone" size={16} />
-              Sign in
-            </Link>
+            <Button href="/auth/signin" label="Sign in" variant="primary" icon={<Icon icon="solar:sun-bold-duotone" size={16} />} />
           )}
           {userInfo && (
-            <Link href="/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>
-              <Icon icon="solar:bolt-linear" size={16} />
-              Dashboard
-            </Link>
+            <Button href="/dashboard" label="Dashboard" variant="primary" icon={<Icon icon="solar:bolt-linear" size={16} />} />
           )}
         </nav>
       </header>
