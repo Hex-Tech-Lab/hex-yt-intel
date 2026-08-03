@@ -26,6 +26,7 @@ import { useStreamReattach } from '@/hooks/useStreamReattach';
 import { isStackedLayout } from '@/hooks/useIsStackedLayout';
 import { parseTimestamp } from '@/components/TimestampLink';
 import { findEntityTimestamp } from '@/lib/utils/entity-time-seek';
+import { useAnalysisDimensionsStore } from '@/lib/stores/analysis-dimensions-store';
 
 // Lazy load visualization components to reduce initial bundle size
 const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
@@ -197,7 +198,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     if (entityTimeSeekEnabled && graph.nodes) {
       const node = graph.nodes.find((n) => n.id === id);
       if (node) {
-        const timestamp = findEntityTimestamp(node);
+        const dim = useAnalysisDimensionsStore.getState().getDimension(node.dimension);
+        const dimContent = dim?.content;
+        const timestamp = findEntityTimestamp(node, dimContent);
         if (timestamp) {
           const secs = parseTimestamp(timestamp);
           if (secs >= 0) setSeekTo(secs);
