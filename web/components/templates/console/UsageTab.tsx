@@ -1,9 +1,11 @@
 'use client';
 
+import { ProgressBar } from '@astryxdesign/core';
 import { useUsageSummary } from '@/hooks/useUsageSummary';
 
 function UsageRow({ label, used, quota }: { label: string; used: number; quota: number | null }) {
   const pct = quota && quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : null;
+  const variant = pct !== null && pct >= 100 ? 'error' : pct !== null && pct >= 80 ? 'warning' : 'accent';
   return (
     <div className="flex flex-col gap-1.5 py-3 border-b border-[var(--line-faint)] last:border-b-0">
       <div className="flex items-center justify-between">
@@ -13,12 +15,13 @@ function UsageRow({ label, used, quota }: { label: string; used: number; quota: 
         </span>
       </div>
       {pct !== null && (
-        <div className="h-1.5 rounded-full bg-[var(--surface)] overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${pct}%`, background: pct >= 100 ? 'var(--err)' : pct >= 80 ? 'var(--warn)' : 'var(--accent)' }}
-          />
-        </div>
+        <ProgressBar
+          label={label}
+          isLabelHidden
+          value={pct}
+          max={100}
+          variant={variant}
+        />
       )}
     </div>
   );

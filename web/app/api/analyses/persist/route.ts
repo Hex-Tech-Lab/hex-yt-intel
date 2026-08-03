@@ -18,7 +18,7 @@ import { TOTAL_DIMENSIONS, TOTAL_STREAMS } from '@/lib/config/synthesis';
 import { WorkflowConductor } from '@/lib/services/WorkflowConductor';
 import { ERROR_PHASES } from '@/lib/error-codes';
 import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
-import { stitchChunksIntoPayload, buildDimensionStatus } from '@/lib/services/stitch-analysis-chunks';
+import { stitchChunksIntoPayload, buildDimensionStatus, resolveBillingStatus } from '@/lib/services/stitch-analysis-chunks';
 import { PostgresBillingAdapter } from '@/lib/adapters/PostgresBillingAdapter';
 import { getUserTier } from '@/lib/services/traffic';
 
@@ -601,10 +601,7 @@ export async function POST(request: NextRequest) {
             ...priorReportSansAux,
             validation_status: finalStatus,
             status: finalStatus,
-            // cancelled overrides content-based computation entirely -- the
-            // user explicitly stopped this, regardless of how much content
-            // happened to complete first (ADR 020 Phase 2).
-            billing_status: cancelled ? 'cancelled' : isStitchedValid ? billingStatus : 'failed',
+            billing_status: resolveBillingStatus(cancelled, billingStatus),
             dimension_status: dimensionStatus,
             model_used: model || null,
             valid: isStitchedValid && finalStatus === 'done',
@@ -623,8 +620,13 @@ export async function POST(request: NextRequest) {
             2
           );
 
-          // Only cache valid results to prevent cache poisoning (P0.2b)
-          if (isStitchedValid) {
+          // Cache any billing-complete result (ADR Law #1: prevent paid re-analysis on re-request).
+          // Gate on billingStatus === 'completed' (dimension completeness), NOT isStitchedValid
+          // (KG/persona schema quality). After the 2026-08-03 billing fix, isStitchedValid=false
+          // + billingStatus='completed' is reachable for real billed rows where schema validation
+          // failed on cosmetic KG/persona metadata but all dimensions are present. Gating on
+          // isStitchedValid here would silently skip caching those rows, violating ADR Law #1.
+          if (billingStatus === 'completed') {
             const cachedPayload: CachedAnalysisResult = {
               id: analysisId,
               video_id: videoId,
@@ -838,7 +840,8 @@ export async function POST(request: NextRequest) {
         // cancelled overrides content-based computation entirely -- the
         // user explicitly stopped this, regardless of how much content
         // happened to complete first (ADR 020 Phase 2).
-        billing_status: cancelled ? 'cancelled' : payloadToEvaluate !== undefined ? billingStatus : priorReport.billing_status,
+        // payloadToEvaluate guard: if no payload exists, preserve the prior row's billing_status.
+        billing_status: payloadToEvaluate !== undefined ? resolveBillingStatus(cancelled, billingStatus) : priorReport.billing_status,
         dimension_status: payloadToEvaluate !== undefined ? dimensionStatus : priorReport.dimension_status,
         model_used: model || null,
         valid: reportValidationStatus === 'done' && validationPassed,
