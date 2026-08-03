@@ -7,15 +7,17 @@
 
 set -e
 
-# Fail-closed: validate ALL required environment variables before proceeding
-REQUIRED_VARS=(
-  "STREAM_HMAC_SECRET"
-  "VERCEL_TOKEN"
-  "VERCEL_PROJECT_ID"
-  "VERCEL_TEAM_ID"
-  "CLOUDFLARE_API_TOKEN"
-  "CLOUDFLARE_ACCOUNT_ID"
-)
+# Fail-closed: validate Vercel-only vars always; Cloudflare vars only with --cloudflare
+REQUIRED_VARS=("STREAM_HMAC_SECRET" "VERCEL_TOKEN" "VERCEL_PROJECT_ID" "VERCEL_TEAM_ID")
+CLOUDFLARE_MODE=false
+for arg in "$@"; do
+  if [ "$arg" = "--cloudflare" ]; then CLOUDFLARE_MODE=true; fi
+done
+
+if [ "$CLOUDFLARE_MODE" = true ]; then
+  REQUIRED_VARS+=("CLOUDFLARE_API_TOKEN" "CLOUDFLARE_ACCOUNT_ID")
+fi
+
 MISSING=false
 for var in "${REQUIRED_VARS[@]}"; do
   if [ -z "${!var}" ]; then
@@ -25,7 +27,8 @@ for var in "${REQUIRED_VARS[@]}"; do
 done
 if [ "$MISSING" = true ]; then
   echo ""
-  echo "   Usage: STREAM_HMAC_SECRET='...' VERCEL_TOKEN='...' VERCEL_PROJECT_ID='...' VERCEL_TEAM_ID='...' CLOUDFLARE_API_TOKEN='...' CLOUDFLARE_ACCOUNT_ID='...' bash scripts/deploy-hmac-secret.sh"
+  echo "   Usage: STREAM_HMAC_SECRET='...' VERCEL_TOKEN='...' VERCEL_PROJECT_ID='...' VERCEL_TEAM_ID='...' bash scripts/deploy-hmac-secret.sh"
+  echo "   Add --cloudflare to also push to Cloudflare Worker (requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID)"
   exit 1
 fi
 HMAC_SECRET="$STREAM_HMAC_SECRET"
