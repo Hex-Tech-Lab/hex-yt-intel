@@ -1,0 +1,20 @@
+scripts/quality-engine/rules/data-integrity.ts
+  h_60000122af7b55 64,68-75,81-92
+scripts/quality-engine/rules/quality.ts
+  h_60000122af7b55 232,239-240,242,257,265-267
+scripts/quality-engine/rules/security.ts
+  h_60000122af7b55 205-217,447-448
+scripts/verify-quality-engine.ts
+  h_60000122af7b55 318-328
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "42a7a085dc44235518428b69caa5aa49c9798237",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
