@@ -1,0 +1,14 @@
+worker/src/__tests__/TranscriptExtractor.test.ts
+  h_60000122af7b55 60-61,65,67,93,97,99,128,132,134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "ba848160de8058d18ea0f4c751c9ddb0cbe6de6a",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
