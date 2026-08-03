@@ -1,0 +1,39 @@
+web/app/admin/users/UsersAdminClient.tsx
+  s_0ad60efcede198::t_1438d20e0a3987 1-2
+scripts/quality-engine/rules/ui.ts
+  s_0ad60efcede198::t_be7ae8eea22405 220
+scripts/check-row-detail.cjs
+  s_0ad60efcede198::t_439b97d1394547 4-11,34-51,58-59,70-89
+  s_0ad60efcede198::t_ef6ef5cdb1df03 3
+scripts/quality-engine/rules/security.ts
+  s_0ad60efcede198::t_6cbd4871055e2c 207-211,213-233
+scripts/deploy-hmac-secret.sh
+  s_0ad60efcede198::t_90fe5a27ad676f 10-28,32-34
+web/lib/utils/format.tsx
+  s_0ad60efcede198::t_8092e12bd299cd 17-26
+  s_0ad60efcede198::t_6b510ad11ac7ba 16
+web/lib/admin-logs/fetchers.ts
+  s_0ad60efcede198::t_5bfad88bf59ae7 345-347
+  s_0ad60efcede198::t_a3855f9fe67a59 304-311,314,317-330,337-342,344
+web/components/templates/console/UsageTab.tsx
+  s_0ad60efcede198::t_c721b17c462105 60
+  s_0ad60efcede198::t_7f0e826a42e00c 5
+scripts/quality-engine/rules/data-integrity.ts
+  s_0ad60efcede198::t_c25df3b18f2184 70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "3fe5a170dc60f0101514e0e27e1f31b4519fe5e3",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
