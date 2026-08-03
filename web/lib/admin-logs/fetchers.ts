@@ -258,7 +258,8 @@ export async function fetchSupabaseLogs(searchParams: URLSearchParams): Promise<
     return { status: 503, body: { error: 'SUPABASE_ACCESS_TOKEN is missing or project reference could not be parsed.', missingEnvVars: ['SUPABASE_ACCESS_TOKEN'].filter((k) => !process.env[k]) } };
   }
   const { startTimeMs, endTimeMs } = computeTimeWindow(searchParams);
-  const isoStart = new Date(startTimeMs).toISOString();
+  const clampedStart = Math.max(startTimeMs, endTimeMs - 86400000);
+  const isoStart = new Date(clampedStart).toISOString();
   const isoEnd = new Date(endTimeMs).toISOString();
   try {
     const sql = `select timestamp, event_message from postgres_logs order by timestamp desc limit 100`;

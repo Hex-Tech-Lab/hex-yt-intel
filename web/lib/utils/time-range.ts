@@ -1,7 +1,7 @@
 export function computeTimeWindow(searchParams: URLSearchParams): { startTimeMs: number; endTimeMs: number } {
   const range = searchParams.get('range');
-  const customStart = searchParams.get('startTime');
-  const customEnd = searchParams.get('endTime');
+  const customStart = searchParams.get('startTime') || searchParams.get('start');
+  const customEnd = searchParams.get('endTime') || searchParams.get('end');
   const now = Date.now();
 
   let startTimeMs = now - 3600000;
