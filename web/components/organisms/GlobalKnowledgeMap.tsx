@@ -1,15 +1,16 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { 
-  forceSimulation, 
-  forceLink, 
-  forceManyBody, 
-  forceCenter, 
+import {
+  forceSimulation,
+  forceLink,
+  forceManyBody,
+  forceCenter,
   forceCollide,
   SimulationNodeDatum,
   SimulationLinkDatum
 } from 'd3-force';
+import { EmptyState } from '@astryxdesign/core';
 import { useGlobalGraph } from '@/hooks/useGlobalGraph';
 import { GraphNode } from '@/lib/types/knowledge-graph';
 
@@ -94,9 +95,9 @@ export function GlobalKnowledgeMap() {
     };
   }, [graph, loading, error]);
 
-  if (loading) return <div>Loading Global Map...</div>;
-  if (error) return <div>Error loading graph: {error}</div>;
-  if (!graph || !graph.nodes || graph.nodes.length === 0) return <div>No history found.</div>;
+  if (loading) return <EmptyState title="Loading Global Map..." isCompact />;
+  if (error) return <EmptyState title="Error loading graph" description={error} isCompact />;
+  if (!graph || !graph.nodes || graph.nodes.length === 0) return <EmptyState title="No history found." isCompact />;
 
   return <canvas ref={canvasRef} width={800} height={600} className="border border-gray-700 max-w-full" />;
 }

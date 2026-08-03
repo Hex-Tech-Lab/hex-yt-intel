@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Button, Spinner } from '@astryxdesign/core';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
@@ -215,14 +216,13 @@ export function VideoPlayerCard() {
           <p className="text-[var(--ink-muted)] max-w-sm mb-4 leading-relaxed">
             In-app playback is blocked by this video&apos;s embed policy. Timestamps in the analysis still work — clicking one updates the button below.
           </p>
-          <a
+          <Button
+            label={`▶ ${fallbackSeek !== null ? `Play from ${formatTime(fallbackSeek)}` : 'Play'} on YouTube ↗`}
             href={watchUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 rounded-lg border border-[var(--accent)] text-[var(--accent)] font-bold hover:bg-[rgb(26_31_43_/_0.8)] transition-colors"
-          >
-            ▶ {fallbackSeek !== null ? `Play from ${formatTime(fallbackSeek)}` : 'Play'} on YouTube ↗
-          </a>
+            variant="secondary"
+          />
         </div>
       </div>
       {interacted && !ready && !embedRestricted && !playbackError && (
@@ -234,15 +234,7 @@ export function VideoPlayerCard() {
             className="absolute inset-0 w-full h-full object-cover opacity-20"
           />
           <div className="relative flex flex-col items-center gap-2">
-            <span className="flex items-center justify-center w-12 h-12 rounded-full bg-[var(--surface)] border border-[var(--accent)] text-[var(--accent)] animate-pulse">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 animate-spin">
-                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                <path d="M12 2a10 10 0 0 1 10 10" />
-              </svg>
-            </span>
-            <span className="font-mono text-xs text-[var(--accent)] font-semibold animate-pulse">
-              Initializing YouTube Player…
-            </span>
+            <Spinner size="lg" label="Initializing YouTube Player…" />
           </div>
         </div>
       )}
@@ -271,23 +263,23 @@ export function VideoPlayerCard() {
       <div className={`absolute inset-x-0 bottom-0 z-10 items-center justify-between gap-3 px-3 py-2 bg-[rgb(11_14_20_/_0.92)] backdrop-blur-sm border-t border-[var(--line)] text-[11px] font-mono ${!embedRestricted && playbackError ? 'flex' : 'hidden'}`}>
         <span className="text-[var(--warn)] truncate">Playback error — this is usually transient.</span>
         <span className="flex items-center gap-2 flex-shrink-0">
-          <button
+          <Button
+            label="Retry"
+            size="sm"
+            variant="ghost"
             onClick={() => {
               setPlaybackError(null);
               setRetryNonce((n) => n + 1);
             }}
-            className="px-2.5 py-1 rounded-md border border-[var(--line)] text-[var(--accent)] cursor-pointer hover:bg-[rgb(26_31_43_/_0.6)] transition-colors"
-          >
-            Retry
-          </button>
-          <a
+          />
+          <Button
+            label="YouTube ↗"
+            size="sm"
+            variant="ghost"
             href={watchUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2.5 py-1 rounded-md border border-[var(--line)] text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors"
-          >
-            YouTube ↗
-          </a>
+          />
         </span>
       </div>
       <div ref={containerRef} className={`w-full h-full ${embedRestricted ? 'hidden' : ''}`} style={embedRestricted ? { display: 'none' } : undefined} />
