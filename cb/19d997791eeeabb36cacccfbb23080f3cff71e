@@ -1,0 +1,19 @@
+supabase/migrations/20260803234216_prevent_self_role_escalation.sql
+  s_0eded1e9d0cab6::t_2fdd745b381f2e 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "cb19d997791eeeabb36cacccfbb23080f3cff71e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
