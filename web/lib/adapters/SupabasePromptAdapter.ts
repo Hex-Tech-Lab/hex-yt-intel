@@ -12,7 +12,7 @@ import * as Sentry from '@sentry/nextjs';
  * genuinely unreachable, mirroring SupabaseSettingsAdapter.getRegistrySettings.
  *
  * Three-tier cache, matching the established pattern already used for the
- * UCIS v5.1 prompt (web/lib/services/settings.ts resolveUCISPromptTemplate --
+ * UCIS v5.3 prompt (web/lib/services/settings.ts resolveUCISPromptTemplate --
  * discovered mid-implementation of this adapter, NOT duplicated logic):
  * in-process (60s) -> Upstash Redis (24h, cross-instance) -> Vault RPC. Once
  * decrypted, the plaintext is cached the same as the settings.ts pattern

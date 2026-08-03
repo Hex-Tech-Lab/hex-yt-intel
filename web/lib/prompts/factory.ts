@@ -10,7 +10,7 @@ export interface GetUCISPromptParams {
    * Pre-resolved template text, supplied by callers (e.g. the Workers
    * runtime) that can't reach resolveUCISPromptTemplate's process.env-based
    * Supabase/Redis reads. When set, resolveUCISPromptTemplate is never
-   * called -- pass UCIS_V5_1_SYSTEM (or your own fallback) explicitly if
+   * called -- pass UCIS_V5_3_SYSTEM (or your own fallback) explicitly if
    * your live-config lookup came back empty.
    */
   promptOverride?: string;

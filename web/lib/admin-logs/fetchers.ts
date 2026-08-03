@@ -335,11 +335,13 @@ export async function fetchSupabaseLogs(searchParams: URLSearchParams): Promise<
       resultList = fallback.result;
       endpointUsed = fallback.endpointUsed;
     } catch (fallbackError) {
-      // Both endpoints failed — preserve the primary error for diagnosis
+      // Both endpoints failed — return controlled 500 with both errors
       const fallbackMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
       Sentry.captureException(fallbackError, { tags: { operation: 'admin_supabase_logs_fallback' } });
       const primaryMsg = primaryError?.message || 'empty result';
-      throw new Error(`Supabase logs: primary (/logs) failed (${primaryMsg}), fallback (logs.all) failed (${fallbackMsg})`);
+      const combinedMsg = `Supabase logs: primary (/logs) failed (${primaryMsg}), fallback (logs.all) failed (${fallbackMsg})`;
+      console.error('[admin-logs]', combinedMsg);
+      return { status: 500, body: { error: combinedMsg } };
     }
   }
 
