@@ -10,7 +10,10 @@ default to OC (opencode / DeepSeek v4 Flash, low effort) for both
 investigation and the fix — see CLAUDE.md's "Agent roster" section. CC
 (Claude Code) verifies the resulting diff against real sources before
 marking an item `fixed`; a fix report alone is not sufficient to close an
-item.
+item. Every dispatch prompt must include CLAUDE.md's "Mandatory sections
+in every AGY/OC prompt" template (contract def+review, E2E, tangent hunt,
+RCA-before-fix, full skill enumeration, structured report) — not optional
+for tech-debt items just because they're individually small.
 
 ## Scoring rubric
 
