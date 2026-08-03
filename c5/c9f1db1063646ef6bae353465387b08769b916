@@ -1,0 +1,19 @@
+docs/history/ASTRYX_MIGRATION_AUDIT_2026-08-03.md
+  s_0eded1e9d0cab6::t_992c21aef0d035 135-140,143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c5c9f1db1063646ef6bae353465387b08769b916",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
