@@ -1,0 +1,35 @@
+web/app/api/analyses/persist/route.ts
+  s_0eded1e9d0cab6::t_7e716488cefd22 21,604,623-629,843-844
+web/components/TimestampLink.tsx
+  s_0eded1e9d0cab6::t_7e716488cefd22 3,60,71,75-79,87
+web/components/templates/console/VideoPlayerCard.tsx
+  s_0eded1e9d0cab6::t_7e716488cefd22 4,219-220,224-225,237,266-269,274-278,282
+web/components/organisms/GlobalKnowledgeMap.tsx
+  s_0eded1e9d0cab6::t_7e716488cefd22 4-8,13,98-100
+web/lib/__tests__/billing-status-dimension-completeness.test.ts
+  s_0eded1e9d0cab6::t_7e716488cefd22 1-236
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_5a9e545ebc6fc0 1076-1078
+  s_0eded1e9d0cab6::t_7e716488cefd22 1074-1075
+web/lib/services/stitch-analysis-chunks.ts
+  s_0eded1e9d0cab6::t_7e716488cefd22 83-103
+  s_0eded1e9d0cab6::t_3310c0a3b4a29e 82
+web/components/templates/console/UsageTab.tsx
+  s_0eded1e9d0cab6::t_7e716488cefd22 3,8,18-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "fe20c78b32a619287844106157641d60fc6ffca6",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
