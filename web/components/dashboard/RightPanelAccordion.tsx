@@ -2,6 +2,7 @@
 
 import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Switch, IconButton } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 
@@ -24,7 +25,7 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
 
   const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
   const entityTimeSeekEnabled = useVideoStore((s) => s.entityTimeSeekEnabled);
-  const toggleEntityTimeSeek = useVideoStore((s) => s.toggleEntityTimeSeek);
+  const setEntityTimeSeekEnabled = useVideoStore((s) => s.setEntityTimeSeekEnabled);
 
   const toggleItem = (id: string) => {
     setOpenStates((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -39,27 +40,13 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between px-3.5 py-2.5 border border-[var(--line)] rounded-lg bg-[var(--surface)] text-xs shadow-sm">
-        <span className="flex items-center gap-1.5 font-medium text-[var(--ink)]">
-          <Icon icon="solar:clock-circle-linear" size={14} className="text-[var(--accent)]" />
-          Entity Click Time-Seek
-        </span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={entityTimeSeekEnabled}
-          aria-label="Entity click time-seek"
-          onClick={toggleEntityTimeSeek}
-          title="Enable/disable time-seeking when clicking entities in Knowledge Graph, Mind Map, or Word Cloud"
-          className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-            entityTimeSeekEnabled ? 'bg-[var(--ok,#22c55e)]' : 'bg-gray-600/60 dark:bg-slate-700'
-          }`}
-        >
-          <span
-            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-              entityTimeSeekEnabled ? 'translate-x-4' : 'translate-x-0'
-            }`}
-          />
-        </button>
+        <Switch
+          label="Entity Click Time-Seek"
+          description="Seek the video when clicking entities in Knowledge Graph, Mind Map, or Word Cloud"
+          value={entityTimeSeekEnabled}
+          onChange={(checked) => setEntityTimeSeekEnabled(checked)}
+          labelIcon={<Icon icon="solar:clock-circle-linear" size={14} className="text-[var(--accent)]" />}
+        />
       </div>
       {items.map((item, index) => (
         <motion.div
@@ -78,61 +65,51 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
             <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               {item.onAction && (
                 <div className="flex items-center gap-1 pr-2 border-r border-[var(--line)] mr-1">
-                  <button
-                    type="button"
+                  <IconButton
+                    label="Split Vertical"
+                    variant="ghost"
+                    size="sm"
+                    icon={<Icon icon="solar:sidebar-minimalistic-linear" size={14} />}
                     onClick={() => item.onAction?.('vertical')}
-                    title="Split Vertical"
-                    className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
-                  >
-                    <Icon icon="solar:sidebar-minimalistic-linear" size={14} />
-                  </button>
-                  <button
-                    type="button"
+                  />
+                  <IconButton
+                    label="Move Left"
+                    variant="ghost"
+                    size="sm"
+                    icon={<Icon icon="solar:arrow-left-linear" size={14} />}
                     onClick={() => item.onAction?.('left')}
-                    title="Move Left"
-                    className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
-                  >
-                    <Icon icon="solar:arrow-left-linear" size={14} />
-                  </button>
-                  <button
-                    type="button"
+                  />
+                  <IconButton
+                    label="Popout / Expand"
+                    variant="ghost"
+                    size="sm"
+                    icon={<Icon icon="solar:square-share-line-linear" size={14} />}
                     onClick={() => item.onAction?.('diagonal')}
-                    title="Popout / Expand"
-                    className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
-                  >
-                    <Icon icon="solar:square-share-line-linear" size={14} />
-                  </button>
-                  <button
-                    type="button"
+                  />
+                  <IconButton
+                    label="Copy Markdown"
+                    variant="ghost"
+                    size="sm"
+                    icon={<Icon icon={copiedItemId === item.id ? "solar:check-read-linear" : "solar:copy-linear"} size={14} />}
                     onClick={() => handleCopyItem(item.id, item.onAction)}
-                    title="Copy Markdown"
-                    className={`p-1 bg-transparent border-0 cursor-pointer flex items-center justify-center transition-all ${
-                      copiedItemId === item.id ? 'text-[var(--accent)] font-bold' : 'text-[var(--ink-muted)] hover:text-[var(--accent)]'
-                    }`}
-                  >
-                    <Icon icon={copiedItemId === item.id ? "solar:check-read-linear" : "solar:copy-linear"} size={14} />
-                  </button>
-                  <button
-                    type="button"
+                  />
+                  <IconButton
+                    label="Export"
+                    variant="ghost"
+                    size="sm"
+                    icon={<Icon icon="solar:download-linear" size={14} />}
                     onClick={() => item.onAction?.('export')}
-                    title="Export"
-                    className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--accent)] cursor-pointer flex items-center justify-center transition-colors"
-                  >
-                    <Icon icon="solar:download-linear" size={14} />
-                  </button>
+                  />
                 </div>
               )}
-              
-              <button
-                type="button"
+
+              <IconButton
+                label={openStates[item.id] ? 'Collapse' : 'Expand'}
+                variant="ghost"
+                size="sm"
+                icon={<Icon icon={openStates[item.id] ? "solar:alt-arrow-up-linear" : "solar:alt-arrow-down-linear"} size={16} />}
                 onClick={() => toggleItem(item.id)}
-                className="p-1 bg-transparent border-0 text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer flex items-center justify-center"
-              >
-                <Icon 
-                  icon={openStates[item.id] ? "solar:alt-arrow-up-linear" : "solar:alt-arrow-down-linear"} 
-                  size={16} 
-                />
-              </button>
+              />
             </div>
           </div>
           <AnimatePresence initial={false}>
