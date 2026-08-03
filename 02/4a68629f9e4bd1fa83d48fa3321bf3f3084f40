@@ -1,0 +1,14 @@
+web/app/billing/page.tsx
+  h_60000122af7b55 4-5,94-95,124-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "024a68629f9e4bd1fa83d48fa3321bf3f3084f40",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
