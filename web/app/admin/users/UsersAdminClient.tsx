@@ -238,10 +238,11 @@ export function UsersAdminClient() {
         </select>
       </div>
 
-      <div className="rounded-xl border border-[var(--border-muted)] overflow-hidden">
+      <div className="rounded-xl border border-[var(--border-muted)] overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-[var(--surface)] text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">
+              <th scope="col" className="px-3 py-2">#</th>
               <th scope="col" className="px-3 py-2">User</th>
               <th scope="col" className="px-3 py-2">Tier</th>
               <th scope="col" className="px-3 py-2">Signed up</th>
@@ -255,12 +256,13 @@ export function UsersAdminClient() {
             </tr>
           </thead>
           <tbody>
-            {visibleUsers.map((u) => (
+            {visibleUsers.map((u, idx) => (
               <Fragment key={u.id}>
                 <tr
                   onClick={() => toggleExpand(u.id)}
-                  className="border-t border-[var(--border-muted)] hover:bg-[rgb(26_31_43_/_0.4)] cursor-pointer transition-colors"
+                  className="border-t border-[var(--border-muted)] hover:bg-[rgb(26_31_43_/_0.4)] cursor-pointer transition-colors odd:bg-[var(--surface-muted)]"
                 >
+                  <td className="px-3 py-2 text-center font-medium text-[var(--ink-muted)]">{idx + 1}</td>
                   <td className="px-3 py-2">
                     <div className="font-semibold text-[var(--ink-main)]">{u.name || u.email || u.id}</div>
                     <div className="text-[10px] text-[var(--ink-muted)]">{u.email}</div>
@@ -282,7 +284,7 @@ export function UsersAdminClient() {
                 </tr>
                 {expandedId === u.id && (
                   <tr className="border-t border-[var(--border-muted)] bg-[rgb(11_14_20_/_0.5)]">
-                    <td colSpan={10} className="px-3 py-3">
+                    <td colSpan={11} className="px-3 py-3">
                       {detailLoading === u.id && <div className="text-[var(--ink-muted)]">Loading…</div>}
                       {detailError[u.id] && <div className="text-[var(--warn)]">{detailError[u.id]}</div>}
                       {detail[u.id] && (() => {
@@ -371,18 +373,19 @@ export function UsersAdminClient() {
           </tbody>
           {totals && (
             <tfoot>
-              <tr className="border-t-2 border-[var(--border-muted)] bg-[var(--surface)] font-bold text-[11px] text-[var(--ink-main)]">
-                <th scope="row" className="px-3 py-2 text-left font-bold">Total ({visibleUsers.length} users)</th>
-                <td className="px-3 py-2">—</td>
-                <td className="px-3 py-2">—</td>
-                <td className="px-3 py-2">{totals.analysis_turns} · {fmtCost(totals.analysis_cost_usd)}</td>
-                <td className="px-3 py-2">{totals.chat_turns} · {fmtCost(totals.chat_cost_usd)}</td>
-                <td className="px-3 py-2">{totals.remediation_turns} · {fmtCost(totals.remediation_cost_usd)}</td>
-                <td className="px-3 py-2 text-[var(--accent)]">{fmtCost(totals.total_cost_usd)} · {totals.total_tokens_used.toLocaleString()} tok</td>
-                <td className="px-3 py-2">—</td>
-                <td className="px-3 py-2">—</td>
-                <td className="px-3 py-2" />
-              </tr>
+            <tr className="border-t-2 border-[var(--border-muted)] bg-[var(--surface)] font-bold text-[11px] text-[var(--ink-main)]">
+              <td className="px-3 py-2">—</td>
+              <th scope="row" className="px-3 py-2 text-left font-bold">Total ({visibleUsers.length} users)</th>
+              <td className="px-3 py-2">—</td>
+              <td className="px-3 py-2">—</td>
+              <td className="px-3 py-2">{totals.analysis_turns} · {fmtCost(totals.analysis_cost_usd)}</td>
+              <td className="px-3 py-2">{totals.chat_turns} · {fmtCost(totals.chat_cost_usd)}</td>
+              <td className="px-3 py-2">{totals.remediation_turns} · {fmtCost(totals.remediation_cost_usd)}</td>
+              <td className="px-3 py-2 text-[var(--accent)]">{fmtCost(totals.total_cost_usd)} · {totals.total_tokens_used.toLocaleString()} tok</td>
+              <td className="px-3 py-2">—</td>
+              <td className="px-3 py-2">—</td>
+              <td className="px-3 py-2" />
+            </tr>
             </tfoot>
           )}
         </table>
