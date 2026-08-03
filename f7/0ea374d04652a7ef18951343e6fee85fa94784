@@ -1,0 +1,20 @@
+web/lib/admin-logs/fetchers.ts
+  s_0ad60efcede198::t_1cd6291aedaed3 265
+  s_0ad60efcede198::t_94ad28c47665cf 261-262
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "f70ea374d04652a7ef18951343e6fee85fa94784",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": null
+    }
+  }
+}
