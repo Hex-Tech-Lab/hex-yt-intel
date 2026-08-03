@@ -3,8 +3,18 @@
 -- 1. Analysis (action='analysis_completed' or 'analysis')
 -- 2. Chat (action='chat_turn')
 -- 3. Remediation (action='dimension_remediation')
+--
+-- NOTE: adding columns to a RETURNS TABLE(...) signature is a return-type
+-- change, which CREATE OR REPLACE FUNCTION cannot perform (Postgres errors
+-- "cannot change return type of existing function") -- DROP FUNCTION is
+-- required first. That DROP silently resets EXECUTE back to PUBLIC/anon
+-- default grants, which is exactly what happened in
+-- 20260801084347_admin_list_users_activity_restore_grants.sql after
+-- 20260801081647's DROP+CREATE -- so the REVOKE/GRANT pair below is
+-- mandatory, not optional, every time this function's signature changes.
+drop function if exists public.admin_list_users_activity();
 
-create or replace function public.admin_list_users_activity()
+create function public.admin_list_users_activity()
 returns table(
   id uuid,
   email text,
@@ -88,3 +98,6 @@ begin
   order by u.created_at desc;
 end;
 $$;
+
+revoke all on function public.admin_list_users_activity() from public, anon;
+grant execute on function public.admin_list_users_activity() to authenticated;
