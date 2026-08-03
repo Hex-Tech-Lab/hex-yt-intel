@@ -1,0 +1,21 @@
+web/app/auth/signin/form.tsx
+  s_0eded1e9d0cab6::t_c30c7fc0abd0ec 109
+web/app/auth/error/form.tsx
+  s_0eded1e9d0cab6::t_5ebc9ca7d3a47e 43,48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "aa53c3ec8bbeaad09facf8a13ddce91f4e2058a7",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
