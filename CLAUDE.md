@@ -31,6 +31,15 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 3. **Update**: Change your line to `[DONE]` when the task is complete.
 4. **Orchestrator "Sink" Pattern**: For complex workflows (e.g., PR Reviews), the lead agent logs `[SINK: Workflow Name]`. Sibling agents log sub-tasks but **cannot** finalize or merge the overall workflow. Only the Sink Orchestrator is responsible for testing, verifying, merging, and closing out the overarching task.
 
+### Agent roster (added 2026-08-03)
+
+- **CC (Claude Code)**: sink orchestrator / verifier for most sessions. Independently re-verifies every other agent's claims against real sources (actual API/dist catalogs, live curl or DB queries, direct code reads) before accepting them — a report saying "verified" from any agent is not itself sufficient. Owns final merge sign-off.
+- **AGY (Antigravity/Gemini)**: execution agent for larger multi-file waves; ledger-disciplined, reports per-subtask.
+- **OC (opencode / DeepSeek v4 Flash, low effort)**: **preferred default for both investigation and execution** on well-scoped findings (bug reports, PR review comments, tech-debt roster items) — do NOT pre-derive the root cause before handing off; give OC the raw finding plus exact context (file:line where already known, links, error text) and let it investigate. Prompts to OC still follow the same handholding/detailed format as AGY prompts (full context, skill stack, gates, structured report) — delegating investigation is not license to write a terse prompt.
+- **GCW (Gemini Web)**: escalation path for tool failures, not a primary executor.
+
+**Same-checkout warning**: AGY and OC have both been run in the same shared working-tree checkout (not isolated git worktrees) at least once this session, resulting in mixed uncommitted diffs from two agents on one branch that sat unpushed/undeployed for hours before being noticed. Prefer isolated worktrees per agent when running AGY/OC concurrently with other work; if a shared checkout is unavoidable, check `git status`/`git diff` per-file before committing anything, don't assume the working tree reflects only your own current task.
+
 ---
 
 ## 3. THE ADR LEDGER (Architectural Decision Records)

@@ -113,5 +113,5 @@ per-dimension.
 
 ## Next step
 
-- **Phase 1 (Active)**: Implement **dimension-level** per-piece persistence. Each dimension result returned by the LLM cascade is written immediately to Supabase `analyses` (not held until all bundles finish).
+- **Phase 1 (Planned, not started)**: Implement **dimension-level** per-piece persistence. Each dimension result returned by the LLM cascade is written immediately to Supabase `analyses` (not held until all bundles finish).
 - **Phases 2-4**: Presence check on resume, Reaper extension, and selective client bundle dispatch (will follow after Phase 1 lands).

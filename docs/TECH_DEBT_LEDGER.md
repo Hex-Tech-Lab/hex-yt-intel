@@ -5,6 +5,13 @@ carries a numeric score computed from the rubric below; new findings insert at
 their computed rank, not appended at the bottom. Re-sort whenever an item's
 status or score changes.
 
+**Assignment workflow (2026-08-03)**: cheap/well-scoped items on this roster
+default to OC (opencode / DeepSeek v4 Flash, low effort) for both
+investigation and the fix — see CLAUDE.md's "Agent roster" section. CC
+(Claude Code) verifies the resulting diff against real sources before
+marking an item `fixed`; a fix report alone is not sufficient to close an
+item.
+
 ## Scoring rubric
 
 `score = Severity(1-3) × Blast Radius(1-3) × Impact(1-3)` — max 27.
