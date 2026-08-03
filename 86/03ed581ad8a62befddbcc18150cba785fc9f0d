@@ -1,0 +1,38 @@
+web/components/dashboard/RightPanelAccordion.tsx
+  s_0ad60efcede198::t_ec55c478d0a004 51
+web/lib/utils/entity-time-seek.ts
+  s_0ad60efcede198::t_04b6e28c31a94b 7-13,32-43,45-48,58-63,68-72
+  s_0eded1e9d0cab6::t_9bfaef8cf74252 17-21
+  s_0eded1e9d0cab6::t_069d7ef242c7dc 65-67
+  s_0eded1e9d0cab6::t_cc9dcbb78700da 64
+  s_0ad60efcede198::t_f70a53e1e2ffd1 73
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0eded1e9d0cab6::t_c2fba68047b816 45-68
+web/components/containers/DashboardContainer.tsx
+  s_0ad60efcede198::t_426b4161982ee4 201-203
+  s_0ad60efcede198::t_7ecb4b9743d21d 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "8603ed581ad8a62befddbcc18150cba785fc9f0d",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
