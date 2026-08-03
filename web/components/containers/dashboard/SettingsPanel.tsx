@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, startTransition, ViewTransition } from 'react';
+import { Button, ButtonGroup, TextInput } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { LogsViewerClient } from '@/app/settings/logs/LogsViewerClient';
 import { AdminSettingsClient } from '@/app/admin/settings/AdminSettingsClient';
@@ -193,21 +194,17 @@ export function SettingsContentPane({ activeKey, onNavigate }: SettingsContentPa
           <div className="max-w-2xl mx-auto flex flex-col gap-6 p-4 bg-[var(--surface)] border border-[var(--border-muted)] rounded-xl">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-[var(--ink-main)]">App Display & Control Density</h2>
-              <div className="flex items-center gap-1 bg-[rgb(26_31_43_/_0.6)] border border-[var(--line)] rounded-lg p-0.5">
+              <ButtonGroup label="App display density" size="sm">
                 {(['compact', 'balanced', 'spacious'] as const).map((d) => (
-                  <button
+                  <Button
                     key={d}
+                    label={d}
+                    variant={density === d ? 'primary' : 'ghost'}
                     onClick={() => setDensity(d)}
-                    className={`px-2.5 py-1 rounded-md text-[10.5px] capitalize transition-colors ${
-                      density === d
-                        ? 'bg-[var(--accent-a12)] text-[var(--accent-ink)]'
-                        : 'text-[var(--ink-muted)] hover:text-[var(--ink-secondary)]'
-                    }`}
-                  >
-                    {d}
-                  </button>
+                    className="capitalize text-[10.5px]"
+                  />
                 ))}
-              </div>
+              </ButtonGroup>
             </div>
             <p className="text-xs text-[var(--ink-muted)]">
               Configure list padding, visual density, and component defaults across the synthesis console.
@@ -250,14 +247,19 @@ export function SettingsPanel({ initialSubmenu = 'overview' }: SettingsPanelProp
       {/* Top Persistent Breadcrumb Header / Home Affordance */}
       <div className="flex items-center justify-between py-3 px-6 border-b border-[var(--border-muted)] bg-[rgb(11_14_20_/_0.8)] backdrop-blur-md">
         <div className="flex items-center gap-2 text-xs">
-          <button
+          <Button
+            label="Return to Settings Overview"
+            variant="ghost"
+            size="sm"
             onClick={() => setActiveKey('overview')}
-            title="Return to Settings Overview"
-            className="flex items-center gap-1.5 font-bold text-[var(--accent)] hover:underline cursor-pointer bg-transparent border-none p-0"
+            tooltip="Return to Settings Overview"
+            className="font-bold text-[var(--accent)] hover:underline p-0"
           >
-            <Icon icon="solar:settings-linear" size={15} />
-            <span>{'// SETTINGS'}</span>
-          </button>
+            <span className="flex items-center gap-1.5">
+              <Icon icon="solar:settings-linear" size={15} />
+              <span>{'// SETTINGS'}</span>
+            </span>
+          </Button>
           {activeItem && (
             <>
               <span className="text-[var(--ink-muted)]">/</span>
@@ -271,25 +273,31 @@ export function SettingsPanel({ initialSubmenu = 'overview' }: SettingsPanelProp
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left-Hand Tree Navigation Column */}
         <div className="w-[280px] flex-shrink-0 border-r border-[var(--border-muted)] bg-[var(--surface)]/60 flex flex-col p-4 overflow-y-auto gap-4">
-          <input
+          <TextInput
+            label="Filter submenus"
+            isLabelHidden
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={setQuery}
             placeholder="Filter submenus..."
-            className="w-full bg-[var(--bg)] border border-[var(--border-muted)] rounded-lg px-3 py-1.5 text-xs text-[var(--ink-main)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]"
+            width="100%"
           />
 
           <div className="flex flex-col gap-4">
-            <button
+            <Button
+              label="Overview"
+              variant="ghost"
               onClick={() => startTransition(() => setActiveKey('overview'))}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-colors ${
+              className={`w-full justify-start gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-left ${
                 activeKey === 'overview'
                   ? 'bg-[var(--accent-a10)] text-[var(--accent)] border border-[var(--accent)]'
                   : 'text-[var(--ink-muted)] hover:text-[var(--ink-main)] hover:bg-[var(--surface-raised)]'
               }`}
             >
-              <Icon icon="solar:home-2-linear" size={16} />
-              <span>Overview</span>
-            </button>
+              <span className="flex items-center gap-2.5">
+                <Icon icon="solar:home-2-linear" size={16} />
+                <span>Overview</span>
+              </span>
+            </Button>
 
             {categories.map((cat) => {
               const items = SETTINGS_TREE.filter(
@@ -308,22 +316,26 @@ export function SettingsPanel({ initialSubmenu = 'overview' }: SettingsPanelProp
                   {items.map((item) => {
                     const isSelected = activeKey === item.key;
                     return (
-                      <button
+                      <Button
                         key={item.key}
+                        label={item.label}
+                        variant="ghost"
                         onClick={() => startTransition(() => setActiveKey(item.key))}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-left transition-all ${
+                        className={`w-full justify-start gap-2.5 px-3 py-2 rounded-lg text-xs text-left ${
                           isSelected
                             ? 'bg-[var(--accent-a10)] text-[var(--accent)] border border-[var(--accent)] font-bold'
                             : 'text-[var(--ink-muted)] hover:text-[var(--ink-main)] hover:bg-[var(--surface-raised)] border border-transparent'
                         }`}
                       >
-                        <Icon
-                          icon={item.icon}
-                          size={16}
-                          className={isSelected ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'}
-                        />
-                        <span className="truncate">{item.label}</span>
-                      </button>
+                        <span className="flex items-center gap-2.5">
+                          <Icon
+                            icon={item.icon}
+                            size={16}
+                            className={isSelected ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'}
+                          />
+                          <span className="truncate">{item.label}</span>
+                        </span>
+                      </Button>
                     );
                   })}
                 </div>
