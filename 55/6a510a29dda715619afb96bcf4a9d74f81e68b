@@ -1,0 +1,24 @@
+web/app/admin/dashboards/AdminDashboardsClient.tsx
+  h_60000122af7b55 6,24-27,47,54,107-108,137,199
+web/app/admin/settings/AdminSettingsClient.tsx
+  h_60000122af7b55 4,86-90,94-99,109-111,113-114,123,128,130,144-148,150,154
+web/app/admin/users/UsersAdminClient.tsx
+  h_60000122af7b55 4,151-155,162-167,226
+web/app/atlas/AtlasClient.tsx
+  h_60000122af7b55 6,108,110-114
+web/app/search/page.tsx
+  h_60000122af7b55 6,83,97-100,102-103,131,150-151,175-179,187-194
+web/app/status/status-dashboard-client.tsx
+  h_60000122af7b55 4,92-95,107,109,139-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "556a510a29dda715619afb96bcf4a9d74f81e68b",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
