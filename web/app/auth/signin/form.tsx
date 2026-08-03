@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { Button, Banner } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { createClient } from '@/utils/supabase/client';
 
@@ -91,33 +92,22 @@ export default function SignInForm() {
           }}>Sign in to continue</h2>
 
           {error && (
-            <div role="alert" style={{
-              marginBottom: 20,
-              padding: 12,
-              background: "rgb(239 68 68 / 0.10)",
-              border: "1px solid rgb(239 68 68 / 0.25)",
-              color: "var(--err)",
-              fontSize: 14,
-            }}>
-              {error}
-            </div>
+            <Banner
+              status="error"
+              title={error}
+              style={{ marginBottom: 20 }}
+            />
           )}
 
-          <button
+          <Button
+            label={loading ? 'Signing in...' : 'Sign in with Google'}
+            variant="primary"
             onClick={handleSupabaseAuth}
-            disabled={loading}
-            aria-busy={loading}
-            className="btn-primary"
-            style={{
-              width: "100%",
-              justifyContent: "center",
-              opacity: loading ? 0.5 : 1,
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            <Icon icon="solar:sun-bold-duotone" size={16} />
-            {loading ? 'Signing in...' : 'Sign in with Google'}
-          </button>
+            isDisabled={loading}
+            isLoading={loading}
+            icon={<Icon icon="solar:sun-bold-duotone" size={16} />}
+            style={{ width: '100%', justifyContent: 'center' }}
+          />
         </div>
       </div>
     </div>
