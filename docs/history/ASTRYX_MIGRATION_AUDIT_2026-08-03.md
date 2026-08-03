@@ -132,11 +132,12 @@ Borderline/negligible, noted but not worth a pass: `app/not-found.tsx`
 (one hand-rolled "Back to Home" link styled as a button) and
 `app/sentry-example-page/page.tsx` (one throwaway test-error button).
 
-**Follow-up open question**: `app/settings/logs/LogsViewerClient.tsx` (561
-lines, already uses Astryx per the earlier grep) is not directly rendered
-by `app/settings/logs/page.tsx` — that page renders `SettingsPanel`
-instead. Not yet determined whether `LogsViewerClient` is wired in via
-`SettingsPanel` or is dead code.
+**Resolved**: `app/settings/logs/LogsViewerClient.tsx` (561 lines,
+already Astryx) is reachable, not dead code — confirmed via import chain:
+`app/admin/logs/page.tsx` re-exports `app/settings/logs/page.tsx`, which
+renders `<SettingsPanel initialSubmenu="logs" />`; `SettingsPanel.tsx:6`
+imports `LogsViewerClient` and `SettingsPanel.tsx:189` conditionally
+renders it when `activeKey === 'logs'`.
 
 **Status: 10 files (4 P0 + 6 P1) identified as real conversion work,
-not yet assigned or started. 20 files confirmed no-action.**
+assigned to AGY 2026-08-03 (P0 batch first, P1 to follow on P0 completion).**
