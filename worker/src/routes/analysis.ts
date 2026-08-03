@@ -29,7 +29,7 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
-type AnalysisEnv = {
+export type AnalysisEnv = {
   YOUTUBE_API_KEY: string;
   OPENROUTER_API_KEY: string;
   UPSTASH_REDIS_REST_URL: string;
@@ -219,7 +219,7 @@ interface ResolvedTranscript {
 // (20260724120000_channel_meta_fetch_settings.sql), used only when a request
 // doesn't carry channelMetaConfig (stale/old client) or the registry itself
 // is unreachable.
-const CHANNEL_META_CONFIG_FALLBACK = { timeoutMs: 4000, maxPayloadBytes: 20_000 };
+export const CHANNEL_META_CONFIG_FALLBACK = { timeoutMs: 4000, maxPayloadBytes: 20_000 };
 // 7-day TTL: channel-level stats (subscriber count, description) change far
 // slower than per-video data, and this also protects against hitting Decodo
 // 5x per analysis (once per parallel bundle stream) -- see call site.
@@ -245,7 +245,7 @@ function truncateChannelMeta(
   return null;
 }
 
-async function fetchChannelMetaCached(
+export async function fetchChannelMetaCached(
   channelId: string | undefined,
   env: Pick<AnalysisEnv, "RESIDENTIAL_PROXY_URL" | "DECODO_API_KEY" | "YOUTUBE_API_KEY">,
   cache?: UpstashCacheAdapter,
