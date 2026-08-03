@@ -1,0 +1,37 @@
+web/app/atlas/AtlasClient.tsx
+  s_0eded1e9d0cab6::t_10262e05a60ca7 111
+web/app/admin/settings/AdminSettingsClient.tsx
+  s_0eded1e9d0cab6::t_9cc2e65ac18566 113-114
+web/app/admin/users/UsersAdminClient.tsx
+  s_0eded1e9d0cab6::t_be6b155967a09e 245-254
+  s_0eded1e9d0cab6::t_d8cc67ee070cfc 375
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_39f36462d42f77 26
+  s_0eded1e9d0cab6::t_6fffdc5706b384 98,105
+web/hooks/useIsStackedLayout.ts
+  s_0eded1e9d0cab6::t_be10676a8e44c3 4-16,28
+  s_0eded1e9d0cab6::t_eb93ecdb98e001 3
+web/components/templates/console/DimensionDrawer.tsx
+  s_0eded1e9d0cab6::t_e2a2c259407a2e 8
+  s_0eded1e9d0cab6::t_b1b9114fe60efa 99
+  s_0eded1e9d0cab6::t_b9d734e3e43a5c 44,46,49
+  s_0eded1e9d0cab6::t_bd8176d002e57c 4-5
+supabase/migrations/20260803133500_admin_list_users_activity_per_category_costs.sql
+  s_0eded1e9d0cab6::t_9931eb01325ad8 104-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "a3168783ba3cb84c15278c303c8f8bee91d65bdc",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
