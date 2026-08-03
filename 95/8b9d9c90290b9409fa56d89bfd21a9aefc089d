@@ -1,0 +1,41 @@
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_0bdc1e3c9a0ae9 222
+  s_0eded1e9d0cab6::t_6513368a2bf3d8 32
+  s_0eded1e9d0cab6::t_c690fad5d9dcd8 248
+web/lib/services/aux-remediation.ts
+  s_0eded1e9d0cab6::t_f2938ac79d4feb 89-90
+  s_0eded1e9d0cab6::t_7b68c0cbd54f06 151
+  s_0eded1e9d0cab6::t_43b85696722226 1-88,91-150,152-349,351-430
+  s_0eded1e9d0cab6::t_98d5f3a925846b 350
+web/lib/stream-token.ts
+  s_0eded1e9d0cab6::t_30f73190149541 61-66,68,70-72
+  s_0eded1e9d0cab6::t_6a153756a134ff 67,69
+worker/src/worker.ts
+  s_0eded1e9d0cab6::t_093cd7f1406a96 13
+  s_0eded1e9d0cab6::t_0fc5ab44abd010 58
+worker/src/routes/channel-meta.ts
+  s_0eded1e9d0cab6::t_70a4167ab5bba9 100-112,118
+  s_0eded1e9d0cab6::t_0ade32c5507aa1 81
+  s_0eded1e9d0cab6::t_0374b67e3f3ed8 1-5,7-31,33-58,60-80,82-99,113-117,119-127
+  s_0eded1e9d0cab6::t_5df70dc3f6f840 6
+  s_0eded1e9d0cab6::t_377798fa74ed17 32
+  s_0eded1e9d0cab6::t_b0c92b26d98c53 59
+web/lib/__tests__/aux-remediation.test.ts
+  s_0eded1e9d0cab6::t_e6aa6b892dda11 1-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "958b9d9c90290b9409fa56d89bfd21a9aefc089d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
