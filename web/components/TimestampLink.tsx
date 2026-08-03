@@ -1,5 +1,6 @@
 'use client';
 
+import { Link } from '@astryxdesign/core';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useCallback } from 'react';
 
@@ -56,7 +57,7 @@ export function TimestampLink({ timestamp, children, className = '' }: Timestamp
     }
   }, [seconds, setSeekTo]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLAnchorElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLAnchorElement | HTMLButtonElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       e.stopPropagation();
@@ -67,15 +68,15 @@ export function TimestampLink({ timestamp, children, className = '' }: Timestamp
   }, [seconds, setSeekTo]);
 
   return (
-    <a
+    <Link
       href={`#${timestamp}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm font-mono transition-colors hover:bg-accent/20 active:bg-accent/30 cursor-pointer text-accent hover:text-accent-ink focus:outline-none focus:ring-1 focus:ring-accent ${className}`}
-      title={`Seek to ${timestamp}`}
-      role="button"
-      tabIndex={0}
-      aria-label={`Seek to ${timestamp}`}
+      type="inherit"
+      color="accent"
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm font-mono transition-colors hover:bg-accent/20 active:bg-accent/30 cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent ${className}`}
+      tooltip={`Seek to ${timestamp}`}
+      label={`Seek to ${timestamp}`}
     >
       {children || (
         <>
@@ -83,6 +84,6 @@ export function TimestampLink({ timestamp, children, className = '' }: Timestamp
           <span>{timestamp}</span>
         </>
       )}
-    </a>
+    </Link>
   );
 }
