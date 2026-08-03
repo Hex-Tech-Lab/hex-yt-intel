@@ -14,6 +14,17 @@ export function fmtUsd(usd: number): string {
 }
 
 /**
+ * Format a USD-denominated value with 4 decimal places always.
+ * Used where the previous inline implementation used toFixed(4)
+ * and the caller expects sub-cent precision (e.g. UsageTab).
+ */
+export function fmtUsdPrecise(usd: number): string {
+  if (usd === 0) return '$0.0000';
+  if (usd < 0.0001) return '<$0.0001';
+  return `$${usd.toFixed(4)}`;
+}
+
+/**
  * Format a cents-denominated value (e.g. from Stripe) as USD string.
  * Divides by 100 first, then formats with fmtUsd semantics.
  */

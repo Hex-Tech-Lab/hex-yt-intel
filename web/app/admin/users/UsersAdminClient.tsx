@@ -1,3 +1,5 @@
+'use client';
+
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Banner, Spinner, Badge } from '@astryxdesign/core';
 import { fmtUsd } from '@/lib/utils/format';

@@ -301,33 +301,50 @@ export async function fetchSupabaseLogs(searchParams: URLSearchParams): Promise<
   const clampedStart = Math.max(startTimeMs, endTimeMs - 86400000);
   const isoStart = new Date(clampedStart).toISOString();
   const isoEnd = new Date(endTimeMs).toISOString();
+
+  // Try the new ClickHouse /logs endpoint first. If it throws (HTTP error, JSON
+  // error, or empty result), fall back to the deprecated logs.all endpoint.
+  // Both endpoints failing → controlled 500 with primary error preserved.
+  let primaryError: Error | null = null;
+  let resultList: unknown[] = [];
+  let endpointUsed = 'logs';
+
   try {
-    // Try the new ClickHouse `/logs` endpoint first
     const clickhouseSql = `select timestamp, event_message from logs where source = 'postgres_logs' order by timestamp desc limit 100`;
-    let { result: resultList, endpointUsed } = await fetchSupabaseLogsFromEndpoint(
+    const primary = await fetchSupabaseLogsFromEndpoint(
       'logs', clickhouseSql, token, projectRef, isoStart, isoEnd,
     );
-    // If the new endpoint returned empty but the old one might have data, try fallback
-    if (resultList.length === 0) {
+    resultList = primary.result;
+    endpointUsed = primary.endpointUsed;
+  } catch (logsError) {
+    primaryError = logsError instanceof Error ? logsError : new Error(String(logsError));
+    console.warn('[admin-logs] /logs endpoint failed, falling back to logs.all', { projectRef, error: primaryError.message });
+    Sentry.captureMessage('Supabase logs: /logs endpoint failed, fell back to logs.all', {
+      level: 'warning',
+      extra: { projectRef, error: primaryError.message },
+    });
+  }
+
+  // If primary returned empty or threw, try the legacy fallback
+  if (resultList.length === 0 || primaryError) {
+    try {
       const legacySql = `select timestamp, event_message from postgres_logs order by timestamp desc limit 100`;
       const fallback = await fetchSupabaseLogsFromEndpoint(
         'logs.all', legacySql, token, projectRef, isoStart, isoEnd,
       );
       resultList = fallback.result;
       endpointUsed = fallback.endpointUsed;
-      console.warn('[admin-logs] Supabase /logs endpoint returned empty, fell back to logs.all', { projectRef });
-      Sentry.captureMessage('Supabase logs: /logs returned empty, fell back to logs.all', {
-        level: 'warning',
-        extra: { projectRef, endpoint: 'logs.all' },
-      });
+    } catch (fallbackError) {
+      // Both endpoints failed — preserve the primary error for diagnosis
+      const fallbackMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      Sentry.captureException(fallbackError, { tags: { operation: 'admin_supabase_logs_fallback' } });
+      const primaryMsg = primaryError?.message || 'empty result';
+      throw new Error(`Supabase logs: primary (/logs) failed (${primaryMsg}), fallback (logs.all) failed (${fallbackMsg})`);
     }
-    if (endpointUsed === 'logs.all') {
-      console.warn('[admin-logs] Using deprecated logs.all endpoint — migrate to /logs when it stabilizes', { projectRef });
-      Sentry.captureMessage('Supabase logs: using deprecated logs.all endpoint', {
-        level: 'info',
-        extra: { projectRef, endpoint: 'logs.all' },
-      });
-    }
+  }
+
+  // Format and return results (shared between primary and fallback paths)
+  try {
     const filteredList = resultList.filter((e: any) => {
       const ts = e.timestamp ? (typeof e.timestamp === 'number' ? e.timestamp / 1000 : new Date(e.timestamp).getTime()) : Date.now();
       return ts >= startTimeMs && ts <= endTimeMs;
