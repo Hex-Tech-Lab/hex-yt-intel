@@ -239,10 +239,10 @@ export function UsersAdminClient() {
       </div>
 
       <div className="rounded-xl border border-[var(--border-muted)] overflow-x-auto">
-        <table className="w-full text-left">
+        <table className="w-full text-left min-w-max">
           <thead>
             <tr className="bg-[var(--surface)] text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">
-              <th scope="col" className="px-3 py-2">#</th>
+              <th scope="col" className="px-3 py-2 text-center">#</th>
               <th scope="col" className="px-3 py-2">User</th>
               <th scope="col" className="px-3 py-2">Tier</th>
               <th scope="col" className="px-3 py-2">Signed up</th>
@@ -260,7 +260,7 @@ export function UsersAdminClient() {
               <Fragment key={u.id}>
                 <tr
                   onClick={() => toggleExpand(u.id)}
-                  className="border-t border-[var(--border-muted)] hover:bg-[rgb(26_31_43_/_0.4)] cursor-pointer transition-colors odd:bg-[var(--surface-muted)]"
+                  className={`border-t border-[var(--border-muted)] hover:bg-[rgb(26_31_43_/_0.4)] cursor-pointer transition-colors${idx % 2 === 0 ? ' bg-[var(--surface-muted)]' : ''}`}
                 >
                   <td className="px-3 py-2 text-center font-medium text-[var(--ink-muted)]">{idx + 1}</td>
                   <td className="px-3 py-2">
