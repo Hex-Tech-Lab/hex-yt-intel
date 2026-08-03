@@ -23,6 +23,7 @@ import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
 import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
+import { useIsStackedLayout } from '@/hooks/useIsStackedLayout';
 import { parseTimestamp } from '@/components/TimestampLink';
 import { findEntityTimestamp } from '@/lib/utils/entity-time-seek';
 
@@ -91,15 +92,18 @@ function cleanDimensionContent(raw: string): string {
 
 export function DashboardContainer({ profile }: DashboardContainerProps) {
   const { pendingNav, clearPendingNav } = useVideoStore();
+  const isStacked = useIsStackedLayout();
 
   useEffect(() => {
     if (pendingNav) {
-      startTransition(() => {
-        setActiveNav(pendingNav);
-        clearPendingNav();
-      });
+      if (isStacked) {
+        startTransition(() => {
+          setActiveNav(pendingNav);
+        });
+      }
+      clearPendingNav();
     }
-  }, [pendingNav, clearPendingNav]);
+  }, [pendingNav, clearPendingNav, isStacked]);
   const setUserRole = useAnalysisStore((s) => s.setUserRole);
   const status = useAnalysisStore((s) => s.status);
   const analysisHistory = useAnalysisStore((s) => s.analysisHistory);
