@@ -84,14 +84,59 @@ import**, including:
 `app/settings/logs/LogsViewerClient.tsx`, `app/share/[token]/MarkdownRenderer.tsx`,
 `app/analyses/saved/page.tsx`.
 
-### What's NOT yet known
-This list is a raw "imports Astryx: yes/no" grep — it has NOT been
-per-file audited the way Part 1 was. Some of these 30 files may be pure
-Next.js routing/layout shells with no real chrome (same as several Part-1
-"no change needed" verdicts) — that determination hasn't been made yet.
-Given the volume (30 files, several of them full pages — admin dashboards,
-auth forms, billing/pricing — not small components), this needs the same
-per-file, catalog-verified, full-skill-gated treatment as Part 1, not a
-blanket conversion pass.
+### Per-file verdicts (2026-08-03, second pass)
 
-**Status: audited (this doc), not yet assigned or started.**
+All 30 files opened and judged individually against Part 1's precedent
+(real hand-rolled interactive chrome → convert; pure layout/shell/static
+content → no change needed). 10 of 30 have real chrome; 20 are legitimate
+no-action, same class as Part 1's "no change needed" verdicts.
+
+**P0 — user-facing, high-traffic, brand-consistency risk (4 files)**
+
+| File | Chrome found |
+|---|---|
+| `app/auth/signin/form.tsx` | hand-rolled logo card, error banner, OAuth CTA `<button>` w/ loading state — first-touch signup screen |
+| `app/auth/error/form.tsx` | hand-rolled error card + "Try again" link styled as button |
+| `app/billing/page.tsx` | hand-rolled header/nav (`btn-primary`/`btn-secondary` Link chrome), breadcrumb, error-state card |
+| `app/pricing/page.tsx` | hand-rolled header/nav, same `btn-primary`/`btn-secondary` pattern as billing — pre-signup marketing page |
+
+**P1 — real chrome, internal or lower-traffic (6 files)**
+
+| File | Chrome found |
+|---|---|
+| `app/admin/dashboards/AdminDashboardsClient.tsx` | hand-rolled StatusBadge, MetricCard, loading state, collapsible `<details>` FAQ blocks |
+| `app/admin/settings/AdminSettingsClient.tsx` | hand-rolled sidebar nav buttons, textarea editors, Save buttons, saved/error states |
+| `app/admin/users/UsersAdminClient.tsx` | hand-rolled search input, sort `<select>`, expandable table rows, loading/empty states |
+| `app/atlas/AtlasClient.tsx` | hand-rolled loading skeleton, URL input + Analyze button w/ loading label |
+| `app/status/status-dashboard-client.tsx` | hand-rolled status pill/badge, hover tooltip, 90-day uptime bar grid (public but pure display, not conversion funnel) |
+| `app/search/page.tsx` | hand-rolled back button, search input w/ clear, loading spinner, empty/no-results states, skeleton loaders |
+
+**P2 / no action — pure shells, static content, error boundaries, test pages (20 files)**
+
+`app/page.tsx` (5-line pass-through to already-Astryx `landing-page.tsx`),
+`app/auth/signin/page.tsx` + `app/auth/error/page.tsx` (server guard/Suspense
+shells, real chrome is in the sibling `form.tsx`), `app/admin/dashboards/page.tsx`
++ `app/admin/settings/page.tsx` (server-only role gates, no UI),
+`app/admin/logs/page.tsx` (1-line re-export of `settings/logs/page`),
+`app/settings/page.tsx` + `app/settings/logs/page.tsx` (server guards
+rendering Part-1-converted `SettingsPanel`), `app/atlas/page.tsx` +
+`app/status/page.tsx` (server guard/fetch shells), `app/dashboard/page.tsx`
+(server guard aliasing Part-1-converted `DashboardContainer`),
+`app/privacy-policy/page.tsx`, `app/refund-policy/page.tsx`,
+`app/terms-and-conditions/page.tsx`, `app/legal/sub-processors/page.tsx`
+(static markdown via `LegalPage` wrapper, no interactive chrome),
+`app/global-error.tsx` (Sentry capture + `NextError` fallback),
+`app/test-error/page.tsx` (dev-only, throws intentionally).
+
+Borderline/negligible, noted but not worth a pass: `app/not-found.tsx`
+(one hand-rolled "Back to Home" link styled as a button) and
+`app/sentry-example-page/page.tsx` (one throwaway test-error button).
+
+**Follow-up open question**: `app/settings/logs/LogsViewerClient.tsx` (561
+lines, already uses Astryx per the earlier grep) is not directly rendered
+by `app/settings/logs/page.tsx` — that page renders `SettingsPanel`
+instead. Not yet determined whether `LogsViewerClient` is wired in via
+`SettingsPanel` or is dead code.
+
+**Status: 10 files (4 P0 + 6 P1) identified as real conversion work,
+not yet assigned or started. 20 files confirmed no-action.**
