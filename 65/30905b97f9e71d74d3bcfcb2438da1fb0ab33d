@@ -1,0 +1,27 @@
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_cecfc30369a691 1074-1076
+web/app/api/analyses/persist/route.ts
+  s_0eded1e9d0cab6::t_b618d8ef7ffde6 21,604,623-629,843-844
+web/components/templates/console/UsageTab.tsx
+  s_0eded1e9d0cab6::t_60965da785e97f 3,8,18-24
+web/lib/__tests__/billing-status-dimension-completeness.test.ts
+  s_0eded1e9d0cab6::t_9d6c5c6720f4be 1-236
+web/lib/services/stitch-analysis-chunks.ts
+  s_0eded1e9d0cab6::t_974b5c1eb6652a 82-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6530905b97f9e71d74d3bcfcb2438da1fb0ab33d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": null
+    }
+  }
+}
