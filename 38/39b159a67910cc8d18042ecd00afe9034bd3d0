@@ -1,0 +1,106 @@
+docs/REPORT_SPRINT1_P0_HMACSecret.md
+  s_0ad60efcede198::t_2b6fff6dbdd5d8 1-37
+scripts/quality-engine/rules/ui.ts
+  s_0ad60efcede198::t_c3413558ae92a0 220-221
+web/app/admin/users/UsersAdminClient.tsx
+  s_0ad60efcede198::t_cb864eb4d181d5 263-265,267,372-375
+  s_0ad60efcede198::t_55ef8a6e111826 3
+web/lib/prompts/ucis-v5.3.ts
+  s_0ad60efcede198::t_05f9cde9e7c89d 1
+  s_0ad60efcede198::t_e239ef946244cc 596
+  s_0ad60efcede198::t_8dec12f47db54d 2-595,597-601
+web/lib/services/settings.ts
+  s_0ad60efcede198::t_50dc12519601a4 81,105
+  s_0ad60efcede198::t_97cf564b07d7b9 7
+web/scripts/generate-prompt-migration.js
+  s_0ad60efcede198::t_db85b933b8c684 4,12
+web/lib/__tests__/token-bucket.test.ts
+  s_0ad60efcede198::t_3a0245246add06 3,8,10
+  s_0ad60efcede198::t_9a2a774353f3cc 4-7,9,11-15,17,26-33,36-37,42-43,46-51,54-57,60-61,66-70,77-82
+  s_0ad60efcede198::t_46fcafbdcb6f6a 1
+  s_0ad60efcede198::t_082001e9f72973 2,16,18-25,34-35,38-41,44-45,52-53,58-59,62-65,71-76,83-84
+docs/REPORT_ITEM2_D_qaIntel.md
+  s_0ad60efcede198::t_98b43b84e2162b 1-43
+web/lib/admin-logs/fetchers.ts
+  s_0ad60efcede198::t_9798e31643b71c 254-293,305-322,324-329,343
+scripts/quality-engine/rules/data-integrity.ts
+  s_0ad60efcede198::t_35e39729f917f7 70
+web/lib/prompts/factory.ts
+  s_0ad60efcede198::t_7abd8036947c27 4
+  s_0ad60efcede198::t_7099765dd5990d 77
+worker/src/services/PromptBuilder.ts
+  s_0ad60efcede198::t_325fe304219221 32
+  s_0ad60efcede198::t_3dc02ce0b85350 2
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_0ad60efcede198::t_a2b7132bfeb05f 729
+docs/REPORT_ITEM3_E_TokenBucket.md
+  s_0ad60efcede198::t_80da6db20ae9f8 1-38
+web/app/api/analyses/[id]/export/route.ts
+  s_0ad60efcede198::t_6910f38a2795de 100,103-107
+  s_0ad60efcede198::t_efb73c04463977 3
+  s_0ad60efcede198::t_33484c58031002 80-88
+web/lib/utils/format.tsx
+  s_0ad60efcede198::t_6a71de70bb1d13 5-7,11-12
+  s_0ad60efcede198::t_a32805fdabf7f4 3-4,8-10,13-23
+docs/REPORT_ITEM1_B9_AdminExport.md
+  s_0ad60efcede198::t_ce150ee12ec16f 1-31
+docs/TECH_DEBT_LEDGER.md
+  s_0ad60efcede198::t_3a3dff523cef33 38
+web/lib/adapters/SupabaseChatAdapter.ts
+  s_0ad60efcede198::t_978f249a8f1156 401
+web/lib/validators/synthesis.ts
+  s_0ad60efcede198::t_80c3dcd684846c 97
+  s_0ad60efcede198::t_041b2dbe6f38d9 77
+scripts/quality-engine/rules/security.ts
+  s_0ad60efcede198::t_6b3dbd7ee38a47 448
+  s_0ad60efcede198::t_48ddae9dc52ddb 205-224
+docs/REPORT_SPRINT1_P0_verifyResourceOwnership.md
+  s_0ad60efcede198::t_556ffe5d3d065d 1-44
+web/components/billing/billing-dashboard-client.tsx
+  s_0ad60efcede198::t_37d92650ed35e7 266
+  s_0ad60efcede198::t_b5323915f84fb1 10
+  s_0ad60efcede198::t_b345b95cf07e5e 102
+web/components/templates/console/UsageTab.tsx
+  s_0ad60efcede198::t_213514f59090e9 5
+  s_0ad60efcede198::t_f73f53b4261572 60
+docs/REPORT_ITEM17_SupabaseLogs.md
+  s_0ad60efcede198::t_0ea9c0dda7861c 1-50
+web/lib/services/ownership.ts
+  s_0ad60efcede198::t_02ad150e019638 18
+docs/REPORT_ITEM4_F_CostFormatter.md
+  s_0ad60efcede198::t_d54ffc5c9837b3 1-42
+scripts/deploy-hmac-secret.sh
+  s_0ad60efcede198::t_50f4c41cde647e 4-6,10-19
+scripts/verify-quality-engine.ts
+  s_0ad60efcede198::t_a9d27aa0498a65 288-289,291-294,300,312,324
+.memory/lessons.md
+  s_0ad60efcede198::t_ac35334fe61ae8 75-80
+docs/REPORT_UCIS_Rename.md
+  s_0ad60efcede198::t_111fe98ee7b37a 1-42
+scripts/check-row-detail.cjs
+  s_0eded1e9d0cab6::t_c46b21d9a55e0d 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "3839b159a67910cc8d18042ecd00afe9034bd3d0",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
