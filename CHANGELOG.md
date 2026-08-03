@@ -4,6 +4,11 @@ All notable changes to hex-yt-intel are tracked here going forward. Entries belo
 
 Classification: **MAJOR** = breaking change to existing behavior, data, or operational safety. **MINOR** = new backward-compatible capability. **PATCH** = fixes only.
 
+## [2.6.1] — 2026-08-04 (PATCH)
+
+### Security
+- Rotated `STREAM_HMAC_SECRET` (Vercel production + preview, Cloudflare Worker) after discovering the previous value had been committed in plaintext to `scripts/deploy-hmac-secret.sh`'s git history — this repo is public, so the old value must be treated as permanently compromised regardless of removal from the current file. New value marked Sensitive in Vercel (write-only after creation). Git-history scrub (`git filter-repo`) tracked as a separate follow-up, lower urgency now that the live secret itself is rotated and dead.
+
 ## [2.6.0] — 2026-07-29 (MINOR)
 
 ### Added
