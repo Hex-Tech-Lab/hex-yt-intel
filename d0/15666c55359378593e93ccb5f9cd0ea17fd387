@@ -1,0 +1,23 @@
+opencode.json
+  s_0ad60efcede198::t_16201112ff8344 1-6
+.memory/lessons.md
+  s_0ad60efcede198::t_fc470422cdd14c 63-68
+.opencode/SKILLS_CLASSIFICATION.md
+  s_0ad60efcede198::t_8f3510e66431de 1-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d015666c55359378593e93ccb5f9cd0ea17fd387",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
