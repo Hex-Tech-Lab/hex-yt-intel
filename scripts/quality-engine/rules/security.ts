@@ -239,7 +239,6 @@ export const AuthSecurityRule: IRule = {
           });
         }
       }
-    }
 
     // Check for localhost fallbacks in production routes
     if (text.includes('localhost') && (text.includes('NEXT_PUBLIC_APP_URL') || text.includes('APP_URL'))) {
