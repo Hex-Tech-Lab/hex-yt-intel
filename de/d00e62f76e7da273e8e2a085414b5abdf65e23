@@ -1,0 +1,16 @@
+supabase/migrations/20260803133500_admin_list_users_activity_per_category_costs.sql
+  h_60000122af7b55 1-90
+web/app/admin/users/UsersAdminClient.tsx
+  h_60000122af7b55 22-28,110-115,163-189,214,234-235,248-251,270-273,276,285,372-387
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "ded00e62f76e7da273e8e2a085414b5abdf65e23",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
