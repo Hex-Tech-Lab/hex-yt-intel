@@ -24,6 +24,7 @@ import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
 import { parseTimestamp } from '@/components/TimestampLink';
+import { findEntityTimestamp } from '@/lib/utils/entity-time-seek';
 
 // Lazy load visualization components to reduce initial bundle size
 const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
@@ -193,10 +194,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     if (entityTimeSeekEnabled && graph.nodes) {
       const node = graph.nodes.find((n) => n.id === id);
       if (node) {
-        const textToSearch = `${node.content || ''} ${node.label || ''} ${(node.keyTerms || []).join(' ')}`;
-        const match = textToSearch.match(/\b(?:\d{1,2}:)?\d{1,2}:\d{2}\b/);
-        if (match) {
-          const secs = parseTimestamp(match[0]);
+        const timestamp = findEntityTimestamp(node);
+        if (timestamp) {
+          const secs = parseTimestamp(timestamp);
           if (secs >= 0) setSeekTo(secs);
         }
       }
