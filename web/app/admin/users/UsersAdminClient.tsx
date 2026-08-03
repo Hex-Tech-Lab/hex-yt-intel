@@ -19,6 +19,13 @@ interface UserActivityRow {
   // (admin_list_users_activity RPC) from usage_logs.action='analysis_completed'.
   total_cost_usd: number;
   total_tokens_used: number;
+  // Per-category breakdown (Analysis, Chat, Remediation)
+  analysis_turns?: number;
+  analysis_cost_usd?: number;
+  chat_turns?: number;
+  chat_cost_usd?: number;
+  remediation_turns?: number;
+  remediation_cost_usd?: number;
 }
 
 type SortKey = 'cost_desc' | 'cost_asc' | 'signup_desc' | 'name_asc';
@@ -100,6 +107,12 @@ export function UsersAdminClient() {
           ...u,
           total_cost_usd: Number(u.total_cost_usd) || 0,
           total_tokens_used: Number(u.total_tokens_used) || 0,
+          analysis_turns: Number(u.analysis_turns) || 0,
+          analysis_cost_usd: Number(u.analysis_cost_usd) || 0,
+          chat_turns: Number(u.chat_turns) || 0,
+          chat_cost_usd: Number(u.chat_cost_usd) || 0,
+          remediation_turns: Number(u.remediation_turns) || 0,
+          remediation_cost_usd: Number(u.remediation_cost_usd) || 0,
         }));
         setUsers(normalized);
       })
@@ -147,6 +160,33 @@ export function UsersAdminClient() {
     return sorted;
   }, [users, search, sortKey]);
 
+  // Derived totals across all visible users
+  const totals = useMemo(() => {
+    if (!visibleUsers) return null;
+    return visibleUsers.reduce(
+      (acc, u) => ({
+        analysis_turns: acc.analysis_turns + (u.analysis_turns || 0),
+        analysis_cost_usd: acc.analysis_cost_usd + (u.analysis_cost_usd || 0),
+        chat_turns: acc.chat_turns + (u.chat_turns || 0),
+        chat_cost_usd: acc.chat_cost_usd + (u.chat_cost_usd || 0),
+        remediation_turns: acc.remediation_turns + (u.remediation_turns || 0),
+        remediation_cost_usd: acc.remediation_cost_usd + (u.remediation_cost_usd || 0),
+        total_cost_usd: acc.total_cost_usd + (u.total_cost_usd || 0),
+        total_tokens_used: acc.total_tokens_used + (u.total_tokens_used || 0),
+      }),
+      {
+        analysis_turns: 0,
+        analysis_cost_usd: 0,
+        chat_turns: 0,
+        chat_cost_usd: 0,
+        remediation_turns: 0,
+        remediation_cost_usd: 0,
+        total_cost_usd: 0,
+        total_tokens_used: 0,
+      }
+    );
+  }, [visibleUsers]);
+
   if (error) {
     return (
       <div className="p-4">
@@ -171,7 +211,7 @@ export function UsersAdminClient() {
     <div className="flex flex-col gap-3 font-mono text-xs">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-[var(--ink-main)]">User Activity ({visibleUsers.length}{visibleUsers.length !== users.length ? ` of ${users.length}` : ''})</h2>
-        <p className="text-[10px] text-[var(--ink-muted)]">Signup, sessions (IP/UA), videos analyzed, reports downloaded, OpenRouter cost</p>
+        <p className="text-[10px] text-[var(--ink-muted)]">Signup, sessions (IP/UA), per-category LLM turns/cost (Analysis, Chat, Remediation), OpenRouter totals</p>
       </div>
 
       <div className="flex items-center gap-2">
@@ -191,8 +231,8 @@ export function UsersAdminClient() {
           onChange={(e) => setSortKey(e.target.value as SortKey)}
           className="rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] outline-none focus:border-[var(--accent)]"
         >
-          <option value="cost_desc">Sort: cost (high → low)</option>
-          <option value="cost_asc">Sort: cost (low → high)</option>
+          <option value="cost_desc">Sort: total cost (high → low)</option>
+          <option value="cost_asc">Sort: total cost (low → high)</option>
           <option value="signup_desc">Sort: newest signup</option>
           <option value="name_asc">Sort: name (A → Z)</option>
         </select>
@@ -205,8 +245,10 @@ export function UsersAdminClient() {
               <th className="px-3 py-2">User</th>
               <th className="px-3 py-2">Tier</th>
               <th className="px-3 py-2">Signed up</th>
-              <th className="px-3 py-2">Analyses</th>
-              <th className="px-3 py-2" title="usage_logs rows purge after 30 days -- this is a rolling window, not a lifetime total">Cost (30d)</th>
+              <th className="px-3 py-2">Analysis (Turns / Cost)</th>
+              <th className="px-3 py-2">Chat (Turns / Cost)</th>
+              <th className="px-3 py-2">Remediation (Turns / Cost)</th>
+              <th className="px-3 py-2" title="usage_logs rows purge after 30 days -- this is a rolling window, not a lifetime total">Total Cost (30d)</th>
               <th className="px-3 py-2">Last session</th>
               <th className="px-3 py-2">Last IP</th>
               <th className="px-3 py-2" />
@@ -225,11 +267,13 @@ export function UsersAdminClient() {
                   </td>
                   <td className="px-3 py-2 capitalize"><Badge variant="neutral" label={u.tier || 'free'} /></td>
                   <td className="px-3 py-2">{fmt(u.created_at)}</td>
-                  <td className="px-3 py-2">{u.analyses_count}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2">{u.analysis_turns || u.analyses_count || 0} · <span className="text-[var(--ink-main)]">{fmtCost(u.analysis_cost_usd || 0)}</span></td>
+                  <td className="px-3 py-2">{u.chat_turns || 0} · <span className="text-[var(--ink-main)]">{fmtCost(u.chat_cost_usd || 0)}</span></td>
+                  <td className="px-3 py-2">{u.remediation_turns || 0} · <span className="text-[var(--ink-main)]">{fmtCost(u.remediation_cost_usd || 0)}</span></td>
+                  <td className="px-3 py-2 font-semibold">
                     <span className="text-[var(--ink-main)]">{fmtCost(u.total_cost_usd)}</span>
                     {u.total_tokens_used > 0 && (
-                      <span className="text-[var(--ink-muted)]"> · {u.total_tokens_used.toLocaleString()} tok</span>
+                      <span className="text-[var(--ink-muted)] font-normal"> · {u.total_tokens_used.toLocaleString()} tok</span>
                     )}
                   </td>
                   <td className="px-3 py-2">{fmt(u.last_session_at)}</td>
@@ -238,7 +282,7 @@ export function UsersAdminClient() {
                 </tr>
                 {expandedId === u.id && (
                   <tr className="border-t border-[var(--border-muted)] bg-[rgb(11_14_20_/_0.5)]">
-                    <td colSpan={8} className="px-3 py-3">
+                    <td colSpan={10} className="px-3 py-3">
                       {detailLoading === u.id && <div className="text-[var(--ink-muted)]">Loading…</div>}
                       {detailError[u.id] && <div className="text-[var(--warn)]">{detailError[u.id]}</div>}
                       {detail[u.id] && (() => {
@@ -325,6 +369,22 @@ export function UsersAdminClient() {
               </Fragment>
             ))}
           </tbody>
+          {totals && (
+            <tfoot>
+              <tr className="border-t-2 border-[var(--border-muted)] bg-[var(--surface)] font-bold text-[11px] text-[var(--ink-main)]">
+                <td className="px-3 py-2">Total ({visibleUsers.length} users)</td>
+                <td className="px-3 py-2">—</td>
+                <td className="px-3 py-2">—</td>
+                <td className="px-3 py-2">{totals.analysis_turns} · {fmtCost(totals.analysis_cost_usd)}</td>
+                <td className="px-3 py-2">{totals.chat_turns} · {fmtCost(totals.chat_cost_usd)}</td>
+                <td className="px-3 py-2">{totals.remediation_turns} · {fmtCost(totals.remediation_cost_usd)}</td>
+                <td className="px-3 py-2 text-[var(--accent)]">{fmtCost(totals.total_cost_usd)} · {totals.total_tokens_used.toLocaleString()} tok</td>
+                <td className="px-3 py-2">—</td>
+                <td className="px-3 py-2">—</td>
+                <td className="px-3 py-2" />
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>
