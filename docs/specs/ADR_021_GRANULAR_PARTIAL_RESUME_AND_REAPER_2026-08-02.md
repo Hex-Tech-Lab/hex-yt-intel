@@ -90,11 +90,7 @@ per-dimension.
 
 ## Open questions (need answers before implementation starts)
 
-1. **Bundle-level or dimension-level for v1?** Dimension-level is the "real"
-   fix per the user's own framing, but bundle-level is a smaller, faster-to-ship
-   first step that still eliminates most of the waste (5 units instead of
-   16). Recommend: ship bundle-level first as a checkpoint, dimension-level
-   as the follow-up, rather than blocking the whole win on the harder version.
+1. **Bundle-level or dimension-level for v1?** — **RESOLVED (Product Owner Decision, 2026-08-03)**: **DIMENSION-LEVEL**. We go directly to per-dimension granular tracking and persistence for v1 rather than bundle-level batching.
 2. **Does the client or the reaper own resume?** The client already retries
    on user action; the reaper resumes on a timer. Both paths need to agree
    on the same "what's missing" query, ideally one shared function, not two
@@ -117,6 +113,5 @@ per-dimension.
 
 ## Next step
 
-Pending sign-off on the open questions above (particularly #1: bundle-level
-v1 vs. dimension-level v1), then break into phases matching the 4 change
-areas above, each independently shippable and testable.
+- **Phase 1 (Planned, not started)**: Implement **dimension-level** per-piece persistence. Each dimension result returned by the LLM cascade is written immediately to Supabase `analyses` (not held until all bundles finish).
+- **Phases 2-4**: Presence check on resume, Reaper extension, and selective client bundle dispatch (will follow after Phase 1 lands).
