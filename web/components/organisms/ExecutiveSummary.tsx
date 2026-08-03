@@ -201,10 +201,10 @@ function AccordionItem({
             e.stopPropagation();
             void handleCopy();
           }}
-          className={`mr-2 ${isConfirmed ? '!text-[var(--ok)]' : ''}`}
+          className={`mr-2 ${isConfirmed ? '!border-[var(--accent)] !text-[var(--accent)] !bg-[var(--accent-a10)]' : ''}`}
           icon={
             <Icon
-              icon={isConfirmed ? 'solar:check-circle-linear' : 'solar:copy-linear'}
+              icon={isConfirmed ? 'solar:check-read-linear' : 'solar:copy-linear'}
               size={14}
             />
           }

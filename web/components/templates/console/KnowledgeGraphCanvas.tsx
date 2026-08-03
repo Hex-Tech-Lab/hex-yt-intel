@@ -229,15 +229,24 @@ export function KnowledgeGraphCanvas({
         onNodeHover={handleHover as any}
         onBackgroundClick={() => startTransition(() => onSelect(null))}
         linkColor={(l: any) => {
-          const idx = data.links.indexOf(l);
-          const dim = neighborhood ? !neighborhood.links.has(`${idx}`) : false;
+          const srcId = String(typeof l.source === 'object' ? l.source?.id : l.source);
+          const tgtId = String(typeof l.target === 'object' ? l.target?.id : l.target);
+          const isEdgeActive = neighborhood
+            ? neighborhood.nodes.has(srcId) && neighborhood.nodes.has(tgtId)
+            : true;
+          const dim = neighborhood ? !isEdgeActive : false;
           const base = KIND_COLOR[l.kind as RelationKind] || COL.slate;
-          return `rgb(${base} / ${dim ? 0.03 : 0.12 + l.strength * 0.18})`;
+          const strength = typeof l.strength === 'number' && Number.isFinite(l.strength) ? l.strength : 0.5;
+          return `rgb(${base} / ${dim ? 0.03 : 0.12 + strength * 0.18})`;
         }}
         linkWidth={(l: any) => {
-          const idx = data.links.indexOf(l);
-          const active = neighborhood ? neighborhood.links.has(`${idx}`) : false;
-          return active ? 1.5 : 0.4 + l.strength * 0.4;
+          const srcId = String(typeof l.source === 'object' ? l.source?.id : l.source);
+          const tgtId = String(typeof l.target === 'object' ? l.target?.id : l.target);
+          const isEdgeActive = neighborhood
+            ? neighborhood.nodes.has(srcId) && neighborhood.nodes.has(tgtId)
+            : false;
+          const strength = typeof l.strength === 'number' && Number.isFinite(l.strength) ? l.strength : 0.5;
+          return isEdgeActive ? 1.5 : 0.4 + strength * 0.4;
         }}
         linkLineDash={(l: any) => (l.kind === 'contrarian' ? [4, 3] : null)}
         nodeCanvasObject={(n: any, ctx: CanvasRenderingContext2D, scale: number) => {

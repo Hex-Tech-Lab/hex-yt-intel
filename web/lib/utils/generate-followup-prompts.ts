@@ -22,15 +22,30 @@ export interface FollowupContext {
  * Extract key entities/topics from text using simple heuristics.
  * Looks for capitalized phrases, quoted strings, and numbered items.
  */
+const STOP_WORDS = new Set([
+  'timestamp', 'timestamps', 'video', 'minute', 'section', 'dimension', 
+  'chapter', 'option', 'header', 'table', 'point', 'part', 'analysis',
+  'digest', 'summary', 'overview', 'details', 'executive', 'content'
+]);
+
 function extractKeyTopics(text: string): string[] {
   const topics: Set<string> = new Set();
+
+  const isStopTopic = (t: string) => {
+    const lower = t.toLowerCase().trim();
+    if (STOP_WORDS.has(lower)) return true;
+    const firstWord = lower.split(/\s+/)[0] || '';
+    if (STOP_WORDS.has(firstWord) && !/\s/.test(t.slice(firstWord.length).trim())) return true;
+    if (/^\d+:\d+/.test(t) || /^timestamp\b/i.test(t)) return true;
+    return false;
+  };
 
   // Extract quoted phrases
   const quoted = text.match(/"([^"]+)"/g);
   if (quoted) {
     quoted.forEach((q) => {
       const clean = q.slice(1, -1).trim();
-      if (clean.length > 3 && clean.length < 100) topics.add(clean);
+      if (clean.length > 3 && clean.length < 100 && !isStopTopic(clean)) topics.add(clean);
     });
   }
 
@@ -38,7 +53,7 @@ function extractKeyTopics(text: string): string[] {
   const capitalized = text.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/g);
   if (capitalized) {
     capitalized
-      .filter((phrase) => phrase.length > 3 && phrase.length < 80)
+      .filter((phrase) => phrase.length > 3 && phrase.length < 80 && !isStopTopic(phrase))
       .slice(0, 5)
       .forEach((phrase) => topics.add(phrase));
   }
@@ -52,7 +67,7 @@ function extractKeyTopics(text: string): string[] {
         const match = item.match(/:\s*(.+?)(?:\.|$)/);
         if (match && match[1]) {
           const extracted = match[1].trim().slice(0, 60);
-          if (extracted.length > 3) topics.add(extracted);
+          if (extracted.length > 3 && !isStopTopic(extracted)) topics.add(extracted);
         }
       });
   }

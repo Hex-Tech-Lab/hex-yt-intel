@@ -374,10 +374,16 @@
   will-change: transform;
 }
 
-/* Astryx Toast dark theme override — force dark surface + crisp text
-   Target outer toast container only to eliminate double-border. */
-div[data-toast-id],
+/* Astryx Toast dark theme override — force dark surface + crisp text */
 div[data-astryx-toast-fallback] {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+div[data-toast-id],
+div[data-astryx-toast-fallback] div,
+div[data-astryx-toast-fallback] [role="status"],
+div[data-astryx-toast-fallback] [role="alert"] {
   background-color: #161b26 !important;
   color: #f1f5f9 !important;
   border: 1px solid var(--line) !important;
@@ -693,10 +699,10 @@ button:focus-visible,
 .chat-answer-table td:first-child {
   width: 1%;
 }
-.chat-answer-table th:nth-child(2),
-.chat-answer-table td:nth-child(2) {
-  width: 99%;
-  min-width: 220px;
+.chat-answer-table th:not(:first-child),
+.chat-answer-table td:not(:first-child) {
+  width: auto;
+  word-break: break-word;
 }
 /* REPLACED 2026-08-01 (cubic review, PR #177): a 2-line visual clamp was
    attempted here via `-webkit-line-clamp`, but it's not fixable as pure

@@ -346,11 +346,11 @@ function ChatDockImpl({ analysisId, analysisTitle }: ChatDockProps) {
         conversationHistory,
       });
 
-      // Data-driven, not a keyword guess: server (ProcessChatMessageUseCase,
-      // which has DB access to the real comment count) already told us
-      // whether the persisted sample is smaller than the actual total.
       const hasMoreComments = useChatStore.getState().hasMoreCommentsByConv[activeId];
-      if (hasMoreComments) {
+      const isCommentRelevant = /comment|viewer|audience|feedback|sentiment|reaction/i.test(
+        `${userMessage.content} ${latestMessage.content}`
+      );
+      if (hasMoreComments && isCommentRelevant) {
         prompts.unshift('[ACTION:expand-comments]');
       }
 

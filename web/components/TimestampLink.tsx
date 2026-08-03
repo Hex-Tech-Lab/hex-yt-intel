@@ -18,7 +18,7 @@ export interface TimestampLinkProps {
  * @example parseTimestamp("30:45") // returns 1845
  * @example parseTimestamp("45") // returns 45
  */
-const parseTimestamp = (timestamp: string): number => {
+export const parseTimestamp = (timestamp: string): number => {
   const rawParts = timestamp.split(':');
   const parts: number[] = [];
   for (const pStr of rawParts) {

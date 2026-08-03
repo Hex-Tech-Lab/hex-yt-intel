@@ -109,7 +109,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                         <button
                           type="button"
                           onClick={handleCopy}
-                          className={`bg-transparent border-none ${copied ? 'text-[var(--accent)]' : 'text-[var(--ink-muted)]'} cursor-pointer p-1.5 flex items-center justify-center rounded-md hover:bg-[var(--surface-raised)] hover:text-[var(--ink)] active:scale-95 transition-all duration-[var(--dur-fast)]`}
+                          className={`bg-transparent border-none ${copied ? '!text-[var(--accent)] !bg-[var(--accent-a10)]' : 'text-[var(--ink-muted)]'} cursor-pointer p-1.5 flex items-center justify-center rounded-md hover:bg-[var(--surface-raised)] hover:text-[var(--ink)] active:scale-95 transition-all duration-[var(--dur-fast)]`}
                         >
                           <Icon icon={copied ? "solar:check-read-linear" : "solar:copy-linear"} size={16} />
                         </button>

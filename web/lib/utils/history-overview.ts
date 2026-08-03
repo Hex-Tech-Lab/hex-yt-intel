@@ -50,10 +50,17 @@ export function computeMissingDimensions(present: readonly number[]): number[] {
  */
 export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOverviewItem {
   const presentDimensions = (row.present_dimensions ?? []).slice().sort((a, b) => a - b);
+  let cleanTitle = row.title?.trim() || '';
+  const isDateOnlyTitle = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/i.test(cleanTitle) || /^\d{4}-\d{2}-\d{2}$/.test(cleanTitle);
+
+  if (!cleanTitle || isDateOnlyTitle) {
+    cleanTitle = row.base_video_id ? `Video (${row.base_video_id})` : 'Untitled Analysis';
+  }
+
   return {
     baseVideoId: row.base_video_id,
     analysisId: row.latest_analysis_id,
-    title: row.title || 'Untitled Analysis',
+    title: cleanTitle,
     channelTitle: row.channel_title ?? null,
     firstAnalyzedAt: row.first_analyzed_at,
     lastAnalyzedAt: row.last_analyzed_at,
