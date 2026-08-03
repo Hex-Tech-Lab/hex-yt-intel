@@ -17,17 +17,17 @@ if (!v51Text) {
 }
 
 const jsonObject = {
-  "latest": "5.1",
+  "latest": "5.3",
   "history": [
     {
-      "version": "5.1",
+      "version": "5.3",
       "timestamp": "2026-06-11T14:25:00Z",
       "author": "Kelly Bakri with Antigravity",
-      "description": "Initial active UCIS v5.1 prompt configuration"
+      "description": "Initial active UCIS v5.3 prompt configuration"
     }
   ],
   "versions": {
-    "5.1": v51Text
+    "5.3": v51Text
   }
 };
 
