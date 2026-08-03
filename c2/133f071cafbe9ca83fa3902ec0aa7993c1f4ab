@@ -1,0 +1,28 @@
+web/lib/prompts/factory.ts
+  s_0ad60efcede198::t_0e91e59c347672 13
+web/lib/services/worker-llm.ts
+  s_0ad60efcede198::t_6694cff7f1d1f8 45
+  s_0ad60efcede198::t_ed6dcdbafccaca 76
+web/scripts/generate-prompt-migration.js
+  s_0ad60efcede198::t_021a20df11568a 20,23,26,30
+web/lib/adapters/SupabasePromptAdapter.ts
+  s_0ad60efcede198::t_f121f9445bc834 15
+web/lib/admin-logs/fetchers.ts
+  s_0ad60efcede198::t_7eb351797c80b2 338,342-344
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c2133f071cafbe9ca83fa3902ec0aa7993c1f4ab",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
