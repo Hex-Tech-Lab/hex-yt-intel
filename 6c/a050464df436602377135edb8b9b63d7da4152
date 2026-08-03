@@ -1,0 +1,18 @@
+web/components/containers/DashboardContainer.tsx
+  h_60000122af7b55 26,95,99-104,106
+web/hooks/useIsStackedLayout.ts
+  h_60000122af7b55 1-23
+web/lib/__tests__/is-stacked-layout.test.ts
+  h_60000122af7b55 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6ca050464df436602377135edb8b9b63d7da4152",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
