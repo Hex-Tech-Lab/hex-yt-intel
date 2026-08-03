@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Banner, Spinner, Badge } from '@astryxdesign/core';
 
 interface UserActivityRow {
   id: string;
@@ -147,14 +148,23 @@ export function UsersAdminClient() {
   }, [users, search, sortKey]);
 
   if (error) {
-    return <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--warn)] text-[var(--warn)] text-xs font-mono">Failed to load users: {error}</div>;
+    return (
+      <div className="p-4">
+        <Banner status="error" title={`Failed to load users: ${error}`} />
+      </div>
+    );
   }
 
   // Both checks needed despite visibleUsers being null exactly when users is
   // null -- TS narrows each variable independently, and both are read below
   // (users.length in the header, visibleUsers in the table).
   if (!users || !visibleUsers) {
-    return <div className="p-4 text-xs font-mono text-[var(--ink-muted)]">Loading users…</div>;
+    return (
+      <div className="p-4 flex items-center gap-2 text-xs font-mono text-[var(--ink-muted)]">
+        <Spinner size="sm" />
+        <span>Loading users…</span>
+      </div>
+    );
   }
 
   return (
@@ -213,7 +223,7 @@ export function UsersAdminClient() {
                     <div className="font-semibold text-[var(--ink-main)]">{u.name || u.email || u.id}</div>
                     <div className="text-[10px] text-[var(--ink-muted)]">{u.email}</div>
                   </td>
-                  <td className="px-3 py-2 capitalize">{u.tier || '—'}</td>
+                  <td className="px-3 py-2 capitalize"><Badge variant="neutral" label={u.tier || 'free'} /></td>
                   <td className="px-3 py-2">{fmt(u.created_at)}</td>
                   <td className="px-3 py-2">{u.analyses_count}</td>
                   <td className="px-3 py-2">

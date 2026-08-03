@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { Spinner, Button, Banner, EmptyState } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useSearch } from '@/hooks/useSearch';
 import ResultCard from '@/components/search/result-card';
@@ -79,7 +80,7 @@ export default function SearchPage() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Icon icon="solar:refresh-linear" size={40} className="hx-anispin text-accent" />
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -93,13 +94,13 @@ export default function SearchPage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <button
+          <Button
+            variant="ghost"
+            label="Back"
+            icon={<Icon icon="solar:alt-arrow-left-linear" size={18} />}
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-accent hover:text-accent-strong transition-colors mb-4 font-medium text-sm"
-          >
-            <Icon icon="solar:alt-arrow-left-linear" size={18} />
-            Back
-          </button>
+            style={{ marginBottom: 16 }}
+          />
           <h1 className="hx-h1 mb-2">
             Search Your Analyses
           </h1>
@@ -127,7 +128,7 @@ export default function SearchPage() {
             {/* Loading State */}
             {isLoading && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <Icon icon="solar:refresh-linear" size={20} className="hx-anispin text-accent" />
+                <Spinner size="sm" />
               </div>
             )}
 
@@ -146,12 +147,8 @@ export default function SearchPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-err/10 border border-err/20 rounded-lg flex items-start gap-3">
-            <Icon icon="solar:danger-circle-linear" size={20} className="text-err flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-err">Search Error</p>
-              <p className="text-sm text-err/80">{error}</p>
-            </div>
+          <div className="mb-6">
+            <Banner status="error" title="Search Error" description={error} />
           </div>
         )}
 
@@ -175,17 +172,11 @@ export default function SearchPage() {
 
             {/* Empty State */}
             {!query && !isLoading && (
-              <div className="text-center py-16 hx-rise">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-surface border border-line rounded-full mb-4">
-                  <Icon icon="solar:magnifer-linear" size={32} className="text-accent" />
-                </div>
-                <h3 className="text-xl font-semibold text-ink mb-2">
-                  Start Searching
-                </h3>
-                <p className="text-ink-muted">
-                  Enter a search query to find insights across your analyses
-                </p>
-              </div>
+              <EmptyState
+                title="Start Searching"
+                description="Enter a search query to find insights across your analyses"
+                icon={<Icon icon="solar:magnifer-linear" size={32} className="text-accent" />}
+              />
             )}
 
             {/* No Results */}
@@ -193,23 +184,14 @@ export default function SearchPage() {
               !isLoading &&
               results.length === 0 &&
               !error && (
-                <div className="text-center py-16 hx-rise">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-surface border border-line rounded-full mb-4">
-                    <Icon icon="solar:magnifer-linear" size={32} className="text-ink-muted" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-ink mb-2">
-                    No Results Found
-                  </h3>
-                  <p className="text-ink-muted mb-4">
-                    Try adjusting your search query
-                  </p>
-                  <button
-                    onClick={clearSearch}
-                    className="text-accent hover:text-accent-ink font-medium"
-                  >
-                    Clear search
-                  </button>
-                </div>
+                <EmptyState
+                  title="No Results Found"
+                  description="Try adjusting your search query"
+                  icon={<Icon icon="solar:magnifer-linear" size={32} className="text-ink-muted" />}
+                  actions={
+                    <Button label="Clear search" variant="ghost" onClick={clearSearch} />
+                  }
+                />
               )}
 
             {/* Results Grid */}

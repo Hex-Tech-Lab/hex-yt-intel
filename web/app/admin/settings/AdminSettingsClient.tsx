@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Banner, Spinner, Card, Button, Badge } from '@astryxdesign/core';
 import type { AdminSettingRow } from '@/app/api/admin/settings/route';
 
 const SUBMENU_LABELS: Record<string, string> = {
@@ -82,11 +83,20 @@ export function AdminSettingsClient() {
   };
 
   if (error) {
-    return <div className="p-8 font-mono text-sm text-[var(--err)]">Failed to load settings: {error}</div>;
+    return (
+      <div className="p-8">
+        <Banner status="error" title={`Failed to load settings: ${error}`} />
+      </div>
+    );
   }
 
   if (!settings) {
-    return <div className="p-8 font-mono text-sm text-[var(--ink-secondary)]">Loading settings…</div>;
+    return (
+      <div className="p-8 flex items-center gap-3 font-mono text-sm text-[var(--ink-secondary)]">
+        <Spinner size="sm" />
+        <span>Loading settings…</span>
+      </div>
+    );
   }
 
   return (
@@ -96,17 +106,12 @@ export function AdminSettingsClient() {
         <ul className="space-y-1">
           {menus.map((menu) => (
             <li key={menu}>
-              <button
-                type="button"
+              <Button
+                variant={activeMenu === menu ? "primary" : "ghost"}
+                label={submenuLabel(menu)}
                 onClick={() => setActiveMenu(menu)}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm font-mono transition-colors ${
-                  activeMenu === menu
-                    ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                    : 'text-[var(--ink-secondary)] hover:bg-[var(--card)]'
-                }`}
-              >
-                {submenuLabel(menu)}
-              </button>
+                style={{ width: '100%', justifyContent: 'flex-start' }}
+              />
             </li>
           ))}
         </ul>
@@ -115,14 +120,14 @@ export function AdminSettingsClient() {
       <main className="flex-1 p-8 space-y-6 max-w-3xl">
         <h2 className="text-lg font-semibold text-[var(--ink)]">{activeMenu ? submenuLabel(activeMenu) : ''}</h2>
         {visible.map((row) => (
-          <div key={row.key} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4">
+          <Card key={row.key} padding={4}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="font-mono text-sm text-[var(--ink)]">{row.key}</span>
               <div className="flex items-center gap-2">
                 {row.isOverridden && (
-                  <span className="text-[10px] font-mono uppercase text-[var(--accent)]">overridden</span>
+                  <Badge variant="info" label="overridden" />
                 )}
-                <span className="text-[10px] font-mono uppercase text-[var(--ink-muted)]">{row.dataType}</span>
+                <Badge variant="neutral" label={row.dataType} />
               </div>
             </div>
             <p className="text-xs text-[var(--ink-secondary)] mb-3">{row.description}</p>
@@ -136,18 +141,17 @@ export function AdminSettingsClient() {
               <p className="text-xs text-[var(--err)] mt-1">{saveError[row.key]}</p>
             )}
             <div className="flex items-center gap-3 mt-2">
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                label={savingKey === row.key ? 'Saving…' : 'Save'}
+                isLoading={savingKey === row.key}
+                isDisabled={savingKey === row.key}
                 onClick={() => save(row)}
-                disabled={savingKey === row.key}
-                className="px-3 py-1.5 rounded-md text-xs font-mono bg-[var(--accent)] text-[var(--bg)] disabled:opacity-50"
-              >
-                {savingKey === row.key ? 'Saving…' : 'Save'}
-              </button>
+              />
               {savedKey === row.key && <span className="text-xs text-[var(--ok)] font-mono">Saved</span>}
               <span className="text-[10px] font-mono text-[var(--ink-muted)]">updated {new Date(row.updatedAt).toLocaleString()}</span>
             </div>
-          </div>
+          </Card>
         ))}
       </main>
     </div>
