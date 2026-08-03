@@ -1,7 +1,7 @@
 import type { PersonaId } from '@/lib/prompts';
 import { rankPersonas } from '@/lib/prompts';
 import { resolveUCISPromptTemplate } from '@lib/services/settings';
-import { UCIS_V5_1_SYSTEM } from '@lib/prompts/ucis-v5.1';
+import { UCIS_V5_3_SYSTEM } from '@lib/prompts/ucis-v5.3';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 export interface GetUCISPromptParams {
@@ -74,7 +74,7 @@ export async function getUCISPrompt({
   const durationNotice = formattedDuration ? `\n**Video Duration**: ${formattedDuration}` : '';
 
   // DB-backed prompt template (not matching the legacy fallback static string)
-  if (systemPrompt !== UCIS_V5_1_SYSTEM) {
+  if (systemPrompt !== UCIS_V5_3_SYSTEM) {
     return `${systemPrompt}
 
 ---

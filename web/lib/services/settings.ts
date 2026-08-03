@@ -4,7 +4,7 @@
  * A short module-level TTL cache avoids a Supabase round-trip on every request.
  */
 import { SupabasePersistenceAdapter } from '@lib/adapters/SupabasePersistenceAdapter';
-import { UCIS_V5_1_SYSTEM } from '@lib/prompts/ucis-v5.1';
+import { UCIS_V5_3_SYSTEM } from '@lib/prompts/ucis-v5.3';
 import { getRedisValue, setRedisValue, deleteRedisKey } from '@lib/redis';
 
 export interface PromptHistoryEntry {
@@ -78,7 +78,7 @@ function getHighestVersion(versions: string[]): string | undefined {
 export async function resolveUCISPromptTemplate(version?: string): Promise<string> {
   const cfg = await readPromptConfig();
   if (!cfg) {
-    return UCIS_V5_1_SYSTEM;
+    return UCIS_V5_3_SYSTEM;
   }
 
   let targetVersion = version;
@@ -102,7 +102,7 @@ export async function resolveUCISPromptTemplate(version?: string): Promise<strin
   }
 
   // Fallback to static code
-  return UCIS_V5_1_SYSTEM;
+  return UCIS_V5_3_SYSTEM;
 }
 
 /** Admin write path / tests: drop the cache so the next read re-fetches. */

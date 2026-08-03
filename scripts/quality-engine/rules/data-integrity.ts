@@ -67,7 +67,7 @@ export const DatabaseConstraintRule: IRule = {
       source.forEachDescendant((node) => {
         if (Node.isCallExpression(node)) {
           const expr = node.getExpression().getText();
-          if ((expr.includes('insert') || expr.includes('update')) && (expr.includes('db.') || expr.includes('supabase.'))) {
+          if ((expr.includes('insert') || expr.includes('update') || expr.includes('upsert')) && (expr.includes('db.') || expr.includes('supabase.'))) {
             const args = node.getArguments();
             if (args.length > 0) {
               // Check if there's validation before this call

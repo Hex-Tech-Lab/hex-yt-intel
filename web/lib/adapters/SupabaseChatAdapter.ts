@@ -398,7 +398,7 @@ export class SupabaseChatAdapter {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('chat_conversations')
-        .select(params.select || '*')
+        .select(params.select || 'id, user_id')
         .eq('id', params.conversationId)
         .eq('user_id', params.userId)
         .maybeSingle();

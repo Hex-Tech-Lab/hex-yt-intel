@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const v51Path = path.join(__dirname, '../lib/prompts/ucis-v5.1.ts');
+const v51Path = path.join(__dirname, '../lib/prompts/ucis-v5.3.ts');
 const v51File = fs.readFileSync(v51Path, 'utf8');
 
 const extractString = (content, varName) => {
@@ -9,7 +9,7 @@ const extractString = (content, varName) => {
   return match ? match[1] : '';
 };
 
-const v51Text = extractString(v51File, 'UCIS_V5_1_SYSTEM');
+const v51Text = extractString(v51File, 'UCIS_V5_3_SYSTEM');
 
 if (!v51Text) {
   console.error('Failed to extract prompt strings:', { v51Length: v51Text ? v51Text.length : 0 });

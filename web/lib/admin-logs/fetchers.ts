@@ -251,6 +251,46 @@ export async function fetchVercelLogs(searchParams: URLSearchParams): Promise<Fe
   }
 }
 
+/**
+ * RCA (2026-08-03): The `logs.all` endpoint has been deprecated by Supabase
+ * in favor of the new `/logs` endpoint (ClickHouse SQL). The old endpoint
+ * still works but may be removed upstream without notice. The new endpoint
+ * returns `{"error":"Backend error! Retry your query."}` for `postgres_logs`
+ * as of 2026-08-03 — likely a ClickHouse migration issue with the `postgres_logs`
+ * source table. This function implements a dual-path strategy:
+ *
+ * 1. Try the new `/logs` endpoint with ClickHouse SQL first.
+ * 2. If that fails, fall back to the deprecated `logs.all` endpoint.
+ * 3. Track which path was used via Sentry and console.warn.
+ *
+ * When the new endpoint stabilizes, the fallback path can be removed.
+ * See docs/TECH_DEBT_LEDGER.md item 17 for the full investigation.
+ */
+async function fetchSupabaseLogsFromEndpoint(
+  endpoint: 'logs' | 'logs.all',
+  sql: string,
+  token: string,
+  projectRef: string,
+  isoStart: string,
+  isoEnd: string,
+): Promise<{ result: unknown[]; endpointUsed: string }> {
+  const url = `https://api.supabase.com/v1/projects/${projectRef}/analytics/endpoints/${endpoint}?sql=${encodeURIComponent(sql)}&iso_timestamp_start=${encodeURIComponent(isoStart)}&iso_timestamp_end=${encodeURIComponent(isoEnd)}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Supabase Management API (${endpoint}) returned status ${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  if (data.error) {
+    throw new Error(`Supabase analytics query (${endpoint}) failed: ${typeof data.error === 'string' ? data.error : JSON.stringify(data.error)}`);
+  }
+  const resultList = Array.isArray(data.result) ? data.result : Array.isArray(data) ? data : [];
+  return { result: resultList, endpointUsed: endpoint };
+}
+
 export async function fetchSupabaseLogs(searchParams: URLSearchParams): Promise<FetcherResult> {
   const token = process.env.SUPABASE_ACCESS_TOKEN;
   const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/(.*?)\.supabase\.co/)?.[1];
@@ -262,21 +302,32 @@ export async function fetchSupabaseLogs(searchParams: URLSearchParams): Promise<
   const isoStart = new Date(clampedStart).toISOString();
   const isoEnd = new Date(endTimeMs).toISOString();
   try {
-    const sql = `select timestamp, event_message from postgres_logs order by timestamp desc limit 100`;
-    const url = `https://api.supabase.com/v1/projects/${projectRef}/analytics/endpoints/logs.all?sql=${encodeURIComponent(sql)}&iso_timestamp_start=${encodeURIComponent(isoStart)}&iso_timestamp_end=${encodeURIComponent(isoEnd)}`;
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`Supabase Management API returned status ${res.status}: ${errText}`);
+    // Try the new ClickHouse `/logs` endpoint first
+    const clickhouseSql = `select timestamp, event_message from logs where source = 'postgres_logs' order by timestamp desc limit 100`;
+    let { result: resultList, endpointUsed } = await fetchSupabaseLogsFromEndpoint(
+      'logs', clickhouseSql, token, projectRef, isoStart, isoEnd,
+    );
+    // If the new endpoint returned empty but the old one might have data, try fallback
+    if (resultList.length === 0) {
+      const legacySql = `select timestamp, event_message from postgres_logs order by timestamp desc limit 100`;
+      const fallback = await fetchSupabaseLogsFromEndpoint(
+        'logs.all', legacySql, token, projectRef, isoStart, isoEnd,
+      );
+      resultList = fallback.result;
+      endpointUsed = fallback.endpointUsed;
+      console.warn('[admin-logs] Supabase /logs endpoint returned empty, fell back to logs.all', { projectRef });
+      Sentry.captureMessage('Supabase logs: /logs returned empty, fell back to logs.all', {
+        level: 'warning',
+        extra: { projectRef, endpoint: 'logs.all' },
+      });
     }
-    const data = await res.json();
-    if (data.error) {
-      throw new Error(`Supabase analytics query failed: ${typeof data.error === 'string' ? data.error : JSON.stringify(data.error)}`);
+    if (endpointUsed === 'logs.all') {
+      console.warn('[admin-logs] Using deprecated logs.all endpoint — migrate to /logs when it stabilizes', { projectRef });
+      Sentry.captureMessage('Supabase logs: using deprecated logs.all endpoint', {
+        level: 'info',
+        extra: { projectRef, endpoint: 'logs.all' },
+      });
     }
-    const resultList = Array.isArray(data.result) ? data.result : Array.isArray(data) ? data : [];
     const filteredList = resultList.filter((e: any) => {
       const ts = e.timestamp ? (typeof e.timestamp === 'number' ? e.timestamp / 1000 : new Date(e.timestamp).getTime()) : Date.now();
       return ts >= startTimeMs && ts <= endTimeMs;
@@ -289,7 +340,7 @@ export async function fetchSupabaseLogs(searchParams: URLSearchParams): Promise<
       const level = msg.includes('ERROR') || msg.includes('FATAL') ? 'ERROR' : msg.includes('WARN') ? 'WARN' : 'INFO';
       return `[${time}] [${level}] [supabase:postgres] ${msg}`;
     });
-    return { status: 200, body: { totalEntries: logLines.length, logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No Supabase log entries returned.`, resultList: targetList } };
+    return { status: 200, body: { totalEntries: logLines.length, logs: logLines.join('\n') || `[${new Date().toISOString()}] [INFO] No Supabase log entries returned.`, resultList: targetList, endpointUsed } };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Sentry.captureException(error, { tags: { operation: 'admin_supabase_logs' } });

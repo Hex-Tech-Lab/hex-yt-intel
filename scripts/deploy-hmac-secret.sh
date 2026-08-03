@@ -1,14 +1,22 @@
 #!/bin/bash
 
 # Direct deployment of HMAC secret to Vercel and Cloudflare
-# Usage: VERCEL_TOKEN='...' CLOUDFLARE_API_TOKEN='...' bash scripts/deploy-hmac-secret.sh
+# Usage: STREAM_HMAC_SECRET='...' VERCEL_TOKEN='...' CLOUDFLARE_API_TOKEN='...' bash scripts/deploy-hmac-secret.sh
+#
+# IMPORTANT: Never hardcode the secret in this file. Always pass via env var.
 
 set -e
 
-HMAC_SECRET="SSqdnev979rW2Z2b/x2J7UQ8/Veo1HfA21WU6L8elqU="
-PROJECT_ID="prj_jKAo3z8jKyHwi3qXqSIeoZO1ILku"
-TEAM_ID="team_vgnBI2s3ynPBzQdOLqhGvBnK"
-WORKER_ACCOUNT_ID="your-cloudflare-account-id"
+# Read secret from environment — fail closed if missing
+if [ -z "$STREAM_HMAC_SECRET" ]; then
+  echo "❌ STREAM_HMAC_SECRET not set"
+  echo "   Usage: STREAM_HMAC_SECRET='...' VERCEL_TOKEN='...' CLOUDFLARE_API_TOKEN='...' bash scripts/deploy-hmac-secret.sh"
+  exit 1
+fi
+HMAC_SECRET="$STREAM_HMAC_SECRET"
+PROJECT_ID="${VERCEL_PROJECT_ID}"
+TEAM_ID="${VERCEL_TEAM_ID}"
+WORKER_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-your-cloudflare-account-id}"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Deploying HMAC Secret to Production"

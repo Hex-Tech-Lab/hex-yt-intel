@@ -74,7 +74,7 @@ export const KGNodeSchema = z.object({
   dimension: z.number().int().min(0).max(TOTAL_DIMENSIONS),
   label: z.string().min(1).max(200),
   content: z.string().min(10),
-  // 1-10, per the prompt's own instruction (ucis-v5.1.ts: "weight: Importance
+  // 1-10, per the prompt's own instruction (ucis-v5.3.ts: "weight: Importance
   // (1-10)") -- was previously capped at <=1, which every real LLM output
   // violates (models consistently emit 8-10 for salient nodes), silently
   // downgrading otherwise-complete 11/11-dimension analyses to
@@ -94,7 +94,7 @@ export const KGNodeSchema = z.object({
 export const KGEdgeSchema = z.object({
   source: z.string().min(1),
   target: z.string().min(1),
-  // 1-10, per the prompt's own instruction (ucis-v5.1.ts: "strength:
+  // 1-10, per the prompt's own instruction (ucis-v5.3.ts: "strength:
   // Connection strength (1-10)") -- see weight above for why this cap
   // matters: it was the actual cause of complete analyses being marked
   // partial/failed.

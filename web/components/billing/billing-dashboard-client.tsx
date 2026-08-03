@@ -7,6 +7,7 @@ import { Icon } from '@/components/templates/_shared/primitives';
 import { STRIPE_PRICING } from '@/lib/stripe';
 import { CheckoutButton } from './checkout-button';
 import { showToast } from '@/lib/dashboard/export';
+import { fmtCentsToUsd } from '@/lib/utils/format';
 
 interface BillingDashboardProps {
   initialData: {
@@ -98,7 +99,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
               Monthly Cost
             </p>
             <p style={{ margin: "4px 0 0 0", fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>
-              {tierConfig.price === 0 ? '$0' : `$${(tierConfig.price / 100).toFixed(2)}`}
+              {tierConfig.price === 0 ? '$0' : fmtCentsToUsd(tierConfig.price)}
             </p>
           </div>
         </div>
@@ -262,7 +263,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
                       {inv.paidAt ? inv.paidAt.toLocaleDateString() : 'Pending'}
                     </TableCell>
                     <TableCell style={{ padding: 12, color: "var(--ink)" }}>
-                      ${(inv.amount / 100).toFixed(2)} {inv.currency.toUpperCase()}
+                      {fmtCentsToUsd(inv.amount)} {inv.currency.toUpperCase()}
                     </TableCell>
                     <TableCell style={{ padding: 12 }}>
                       <span style={{ 

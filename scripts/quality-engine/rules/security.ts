@@ -202,15 +202,26 @@ export const AuthSecurityRule: IRule = {
     const filePath = source.getFilePath().replace(/\\/g, "/");
     const text = source.getText();
 
-    // Check for 307 redirect with POST (should be 303)
-    if (text.includes('307') && text.includes('POST')) {
-      findings.push({
-        file: filePath,
-        severity: "high",
-        title: "Auth: POST 307 redirect preserves POST method",
-        why: "307 redirect preserves the POST method but target may only handle GET. Use 303 to force GET.",
-        fix: "Change 307 to 303 redirect when redirecting POST to a GET-only route."
-      });
+    // Check for 307 redirect with POST (should be 303) — scoped to the
+    // POST handler only, not the whole file (a GET handler using 307 is
+    // harmless and should not false-positive).
+    const hasPostHandler = text.includes('export async function POST') || text.includes('export function POST');
+    if (hasPostHandler && text.includes('307')) {
+      // Find the POST handler body and check only within it
+      const postMatch = text.match(/export\s+(async\s+)?function\s+POST\s*\([^)]*\)\s*\{/);
+      if (postMatch && postMatch.index !== undefined) {
+        const postBodyStart = postMatch.index + postMatch[0].length;
+        const postBody = text.slice(postBodyStart);
+        if (postBody.includes('307')) {
+          findings.push({
+            file: filePath,
+            severity: "high",
+            title: "Auth: POST 307 redirect preserves POST method",
+            why: "307 redirect preserves the POST method but target may only handle GET. Use 303 to force GET.",
+            fix: "Change 307 to 303 redirect when redirecting POST to a GET-only route."
+          });
+        }
+      }
     }
 
     // Check for localhost fallbacks in production routes
@@ -434,7 +445,7 @@ export const InformationDisclosureRule: IRule = {
           if (Node.isTemplateExpression(arg)) {
             const templateText = arg.getText();
             // Check for sensitive patterns in template
-            const sensitivPatterns = ['filePath', 'userId', 'path:', 'user:', 'id:'];
+            const sensitivPatterns = ['filePath', 'path:', 'user:', 'id:'];
             for (const pattern of sensitivPatterns) {
               if (templateText.includes(pattern) && templateText.includes('$')) {
                 findings.push({

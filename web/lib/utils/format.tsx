@@ -1,6 +1,27 @@
 import React from 'react';
 
 /**
+ * Format a USD-denominated value for display.
+ * Uses 4 decimal places for values under $0.01 (but >= $0.0001),
+ * 2 decimal places otherwise. Handles zero and micro-amounts explicitly
+ * to avoid hiding real recorded charges.
+ * Preserves the exact output of the previous inline implementations.
+ */
+export function fmtUsd(usd: number): string {
+  if (usd === 0) return '$0.00';
+  if (usd < 0.0001) return '<$0.0001';
+  return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
+}
+
+/**
+ * Format a cents-denominated value (e.g. from Stripe) as USD string.
+ * Divides by 100 first, then formats with fmtUsd semantics.
+ */
+export function fmtCentsToUsd(cents: number): string {
+  return fmtUsd(cents / 100);
+}
+
+/**
  * Preprocesses markdown content from the assistant to convert non-standard elements:
  * 1. Convert unicode bullets (•/●) into standard markdown list items (-).
  * 2. Translate tab-separated values into markdown pipe tables.
