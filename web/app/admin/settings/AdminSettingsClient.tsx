@@ -110,7 +110,8 @@ export function AdminSettingsClient() {
                 variant={activeMenu === menu ? "primary" : "ghost"}
                 label={submenuLabel(menu)}
                 onClick={() => setActiveMenu(menu)}
-                style={{ width: '100%', justifyContent: 'flex-start' }}
+                width="100%"
+                style={{ justifyContent: 'flex-start' }}
               />
             </li>
           ))}

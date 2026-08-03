@@ -242,16 +242,16 @@ export function UsersAdminClient() {
         <table className="w-full text-left">
           <thead>
             <tr className="bg-[var(--surface)] text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">
-              <th className="px-3 py-2">User</th>
-              <th className="px-3 py-2">Tier</th>
-              <th className="px-3 py-2">Signed up</th>
-              <th className="px-3 py-2">Analysis (Turns / Cost)</th>
-              <th className="px-3 py-2">Chat (Turns / Cost)</th>
-              <th className="px-3 py-2">Remediation (Turns / Cost)</th>
-              <th className="px-3 py-2" title="usage_logs rows purge after 30 days -- this is a rolling window, not a lifetime total">Total Cost (30d)</th>
-              <th className="px-3 py-2">Last session</th>
-              <th className="px-3 py-2">Last IP</th>
-              <th className="px-3 py-2" />
+              <th scope="col" className="px-3 py-2">User</th>
+              <th scope="col" className="px-3 py-2">Tier</th>
+              <th scope="col" className="px-3 py-2">Signed up</th>
+              <th scope="col" className="px-3 py-2">Analysis (Turns / Cost)</th>
+              <th scope="col" className="px-3 py-2">Chat (Turns / Cost)</th>
+              <th scope="col" className="px-3 py-2">Remediation (Turns / Cost)</th>
+              <th scope="col" className="px-3 py-2" title="usage_logs rows purge after 30 days -- this is a rolling window, not a lifetime total">Total Cost (30d)</th>
+              <th scope="col" className="px-3 py-2">Last session</th>
+              <th scope="col" className="px-3 py-2">Last IP</th>
+              <th scope="col" className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
@@ -372,7 +372,7 @@ export function UsersAdminClient() {
           {totals && (
             <tfoot>
               <tr className="border-t-2 border-[var(--border-muted)] bg-[var(--surface)] font-bold text-[11px] text-[var(--ink-main)]">
-                <td className="px-3 py-2">Total ({visibleUsers.length} users)</td>
+                <th scope="row" className="px-3 py-2 text-left font-bold">Total ({visibleUsers.length} users)</th>
                 <td className="px-3 py-2">—</td>
                 <td className="px-3 py-2">—</td>
                 <td className="px-3 py-2">{totals.analysis_turns} · {fmtCost(totals.analysis_cost_usd)}</td>

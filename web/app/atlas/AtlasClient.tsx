@@ -108,7 +108,7 @@ export function AtlasClient() {
             <Button
               type="submit"
               variant="primary"
-              label={isSubmitting ? "Processing..." : "Analyze"}
+              label={isSubmitting ? "Processing…" : "Analyze"}
               isDisabled={isSubmitting}
               isLoading={isSubmitting}
             />

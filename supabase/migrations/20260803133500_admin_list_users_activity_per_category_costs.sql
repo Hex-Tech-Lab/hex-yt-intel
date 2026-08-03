@@ -101,3 +101,15 @@ $$;
 
 revoke all on function public.admin_list_users_activity() from public, anon;
 grant execute on function public.admin_list_users_activity() to authenticated;
+
+-- supabase-postgres-best-practices flag: the lateral above filters on 4
+-- action values via 4x FILTER, but idx_usage_logs_user_analysis_completed
+-- (20260801085822) only covers 'analysis_completed' -- the other 3 fell
+-- back to a per-user scan of idx_usage_logs_user_id filtered in-memory.
+-- This composite index subsumes it (covers all 4 actions actually used by
+-- this query, leading column supports the per-action FILTER scans too).
+drop index if exists public.idx_usage_logs_user_analysis_completed;
+
+create index if not exists idx_usage_logs_user_activity_costs
+  on public.usage_logs (user_id, action)
+  where action in ('analysis_completed', 'analysis', 'chat_turn', 'dimension_remediation');
