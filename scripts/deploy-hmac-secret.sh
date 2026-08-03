@@ -7,16 +7,31 @@
 
 set -e
 
-# Read secret from environment — fail closed if missing
-if [ -z "$STREAM_HMAC_SECRET" ]; then
-  echo "❌ STREAM_HMAC_SECRET not set"
-  echo "   Usage: STREAM_HMAC_SECRET='...' VERCEL_TOKEN='...' CLOUDFLARE_API_TOKEN='...' bash scripts/deploy-hmac-secret.sh"
+# Fail-closed: validate ALL required environment variables before proceeding
+REQUIRED_VARS=(
+  "STREAM_HMAC_SECRET"
+  "VERCEL_TOKEN"
+  "VERCEL_PROJECT_ID"
+  "VERCEL_TEAM_ID"
+  "CLOUDFLARE_API_TOKEN"
+  "CLOUDFLARE_ACCOUNT_ID"
+)
+MISSING=false
+for var in "${REQUIRED_VARS[@]}"; do
+  if [ -z "${!var}" ]; then
+    echo "❌ $var not set"
+    MISSING=true
+  fi
+done
+if [ "$MISSING" = true ]; then
+  echo ""
+  echo "   Usage: STREAM_HMAC_SECRET='...' VERCEL_TOKEN='...' VERCEL_PROJECT_ID='...' VERCEL_TEAM_ID='...' CLOUDFLARE_API_TOKEN='...' CLOUDFLARE_ACCOUNT_ID='...' bash scripts/deploy-hmac-secret.sh"
   exit 1
 fi
 HMAC_SECRET="$STREAM_HMAC_SECRET"
-PROJECT_ID="${VERCEL_PROJECT_ID}"
-TEAM_ID="${VERCEL_TEAM_ID}"
-WORKER_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-your-cloudflare-account-id}"
+PROJECT_ID="$VERCEL_PROJECT_ID"
+TEAM_ID="$VERCEL_TEAM_ID"
+WORKER_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Deploying HMAC Secret to Production"

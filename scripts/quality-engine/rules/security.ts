@@ -204,16 +204,33 @@ export const AuthSecurityRule: IRule = {
 
     // Check for 307 redirect with POST (should be 303) — scoped to the
     // POST handler only, not the whole file (a GET handler using 307 is
-    // harmless and should not false-positive).
-    const hasPostHandler = text.includes('export async function POST') || text.includes('export function POST');
+    // harmless and should not false-positive). Supports both:
+    //   export async function POST(...) { ... }
+    //   export function POST(...) { ... }
+    //   export const POST = ... (async handler function)
+    const hasPostHandler = /export\s+(async\s+)?(function\s+POST|const\s+POST\s*=)/.test(text);
     if (hasPostHandler && text.includes('307')) {
-      // Find the POST handler body and check only within it
-      const postMatch = text.match(/export\s+(async\s+)?function\s+POST\s*\([^)]*\)\s*\{/);
-      if (postMatch && postMatch.index !== undefined) {
-        const postBodyStart = postMatch.index + postMatch[0].length;
-        const postBody = text.slice(postBodyStart);
-        if (postBody.includes('307')) {
-          findings.push({
+      // Extract the POST handler body using AST-aware brace matching.
+      // Find the handler declaration and match its opening brace to the
+      // corresponding closing brace at the same nesting depth.
+      let postBody = '';
+      const functionMatch = text.match(/export\s+(async\s+)?function\s+POST\s*\([^)]*\)\s*\{/);
+      const constMatch = !functionMatch ? text.match(/export\s+const\s+POST\s*=\s*(async\s+)?(\([^)]*\)|\w+)\s*=>\s*\{/) : null;
+      const match = functionMatch || constMatch;
+      if (match && match.index !== undefined) {
+        const bodyStart = match.index + match[0].length;
+        // Brace-match: +1 for the opening brace in the match, count depth
+        let depth = 1;
+        let i = bodyStart;
+        while (i < text.length && depth > 0) {
+          if (text[i] === '{') depth++;
+          else if (text[i] === '}') depth--;
+          i++;
+        }
+        postBody = text.slice(bodyStart, i - 1);
+      }
+      if (postBody.includes('307')) {
+        findings.push({
             file: filePath,
             severity: "high",
             title: "Auth: POST 307 redirect preserves POST method",
