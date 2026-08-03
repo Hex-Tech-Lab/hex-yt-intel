@@ -1,0 +1,16 @@
+.memory/AGENT_LEDGER.md
+  h_60000122af7b55 1103-1106
+docs/TECH_DEBT_LEDGER.md
+  h_60000122af7b55 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "4f12d5d64051a936eb598ff329757bae65a3bec7",
+  "prompts": {},
+  "humans": {
+    "h_60000122af7b55": {
+      "author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
