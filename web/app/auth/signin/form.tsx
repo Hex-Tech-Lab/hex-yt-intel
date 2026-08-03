@@ -106,7 +106,7 @@ export default function SignInForm() {
             isDisabled={loading}
             isLoading={loading}
             icon={<Icon icon="solar:sun-bold-duotone" size={16} />}
-            style={{ width: '100%', justifyContent: 'center' }}
+            width="100%"
           />
         </div>
       </div>

@@ -40,12 +40,12 @@ export default function AuthErrorForm() {
           style={{ marginBottom: 24 }}
         />
 
-        <Card style={{ padding: 32, textAlign: 'center' }}>
+        <Card padding={8} style={{ textAlign: 'center' }}>
           <Button
             href="/auth/signin"
             label="Try again"
             variant="primary"
-            style={{ width: '100%', justifyContent: 'center' }}
+            width="100%"
           />
         </Card>
       </div>
