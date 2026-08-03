@@ -1,0 +1,21 @@
+web/app/admin/users/UsersAdminClient.tsx
+  s_0ad60efcede198::t_b5eb36ddce50e9 242
+  s_0ad60efcede198::t_9f4e5457f53dd6 245
+  s_0ad60efcede198::t_34fc8f154fa493 263
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d35b3fce149013630352da66743a24ede88db398",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
