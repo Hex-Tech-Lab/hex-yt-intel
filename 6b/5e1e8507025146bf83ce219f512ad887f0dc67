@@ -1,0 +1,23 @@
+docs/specs/ADR_021_GRANULAR_PARTIAL_RESUME_AND_REAPER_2026-08-02.md
+  s_0eded1e9d0cab6::t_41d9cd5184f864 116
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_4080e84c2a44ef 8-14
+CLAUDE.md
+  s_0eded1e9d0cab6::t_9b2e50e6b98eb8 34-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6b5e1e8507025146bf83ce219f512ad887f0dc67",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
