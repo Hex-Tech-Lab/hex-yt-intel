@@ -1,0 +1,27 @@
+web/lib/utils/entity-time-seek.ts
+  s_0eded1e9d0cab6::t_56d6db8991504b 1-38
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_ccad85375e28cd 1069-1070
+  s_0eded1e9d0cab6::t_eb2707d0e39a8d 1071-1072
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_54040d6035cfdb 197-199
+  s_0eded1e9d0cab6::t_f55b12984646cf 27
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0eded1e9d0cab6::t_798728e0759045 1-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "cc1edcdacb45d2667f709135592a893144264a3d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
