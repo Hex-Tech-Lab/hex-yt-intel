@@ -79,6 +79,13 @@
   --radius-3xl: 14px;
 }
 
+/* Sprint 1: override all radii to 0px for sharp industrial aesthetic.
+   Must be a separate @theme block AFTER the main one above — Tailwind v4
+   merges theme blocks in declaration order, so this wins. */
+@theme {
+  --radius-*: 0px;
+}
+
 /* Base reset lives in @layer base so Tailwind's utilities (a later layer) win.
    Unlayered, this universal rule would beat every padding/margin utility
    regardless of specificity — which silently zeroed the px / py / mx spacing

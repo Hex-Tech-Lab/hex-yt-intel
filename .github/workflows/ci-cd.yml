@@ -128,7 +128,7 @@ jobs:
         run: pnpm --filter @hex-yt-intel/web run lint
 
       - name: Run QA Intel Quality Gate
-        run: pnpm dlx tsx scripts/verify-quality-engine.ts
+        run: pnpm dlx tsx scripts/verify-quality-engine.ts --ci --compare
 
       - name: Run Contract Auditor
         run: pnpm --filter @hex-yt-intel/web run contract-audit
