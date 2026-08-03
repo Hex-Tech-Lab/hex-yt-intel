@@ -1,0 +1,29 @@
+web/app/api/analyses/persist/route.ts
+  s_0eded1e9d0cab6::t_13a04b16ce1821 21,604,623-629,843-844
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_13a04b16ce1821 1077
+  s_0eded1e9d0cab6::t_cecfc30369a691 1074-1076
+web/lib/__tests__/billing-status-dimension-completeness.test.ts
+  s_0eded1e9d0cab6::t_13a04b16ce1821 1-236
+web/components/templates/console/UsageTab.tsx
+  s_0eded1e9d0cab6::t_13a04b16ce1821 3,8,18-24
+web/lib/services/stitch-analysis-chunks.ts
+  s_0eded1e9d0cab6::t_13a04b16ce1821 83-103
+  s_0eded1e9d0cab6::t_2b1e199acd3a25 82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "4ad5b143b75566e56b20ace5c65e16fba35533c1",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
