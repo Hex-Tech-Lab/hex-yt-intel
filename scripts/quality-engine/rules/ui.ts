@@ -217,7 +217,7 @@ export const SwallowedErrorRule: IRule = {
       if (Node.isCatchClause(node)) {
         const block = node.getBlock();
         const statements = block.getStatements();
-        const hasOnlyComments = statements.length === 0 && block.getFullText().trim().length > 0 && (/^\s*\/\*[\s\S]*\*\/\s*$/.test(block.getFullText()) || /^\s*\/\/.*$/.test(block.getFullText().trim()));
+        const hasOnlyComments = statements.length === 0 && block.getFullText().trim().length > 0 && (/^\s*\/\*[\s\S]*\*\/\s*$/.test(block.getFullText()) || /^(\s*\/\/.*\s*)*$/.test(block.getFullText().trim()));
         if (statements.length === 0 && !hasOnlyComments) {
           findings.push({
             file: filePath,

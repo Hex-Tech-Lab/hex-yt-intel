@@ -44,7 +44,10 @@ if (!key) {
   process.exit(1);
 }
 
-const analysisId = process.argv[2];
+// Parse analysis ID from first non-option argument (supports --payload before or after ID)
+const args = process.argv.slice(2);
+const analysisId = args.find(a => !a.startsWith('--'));
+const hasPayload = args.includes('--payload');
 if (!analysisId) {
   console.error('❌ Usage: node scripts/check-row-detail.cjs <analysis-id>');
   process.exit(1);
@@ -71,7 +74,7 @@ async function main() {
   console.log('Video ID:', row.video_id);
 
   // Only print full payload with explicit --payload flag
-  if (process.argv.includes('--payload')) {
+  if (hasPayload) {
     const { data: fullRow } = await supabase
       .from('analyses')
       .select('analysis_payload, validation_report')
@@ -79,7 +82,7 @@ async function main() {
       .single();
     if (fullRow?.analysis_payload) {
       console.log('\nAnalysis Payload Keys:', Object.keys(fullRow.analysis_payload).join(', '));
-      console.log('Analysis Payload (redacted):', JSON.stringify(fullRow.analysis_payload, null, 2).slice(0, 500) + '...');
+      console.log('Analysis Payload (truncated to 500 chars):', JSON.stringify(fullRow.analysis_payload, null, 2).slice(0, 500) + '...');
     }
     if (fullRow?.validation_report) {
       console.log('\nValidation Report Keys:', Object.keys(fullRow.validation_report).join(', '));
