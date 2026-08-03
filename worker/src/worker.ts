@@ -10,6 +10,7 @@ import transcript from "./routes/transcript";
 import analysis from "./routes/analysis";
 import chat from "./routes/chat";
 import comments from "./routes/comments";
+import channelMetaRoutes from "./routes/channel-meta";
 import { handleCommentsTier3Message } from "./queue-consumers/comments-tier3";
 import type { CommentsTier3QueueMessage } from "./routes/comments";
 
@@ -54,6 +55,7 @@ app.route("/", transcript);
 app.route("/", analysis);
 app.route("/", chat);
 app.route("/", comments);
+app.route("/", channelMetaRoutes);
 
 export default {
   fetch: app.fetch,

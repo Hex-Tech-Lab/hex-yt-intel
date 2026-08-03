@@ -58,6 +58,18 @@ export async function signCommentsTier3Token(sampleRunId: string, userId: string
   return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
 }
 
+/**
+ * Signs a Vercel->Worker call to the standalone channelMeta backfill route
+ * (worker/src/routes/channel-meta.ts), used by aux-remediation.ts. Same TTL
+ * as the streaming tokens -- this is a single synchronous fetch, not a
+ * fire-and-forget enqueue like comments-tier3's.
+ */
+export async function signChannelMetaToken(analysisId: string, videoId: string): Promise<{ sig: string; exp: number }> {
+  const exp = Date.now() + TOKEN_TTL_MS;
+  const msg = `channel-meta:${analysisId}:${videoId}:${exp}`;
+  return { sig: await hmacHex(env.streamHmacSecret, msg), exp };
+}
+
 export async function verifyChatToken(conversationId: string, userId: string, exp: number, sig: string, models: string[] = []): Promise<boolean> {
   if (Date.now() > exp) return false;
   const modelStr = [...models].sort().join(',');
