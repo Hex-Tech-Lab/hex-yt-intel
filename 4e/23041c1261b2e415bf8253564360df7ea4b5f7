@@ -1,0 +1,23 @@
+web/components/dashboard/RightPanelAccordion.tsx
+  s_0eded1e9d0cab6::t_82f863dfc690ee 28
+  s_0eded1e9d0cab6::t_3151f031cf7d54 43-46,48-49
+  s_0eded1e9d0cab6::t_de838a1410382b 5
+  s_0eded1e9d0cab6::t_d6c81eaa8f5b25 47
+  s_0eded1e9d0cab6::t_220f6d4a50a179 68-72,74-79,81-86,88-93,95-100,102,105-110,112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "4e23041c1261b2e415bf8253564360df7ea4b5f7",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
