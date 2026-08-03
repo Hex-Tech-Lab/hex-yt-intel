@@ -1,0 +1,25 @@
+scripts/check-row-detail.cjs
+  s_0ad60efcede198::t_8bdaebba0797f5 77
+  s_0ad60efcede198::t_634150876742b8 85
+  s_0ad60efcede198::t_f01dac6184feb1 47-50
+scripts/quality-engine/rules/ui.ts
+  s_0ad60efcede198::t_65c8d419a7761b 220
+scripts/deploy-hmac-secret.sh
+  s_0ad60efcede198::t_0ad138fc9eff8f 10-20,30-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "62d51832b3b14cae087dea6bc6d5566ac8fb197a",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
