@@ -1,0 +1,30 @@
+web/components/containers/dashboard/SettingsPanel.tsx
+  s_0eded1e9d0cab6::t_aca49232284eff 197,199,201-202,204-205,207
+  s_0eded1e9d0cab6::t_97428acbeab306 319,321-322,324,330-338
+  s_0eded1e9d0cab6::t_6fbca79071e57b 250-253,255-256,258-262
+  s_0eded1e9d0cab6::t_4d593ca81d4829 276-278,280,282
+  s_0eded1e9d0cab6::t_4e68abc1afedb2 4
+  s_0eded1e9d0cab6::t_479c81d44a5753 286-288,290,296-300
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_3ee91f1adb09e3 1073-1074
+web/components/UserMenu.tsx
+  s_0eded1e9d0cab6::t_2d9eb41ca7e3c5 4
+  s_0eded1e9d0cab6::t_89a9146d36e6c1 5-6
+  s_0eded1e9d0cab6::t_8cfdcbcd254798 20-23,25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "73c80d00496c911d5e129f52807d774dd310cc41",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
