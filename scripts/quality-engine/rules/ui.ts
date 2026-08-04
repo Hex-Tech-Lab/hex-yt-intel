@@ -217,7 +217,20 @@ export const SwallowedErrorRule: IRule = {
       if (Node.isCatchClause(node)) {
         const block = node.getBlock();
         const statements = block.getStatements();
-        const hasOnlyComments = statements.length === 0 && block.getFullText().trim().length > 0 && (/^\s*\/\*[\s\S]*\*\/\s*$/.test(block.getFullText()) || /^(\s*\/\/.*\s*)*$/.test(block.getFullText().trim()));
+        // CodeQL-flagged ReDoS: /^(\s*\/\/.*\s*)*$/ nests a `*`-repeated group
+        // around `\s*...\s*`, causing exponential backtracking on adversarial
+        // input (many `//` sequences with no full match). Same "every line is
+        // a // comment" check, done via a line-by-line loop instead of a
+        // single regex with nested quantifiers -- linear time, no
+        // backtracking possible.
+        const isAllLineComments = (text: string): boolean => {
+          const lines = text.split('\n');
+          return lines.every((line) => {
+            const trimmed = line.trim();
+            return trimmed === '' || trimmed.startsWith('//');
+          });
+        };
+        const hasOnlyComments = statements.length === 0 && block.getFullText().trim().length > 0 && (/^\s*\/\*[\s\S]*\*\/\s*$/.test(block.getFullText()) || isAllLineComments(block.getFullText().trim()));
         if (statements.length === 0 && !hasOnlyComments) {
           findings.push({
             file: filePath,
