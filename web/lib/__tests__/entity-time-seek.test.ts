@@ -66,4 +66,36 @@ describe('findEntityTimestamp', () => {
     const node = { label: 'Pricing strategy', content: 'No timing info', keyTerms: [] };
     expect(findEntityTimestamp(node, 'Nothing time-related here.')).toBeNull();
   });
+
+  it('uses a chapter boundary over regex when the content timestamp falls inside a chapter', () => {
+    const node = { label: 'Pricing strategy', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'At 5:45 Pricing strategy is discussed in detail.';
+    const chapters = [
+      { start_seconds: 0, end_seconds: 60, label: 'Intro' },
+      { start_seconds: 300, end_seconds: 420, label: 'Pricing deep dive' },
+    ];
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('5:00');
+  });
+
+  it('falls through to regex when no chapter brackets the content timestamp', () => {
+    const node = { label: 'Pricing strategy', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'At 5:45 Pricing strategy is discussed in detail.';
+    const chapters = [
+      { start_seconds: 600, end_seconds: 720, label: 'Late section' },
+    ];
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('5:45');
+  });
+
+  it('behaves identically to before when no chapters are provided', () => {
+    const node = { label: 'Pricing strategy', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'At 5:45 Pricing strategy is discussed.';
+    expect(findEntityTimestamp(node, dimensionContent, null)).toBe('5:45');
+    expect(findEntityTimestamp(node, dimensionContent, [])).toBe('5:45');
+  });
+
+  it('extracts the start time from a range-format timestamp in dimension content', () => {
+    const node = { label: 'Apex', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'The Apex framework segment runs from 60:00 to 65:00.';
+    expect(findEntityTimestamp(node, dimensionContent)).toBe('60:00');
+  });
 });

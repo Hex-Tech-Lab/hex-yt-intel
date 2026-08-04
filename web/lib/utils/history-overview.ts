@@ -50,11 +50,22 @@ export function computeMissingDimensions(present: readonly number[]): number[] {
  */
 export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOverviewItem {
   const presentDimensions = (row.present_dimensions ?? []).slice().sort((a, b) => a - b);
-  let cleanTitle = row.title?.trim() || '';
-  const isDateOnlyTitle = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/i.test(cleanTitle) || /^\d{4}-\d{2}-\d{2}$/.test(cleanTitle);
+  const rawTitle = row.title?.trim() || '';
+  // Non-descriptive title detection: bare dates in "Month D, YYYY", "YYYY-MM-DD",
+  // or short "M/D/YY" / "D/M/YY" forms, plus empty/whitespace. A real date-only
+  // title is useless in a history list, so prepend the channel name when known.
+  const isNonDescriptiveTitle =
+    !rawTitle ||
+    /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}$/i.test(rawTitle) ||
+    /^\d{4}-\d{2}-\d{2}$/.test(rawTitle) ||
+    /^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$/.test(rawTitle);
 
-  if (!cleanTitle || isDateOnlyTitle) {
-    cleanTitle = row.base_video_id ? `Video (${row.base_video_id})` : 'Untitled Analysis';
+  const channel = row.channel_title?.trim();
+  let cleanTitle = rawTitle;
+  if (isNonDescriptiveTitle) {
+    cleanTitle = channel
+      ? `${channel} — ${rawTitle || 'Untitled Analysis'}`
+      : rawTitle || (row.base_video_id ? `Video (${row.base_video_id})` : 'Untitled Analysis');
   }
 
   return {

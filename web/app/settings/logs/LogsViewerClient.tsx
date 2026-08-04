@@ -464,7 +464,7 @@ export function LogsViewerClient() {
                   </th>
                   <th
                     onClick={() => handleHeaderClick('message')}
-                    className="py-2.5 px-3 cursor-pointer hover:text-[var(--accent)] transition-colors"
+                    className="py-2.5 px-3 min-w-[320px] cursor-pointer hover:text-[var(--accent)] transition-colors"
                   >
                     Message / Payload {sortField === 'message' ? (sortOrder === 'asc' ? '↑' : '↓') : <span className="opacity-30">↕</span>}
                   </th>

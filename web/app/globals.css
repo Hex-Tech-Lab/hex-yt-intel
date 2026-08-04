@@ -747,4 +747,37 @@ button:focus-visible,
    that marker as a real "…more" toggle: the full text is simply absent
    from the DOM until requested, same as a Facebook/X "See more". */
 
+/* 
+ * ITEM #8 & #4: Global Tooltip Dark Theme Override
+ * Astryx's Tooltip / Popover components use themeProps('tooltip') ("astryx-tooltip")
+ * or browser popover elements. In theme-neutral, no `astryx-tooltip` component styles
+ * are declared, causing tooltips to default to white backgrounds.
+ * We override all popover/tooltip instances at the root source to inherit dark theme surface styles.
+ */
+[popover],
+.astryx-tooltip,
+[role="tooltip"] {
+  background-color: var(--surface-raised, #1F2533) !important;
+  color: var(--ink, #E2E8F0) !important;
+  border: 1px solid var(--line-strong, #334155) !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 11px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
 
+/* 
+ * ITEM #1: Multi-column Table Formatting inside Chat Messages
+ * For tables with >2 columns (or non-timestamp tables) rendered in chat assistant responses,
+ * ensure columns distribute evenly with a min-width on the last column to prevent cramming.
+ */
+.chat-answer-table table th,
+.chat-answer-table table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line-faint, rgba(148, 163, 184, 0.1));
+}
+.chat-answer-table table th:last-child,
+.chat-answer-table table td:last-child {
+  min-width: 140px;
+}

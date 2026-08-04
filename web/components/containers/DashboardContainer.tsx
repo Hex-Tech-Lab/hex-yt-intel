@@ -204,6 +204,25 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         if (timestamp) {
           const secs = parseTimestamp(timestamp);
           if (secs >= 0) setSeekTo(secs);
+        } else if (!dim) {
+          // Race condition: dimension not yet streamed into store.
+          // Subscribe and retry once when the dimension arrives. If the
+          // dimension never streams in (permanently missing, or the user
+          // navigates away before it does), the subscription would otherwise
+          // never unsubscribe -- cap it with a timeout so it can't leak.
+          const timeoutId = setTimeout(() => unsub(), 15_000);
+          const unsub = useAnalysisDimensionsStore.subscribe((state) => {
+            const retryDim = state.getDimension(node.dimension);
+            if (!retryDim) return;
+            clearTimeout(timeoutId);
+            unsub();
+            const retryContent = retryDim.content;
+            const retryTs = findEntityTimestamp(node, retryContent);
+            if (retryTs) {
+              const secs = parseTimestamp(retryTs);
+              if (secs >= 0) setSeekTo(secs);
+            }
+          });
         }
       }
     }
