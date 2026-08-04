@@ -1,36 +1,11 @@
 import React from 'react';
 
-/**
- * Format a USD-denominated value for display.
- * Uses 4 decimal places for values under $0.01 (but >= $0.0001),
- * 2 decimal places otherwise. Handles zero and micro-amounts explicitly
- * to avoid hiding real recorded charges.
- * Preserves the exact output of the previous inline implementations.
- */
-export function fmtUsd(usd: number): string {
-  if (usd === 0) return '$0.00';
-  if (usd < 0.0001) return '<$0.0001';
-  return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
-}
-
-/**
- * Format a USD-denominated value with 4 decimal places always.
- * Used where the previous inline implementation used toFixed(4)
- * and the caller expects sub-cent precision (e.g. UsageTab).
- */
-export function fmtUsdPrecise(usd: number): string {
-  if (usd === 0) return '$0.0000';
-  if (usd < 0.0001) return '<$0.0001';
-  return `$${usd.toFixed(4)}`;
-}
-
-/**
- * Format a cents-denominated value (e.g. from Stripe) as USD string.
- * Divides by 100 first, then formats with fmtUsd semantics.
- */
-export function fmtCentsToUsd(cents: number): string {
-  return fmtUsd(cents / 100);
-}
+// Moved to lib/utils/currency.ts (a plain .ts module, no JSX) so these pure
+// functions are actually unit-testable -- vitest/esbuild can't parse this
+// file's JSX under tsconfig's "jsx": "preserve" (Next.js's own setting,
+// esbuild only supports "preserve" via a real JSX transform, not passthrough)
+// when imported from a .test.ts file. Re-exported here for existing callers.
+export { fmtUsd, fmtUsdPrecise, fmtCentsToUsd } from './currency';
 
 /**
  * Preprocesses markdown content from the assistant to convert non-standard elements:
