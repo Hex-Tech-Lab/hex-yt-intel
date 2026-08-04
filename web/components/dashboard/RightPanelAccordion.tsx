@@ -48,6 +48,7 @@ function RightPanelAccordionImpl({ items }: RightPanelAccordionProps) {
           labelIcon={<Icon icon="solar:clock-circle-linear" size={14} className="text-[var(--accent)]" />}
           labelPosition="start"
           labelSpacing="spread"
+          width={280}
         />
       </div>
       {items.map((item, index) => (

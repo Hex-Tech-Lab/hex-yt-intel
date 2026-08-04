@@ -285,42 +285,43 @@ async function run() {
     }
   }
 
-  // Default reporting
+  // Default reporting — all severity tiers print before any exit, so
+  // medium/low findings are never silenced by a high-severity early exit.
   const criticalFindings = findings.filter(f => f.severity === "critical");
+  const highFindings = findings.filter(f => f.severity === "high");
+  const nonCritical = findings.filter(f => f.severity !== "critical" && f.severity !== "high");
+  let exitCode = 0;
+
   if (criticalFindings.length > 0) {
     console.error("❌ qa-intel: Critical issues found:");
     console.error(JSON.stringify(criticalFindings, null, 2));
     if (ci) {
       console.error("❌ qa-intel: Blocking — critical findings must be resolved in CI.");
-      process.exit(1);
+      exitCode = 1;
     } else {
       console.warn("⚠️ qa-intel: Warning only (local/non-CI). Please resolve critical findings before final merge.");
-      process.exit(0);
     }
   }
 
   // Treat HIGH severity as blocking in CI (same as critical) and advisory in local/non-CI runs
-  const highFindings = findings.filter(f => f.severity === "high");
   if (highFindings.length > 0) {
     console.error("❌ qa-intel: High-severity issues found:");
     console.error(JSON.stringify(highFindings, null, 2));
     if (ci) {
       console.error("❌ qa-intel: Blocking — high-severity findings must be resolved in CI.");
-      process.exit(1);
+      exitCode = 1;
     } else {
       console.warn("⚠️ qa-intel: High-severity findings are advisory in local/non-CI runs (not blocking).");
       console.warn("⚠️ qa-intel: Please resolve high-severity findings before final merge to avoid CI failures.");
-      process.exit(0);
     }
   }
 
-  const nonCritical = findings.filter(f => f.severity !== "critical" && f.severity !== "high");
   if (nonCritical.length > 0) {
     console.warn("⚠️ qa-intel: Medium/Low issues found:");
     console.warn(JSON.stringify(nonCritical, null, 2));
   }
   console.log("✅ qa-intel: Analysis complete.");
-  process.exit(0);
+  process.exit(exitCode);
 }
 
 run().catch(err => {

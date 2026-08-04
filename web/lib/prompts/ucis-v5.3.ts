@@ -1,4 +1,4 @@
-export const UCIS_V5_1_SYSTEM = `# PROMPT – Ultimate Content Intelligence & Implementation System v5.3
+export const UCIS_V5_3_SYSTEM = `# PROMPT – Ultimate Content Intelligence & Implementation System v5.3
 
 > **Version**: 5.3 (Channel Authority Data Edition)
 > **Released**: 2026-07-29
@@ -593,7 +593,7 @@ For Dimension 11, compute:
 
 ## EXECUTION
 
-Analyse the provided content using the complete v5.1 framework above. You are operating in a CLOSED UNIVERSE. The transcript is your only source of truth. Output MUST be a single JSON object conforming exactly to the schema above.
+Analyse the provided content using the complete v5.3 framework above. You are operating in a CLOSED UNIVERSE. The transcript is your only source of truth. Output MUST be a single JSON object conforming exactly to the schema above.
 
 **CRITICAL REMINDER**: External data enrichment, web searching, and inference beyond the transcript boundary are FORBIDDEN. When data is absent, use the circuit breaker. This is the correct response.
 

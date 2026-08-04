@@ -42,7 +42,7 @@ function getRandomUserAgent(): string {
 /**
  * Call Cloudflare Worker's LLM analysis endpoint
  * Proxies request to worker which handles 3-model cascade + KV caching
- * Uses UCIS v5.1 system prompt for comprehensive 11-dimension analysis
+ * Uses UCIS v5.3 system prompt for comprehensive 11-dimension analysis
  */
 export async function callWorkerLLMAnalysis(
   videoId: string,
@@ -73,7 +73,7 @@ export async function callWorkerLLMAnalysis(
       throw new Error(`Worker URL origin '${urlObj.hostname}' is not in approved allowlist. SSRF prevention enforced.`);
     }
 
-    // Build system prompt using UCIS v5.1 factory
+    // Build system prompt using UCIS v5.3 factory
     const systemPrompt = await getUCISPrompt({
       metadata: {
         title: metadata.title,

@@ -1,5 +1,12 @@
 import React from 'react';
 
+// Moved to lib/utils/currency.ts (a plain .ts module, no JSX) so these pure
+// functions are actually unit-testable -- vitest/esbuild can't parse this
+// file's JSX under tsconfig's "jsx": "preserve" (Next.js's own setting,
+// esbuild only supports "preserve" via a real JSX transform, not passthrough)
+// when imported from a .test.ts file. Re-exported here for existing callers.
+export { fmtUsd, fmtUsdPrecise, fmtCentsToUsd } from './currency';
+
 /**
  * Preprocesses markdown content from the assistant to convert non-standard elements:
  * 1. Convert unicode bullets (•/●) into standard markdown list items (-).

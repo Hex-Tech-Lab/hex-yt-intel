@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Banner, Spinner, Badge } from '@astryxdesign/core';
+import { fmtUsd } from '@/lib/utils/format';
 
 interface UserActivityRow {
   id: string;
@@ -29,14 +30,6 @@ interface UserActivityRow {
 }
 
 type SortKey = 'cost_desc' | 'cost_asc' | 'signup_desc' | 'name_asc';
-
-function fmtCost(usd: number): string {
-  if (usd === 0) return '$0.00';
-  // A nonzero cost below $0.0001 would round to "$0.0000" at 4 decimals,
-  // silently hiding a real recorded OpenRouter charge (cubic review, PR #175).
-  if (usd < 0.0001) return '<$0.0001';
-  return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
-}
 
 interface UserSession {
   id: string;
@@ -269,11 +262,11 @@ export function UsersAdminClient() {
                   </td>
                   <td className="px-3 py-2 capitalize"><Badge variant="neutral" label={u.tier || 'free'} /></td>
                   <td className="px-3 py-2">{fmt(u.created_at)}</td>
-                  <td className="px-3 py-2">{u.analysis_turns || u.analyses_count || 0} · <span className="text-[var(--ink-main)]">{fmtCost(u.analysis_cost_usd || 0)}</span></td>
-                  <td className="px-3 py-2">{u.chat_turns || 0} · <span className="text-[var(--ink-main)]">{fmtCost(u.chat_cost_usd || 0)}</span></td>
-                  <td className="px-3 py-2">{u.remediation_turns || 0} · <span className="text-[var(--ink-main)]">{fmtCost(u.remediation_cost_usd || 0)}</span></td>
+                  <td className="px-3 py-2">{u.analysis_turns || u.analyses_count || 0} · <span className="text-[var(--ink-main)]">{fmtUsd(u.analysis_cost_usd || 0)}</span></td>
+                  <td className="px-3 py-2">{u.chat_turns || 0} · <span className="text-[var(--ink-main)]">{fmtUsd(u.chat_cost_usd || 0)}</span></td>
+                  <td className="px-3 py-2">{u.remediation_turns || 0} · <span className="text-[var(--ink-main)]">{fmtUsd(u.remediation_cost_usd || 0)}</span></td>
                   <td className="px-3 py-2 font-semibold">
-                    <span className="text-[var(--ink-main)]">{fmtCost(u.total_cost_usd)}</span>
+                    <span className="text-[var(--ink-main)]">{fmtUsd(u.total_cost_usd)}</span>
                     {u.total_tokens_used > 0 && (
                       <span className="text-[var(--ink-muted)] font-normal"> · {u.total_tokens_used.toLocaleString()} tok</span>
                     )}
@@ -378,10 +371,10 @@ export function UsersAdminClient() {
               <th scope="row" className="px-3 py-2 text-left font-bold">Total ({visibleUsers.length} users)</th>
               <td className="px-3 py-2">—</td>
               <td className="px-3 py-2">—</td>
-              <td className="px-3 py-2">{totals.analysis_turns} · {fmtCost(totals.analysis_cost_usd)}</td>
-              <td className="px-3 py-2">{totals.chat_turns} · {fmtCost(totals.chat_cost_usd)}</td>
-              <td className="px-3 py-2">{totals.remediation_turns} · {fmtCost(totals.remediation_cost_usd)}</td>
-              <td className="px-3 py-2 text-[var(--accent)]">{fmtCost(totals.total_cost_usd)} · {totals.total_tokens_used.toLocaleString()} tok</td>
+              <td className="px-3 py-2">{totals.analysis_turns} · {fmtUsd(totals.analysis_cost_usd)}</td>
+              <td className="px-3 py-2">{totals.chat_turns} · {fmtUsd(totals.chat_cost_usd)}</td>
+              <td className="px-3 py-2">{totals.remediation_turns} · {fmtUsd(totals.remediation_cost_usd)}</td>
+              <td className="px-3 py-2 text-[var(--accent)]">{fmtUsd(totals.total_cost_usd)} · {totals.total_tokens_used.toLocaleString()} tok</td>
               <td className="px-3 py-2">—</td>
               <td className="px-3 py-2">—</td>
               <td className="px-3 py-2" />

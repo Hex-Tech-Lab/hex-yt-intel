@@ -15,7 +15,7 @@ export interface OwnershipResult<T> {
 export async function verifyResourceOwnership<T>(
   resourceId: string,
   table: 'analyses' | 'chat_conversations',
-  select: string = '*',
+  select: string = 'id, user_id',
   auth: AuthPort = new SupabaseAuthAdapter(),
   persistence: AnalysisPersistencePort & ChatPersistencePort = new SupabasePersistenceAdapter()
 ): Promise<OwnershipResult<T>> {

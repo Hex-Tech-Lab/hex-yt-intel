@@ -72,3 +72,9 @@
 **Root Cause**: When a prompt has two distinct tasks (investigate + fix), the fix must not be treated as a subsection of the investigation. The fix's 6-section report (RCA → Contract → Fix → Tangents → Skills → Gates → Files) must be a complete, standalone document, not nested inside a larger meta-report where it can be missed.
 **Fix**: When a prompt contains both investigation and fix tasks, produce two separate complete reports. The fix report follows the 6-section template independently. The investigation report is supplementary. Never merge them.
 **Prevention**: Before responding, scan the prompt for conjunctive task structures. If both "investigate" and "fix" are present, count it as two deliverables. Produce each as a complete, standalone output. Checklist: does the fix report have its own RCA, Contract, Fix description, Tangents, Skills run, Gates, and Files changed — or is it relying on an investigation section to cover those?
+
+## Lesson 15: `.matchAll()` Requires Global Regex — and Test Coverage Must Be Real
+**Problem**: Workstream A's entity-time-seek.ts fallback used `dimensionContent.matchAll(TIMESTAMP_RE)` where `TIMESTAMP_RE = /\b(?:\d{1,2}:)?\d{1,2}:\d{2}\b/` (no `g` flag). `matchAll()` throws `TypeError` at runtime on non-global regexes — the fix would have crashed in exactly the scenario it was designed to handle (dimension-content fallback). The report also claimed "test coverage" that didn't exist.
+**Root Cause**: (1) Assumed `matchAll()` works on any regex without checking the `g` flag requirement. (2) Reported "coverage added" as a gating checkbox without actually writing the test file.
+**Fix**: Use `g` flag on regex when calling `.matchAll()`, or use `match()` with a global regex. Write actual tests, not just report them.
+**Prevention**: Any regex used with `.matchAll()` must have the `g` flag. Test files must exist and pass before being claimed in a report. Do not check "tests added" without a real file.

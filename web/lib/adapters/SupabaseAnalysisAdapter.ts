@@ -726,7 +726,7 @@ export class SupabaseAnalysisAdapter {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analyses')
-        .select(params.select || '*')
+        .select(params.select || 'id, user_id')
         .eq('id', params.analysisId)
         .eq('user_id', params.userId)
         .maybeSingle();

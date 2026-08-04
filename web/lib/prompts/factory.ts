@@ -1,7 +1,7 @@
 import type { PersonaId } from '@/lib/prompts';
 import { rankPersonas } from '@/lib/prompts';
 import { resolveUCISPromptTemplate } from '@lib/services/settings';
-import { UCIS_V5_1_SYSTEM } from '@lib/prompts/ucis-v5.1';
+import { UCIS_V5_3_SYSTEM } from '@lib/prompts/ucis-v5.3';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 
 export interface GetUCISPromptParams {
@@ -10,7 +10,7 @@ export interface GetUCISPromptParams {
    * Pre-resolved template text, supplied by callers (e.g. the Workers
    * runtime) that can't reach resolveUCISPromptTemplate's process.env-based
    * Supabase/Redis reads. When set, resolveUCISPromptTemplate is never
-   * called -- pass UCIS_V5_1_SYSTEM (or your own fallback) explicitly if
+   * called -- pass UCIS_V5_3_SYSTEM (or your own fallback) explicitly if
    * your live-config lookup came back empty.
    */
   promptOverride?: string;
@@ -74,7 +74,7 @@ export async function getUCISPrompt({
   const durationNotice = formattedDuration ? `\n**Video Duration**: ${formattedDuration}` : '';
 
   // DB-backed prompt template (not matching the legacy fallback static string)
-  if (systemPrompt !== UCIS_V5_1_SYSTEM) {
+  if (systemPrompt !== UCIS_V5_3_SYSTEM) {
     return `${systemPrompt}
 
 ---

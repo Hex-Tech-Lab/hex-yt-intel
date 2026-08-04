@@ -2,6 +2,7 @@
 
 import { ProgressBar } from '@astryxdesign/core';
 import { useUsageSummary } from '@/hooks/useUsageSummary';
+import { fmtUsdPrecise } from '@/lib/utils/format';
 
 function UsageRow({ label, used, quota }: { label: string; used: number; quota: number | null }) {
   const pct = quota && quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : null;
@@ -56,7 +57,7 @@ export function UsageTab() {
       </div>
       {summary.estimatedCostUsd > 0 && (
         <p className="mt-3 text-[11px] text-[var(--ink-muted)] font-mono">
-          Estimated platform cost this period: ${summary.estimatedCostUsd.toFixed(4)}
+          Estimated platform cost this period: {fmtUsdPrecise(summary.estimatedCostUsd)}
         </p>
       )}
     </div>

@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { getSupabaseClientWithAuth } from '@/lib/supabase';
+import { getSupabaseClientWithAuth, getSupabaseServiceClient } from '@/lib/supabase';
 import { getUserTier } from '@/lib/services/traffic';
 import { logUsage } from '@/lib/usage';
 import { ERROR_CODES } from '@/lib/error-codes';
@@ -77,6 +77,15 @@ export async function GET(
     }
 
     const userId = user.id;
+
+    const service = getSupabaseServiceClient();
+    const { data: callerData } = await service
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+    const isAdmin = callerData?.role === 'admin';
+
     const searchParams = request.nextUrl.searchParams;
     const format = searchParams.get('format') || 'pdf';
     const scope = searchParams.get('scope') || 'summary';
@@ -88,12 +97,14 @@ export async function GET(
       );
     }
 
-    const { data: analysis, error } = await supabase
+    const query = service
       .from('analyses')
       .select('*')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .maybeSingle();
+      .eq('id', id);
+    if (!isAdmin) {
+      query.eq('user_id', userId);
+    }
+    const { data: analysis, error } = await query.maybeSingle();
 
     if (error || !analysis) {
       return NextResponse.json(
