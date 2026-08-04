@@ -1,0 +1,28 @@
+worker/package.json
+  s_0eded1e9d0cab6::t_2a7826b73b52fc 25
+web/lib/__tests__/token-bucket.test.ts
+  s_0eded1e9d0cab6::t_e41738a79029e9 4-20,22-50,52-63,86,94-96,98,101-113,115,118-123,125,128-130,132,135-137,139-141,144-145,150,153-158,160
+  s_0eded1e9d0cab6::t_f10fc6558e8574 51
+  s_0eded1e9d0cab6::t_b6d17230ac1611 64-69,73-76
+  s_0eded1e9d0cab6::t_f4acd75f82b1b1 1
+pnpm-workspace.yaml
+  s_0eded1e9d0cab6::t_a35f547c514967 28-32,34-35,41
+pnpm-lock.yaml
+  s_0eded1e9d0cab6::t_599f41113d5368 12,14-15,21,250,255-256,1760,3630-3631,3874-3875,3969-3970,5623-5624,7059,7063,7764,7968,8033,8226,9281,9582,9681,9935,10478,11295,11681
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "a162abd94f4087d2f581f2f76c30efc3cc88d90b",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
