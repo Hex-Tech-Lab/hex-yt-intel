@@ -25,15 +25,20 @@ overrides:
   # version GitHub's advisory data confirms as patched, not a blind
   # latest-bump. (tar's #62-65 and js-yaml's #61 bumps are on their
   # pre-existing entries further down, not duplicated here.)
-  "fast-uri": "^3.1.4"
+  # Dependabot alerts #96,97,99-107 (2026-08-04): fast-uri/hono/undici's
+  # existing pins above had drifted stale (still resolving inside newer
+  # vulnerable ranges); ip-address had no pin at all. All 4 bumped to the
+  # first version each advisory confirms as patched.
+  "fast-uri": "^3.1.5"
   "sharp": "^0.35.0"
-  "hono": "^4.12.27"
+  "hono": "^4.12.34"
+  "ip-address": "^10.3.1"
   "eslint-plugin-react-hooks": "5.1.0"
   "eslint-plugin-react": "7.34.3"
   "eslint-config-next": "14.2.16"
   "@next/eslint-plugin-next": "14.2.16"
   "glob@>=10.2.0 <10.5.0": "10.5.0"
-  "undici": "^7.25.0"
+  "undici": "^7.29.0"
   "ajv": "^8.18.0"
   "@eslint/eslintrc>ajv": "^6.14.0"
   "eslint>ajv": "^6.14.0"
