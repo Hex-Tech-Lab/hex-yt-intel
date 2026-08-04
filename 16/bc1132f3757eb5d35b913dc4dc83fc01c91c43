@@ -1,0 +1,27 @@
+supabase/migrations/20260803234216_prevent_self_role_escalation.sql
+  s_0eded1e9d0cab6::t_0c672e285f040d 1-39
+web/lib/utils/format.tsx
+  s_0eded1e9d0cab6::t_018646e833a2b4 3-8
+CHANGELOG.md
+  s_0eded1e9d0cab6::t_eff78eea21dfaa 7-11
+web/lib/__tests__/currency.test.ts
+  s_0eded1e9d0cab6::t_95d150ee7b6156 1-62
+web/lib/utils/currency.ts
+  s_0eded1e9d0cab6::t_826ceddcef6033 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "16bc1132f3757eb5d35b913dc4dc83fc01c91c43",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
