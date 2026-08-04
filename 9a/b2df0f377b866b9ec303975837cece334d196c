@@ -1,0 +1,71 @@
+docs/agent-prompts/2026-08-05-oc-title-fallback.md
+  s_0eded1e9d0cab6::t_49f13056514510 1-39
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_8d88e6b6eef697 209-213,217
+  s_0ad60efcede198::t_d8df06b066aa15 207-208,214-216,218-225
+docs/REPORT_6HOUR_COMPREHENSIVE.md
+  s_0ad60efcede198::t_38210067f852d1 1-384
+docs/agent-prompts/2026-08-05-oc-livetest-batch.md
+  s_0eded1e9d0cab6::t_70ca8d101aff31 1-41
+docs/agent-prompts/2026-08-05-agy-livetest-batch-HELD.md
+  s_0eded1e9d0cab6::t_70ca8d101aff31 1-36
+docs/agent-prompts/2026-08-06-oc-chapters-and-speaker-id.md
+  s_0eded1e9d0cab6::t_aa64f2f20a1cc8 1-94
+worker/src/services/chapter-parser.ts
+  s_0ad60efcede198::t_0e13db70460a23 1-54,56-57,59-60,67,76-87
+  s_0ad60efcede198::t_a83b2b4d457c3e 58,62
+  s_0ad60efcede198::t_4b3a29d20f1a46 69-75
+  s_0ad60efcede198::t_88c56392d15988 55
+  s_0ad60efcede198::t_0d952bd363b52f 61,63-66,68
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0ad60efcede198::t_01f9796cd543dd 69-100
+web/lib/__tests__/chapter-parser.test.ts
+  s_0ad60efcede198::t_b3b173d7bef085 1-43
+web/lib/__tests__/history-overview.test.ts
+  s_0ad60efcede198::t_7fa7ab00599f23 130-160
+web/lib/utils/entity-time-seek.ts
+  s_0ad60efcede198::t_03d8b4bc895bb0 28-43
+  s_0eded1e9d0cab6::t_79283e1ecbec50 22-26
+  s_0ad60efcede198::t_9c5403c6377d38 14-17
+  s_0ad60efcede198::t_0e109bebc61690 51-57,62-65,76-77,82,84-97
+  s_0ad60efcede198::t_5e5ccb2ced0df1 119-126
+docs/specs/CHAPTERS_AND_SPEAKER_ID_SPEC_2026-08-05.md
+  s_0eded1e9d0cab6::t_6075231e79bd4e 111,113-123,127-129
+  s_0eded1e9d0cab6::t_cad4a48260d689 1-110,112,124-126
+web/app/settings/logs/LogsViewerClient.tsx
+  s_0eded1e9d0cab6::t_0a10dc4ac98e1b 467
+web/lib/utils/history-overview.ts
+  s_0ad60efcede198::t_07432384dc53d3 53-61,63-68
+web/components/SignalBarGroup.tsx
+  s_0eded1e9d0cab6::t_2a4faa03dd10bf 1-63
+web/components/templates/console/AnalysisHero.tsx
+  s_0eded1e9d0cab6::t_3a3a6fd271bea8 105,133,135,137,144-146,150-151
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_4d21cb5ed9499f 1125
+supabase/migrations/20260805000000_add_transcript_chapters.sql
+  s_0ad60efcede198::t_39d00cadddac67 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "9ab2df0f377b866b9ec303975837cece334d196c",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
