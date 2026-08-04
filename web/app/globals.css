@@ -81,9 +81,21 @@
 
 /* Sprint 1: override all radii to 0px for sharp industrial aesthetic.
    Must be a separate @theme block AFTER the main one above — Tailwind v4
-   merges theme blocks in declaration order, so this wins. */
+   merges theme blocks in declaration order, so this wins. Each token
+   listed individually -- `--radius-*: 0px` is invalid Tailwind v4 syntax
+   (wildcard namespace values only accept `initial`, not a concrete value;
+   this broke the production build, caught in CI). */
 @theme {
-  --radius-*: 0px;
+  --radius-control: 0px;
+  --radius-card: 0px;
+  --radius-pill: 0px;
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
 }
 
 /* Base reset lives in @layer base so Tailwind's utilities (a later layer) win.
@@ -160,10 +172,14 @@
   --platform-linux: #FBBF24;     /* amber-400  */
   --platform-web: var(--ink-muted);
 
-  /* --- Radii — one source of truth (see @theme). Slightly rounded. ------ */
-  --radius-control: 7px;
-  --radius-card: 10px;
-  --radius-pill: 7px;
+  /* --- Radii — one source of truth (see @theme). Sprint 1: zero everywhere,
+     sharp industrial aesthetic. Was drifted out of sync with @theme's
+     override until now -- direct `var(--radius-control)` usage (border-
+     radius on plain CSS rules, not Tailwind utility classes) reads this
+     :root value, not @theme's, so both had to change together. -------- */
+  --radius-control: 0px;
+  --radius-card: 0px;
+  --radius-pill: 0px;
 
   /* --- Type families ----------------------------------------------------- */
   --font-sans: var(--inter-font), ui-sans-serif, system-ui, -apple-system, sans-serif;
