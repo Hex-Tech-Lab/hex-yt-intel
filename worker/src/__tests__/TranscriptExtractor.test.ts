@@ -58,11 +58,7 @@ describe('TranscriptExtractor', () => {
     const extractor = new TranscriptExtractor();
 
     // Call fetchTranscriptContent which should catch the timeout and report to Sentry
-    try {
-      await (extractor as any).fetchTranscriptContent(videoId, langCode);
-    } catch (e) {
-      // Expected to throw after reporting
-    }
+    await expect((extractor as any).fetchTranscriptContent(videoId, langCode)).rejects.toThrow();
 
     // Verify captureException was called with the timeout error and correct tags
     expect(captureException).toHaveBeenCalledWith(timeoutError, {
@@ -88,11 +84,7 @@ describe('TranscriptExtractor', () => {
     const extractor = new TranscriptExtractor();
 
     // Call fetchTranscriptContent which should catch the error and report to Sentry
-    try {
-      await (extractor as any).fetchTranscriptContent(videoId, langCode);
-    } catch (e) {
-      // Expected to throw after reporting
-    }
+    await expect((extractor as any).fetchTranscriptContent(videoId, langCode)).rejects.toThrow();
 
     // Verify captureException was called with the error and correct tags
     expect(captureException).toHaveBeenCalledWith(fetchError, {
@@ -121,11 +113,7 @@ describe('TranscriptExtractor', () => {
 
     const extractor = new TranscriptExtractor();
 
-    try {
-      await (extractor as any).fetchTranscriptContent(videoId, langCode);
-    } catch (e) {
-      // Expected to throw after reporting
-    }
+    await expect((extractor as any).fetchTranscriptContent(videoId, langCode)).rejects.toThrow();
 
     // Verify captureException was called
     expect(captureException).toHaveBeenCalledTimes(1);
