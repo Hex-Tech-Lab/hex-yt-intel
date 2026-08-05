@@ -1116,7 +1116,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
   // This runs in parallel with the LLM stream — chapters are independent of
   // the analysis lifecycle (chapters-decoupling design, 2026-08-06).
   const description = (req.metadata as { description?: string }).description;
-  if (description) {
+  if (description !== undefined) {
     const chapters = parseChapters(description);
     const appUrl = req.appUrl || c.env.APP_URL || '';
     if (appUrl && signingKey) {
@@ -1125,11 +1125,23 @@ analysis.post("/analyze-llm-stream", async (c) => {
           const exp = Date.now() + 120_000;
           const canonical = JSON.stringify({ chapters });
           const sig = await signBoundContent(signingKey, 'chapters', req.videoId, exp, canonical);
-          await fetch(`${appUrl}/api/videos/${req.videoId}/chapters`, {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10_000);
+          const response = await fetch(`${appUrl}/api/videos/${req.videoId}/chapters`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chapters, sig, exp }),
+            signal: controller.signal,
           });
+          clearTimeout(timeout);
+          if (!response.ok) {
+            const bodySnippet = (await response.text()).slice(0, 200);
+            console.error('[analyze-llm-stream] Chapter persist returned non-2xx', {
+              videoId: req.videoId,
+              status: response.status,
+              body: bodySnippet,
+            });
+          }
         } catch (err) {
           console.warn('[analyze-llm-stream] Chapter persist failed (non-blocking)', {
             videoId: req.videoId,
