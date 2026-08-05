@@ -1135,7 +1135,8 @@ analysis.post("/analyze-llm-stream", async (c) => {
           });
           clearTimeout(timeout);
           if (!response.ok) {
-            const bodySnippet = (await response.text()).slice(0, 200);
+            const bodyText = await response.text();
+            const bodySnippet = bodyText.length > 200 ? bodyText.slice(0, 200) + '...' : bodyText;
             console.error('[analyze-llm-stream] Chapter persist returned non-2xx', {
               videoId: req.videoId,
               status: response.status,

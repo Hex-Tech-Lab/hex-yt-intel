@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useVideoStore } from '@/store/useVideoStore';
+import { useChaptersStore } from '@/store/useChaptersStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
@@ -95,9 +96,20 @@ export function useSSEStream() {
     clearAnalysis();
     setVideoMetadata(preservedMetadata);
     resetSynthesis();
+    // Chapters are per-video and survive across analyses of the same video
+    // via the Zustand store's per-video cache. On ANY new analysis (same or
+    // different video), clear the cache entry for THIS video so the first
+    // post-analysis render re-fetches fresh data. The old entry for a
+    // DIFFERENT video is left in place (no cache-bloat risk — it gets
+    // overwritten by the new video's write on the first useChapters mount
+    // since that hook is per-Dashboard-instance).
+    useChaptersStore.getState().reset(videoId);
     if (!isSameVideo) {
       useChatStore.getState().reset();
       useVideoStore.getState().reset();
+    }
+    if (videoId && (!isSameVideo || forceRefresh)) {
+      useChaptersStore.getState().reset(videoId);
     }
     setIsLoading(true);
     setStatus('downloading');

@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { verifyContentSig } from '@/lib/stream-token';
-import { SupabaseTranscriptAdapter, type ChapterRow } from '@/lib/adapters/SupabaseTranscriptAdapter';
+import { SupabaseTranscriptAdapter } from '@/lib/adapters/SupabaseTranscriptAdapter';
+import type { ChapterRow } from '@/lib/adapters/SupabaseTranscriptAdapter';
 
 const ChapterInputSchema = z.object({
   idx: z.number().int().min(0),
