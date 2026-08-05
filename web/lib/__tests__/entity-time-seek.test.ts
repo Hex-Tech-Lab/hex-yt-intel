@@ -98,4 +98,28 @@ describe('findEntityTimestamp', () => {
     const dimensionContent = 'The Apex framework segment runs from 60:00 to 65:00.';
     expect(findEntityTimestamp(node, dimensionContent)).toBe('60:00');
   });
+
+  it('uses label-proximity timestamp for chapter check, not the first timestamp (P0-4)', () => {
+    // Two timestamps, only the second is near the entity label. The chapter
+    // check must use the label-proximity timestamp (50:00), not the first one
+    // (2:10). The chapter "Deep dive" (40:00-60:00) brackets 50:00, so the
+    // result should be the chapter start (40:00), not the raw 50:00.
+    const node = { label: 'Entity B', content: '', keyTerms: [] };
+    const dimensionContent = 'At 2:10 we cover intros. At 50:00 Entity B is discussed in depth.';
+    const chapters = [
+      { start_seconds: 0, end_seconds: 300, label: 'Intro' },
+      { start_seconds: 2400, end_seconds: 3600, label: 'Deep dive' },
+    ];
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('40:00');
+  });
+
+  it('uses the label-proximity timestamp when it falls outside any chapter (P0-4)', () => {
+    const node = { label: 'Entity B', content: '', keyTerms: [] };
+    const dimensionContent = 'At 2:10 we cover intros. At 50:00 Entity B is discussed.';
+    const chapters = [
+      { start_seconds: 0, end_seconds: 300, label: 'Intro' },
+    ];
+    // 50:00 = 3000s, falls outside the 0-300s chapter, so return raw 50:00
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('50:00');
+  });
 });

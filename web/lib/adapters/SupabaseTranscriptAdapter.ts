@@ -179,6 +179,20 @@ export class SupabaseTranscriptAdapter {
         Sentry.captureException(deleteError, { tags: { method: 'upsertChapters-cleanup' }, extra: { videoId } });
       }
     } else if (attemptedButEmpty && videoId) {
+      // P0-2: delete ALL existing real chapter rows (idx >= 0) from a prior
+      // analysis run before writing the sentinel. Without this, a re-analysis
+      // that finds no chapters keeps stale chapters from the old run visible
+      // (green chip, wrong seek boundaries).
+      const { error: deleteRealError } = await service
+        .from('transcript_chapters')
+        .delete()
+        .eq('video_id', videoId)
+        .gte('idx', 0);
+      if (deleteRealError) {
+        Sentry.captureException(deleteRealError, { tags: { method: 'upsertChapters-delete-stale' }, extra: { videoId } });
+        throw deleteRealError;
+      }
+
       const sentinel: ChapterRow = {
         video_id: videoId,
         idx: -1,
@@ -208,6 +222,23 @@ export class SupabaseTranscriptAdapter {
       .order('start_seconds', { ascending: true });
     if (error) throw error;
     return (data as ChapterRow[]) || [];
+  }
+
+  static async purgeExpiredChapters(): Promise<{ videoId: string; deletedAt: string }[]> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service.rpc('purge_expired_chapters');
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async complianceCheckChapters(): Promise<{ violations: number; maxAge: string | null }> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service.rpc('compliance_check_chapters');
+    if (error) throw error;
+    if (data && data.length > 0) {
+      return { violations: data[0]!.violations, maxAge: data[0]!.max_age };
+    }
+    return { violations: 0, maxAge: null };
   }
 
   static async purgeExpired(): Promise<{ videoId: string; deletedAt: string }[]> {

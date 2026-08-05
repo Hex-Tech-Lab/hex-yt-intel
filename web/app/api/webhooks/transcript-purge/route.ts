@@ -17,6 +17,11 @@ export async function POST(request: NextRequest) {
     const purged = await SupabaseTranscriptAdapter.purgeExpired();
     console.log('[transcript-purge] purged', purged.length);
 
+    // P0-3: purge expired chapter rows (both real chapters and the
+    // attempted-but-empty sentinel) on the same cron schedule as transcripts.
+    const purgedChapters = await SupabaseTranscriptAdapter.purgeExpiredChapters();
+    console.log('[transcript-purge] purged chapters', purgedChapters.length);
+
     // Purge corresponding Redis L1 transcript cache keys (72h TTL, set in worker).
     const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
     const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
