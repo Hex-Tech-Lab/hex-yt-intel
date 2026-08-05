@@ -1,0 +1,20 @@
+web/hooks/useChapters.ts
+  s_0eded1e9d0cab6::t_872133832d96a9 39-42
+  s_0eded1e9d0cab6::t_b5f4242448c72c 3,9-10,20-36,43-46,50-60,62-63,66,68,83,95-97,101,107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "782d2b1751624bcd6f8d6f9c4bbed8dd2cbe28da",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
