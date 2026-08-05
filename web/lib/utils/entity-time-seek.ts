@@ -27,19 +27,21 @@ const TIMESTAMP_RANGE_RE = /\b(?:\d{1,2}:)?\d{1,2}:\d{2}\s*(?:–|-|to)\s*(?:\d{
 
 /** Parse "HH:MM:SS", "MM:SS", or "M:SS" to seconds. NaN on no match. */
 function timeToSeconds(ts: string): number {
-  const m = ts.match(/^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})$/);
-  if (!m) return NaN;
-  const hours = m[1] ? parseInt(m[1], 10) : 0;
-  return hours * 3600 + parseInt(m[2]!, 10) * 60 + parseInt(m[3]!, 10);
+  const match = ts.match(/^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})$/);
+  if (!match) return NaN;
+  const hours = match[1] ? parseInt(match[1], 10) : 0;
+  const minutes = parseInt(match[2]!, 10);
+  const seconds = parseInt(match[3]!, 10);
+  return hours * 3600 + minutes * 60 + seconds;
 }
 
 /** Format seconds back to the "MM:SS" / "HH:MM:SS" display form. */
-function formatTimestamp(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = Math.floor(secs % 60);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+function formatTimestamp(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
 }
 
 export interface EntityTimeSeekNode {
@@ -88,8 +90,10 @@ export function findEntityTimestamp(
     if (candidate) {
       const startTimeMatch = candidate[0].match(TIMESTAMP_RE);
       if (startTimeMatch) {
-        const t = timeToSeconds(startTimeMatch[0]);
-        const chapter = chapters.find((c) => t >= c.start_seconds && t <= c.end_seconds);
+        const candidateSeconds = timeToSeconds(startTimeMatch[0]);
+        const chapter = chapters.find(
+          (ch) => candidateSeconds >= ch.start_seconds && candidateSeconds <= ch.end_seconds,
+        );
         if (chapter) return formatTimestamp(chapter.start_seconds);
       }
     }

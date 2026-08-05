@@ -48,6 +48,12 @@ export function useChapters(analysisId: string | null, status: string) {
         }
       } catch (err) {
         console.debug('[chapters] fetch failed:', err);
+      } finally {
+        // No resource to release here (the `cancelled` flag set by this
+        // effect's own cleanup handles the abandoned-request case) -- this
+        // finally exists to satisfy qa-intel's WorkflowRule I/O-safety check,
+        // which requires fetch calls to be wrapped in try/finally regardless
+        // of whether the finally body does anything.
       }
     })();
 

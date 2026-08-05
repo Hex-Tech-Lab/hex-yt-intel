@@ -50,11 +50,11 @@ export function SignalBarGroup({ score = 0, maxScore = 10, label, className = ''
         </div>
       )}
       <div className="flex items-center gap-1 w-full h-3">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: 6 }).map((_unused, barIndex) => (
           <div
-            key={i}
-            className={`flex-1 h-full rounded-sm border transition-all duration-300 ${getBarColor(i, activeBars)}`}
-            title={`Signal step ${i + 1} of 6`}
+            key={barIndex}
+            className={`flex-1 h-full rounded-sm border transition-all duration-300 ${getBarColor(barIndex, activeBars)}`}
+            title={`Signal step ${barIndex + 1} of 6`}
           />
         ))}
       </div>
