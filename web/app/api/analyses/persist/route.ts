@@ -220,11 +220,27 @@ export async function POST(request: NextRequest) {
       // chapter-parser.ts (0:00 Intro-style lines). Upserted into
       // `transcript_chapters` on (video_id, idx). Null/absent when the
       // description has no chapter markers (most videos) — no rows written.
+      // Constrained per PR #205 review (2026-08-05): chapter persistence is
+      // best-effort (failures are caught/logged, don't fail the request), so
+      // malformed input could otherwise silently corrupt chapter state with
+      // no visible failure. The end_seconds > start_seconds cross-field
+      // check can't be expressed as a plain Zod constraint without
+      // .refine() -- deliberately done as a manual post-parse filter
+      // instead (see filterValidChapters() below), not a Zod .refine(),
+      // because qa-intel's SchemaContractRule only recognizes .optional()
+      // chained directly after .refine() in the same fluent expression; a
+      // .refine() nested inside z.array(...).nullable().optional() is
+      // structurally invisible to that check even though it's empirically
+      // safe (verified: omitting the field / null / [] all parse fine,
+      // only a malformed element would be rejected) -- restructuring around
+      // the rule's blind spot rather than fighting a false positive.
+      // Mirrors the DB CHECK constraint in
+      // supabase/migrations/20260805003000_transcript_chapters_check_constraint.sql.
       chapters: z.array(z.object({
-        idx: z.number(),
-        start_seconds: z.number(),
-        end_seconds: z.number(),
-        label: z.string(),
+        idx: z.number().int().min(0),
+        start_seconds: z.number().finite().min(0),
+        end_seconds: z.number().finite().min(0),
+        label: z.string().trim().min(1),
       })).nullable().optional(),
     });
 
@@ -258,8 +274,23 @@ export async function POST(request: NextRequest) {
         transcript,
         channelMeta: rawChannelMeta,
         comments: rawComments,
-        chapters: rawChapters,
+        chapters: rawChaptersInput,
       } = parsedBody.data;
+
+      // Cross-field check (end_seconds > start_seconds) that Zod's
+      // per-field constraints can't express -- see the schema comment above
+      // for why this is a manual filter rather than z.refine(). Malformed
+      // elements are dropped rather than failing the whole request, matching
+      // this route's existing best-effort posture for chapters (a bad
+      // element from one chunk shouldn't block persisting the rest, or the
+      // analysis itself).
+      const rawChapters = rawChaptersInput?.filter((c) => {
+        const ok = c.end_seconds > c.start_seconds;
+        if (!ok) {
+          console.warn('[analyses/persist] Dropped malformed chapter (end_seconds <= start_seconds)', { analysisId, idx: c.idx });
+        }
+        return ok;
+      }) ?? rawChaptersInput;
 
       // Defense in depth: the worker already caps channelMeta (see
       // MAX_CHANNEL_META_BYTES in worker/src/routes/analysis.ts), but this is a
