@@ -1,0 +1,19 @@
+docs/specs/CHAPTERS_DECOUPLING_DESIGN_2026-08-06.md
+  s_0eded1e9d0cab6::t_69958f013d0765 1-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "7ba1f1b84b198e236f7ae175b8b4842049e919ca",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
