@@ -899,6 +899,7 @@ export async function POST(request: NextRequest) {
       // parsed) -> no rows, chip renders grey.
       if (rawChapters) {
         await SupabaseTranscriptAdapter.upsertChapters(
+          videoId,
           rawChapters.map((c) => ({
             video_id: videoId,
             idx: c.idx,

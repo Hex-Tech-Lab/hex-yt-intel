@@ -140,11 +140,14 @@ export class SupabaseTranscriptAdapter {
    * chapters exist, the sentinel is deleted so the chip renders green. No-op
    * when chapters is empty and not attemptedButEmpty.
    */
-  static async upsertChapters(chapters: ChapterRow[], opts?: { attemptedButEmpty?: boolean }): Promise<void> {
+  static async upsertChapters(
+    videoId: string,
+    chapters: ChapterRow[],
+    opts?: { attemptedButEmpty?: boolean },
+  ): Promise<void> {
     const attemptedButEmpty = opts?.attemptedButEmpty === true;
     if (chapters.length === 0 && !attemptedButEmpty) return;
     const service = getSupabaseServiceClient();
-    const videoId = chapters[0]?.video_id;
 
     if (chapters.length > 0) {
       const { error: upsertError } = await service
