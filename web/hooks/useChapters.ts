@@ -36,26 +36,36 @@ export function useChapters(videoId: string | null) {
     let cancelled = false;
     const fetchWithBackoff = async () => {
       while (retryCountRef.current < MAX_RETRIES && !cancelled) {
+        let confirmedLoaded = false;
         try {
           const res = await fetch(`/api/videos/${encodeURIComponent(videoId)}/chapters`);
           if (cancelled) return;
           if (res.ok) {
-            const data = await res.json() as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }> };
+            const data = await res.json() as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }>; confirmed?: boolean };
             if (!cancelled) {
-              const chapters = data.chapters ?? [];
-              store.setLoaded(videoId, chapters);
-              return;
+              // confirmed: false means no sentinel/real rows exist yet -- the
+              // worker's fire-and-forget write can still be in flight (fires
+              // from inside the SSE stream handler). Treat as not-yet-final
+              // and keep retrying, same as a network failure, rather than
+              // caching a false "no chapters" the moment the first request
+              // happens to race ahead of the write.
+              if (data.confirmed) {
+                store.setLoaded(videoId, data.chapters ?? []);
+                confirmedLoaded = true;
+              }
             }
           }
         } catch (err) {
           if (!cancelled) {
             Sentry.captureException(err, { contexts: { chapters: { videoId } } });
           }
+        } finally {
+          if (confirmedLoaded) return;
         }
         retryCountRef.current++;
         if (retryCountRef.current < MAX_RETRIES && !cancelled) {
           const delay = Math.min(BASE_DELAY_MS * Math.pow(2, retryCountRef.current - 1), MAX_DELAY_MS);
-          await new Promise((r) => setTimeout(r, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
       if (!cancelled) store.setError(videoId);

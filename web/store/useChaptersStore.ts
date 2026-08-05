@@ -32,22 +32,22 @@ export const useChaptersStore = create<ChaptersStore>((set, get) => ({
   entries: {},
 
   setLoading: (videoId) =>
-    set((s) => ({
-      entries: { ...s.entries, [videoId]: { status: 'loading', chapters: [], fetchedAt: null } },
+    set((state) => ({
+      entries: { ...state.entries, [videoId]: { status: 'loading', chapters: [], fetchedAt: null } },
     })),
 
   setLoaded: (videoId, chapters) =>
-    set((s) => ({
+    set((state) => ({
       entries: {
-        ...s.entries,
+        ...state.entries,
         [videoId]: { status: 'loaded', chapters, fetchedAt: Date.now() },
       },
     })),
 
   setError: (videoId) =>
-    set((s) => ({
+    set((state) => ({
       entries: {
-        ...s.entries,
+        ...state.entries,
         [videoId]: { status: 'error', chapters: [], fetchedAt: Date.now() },
       },
     })),
@@ -58,8 +58,8 @@ export const useChaptersStore = create<ChaptersStore>((set, get) => ({
   },
 
   reset: (videoId) =>
-    set((s) => {
-      const next = { ...s.entries };
+    set((state) => {
+      const next = { ...state.entries };
       delete next[videoId];
       return { entries: next };
     }),
