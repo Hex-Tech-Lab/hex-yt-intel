@@ -40,4 +40,27 @@ describe('parseChapters', () => {
   it('drops timestamp-only lines with no label', () => {
     expect(parseChapters('1:23\n2:45 Real label')).toHaveLength(1);
   });
+
+  it('rejects a malformed timestamp with out-of-range seconds', () => {
+    const chapters = parseChapters('0:00 Intro\n0:60 Bad seconds\n2:00 Valid chapter');
+    expect(chapters).toHaveLength(2);
+    expect(chapters.map((chapter) => chapter.label)).toEqual(['Intro', 'Valid chapter']);
+  });
+
+  it('rejects a malformed HH:MM:SS timestamp with out-of-range minutes', () => {
+    const chapters = parseChapters('1:60:00 Bad minutes\n0:00 Valid chapter');
+    expect(chapters).toHaveLength(1);
+    expect(chapters[0]?.label).toBe('Valid chapter');
+  });
+
+  it('allows total minutes over 59 when no hours group is present (long-video MM:SS convention)', () => {
+    const chapters = parseChapters('75:30 Deep into a long video');
+    expect(chapters[0]).toEqual({ idx: 0, start_seconds: 4530, end_seconds: 4590, label: 'Deep into a long video' });
+  });
+
+  it('parses a "to"-separated range and strips it from the label', () => {
+    const chapters = parseChapters('0:00 to 1:00 Introduction\n1:00 to 2:00 Deep dive');
+    expect(chapters[0]).toEqual({ idx: 0, start_seconds: 0, end_seconds: 60, label: 'Introduction' });
+    expect(chapters[1]).toEqual({ idx: 1, start_seconds: 60, end_seconds: 120, label: 'Deep dive' });
+  });
 });

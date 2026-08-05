@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 
 import { verifyResourceOwnership } from '@/lib/services/ownership';
 import { SupabaseTranscriptAdapter } from '@/lib/adapters/SupabaseTranscriptAdapter';
+import { stripArchivedVideoIdSuffix } from '@/lib/utils/archived-video-id';
 
 /**
  * GET /api/analyses/[id]/chapters
@@ -37,7 +38,13 @@ export async function GET(
       return NextResponse.json({ error: 'Analysis not found' }, { status: 404 });
     }
 
-    const chapters = await SupabaseTranscriptAdapter.getChapters(analysis.video_id);
+    // An analysisId can point at a reaper-archived row (video_id suffixed
+    // '_archived_<ts>' -- see archived-video-id.ts) while chapters are
+    // always persisted under the raw, unsuffixed video_id. Without
+    // stripping the suffix here, viewing an archived analysis directly
+    // would silently return zero chapters even when they genuinely exist.
+    const canonicalVideoId = stripArchivedVideoIdSuffix(analysis.video_id) ?? analysis.video_id;
+    const chapters = await SupabaseTranscriptAdapter.getChapters(canonicalVideoId);
 
     return NextResponse.json({ chapters });
 

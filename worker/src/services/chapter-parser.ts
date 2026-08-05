@@ -24,6 +24,26 @@ export interface VideoChapter {
 /** HH:MM:SS, MM:SS, or M:SS, optionally with a range end "MM:SS – MM:SS". */
 const CHAPTER_TIMESTAMP_RE = /^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})\b/;
 
+/**
+ * CHAPTER_TIMESTAMP_RE's group 3 (seconds) is always 2 digits but the regex
+ * itself doesn't bound it to 00-59 -- "0:60" matches and, unchecked, would
+ * silently convert to 60s (as if it were "1:00"). Group 2 is the total
+ * minutes when no hours group is present (a valid YouTube convention for
+ * long videos, e.g. "75:30" = 1h15m30s), so it's only bounded to 00-59 when
+ * an hours group IS present (where it's minutes-within-the-hour, not total
+ * minutes). Malformed matches should be treated as not-a-timestamp, not
+ * silently coerced.
+ */
+function isValidChapterTimestamp(match: RegExpMatchArray): boolean {
+  const seconds = parseInt(match[3] ?? '0', 10);
+  if (seconds > 59) return false;
+  if (match[1]) {
+    const minutes = parseInt(match[2] ?? '0', 10);
+    if (minutes > 59) return false;
+  }
+  return true;
+}
+
 /** Converts a CHAPTER_TIMESTAMP_RE match's captured groups to total seconds. */
 function timeToSeconds(match: RegExpMatchArray): number {
   const hours = match[1] ? parseInt(match[1], 10) : 0;
@@ -48,7 +68,7 @@ export function parseChapters(description: string | null | undefined): VideoChap
     if (!line) continue;
 
     const match = line.match(CHAPTER_TIMESTAMP_RE);
-    if (!match) continue;
+    if (!match || !isValidChapterTimestamp(match)) continue;
 
     // Skip pure durations like "1:23" appearing alone on a line only if there
     // is no label after the timestamp — YouTube chapter lines always have a label.
@@ -62,12 +82,18 @@ export function parseChapters(description: string | null | undefined): VideoChap
 
     const start = timeToSeconds(match);
 
-    // Detect an explicit range end "10:30 – 12:00" and use it as end_seconds.
-    // Strip the range end time from the label afterward -- same anchored-
-    // prefix removal as above, applied to the range-end timestamp.
-    const rangeMatch = label.match(CHAPTER_TIMESTAMP_RE);
-    if (rangeMatch) {
-      label = label.replace(rangeMatch[0], '').trim().replace(/^[-–—]\s*/u, '');
+    // Detect an explicit range end -- either dash-like ("10:30 – 12:00",
+    // already stripped to just the end timestamp by the leading-dash strip
+    // above) or word-separated ("0:00 to 1:00 Introduction", where "to "
+    // still needs stripping first). Matches the same separator set
+    // TIMESTAMP_RANGE_RE supports in entity-time-seek.ts -- without the "to"
+    // form here, a line like "0:00 to 1:00 Introduction" kept "to 1:00
+    // Introduction" as the label and silently dropped the real end time.
+    const toStrip = label.match(/^to\s+/iu);
+    const rangeCandidate = toStrip ? label.replace(toStrip[0], '') : label;
+    const rangeMatch = rangeCandidate.match(CHAPTER_TIMESTAMP_RE);
+    if (rangeMatch && isValidChapterTimestamp(rangeMatch)) {
+      label = rangeCandidate.replace(rangeMatch[0], '').trim().replace(/^[-–—]\s*/u, '');
     }
     if (!label) continue;
 

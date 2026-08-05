@@ -43,34 +43,25 @@ export function useChapters(analysisId: string | null, status: string) {
 
     let cancelled = false;
     void (async () => {
+      // A fetch's outcome is "final" (lock in chaptersFetchedForRef, stop
+      // retrying) when it found real chapters, or when status is already
+      // 'complete' -- a status-'complete' outcome can't improve on retry
+      // regardless of which branch (success/non-ok/error) produced it, so
+      // the check is centralized here instead of duplicated three times.
+      let isFinal = status === 'complete';
       try {
         const res = await fetch(`/api/analyses/${analysisId}/chapters`);
         if (cancelled) return;
         if (res.ok) {
           const data = (await res.json()) as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }> };
           const fetched = data.chapters ?? [];
-          if (!cancelled) {
-            setChapters(fetched);
-            if (fetched.length > 0 || status === 'complete') {
-              chaptersFetchedForRef.current = analysisId;
-            }
-          }
-        } else if (status === 'complete') {
-          // A non-ok response during a terminal status is as final as this
-          // hook can determine -- lock it in rather than retry forever.
-          chaptersFetchedForRef.current = analysisId;
+          if (!cancelled) setChapters(fetched);
+          isFinal = isFinal || fetched.length > 0;
         }
       } catch (err) {
         Sentry.captureException(err, { contexts: { chapters: { analysisId, status } } });
-        if (status === 'complete') {
-          chaptersFetchedForRef.current = analysisId;
-        }
       } finally {
-        // No resource to release here (the `cancelled` flag set by this
-        // effect's own cleanup handles the abandoned-request case) -- this
-        // finally exists to satisfy qa-intel's WorkflowRule I/O-safety check,
-        // which requires fetch calls to be wrapped in try/finally regardless
-        // of whether the finally body does anything.
+        if (!cancelled && isFinal) chaptersFetchedForRef.current = analysisId;
       }
     })();
 

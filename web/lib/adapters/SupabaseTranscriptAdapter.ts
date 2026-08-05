@@ -35,6 +35,7 @@ export interface ChapterRow {
   label: string;
 }
 
+
 export class SupabaseTranscriptAdapter {
   static async upsertTranscript(params: {
     videoId: string;
@@ -150,33 +151,22 @@ export class SupabaseTranscriptAdapter {
     const service = getSupabaseServiceClient();
 
     if (chapters.length > 0) {
-      const { error: upsertError } = await service
-        .from('transcript_chapters')
-        .upsert(chapters, { onConflict: 'video_id,idx' });
-      if (upsertError) {
-        Sentry.captureException(upsertError, { tags: { method: 'upsertChapters' } });
-        throw upsertError;
-      }
-
-      // Remove the "attempted but empty" sentinel if one was previously written
-      // (a re-analysis that now found chapters must flip orange -> green).
-      const { error: sentinelError } = await service
-        .from('transcript_chapters')
-        .delete()
-        .eq('video_id', videoId)
-        .eq('idx', -1);
-      if (sentinelError) {
-        Sentry.captureException(sentinelError, { tags: { method: 'upsertChapters-sentinel' }, extra: { videoId } });
-      }
-
-      // Delete stale rows with idx beyond the current run.
-      const { error: deleteError } = await service
-        .from('transcript_chapters')
-        .delete()
-        .eq('video_id', videoId)
-        .gt('idx', chapters.length - 1);
-      if (deleteError) {
-        Sentry.captureException(deleteError, { tags: { method: 'upsertChapters-cleanup' }, extra: { videoId } });
+      // write_real_chapters() does the upsert, sentinel-delete, and stale-row
+      // cleanup as one DB transaction (mirrors write_chapter_sentinel()'s
+      // atomicity fix for the empty branch -- three separate PostgREST calls
+      // left the same partial-write failure class on this branch too).
+      const { error: writeError } = await service.rpc('write_real_chapters', {
+        p_video_id: videoId,
+        p_chapters: chapters.map((chapter) => ({
+          idx: chapter.idx,
+          start_seconds: chapter.start_seconds,
+          end_seconds: chapter.end_seconds,
+          label: chapter.label,
+        })),
+      });
+      if (writeError) {
+        Sentry.captureException(writeError, { tags: { method: 'upsertChapters' }, extra: { videoId } });
+        throw writeError;
       }
     } else if (attemptedButEmpty && videoId) {
       // P0-2 + atomicity fix (2026-08-05 PR #205 review): delete ALL existing
@@ -201,38 +191,42 @@ export class SupabaseTranscriptAdapter {
     const service = getSupabaseServiceClient();
     // idx >= 0 filters out the sentinel (idx = -1) that represents
     // "attempted but empty" — it's a status marker, not a real chapter.
+    // expires_at > now() matches the same predicate the history RPC's
+    // has_chapters check uses -- without it, this could return rows the
+    // purge cron hasn't swept yet even though they're past their TTL.
     const { data, error } = await service
       .from('transcript_chapters')
       .select('*')
       .eq('video_id', videoId)
       .gte('idx', 0)
+      .gt('expires_at', new Date().toISOString())
       .order('start_seconds', { ascending: true });
     if (error) throw error;
     return (data as ChapterRow[]) || [];
+  }
+
+  /** Maps a snake_case {video_id, deleted_at}[] purge-RPC result to the
+   * adapter's declared camelCase shape -- shared by purgeExpiredChapters()
+   * (purgeExpired(), the pre-existing transcripts sibling, has the same
+   * snake_case RPC shape but is left as-is here: out of scope for this
+   * pass, not introduced by it). */
+  private static mapPurgeRows(data: { video_id: string; deleted_at: string }[] | null): { videoId: string; deletedAt: string }[] {
+    return (data || []).map((row) => ({ videoId: row.video_id, deletedAt: row.deleted_at }));
   }
 
   static async purgeExpiredChapters(): Promise<{ videoId: string; deletedAt: string }[]> {
     const service = getSupabaseServiceClient();
     const { data, error } = await service.rpc('purge_expired_chapters');
     if (error) throw error;
-    // purge_expired_chapters() returns snake_case columns (video_id,
-    // deleted_at) -- map to the declared camelCase return shape rather than
-    // returning the raw rows, which would make .videoId/.deletedAt undefined
-    // for any caller that reads past .length.
-    return ((data as { video_id: string; deleted_at: string }[]) || []).map((row) => ({
-      videoId: row.video_id,
-      deletedAt: row.deleted_at,
-    }));
+    return SupabaseTranscriptAdapter.mapPurgeRows(data as { video_id: string; deleted_at: string }[] | null);
   }
 
   static async complianceCheckChapters(): Promise<{ violations: number; maxAge: string | null }> {
     const service = getSupabaseServiceClient();
     const { data, error } = await service.rpc('compliance_check_chapters');
     if (error) throw error;
-    if (data && data.length > 0) {
-      return { violations: data[0]!.violations, maxAge: data[0]!.max_age };
-    }
-    return { violations: 0, maxAge: null };
+    const row = (data as { violations: number; max_age: string | null }[] | null)?.[0];
+    return { violations: row?.violations ?? 0, maxAge: row?.max_age ?? null };
   }
 
   static async purgeExpired(): Promise<{ videoId: string; deletedAt: string }[]> {

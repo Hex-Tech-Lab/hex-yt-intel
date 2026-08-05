@@ -117,11 +117,11 @@ as $$
     (case
       when exists (
         select 1 from public.transcript_chapters tc
-        where tc.video_id = a.base_video_id and tc.idx >= 0
+        where tc.video_id = a.base_video_id and tc.idx >= 0 and tc.expires_at > now()
       ) then true
       when exists (
         select 1 from public.transcript_chapters tc
-        where tc.video_id = a.base_video_id and tc.idx = -1
+        where tc.video_id = a.base_video_id and tc.idx = -1 and tc.expires_at > now()
       ) then false
       else null
     end) as has_chapters,
