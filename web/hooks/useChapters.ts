@@ -59,7 +59,12 @@ export function useChapters(analysisId: string | null, status: string) {
           isFinal = isFinal || fetched.length > 0;
         }
       } catch (err) {
-        Sentry.captureException(err, { contexts: { chapters: { analysisId, status } } });
+        // Don't report cancelled/aborted fetches (unmount or analysisId/status
+        // change tearing down this effect) as real errors -- those are
+        // expected React-lifecycle noise, not application failures.
+        if (!cancelled) {
+          Sentry.captureException(err, { contexts: { chapters: { analysisId, status } } });
+        }
       } finally {
         if (!cancelled && isFinal) chaptersFetchedForRef.current = analysisId;
       }
