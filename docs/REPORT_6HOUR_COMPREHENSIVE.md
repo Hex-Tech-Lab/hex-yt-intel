@@ -76,7 +76,7 @@ Default `select = '*'` would issue `SELECT *` on `analyses` table containing lar
 ## Item 3 — HMAC Secret Removal
 
 ### 1. RCA
-`scripts/deploy-hmac-secret.sh` contained hardcoded production `STREAM_HMAC_SECRET` (`SSqdnev979rW2Z2b/x2J7UQ8/Veo1HfA21WU6L8elqU=`) plus `PROJECT_ID` and `TEAM_ID`.
+`scripts/deploy-hmac-secret.sh` contained hardcoded production `STREAM_HMAC_SECRET` (`[REDACTED - rotated, see incident history]`) plus `PROJECT_ID` and `TEAM_ID`.
 
 ### 2. Contract
 - Remove all hardcoded secrets, read from env vars, fail-closed
@@ -381,4 +381,4 @@ Review flagged 10+ documentation inaccuracies across the 8 `docs/REPORT_*.md` fi
 | 11 | Empty catch test fix | wave-4 | #201 | ✅ Fixed |
 | 12 | Report corrections | both | #200/#201 | ✅ Fixed |
 
-**Pending (operational, not code):** HMAC secret rotation — the exposed `SSqdnev979rW2Z2b/x2J7UQ8/Veo1HfA21WU6L8elqU=` must be rotated in Vercel/Cloudflare environments.
+**Pending (operational, not code):** HMAC secret rotation — the exposed `[REDACTED - rotated, see incident history]` must be rotated in Vercel/Cloudflare environments.
