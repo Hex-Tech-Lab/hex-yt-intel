@@ -1,0 +1,25 @@
+web/lib/__tests__/signal-bar-clamp.test.ts
+  s_0eded1e9d0cab6::t_29563e6cf0a9ff 2
+  s_0eded1e9d0cab6::t_233ede28ef4686 1,3-54
+web/lib/utils/signal-bar-clamp.ts
+  s_0eded1e9d0cab6::t_ebc017f134e71c 1-18
+web/components/SignalBarGroup.tsx
+  s_0eded1e9d0cab6::t_cb02d45de47db7 3
+  s_0eded1e9d0cab6::t_941d8ef0aa5858 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "54bdafc23b51697ae1cbae9bf9735827b10505fa",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
