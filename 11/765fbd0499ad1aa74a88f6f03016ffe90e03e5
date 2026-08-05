@@ -1,0 +1,26 @@
+supabase/migrations/20260805001000_history_overview_function_v13_add_has_chapters.sql
+  s_0ad60efcede198::t_6dd1b78575c438 117-127
+  s_0ad60efcede198::t_f18f9fdecb3a26 11-17
+supabase/migrations/20260805000000_add_transcript_chapters.sql
+  s_0ad60efcede198::t_e2d70104e9b16c 3-11,19
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_0ad60efcede198::t_849d6fadc85900 134-141,143-145,147-192,198-205
+web/app/api/analyses/persist/route.ts
+  s_0ad60efcede198::t_ea852f0a7729f2 896-900,908-909
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "11765fbd0499ad1aa74a88f6f03016ffe90e03e5",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
