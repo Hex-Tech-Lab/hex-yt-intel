@@ -1,0 +1,30 @@
+worker/src/services/chapter-parser.ts
+  s_0eded1e9d0cab6::t_02e7e4c19dbb16 55-59,66-67
+  s_0eded1e9d0cab6::t_dfafc4c9e135c9 60,70
+  s_0eded1e9d0cab6::t_67c14aad6b5ead 102-104,106
+  s_0eded1e9d0cab6::t_20a47b6f12048d 27,29-31
+web/components/SignalBarGroup.tsx
+  s_0eded1e9d0cab6::t_2b6de70fc6b14b 53,55-57
+web/hooks/useChapters.ts
+  s_0eded1e9d0cab6::t_aec0ba9ede975e 51
+  s_0eded1e9d0cab6::t_14131609779400 52-56
+web/lib/utils/entity-time-seek.ts
+  s_0eded1e9d0cab6::t_f6d3e80986c7ef 30-35,39-44
+  s_0eded1e9d0cab6::t_9ee3076ea51cbf 93-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "527c9c47977469c1449d7062687eb1e331fb6239",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
