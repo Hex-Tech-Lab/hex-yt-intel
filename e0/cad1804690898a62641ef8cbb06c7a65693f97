@@ -1,0 +1,34 @@
+web/components/SignalBarGroup.tsx
+  s_0eded1e9d0cab6::t_a73e4bb3c528d7 52-60,64
+web/hooks/useChapters.ts
+  s_0eded1e9d0cab6::t_250d156d2409ca 2,5-9,11-16,22-24,51-61,64-67,80
+web/lib/__tests__/history-overview.test.ts
+  s_0eded1e9d0cab6::t_082a4f5817d863 50
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_0eded1e9d0cab6::t_88d3eceacdfc1e 182-195
+  s_0eded1e9d0cab6::t_271f74280e6972 218-225
+web/lib/utils/entity-time-seek.ts
+  s_0eded1e9d0cab6::t_3e6b7d5189097c 83-105,111-116,118,121,124,136,143,150,154
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0eded1e9d0cab6::t_6f64858cac195d 125-143
+web/app/api/analyses/[id]/chapters/route.ts
+  s_0eded1e9d0cab6::t_1a5c6c7800f168 47
+supabase/migrations/20260805002000_write_chapter_sentinel_atomic.sql
+  s_0eded1e9d0cab6::t_75fc641793dcf5 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e0cad1804690898a62641ef8cbb06c7a65693f97",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
