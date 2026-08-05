@@ -17,10 +17,21 @@ export interface SignalBarGroupProps {
  * Renders 6 horizontal bars stepped/colored from orange (low 1-2) -> yellow (mid 3-4) -> green (high 5-6).
  * underlying weight algorithm is preserved, only presentation-layer color mapping is updated.
  */
+const DEFAULT_MAX_SCORE = 10;
+
 export function SignalBarGroup({ score = 0, maxScore = 10, label, className = '' }: SignalBarGroupProps) {
-  // Normalize score to 0..1 ratio
-  const ratio = Math.max(0, Math.min(1, maxScore > 0 ? score / maxScore : 0));
-  
+  // Normalize maxScore to a finite positive number; fall back to the default otherwise.
+  const normalizedMaxScore =
+    Number.isFinite(maxScore) && maxScore > 0 ? maxScore : DEFAULT_MAX_SCORE;
+
+  // Clamp score into [0, normalizedMaxScore], guarding against NaN/Infinity as well.
+  const normalizedScore = Number.isFinite(score)
+    ? Math.max(0, Math.min(normalizedMaxScore, score))
+    : 0;
+
+  // Normalize score to 0..1 ratio, derived from the same clamped values used for ARIA.
+  const ratio = normalizedScore / normalizedMaxScore;
+
   // 6 total bars
   const activeBars = Math.round(ratio * 6);
 
@@ -46,16 +57,16 @@ export function SignalBarGroup({ score = 0, maxScore = 10, label, className = ''
       {label && (
         <div className="flex items-center justify-between text-[11px] text-[var(--ink-secondary)]">
           <span>{label}</span>
-          <span className="font-bold text-[var(--ink)]">{score.toFixed(1)} / {maxScore}</span>
+          <span className="font-bold text-[var(--ink)]">{normalizedScore.toFixed(1)} / {normalizedMaxScore}</span>
         </div>
       )}
       <div
         className="flex items-center gap-1 w-full h-3"
         role="meter"
         aria-valuemin={0}
-        aria-valuemax={maxScore}
-        aria-valuenow={score}
-        aria-valuetext={`${score.toFixed(1)} out of ${maxScore}`}
+        aria-valuemax={normalizedMaxScore}
+        aria-valuenow={normalizedScore}
+        aria-valuetext={`${normalizedScore.toFixed(1)} out of ${normalizedMaxScore}`}
         aria-label={label ?? 'Signal strength'}
       >
         {Array.from({ length: 6 }).map((_unused, barIndex) => (
