@@ -92,12 +92,17 @@ export function parseChapters(description: string | null | undefined): VideoChap
     const toStrip = label.match(/^to\s+/iu);
     const rangeCandidate = toStrip ? label.replace(toStrip[0], '') : label;
     const rangeMatch = rangeCandidate.match(CHAPTER_TIMESTAMP_RE);
-    if (rangeMatch && isValidChapterTimestamp(rangeMatch)) {
-      label = rangeCandidate.replace(rangeMatch[0], '').trim().replace(/^[-–—]\s*/u, '');
+    const hasValidRangeEnd = rangeMatch !== null && isValidChapterTimestamp(rangeMatch);
+    if (hasValidRangeEnd) {
+      label = rangeCandidate.replace(rangeMatch![0], '').trim().replace(/^[-–—]\s*/u, '');
     }
     if (!label) continue;
 
-    const end = rangeMatch ? timeToSeconds(rangeMatch) : start;
+    // Only a range end that passed validation contributes to end_seconds --
+    // checking rangeMatch's mere presence (not its validity) here would let
+    // an invalid range end (e.g. "1:99") silently convert to a wrong second
+    // count instead of falling back to the no-explicit-end path.
+    const end = hasValidRangeEnd ? timeToSeconds(rangeMatch!) : start;
 
     chapters.push({
       idx: idx++,
@@ -124,12 +129,19 @@ export function parseChapters(description: string | null | undefined): VideoChap
   chronological.forEach((chapter, i) => { chapter.idx = i; });
 
   // Second pass: fill end_seconds for chapters without an explicit range end.
+  // The parser has no video-duration data, so the LAST chapter's end can't
+  // be a guessed duration -- a fixed fallback (this used to be +60s) made
+  // any entity timestamp more than a minute into the final chapter fall
+  // outside its range and lose the chapter-boundary anchor for what's
+  // usually the longest chapter in the video (PR #205 review, 2026-08-05).
+  // Open-ended (MAX_SAFE_INTEGER) is correct here: the final chapter
+  // legitimately runs to the end of the video, whatever that duration is.
   for (let i = 0; i < chronological.length; i++) {
     const current = chronological[i];
     if (!current) continue;
     if (current.end_seconds <= current.start_seconds) {
       const next = chronological[i + 1];
-      current.end_seconds = next ? next.start_seconds : current.start_seconds + 60;
+      current.end_seconds = next ? next.start_seconds : Number.MAX_SAFE_INTEGER;
     }
   }
 

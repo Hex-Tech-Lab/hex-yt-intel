@@ -472,6 +472,33 @@ export async function POST(request: NextRequest) {
           });
         }
 
+        // Same safety-net pattern as the transcript write above (P0-1 placement
+        // fix, PR #205 review 2026-08-05): chapters are chunk-independent data
+        // -- the worker parses the same description-derived chapters on every
+        // chunk request, not just the finalizing one -- so gating this write
+        // behind isFullyReceived (its original P0-1 placement) meant a
+        // partial/interrupted analysis that never receives all chunks lost
+        // chapter data that was actually available on an earlier successful
+        // chunk. upsertChapters is idempotent on (video_id, idx), so firing on
+        // every chunk is harmless; moved here to run unconditionally per chunk
+        // instead of only inside the isFullyReceived finalization branch below.
+        if (rawChapters) {
+          await SupabaseTranscriptAdapter.upsertChapters(
+            videoId,
+            rawChapters.map((c) => ({
+              video_id: videoId,
+              idx: c.idx,
+              start_seconds: c.start_seconds,
+              end_seconds: c.end_seconds,
+              label: c.label,
+            })),
+            { attemptedButEmpty: rawChapters.length === 0 }
+          ).catch(e => {
+            Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_chapters_chunked', analysisId } } });
+            console.warn('[analyses/persist] Failed to upsert chapters (chunked path)', { analysisId, error: String(e) });
+          });
+        }
+
         // Verify chunk completeness immediately after persisting chunk
         const chunks = await retryWithBackoff(
           () => persistenceAdapter.findAnalysisChunks({ analysisId }),
@@ -739,29 +766,6 @@ export async function POST(request: NextRequest) {
                 console.warn('[analyses/persist] Failed to log analysis_completed usage event (chunked path)', { analysisId, error: String(e) });
               });
           }
-
-          // P0-1: chapters must be persisted on every chunk POST, including the
-          // finalizing one. The worker sends chapters on every chunk request
-          // (each independently parses the description per Gap 1). This call
-          // is idempotent on (video_id, idx) — repeating it across chunks is
-          // harmless and ensures the finalizing chunk doesn't skip it.
-          if (rawChapters) {
-            await SupabaseTranscriptAdapter.upsertChapters(
-              videoId,
-              rawChapters.map((c) => ({
-                video_id: videoId,
-                idx: c.idx,
-                start_seconds: c.start_seconds,
-                end_seconds: c.end_seconds,
-                label: c.label,
-              })),
-              { attemptedButEmpty: rawChapters.length === 0 }
-            ).catch(e => {
-              Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_chapters_chunked', analysisId } } });
-              console.warn('[analyses/persist] Failed to upsert chapters (chunked path)', { analysisId, error: String(e) });
-            });
-          }
-
         }
 
         return { type: 'chunk_saved' as const, analysisId, chunkIndex };
