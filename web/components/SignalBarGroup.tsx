@@ -1,6 +1,6 @@
 'use client';
 
-
+import { clampSignalScore } from '@/lib/utils/signal-bar-clamp';
 
 export interface SignalBarGroupProps {
   /** Score value from 0 to 10 or 0 to 100 */
@@ -17,17 +17,8 @@ export interface SignalBarGroupProps {
  * Renders 6 horizontal bars stepped/colored from orange (low 1-2) -> yellow (mid 3-4) -> green (high 5-6).
  * underlying weight algorithm is preserved, only presentation-layer color mapping is updated.
  */
-const DEFAULT_MAX_SCORE = 10;
-
 export function SignalBarGroup({ score = 0, maxScore = 10, label, className = '' }: SignalBarGroupProps) {
-  // Normalize maxScore to a finite positive number; fall back to the default otherwise.
-  const normalizedMaxScore =
-    Number.isFinite(maxScore) && maxScore > 0 ? maxScore : DEFAULT_MAX_SCORE;
-
-  // Clamp score into [0, normalizedMaxScore], guarding against NaN/Infinity as well.
-  const normalizedScore = Number.isFinite(score)
-    ? Math.max(0, Math.min(normalizedMaxScore, score))
-    : 0;
+  const { normalizedScore, normalizedMaxScore } = clampSignalScore(score, maxScore);
 
   // Normalize score to 0..1 ratio, derived from the same clamped values used for ARIA.
   const ratio = normalizedScore / normalizedMaxScore;
