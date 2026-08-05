@@ -1,5 +1,14 @@
 -- Chapters extracted from YouTube video descriptions
 -- Same 72h TTL/purge pattern as public.transcripts (migration 20260718000000)
+--
+-- Three-state chapter status (see docs/specs/CHAPTERS_AND_SPEAKER_ID_SPEC
+-- _2026-08-05.md and the AGY chip spec):
+--   green  -> real chapter rows exist for the video (idx >= 0)
+--   orange -> parse was attempted but found zero markers: a sentinel row
+--             with idx = -1 carries parse_attempted_at (distinct from grey)
+--   grey   -> no rows at all (video predates the feature / never attempted)
+-- The sentinel row is hidden from getChapters by filtering idx >= 0 and is
+-- only used by get_user_history_overview's has_chapters case expression.
 
 create table if not exists public.transcript_chapters (
   video_id text not null,
@@ -7,6 +16,7 @@ create table if not exists public.transcript_chapters (
   start_seconds double precision not null,
   end_seconds double precision not null,
   label text not null,
+  parse_attempted_at timestamptz,
   created_at timestamptz not null default now(),
   expires_at timestamptz not null default (now() + interval '72 hours'),
   unique(video_id, idx)

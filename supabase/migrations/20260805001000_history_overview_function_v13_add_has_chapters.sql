@@ -8,10 +8,13 @@
 -- Chapters live in public.transcript_chapters (72h TTL, same lifecycle as
 -- transcripts), not in the analysis payload, so this uses a correlated
 -- EXISTS subquery against that table rather than the has_digest-style
--- payload checks. Three-state: true when rows exist, false when a video
--- has been analyzed but has no chapter rows (either never attempted or
--- attempted and found zero — v1 does not distinguish these, matching the
--- spec's "degrade gracefully" requirement).
+-- payload checks.
+--
+-- THREE-STATE semantics (per the AGY chip spec and the wiring prompt's
+-- Gap 2 decision): a real chapter row (idx >= 0) -> green (true); a
+-- sentinel "attempted but found zero" row (idx = -1, set when the worker
+-- parsed the description and found no markers) -> orange (false); no rows
+-- at all (video predates the feature / never attempted) -> grey (null).
 drop function if exists public.get_user_history_overview(uuid);
 
 create function public.get_user_history_overview(p_user_id uuid)
@@ -111,10 +114,17 @@ as $$
         then jsonb_array_length(l.analysis_payload -> 'comments') > 0
       else false
     end) as has_comments,
-    (exists (
-      select 1 from public.transcript_chapters tc
-      where tc.video_id = a.base_video_id
-    )) as has_chapters,
+    (case
+      when exists (
+        select 1 from public.transcript_chapters tc
+        where tc.video_id = a.base_video_id and tc.idx >= 0
+      ) then true
+      when exists (
+        select 1 from public.transcript_chapters tc
+        where tc.video_id = a.base_video_id and tc.idx = -1
+      ) then false
+      else null
+    end) as has_chapters,
     l.client_platform as client_platform
   from agg a
   join latest l on l.base_video_id = a.base_video_id

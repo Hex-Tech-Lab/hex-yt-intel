@@ -131,37 +131,78 @@ export class SupabaseTranscriptAdapter {
    * Upsert parsed chapters into `transcript_chapters` on (video_id, idx).
    * Mirrors saveMarkers' pattern: upsert new rows, then delete stale rows
    * with idx beyond the current run (a previously-longer chapter list would
-   * otherwise leave orphans). No-op on empty input — a video with no chapter
-   * markers simply has no rows, and get_user_history_overview's has_chapters
-   * EXISTS check reads that as false (grey chip), which is the correct
-   * "no chapters" state.
+   * otherwise leave orphans).
+   *
+   * Three-state representation (see the v13 history-overview RPC): when
+   * `attemptedButEmpty` is true (the worker parsed the description and found
+   * zero chapter markers), a sentinel row (idx = -1) is written so the chip
+   * renders orange, distinct from grey (no rows, never attempted). When real
+   * chapters exist, the sentinel is deleted so the chip renders green. No-op
+   * when chapters is empty and not attemptedButEmpty.
    */
-  static async upsertChapters(chapters: ChapterRow[]): Promise<void> {
-    if (chapters.length === 0) return;
+  static async upsertChapters(chapters: ChapterRow[], opts?: { attemptedButEmpty?: boolean }): Promise<void> {
+    const attemptedButEmpty = opts?.attemptedButEmpty === true;
+    if (chapters.length === 0 && !attemptedButEmpty) return;
     const service = getSupabaseServiceClient();
-    const videoId = chapters[0]!.video_id;
+    const videoId = chapters[0]?.video_id;
 
-    const { error: upsertError } = await service
-      .from('transcript_chapters')
-      .upsert(chapters, { onConflict: 'video_id,idx' });
-    if (upsertError) {
-      Sentry.captureException(upsertError, { tags: { method: 'upsertChapters' } });
-      throw upsertError;
-    }
+    if (chapters.length > 0) {
+      const { error: upsertError } = await service
+        .from('transcript_chapters')
+        .upsert(chapters, { onConflict: 'video_id,idx' });
+      if (upsertError) {
+        Sentry.captureException(upsertError, { tags: { method: 'upsertChapters' } });
+        throw upsertError;
+      }
 
-    const { error: deleteError } = await service
-      .from('transcript_chapters')
-      .delete()
-      .eq('video_id', videoId)
-      .gt('idx', chapters.length - 1);
-    if (deleteError) {
-      Sentry.captureException(deleteError, { tags: { method: 'upsertChapters-cleanup' }, extra: { videoId } });
+      // Remove the "attempted but empty" sentinel if one was previously written
+      // (a re-analysis that now found chapters must flip orange -> green).
+      const { error: sentinelError } = await service
+        .from('transcript_chapters')
+        .delete()
+        .eq('video_id', videoId)
+        .eq('idx', -1);
+      if (sentinelError) {
+        Sentry.captureException(sentinelError, { tags: { method: 'upsertChapters-sentinel' }, extra: { videoId } });
+      }
+
+      // Delete stale rows with idx beyond the current run.
+      const { error: deleteError } = await service
+        .from('transcript_chapters')
+        .delete()
+        .eq('video_id', videoId)
+        .gt('idx', chapters.length - 1);
+      if (deleteError) {
+        Sentry.captureException(deleteError, { tags: { method: 'upsertChapters-cleanup' }, extra: { videoId } });
+      }
+    } else if (attemptedButEmpty && videoId) {
+      const sentinel: ChapterRow = {
+        video_id: videoId,
+        idx: -1,
+        start_seconds: -1,
+        end_seconds: -1,
+        label: '__attempted_empty__',
+      };
+      const { error: sentinelUpsertError } = await service
+        .from('transcript_chapters')
+        .upsert(sentinel, { onConflict: 'video_id,idx' });
+      if (sentinelUpsertError) {
+        Sentry.captureException(sentinelUpsertError, { tags: { method: 'upsertChapters-sentinel' }, extra: { videoId } });
+        throw sentinelUpsertError;
+      }
     }
   }
 
   static async getChapters(videoId: string): Promise<ChapterRow[]> {
     const service = getSupabaseServiceClient();
-    const { data, error } = await service.from('transcript_chapters').select('*').eq('video_id', videoId).order('start_seconds', { ascending: true });
+    // idx >= 0 filters out the sentinel (idx = -1) that represents
+    // "attempted but empty" — it's a status marker, not a real chapter.
+    const { data, error } = await service
+      .from('transcript_chapters')
+      .select('*')
+      .eq('video_id', videoId)
+      .gte('idx', 0)
+      .order('start_seconds', { ascending: true });
     if (error) throw error;
     return (data as ChapterRow[]) || [];
   }

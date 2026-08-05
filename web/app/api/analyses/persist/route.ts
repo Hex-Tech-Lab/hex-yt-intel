@@ -893,9 +893,11 @@ export async function POST(request: NextRequest) {
       }
 
       // Chapters (Gap 2): persist the parsed chapter markers when the worker
-      // sent any. No-op when rawChapters is null/empty (video has no chapter
-      // markers) — that's the correct "no chapters" state, not an error.
-      if (rawChapters && rawChapters.length > 0) {
+      // sent any. Three-state: non-empty -> green rows; empty array (worker
+      // parsed the description and found zero markers) -> attempted-but-empty
+      // sentinel so the history chip renders orange; absent (worker never
+      // parsed) -> no rows, chip renders grey.
+      if (rawChapters) {
         await SupabaseTranscriptAdapter.upsertChapters(
           rawChapters.map((c) => ({
             video_id: videoId,
@@ -903,7 +905,8 @@ export async function POST(request: NextRequest) {
             start_seconds: c.start_seconds,
             end_seconds: c.end_seconds,
             label: c.label,
-          }))
+          })),
+          { attemptedButEmpty: rawChapters.length === 0 }
         ).catch(e => {
           Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_chapters', analysisId } } });
           console.warn('[analyses/persist] Failed to upsert chapters', { analysisId, error: String(e) });
