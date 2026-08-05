@@ -1,0 +1,69 @@
+worker/src/services/PersistService.ts
+  s_0ad60efcede198::t_450dc7ee041521 46
+  s_0ad60efcede198::t_72e2d8c3f1c301 190
+  s_0ad60efcede198::t_9e9f318a20ce1b 161
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_aeb43aa3db0c13 81-96
+web/hooks/useChapters.ts
+  s_0ad60efcede198::t_eda95464cd7806 1-60
+supabase/migrations/20260805000000_add_transcript_chapters.sql
+  s_0eded1e9d0cab6::t_3d260e29f20e69 38-39,53-55
+worker/src/services/chapter-parser.ts
+  s_0ad60efcede198::t_0817f97503f752 92
+  s_0ad60efcede198::t_3f46da4f09c434 58
+  s_0eded1e9d0cab6::t_9c03cce4f243ed 78-91,93,95-98,102
+worker/src/routes/analysis.ts
+  s_0ad60efcede198::t_40e550bff71b22 853-862
+  s_0ad60efcede198::t_f495df9dc114a1 753
+  s_0ad60efcede198::t_589bca1a7107d5 693-698
+  s_0ad60efcede198::t_7245228bfa7352 5
+web/components/containers/DashboardContainer.tsx
+  s_0ad60efcede198::t_1dcf4915d02e73 210-213,230
+  s_0ad60efcede198::t_b411b300bb8cff 42
+  s_0ad60efcede198::t_f684eca65eda43 239
+  s_0ad60efcede198::t_2dd420d1f22951 129-134
+docs/agent-prompts/2026-08-05-agy-chapter-chip-and-status-colors.md
+  s_0eded1e9d0cab6::t_f6aa12303b0bd0 1-84
+supabase/migrations/20260805001000_history_overview_function_v13_add_has_chapters.sql
+  s_0ad60efcede198::t_edc8345b988d02 1-124
+web/app/api/analyses/persist/route.ts
+  s_0ad60efcede198::t_da215a1a6f65ed 261
+  s_0ad60efcede198::t_3df607bd3b7977 219-228
+  s_0ad60efcede198::t_18a7a2b29a973f 895-912
+docs/agent-prompts/2026-08-05-oc-chapters-wiring-CORRECTED.md
+  s_0eded1e9d0cab6::t_4c83db0d13b90a 1-159
+web/app/api/analyses/[id]/chapters/route.ts
+  s_0ad60efcede198::t_9b86d664237b10 1-52
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_0ad60efcede198::t_0f44433efba966 139-168
+  s_0ad60efcede198::t_04820de8d97bbe 29-37
+  s_0ad60efcede198::t_f15f5b2e35e7c0 130-138
+.memory/AGENT_LEDGER.md
+  s_0ad60efcede198::t_363a4abaaed6fb 1125-1126
+  s_0ad60efcede198::t_dab9467ebd3ebd 1127-1128
+  s_0ad60efcede198::t_4db26beaf0a97d 1129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d164503ea747ec3ab3e5e335d2130ed1f9da1138",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
