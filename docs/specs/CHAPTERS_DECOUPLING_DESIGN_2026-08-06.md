@@ -1,6 +1,6 @@
 # Decoupling Chapter Persistence from the Analysis Request Lifecycle
 
-**Status**: approved (2026-08-06), not implemented. Follow-up to the chapters feature
+**Status**: approved and implemented (2026-08-06, PR #206). Follow-up to the chapters feature
 shipped in PR #205. Origin: user question during PR #205 review — "why are
 [chapters and the analysis stream] coupled... why don't we fetch chapters on
 their own... start with chapters, split them into a separate slot where they

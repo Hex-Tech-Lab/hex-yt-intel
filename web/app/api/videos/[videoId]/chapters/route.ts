@@ -5,6 +5,8 @@ import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { verifyContentSig } from '@/lib/stream-token';
 import { SupabaseTranscriptAdapter } from '@/lib/adapters/SupabaseTranscriptAdapter';
+import { ERROR_PHASES } from '@/lib/error-codes';
+import { categorizeError, createErrorResponse } from '@/lib/services/error-handler';
 import type { ChapterRow } from '@/lib/adapters/SupabaseTranscriptAdapter';
 
 const ChapterInputSchema = z.object({
@@ -31,8 +33,16 @@ export async function POST(
 ) {
   const { videoId } = await params;
 
+  let body: Record<string, unknown>;
   try {
-    const body = await request.json() as Record<string, unknown>;
+    body = await request.json() as Record<string, unknown>;
+  } catch (error: unknown) {
+    const err = categorizeError(error, ERROR_PHASES.JSON_PARSE);
+    console.error('[chapters] Malformed request body', { message: err.message, videoId });
+    return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
+  }
+
+  try {
     const parsed = ChaptersPayloadSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid payload', details: parsed.error.flatten() }, { status: 400 });
@@ -87,13 +97,13 @@ export async function POST(
     return NextResponse.json({ ok: true, inserted: chapterRows.length });
 
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const err = categorizeError(error, ERROR_PHASES.DATABASE_WRITE);
     Sentry.captureException(error, {
       tags: { operation: 'chapters_upsert' },
       extra: { videoId },
     });
-    console.error('[chapters] Failed to upsert', { message: msg, videoId });
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[chapters] Failed to upsert', { message: err.message, videoId });
+    return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
   }
 }
 
@@ -120,12 +130,12 @@ export async function GET(
     const { chapters, confirmed } = await SupabaseTranscriptAdapter.getChaptersWithStatus(videoId);
     return NextResponse.json({ chapters, confirmed });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const err = categorizeError(error, ERROR_PHASES.DATABASE_FETCH);
     Sentry.captureException(error, {
       tags: { operation: 'chapters_get' },
       extra: { videoId },
     });
-    console.error('[chapters] Failed to fetch', { message: msg, videoId });
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[chapters] Failed to fetch', { message: err.message, videoId });
+    return NextResponse.json(createErrorResponse(err), { status: err.statusCode });
   }
 }
