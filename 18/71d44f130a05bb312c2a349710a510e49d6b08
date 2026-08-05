@@ -1,0 +1,41 @@
+web/app/api/analyses/persist/route.ts
+  s_0ad60efcede198::t_c003f23d895650 711-732
+  s_0ad60efcede198::t_4d78f515ce61d3 733
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_0ad60efcede198::t_945fcf6d72b62b 227-243
+  s_0ad60efcede198::t_d42e508bc826db 182-195
+web/app/api/webhooks/transcript-purge/route.ts
+  s_0ad60efcede198::t_16f5ae94a9af5e 20-24
+docs/agent-prompts/2026-08-05-oc-chapters-P0-regressions.md
+  s_0eded1e9d0cab6::t_851d3b83c1ac5e 1-166
+.memory/AGENT_LEDGER.md
+  s_0ad60efcede198::t_a3675c8709bbb1 1129-1130
+web/lib/utils/entity-time-seek.ts
+  s_0ad60efcede198::t_f8e6c1bbd46ef7 74-80,98-105,113-115,119-125,127-147
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0ad60efcede198::t_ad2a0ce858ecba 101-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1871d44f130a05bb312c2a349710a510e49d6b08",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
