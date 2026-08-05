@@ -50,7 +50,7 @@ export function useChapters(analysisId: string | null, status: string) {
       // the check is centralized here instead of duplicated three times.
       let isFinal = status === 'complete';
       try {
-        const res = await fetch(`/api/analyses/${analysisId}/chapters`);
+        const res = await fetch(`/api/analyses/${encodeURIComponent(analysisId)}/chapters`);
         if (cancelled) return;
         if (res.ok) {
           const data = (await res.json()) as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }> };
