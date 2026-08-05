@@ -1,0 +1,44 @@
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_2360b3a3139a93 1132
+docs/specs/CHAPTERS_DECOUPLING_DESIGN_2026-08-06.md
+  s_0eded1e9d0cab6::t_f96ad53128ed76 3
+web/hooks/useChapters.ts
+  s_0eded1e9d0cab6::t_75216cc2d54642 116-118
+  s_0eded1e9d0cab6::t_4f9f19c36a63a7 120
+  s_0eded1e9d0cab6::t_48716d99f29fe0 32-36
+  s_0eded1e9d0cab6::t_a34b3450887a72 128
+  s_0eded1e9d0cab6::t_4a6daeda9af740 147
+  s_0eded1e9d0cab6::t_a65c210cd58835 57,61-62,64,68-71
+  s_0eded1e9d0cab6::t_40e08be17d6a2f 19-24
+  s_0eded1e9d0cab6::t_ad84aab928cc5a 17-18,25-31
+  s_0eded1e9d0cab6::t_96652934f8f38c 85
+  s_0eded1e9d0cab6::t_b922231dcb09a2 127,129-130,135-146
+  s_0eded1e9d0cab6::t_8029d17aaa9f00 79,83-84
+  s_0eded1e9d0cab6::t_a0ee9154c66546 105
+  s_0eded1e9d0cab6::t_2d54e86c27f33f 107
+web/store/useChaptersStore.ts
+  s_0eded1e9d0cab6::t_aed26ad4796c48 16-20,28-40,48,50-51,54-56,58-59,65-66,68-69,75-76,80,87-90
+web/lib/__tests__/useChaptersStore.test.ts
+  s_0eded1e9d0cab6::t_1dd50bb25040fe 1-65
+web/app/api/videos/[videoId]/chapters/route.ts
+  s_0eded1e9d0cab6::t_eaeb6c18eca1e2 36-44
+  s_0eded1e9d0cab6::t_f88c21a9d9b5c7 100,105-106
+  s_0eded1e9d0cab6::t_1ddfe6973c7fde 133,138-139
+  s_0eded1e9d0cab6::t_581a5829397074 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "cefeaa5470fcf70ac4967b6c705d7b4ef488cb76",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
