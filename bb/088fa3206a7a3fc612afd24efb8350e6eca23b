@@ -1,0 +1,34 @@
+web/app/api/analyses/persist/route.ts
+  s_0eded1e9d0cab6::t_b32cd4d4142eb0 475-501
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0eded1e9d0cab6::t_bd31d3adcc28f5 87-95
+web/lib/__tests__/chapter-parser.test.ts
+  s_0eded1e9d0cab6::t_f21a9f2df9a8fb 20
+  s_0eded1e9d0cab6::t_bfe55738ebdeaa 58
+  s_0eded1e9d0cab6::t_41bda5a9e24272 32
+  s_0eded1e9d0cab6::t_225364f4e5c932 66-75
+web/app/api/webhooks/compliance-check/route.ts
+  s_0eded1e9d0cab6::t_464cf82da1de10 32-54
+worker/src/services/chapter-parser.ts
+  s_0eded1e9d0cab6::t_eb82af269aeb17 95-97,101-105
+  s_0eded1e9d0cab6::t_08e4e8391df2fd 132-138,144
+web/app/api/webhooks/transcript-purge/route.ts
+  s_0eded1e9d0cab6::t_c58531b25b3e5a 22-34
+  s_0eded1e9d0cab6::t_e5d772d7f6fcde 72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "bb088fa3206a7a3fc612afd24efb8350e6eca23b",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
