@@ -99,6 +99,12 @@ describe('findEntityTimestamp', () => {
     expect(findEntityTimestamp(node, dimensionContent)).toBe('60:00');
   });
 
+  it('uses the START of a range immediately preceding the label, not the range end (label-proximity branch)', () => {
+    const node = { label: 'Entity A', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'Segment: 60:00 to 65:00 Entity A discussion follows.';
+    expect(findEntityTimestamp(node, dimensionContent)).toBe('60:00');
+  });
+
   it('uses label-proximity timestamp for chapter check, not the first timestamp (P0-4)', () => {
     // Two timestamps, only the second is near the entity label. The chapter
     // check must use the label-proximity timestamp (50:00), not the first one

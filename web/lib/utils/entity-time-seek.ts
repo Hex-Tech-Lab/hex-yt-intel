@@ -131,9 +131,23 @@ export function findEntityTimestamp(
       const labelIdx = dimensionContent.indexOf(label);
       if (labelIdx >= 0) {
         const beforeLabel = dimensionContent.slice(0, labelIdx);
-        const timestamps = [...beforeLabel.matchAll(TIMESTAMP_RE_GLOBAL)];
-        if (timestamps.length > 0) {
-          candidateStr = timestamps[timestamps.length - 1]![0];
+        // A range (e.g. "60:00 to 65:00") must be recognized as ONE unit
+        // before falling back to individual-timestamp matching -- otherwise
+        // TIMESTAMP_RE_GLOBAL matches the range's start and end as two
+        // separate timestamps and picks the END (last match) as the
+        // candidate, when the range's START is what should anchor the
+        // entity that immediately follows it.
+        const rangeMatches = [...beforeLabel.matchAll(TIMESTAMP_RANGE_RE)];
+        const lastRange = rangeMatches[rangeMatches.length - 1];
+        if (lastRange && beforeLabel.slice(lastRange.index! + lastRange[0].length).trim() === '') {
+          const startTime = lastRange[0].match(TIMESTAMP_RE);
+          if (startTime) candidateStr = startTime[0];
+        }
+        if (!candidateStr) {
+          const timestamps = [...beforeLabel.matchAll(TIMESTAMP_RE_GLOBAL)];
+          if (timestamps.length > 0) {
+            candidateStr = timestamps[timestamps.length - 1]![0];
+          }
         }
       }
     }
