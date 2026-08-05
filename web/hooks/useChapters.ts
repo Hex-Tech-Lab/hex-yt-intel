@@ -1,79 +1,70 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import { useChaptersStore } from '@/store/useChaptersStore';
+
+const MAX_RETRIES = 5;
+const BASE_DELAY_MS = 1000;
+const MAX_DELAY_MS = 30000;
 
 /**
- * Chapter markers for the current analysis's video. Fetched from
- * `GET /api/analyses/[id]/chapters` (which reads transcript_chapters rows via
- * SupabaseTranscriptAdapter.getChapters). Gap 3 wiring (2026-08-05): these
- * are threaded into findEntityTimestamp's third argument so an entity click
- * uses a real chapter boundary when one exists.
+ * Chapter markers for a given video. Thin selector over the Zustand
+ * useChaptersStore (keyed by videoId). Fetches as soon as videoId is known
+ * — independent of analysis status — with exponential backoff on empty/
+ * failed results (chapters-decoupling design, 2026-08-06).
  *
- * Mirrors useExecutiveDigest's per-analysis fetch-guard pattern, with one
- * addition: an empty result is only treated as final once `status` is
- * 'complete'. Server-side chapter persistence (P0-1, 2026-08-05) can land
- * slightly after this hook's first fetch fires -- without the status check,
- * a fetch that races ahead of persistence would cache an empty [] forever
- * and never retry even after the chapters actually land.
+ * Cache invalidation: re-fetch after re-analysis persists (the re-parse +
+ * idempotent RPC write IS the invalidation mechanism), not description-
+ * diffing. The per-video cache survives across analyses of the same video.
  */
-export function useChapters(analysisId: string | null, status: string) {
-  const [chapters, setChapters] = useState<
-    Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }>
-  >([]);
-  // Locked in only once a fetch returns non-empty chapters, or returns empty
-  // while status is already terminal ('complete') -- an empty result during
-  // an earlier status is provisional and must be retried once complete.
-  const chaptersFetchedForRef = useRef<string | null>(null);
-
-  // Reset when analysis changes or a new analysis starts streaming.
-  useEffect(() => {
-    if (status === 'analyzing' || status === 'downloading') {
-      setChapters([]);
-      chaptersFetchedForRef.current = null;
-    }
-  }, [status]);
+export function useChapters(videoId: string | null) {
+  const store = useChaptersStore();
+  const entry = videoId ? store.getChapters(videoId) : { status: 'idle' as const, chapters: [], fetchedAt: null };
+  const retryCountRef = useRef(0);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    setChapters([]);
-    chaptersFetchedForRef.current = null;
-  }, [analysisId]);
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
-    if (!analysisId) return;
-    if (chaptersFetchedForRef.current === analysisId) return;
+    if (!videoId) return;
+    if (entry.status === 'loaded' || entry.status === 'loading') return;
+
+    store.setLoading(videoId);
+    retryCountRef.current = 0;
 
     let cancelled = false;
-    void (async () => {
-      // A fetch's outcome is "final" (lock in chaptersFetchedForRef, stop
-      // retrying) when it found real chapters, or when status is already
-      // 'complete' -- a status-'complete' outcome can't improve on retry
-      // regardless of which branch (success/non-ok/error) produced it, so
-      // the check is centralized here instead of duplicated three times.
-      let isFinal = status === 'complete';
-      try {
-        const res = await fetch(`/api/analyses/${encodeURIComponent(analysisId)}/chapters`);
-        if (cancelled) return;
-        if (res.ok) {
-          const data = (await res.json()) as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }> };
-          const fetched = data.chapters ?? [];
-          if (!cancelled) setChapters(fetched);
-          isFinal = isFinal || fetched.length > 0;
+    const fetchWithBackoff = async () => {
+      while (retryCountRef.current < MAX_RETRIES && !cancelled) {
+        try {
+          const res = await fetch(`/api/videos/${encodeURIComponent(videoId)}/chapters`);
+          if (cancelled) return;
+          if (res.ok) {
+            const data = await res.json() as { chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }> };
+            if (!cancelled) {
+              const chapters = data.chapters ?? [];
+              store.setLoaded(videoId, chapters);
+              return;
+            }
+          }
+        } catch (err) {
+          if (!cancelled) {
+            Sentry.captureException(err, { contexts: { chapters: { videoId } } });
+          }
         }
-      } catch (err) {
-        // Don't report cancelled/aborted fetches (unmount or analysisId/status
-        // change tearing down this effect) as real errors -- those are
-        // expected React-lifecycle noise, not application failures.
-        if (!cancelled) {
-          Sentry.captureException(err, { contexts: { chapters: { analysisId, status } } });
+        retryCountRef.current++;
+        if (retryCountRef.current < MAX_RETRIES && !cancelled) {
+          const delay = Math.min(BASE_DELAY_MS * Math.pow(2, retryCountRef.current - 1), MAX_DELAY_MS);
+          await new Promise((r) => setTimeout(r, delay));
         }
-      } finally {
-        if (!cancelled && isFinal) chaptersFetchedForRef.current = analysisId;
       }
-    })();
-
-    return () => {
-      cancelled = true;
+      if (!cancelled) store.setError(videoId);
     };
-  }, [analysisId, status]);
 
-  return { chapters };
+    fetchWithBackoff();
+
+    return () => { cancelled = true; };
+  }, [videoId, entry.status, store]);
+
+  return { chapters: entry.chapters, status: entry.status };
 }

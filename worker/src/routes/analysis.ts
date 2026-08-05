@@ -12,7 +12,7 @@ import { UpstashCacheAdapter } from "../services/UpstashCacheAdapter";
 import { WorkerPromptConfigAdapter } from "../adapters/WorkerPromptConfigAdapter";
 import { PersistService } from "../services/PersistService";
 import { createAtomicPersist } from "../services/atomic-persist";
-import { hmacHex, secretFingerprint } from "../crypto";
+import { hmacHex, secretFingerprint, signBoundContent } from "../crypto";
 import { isProductionEnv } from "../env-utils";
 import { stratifiedSampleIndices, type StratifiableComment } from "../../../web/lib/services/comment-sampling";
 import { isValidAppUrl } from "../middleware/cors";
@@ -1109,6 +1109,36 @@ analysis.post("/analyze-llm-stream", async (c) => {
     upstashUrl && upstashToken
       ? new WorkerPromptConfigAdapter({ url: upstashUrl, token: upstashToken })
       : undefined;
+
+  // Decoupled chapter persistence: parse chapters from the video description
+  // (already available in req.metadata, no need to wait for the LLM stream)
+  // and fire-and-forget to the new /api/videos/[videoId]/chapters endpoint.
+  // This runs in parallel with the LLM stream — chapters are independent of
+  // the analysis lifecycle (chapters-decoupling design, 2026-08-06).
+  const description = (req.metadata as { description?: string }).description;
+  if (description) {
+    const chapters = parseChapters(description);
+    const appUrl = req.appUrl || c.env.APP_URL || '';
+    if (appUrl && signingKey) {
+      c.executionCtx.waitUntil((async () => {
+        try {
+          const exp = Date.now() + 120_000;
+          const canonical = JSON.stringify({ chapters });
+          const sig = await signBoundContent(signingKey, 'chapters', req.videoId, exp, canonical);
+          await fetch(`${appUrl}/api/videos/${req.videoId}/chapters`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chapters, sig, exp }),
+          });
+        } catch (err) {
+          console.warn('[analyze-llm-stream] Chapter persist failed (non-blocking)', {
+            videoId: req.videoId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      })());
+    }
+  }
 
   const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId), new ValidationService(), cache);
 
