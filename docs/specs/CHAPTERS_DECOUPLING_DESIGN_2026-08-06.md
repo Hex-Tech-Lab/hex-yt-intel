@@ -1,6 +1,6 @@
 # Decoupling Chapter Persistence from the Analysis Request Lifecycle
 
-**Status**: proposed, not implemented. Follow-up to the chapters feature
+**Status**: approved (2026-08-06), not implemented. Follow-up to the chapters feature
 shipped in PR #205. Origin: user question during PR #205 review — "why are
 [chapters and the analysis stream] coupled... why don't we fetch chapters on
 their own... start with chapters, split them into a separate slot where they
@@ -125,23 +125,37 @@ This can ship incrementally without a flag day:
 4. Update `useChapters.ts` to the new fetch/retry/cache contract described
    above.
 
-## Open questions for whoever picks this up
+## Open questions — resolved (user sign-off, 2026-08-06)
 
-1. Exact route path and auth mechanism for the new worker→web callback —
-   should it reuse the existing HMAC-signed-persist-token machinery
-   (`signingKey`/`activeSecret` in `analysis.ts`) scoped down, or is a
-   simpler service-to-service auth pattern more appropriate for a
-   video-scoped (not analysis-scoped, not user-scoped) write?
-2. Should the client-side `videoId`-keyed cache from step 4 live in a
-   Zustand store (matching `useVideoStore`/`useAnalysisDimensionsStore`
-   conventions elsewhere in this codebase) or stay a local hook cache? A
-   store would let multiple components (history list, dashboard, chat)
-   share one fetch instead of each mounting its own `useChapters` instance.
-3. Does the "re-analysis of the same video" cache-reuse case need
-   invalidation logic for when the video's description genuinely changed
-   (creator edited it) between analyses? Low priority — descriptions
-   rarely change after publish — but worth a one-line decision either way
-   rather than leaving it implicit.
+1. **Auth mechanism: reuse the existing HMAC machinery, scoped down.** Not
+   a new bespoke pattern — a fresh auth mechanism for one endpoint is more
+   audit surface, not less, and this one's already proven. Sign a token
+   scoped to `{videoId, exp}` (mirroring the existing `{analysisId, exp}`
+   shape) and verify it the same way the persist route's current
+   signature check already works. Trust boundary stays identical to
+   what's shipped; only the scope narrows.
+2. **Zustand store, not a local hook cache.** The "multiple components
+   want the same chapters" case is already real today (history list's
+   `ChapterChip`, the dashboard's `useChapters`, and chat if it ever
+   surfaces chapter context) — a local cache means N independent fetches
+   for the same `videoId` the moment two consumers mount at once. Add a
+   `useChaptersStore` keyed by `videoId`
+   (`{status: 'idle'|'loading'|'loaded'|'error', chapters, fetchedAt}` per
+   entry), matching the existing `useVideoStore`/
+   `useAnalysisDimensionsStore` shape. `useChapters` becomes a thin
+   selector over the store, not its own fetch-and-cache logic.
+3. **No description-diff invalidation logic — the re-analysis path already
+   is the invalidation mechanism.** Every re-analysis re-runs
+   `parseChapters(description)` server-side and re-persists through the
+   same idempotent `write_real_chapters`/`write_chapter_sentinel` calls —
+   if the description changed, the re-parse naturally produces different
+   chapters and overwrites the stale ones. The only gap is the client
+   cache (from #2) serving a stale copy for the few seconds until that
+   write lands and a fresh fetch happens — a non-issue given descriptions
+   essentially never change post-publish. Leave one explicit comment on
+   the store stating this is the deliberate mechanism (re-fetch-after-
+   persist, not description-diffing), so it reads as a decision, not an
+   oversight, if revisited later.
 
 ## Non-goals
 
