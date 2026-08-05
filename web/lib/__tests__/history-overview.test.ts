@@ -73,6 +73,7 @@ describe('mapHistoryOverviewRow', () => {
       hasDescription: true,
       hasChannelMeta: true,
       hasComments: true,
+      hasChapters: null,
       clientPlatform: 'ios',
     });
   });

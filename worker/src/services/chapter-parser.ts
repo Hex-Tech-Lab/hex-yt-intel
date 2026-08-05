@@ -55,7 +55,7 @@ export function parseChapters(description: string | null | undefined): VideoChap
     let label = line.slice(match[0].length).trim().replace(/^[-–—]\s*/, '');
     if (!label) continue;
 
-        const start = timeToSeconds(match);
+    const start = timeToSeconds(match);
 
     // Detect an explicit range end "10:30 – 12:00" and use it as end_seconds.
     // Strip the range end time from the label afterward.
@@ -75,13 +75,29 @@ export function parseChapters(description: string | null | undefined): VideoChap
     });
   }
 
+  // Drop non-chronological entries: a real chapter list is monotonically
+  // increasing in start_seconds. Anything that doesn't advance past the
+  // last KEPT chapter is either an incidental timestamp-shaped mention
+  // elsewhere in the description (e.g. "follow me at 1:23pm...") or noise --
+  // without this filter, the end-seconds fill-in below can compute a
+  // negative-duration range (end < start) whenever a stray match appears
+  // after a real chapter with a larger start time, silently producing a
+  // chapter range that can never match anything in findEntityTimestamp.
+  const chronological: VideoChapter[] = [];
+  for (const chapter of chapters) {
+    const last = chronological[chronological.length - 1];
+    if (last && chapter.start_seconds <= last.start_seconds) continue;
+    chronological.push(chapter);
+  }
+  chronological.forEach((chapter, i) => { chapter.idx = i; });
+
   // Second pass: fill end_seconds for chapters without an explicit range end.
-  for (let i = 0; i < chapters.length; i++) {
-    if (chapters[i]!.end_seconds <= chapters[i]!.start_seconds) {
-      const next = chapters[i + 1];
-      chapters[i]!.end_seconds = next ? next.start_seconds : chapters[i]!.start_seconds + 60;
+  for (let i = 0; i < chronological.length; i++) {
+    if (chronological[i]!.end_seconds <= chronological[i]!.start_seconds) {
+      const next = chronological[i + 1];
+      chronological[i]!.end_seconds = next ? next.start_seconds : chronological[i]!.start_seconds + 60;
     }
   }
 
-  return chapters;
+  return chronological;
 }

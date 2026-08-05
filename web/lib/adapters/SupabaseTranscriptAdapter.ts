@@ -26,6 +26,15 @@ export interface TranscriptMarker {
   source: string;
 }
 
+/** Chapter-row shape mirroring public.transcript_chapters. */
+export interface ChapterRow {
+  video_id: string;
+  idx: number;
+  start_seconds: number;
+  end_seconds: number;
+  label: string;
+}
+
 export class SupabaseTranscriptAdapter {
   static async upsertTranscript(params: {
     videoId: string;
@@ -116,6 +125,45 @@ export class SupabaseTranscriptAdapter {
     const { data, error } = await service.from('transcript_markers').select('*').eq('video_id', videoId).order('start_seconds', { ascending: true });
     if (error) throw error;
     return (data as TranscriptMarker[]) || [];
+  }
+
+  /**
+   * Upsert parsed chapters into `transcript_chapters` on (video_id, idx).
+   * Mirrors saveMarkers' pattern: upsert new rows, then delete stale rows
+   * with idx beyond the current run (a previously-longer chapter list would
+   * otherwise leave orphans). No-op on empty input — a video with no chapter
+   * markers simply has no rows, and get_user_history_overview's has_chapters
+   * EXISTS check reads that as false (grey chip), which is the correct
+   * "no chapters" state.
+   */
+  static async upsertChapters(chapters: ChapterRow[]): Promise<void> {
+    if (chapters.length === 0) return;
+    const service = getSupabaseServiceClient();
+    const videoId = chapters[0]!.video_id;
+
+    const { error: upsertError } = await service
+      .from('transcript_chapters')
+      .upsert(chapters, { onConflict: 'video_id,idx' });
+    if (upsertError) {
+      Sentry.captureException(upsertError, { tags: { method: 'upsertChapters' } });
+      throw upsertError;
+    }
+
+    const { error: deleteError } = await service
+      .from('transcript_chapters')
+      .delete()
+      .eq('video_id', videoId)
+      .gt('idx', chapters.length - 1);
+    if (deleteError) {
+      Sentry.captureException(deleteError, { tags: { method: 'upsertChapters-cleanup' }, extra: { videoId } });
+    }
+  }
+
+  static async getChapters(videoId: string): Promise<ChapterRow[]> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service.from('transcript_chapters').select('*').eq('video_id', videoId).order('start_seconds', { ascending: true });
+    if (error) throw error;
+    return (data as ChapterRow[]) || [];
   }
 
   static async purgeExpired(): Promise<{ videoId: string; deletedAt: string }[]> {

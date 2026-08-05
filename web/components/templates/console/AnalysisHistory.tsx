@@ -70,6 +70,25 @@ function PlatformChip({ platform }: { platform: ClientPlatform | null }) {
   );
 }
 
+/** 3-state Chapter Chip: green (chapters present) | orange (attempted/no markers) | grey (not attempted/predates feature) */
+function ChapterChip({ hasChapters }: { hasChapters: boolean | null }) {
+  const config =
+    hasChapters === true
+      ? { label: 'Chapters', cls: 'bg-[var(--ok)]/15 text-[var(--ok)] border border-[var(--ok)]/40', title: 'Transcript chapters extracted from description' }
+      : hasChapters === false
+      ? { label: 'No Chapters', cls: 'bg-[var(--warn)]/15 text-[var(--warn)] border border-[var(--warn)]/40', title: 'Chapter parse attempted, no valid markers found' }
+      : { label: 'Chapters N/A', cls: 'bg-transparent text-[var(--ink-muted)] border border-dashed border-[var(--line)]', title: 'Chapter parsing not attempted for this video' };
+
+  return (
+    <Tooltip content={config.title}>
+      <span className={`shrink-0 inline-flex items-center gap-1 text-[9px] font-mono font-semibold tabular-nums px-1.5 py-0.5 rounded ${config.cls}`}>
+        <Icon icon="solar:bookmark-opened-linear" size={11} />
+        {config.label}
+      </span>
+    </Tooltip>
+  );
+}
+
 function MetricChip({ icon, children, title }: { icon: string; children: ReactNode; title: string }) {
   return (
     <Tooltip content={title}>
@@ -783,6 +802,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
                             <StatusBadge status={item.hasDescription ? 'done' : 'idle'} label="Description" />
                             <StatusBadge status={item.hasChannelMeta ? 'done' : 'idle'} label="Channel Meta" />
                             <StatusBadge status={item.hasComments ? 'done' : 'idle'} label="Comments" />
+                            <ChapterChip hasChapters={item.hasChapters} />
                           </span>
                         )
                       }

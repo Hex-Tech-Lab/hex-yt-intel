@@ -35,6 +35,8 @@ begin
 end;
 $$;
 
+revoke execute on function public.purge_expired_chapters() from anon, authenticated, public;
+
 -- Compliance check
 create or replace function public.compliance_check_chapters()
 returns table(violations bigint, max_age interval)
@@ -49,3 +51,5 @@ begin
   where expires_at < now();
 end;
 $$;
+
+revoke execute on function public.compliance_check_chapters() from anon, authenticated, public;

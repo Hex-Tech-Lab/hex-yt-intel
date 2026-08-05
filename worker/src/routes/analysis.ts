@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import * as Sentry from "@sentry/cloudflare";
 import { TranscriptExtractor } from "../services/TranscriptExtractor";
 import { MetadataScraper, type VideoComment } from "../services/MetadataScraper";
+import { parseChapters, type VideoChapter } from "../services/chapter-parser";
 import type { TranscriptSegment } from "../ports/TranscriptProviderPort";
 import { ReasoningEngine } from "../services/ReasoningEngine";
 import { PromptBuilder } from "../services/PromptBuilder";
@@ -689,6 +690,12 @@ function buildStreamResponse(
   // same enrichment purpose as channel metadata, fetched via the YouTube Data
   // API in fetchTranscriptIfMissing / fetchCommentsCached.
   let resolvedComments: VideoComment[] | null = null;
+  // Chapters parsed from the video description (0:00 Intro-style lines).
+  // Derived from req.metadata.description -- already fetched with the rest of
+  // the video metadata, no extra YouTube API call (chapter-parser.ts). Empty
+  // when the description has no chapter markers (most videos) -- threaded to
+  // persist so `transcript_chapters` gets a real row only when chapters exist.
+  let resolvedChapters: VideoChapter[] | null = null;
 
   const persistService = new PersistService();
 
@@ -743,6 +750,7 @@ function buildStreamResponse(
         transcript: resolvedTranscriptText,
         channelMeta: resolvedChannelMeta,
         comments: resolvedComments,
+        chapters: resolvedChapters ?? undefined,
       };
 
       // RCA (2026-07-22): this used to race EVERY persist call (including successful
@@ -841,6 +849,16 @@ function buildStreamResponse(
       }
       if (fetchResult.status === 'fulfilled' && fetchResult.value.comments) {
         resolvedComments = fetchResult.value.comments;
+      }
+      // Gap 1 (2026-08-05): actually invoke the chapter parser. The video
+      // description travels in req.metadata (AnalysisJobMetadataSchema has
+      // description as optional). Parse once here so both the persist call and
+      // any downstream consumer get the same array.
+      {
+        const description = (req.metadata as { description?: string }).description;
+        if (description) {
+          resolvedChapters = parseChapters(description);
+        }
       }
 
       if (!resolvedTranscript || !resolvedTranscript.trim() || resolvedTranscript.includes("Transcript unavailable") || resolvedTranscript.includes("content ingestion failed") || resolvedTranscript.includes("No captions available")) {

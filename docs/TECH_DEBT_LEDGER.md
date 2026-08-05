@@ -78,6 +78,22 @@ complexity 8) surfaced during PR #183/#185 review — already logged as
 pre-existing, non-blocking, not duplicated into this ledger. See PR #183/#185
 review threads.
 
+## Open — missing REVOKE on pre-existing SECURITY DEFINER function (2026-08-05)
+
+`public.purge_expired_transcripts()` and `public.compliance_check_transcripts()`
+in `supabase/migrations/20260718000000_add_transcripts_and_markers.sql` are
+`SECURITY DEFINER` with no `revoke execute ... from anon, authenticated,
+public` — same gap class as the PR #179 incident that this project's own
+`pr-review-workflow` mandatory sub-check exists to catch (precedent:
+`update_analysis_result_atomic`, `get_user_history_overview`). Found while
+reviewing the sibling `transcript_chapters` migration (which copied this
+pattern and has now been fixed with an explicit REVOKE before merge, since
+it hadn't shipped yet). This one has likely already been applied to prod —
+fixing it needs a new migration plus a live `select grantee, privilege_type
+from information_schema.routine_privileges where routine_name = '...'`
+check, not a blind edit to an already-applied file. Not fixed yet — flagging
+for the next scan pass.
+
 ## Next scan
 
 Re-run `pnpm tsx scripts/verify-quality-engine.ts --mode full` and

@@ -216,6 +216,16 @@ export async function POST(request: NextRequest) {
         publishedAt: z.string(),
         likeCount: z.number(),
       })).nullable().optional(),
+      // Chapter markers parsed from the video description by the worker's
+      // chapter-parser.ts (0:00 Intro-style lines). Upserted into
+      // `transcript_chapters` on (video_id, idx). Null/absent when the
+      // description has no chapter markers (most videos) — no rows written.
+      chapters: z.array(z.object({
+        idx: z.number(),
+        start_seconds: z.number(),
+        end_seconds: z.number(),
+        label: z.string(),
+      })).nullable().optional(),
     });
 
     const parsedBody = bodySchema.safeParse(body);
@@ -248,6 +258,7 @@ export async function POST(request: NextRequest) {
         transcript,
         channelMeta: rawChannelMeta,
         comments: rawComments,
+        chapters: rawChapters,
       } = parsedBody.data;
 
       // Defense in depth: the worker already caps channelMeta (see
@@ -878,6 +889,24 @@ export async function POST(request: NextRequest) {
         }).catch(e => {
           Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_transcript', analysisId } } });
           console.warn('[analyses/persist] Failed to upsert transcript segments', { analysisId, error: String(e) });
+        });
+      }
+
+      // Chapters (Gap 2): persist the parsed chapter markers when the worker
+      // sent any. No-op when rawChapters is null/empty (video has no chapter
+      // markers) — that's the correct "no chapters" state, not an error.
+      if (rawChapters && rawChapters.length > 0) {
+        await SupabaseTranscriptAdapter.upsertChapters(
+          rawChapters.map((c) => ({
+            video_id: videoId,
+            idx: c.idx,
+            start_seconds: c.start_seconds,
+            end_seconds: c.end_seconds,
+            label: c.label,
+          }))
+        ).catch(e => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_chapters', analysisId } } });
+          console.warn('[analyses/persist] Failed to upsert chapters', { analysisId, error: String(e) });
         });
       }
 

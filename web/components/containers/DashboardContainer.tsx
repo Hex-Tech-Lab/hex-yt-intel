@@ -39,6 +39,7 @@ import { useSSEStream } from '@/hooks/useSSEStream';
 import { useEagerVideoMetadata } from '@/hooks/useEagerVideoMetadata';
 import { useAutoRestoreAnalysis } from '@/hooks/useAutoRestoreAnalysis';
 import { useExecutiveDigest } from '@/hooks/useExecutiveDigest';
+import { useChapters } from '@/hooks/useChapters';
 import { useAuxElementStatus } from '@/hooks/useAuxElementStatus';
 import { extractVideoId } from '@/lib/youtube';
 import { useExistingAnalysisCheck } from '@/hooks/useExistingAnalysisCheck';
@@ -125,6 +126,12 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   useEagerVideoMetadata();
   const nucleusAnalysis = useSynthesisNucleus((s) => s.analysis);
   const nucleusProjection = useSynthesisNucleus((s) => s.projection);
+  // Gap 3: chapter markers for the current analysis's video, fetched once per
+  // analysis id. Must be declared before handleSelectNode (below) which
+  // threads them into findEntityTimestamp. Empty during the fetch window —
+  // findEntityTimestamp falls through to regex, which is the correct degraded
+  // behavior.
+  const { chapters } = useChapters(nucleusAnalysis?.id ?? null, status);
 
   useEffect(() => {
     setUserRole(profile.role);
@@ -200,7 +207,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       if (node) {
         const dim = useAnalysisDimensionsStore.getState().getDimension(node.dimension);
         const dimContent = dim?.content;
-        const timestamp = findEntityTimestamp(node, dimContent);
+        // Gap 3: pass parsed chapters (from transcript_chapters via
+        // useChapters) so findEntityTimestamp prefers a real chapter boundary
+        // when the content timestamp falls inside one.
+        const timestamp = findEntityTimestamp(node, dimContent, chapters);
         if (timestamp) {
           const secs = parseTimestamp(timestamp);
           if (secs >= 0) setSeekTo(secs);
@@ -217,7 +227,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             clearTimeout(timeoutId);
             unsub();
             const retryContent = retryDim.content;
-            const retryTs = findEntityTimestamp(node, retryContent);
+            const retryTs = findEntityTimestamp(node, retryContent, chapters);
             if (retryTs) {
               const secs = parseTimestamp(retryTs);
               if (secs >= 0) setSeekTo(secs);
@@ -226,7 +236,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         }
       }
     }
-  }, [graph.nodes]);
+  }, [graph.nodes, chapters]);
 
   // Define Right Panel Accordion Items
   const handleExpandPanel = useCallback((id: string, mode: string) => {
