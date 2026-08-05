@@ -79,11 +79,25 @@ begin
         expires_at = excluded.expires_at;
 
   -- Remove the "attempted but empty" sentinel (a re-analysis that now found
-  -- chapters must flip orange -> green) and any stale rows beyond the
-  -- current run's idx range, in the same transaction as the upsert above.
+  -- chapters must flip orange -> green) and any stale rows not present in
+  -- this run's submitted set, in the same transaction as the upsert above.
+  -- `idx not in (submitted indexes)` rather than `idx >= v_count` (CodeRabbit
+  -- review, 2026-08-05): the latter assumed submitted indexes are exactly
+  -- the contiguous range 0..v_count-1, which the current caller happens to
+  -- guarantee but this DB function has no way to enforce -- a sparse or
+  -- reordered submission would have incorrectly left orphans or deleted
+  -- rows that were actually part of the current set. Verified live: sparse
+  -- (0,2,5) keeps all 3; a rewrite that drops a previously-submitted index
+  -- correctly removes only that one.
   delete from public.transcript_chapters
   where video_id = p_video_id
-    and (idx = -1 or idx >= v_count);
+    and (
+      idx = -1
+      or idx not in (
+        select (elem ->> 'idx')::int
+        from jsonb_array_elements(p_chapters) as elem
+      )
+    );
 end;
 $$;
 

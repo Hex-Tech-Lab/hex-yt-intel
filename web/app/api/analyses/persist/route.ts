@@ -284,13 +284,32 @@ export async function POST(request: NextRequest) {
       // this route's existing best-effort posture for chapters (a bad
       // element from one chunk shouldn't block persisting the rest, or the
       // analysis itself).
-      const rawChapters = rawChaptersInput?.filter((c) => {
+      const rawChaptersFiltered = rawChaptersInput?.filter((c) => {
         const ok = c.end_seconds > c.start_seconds;
         if (!ok) {
           console.warn('[analyses/persist] Dropped malformed chapter (end_seconds <= start_seconds)', { analysisId, idx: c.idx });
         }
         return ok;
-      }) ?? rawChaptersInput;
+      });
+      // Distinguish "worker genuinely parsed zero chapters" (rawChaptersInput
+      // null/undefined/[]) from "every submitted chapter was malformed"
+      // (rawChaptersInput had elements, all got filtered out above). Cubic
+      // review, 2026-08-05: the two were previously indistinguishable, so an
+      // all-malformed submission fell through to the same attemptedButEmpty
+      // sentinel path as a real empty parse -- which DELETES existing real
+      // chapter rows for the video (see upsertChapters). A malformed
+      // submission must not be able to wipe out previously-valid chapters;
+      // skip persistence entirely instead.
+      const allChaptersMalformed = !!rawChaptersInput && rawChaptersInput.length > 0 && (rawChaptersFiltered?.length ?? 0) === 0;
+      if (allChaptersMalformed) {
+        Sentry.captureMessage('analyses/persist: all submitted chapters malformed, skipping persistence', {
+          level: 'warning',
+          tags: { operation: 'chapters-persist' },
+          extra: { analysisId, submittedCount: rawChaptersInput!.length },
+        });
+        console.error('[analyses/persist] All submitted chapters were malformed -- skipping chapter persistence entirely, not treating as an empty parse', { analysisId, submittedCount: rawChaptersInput!.length });
+      }
+      const rawChapters = allChaptersMalformed ? undefined : (rawChaptersFiltered ?? rawChaptersInput);
 
       // Defense in depth: the worker already caps channelMeta (see
       // MAX_CHANNEL_META_BYTES in worker/src/routes/analysis.ts), but this is a
