@@ -1,0 +1,33 @@
+worker/src/routes/analysis.ts
+  s_0ad60efcede198::t_c0b7f42d1b4361 1138-1139
+web/hooks/useSSEStream.ts
+  s_0ad60efcede198::t_0ace04465b252e 6
+  s_0ad60efcede198::t_407b2e9a706c0e 99-106
+  s_0eded1e9d0cab6::t_28a8115e948ec6 111-113
+web/app/api/videos/[videoId]/chapters/route.ts
+  s_0ad60efcede198::t_638c4d9c816a4d 7-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6ceacbad8f15b98499ec92e91a8dc4e98ea3ae72",
+  "prompts": {},
+  "sessions": {
+    "s_0ad60efcede198": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03845f2e8ffeNf2TJ3GpUGDIC5",
+        "model": "deepseek/deepseek-v4-flash"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
