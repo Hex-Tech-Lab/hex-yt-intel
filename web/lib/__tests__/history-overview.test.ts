@@ -47,6 +47,7 @@ function baseRow(overrides: Partial<RawHistoryOverviewRow> = {}): RawHistoryOver
     has_description: true,
     has_channel_meta: true,
     has_comments: true,
+    has_chapters: null,
     client_platform: 'ios',
     ...overrides,
   };
@@ -73,6 +74,7 @@ describe('mapHistoryOverviewRow', () => {
       hasDescription: true,
       hasChannelMeta: true,
       hasComments: true,
+      hasChapters: null,
       clientPlatform: 'ios',
     });
   });
@@ -126,5 +128,36 @@ describe('mapHistoryOverviewRow', () => {
     const item = mapHistoryOverviewRow(baseRow({ present_dimensions: [3, 1, 2], best_dimensions: 3, status: 'partial' }));
     expect(item.presentDimensions).toEqual([1, 2, 3]);
     expect(item.missingDimensions).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
+  });
+
+  it('prepends channel name to a bare-date title (Month D, YYYY)', () => {
+    const item = mapHistoryOverviewRow(baseRow({ title: 'April 28, 2026', channel_title: 'Mark Johnson' }));
+    expect(item.title).toBe('Mark Johnson — April 28, 2026');
+    expect(item.channelTitle).toBe('Mark Johnson');
+  });
+
+  it('prepends channel name to a bare-date title (YYYY-MM-DD)', () => {
+    const item = mapHistoryOverviewRow(baseRow({ title: '2026-04-28', channel_title: 'Mark Johnson' }));
+    expect(item.title).toBe('Mark Johnson — 2026-04-28');
+  });
+
+  it('prepends channel name to a short-date title (M/D/YY)', () => {
+    const item = mapHistoryOverviewRow(baseRow({ title: '4/28/26', channel_title: 'Mark Johnson' }));
+    expect(item.title).toBe('Mark Johnson — 4/28/26');
+  });
+
+  it('keeps a date-only title bare when no channel is known', () => {
+    const item = mapHistoryOverviewRow(baseRow({ title: 'April 28, 2026', channel_title: null }));
+    expect(item.title).toBe('April 28, 2026');
+  });
+
+  it('prepends channel to a null title as "Channel — Untitled Analysis"', () => {
+    const item = mapHistoryOverviewRow(baseRow({ title: null, channel_title: 'Mark Johnson' }));
+    expect(item.title).toBe('Mark Johnson — Untitled Analysis');
+  });
+
+  it('keeps a descriptive title untouched even when channel is known', () => {
+    const item = mapHistoryOverviewRow(baseRow({ title: 'Real Video Title', channel_title: 'Mark Johnson' }));
+    expect(item.title).toBe('Real Video Title');
   });
 });

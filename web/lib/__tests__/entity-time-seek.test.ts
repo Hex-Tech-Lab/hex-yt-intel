@@ -66,4 +66,85 @@ describe('findEntityTimestamp', () => {
     const node = { label: 'Pricing strategy', content: 'No timing info', keyTerms: [] };
     expect(findEntityTimestamp(node, 'Nothing time-related here.')).toBeNull();
   });
+
+  it('uses a chapter boundary over regex when the content timestamp falls inside a chapter', () => {
+    const node = { label: 'Pricing strategy', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'At 5:45 Pricing strategy is discussed in detail.';
+    const chapters = [
+      { start_seconds: 0, end_seconds: 60, label: 'Intro' },
+      { start_seconds: 300, end_seconds: 420, label: 'Pricing deep dive' },
+    ];
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('5:00');
+  });
+
+  it('falls through to regex when no chapter brackets the content timestamp', () => {
+    const node = { label: 'Pricing strategy', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'At 5:45 Pricing strategy is discussed in detail.';
+    const chapters = [
+      { start_seconds: 600, end_seconds: 720, label: 'Late section' },
+    ];
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('5:45');
+  });
+
+  it('behaves identically to before when no chapters are provided', () => {
+    const node = { label: 'Pricing strategy', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'At 5:45 Pricing strategy is discussed.';
+    expect(findEntityTimestamp(node, dimensionContent, null)).toBe('5:45');
+    expect(findEntityTimestamp(node, dimensionContent, [])).toBe('5:45');
+  });
+
+  it('extracts the start time from a range-format timestamp in dimension content', () => {
+    const node = { label: 'Apex', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'The Apex framework segment runs from 60:00 to 65:00.';
+    expect(findEntityTimestamp(node, dimensionContent)).toBe('60:00');
+  });
+
+  it('uses the START of a range immediately preceding the label, not the range end (label-proximity branch)', () => {
+    const node = { label: 'Entity A', content: 'No timing info', keyTerms: [] };
+    const dimensionContent = 'Segment: 60:00 to 65:00 Entity A discussion follows.';
+    expect(findEntityTimestamp(node, dimensionContent)).toBe('60:00');
+  });
+
+  it('uses label-proximity timestamp for chapter check, not the first timestamp (P0-4)', () => {
+    // Two timestamps, only the second is near the entity label. The chapter
+    // check must use the label-proximity timestamp (50:00), not the first one
+    // (2:10). The chapter "Deep dive" (40:00-60:00) brackets 50:00, so the
+    // result should be the chapter start (40:00), not the raw 50:00.
+    const node = { label: 'Entity B', content: '', keyTerms: [] };
+    const dimensionContent = 'At 2:10 we cover intros. At 50:00 Entity B is discussed in depth.';
+    const chapters = [
+      { start_seconds: 0, end_seconds: 300, label: 'Intro' },
+      { start_seconds: 2400, end_seconds: 3600, label: 'Deep dive' },
+    ];
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('40:00');
+  });
+
+  it('uses the label-proximity timestamp when it falls outside any chapter (P0-4)', () => {
+    const node = { label: 'Entity B', content: '', keyTerms: [] };
+    const dimensionContent = 'At 2:10 we cover intros. At 50:00 Entity B is discussed.';
+    const chapters = [
+      { start_seconds: 0, end_seconds: 300, label: 'Intro' },
+    ];
+    // 50:00 = 3000s, falls outside the 0-300s chapter, so return raw 50:00
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('50:00');
+  });
+
+  it('resolves an exact shared chapter boundary to the later chapter, not the earlier one', () => {
+    const node = { label: 'Entity C', content: '', keyTerms: [] };
+    const dimensionContent = 'At 5:00 Entity C is introduced.';
+    // 5:00 = 300s sits exactly on the shared boundary between both chapters.
+    const chapters = [
+      { start_seconds: 0, end_seconds: 300, label: 'Intro' },
+      { start_seconds: 300, end_seconds: 600, label: 'Deep dive' },
+    ];
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('5:00');
+  });
+
+  it('applies chapter-boundary snapping to a literal timestamp in node.label, not just the dimension fallback', () => {
+    const node = { label: '10:00 marker', content: '', keyTerms: [] };
+    const chapters = [{ start_seconds: 0, end_seconds: 1200, label: 'Full chapter' }];
+    // node.label itself contains a timestamp (rare, but must still snap to
+    // the covering chapter's start -- this was bypassed before the fix.
+    expect(findEntityTimestamp(node, null, chapters)).toBe('0:00');
+  });
 });

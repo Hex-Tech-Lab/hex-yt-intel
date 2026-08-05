@@ -17,6 +17,22 @@ export async function POST(request: NextRequest) {
     const purged = await SupabaseTranscriptAdapter.purgeExpired();
     console.log('[transcript-purge] purged', purged.length);
 
+    // P0-3: purge expired chapter rows (both real chapters and the
+    // attempted-but-empty sentinel) on the same cron schedule as transcripts.
+    // Isolated in its own try/catch (PR #205 review, 2026-08-05): the
+    // transcript purge above already committed its DB deletes by this
+    // point -- a chapters-purge failure shouldn't turn the whole response
+    // into a 500 and obscure that the transcript purge genuinely succeeded.
+    let purgedChaptersCount: number | null = null;
+    try {
+      const purgedChapters = await SupabaseTranscriptAdapter.purgeExpiredChapters();
+      purgedChaptersCount = purgedChapters.length;
+      console.log('[transcript-purge] purged chapters', purgedChaptersCount);
+    } catch (chaptersError) {
+      Sentry.captureException(chaptersError, { contexts: { api: { endpoint: '/api/webhooks/transcript-purge', phase: 'chapters' } } });
+      console.error('[transcript-purge] chapters purge failed, transcript purge still reported', chaptersError);
+    }
+
     // Purge corresponding Redis L1 transcript cache keys (72h TTL, set in worker).
     const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
     const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -53,6 +69,7 @@ export async function POST(request: NextRequest) {
       purgedCount: purged.length,
       purged,
       redisPurgeResults,
+      purgedChaptersCount,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

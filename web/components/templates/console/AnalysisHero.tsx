@@ -102,7 +102,7 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                     className="w-full min-w-0 font-mono text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] bg-transparent border-none outline-none shadow-none px-1 overflow-x-auto"
                   />
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
                   {url && (
                     <div className="flex items-center gap-1">
                       <Tooltip content="Copy URL">
@@ -130,22 +130,25 @@ export function AnalysisHero({ url, status, onUrlChange, onAnalyze, onReanalyze,
                       type="button"
                       label="Cancel analysis"
                       variant="destructive"
-                      size="md"
+                      size="sm"
                       isIconOnly
-                      icon={<Icon icon="solar:stop-circle-linear" size={16} />}
+                      icon={<Icon icon="solar:stop-circle-linear" size={14} />}
                       onClick={onCancel}
+                      className="!rounded-none"
                     />
                   )}
                   <Button
                     type="button"
                     label={streaming ? "Analyzing" : isRepeat ? "Re-analyze" : "Analyze"}
                     variant={isRepeat ? "secondary" : "primary"}
-                    size="md"
-                    tooltip={isRepeat ? "Re-analyze this video (runs fresh, not from cache)" : "Analyze YouTube video and extract multi-dimensional intelligence"}
+                    size="sm"
+                    tooltip={`${isRepeat ? "Re-analyze this video (runs fresh, not from cache)" : "Analyze YouTube video and extract multi-dimensional intelligence"} (Press Enter ↵)`}
+                    aria-keyshortcuts="Enter"
                     onClick={isRepeat ? onReanalyze : onAnalyze}
                     isDisabled={disabled}
                     isLoading={streaming}
-                    icon={!streaming ? <Icon icon="solar:bolt-linear" size={16} /> : undefined}
+                    icon={!streaming ? <Icon icon="solar:bolt-linear" size={14} /> : undefined}
+                    className="!rounded-none font-mono font-semibold uppercase tracking-wider"
                   />
                 </div>
               </div>

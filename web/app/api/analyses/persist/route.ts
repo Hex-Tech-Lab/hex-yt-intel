@@ -216,6 +216,32 @@ export async function POST(request: NextRequest) {
         publishedAt: z.string(),
         likeCount: z.number(),
       })).nullable().optional(),
+      // Chapter markers parsed from the video description by the worker's
+      // chapter-parser.ts (0:00 Intro-style lines). Upserted into
+      // `transcript_chapters` on (video_id, idx). Null/absent when the
+      // description has no chapter markers (most videos) — no rows written.
+      // Constrained per PR #205 review (2026-08-05): chapter persistence is
+      // best-effort (failures are caught/logged, don't fail the request), so
+      // malformed input could otherwise silently corrupt chapter state with
+      // no visible failure. The end_seconds > start_seconds cross-field
+      // check can't be expressed as a plain Zod constraint without
+      // .refine() -- deliberately done as a manual post-parse filter
+      // instead (see filterValidChapters() below), not a Zod .refine(),
+      // because qa-intel's SchemaContractRule only recognizes .optional()
+      // chained directly after .refine() in the same fluent expression; a
+      // .refine() nested inside z.array(...).nullable().optional() is
+      // structurally invisible to that check even though it's empirically
+      // safe (verified: omitting the field / null / [] all parse fine,
+      // only a malformed element would be rejected) -- restructuring around
+      // the rule's blind spot rather than fighting a false positive.
+      // Mirrors the DB CHECK constraint in
+      // supabase/migrations/20260805003000_transcript_chapters_check_constraint.sql.
+      chapters: z.array(z.object({
+        idx: z.number().int().min(0),
+        start_seconds: z.number().finite().min(0),
+        end_seconds: z.number().finite().min(0),
+        label: z.string().trim().min(1),
+      })).nullable().optional(),
     });
 
     const parsedBody = bodySchema.safeParse(body);
@@ -248,7 +274,42 @@ export async function POST(request: NextRequest) {
         transcript,
         channelMeta: rawChannelMeta,
         comments: rawComments,
+        chapters: rawChaptersInput,
       } = parsedBody.data;
+
+      // Cross-field check (end_seconds > start_seconds) that Zod's
+      // per-field constraints can't express -- see the schema comment above
+      // for why this is a manual filter rather than z.refine(). Malformed
+      // elements are dropped rather than failing the whole request, matching
+      // this route's existing best-effort posture for chapters (a bad
+      // element from one chunk shouldn't block persisting the rest, or the
+      // analysis itself).
+      const rawChaptersFiltered = rawChaptersInput?.filter((c) => {
+        const ok = c.end_seconds > c.start_seconds;
+        if (!ok) {
+          console.warn('[analyses/persist] Dropped malformed chapter (end_seconds <= start_seconds)', { analysisId, idx: c.idx });
+        }
+        return ok;
+      });
+      // Distinguish "worker genuinely parsed zero chapters" (rawChaptersInput
+      // null/undefined/[]) from "every submitted chapter was malformed"
+      // (rawChaptersInput had elements, all got filtered out above). Cubic
+      // review, 2026-08-05: the two were previously indistinguishable, so an
+      // all-malformed submission fell through to the same attemptedButEmpty
+      // sentinel path as a real empty parse -- which DELETES existing real
+      // chapter rows for the video (see upsertChapters). A malformed
+      // submission must not be able to wipe out previously-valid chapters;
+      // skip persistence entirely instead.
+      const allChaptersMalformed = !!rawChaptersInput && rawChaptersInput.length > 0 && (rawChaptersFiltered?.length ?? 0) === 0;
+      if (allChaptersMalformed) {
+        Sentry.captureMessage('analyses/persist: all submitted chapters malformed, skipping persistence', {
+          level: 'warning',
+          tags: { operation: 'chapters-persist' },
+          extra: { analysisId, submittedCount: rawChaptersInput!.length },
+        });
+        console.error('[analyses/persist] All submitted chapters were malformed -- skipping chapter persistence entirely, not treating as an empty parse', { analysisId, submittedCount: rawChaptersInput!.length });
+      }
+      const rawChapters = allChaptersMalformed ? undefined : (rawChaptersFiltered ?? rawChaptersInput);
 
       // Defense in depth: the worker already caps channelMeta (see
       // MAX_CHANNEL_META_BYTES in worker/src/routes/analysis.ts), but this is a
@@ -427,6 +488,33 @@ export async function POST(request: NextRequest) {
           }).catch(e => {
             Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_transcript_chunk', analysisId } } });
             console.warn('[analyses/persist] Failed to upsert transcript segments in chunk path', { analysisId, error: String(e) });
+          });
+        }
+
+        // Same safety-net pattern as the transcript write above (P0-1 placement
+        // fix, PR #205 review 2026-08-05): chapters are chunk-independent data
+        // -- the worker parses the same description-derived chapters on every
+        // chunk request, not just the finalizing one -- so gating this write
+        // behind isFullyReceived (its original P0-1 placement) meant a
+        // partial/interrupted analysis that never receives all chunks lost
+        // chapter data that was actually available on an earlier successful
+        // chunk. upsertChapters is idempotent on (video_id, idx), so firing on
+        // every chunk is harmless; moved here to run unconditionally per chunk
+        // instead of only inside the isFullyReceived finalization branch below.
+        if (rawChapters) {
+          await SupabaseTranscriptAdapter.upsertChapters(
+            videoId,
+            rawChapters.map((c) => ({
+              video_id: videoId,
+              idx: c.idx,
+              start_seconds: c.start_seconds,
+              end_seconds: c.end_seconds,
+              label: c.label,
+            })),
+            { attemptedButEmpty: rawChapters.length === 0 }
+          ).catch(e => {
+            Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_chapters_chunked', analysisId } } });
+            console.warn('[analyses/persist] Failed to upsert chapters (chunked path)', { analysisId, error: String(e) });
           });
         }
 
@@ -878,6 +966,28 @@ export async function POST(request: NextRequest) {
         }).catch(e => {
           Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_transcript', analysisId } } });
           console.warn('[analyses/persist] Failed to upsert transcript segments', { analysisId, error: String(e) });
+        });
+      }
+
+      // Chapters (Gap 2): persist the parsed chapter markers when the worker
+      // sent any. Three-state: non-empty -> green rows; empty array (worker
+      // parsed the description and found zero markers) -> attempted-but-empty
+      // sentinel so the history chip renders orange; absent (worker never
+      // parsed) -> no rows, chip renders grey.
+      if (rawChapters) {
+        await SupabaseTranscriptAdapter.upsertChapters(
+          videoId,
+          rawChapters.map((c) => ({
+            video_id: videoId,
+            idx: c.idx,
+            start_seconds: c.start_seconds,
+            end_seconds: c.end_seconds,
+            label: c.label,
+          })),
+          { attemptedButEmpty: rawChapters.length === 0 }
+        ).catch(e => {
+          Sentry.captureException(e, { contexts: { persist: { phase: 'upsert_chapters', analysisId } } });
+          console.warn('[analyses/persist] Failed to upsert chapters', { analysisId, error: String(e) });
         });
       }
 

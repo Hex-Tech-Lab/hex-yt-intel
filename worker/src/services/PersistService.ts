@@ -43,6 +43,7 @@ export interface PersistOptions {
   transcript?: string;
   channelMeta?: Record<string, unknown> | null;
   comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
+  chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }> | null;
 }
 
 const rawFetch = fetch;
@@ -157,6 +158,7 @@ export class PersistService {
     transcript?: string;
     channelMeta?: Record<string, unknown> | null;
     comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
+    chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }> | null;
   }): Promise<boolean> {
     const maxRetries = 2;
     for (let tryIndex = 0; tryIndex <= maxRetries; tryIndex++) {
@@ -185,6 +187,7 @@ export class PersistService {
             transcript: params.transcript,
             channelMeta: params.channelMeta,
             comments: params.comments,
+            chapters: params.chapters,
           }),
         });
         if (persistRes.ok) return true;
