@@ -324,3 +324,43 @@ export const CanvasStaleDataRule: IRule = {
     return findings;
   }
 };
+
+export const ZustandWholeStoreInEffectDepsRule: IRule = {
+  name: "zustand-whole-store-effect-deps",
+  check: (source: SourceFile) => {
+    const findings: Finding[] = [];
+    const filePath = source.getFilePath().replace(/\\/g, "/");
+    const text = source.getText();
+
+    // A Zustand store hook called with NO selector argument (`useXStore()`)
+    // subscribes to the WHOLE store object. Every set() call anywhere in
+    // that store produces a new top-level object reference -- so binding
+    // that whole-store value and then including it in a useEffect/useMemo/
+    // useCallback dependency array causes the effect to re-run on ANY
+    // unrelated store update, including its own setter calls made inside
+    // the same effect. Confirmed real bug (hex-yt-intel useChapters.ts,
+    // 2026-08-06): this made an entire feature non-functional -- an
+    // in-flight async fetch was silently cancelled by the effect's own
+    // state-setting call, permanently stuck at a "loading" status.
+    const noSelectorCalls = [...text.matchAll(/const\s+(\w+)\s*=\s*(use\w*Store)\(\s*\)/g)];
+    for (const match of noSelectorCalls) {
+      const varName = match[1]!;
+      const storeHookName = match[2]!;
+      // Match the standard `useEffect(() => { ...body... }, [deps])` shape --
+      // [\s\S]*? (not [^;]*?) so the scan isn't blocked by semicolons inside
+      // the callback body, which real effect bodies always have.
+      const depArrayRe = new RegExp(`use(?:Effect|Memo|Callback)\\([\\s\\S]*?\\},\\s*\\[[^\\]]*\\b${varName}\\b[^\\]]*\\]\\)`);
+      if (depArrayRe.test(text)) {
+        findings.push({
+          file: filePath,
+          severity: "critical",
+          title: "React: whole Zustand store object in effect/memo dependency array",
+          why: `'${varName}' is bound from '${storeHookName}()' with no selector -- it subscribes to the WHOLE store and gets a new object reference on every state change anywhere in the store. Including it in a dependency array can self-trigger the effect on its own setter calls, silently cancelling in-flight async work.`,
+          fix: `Select only what's needed: 'const ${varName} = ${storeHookName}((state) => state.someField)' for values, or 'const setX = ${storeHookName}((state) => state.setX)' for stable action references. Never put a whole un-selected store binding in a dependency array.`
+        });
+      }
+    }
+
+    return findings;
+  }
+};
