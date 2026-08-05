@@ -1,0 +1,39 @@
+web/hooks/useChapters.ts
+  s_0eded1e9d0cab6::t_c4ad17c5db4665 46-51,58-59,64
+web/app/api/analyses/[id]/chapters/route.ts
+  s_0eded1e9d0cab6::t_a8a07827b8fda3 41-47
+  s_0eded1e9d0cab6::t_b80796f0fa7702 6
+web/lib/adapters/SupabaseTranscriptAdapter.ts
+  s_0eded1e9d0cab6::t_10f3029045797b 154-169
+  s_0eded1e9d0cab6::t_927be1f18d1956 194-196,202
+  s_0eded1e9d0cab6::t_57b072063b1729 38
+  s_0eded1e9d0cab6::t_ba8efcedf6424f 208-216,221,228-229
+supabase/migrations/20260805002000_write_chapter_sentinel_atomic.sql
+  s_0eded1e9d0cab6::t_66cfed3e80f0f8 43-90
+  s_0eded1e9d0cab6::t_e6e5ff84bf682d 12-17,28-31,36-37
+web/lib/__tests__/chapter-parser.test.ts
+  s_0eded1e9d0cab6::t_3cea48a347fd09 43-46,48-65
+  s_0eded1e9d0cab6::t_f24e8c4f26b517 47
+worker/src/services/chapter-parser.ts
+  s_0eded1e9d0cab6::t_b99f12e6640038 27-46
+  s_0eded1e9d0cab6::t_14e0c2ca340412 71,85-92,94-96
+  s_0eded1e9d0cab6::t_1065916210b2a8 93
+supabase/migrations/20260805001000_history_overview_function_v13_add_has_chapters.sql
+  s_0eded1e9d0cab6::t_e8889d1c84c9ca 120,124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "4465b48a427acf7de00cd0d93c71f6dfc4d9f173",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
