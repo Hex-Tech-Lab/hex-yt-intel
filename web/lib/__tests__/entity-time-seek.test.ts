@@ -122,4 +122,23 @@ describe('findEntityTimestamp', () => {
     // 50:00 = 3000s, falls outside the 0-300s chapter, so return raw 50:00
     expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('50:00');
   });
+
+  it('resolves an exact shared chapter boundary to the later chapter, not the earlier one', () => {
+    const node = { label: 'Entity C', content: '', keyTerms: [] };
+    const dimensionContent = 'At 5:00 Entity C is introduced.';
+    // 5:00 = 300s sits exactly on the shared boundary between both chapters.
+    const chapters = [
+      { start_seconds: 0, end_seconds: 300, label: 'Intro' },
+      { start_seconds: 300, end_seconds: 600, label: 'Deep dive' },
+    ];
+    expect(findEntityTimestamp(node, dimensionContent, chapters)).toBe('5:00');
+  });
+
+  it('applies chapter-boundary snapping to a literal timestamp in node.label, not just the dimension fallback', () => {
+    const node = { label: '10:00 marker', content: '', keyTerms: [] };
+    const chapters = [{ start_seconds: 0, end_seconds: 1200, label: 'Full chapter' }];
+    // node.label itself contains a timestamp (rare, but must still snap to
+    // the covering chapter's start -- this was bypassed before the fix.
+    expect(findEntityTimestamp(node, null, chapters)).toBe('0:00');
+  });
 });

@@ -179,33 +179,20 @@ export class SupabaseTranscriptAdapter {
         Sentry.captureException(deleteError, { tags: { method: 'upsertChapters-cleanup' }, extra: { videoId } });
       }
     } else if (attemptedButEmpty && videoId) {
-      // P0-2: delete ALL existing real chapter rows (idx >= 0) from a prior
-      // analysis run before writing the sentinel. Without this, a re-analysis
-      // that finds no chapters keeps stale chapters from the old run visible
-      // (green chip, wrong seek boundaries).
-      const { error: deleteRealError } = await service
-        .from('transcript_chapters')
-        .delete()
-        .eq('video_id', videoId)
-        .gte('idx', 0);
-      if (deleteRealError) {
-        Sentry.captureException(deleteRealError, { tags: { method: 'upsertChapters-delete-stale' }, extra: { videoId } });
-        throw deleteRealError;
-      }
-
-      const sentinel: ChapterRow = {
-        video_id: videoId,
-        idx: -1,
-        start_seconds: -1,
-        end_seconds: -1,
-        label: '__attempted_empty__',
-      };
-      const { error: sentinelUpsertError } = await service
-        .from('transcript_chapters')
-        .upsert(sentinel, { onConflict: 'video_id,idx' });
-      if (sentinelUpsertError) {
-        Sentry.captureException(sentinelUpsertError, { tags: { method: 'upsertChapters-sentinel' }, extra: { videoId } });
-        throw sentinelUpsertError;
+      // P0-2 + atomicity fix (2026-08-05 PR #205 review): delete ALL existing
+      // real chapter rows (idx >= 0) from a prior analysis run and write the
+      // sentinel in a single DB transaction via write_chapter_sentinel(),
+      // instead of two separate PostgREST calls. Two separate calls left a
+      // window where a failed sentinel write after a successful delete would
+      // leave the video with NO chapter rows -- history falls back to grey
+      // (never-attempted) instead of orange (attempted, empty), and the
+      // failure mode is indistinguishable from the caller's error handling.
+      const { error: sentinelRpcError } = await service.rpc('write_chapter_sentinel', {
+        p_video_id: videoId,
+      });
+      if (sentinelRpcError) {
+        Sentry.captureException(sentinelRpcError, { tags: { method: 'upsertChapters-sentinel' }, extra: { videoId } });
+        throw sentinelRpcError;
       }
     }
   }
@@ -228,7 +215,14 @@ export class SupabaseTranscriptAdapter {
     const service = getSupabaseServiceClient();
     const { data, error } = await service.rpc('purge_expired_chapters');
     if (error) throw error;
-    return data || [];
+    // purge_expired_chapters() returns snake_case columns (video_id,
+    // deleted_at) -- map to the declared camelCase return shape rather than
+    // returning the raw rows, which would make .videoId/.deletedAt undefined
+    // for any caller that reads past .length.
+    return ((data as { video_id: string; deleted_at: string }[]) || []).map((row) => ({
+      videoId: row.video_id,
+      deletedAt: row.deleted_at,
+    }));
   }
 
   static async complianceCheckChapters(): Promise<{ violations: number; maxAge: string | null }> {

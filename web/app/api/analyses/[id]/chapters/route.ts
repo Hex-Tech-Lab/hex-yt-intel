@@ -44,7 +44,7 @@ export async function GET(
   } catch (error: unknown) {
     Sentry.captureException(error, {
       tags: { operation: 'get-analysis-chapters' },
-      extra: { analysisId },
+      contexts: { chapters: { analysisId } },
     });
     console.error('[getAnalysisChapters]', { message: error instanceof Error ? error.message : String(error), analysisId });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

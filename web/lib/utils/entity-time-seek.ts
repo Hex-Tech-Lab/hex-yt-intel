@@ -80,27 +80,50 @@ export interface EntityTimeSeekChapter {
  * are more reliable anchors than regex guesses. When no chapter data exists
  * (most already-analyzed videos), this behaves exactly as before.
  */
+/**
+ * If `chapters` covers the candidate timestamp, snap it to that chapter's
+ * start (a real chapter boundary is a more reliable anchor than a raw
+ * regex-extracted timestamp). On a tie at a shared boundary (candidate ===
+ * some chapter's end === the next chapter's start), prefer the chapter with
+ * the greater start_seconds -- the newly-started chapter, not the ending
+ * one, since chapter ranges are filled contiguous ([start, next.start]) by
+ * the parser and an exact-boundary timestamp reads as "the next chapter
+ * just began," not "the previous one is still ending."
+ */
+function applyChapterBoundary(candidateStr: string, chapters?: EntityTimeSeekChapter[] | null): string {
+  if (!chapters || chapters.length === 0) return candidateStr;
+  const candidateSeconds = timeToSeconds(candidateStr);
+  if (Number.isNaN(candidateSeconds)) return candidateStr;
+  const chapter = chapters.reduce<EntityTimeSeekChapter | null>((best, ch) => {
+    const inRange = candidateSeconds >= ch.start_seconds && candidateSeconds <= ch.end_seconds;
+    if (!inRange) return best;
+    if (!best || ch.start_seconds > best.start_seconds) return ch;
+    return best;
+  }, null);
+  return chapter ? formatTimestamp(chapter.start_seconds) : candidateStr;
+}
+
 export function findEntityTimestamp(
   node: EntityTimeSeekNode,
   dimensionContent?: string | null,
   chapters?: EntityTimeSeekChapter[] | null,
 ): string | null {
+  // Entity-relevant candidate found FIRST (label/content/keyTerms, then
+  // dimension-content proximity), chapter-boundary snapping applied to
+  // WHATEVER candidate is found -- uniformly, not just the dimension-content
+  // fallback. Applying it only to the fallback path (the original P0-4 fix,
+  // 2026-08-05) left node.label/content/keyTerms matches unsnapped whenever
+  // an entity's own field happened to carry a literal timestamp.
   const labelMatch = (node.label ?? '').match(TIMESTAMP_RE);
-  if (labelMatch) return labelMatch[0];
+  if (labelMatch) return applyChapterBoundary(labelMatch[0], chapters);
 
   const contentMatch = (node.content ?? '').match(TIMESTAMP_RE);
-  if (contentMatch) return contentMatch[0];
+  if (contentMatch) return applyChapterBoundary(contentMatch[0], chapters);
 
   const keyTermsMatch = (node.keyTerms ?? []).join(' ').match(TIMESTAMP_RE);
-  if (keyTermsMatch) return keyTermsMatch[0];
+  if (keyTermsMatch) return applyChapterBoundary(keyTermsMatch[0], chapters);
 
   if (dimensionContent) {
-    // Find the entity-relevant candidate timestamp FIRST (label proximity),
-    // THEN check if it falls inside a chapter range. This is the reverse of
-    // the earlier buggy approach (P0-4, 2026-08-05) where the chapter branch
-    // ran before label-proximity, causing every entity click to resolve to
-    // the same chapter (the one containing the dimension's first timestamp).
-    let candidateSeconds: number | null = null;
     let candidateStr: string | null = null;
 
     const label = node.label;
@@ -110,41 +133,25 @@ export function findEntityTimestamp(
         const beforeLabel = dimensionContent.slice(0, labelIdx);
         const timestamps = [...beforeLabel.matchAll(TIMESTAMP_RE_GLOBAL)];
         if (timestamps.length > 0) {
-          const ts = timestamps[timestamps.length - 1]![0];
-          candidateSeconds = timeToSeconds(ts);
-          candidateStr = ts;
+          candidateStr = timestamps[timestamps.length - 1]![0];
         }
       }
     }
 
     if (!candidateStr) {
       const singleMatch = dimensionContent.match(TIMESTAMP_RE);
-      if (singleMatch) {
-        candidateSeconds = timeToSeconds(singleMatch[0]);
-        candidateStr = singleMatch[0];
-      }
+      if (singleMatch) candidateStr = singleMatch[0];
     }
 
     if (!candidateStr) {
       const rangeMatch = dimensionContent.match(TIMESTAMP_RANGE_RE);
       if (rangeMatch) {
         const startTime = rangeMatch[0]!.match(TIMESTAMP_RE);
-        if (startTime) {
-          candidateSeconds = timeToSeconds(startTime[0]);
-          candidateStr = startTime[0];
-        }
+        if (startTime) candidateStr = startTime[0];
       }
     }
 
-    // Now check if the entity-relevant candidate falls inside a chapter.
-    if (candidateStr && chapters && chapters.length > 0 && candidateSeconds !== null) {
-      const chapter = chapters.find(
-        (ch) => candidateSeconds! >= ch.start_seconds && candidateSeconds! <= ch.end_seconds,
-      );
-      if (chapter) return formatTimestamp(chapter.start_seconds);
-    }
-
-    if (candidateStr) return candidateStr;
+    if (candidateStr) return applyChapterBoundary(candidateStr, chapters);
   }
 
   return null;

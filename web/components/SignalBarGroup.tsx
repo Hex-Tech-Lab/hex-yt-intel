@@ -49,10 +49,19 @@ export function SignalBarGroup({ score = 0, maxScore = 10, label, className = ''
           <span className="font-bold text-[var(--ink)]">{score.toFixed(1)} / {maxScore}</span>
         </div>
       )}
-      <div className="flex items-center gap-1 w-full h-3">
+      <div
+        className="flex items-center gap-1 w-full h-3"
+        role="meter"
+        aria-valuemin={0}
+        aria-valuemax={maxScore}
+        aria-valuenow={score}
+        aria-valuetext={`${score.toFixed(1)} out of ${maxScore}`}
+        aria-label={label ?? 'Signal strength'}
+      >
         {Array.from({ length: 6 }).map((_unused, barIndex) => (
           <div
             key={barIndex}
+            aria-hidden="true"
             className={`flex-1 h-full rounded-sm border transition-all duration-300 ${getBarColor(barIndex, activeBars)}`}
             title={`Signal step ${barIndex + 1} of 6`}
           />

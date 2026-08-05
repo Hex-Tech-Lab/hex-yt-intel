@@ -47,6 +47,7 @@ function baseRow(overrides: Partial<RawHistoryOverviewRow> = {}): RawHistoryOver
     has_description: true,
     has_channel_meta: true,
     has_comments: true,
+    has_chapters: null,
     client_platform: 'ios',
     ...overrides,
   };
