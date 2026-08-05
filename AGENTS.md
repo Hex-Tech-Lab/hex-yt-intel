@@ -155,6 +155,8 @@ Confidence = weighted sum of passing tools, re-normalized when tools timeout.
 
 **Orchestrator "Sink" pattern**: For multi-stage workflows, the lead agent logs `[SINK: Workflow Name]`. Sibling agents log sub-tasks but only the Sink merges/closes.
 
+**Dispatching a task to another agent (or to yourself)**: build the prompt from `docs/agent-prompts/TEMPLATE.md`, don't write one from scratch or from memory. It has fill-in sections (Context, Task, Goal, Expected results, task-specific skills/tools/MCPs, task-specific fixtures) plus always-included sections that reference this protocol, the three verification tenets, required gates, and the report format CC checks every completion report against. Save the filled-in copy to `docs/agent-prompts/<date>-<agent>-<short-name>.md` before dispatching (2026-08-06 — created after a dispatched prompt omitted the ledger-protocol instruction above and the agent only followed it after manual user intervention).
+
 ---
 
 ## 6. ESLint & FORMATTING
