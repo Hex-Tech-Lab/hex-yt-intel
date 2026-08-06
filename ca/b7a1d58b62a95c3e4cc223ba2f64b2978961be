@@ -1,0 +1,36 @@
+web/hooks/__tests__/useKnowledgeGraph.test.tsx
+  s_0eded1e9d0cab6::t_580a42232c3367 62-71,73
+  s_0eded1e9d0cab6::t_f2dee3334ce1e1 72
+web/hooks/__tests__/useExecutiveDigest.test.tsx
+  s_0eded1e9d0cab6::t_3560fca9c72d1c 72
+  s_0eded1e9d0cab6::t_b2a7dba579d84a 88
+web/vitest.config.ts
+  s_0eded1e9d0cab6::t_eea5a90f1b2516 22-25
+web/hooks/__tests__/useChapters.test.tsx
+  s_0eded1e9d0cab6::t_3fc69261ba8b07 90,132
+  s_0eded1e9d0cab6::t_08e5b19303bd89 115-123,125-131,133-157
+  s_0eded1e9d0cab6::t_2dba955ae83c61 78,124
+  s_0eded1e9d0cab6::t_aa2a6582c673f6 46
+  s_0eded1e9d0cab6::t_0c67c6ba55709b 62
+web/components/templates/console/__tests__/WordCloud.test.tsx
+  s_0eded1e9d0cab6::t_fbbb177ef0340c 106-114
+  s_0eded1e9d0cab6::t_58a6d5616427bf 32
+  s_0eded1e9d0cab6::t_ae4eb94ca34008 86
+  s_0eded1e9d0cab6::t_ba28294e7beaa1 7-11,13-21,33,37-40,52-62,65-66,69,83-85,87-105,115-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "cab7a1d58b62a95c3e4cc223ba2f64b2978961be",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
