@@ -1,0 +1,29 @@
+web/app/api/webhooks/upstash-snapshot-poll/route.ts
+  s_0eded1e9d0cab6::t_2d6984a611c483 57-58
+  s_0eded1e9d0cab6::t_edf04dc99d0892 67,74-77,85-86
+  s_0eded1e9d0cab6::t_30f2e95d52d8f0 29,36-39
+web/lib/api-client.ts
+  s_0eded1e9d0cab6::t_b64b98c1e5c2a1 56-57
+  s_0eded1e9d0cab6::t_d6f96e4d8b629d 94-95
+  s_0eded1e9d0cab6::t_912b8e01f3ad05 96,102
+  s_0eded1e9d0cab6::t_875fc1de1fefcf 70-75,79
+  s_0eded1e9d0cab6::t_60b6d1d2223e4a 1-2
+  s_0eded1e9d0cab6::t_295d3c0fdc51c3 58,65
+  s_0eded1e9d0cab6::t_b52d9db23a098d 76,82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "effa92163238bce5b66afb9967213cd8e4d41325",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
