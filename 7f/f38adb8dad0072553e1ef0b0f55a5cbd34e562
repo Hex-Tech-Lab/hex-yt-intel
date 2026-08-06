@@ -1,0 +1,21 @@
+docs/agent-prompts/2026-08-06-agent-unverified-endpoint-audit.md
+  s_0eded1e9d0cab6::t_8fca4df3046025 1-157
+docs/agent-prompts/2026-08-06-agent-silent-error-telemetry.md
+  s_0eded1e9d0cab6::t_7f07d4bdc181a9 1-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "7ff38adb8dad0072553e1ef0b0f55a5cbd34e562",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
