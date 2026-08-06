@@ -45,7 +45,12 @@ export const parseTimestamp = (timestamp: string): number => {
  * Clicking the timestamp seeks the video player to that position
  */
 export function TimestampLink({ timestamp, children, className = '' }: TimestampLinkProps) {
-  const { setSeekTo } = useVideoStore();
+  // Scoped selector, not `useVideoStore()` (whole-store subscription) --
+  // this store now also carries currentPlaybackSeconds, updated 4x/sec
+  // while playing (post-review finding, 2026-08-06); a whole-store
+  // subscriber here would re-render on every one of those ticks for a
+  // component that only ever calls the stable setSeekTo action.
+  const setSeekTo = useVideoStore((state) => state.setSeekTo);
   const seconds = parseTimestamp(timestamp);
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {

@@ -25,7 +25,7 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
 import { isStackedLayout } from '@/hooks/useIsStackedLayout';
 import { parseTimestamp } from '@/components/TimestampLink';
-import { findEntityTimestamp } from '@/lib/utils/entity-time-seek';
+import { findNearestEntityMention } from '@/lib/utils/entity-time-seek';
 import { useAnalysisDimensionsStore } from '@/lib/stores/analysis-dimensions-store';
 
 // Lazy load visualization components to reduce initial bundle size
@@ -93,7 +93,16 @@ function cleanDimensionContent(raw: string): string {
 }
 
 export function DashboardContainer({ profile }: DashboardContainerProps) {
-  const { pendingNav, clearPendingNav } = useVideoStore();
+  // Scoped selectors, not `useVideoStore()` (whole-store subscription) --
+  // this store now also carries currentPlaybackSeconds, updated 4x/sec
+  // while playing (post-review finding, 2026-08-06); DashboardContainer is
+  // the most expensive component in the tree, so a whole-store subscription
+  // here would re-render it on every playback tick for no reason -- this
+  // component only ever reads pendingNav/clearPendingNav reactively; the
+  // other useVideoStore usages below already correctly use .getState()
+  // (a snapshot, not a subscription).
+  const pendingNav = useVideoStore((s) => s.pendingNav);
+  const clearPendingNav = useVideoStore((s) => s.clearPendingNav);
 
   useEffect(() => {
     if (pendingNav) {
@@ -210,7 +219,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         // Gap 3: pass parsed chapters (from transcript_chapters via
         // useChapters) so findEntityTimestamp prefers a real chapter boundary
         // when the content timestamp falls inside one.
-        const timestamp = findEntityTimestamp(node, dimContent, chapters);
+        const timestamp = findNearestEntityMention(node, dimContent, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
         if (timestamp) {
           const secs = parseTimestamp(timestamp);
           if (secs >= 0) setSeekTo(secs);
@@ -227,7 +236,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
             clearTimeout(timeoutId);
             unsub();
             const retryContent = retryDim.content;
-            const retryTs = findEntityTimestamp(node, retryContent, chapters);
+            const retryTs = findNearestEntityMention(node, retryContent, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
             if (retryTs) {
               const secs = parseTimestamp(retryTs);
               if (secs >= 0) setSeekTo(secs);
