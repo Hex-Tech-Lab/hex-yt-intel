@@ -1,0 +1,67 @@
+web/lib/adapters/OpenRouterCompletionAdapter.test.ts
+  s_0eded1e9d0cab6::t_55d7b88f8b6ed5 20,46-47
+  s_0eded1e9d0cab6::t_8249d2d15f1702 1-7,9-19,21-40,43-45,48-69
+web/app/api/admin/logs/supabase/route.test.ts
+  s_0eded1e9d0cab6::t_4dc1978de0bf1a 2-10,12-48
+web/lib/admin-logs/fetchers.ts
+  s_0eded1e9d0cab6::t_124281d3782637 115-132,134-137,139-160,162
+  s_0eded1e9d0cab6::t_a908357e804fbd 138
+worker/src/services/LLMCascade.test.ts
+  s_0eded1e9d0cab6::t_233fa17c35a361 65
+  s_0eded1e9d0cab6::t_8133c085ae5019 11
+  s_0eded1e9d0cab6::t_2cfa2664773185 2-6,8-10,12-42,45-52,54-64,66-74,76-80
+  s_0eded1e9d0cab6::t_bfd4bce3f85380 43-44,53,75
+worker/src/chat-stream.test.ts
+  s_0eded1e9d0cab6::t_bfd4bce3f85380 40,51
+  s_0eded1e9d0cab6::t_6146d5c7feaeab 2-6,8-39,41-50,52-77
+web/lib/embeddings.test.ts
+  s_0eded1e9d0cab6::t_b4ebdff701c671 1-52,55-77
+web/lib/admin-logs/fetchers.test.ts
+  s_0eded1e9d0cab6::t_f23e51abd1c5ad 113
+  s_0eded1e9d0cab6::t_0d537660af3c4f 6,8-15,17-25,28-33,35-42,44-53,56-73,76-86,88-92,95-98,101-112,114,116-119,122-140,144-168,170-172,175-195,199-200
+  s_0eded1e9d0cab6::t_ab6983cf4582b2 26-27,93-94,99-100,120-121,169,173-174
+  s_0eded1e9d0cab6::t_a404276cef415f 115
+  s_0eded1e9d0cab6::t_e4b1fccf24fc43 87
+worker/src/chat-stream.ts
+  s_0eded1e9d0cab6::t_e5a2497264c793 94
+web/app/api/admin/logs/qstash/route.test.ts
+  s_0eded1e9d0cab6::t_70fd0fb32dd9fb 2-6,8-46
+web/lib/services/openrouter.test.ts
+  s_0eded1e9d0cab6::t_f7c6ceec4aece5 2-6,8-81
+web/lib/intelligence/relations-engine.test.ts
+  s_0eded1e9d0cab6::t_065534c154f534 59
+  s_0eded1e9d0cab6::t_67c16472b958a9 2-7,9-58,60-70
+web/lib/env.ts
+  s_0eded1e9d0cab6::t_2ef3a3f3db8a08 39-45
+web/lib/services/dimension-remediation.test.ts
+  s_0eded1e9d0cab6::t_cca2888ad31d1f 2-11,15-18,20-42,44-89,91-92
+  s_0eded1e9d0cab6::t_c6f9be798cbf5b 19
+  s_0eded1e9d0cab6::t_37d3ab8a28ea5a 13-14
+worker/src/services/CommentClassifier.test.ts
+  s_0eded1e9d0cab6::t_618018e99849a5 23
+  s_0eded1e9d0cab6::t_314d897de65f78 2-5,7-22,24-62
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_6a9cb42098c024 119-134,136-146,152,154-163,168-179,183-184,189
+  s_0eded1e9d0cab6::t_da1f744a591223 164
+  s_0eded1e9d0cab6::t_3e9661240a42b5 135
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_1815a23617b54e 191
+web/lib/env.test.ts
+  s_0eded1e9d0cab6::t_65f36057be51f9 8-16,18-19,22-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c6636b33ffe2a62c84d574d11a8388821d3cc1bc",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
