@@ -19,6 +19,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Post-review finding (2026-08-06): vitest.dom-setup.ts (jest-dom
+    // matchers) existed but was never registered here -- dead code, no test
+    // actually had access to toBeInTheDocument() etc.
+    setupFiles: ['./vitest.dom-setup.ts'],
     include: [
       'lib/__tests__/**/*.test.ts',
       'hooks/**/*.test.{ts,tsx}',

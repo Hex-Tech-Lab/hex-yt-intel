@@ -43,7 +43,7 @@ describe('useChapters remount/reset behavior', () => {
     cleanup();
   });
 
-  it('mount triggers a fetch, and remount before settle resets to idle (not stuck loading)', async () => {
+  it('mount triggers a fetch, and remount before settle resets to idle (not stuck loading)', () => {
     const fetchMock = vi.fn();
     // Simulate a slow fetch that never settles during this test.
     fetchMock.mockImplementation(() => new Promise(() => {}));
@@ -59,7 +59,7 @@ describe('useChapters remount/reset behavior', () => {
     expect(useChaptersStore.getState().entries['vid1']).toBeUndefined();
   });
 
-  it('remount after cleanup successfully retriggers a fetch (not blocked by handledForRef)', async () => {
+  it('remount after cleanup successfully retriggers a fetch (not blocked by handledForRef)', () => {
     const fetchMock = vi.fn();
     fetchMock.mockImplementation(() => new Promise(() => {}));
     vi.stubGlobal('fetch', fetchMock);
@@ -75,7 +75,7 @@ describe('useChapters remount/reset behavior', () => {
   });
 
   it('reset(videoId) causes the hook to refetch', async () => {
-    let resolvePromise: (v: Response) => void = () => {};
+    let resolvePromise: (response: Response) => void = () => {};
     const fetchMock = vi.fn();
     fetchMock.mockImplementation(() => {
       return new Promise<Response>((resolve) => {
@@ -87,7 +87,7 @@ describe('useChapters remount/reset behavior', () => {
     const { unmount } = renderHook(() => useChapters('vid1'));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     // Let the first fetch complete with confirmed data.
-    await act(async () => {
+    await act(() => {
       resolvePromise(
         okResponse({ chapters: [{ idx: 0, start_seconds: 0, end_seconds: 10, label: 'Intro' }], confirmed: true })
       );
@@ -111,5 +111,48 @@ describe('useChapters remount/reset behavior', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     unmount2();
+  });
+
+  it('reset(videoId) retriggers a fetch on an ALREADY-MOUNTED hook, without unmounting -- the real production path', async () => {
+    // Post-review finding (2026-08-06): the previous test above only
+    // verified reset() through an unmount+remount cycle. The actual
+    // production call site (web/hooks/useSSEStream.ts's startAnalysis)
+    // calls useChaptersStore.getState().reset(videoId) on a re-analysis
+    // WITHOUT unmounting the component that's already showing chapters for
+    // that video -- this is the scenario the hook's `generation` selector
+    // in its effect dependency array exists specifically to handle.
+    let resolvePromise: (response: Response) => void = () => {};
+    const fetchMock = vi.fn();
+    fetchMock.mockImplementation(() => new Promise<Response>((resolve) => { resolvePromise = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { unmount } = renderHook(() => useChapters('vid1'));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await act(() => {
+      resolvePromise(
+        okResponse({ chapters: [{ idx: 0, start_seconds: 0, end_seconds: 10, label: 'Intro' }], confirmed: true })
+      );
+    });
+    await vi.advanceTimersByTimeAsync(10);
+    await vi.waitFor(() => {
+      expect(useChaptersStore.getState().entries['vid1']?.status).toBe('loaded');
+    });
+
+    // Reset WITHOUT unmounting the hook instance above.
+    act(() => {
+      useChaptersStore.getState().reset('vid1');
+    });
+
+    // The still-mounted hook should detect the generation bump and refetch
+    // on its own -- no remount involved.
+    await vi.waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+    await vi.waitFor(() => {
+      expect(useChaptersStore.getState().entries['vid1']?.status).toBe('loading');
+    });
+
+    unmount();
   });
 });

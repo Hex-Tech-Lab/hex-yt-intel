@@ -69,7 +69,7 @@ describe('useExecutiveDigest store bridging', () => {
 
   it('does not populate the store when a stale/different analysisId resolves', async () => {
     const fetchMock = vi.fn();
-    let resolvePromise: (v: Response) => void = () => {};
+    let resolvePromise: (response: Response) => void = () => {};
     fetchMock.mockImplementation(() => {
       return new Promise<Response>((resolve) => {
         resolvePromise = resolve;
@@ -85,7 +85,7 @@ describe('useExecutiveDigest store bridging', () => {
     useAnalysisStore.getState().initializeAnalysis('analysis-new', 'New Video');
 
     // Now let the STALE fetch resolve.
-    await act(async () => {
+    await act(() => {
       resolvePromise(
         okResponse({
           digest: { overview: 'Stale digest', snapshot: '', takeaways: [], detailedSummary: '' },

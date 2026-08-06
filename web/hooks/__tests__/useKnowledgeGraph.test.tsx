@@ -59,6 +59,18 @@ describe('useKnowledgeGraph client-side fallback', () => {
     expect(fetchMock).toHaveBeenCalled();
     expect(result.current.loading).toBe(false);
 
+    // Post-review finding (2026-08-06): the original version of this test
+    // only asserted loading===false and that fetch was called -- it would
+    // have passed even if the fallback synthesis were completely broken
+    // (produced zero nodes). The actual claim in this test's own header --
+    // "the client-side TF-IDF synthesis... actually runs and produces
+    // nodes" -- was never verified. Assert it directly.
+    expect(result.current.graph.nodes.length).toBeGreaterThan(0);
+    expect(result.current.ready).toBe(true);
+    // Sanity: nodes should carry real content derived from the seeded
+    // dimensions above, not an empty/placeholder synthesis result.
+    expect(result.current.graph.nodes.some((node) => node.content.length > 0)).toBe(true);
+
     unmount();
   });
 });
