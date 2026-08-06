@@ -29,7 +29,6 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
   const activePersona = useSynthesisNucleus((s) => s.activePersona);
   const storeKnowledgeGraph = useSynthesisNucleus((s) => s.knowledgeGraph);
   const [loading, setLoading] = useState(false);
-  const [apiFetchDone, setApiFetchDone] = useState(false);
   const [loadedFromApi, setLoadedFromApi] = useState(false);
 
   // Stable list of dimensions with non-trivial content.
@@ -45,9 +44,15 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
   }, [analysis]);
 
   // Fingerprint so we only re-synthesize when content/persona/count changes.
+  // Post-review finding (2026-08-06): must include analysisId. Without it,
+  // switching from analysis A to analysis B with the SAME persona and
+  // coincidentally identical per-dimension content LENGTHS (fingerprint
+  // compares lengths, not content) -- and B's API returning empty/error, so
+  // loadedFromApi stays false -- would match lastFingerprint and skip
+  // re-synthesis entirely, leaving A's stale graph displayed for B.
   const fingerprint = useMemo(
-    () => `${activePersona}:${dimensions.map((d) => `${d.number}:${d.content.length}`).join('|')}`,
-    [dimensions, activePersona]
+    () => `${analysisId}:${activePersona}:${dimensions.map((d) => `${d.number}:${d.content.length}`).join('|')}`,
+    [analysisId, dimensions, activePersona]
   );
 
   const [graph, setGraph] = useState<KnowledgeGraph>(EMPTY);
@@ -57,14 +62,12 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
   useEffect(() => {
     if (!analysisId) {
       setGraph(EMPTY);
-      setApiFetchDone(false);
       setLoadedFromApi(false);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
-    setApiFetchDone(false);
     setLoadedFromApi(false);
     fetch(`/api/analyses/${analysisId}/graph`)
       .then((res) => {
@@ -114,14 +117,12 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
           setLoadedFromApi(false);
         }
         setLoading(false);
-        setApiFetchDone(true);
       })
       .catch(() => {
         if (!cancelled) {
           // On a fetch error, do not wipe a synthesized fallback graph either.
           setLoadedFromApi(false);
           setLoading(false);
-          setApiFetchDone(true);
         }
       });
 
@@ -215,7 +216,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
     return () => {
       cancelled = true;
     };
-  }, [fingerprint, dimensions, activePersona, analysisId, apiFetchDone, loadedFromApi, storeKnowledgeGraph]);
+  }, [fingerprint, dimensions, activePersona, analysisId, loadedFromApi, storeKnowledgeGraph]);
 
   return { graph, ready: graph.nodes.length >= 1, loading };
 }
