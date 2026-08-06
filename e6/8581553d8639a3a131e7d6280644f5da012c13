@@ -1,0 +1,45 @@
+web/hooks/__tests__/useExecutiveDigest.test.tsx
+  s_5377814a5f6d1f::t_9167fbc91747fe 1-100
+web/hooks/__tests__/useChapters.test.tsx
+  s_5377814a5f6d1f::t_685a17a2252eec 1-89,91-95,97-115
+  s_5377814a5f6d1f::t_d678842fca78f9 96
+  s_5377814a5f6d1f::t_d34da2a8186190 90
+web/vitest.dom-setup.ts
+  s_5377814a5f6d1f::t_36c7887147df57 1
+web/package.json
+  s_5377814a5f6d1f::t_597ef3e4197de0 62-63,78
+  s_5377814a5f6d1f::t_b1b899abd48ea9 75
+web/components/templates/console/__tests__/WordCloud.test.tsx
+  s_5377814a5f6d1f::t_60d7d101932b02 1-10,13,17-21,25-42,44-45,48-51,55,58-60
+  s_5377814a5f6d1f::t_635568e8d78a17 11-12,24,46
+  s_5377814a5f6d1f::t_814e67a9ebc205 14-16,47,56-57
+  s_5377814a5f6d1f::t_56daba36d267d1 22-23
+  s_5377814a5f6d1f::t_560f689aa20cc5 43,52-54
+web/vitest.config.ts
+  s_5377814a5f6d1f::t_f1cb7fdee4b31c 2,6-9
+web/hooks/__tests__/useKnowledgeGraph.test.tsx
+  s_5377814a5f6d1f::t_aa30d79564bc3e 18,41-42,44,52
+  s_5377814a5f6d1f::t_91818202590d46 32,60
+  s_5377814a5f6d1f::t_e22d96496a83df 16,21-23,29,33-38,54-57,59
+  s_5377814a5f6d1f::t_062fb6f19f363d 1,4,10-15,19-20,24-27,30-31,39-40,43,45-46,49-50,53,61-64
+  s_5377814a5f6d1f::t_f0d23ac199d254 2-3,5-9,28,47-48
+  s_5377814a5f6d1f::t_01159539867f59 17,51,58
+pnpm-lock.yaml
+  s_5377814a5f6d1f::t_eb0c3b3c64b279 179-184,218-220,227-229,253,294-296,384-387,2047-2071,2094-2096,2273-2278,2649-2661,2833-2835,2998-3001,3144-3146,3403-3408,3455-3458,3924-3927,4031-4034,4487-4490,4668-4671,5026-5029,5097-5099,5123-5126,5456-5459,5921-5924,6093-6094,6207-6208,7434-7464,7491-7492,7700-7705,8222-8226,8419-8422,8587-8590,8700-8701,8967-8970,9028-9029,9715-9727,9851-9852,10293-10294,10676-10677,11036-11041,11120-11121,11151-11155,11644-11647,12064,12090,12151-12152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e68581553d8639a3a131e7d6280644f5da012c13",
+  "prompts": {},
+  "sessions": {
+    "s_5377814a5f6d1f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02914e6bdffepo2H8hDUq9wErS",
+        "model": "deepseek-v4-flash-forced"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
