@@ -1,0 +1,38 @@
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_0eded1e9d0cab6::t_3ee7b388f3eccf 155
+web/lib/utils/entity-time-seek.ts
+  s_0eded1e9d0cab6::t_b89e7750202372 178-183,185,191,193
+  s_0eded1e9d0cab6::t_90c6993ba57865 207-209
+  s_0eded1e9d0cab6::t_5d478561ebc5f5 184,186
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0eded1e9d0cab6::t_83977c811edf2c 207-221
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_5d56df2ed074cc 96-105
+web/components/templates/console/VideoPlayerCard.tsx
+  s_0eded1e9d0cab6::t_e51bf746dda321 108-117
+  s_0eded1e9d0cab6::t_a6497e6375f768 17-27
+  s_0eded1e9d0cab6::t_7f8481e52e1d0b 119-123
+  s_0eded1e9d0cab6::t_de154d31132874 196-205,208,211-212
+  s_0eded1e9d0cab6::t_bb02a9ce52d797 118
+web/lib/ports/VideoPlayerPort.ts
+  s_0eded1e9d0cab6::t_3c5ca382413f97 6-11
+web/components/TimestampLink.tsx
+  s_0eded1e9d0cab6::t_1bb0b07cc726a9 53
+  s_0eded1e9d0cab6::t_f0d26a8157234f 48-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "2a02c26b6e5eaed141e0a6fa3df568523db14480",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
