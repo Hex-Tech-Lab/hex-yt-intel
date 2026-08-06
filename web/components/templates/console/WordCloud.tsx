@@ -71,6 +71,15 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     wordStartedAtRef.current = {};
     emptyTimedOutRef.current = false;
     setIsEmptyTimedOut(false);
+    // Cubic review, PR #207: a selected wordKey from the PREVIOUS graph can
+    // survive a video switch / graph replacement -- the wordKey identity
+    // space is per-tokenMap (rebuilt from scratch whenever graph.nodes
+    // changes), so a stale ref could coincidentally collide with an
+    // unrelated word in the new graph. Reset alongside the other per-video
+    // refs this same effect already clears, keyed on the same graph.rootId
+    // signal (not a second/duplicate reset mechanism).
+    lastClickedWordKeyRef.current = null;
+    lastSelfSelectedIdRef.current = null;
   }, [graph?.rootId]);
 
   // Resize handling
@@ -363,6 +372,25 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // ref-only canvas repaint already reacts to.
   const [isEmptyTimedOut, setIsEmptyTimedOut] = useState(false);
 
+  // Cubic review, PR #207: shared predicate for "is this rendered word
+  // currently highlighted" -- used by BOTH the canvas draw (drawCanvas
+  // below) and the accessible selected-count label (selectedWordCount
+  // below), which previously used two separate predicates (wordKey-exact
+  // vs node-id-match) that could drift and overcount the ARIA label
+  // relative to what's actually painted. Depends on `selectedId` only for
+  // memoization identity; `lastClickedWordKeyRef` is read imperatively
+  // (refs don't participate in React's dependency tracking) -- safe here
+  // because the ref is only ever mutated by the click handler and the
+  // selectedId-keyed effect below, both of which run before/alongside the
+  // render that would observe a stale value.
+  const isWordSelected = useCallback(
+    (word: PlacedWord) =>
+      lastClickedWordKeyRef.current
+        ? lastClickedWordKeyRef.current === word.wordKey
+        : selectedId === word.id,
+    [selectedId]
+  );
+
   // Imperative canvas draw — no React re-render needed for hover
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -371,15 +399,6 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     if (!ctx) return;
 
     ctx.clearRect(0, 0, size.w, size.h);
-
-    // selectedId changed for a reason other than our own last click (cross-
-    // panel selection, or cleared) -- fall back to the "highlight every
-    // matching word" behavior, since we don't know which specific mention
-    // the other panel meant.
-    if (selectedId !== lastSelfSelectedIdRef.current) {
-      lastClickedWordKeyRef.current = null;
-      lastSelfSelectedIdRef.current = selectedId;
-    }
 
     const words = wordsLayoutRef.current;
 
@@ -415,9 +434,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       const progress = wordProgressRef.current[word.id] ?? 0;
       if (progress <= 0) return;
 
-      const isSelected = lastClickedWordKeyRef.current
-        ? lastClickedWordKeyRef.current === word.wordKey
-        : selectedId === word.id;
+      const isSelected = isWordSelected(word);
       const isHovered = hoveredWordIdRef.current === word.id;
       const active = isSelected || isHovered;
       const rgb = entityRgb(word.type);
@@ -447,7 +464,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
       ctx.restore();
     });
-  }, [selectedId, size]);
+  }, [isWordSelected, size]);
 
   // react-best-practices self-review finding (2026-08-02): the entrance
   // animation effect below used to list `drawCanvas` directly in its deps.
@@ -456,6 +473,33 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // resetting `startTime` -- so selecting a word replayed the pop-in
   // animation for every word from scratch. Route calls through a ref so the
   // effect only restarts when the actual word data changes.
+  // Cubic review, PR #207: this used to live INSIDE drawCanvas, comparing
+  // the `selectedId` PROP against `lastSelfSelectedIdRef` on every single
+  // repaint (including the rAF entrance/pulse animation loop's frames).
+  // `handleMouseClick` writes `lastSelfSelectedIdRef.current` SYNCHRONOUSLY
+  // in the event handler, but wraps the actual `onSelect(newId)` call in
+  // `startTransition` -- so `selectedId` (the prop) does not update until
+  // React commits the transition, one or more ticks later. Any draw that
+  // fired in that window (there are several: the rAF loop redraws on every
+  // frame while an entrance/pulse animation is in flight, and hover/mouse
+  // -move also triggers a synchronous drawCanvas()) compared the
+  // STILL-STALE `selectedId` against the ALREADY-UPDATED
+  // `lastSelfSelectedIdRef`, read them as unequal, and incorrectly treated
+  // our own pending click as an "external" selection change --
+  // clearing `lastClickedWordKeyRef` (reverting to broad node-id
+  // highlighting) and, worse, overwriting `lastSelfSelectedIdRef` back to
+  // the stale value, so the SAME false-mismatch fired again on the actual
+  // post-commit draw. Moving this logic into an effect keyed on the real
+  // `selectedId` prop means it only runs once React has actually committed
+  // the value -- by construction, no draw can observe a transitional state
+  // between the ref write and the prop commit.
+  useEffect(() => {
+    if (selectedId !== lastSelfSelectedIdRef.current) {
+      lastClickedWordKeyRef.current = null;
+      lastSelfSelectedIdRef.current = selectedId;
+    }
+  }, [selectedId]);
+
   const drawCanvasRef = useRef(drawCanvas);
   useEffect(() => {
     drawCanvasRef.current = drawCanvas;
@@ -463,7 +507,11 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     // size) -- clicking a word to select it must still update the highlight
     // immediately, without waiting for a stray mouse-move to trigger it or
     // (worse) going through the entrance-animation effect, which would
-    // restart the pop-in for every word again.
+    // restart the pop-in for every word again. Declared AFTER the
+    // selectedId-reset effect above so that when both fire in the same
+    // commit (an external selection change), the ref reset has already
+    // happened before this repaint reads it -- avoids a one-frame flash of
+    // the stale word-specific highlight.
     drawCanvas();
   }, [drawCanvas]);
 
@@ -593,7 +641,19 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
   const handleMouseClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const word = getWordAtCoords(e.clientX, e.clientY);
-    const newId = word ? (word.id === selectedId ? null : word.id) : null;
+    // Cubic review, PR #207: this toggle-off check used to compare
+    // `word.id === selectedId` (the shared KG NODE id) -- but `id` is
+    // shared by every word derived from the same node (the whole reason
+    // `wordKey` exists). If node id N is already selected (from clicking
+    // word A, which also has node id N) and the user then clicks a
+    // DIFFERENT word B that happens to share node id N, this evaluated
+    // true and deselected instead of switching the highlight to word B.
+    // Comparing against `lastClickedWordKeyRef` (this component's own
+    // per-word click memory) instead of `selectedId` (the shared node-id
+    // prop) fixes it: only clicking the SAME rendered word again toggles
+    // off; a different word, even sharing a node id, always selects.
+    const isReclickingSameWord = word ? lastClickedWordKeyRef.current === word.wordKey : false;
+    const newId = word && !isReclickingSameWord ? word.id : null;
     // Remember exactly which word this click targeted, so drawCanvas
     // highlights only that word -- not every word sharing its node id.
     lastClickedWordKeyRef.current = newId && word ? word.wordKey : null;
@@ -608,7 +668,11 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // words currently in wordsLayout, or (since multiple tokens can share one
   // node's id) more than one. Counting actual matches keeps the label
   // honest, including the zero case.
-  const selectedWordCount = selectedId ? wordsLayout.filter((w) => w.id === selectedId).length : 0;
+  // Cubic review, PR #207: was `w.id === selectedId` -- a node-id-only
+  // predicate that overcounts relative to what drawCanvas actually paints
+  // once the wordKey-exact highlight is active (isWordSelected). Sharing
+  // the same predicate here keeps the accessible label truthful.
+  const selectedWordCount = selectedId ? wordsLayout.filter(isWordSelected).length : 0;
   const canvasAccessibleLabel =
     wordsLayout.length > 0
       ? `Word cloud showing ${wordsLayout.length} key term${wordsLayout.length === 1 ? '' : 's'}${

@@ -44,6 +44,12 @@ export interface AnalysisState extends UseAnalysisStreamState {
   setExecutiveDigest: (analysisId: string, executiveDigest: Record<string, unknown>) => void;
 }
 
+/**
+ * Redacts infrastructure/vendor details (OpenRouter, Cloudflare, Worker,
+ * Vercel, model/cascade names) from terminal log lines shown to non-admin
+ * users, so the live-analysis log never leaks the underlying provider
+ * topology to end users. Admin role bypasses redaction unchanged.
+ */
 function sanitizeLogMessage(message: string, role: string | null): string {
   if (role === 'admin') return message;
 
