@@ -64,9 +64,19 @@ export function mapHistoryOverviewRow(row: RawHistoryOverviewRow): HistoryOvervi
   const channel = row.channel_title?.trim();
   let cleanTitle = rawTitle;
   if (isNonDescriptiveTitle) {
+    // Known channel: prepend it to the bare date/empty title (still useful --
+    // "Mark Johnson — April 28, 2026" beats nothing). No channel: rawTitle
+    // must NOT be used here even as a last resort -- it's the exact date/
+    // empty string this branch exists to replace. The old
+    // `rawTitle || fallback` bug re-selected it whenever rawTitle was a
+    // non-empty date (dates are truthy) -- reported 2026-08-06, a
+    // presentation-skills lecture with no channel_title still showed its
+    // date-only title in history.
     cleanTitle = channel
       ? `${channel} — ${rawTitle || 'Untitled Analysis'}`
-      : rawTitle || (row.base_video_id ? `Video (${row.base_video_id})` : 'Untitled Analysis');
+      : row.base_video_id
+        ? `Video (${row.base_video_id})`
+        : 'Untitled Analysis';
   }
 
   return {

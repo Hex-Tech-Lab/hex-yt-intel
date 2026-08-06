@@ -12,6 +12,13 @@ interface WordCloudProps {
 
 interface PlacedWord {
   id: string;
+  /** Unique per rendered word/bigram (the tokenMap key) -- distinct from
+   *  `id`, which is the underlying KG node's id and is shared by every word
+   *  derived from that node's label/keyTerms. Used to highlight only the
+   *  specific word a user clicked, not every word sharing its source node
+   *  (clustering bug reported 2026-08-06: differently-sized, unrelated-
+   *  looking words all highlighting together because they shared `id`). */
+  wordKey: string;
   label: string;
   type: string;
   weight: number;
@@ -29,6 +36,16 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   const [size, setSize] = useState({ w: 320, h: 220 });
   const hoveredWordIdRef = useRef<string | null>(null);
   const wordsLayoutRef = useRef<PlacedWord[]>([]);
+  // Tracks exactly which word THIS component's own click selected, so the
+  // highlight doesn't spread to every other word sharing the clicked word's
+  // source node id (many tokens can come from one KG node -- see
+  // PlacedWord.wordKey). Cleared (falling back to "highlight every word
+  // matching selectedId") whenever selectedId changes for a reason other
+  // than this component's own click, e.g. selecting a node in
+  // KnowledgeGraphCanvas/MindMap -- there we don't know which specific
+  // mention the other panel meant, so highlighting all of them is correct.
+  const lastClickedWordKeyRef = useRef<string | null>(null);
+  const lastSelfSelectedIdRef = useRef<string | null>(null);
   // Chip corner radius + active text color resolved from the design system
   // (canvas can't read CSS custom properties directly).
   const radiusRef = useRef(7);
@@ -138,7 +155,8 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       }
     });
 
-    const sortedTokens = Object.values(tokenMap)
+    const sortedTokens = Object.entries(tokenMap)
+      .map(([key, token]) => ({ ...token, key }))
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 50);
 
@@ -216,6 +234,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
         const candidate: PlacedWord = {
           id: token.id,
+          wordKey: token.key,
           label: text,
           type: token.type,
           weight,
@@ -353,6 +372,15 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
     ctx.clearRect(0, 0, size.w, size.h);
 
+    // selectedId changed for a reason other than our own last click (cross-
+    // panel selection, or cleared) -- fall back to the "highlight every
+    // matching word" behavior, since we don't know which specific mention
+    // the other panel meant.
+    if (selectedId !== lastSelfSelectedIdRef.current) {
+      lastClickedWordKeyRef.current = null;
+      lastSelfSelectedIdRef.current = selectedId;
+    }
+
     const words = wordsLayoutRef.current;
 
     if (words.length === 0) {
@@ -387,7 +415,9 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       const progress = wordProgressRef.current[word.id] ?? 0;
       if (progress <= 0) return;
 
-      const isSelected = selectedId === word.id;
+      const isSelected = lastClickedWordKeyRef.current
+        ? lastClickedWordKeyRef.current === word.wordKey
+        : selectedId === word.id;
       const isHovered = hoveredWordIdRef.current === word.id;
       const active = isSelected || isHovered;
       const rgb = entityRgb(word.type);
@@ -563,8 +593,13 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
   const handleMouseClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const word = getWordAtCoords(e.clientX, e.clientY);
+    const newId = word ? (word.id === selectedId ? null : word.id) : null;
+    // Remember exactly which word this click targeted, so drawCanvas
+    // highlights only that word -- not every word sharing its node id.
+    lastClickedWordKeyRef.current = newId && word ? word.wordKey : null;
+    lastSelfSelectedIdRef.current = newId;
     startTransition(() => {
-      onSelect(word ? (word.id === selectedId ? null : word.id) : null);
+      onSelect(newId);
     });
   };
 

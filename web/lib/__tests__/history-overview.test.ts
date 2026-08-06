@@ -146,9 +146,17 @@ describe('mapHistoryOverviewRow', () => {
     expect(item.title).toBe('Mark Johnson — 4/28/26');
   });
 
-  it('keeps a date-only title bare when no channel is known', () => {
+  it('replaces a date-only title with a video-id fallback when no channel is known (regression, 2026-08-06)', () => {
+    // Old bug: `rawTitle || fallback` re-selected rawTitle here since a
+    // date string is truthy -- a real analysis (no channel_title) kept
+    // showing its bare date as the title in history.
     const item = mapHistoryOverviewRow(baseRow({ title: 'April 28, 2026', channel_title: null }));
-    expect(item.title).toBe('April 28, 2026');
+    expect(item.title).toBe('Video (abc123)');
+  });
+
+  it('falls back to the generic placeholder for a date-only title with neither channel nor base_video_id', () => {
+    const item = mapHistoryOverviewRow(baseRow({ title: 'April 28, 2026', channel_title: null, base_video_id: '' }));
+    expect(item.title).toBe('Untitled Analysis');
   });
 
   it('prepends channel to a null title as "Channel — Untitled Analysis"', () => {
