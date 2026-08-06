@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useAnalysisStore } from '@/store/useAnalysisStore';
 import type { StoredExecutiveDigest } from '@/lib/ports/ExecutiveDigestPorts';
 import type { ExecutiveSummaryData } from '@/components/organisms/ExecutiveSummary';
 
@@ -72,6 +73,12 @@ export function useExecutiveDigest(analysisId: string | null, status: string) {
               const data = await res.json();
               if (!cancelled && data?.digest) {
                 setDigest(data.digest as StoredExecutiveDigest);
+                // Bridge into the shared store -- see setExecutiveDigest's
+                // own comment for why this is needed (consumers reading
+                // useAnalysisStore.analysis.executiveDigest directly, e.g.
+                // AnalysisHistory's "currently analyzing" card, never saw a
+                // freshly-generated digest without this).
+                useAnalysisStore.getState().setExecutiveDigest(analysisId, data.digest as Record<string, unknown>);
                 succeeded = true;
               }
               return;
