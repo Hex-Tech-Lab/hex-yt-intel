@@ -14,7 +14,17 @@ export function VideoPlayerCard() {
   const seekQueueRef = useRef<number | null>(null);
   const videoIdRef = useRef<string | null>(null);
   const isPlayingRef = useRef(false);
-  const { isPlaying, seekTo, clearSeek, setPlaying, setCurrentPlaybackSeconds } = useVideoStore();
+  // Scoped selectors, not `useVideoStore()` (whole-store subscription) --
+  // this component's own poll loop below writes currentPlaybackSeconds to
+  // this same store 4x/sec while playing, but never reads it reactively;
+  // a whole-store subscription would re-render this entire component (and
+  // re-run every other effect's dependency check) on every one of its own
+  // writes for no reason (post-review finding, 2026-08-06).
+  const isPlaying = useVideoStore((s) => s.isPlaying);
+  const seekTo = useVideoStore((s) => s.seekTo);
+  const clearSeek = useVideoStore((s) => s.clearSeek);
+  const setPlaying = useVideoStore((s) => s.setPlaying);
+  const setCurrentPlaybackSeconds = useVideoStore((s) => s.setCurrentPlaybackSeconds);
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
   const [mounted, setMounted] = useState(false);
@@ -95,6 +105,22 @@ export function VideoPlayerCard() {
         if (!cancelled) setPlaying(true);
       },
       onPause: () => {
+        if (cancelled) return;
+        setPlaying(false);
+        // Capture one final accurate reading at the moment of pause -- the
+        // poll loop below only runs while isPlaying, so without this the
+        // store would keep whatever value the last ~250ms-old poll tick
+        // happened to catch. Does NOT cover scrubbing the native player's
+        // seek bar while it's already paused (no such event exists on this
+        // adapter) -- accepted limitation, narrow case, not fixed here.
+        const currentTime = adapter.getCurrentTime?.() ?? null;
+        if (currentTime !== null) setCurrentPlaybackSeconds(currentTime);
+      },
+      // YouTube's IFrame API state machine goes PLAYING -> ENDED, not
+      // PLAYING -> PAUSED -- without this, isPlaying never flips false on
+      // video end, so the playback-position poll loop below (gated on
+      // isPlaying) would run indefinitely after the video finishes.
+      onEnded: () => {
         if (!cancelled) setPlaying(false);
       },
     });
@@ -167,22 +193,23 @@ export function VideoPlayerCard() {
   }, [isPlaying, ready]);
 
   // Poll current playback position while playing so entity-seek can pick the
-  // nearest mention to where the video currently is. Polls at ~250ms cadence
-  // (4 updates/sec) — fast enough for entity-mention distance ranking, not
-  // fast enough to cause meaningful re-render churn (Zustand only notifies
-  // subscribers on actual value changes, and the read is a native method call
-  // on the YT player object, not a React state update).
+  // nearest mention to where the video currently is. A true ~250ms interval
+  // (4 updates/sec) -- NOT requestAnimationFrame, which runs at display
+  // refresh rate (~60/sec) and was silently ~15x faster than this comment
+  // used to claim (post-review finding, 2026-08-06: the code and its own
+  // comment disagreed). setPlaying(false) already fires on native pause AND
+  // native "ended" (see onEnded above), so gating on `isPlaying` is
+  // sufficient to stop polling on every real stop condition; the interval
+  // itself is also cleared on unmount/ready/videoId change via this
+  // effect's own cleanup + dependency array.
+  const POLL_INTERVAL_MS = 250;
   useEffect(() => {
     if (!ready || !playerRef.current || !isPlaying) return;
-    let active = true;
-    const poll = () => {
-      if (!active) return;
+    const intervalId = setInterval(() => {
       const currentTime = playerRef.current?.getCurrentTime?.() ?? null;
       if (currentTime !== null) setCurrentPlaybackSeconds(currentTime);
-      requestAnimationFrame(poll);
-    };
-    requestAnimationFrame(poll);
-    return () => { active = false; };
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(intervalId);
   }, [ready, isPlaying, setCurrentPlaybackSeconds]);
 
   if (!mounted || !videoId) return null;

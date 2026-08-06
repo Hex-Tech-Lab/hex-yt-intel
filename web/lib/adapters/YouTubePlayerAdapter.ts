@@ -152,6 +152,7 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
             if (this.destroyed) return;
             if (e.data === 1) callbacks?.onPlay?.();
             else if (e.data === 2) callbacks?.onPause?.();
+            else if (e.data === 0) callbacks?.onEnded?.();
           },
         },
       });

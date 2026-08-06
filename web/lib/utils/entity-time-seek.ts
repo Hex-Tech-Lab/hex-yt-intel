@@ -175,14 +175,22 @@ export function findAllEntityMentions(
     const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const labelRe = new RegExp(escapedLabel, 'g');
 
-    let labelMatchResult: RegExpExecArray | null;
-    while ((labelMatchResult = labelRe.exec(dimensionContent)) !== null) {
+    // occurrenceIndex must reflect the label's position in the SOURCE TEXT
+    // (every textual occurrence), not the position in the resolved-mentions
+    // array -- an earlier occurrence with no resolvable preceding timestamp
+    // is skipped (not pushed), so counting off `mentions.length` would
+    // mislabel the next resolved occurrence as index 0 instead of its real
+    // index (post-review finding, 2026-08-06).
+    const labelMatches = dimensionContent.matchAll(labelRe);
+    let textOccurrenceIndex = 0;
+    for (const labelMatchResult of labelMatches) {
       const beforeLabel = dimensionContent.slice(0, labelMatchResult.index);
       const candidateStr = findPrecedingTimestamp(beforeLabel);
       if (candidateStr) {
         const ts = applyChapterBoundary(candidateStr, chapters);
-        mentions.push({ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: mentions.length });
+        mentions.push({ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: textOccurrenceIndex });
       }
+      textOccurrenceIndex++;
     }
 
     if (mentions.length > 0) return mentions;
@@ -196,8 +204,9 @@ export function findAllEntityMentions(
   }
 
   const rangeMatch = dimensionContent.match(TIMESTAMP_RANGE_RE);
-  if (rangeMatch) {
-    const startTime = rangeMatch[0]!.match(TIMESTAMP_RE);
+  const rangeText = rangeMatch?.[0];
+  if (rangeText) {
+    const startTime = rangeText.match(TIMESTAMP_RE);
     if (startTime) {
       const ts = applyChapterBoundary(startTime[0], chapters);
       return [{ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: 0 }];

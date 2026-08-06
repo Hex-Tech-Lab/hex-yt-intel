@@ -204,6 +204,21 @@ describe('findAllEntityMentions', () => {
     expect(mentions[0]!.timestamp).toBe('60:00');
     expect(mentions[1]!.timestamp).toBe('90:00');
   });
+
+  it('occurrenceIndex reflects source-text position, not resolved-array position, when an earlier occurrence has no resolvable timestamp', () => {
+    // Post-review finding (2026-08-06): occurrenceIndex used to be assigned
+    // from mentions.length at push time -- an earlier textual occurrence
+    // with no preceding timestamp is skipped (never pushed), so the NEXT
+    // resolved occurrence was mislabeled as index 0 instead of its real
+    // index 1. This is occurrence 0 (Apex mentioned with nothing before it)
+    // -- unresolved, skipped -- then occurrence 1 (Apex at 45:00) -- resolved.
+    const node = { label: 'Apex', content: '', keyTerms: [] };
+    const content = 'Apex is mentioned here with no preceding timestamp. Later, at 45:00, Apex comes up again.';
+    const mentions = findAllEntityMentions(node, content);
+    expect(mentions.length).toBe(1);
+    expect(mentions[0]!.timestamp).toBe('45:00');
+    expect(mentions[0]!.occurrenceIndex).toBe(1);
+  });
 });
 
 describe('findNearestEntityMention', () => {

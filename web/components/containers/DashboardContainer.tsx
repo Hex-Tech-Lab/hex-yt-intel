@@ -93,7 +93,16 @@ function cleanDimensionContent(raw: string): string {
 }
 
 export function DashboardContainer({ profile }: DashboardContainerProps) {
-  const { pendingNav, clearPendingNav } = useVideoStore();
+  // Scoped selectors, not `useVideoStore()` (whole-store subscription) --
+  // this store now also carries currentPlaybackSeconds, updated 4x/sec
+  // while playing (post-review finding, 2026-08-06); DashboardContainer is
+  // the most expensive component in the tree, so a whole-store subscription
+  // here would re-render it on every playback tick for no reason -- this
+  // component only ever reads pendingNav/clearPendingNav reactively; the
+  // other useVideoStore usages below already correctly use .getState()
+  // (a snapshot, not a subscription).
+  const pendingNav = useVideoStore((s) => s.pendingNav);
+  const clearPendingNav = useVideoStore((s) => s.clearPendingNav);
 
   useEffect(() => {
     if (pendingNav) {
