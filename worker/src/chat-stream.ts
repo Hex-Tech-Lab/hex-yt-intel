@@ -91,7 +91,7 @@ function timingSafeEqualHex(a: string, b: string): boolean {
 
 /** Run the chat cascade, committing to the first model that produces tokens. The model
  *  list comes from the bouncer (per-tier app_settings); falls back to CHAT_MODELS. */
-async function streamChatCascade(
+export async function streamChatCascade(
   apiKey: string,
   grounding: string,
   history: Array<{ role: string; content: string }>,

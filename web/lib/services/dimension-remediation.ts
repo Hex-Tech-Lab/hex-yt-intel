@@ -89,12 +89,21 @@ const REGISTRY_FALLBACK = {
 
 const TOKEN_BUCKET_KEY = 'budget:dimension-remediation';
 const PENDULUM_COUNTER_KEY = 'counter:dimension-remediation-pendulum';
-// OpenRouter's own management API (GET /api/v1/auth/key) -- undocumented/
-// unversioned, same UNVERIFIED_ENDPOINT_NO_TEST risk class contract-auditor
-// already flags for other management APIs in this repo. If this ever 404s
-// or changes shape, fail closed (zero capacity), never assume unlimited --
-// see getRemainingBudgetCents.
-const OPENROUTER_KEY_INFO_URL = 'https://openrouter.ai/api/v1/auth/key';
+// CONFIRMED DRIFT (2026-08-06 contract audit, docs-only verification --
+// https://openrouter.ai/docs/api-reference/authentication and llms.txt index
+// make no mention of `/auth/key`; the currently-documented balance/rate-limit
+// endpoint is `GET /api/v1/key`, same response shape (`data.limit_remaining`
+// etc). `/auth/key` may be a legacy alias that still 200s, or may already be
+// gone -- no live credential available in this pass to confirm either way
+// (see fetchers.test.ts / this file's own test for the same caveat). Tries
+// the documented path first, falls back to the old path so this doesn't
+// regress if `/auth/key` is in fact still what's live -- same dual-path
+// pattern already used for the Supabase logs.all/logs drift in
+// web/lib/admin-logs/fetchers.ts (the exact prior incident this rule exists
+// to prevent). Fails closed (0 budget) if BOTH fail, per this module's
+// existing "spend nothing over spend unlimited" contract.
+const OPENROUTER_KEY_INFO_URL = 'https://openrouter.ai/api/v1/key';
+const OPENROUTER_KEY_INFO_URL_LEGACY = 'https://openrouter.ai/api/v1/auth/key';
 
 /**
  * Live remaining OpenRouter monthly balance, in cents. Fetched fresh on
@@ -107,22 +116,77 @@ const OPENROUTER_KEY_INFO_URL = 'https://openrouter.ai/api/v1/auth/key';
  * (0, not Infinity) on any error -- the safe failure mode is "spend
  * nothing", not "spend without limit".
  */
-async function getRemainingBudgetCents(): Promise<number> {
+// DeepSource-flagged timeout (fixed 2026-08-06): bounded to the same 8s
+// budget used elsewhere for third-party admin/status calls -- this is a
+// balance check, not a long-running generation, so it doesn't need the
+// worker's 90s streaming window (Law #2). AbortController surfaces as a
+// normal thrown error, caught by getRemainingBudgetCents's existing
+// primary/legacy fallback below.
+const OPENROUTER_KEY_INFO_TIMEOUT_MS = 8_000;
+
+/**
+ * Fetch OpenRouter's live remaining monthly balance from a single key-info
+ * endpoint (either the documented `/key` path or the legacy `/auth/key`
+ * fallback -- `getRemainingBudgetCents` tries both). Converted from a
+ * function declaration to a const arrow (DeepSource: unexpected function
+ * declaration in module/global scope) -- no behavior change, module-private
+ * either way since it's never exported.
+ */
+export const fetchKeyInfo = async (url: string): Promise<number> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_KEY_INFO_TIMEOUT_MS);
+  let res: Response;
   try {
-    const res = await fetch(OPENROUTER_KEY_INFO_URL, {
+    res = await fetch(url, {
       headers: { Authorization: `Bearer ${env.openrouterApiKey}` },
+      signal: controller.signal,
     });
-    if (!res.ok) throw new Error(`OpenRouter key-info returned ${res.status}`);
-    const body = await res.json();
-    const remaining = Number(body?.data?.limit_remaining);
-    if (!Number.isFinite(remaining) || remaining < 0) throw new Error('OpenRouter key-info returned a non-numeric limit_remaining');
-    return Math.round(remaining * 100);
-  } catch (err) {
-    console.error('[dimension-remediation] failed to fetch OpenRouter remaining balance, failing closed', { err: err instanceof Error ? err.message : String(err) });
-    Sentry.captureException(err, { contexts: { remediation: { service: 'dimension-remediation', phase: 'openrouter_balance' } } });
-    return 0;
+  } finally {
+    clearTimeout(timeoutId);
   }
-}
+  if (!res.ok) throw new Error(`OpenRouter key-info (${url}) returned ${res.status}`);
+  const body = await res.json();
+  const remaining = Number(body?.data?.limit_remaining);
+  if (!Number.isFinite(remaining) || remaining < 0) throw new Error(`OpenRouter key-info (${url}) returned a non-numeric limit_remaining`);
+  return Math.round(remaining * 100);
+};
+
+/**
+ * Live remaining OpenRouter monthly balance, in cents, tried against the
+ * documented `/api/v1/key` endpoint first and falling back to the legacy
+ * `/api/v1/auth/key` path (see the CONFIRMED DRIFT comment above
+ * OPENROUTER_KEY_INFO_URL for why both exist). Fails closed (0 cents, not
+ * Infinity) if both endpoints fail -- the safe failure mode for a budget
+ * gate is "spend nothing", not "spend without limit". Converted from a
+ * function declaration to a const arrow (DeepSource: unexpected function
+ * declaration in module/global scope).
+ */
+export const getRemainingBudgetCents = async (): Promise<number> => {
+  try {
+    return await fetchKeyInfo(OPENROUTER_KEY_INFO_URL);
+  } catch (primaryErr) {
+    const primaryErrMessage = primaryErr instanceof Error ? primaryErr.message : String(primaryErr);
+    console.warn('[dimension-remediation]', { event: 'openrouter_key_endpoint_fallback', reason: primaryErrMessage });
+    // DeepSource-flagged gap (fixed 2026-08-06): this fallback path running
+    // at all -- even when the legacy endpoint succeeds -- is itself worth
+    // tracking: silent, indefinite dependence on a possibly-deprecated
+    // endpoint would otherwise go undetected until it too breaks.
+    // captureMessage (not captureException) because this is a recovered,
+    // handled case, not a hard failure.
+    Sentry.captureMessage('dimension-remediation: documented /key endpoint failed, fell back to legacy /auth/key', {
+      level: 'warning',
+      contexts: { remediation: { service: 'dimension-remediation', phase: 'openrouter_balance_fallback', primaryError: primaryErrMessage } },
+    });
+    try {
+      return await fetchKeyInfo(OPENROUTER_KEY_INFO_URL_LEGACY);
+    } catch (legacyErr) {
+      const legacyErrMessage = legacyErr instanceof Error ? legacyErr.message : String(legacyErr);
+      console.error('[dimension-remediation]', { event: 'openrouter_balance_check_failed_both_endpoints', primaryError: primaryErrMessage, legacyError: legacyErrMessage });
+      Sentry.captureException(legacyErr, { contexts: { remediation: { service: 'dimension-remediation', phase: 'openrouter_balance' } } });
+      return 0;
+    }
+  }
+};
 
 /**
  * Resolve this run's token-bucket capacity/refill rate from the Settings
