@@ -1,0 +1,27 @@
+CLAUDE.md
+  s_0eded1e9d0cab6::t_fcdfacf332add7 75-77
+docs/specs/ADR_024_COMPONENT_HOOK_RUNTIME_TEST_COVERAGE_2026-08-06.md
+  s_0eded1e9d0cab6::t_b3c54a0869ccb6 1-106
+docs/agent-prompts/2026-08-06-oc-kg-fallback-reliability.md
+  s_0eded1e9d0cab6::t_ff75bb3a67b3cf 1-177
+docs/agent-prompts/2026-08-06-oc-happydom-rtl-setup.md
+  s_0eded1e9d0cab6::t_38500e5d8abd05 1-190
+docs/specs/ADR_023_CLIENT_SIDE_KNOWLEDGE_GRAPH_REGENERATION_2026-08-06.md
+  s_0eded1e9d0cab6::t_558f23dc02c6e6 1-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ba93acbcd7056c6c0e818f2e2e586ef2f119853e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
