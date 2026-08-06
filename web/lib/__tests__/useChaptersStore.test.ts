@@ -57,9 +57,9 @@ describe('useChaptersStore', () => {
 
   it('getChapters returns a stable idle snapshot for a videoId with no entry', () => {
     const { getChapters } = useChaptersStore.getState();
-    const a = getChapters('missing');
-    const b = getChapters('missing');
-    expect(a).toBe(b); // referentially stable across calls
-    expect(a.status).toBe('idle');
+    const firstRead = getChapters('missing');
+    const secondRead = getChapters('missing');
+    expect(firstRead).toBe(secondRead); // referentially stable across calls
+    expect(firstRead.status).toBe('idle');
   });
 });
