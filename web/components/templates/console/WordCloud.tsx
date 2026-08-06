@@ -34,7 +34,10 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 320, h: 220 });
-  const hoveredWordIdRef = useRef<string | null>(null);
+  // Keyed on wordKey (not node id) for the same reason selection is --
+  // otherwise hovering one word would highlight every word sharing its
+  // source node id, the exact bug this file exists to fix.
+  const hoveredWordKeyRef = useRef<string | null>(null);
   const wordsLayoutRef = useRef<PlacedWord[]>([]);
   // Tracks exactly which word THIS component's own click selected, so the
   // highlight doesn't spread to every other word sharing the clicked word's
@@ -44,7 +47,30 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // than this component's own click, e.g. selecting a node in
   // KnowledgeGraphCanvas/MindMap -- there we don't know which specific
   // mention the other panel meant, so highlighting all of them is correct.
-  const lastClickedWordKeyRef = useRef<string | null>(null);
+  //
+  // Known accepted limitation (post-merge review, 2026-08-06): the
+  // reconciliation below only fires on a `selectedId` VALUE change. If
+  // this component's own click already selected node N, and another panel
+  // then re-selects the SAME node N (value unchanged), this component has
+  // no way to distinguish that from "nothing happened" -- the word-level
+  // highlight stays instead of broadening back to all-words-for-node-N.
+  // Fixing this needs an origin/version signal added to the shared
+  // selectedId/onSelect contract across all 4 consumer panels
+  // (WordCloud/KnowledgeGraphCanvas/MindMap/IntelligencePanel), which is a
+  // real API change, not a local fix -- deliberately not done here. Narrow
+  // edge case (re-selecting an already-selected node from a different
+  // panel), not fixed.
+  //
+  // Post-merge review finding (2026-08-06): this used to be a plain ref.
+  // Clearing a ref inside the reconciliation effect below does NOT itself
+  // trigger a re-render, so `isWordSelected`/`selectedWordCount`/
+  // `canvasAccessibleLabel` -- all computed during render from this value
+  // -- could go stale after an external (cross-panel) selection change
+  // until some UNRELATED re-render happened to occur, even though
+  // drawCanvas's own imperative repaint (triggered separately) was already
+  // correct. State fixes this: clearing it is a real update, so the ARIA
+  // label and the canvas repaint together, in the same render, every time.
+  const [lastClickedWordKey, setLastClickedWordKey] = useState<string | null>(null);
   const lastSelfSelectedIdRef = useRef<string | null>(null);
   // Chip corner radius + active text color resolved from the design system
   // (canvas can't read CSS custom properties directly).
@@ -78,7 +104,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     // unrelated word in the new graph. Reset alongside the other per-video
     // refs this same effect already clears, keyed on the same graph.rootId
     // signal (not a second/duplicate reset mechanism).
-    lastClickedWordKeyRef.current = null;
+    setLastClickedWordKey(null);
     lastSelfSelectedIdRef.current = null;
   }, [graph?.rootId]);
 
@@ -377,18 +403,16 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // below) and the accessible selected-count label (selectedWordCount
   // below), which previously used two separate predicates (wordKey-exact
   // vs node-id-match) that could drift and overcount the ARIA label
-  // relative to what's actually painted. Depends on `selectedId` only for
-  // memoization identity; `lastClickedWordKeyRef` is read imperatively
-  // (refs don't participate in React's dependency tracking) -- safe here
-  // because the ref is only ever mutated by the click handler and the
-  // selectedId-keyed effect below, both of which run before/alongside the
-  // render that would observe a stale value.
+  // relative to what's actually painted. Depends on `lastClickedWordKey`
+  // being real state (not a ref, see its own comment) so this callback's
+  // identity -- and everything downstream of it (drawCanvas, the ARIA
+  // label) -- actually updates in the same render the selection changes.
   const isWordSelected = useCallback(
     (word: PlacedWord) =>
-      lastClickedWordKeyRef.current
-        ? lastClickedWordKeyRef.current === word.wordKey
+      lastClickedWordKey
+        ? lastClickedWordKey === word.wordKey
         : selectedId === word.id,
-    [selectedId]
+    [selectedId, lastClickedWordKey]
   );
 
   // Imperative canvas draw — no React re-render needed for hover
@@ -435,7 +459,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
       if (progress <= 0) return;
 
       const isSelected = isWordSelected(word);
-      const isHovered = hoveredWordIdRef.current === word.id;
+      const isHovered = hoveredWordKeyRef.current === word.wordKey;
       const active = isSelected || isHovered;
       const rgb = entityRgb(word.type);
 
@@ -486,7 +510,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // STILL-STALE `selectedId` against the ALREADY-UPDATED
   // `lastSelfSelectedIdRef`, read them as unequal, and incorrectly treated
   // our own pending click as an "external" selection change --
-  // clearing `lastClickedWordKeyRef` (reverting to broad node-id
+  // clearing `lastClickedWordKey` (reverting to broad node-id
   // highlighting) and, worse, overwriting `lastSelfSelectedIdRef` back to
   // the stale value, so the SAME false-mismatch fired again on the actual
   // post-commit draw. Moving this logic into an effect keyed on the real
@@ -495,7 +519,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
   // between the ref write and the prop commit.
   useEffect(() => {
     if (selectedId !== lastSelfSelectedIdRef.current) {
-      lastClickedWordKeyRef.current = null;
+      setLastClickedWordKey(null);
       lastSelfSelectedIdRef.current = selectedId;
     }
   }, [selectedId]);
@@ -631,9 +655,9 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const word = getWordAtCoords(e.clientX, e.clientY);
-    const newId = word?.id ?? null;
-    if (hoveredWordIdRef.current !== newId) {
-      hoveredWordIdRef.current = newId;
+    const newKey = word?.wordKey ?? null;
+    if (hoveredWordKeyRef.current !== newKey) {
+      hoveredWordKeyRef.current = newKey;
       e.currentTarget.style.cursor = word ? 'pointer' : 'default';
       drawCanvas();
     }
@@ -648,15 +672,22 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
     // word A, which also has node id N) and the user then clicks a
     // DIFFERENT word B that happens to share node id N, this evaluated
     // true and deselected instead of switching the highlight to word B.
-    // Comparing against `lastClickedWordKeyRef` (this component's own
+    // Comparing against `lastClickedWordKey` (this component's own
     // per-word click memory) instead of `selectedId` (the shared node-id
     // prop) fixes it: only clicking the SAME rendered word again toggles
     // off; a different word, even sharing a node id, always selects.
-    const isReclickingSameWord = word ? lastClickedWordKeyRef.current === word.wordKey : false;
+    const isReclickingSameWord = word ? lastClickedWordKey === word.wordKey : false;
     const newId = word && !isReclickingSameWord ? word.id : null;
-    // Remember exactly which word this click targeted, so drawCanvas
-    // highlights only that word -- not every word sharing its node id.
-    lastClickedWordKeyRef.current = newId && word ? word.wordKey : null;
+    // Post-merge review finding (2026-08-06): when clicking a DIFFERENT
+    // word that shares the already-selected node id, `newId` equals the
+    // current `selectedId` PROP value -- React bails out of the no-op
+    // update inside startTransition, so the prop never actually changes.
+    // Previously `lastClickedWordKeyRef` was a plain ref, so nothing
+    // observed this click at all until an unrelated redraw (a hover move,
+    // a resize) happened to occur -- setting it as real state here is what
+    // guarantees an immediate, correct repaint AND keeps the ARIA label in
+    // sync (both derive from `lastClickedWordKey` via `isWordSelected`).
+    setLastClickedWordKey(newId && word ? word.wordKey : null);
     lastSelfSelectedIdRef.current = newId;
     startTransition(() => {
       onSelect(newId);
@@ -693,7 +724,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
         width={size.w}
         height={size.h}
         onMouseMove={handleMouseMove}
-        onMouseOut={() => { hoveredWordIdRef.current = null; drawCanvas(); }}
+        onMouseOut={() => { hoveredWordKeyRef.current = null; drawCanvas(); }}
         onClick={handleMouseClick}
         className="block w-full h-full js-word-cloud-canvas"
         role="img"
