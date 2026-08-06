@@ -1,0 +1,34 @@
+web/components/containers/DashboardContainer.tsx
+  s_5377814a5f6d1f::t_8a1633e5c91ae8 230
+  s_5377814a5f6d1f::t_c28840a916d91c 213
+  s_5377814a5f6d1f::t_532ef17df56a1b 28
+web/lib/__tests__/entity-time-seek.test.ts
+  s_5377814a5f6d1f::t_b36136e2413af9 186,193,195,201
+  s_5377814a5f6d1f::t_2348918d28ff9e 6
+  s_5377814a5f6d1f::t_452afde5e12775 151-185,187-192,194,196-200,202-243
+web/store/useVideoStore.ts
+  s_5377814a5f6d1f::t_8643bd0f4ffdd3 8-10,13,26,37,40
+web/lib/utils/entity-time-seek.ts
+  s_5377814a5f6d1f::t_7beb11f070c091 60-88
+  s_5377814a5f6d1f::t_e5360fccf557b8 135-146,150-151,153-156,159-162,165-168,170-176,178-184,188,191-237
+web/components/templates/console/VideoPlayerCard.tsx
+  s_5377814a5f6d1f::t_c9e016c15f40c3 17
+  s_5377814a5f6d1f::t_6f9533e11a83b8 169-179,182-187
+  s_5377814a5f6d1f::t_e38085bf4289de 180-181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "20cf211c7a0d0f2e72313edc8d7829feb4f40b14",
+  "prompts": {},
+  "sessions": {
+    "s_5377814a5f6d1f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02914e6bdffepo2H8hDUq9wErS",
+        "model": "deepseek-v4-flash-forced"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
