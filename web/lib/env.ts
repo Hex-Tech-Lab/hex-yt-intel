@@ -36,8 +36,13 @@ type OptionalEnvVar =
 type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];
 type EnvVar = RequiredEnvVar | OptionalEnvVar;
 
-/** Functional mocks used to prevent crashes in all environments */
-const MOCK_DEFAULTS: Partial<Record<EnvVar, string>> = {
+/**
+ * Functional mocks used to prevent crashes in all environments. Exported
+ * (narrowly, 2026-08-06) so env.test.ts can assert the REAL fallback value
+ * for UPSTASH_VECTOR_REST_URL instead of re-declaring it as a separate
+ * local literal in the test file.
+ */
+export const MOCK_DEFAULTS: Partial<Record<EnvVar, string>> = {
   NEXT_PUBLIC_SUPABASE_URL: 'https://adnmbikaqnxivalqoild.supabase.co', 
   NEXT_PUBLIC_SUPABASE_ANON_KEY: 'mock-anon-key-prevent-crash',
   OPENROUTER_API_KEY: 'sk-or-v1-mock-key-preview-only',

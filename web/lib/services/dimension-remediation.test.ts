@@ -1,29 +1,94 @@
-import { describe, it, expect } from 'vitest';
-
 /**
- * Sibling contract test (UNVERIFIED_ENDPOINT_NO_TEST). Covers
- * getRemainingBudgetCents()'s OpenRouter key-info call -- the only direct
- * OpenRouter endpoint this file hits (analysis generation itself is
- * delegated S2S to the worker's /analyze-llm-stream, covered by
- * LLMCascade.test.ts).
+ * CONTRACT: dimension-remediation.ts OpenRouter balance check
+ * (getRemainingBudgetCents / fetchKeyInfo).
+ *
+ * Rewritten 2026-08-06 per Cubic review (PR #211): the previous version
+ * re-hardcoded the URL strings and re-implemented the parsing locally,
+ * never importing the real functions or mocking fetch -- it could never
+ * detect drift. This mocks global.fetch and exercises the REAL exported
+ * getRemainingBudgetCents/fetchKeyInfo through their public entry point,
+ * covering: primary /key success, primary failure -> legacy /auth/key
+ * success, both fail -> 0 (fail-closed), malformed limit_remaining.
  */
-describe('CONTRACT: dimension-remediation.ts OpenRouter balance check', () => {
-  it('DRIFT FOUND + FIXED 2026-08-06: docs (openrouter.ai/docs/api-reference/authentication + llms.txt index) document GET /api/v1/key, not the previously-hardcoded /api/v1/auth/key', () => {
-    // No live OPENROUTER_MANAGEMENT_KEY available in this pass to confirm
-    // whether /auth/key still 200s or has already been removed -- fixed to
-    // try the documented /key path first, fall back to the legacy /auth/key
-    // path on failure (same dual-path pattern as fetchSupabaseLogs), rather
-    // than blind-swapping and risking a regression if /auth/key is in fact
-    // still what's live. See dimension-remediation.ts's getRemainingBudgetCents.
-    const documentedUrl = 'https://openrouter.ai/api/v1/key';
-    const legacyFallbackUrl = 'https://openrouter.ai/api/v1/auth/key';
-    expect(documentedUrl).not.toBe(legacyFallbackUrl);
+import * as Sentry from '@sentry/nextjs';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+
+vi.mock('@/lib/env', () => ({ env: { openrouterApiKey: 'test-openrouter-key', cloudflareWorkerUrl: 'https://worker.test' } }));
+vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
+
+import { getRemainingBudgetCents, fetchKeyInfo } from './dimension-remediation';
+
+describe('fetchKeyInfo', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('calls the given URL with the Bearer auth header and parses data.limit_remaining into cents', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => ({ data: { limit: 100, limit_remaining: 42.5, is_free_tier: false } }),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cents = await fetchKeyInfo('https://openrouter.ai/api/v1/key');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://openrouter.ai/api/v1/key');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-openrouter-key');
+    expect(cents).toBe(4250);
   });
 
-  it('parses the documented response shape (data.limit_remaining)', () => {
-    const docsExampleResponse = { data: { limit: 100, limit_remaining: 42.5, is_free_tier: false } };
-    const remaining = Number(docsExampleResponse.data.limit_remaining);
-    expect(Number.isFinite(remaining)).toBe(true);
-    expect(Math.round(remaining * 100)).toBe(4250);
+  it('throws on a malformed (non-numeric) limit_remaining', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({ ok: true, json: () => ({ data: { limit_remaining: 'not-a-number' } }) } as Response));
+    await expect(fetchKeyInfo('https://openrouter.ai/api/v1/key')).rejects.toThrow(/non-numeric limit_remaining/);
+  });
+});
+
+describe('getRemainingBudgetCents', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('uses the documented /api/v1/key endpoint on success, without touching the legacy fallback', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true, json: () => ({ data: { limit_remaining: 10 } }) } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cents = await getRemainingBudgetCents();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://openrouter.ai/api/v1/key');
+    expect(cents).toBe(1000);
+  });
+
+  it('falls back to the legacy /api/v1/auth/key endpoint when the primary fails, and reports the fallback to Sentry', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, json: () => ({}) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: () => ({ data: { limit_remaining: 5 } }) } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cents = await getRemainingBudgetCents();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://openrouter.ai/api/v1/key');
+    expect(fetchMock.mock.calls[1][0]).toBe('https://openrouter.ai/api/v1/auth/key');
+    expect(cents).toBe(500);
+    // DeepSource finding #4 (fixed): fallback-taken path reports to Sentry
+    // even though it "succeeded", so silent dependence on the legacy
+    // endpoint doesn't go undetected indefinitely.
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      expect.stringContaining('fell back to legacy /auth/key'),
+      expect.objectContaining({ level: 'warning' }),
+    );
+  });
+
+  it('fails closed to 0 cents when BOTH endpoints fail, and reports the terminal failure to Sentry', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, json: () => ({}) } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 500, json: () => ({}) } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cents = await getRemainingBudgetCents();
+
+    expect(cents).toBe(0);
+    expect(Sentry.captureException).toHaveBeenCalled();
   });
 });

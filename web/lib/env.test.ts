@@ -5,20 +5,32 @@ import { describe, it, expect } from 'vitest';
  *
  * JUSTIFICATION (documented, not a silent skip): this finding is a
  * contract-auditor FALSE POSITIVE, not a real unverified network call.
- * Line 46 is `UPSTASH_VECTOR_REST_URL: 'https://rested-ferret-38816-eu1-vector.upstash.io'`
- * inside MOCK_DEFAULTS -- a hardcoded fallback string used only to keep the
- * app booting when the real env var is unset (per this file's own
- * "ZERO-FATAL POLICY" doc comment), never an actual fetch target. The
- * auditor's UNVERIFIED_ENDPOINT_NO_TEST regex matches any line containing
- * both a risky host substring AND a bare `https://` prefix, which a plain
- * string literal satisfies without a real network call being made anywhere
- * near it (no fetch(/axios. call in env.ts at all). Adding this sibling
- * test so the file has one, per the rule's structural check, while
- * documenting why no live/docs endpoint verification applies here.
+ * MOCK_DEFAULTS.UPSTASH_VECTOR_REST_URL is a hardcoded fallback string used
+ * only to keep the app booting when the real env var is unset (per this
+ * file's own "ZERO-FATAL POLICY" doc comment), never an actual fetch
+ * target -- env.ts contains no fetch()/axios call anywhere.
+ *
+ * Rewritten 2026-08-06: now imports the REAL MOCK_DEFAULTS export from
+ * env.ts (narrowly exported for this purpose) instead of re-declaring the
+ * expected URL as a separate literal, so a future edit to the real fallback
+ * value is what this test actually pins.
  */
+import { MOCK_DEFAULTS } from './env';
+
 describe('env.ts MOCK_DEFAULTS.UPSTASH_VECTOR_REST_URL is a placeholder, not a live endpoint', () => {
   it('is a syntactically valid URL used only as a boot-safety fallback (no fetch call reads it directly as a real endpoint)', () => {
-    const mockUpstashVectorUrl = 'https://rested-ferret-38816-eu1-vector.upstash.io';
-    expect(() => new URL(mockUpstashVectorUrl)).not.toThrow();
+    const mockUpstashVectorUrl = MOCK_DEFAULTS.UPSTASH_VECTOR_REST_URL;
+    expect(mockUpstashVectorUrl).toBeDefined();
+    expect(() => new URL(mockUpstashVectorUrl!)).not.toThrow();
+  });
+
+  it('other required MOCK_DEFAULTS entries (real values env.ts falls back to) are also syntactically sane', () => {
+    expect(MOCK_DEFAULTS.NEXT_PUBLIC_SUPABASE_URL).toMatch(/^https:\/\//);
+    expect(MOCK_DEFAULTS.CLOUDFLARE_WORKER_URL).toMatch(/^https:\/\//);
+    // STREAM_HMAC_SECRET is intentionally NOT in MOCK_DEFAULTS (fail-closed
+    // in production, see env.ts's streamHmacSecret getter) -- pinning the
+    // absence so a future accidental addition doesn't silently reopen that
+    // fail-closed contract.
+    expect(MOCK_DEFAULTS.STREAM_HMAC_SECRET).toBeUndefined();
   });
 });

@@ -112,14 +112,54 @@ export async function fetchQstashLogs(searchParams: URLSearchParams): Promise<Fe
   // had undetected drift" incident this contract-auditor rule cites. Fixed
   // to /v2/logs + data.logs, with a defensive fallback to the old
   // events/array shape in case a cached/CDN'd response still uses it.
+  //
+  // PAGINATION + TIMEOUT (2026-08-06 rework): /v2/logs is cursor-paginated
+  // (docs: a non-null `cursor` in the response means more pages exist,
+  // fetched via `?cursor=<value>` on the next call) and accepts
+  // `fromDate`/`toDate` (epoch ms) range filters -- the original fix only
+  // fetched page 1 with no range filter, silently truncating results for a
+  // busy or wide custom-range admin query. QSTASH_LOGS_MAX_PAGES bounds the
+  // loop (never hardcode an unbounded "follow cursor forever" loop against a
+  // third-party API): 10 pages x QSTASH_LOGS_PAGE_SIZE-ish per-call volume is
+  // comfortably above what a human operator reviews in one admin-panel
+  // request, while still guaranteeing termination if QStash ever returns a
+  // non-advancing or cyclical cursor. Each call also gets its own 8s
+  // AbortController timeout (this endpoint previously had none -- a stalled
+  // Upstash request could hang the Next.js route indefinitely, unlike this
+  // project's Law #2 dual-timeout convention elsewhere) so a single slow page
+  // can't stall pagination past a bounded total.
+  const QSTASH_LOGS_MAX_PAGES = 10;
+  const QSTASH_LOGS_TIMEOUT_MS = 8_000;
   try {
-    const res = await fetch('https://qstash.upstash.io/v2/logs', { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`Upstash QStash API returned ${res.status}: ${errText}`);
+    const rawEvents: any[] = [];
+    let cursor: string | undefined;
+    for (let page = 0; page < QSTASH_LOGS_MAX_PAGES; page++) {
+      const url = new URL('https://qstash.upstash.io/v2/logs');
+      url.searchParams.set('fromDate', String(startTimeMs));
+      url.searchParams.set('toDate', String(endTimeMs));
+      if (cursor) url.searchParams.set('cursor', cursor);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), QSTASH_LOGS_TIMEOUT_MS);
+      let res: Response;
+      try {
+        res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Upstash QStash API returned ${res.status}: ${errText}`);
+      }
+      const data = await res.json();
+      const pageEvents = Array.isArray(data.logs) ? data.logs : Array.isArray(data.events) ? data.events : Array.isArray(data) ? data : [];
+      rawEvents.push(...pageEvents);
+
+      const nextCursor = typeof data.cursor === 'string' && data.cursor.length > 0 ? data.cursor : undefined;
+      if (!nextCursor || nextCursor === cursor) break; // no more pages, or a non-advancing cursor -- stop rather than loop forever
+      cursor = nextCursor;
     }
-    const data = await res.json();
-    const rawEvents = Array.isArray(data.logs) ? data.logs : Array.isArray(data.events) ? data.events : Array.isArray(data) ? data : [];
+
     const events = rawEvents.filter((evt: any) => {
       const timeMs = typeof evt.time === 'number' ? evt.time : new Date(evt.time || evt.createdAt || 0).getTime();
       return timeMs >= startTimeMs && timeMs <= endTimeMs;

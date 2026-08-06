@@ -1,30 +1,79 @@
-import { describe, it, expect } from 'vitest';
+/**
+ * CONTRACT: embeddings.ts hits OpenRouter /embeddings with a valid,
+ * provider-qualified model slug.
+ *
+ * Rewritten 2026-08-06: the previous version asserted a local literal
+ * against itself, never calling generateEmbedding. This mocks global.fetch
+ * and calls the REAL exported generateEmbedding, asserting the real
+ * request body actually contains "openai/text-embedding-3-small" -- proven
+ * with a negative control (reverting the model id to the bare
+ * "text-embedding-3-small" makes this test fail).
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { generateEmbedding, cosineSimilarity } from './embeddings';
 
-describe('CONTRACT: embeddings.ts hits OpenRouter /embeddings with a valid model slug', () => {
-  it('DRIFT FOUND + FIXED 2026-08-06: model id must be provider-qualified ("openai/text-embedding-3-small"), not bare "text-embedding-3-small"', () => {
-    // VERIFIED via WebFetch against
-    // https://openrouter.ai/docs/api_reference/embeddings.md: the
-    // documented request example uses "openai/text-embedding-3-small",
-    // consistent with every other model ID in this repo (translateModelId
-    // etc. all assume `provider/model`). The pre-fix code used the bare
-    // slug, which is not a valid OpenRouter model identifier -- fixed in
-    // embeddings.ts. No live OPENROUTER_API_KEY spend in this pass to
-    // confirm the exact runtime failure mode; the docs mismatch alone is
-    // high-confidence enough to fix.
-    const fixedModelId = 'openai/text-embedding-3-small';
-    expect(fixedModelId).toMatch(/^[a-z0-9-]+\//);
+const originalEnv = { ...process.env };
+
+describe('generateEmbedding', () => {
+  beforeEach(() => {
+    process.env.OPENROUTER_API_KEY = 'test-key';
+  });
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.restoreAllMocks();
   });
 
-  it('endpoint + response shape match docs (POST /api/v1/embeddings, {data:[{embedding,index}], model, object, usage})', () => {
-    const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/embeddings';
-    expect(OPENROUTER_API_URL).toBe('https://openrouter.ai/api/v1/embeddings');
-    const docsExampleResponse = {
-      data: [{ embedding: [0.1, 0.2, 0.3], index: 0, object: 'embedding' }],
-      model: 'openai/text-embedding-3-small',
-      object: 'list',
-      usage: { prompt_tokens: 5, total_tokens: 5 },
-    };
-    const embeddingData = docsExampleResponse.data[0];
-    expect(embeddingData.embedding).toHaveLength(3);
+  it('sends the provider-qualified model id "openai/text-embedding-3-small" in the real request body', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => ({ data: [{ object: 'embedding', index: 0, embedding: new Array(1536).fill(0.01) }] }),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await generateEmbedding('some text to embed');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://openrouter.ai/api/v1/embeddings');
+    const body = JSON.parse(init.body as string);
+    expect(body.model).toBe('openai/text-embedding-3-small');
+  });
+
+  it('returns the parsed embedding vector and a nonzero estimated cost', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => ({ data: [{ object: 'embedding', index: 0, embedding: new Array(1536).fill(0.5) }] }),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await generateEmbedding('some text to embed');
+
+    expect(result.embedding).toHaveLength(1536);
+    expect(result.costUsd).toBeGreaterThan(0);
+  });
+
+  it('retries on failure and eventually throws after RETRY_MAX_ATTEMPTS with a descriptive error', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500, text: () => 'server error' } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(generateEmbedding('text')).rejects.toThrow(/Failed to generate embedding after 3 attempts/);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  }, 15000);
+
+  it('throws immediately for empty text without calling fetch', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(generateEmbedding('   ')).rejects.toThrow('Cannot generate embedding for empty text');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('cosineSimilarity (pure function, unaffected by the endpoint fix, kept for regression coverage)', () => {
+  it('returns 1 for identical vectors', () => {
+    expect(cosineSimilarity([1, 2, 3], [1, 2, 3])).toBeCloseTo(1);
+  });
+  it('returns 0 for orthogonal vectors', () => {
+    expect(cosineSimilarity([1, 0], [0, 1])).toBeCloseTo(0);
   });
 });
