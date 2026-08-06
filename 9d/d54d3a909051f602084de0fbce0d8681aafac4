@@ -1,0 +1,33 @@
+web/vitest.config.ts
+  s_5377814a5f6d1f::t_9aa9235405046e 14-16
+  s_0eded1e9d0cab6::t_df29491d973106 25
+  s_0eded1e9d0cab6::t_2abcbf86fe9155 17-24,26
+  s_5377814a5f6d1f::t_0c5702a94edb24 39
+  s_5377814a5f6d1f::t_b0e56196f2e4e1 30-36
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_d85a898e22238a 1149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9dd54d3a909051f602084de0fbce0d8681aafac4",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_5377814a5f6d1f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02914e6bdffepo2H8hDUq9wErS",
+        "model": "deepseek-v4-flash-forced"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
