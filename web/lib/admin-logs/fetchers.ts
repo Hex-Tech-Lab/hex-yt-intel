@@ -103,14 +103,23 @@ export async function fetchQstashLogs(searchParams: URLSearchParams): Promise<Fe
   else startTimeMs = now - 60 * 60 * 1000;
   const endTimeMs = range === 'custom' && customEnd ? new Date(customEnd).getTime() : now;
 
+  // CONFIRMED DRIFT (2026-08-06 contract audit, docs-verified --
+  // https://upstash.com/docs/qstash/api-reference/logs/list-logs.md): the
+  // current QStash REST API path is `GET /v2/logs` returning
+  // `{cursor, logs: [...]}` -- this call previously hit `/v2/events`
+  // (undocumented, does not appear anywhere in the current QStash API
+  // reference) and read `data.events`. Exactly the "QStash schedule endpoint
+  // had undetected drift" incident this contract-auditor rule cites. Fixed
+  // to /v2/logs + data.logs, with a defensive fallback to the old
+  // events/array shape in case a cached/CDN'd response still uses it.
   try {
-    const res = await fetch('https://qstash.upstash.io/v2/events', { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch('https://qstash.upstash.io/v2/logs', { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
       throw new Error(`Upstash QStash API returned ${res.status}: ${errText}`);
     }
     const data = await res.json();
-    const rawEvents = Array.isArray(data.events) ? data.events : Array.isArray(data) ? data : [];
+    const rawEvents = Array.isArray(data.logs) ? data.logs : Array.isArray(data.events) ? data.events : Array.isArray(data) ? data : [];
     const events = rawEvents.filter((evt: any) => {
       const timeMs = typeof evt.time === 'number' ? evt.time : new Date(evt.time || evt.createdAt || 0).getTime();
       return timeMs >= startTimeMs && timeMs <= endTimeMs;
@@ -451,6 +460,21 @@ export async function fetchContractAuditLogs(searchParams: URLSearchParams): Pro
   }
 }
 
+// FLAGGED (2026-08-06 contract audit, docs-only verification -- no live
+// OpenRouter management credential available in this pass): OpenRouter's
+// current docs index (llms.txt) surfaces a documented Analytics API at
+// `POST /api/v1/analytics/query` (management-key auth, `data.data[]` rows
+// with total_usage/tokens_total/request_count) but do NOT document this
+// GET /api/v1/activity path anywhere. This may be a working legacy/
+// undocumented alias (the UI's own Activity Export page lives at
+// openrouter.ai/activity, so a same-named API route plausibly still exists)
+// or it may already be silently broken -- same uncertainty class as the
+// admin-logs Supabase logs.all endpoint that motivated this rule. Left
+// AS-IS (not rewritten to /analytics/query) because that's a different
+// request/response shape entirely and a blind swap risks trading a
+// possibly-still-working endpoint for an unverified rewrite. See
+// fetchOpenRouterLogs.test.ts for the explicit justification this rule
+// requires when full live verification isn't practical.
 export async function fetchOpenRouterLogs(searchParams: URLSearchParams): Promise<FetcherResult> {
   const key = process.env.OPENROUTER_MANAGEMENT_KEY;
   if (!key) {

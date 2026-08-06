@@ -15,7 +15,15 @@ interface EmbeddingResult {
   costUsd: number;
 }
 
-const EMBEDDING_MODEL = 'text-embedding-3-small';
+// CONFIRMED DRIFT (2026-08-06 contract audit, docs-only verification --
+// https://openrouter.ai/docs/api_reference/embeddings.md's own request
+// example uses the provider-qualified slug "openai/text-embedding-3-small",
+// consistent with every other model ID in this repo (translateModelId etc.
+// all assume `provider/model`). An unqualified "text-embedding-3-small" is
+// not a valid OpenRouter model slug -- fixed here; no live call made to
+// confirm the exact failure mode (401/400 vs silent wrong-model routing),
+// flagging as the highest-confidence real bug found in this audit pass.
+const EMBEDDING_MODEL = 'openai/text-embedding-3-small';
 const EMBEDDING_DIMENSION = 1536;
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/embeddings';
 

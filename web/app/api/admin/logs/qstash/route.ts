@@ -6,7 +6,9 @@ import { fetchQstashLogs } from '@/lib/admin-logs/fetchers';
 
 /**
  * GET /api/admin/logs/qstash — Admin-only live fetch for Upstash QStash event logs
- * Queries https://qstash.upstash.io/v2/events using QSTASH_TOKEN.
+ * Queries https://qstash.upstash.io/v2/logs using QSTASH_TOKEN (see fetchers.ts's
+ * fetchQstashLogs for the 2026-08-06 contract-audit fix: this was previously the
+ * undocumented /v2/events path).
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const adminResult = await requireAdmin('admin/logs/qstash:GET');
