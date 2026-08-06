@@ -1,0 +1,20 @@
+web/hooks/useKnowledgeGraph.ts
+  s_0eded1e9d0cab6::t_f8d7b54dfa31bc 47-52,54-55
+  s_0eded1e9d0cab6::t_c19f45c6c9410b 219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "190acfb6f873db9c4455190234813e741ab42cda",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
