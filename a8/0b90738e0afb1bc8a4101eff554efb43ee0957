@@ -1,0 +1,54 @@
+web/lib/intelligence/relations-engine.test.ts
+  s_0eded1e9d0cab6::t_dcaab49db2d2a8 1-13
+web/lib/embeddings.test.ts
+  s_0eded1e9d0cab6::t_44d984be1a72c5 1-30
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_6b26dd80c81b93 119-129,132-141
+  s_0eded1e9d0cab6::t_d32fbfcdb16527 92-106
+web/lib/services/dimension-remediation.test.ts
+  s_0eded1e9d0cab6::t_1b9e9ae1c65324 1-29
+web/lib/services/openrouter.test.ts
+  s_0eded1e9d0cab6::t_406d9faa5c9e89 1-13
+web/lib/admin-logs/fetchers.ts
+  s_0eded1e9d0cab6::t_385fd92acdfd34 463-477
+  s_0eded1e9d0cab6::t_00b01ce3afd005 106-114,116,122
+web/lib/env.test.ts
+  s_0eded1e9d0cab6::t_de660608dcd397 1-24
+worker/src/services/LLMCascade.test.ts
+  s_0eded1e9d0cab6::t_8139cbbd30f61b 1-16
+worker/src/services/CommentClassifier.test.ts
+  s_0eded1e9d0cab6::t_bd5ea0d4be922a 1-14
+web/lib/adapters/OpenRouterCompletionAdapter.test.ts
+  s_0eded1e9d0cab6::t_d1bddc488f3b96 1-18
+web/app/api/admin/logs/supabase/route.test.ts
+  s_0eded1e9d0cab6::t_c955f835dc5a0d 1-16
+web/app/api/admin/logs/qstash/route.ts
+  s_0eded1e9d0cab6::t_d509d5502ef5b8 9-11
+web/vitest.config.ts
+  s_0eded1e9d0cab6::t_ca35270d249b9a 24-33,36-43,45-47
+  s_0eded1e9d0cab6::t_8da07230749440 18-23,34-35,44,48
+web/app/api/admin/logs/qstash/route.test.ts
+  s_0eded1e9d0cab6::t_7ee4fc7837ea5f 1-15
+web/lib/embeddings.ts
+  s_0eded1e9d0cab6::t_0d0a81e9494db4 18-26
+web/lib/admin-logs/fetchers.test.ts
+  s_0eded1e9d0cab6::t_36727f5ae82a7b 1-128
+worker/src/chat-stream.test.ts
+  s_0eded1e9d0cab6::t_2b93c1d9bec3e6 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a80b90738e0afb1bc8a4101eff554efb43ee0957",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
