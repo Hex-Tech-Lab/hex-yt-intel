@@ -205,6 +205,33 @@ export class SupabaseTranscriptAdapter {
     return (data as ChapterRow[]) || [];
   }
 
+  /**
+   * Like getChapters, but also reports whether an empty result is
+   * CONFIRMED (the sentinel row exists -- worker genuinely parsed the
+   * description and found none) vs UNKNOWN (no rows at all yet, real or
+   * sentinel -- the worker's fire-and-forget parse+persist likely just
+   * hasn't landed). Needed because the decoupled write path (2026-08-06)
+   * fires from inside the SSE stream handler and can genuinely still be
+   * in flight when the client's first GET request lands -- without this
+   * distinction, a client that fetches before the write completes gets an
+   * indistinguishable [] and (per useChapters' retry logic) would
+   * permanently cache a false "no chapters" instead of retrying.
+   */
+  static async getChaptersWithStatus(videoId: string): Promise<{ chapters: ChapterRow[]; confirmed: boolean }> {
+    const service = getSupabaseServiceClient();
+    const { data, error } = await service
+      .from('transcript_chapters')
+      .select('*')
+      .eq('video_id', videoId)
+      .gt('expires_at', new Date().toISOString())
+      .order('start_seconds', { ascending: true });
+    if (error) throw error;
+    const rows = (data as ChapterRow[]) || [];
+    const hasSentinel = rows.some((row) => row.idx === -1);
+    const chapters = rows.filter((row) => row.idx >= 0);
+    return { chapters, confirmed: hasSentinel || chapters.length > 0 };
+  }
+
   /** Maps a snake_case {video_id, deleted_at}[] purge-RPC result to the
    * adapter's declared camelCase shape -- shared by purgeExpiredChapters()
    * (purgeExpired(), the pre-existing transcripts sibling, has the same

@@ -131,7 +131,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // threads them into findEntityTimestamp. Empty during the fetch window —
   // findEntityTimestamp falls through to regex, which is the correct degraded
   // behavior.
-  const { chapters } = useChapters(nucleusAnalysis?.id ?? null, status);
+  const { chapters } = useChapters(videoMetadata?.videoId || nucleusAnalysis?.videoId || null);
 
   useEffect(() => {
     setUserRole(profile.role);

@@ -40,18 +40,11 @@ To enable high concurrency without toe-stepping, all agents MUST use the shared 
 
 **Same-checkout warning**: AGY and OC have both been run in the same shared working-tree checkout (not isolated git worktrees) at least once this session, resulting in mixed uncommitted diffs from two agents on one branch that sat unpushed/undeployed for hours before being noticed. Prefer isolated worktrees per agent when running AGY/OC concurrently with other work; if a shared checkout is unavoidable, check `git status`/`git diff` per-file before committing anything, don't assume the working tree reflects only your own current task.
 
-### Mandatory sections in every AGY/OC prompt (added 2026-08-03)
+### Mandatory template for every agent dispatch prompt (added 2026-08-03, enforced as a file template 2026-08-06)
 
-Every prompt dispatched to AGY or OC — investigation, execution, or both — MUST include these, not as optional nice-to-haves:
+Every prompt dispatched to AGY, OC, a remote/worktree Agent-tool call, or written by CC for itself — investigation, execution, or both — MUST be built from **`docs/agent-prompts/TEMPLATE.md`**, not re-derived from memory or written ad hoc. Copy that file, fill in its `[FILL IN]` sections (Context, Task, Goal, Expected results, Task-specific skills/tools/MCPs, task-specific fixtures), and dispatch — do not paraphrase or drop its `[ALWAYS INCLUDE]` sections (ledger protocol, code-review-graph as Step 0, the three tenets, gates, report format). Save the filled-in prompt to `docs/agent-prompts/<date>-<agent>-<short-name>.md` before dispatching, same as every prior prompt in that directory.
 
-1. **Contract definition + review**: state the expected contract before implementation (function signature, API shape, DB return type, prop interface — whatever the fix touches) and require the agent to review its own diff against that stated contract before reporting done, not just against "does it compile."
-2. **E2E verification**: unit-level green (tsc/vitest) is not sufficient on its own — require a real end-to-end check (manual repro steps, live curl, actual UI interaction description) proportional to what the bug/feature actually is. A silent-failure class of bug (like the Supabase logs tab, dead since creation with HTTP 200 responses) will pass every unit gate while still being broken.
-3. **Tangent hunt**: while investigating the reported symptom, require the agent to check for related/adjacent issues in the same area (same function, same file, same data shape) rather than fixing only the narrowest reported line. Report tangents found even if not fixed in this pass.
-4. **RCA before fix**: root-cause analysis is a required, separate, visible step — not skipped straight to a patch. A fix without a stated RCA is not acceptable, even if it happens to work.
-5. **Run ALL applicable skills, enumerated from the live list, not memory**: CORE (qa-intel, contract-auditor, `/simplify`) always; SELECT skills chosen by what the diff actually touches (per `pr-review-workflow`'s SELECT trigger list) — read the trigger list fresh each time, don't recall it from a prior prompt.
-6. **Structured report format**: RCA → Contract → Fix → Tangents found (fixed or logged) → Skills run + findings → Gates (tsc/vitest/qa-intel/contract-auditor results) → Files changed. Same shape every time, so CC's verification pass has a consistent structure to check against.
-
-This is the standing template — reference it in future prompts rather than re-deriving these six requirements each time.
+This became a hard file-based template (not just a prose reminder) after a dispatched OC prompt omitted the ledger-protocol instruction and the agent only posted its `[IN_PROGRESS]` entry after the user manually intervened mid-task (2026-08-06) — the gap was in the dispatching prompt, not the agent's behavior. See the template file's own "why this exists" section for the other incidents behind each mandatory section.
 
 ---
 

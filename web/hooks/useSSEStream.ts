@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useVideoStore } from '@/store/useVideoStore';
+import { useChaptersStore } from '@/store/useChaptersStore';
 import { SynthesisStreamAdapter } from '@/lib/adapters/synthesis-stream-adapter';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import type { WorkerStreamRequest } from '@/lib/types/contracts';
@@ -98,6 +99,13 @@ export function useSSEStream() {
     if (!isSameVideo) {
       useChatStore.getState().reset();
       useVideoStore.getState().reset();
+    }
+    // Bust the chapters cache on a different video, or a forced re-analysis of
+    // the same video (its description/chapters may have changed since the
+    // last cached read) — not on a plain retry of the same video, which
+    // should keep serving the already-loaded/cached entry.
+    if (!isSameVideo || forceRefresh) {
+      useChaptersStore.getState().reset(videoId);
     }
     setIsLoading(true);
     setStatus('downloading');

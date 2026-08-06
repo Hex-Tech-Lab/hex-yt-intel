@@ -31,7 +31,7 @@ export const secretFingerprint = async (secret: string | undefined | null): Prom
 };
 
 /** The server-to-server persist flows that sign content with the shared secret. */
-export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3';
+export type BoundSigPurpose = 'persist' | 'chat-persist' | 'comments-tier3' | 'chapters';
 
 /**
  * Sign a bound, time-limited server-to-server content signature. The purpose tag
