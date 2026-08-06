@@ -26,12 +26,17 @@ async function pollRedis(): Promise<PollResult> {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) {
+    console.warn('[upstash-snapshot-poll] pollRedis: UPSTASH_REDIS_REST_URL/TOKEN not configured, skipping poll');
     return { provider: 'redis', ok: false, stats: {}, error: 'UPSTASH_REDIS_REST_URL/TOKEN not configured' };
   }
   try {
     const res = await fetch(`${url}/info`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
+      console.warn('[upstash-snapshot-poll] pollRedis: non-OK response from Upstash Redis /info', {
+        status: res.status,
+        errText,
+      });
       return { provider: 'redis', ok: false, stats: {}, error: `HTTP ${res.status}: ${errText}` };
     }
     const data = await res.json();
@@ -49,6 +54,8 @@ async function pollRedis(): Promise<PollResult> {
     return { provider: 'redis', ok: true, stats };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, { contexts: { upstashSnapshotPoll: { provider: 'redis' } } });
+    console.error('[upstash-snapshot-poll] pollRedis: fetch/parse failed', { message });
     return { provider: 'redis', ok: false, stats: {}, error: message };
   }
 }
@@ -57,12 +64,17 @@ async function pollVector(): Promise<PollResult> {
   const url = process.env.UPSTASH_VECTOR_REST_URL;
   const token = process.env.UPSTASH_VECTOR_REST_TOKEN;
   if (!url || !token || url.includes('placeholder') || token.includes('mock')) {
+    console.warn('[upstash-snapshot-poll] pollVector: UPSTASH_VECTOR_REST_URL/TOKEN missing or placeholder, skipping poll');
     return { provider: 'vector', ok: false, stats: {}, error: 'UPSTASH_VECTOR_REST_URL/TOKEN missing or placeholder' };
   }
   try {
     const res = await fetch(`${url}/info`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
+      console.warn('[upstash-snapshot-poll] pollVector: non-OK response from Upstash Vector /info', {
+        status: res.status,
+        errText,
+      });
       return { provider: 'vector', ok: false, stats: {}, error: `HTTP ${res.status}: ${errText}` };
     }
     const data = await res.json();
@@ -70,6 +82,8 @@ async function pollVector(): Promise<PollResult> {
     return { provider: 'vector', ok: true, stats: resultObj };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, { contexts: { upstashSnapshotPoll: { provider: 'vector' } } });
+    console.error('[upstash-snapshot-poll] pollVector: fetch/parse failed', { message });
     return { provider: 'vector', ok: false, stats: {}, error: message };
   }
 }

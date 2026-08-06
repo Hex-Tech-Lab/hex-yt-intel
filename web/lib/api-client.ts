@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/nextjs';
+
 export interface RateLimitError {
   status: 429;
   message: string;
@@ -51,23 +53,33 @@ export async function apiCall<T>(
         retryAfter: retrySeconds,
       };
 
-      return {
+      console.warn('[apiCall] rate limited', { endpoint, retryAfter: retrySeconds });
+
+      const rateLimitResponse: ApiResponse<T> = {
         ok: false,
         status: response.status,
         error: rateLimitError.message,
         rateLimitError,
         headers: { retryAfter: retrySeconds },
       };
+      return rateLimitResponse;
     }
 
     // Handle other errors
     if (!response.ok) {
-      return {
+      const errorMessage = responseData?.error || `HTTP ${response.status}`;
+      console.error('[apiCall] request failed', { endpoint, status: response.status, error: errorMessage });
+      Sentry.captureMessage('apiCall: request failed', {
+        level: 'warning',
+        contexts: { apiCall: { endpoint, status: response.status, error: errorMessage } },
+      });
+      const errorResponse: ApiResponse<T> = {
         ok: false,
         status: response.status,
-        error: responseData?.error || `HTTP ${response.status}`,
+        error: errorMessage,
         headers: { retryAfter },
       };
+      return errorResponse;
     }
 
     // Success
@@ -79,11 +91,14 @@ export async function apiCall<T>(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Network error';
-    return {
+    Sentry.captureException(error, { contexts: { apiCall: { endpoint } } });
+    console.error('[apiCall] network error', { endpoint, message });
+    const networkErrorResponse: ApiResponse<T> = {
       ok: false,
       status: 0,
       error: message,
       headers: {},
     };
+    return networkErrorResponse;
   }
 }
