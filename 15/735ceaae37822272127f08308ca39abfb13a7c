@@ -1,0 +1,20 @@
+web/hooks/useKnowledgeGraph.ts
+  s_5377814a5f6d1f::t_c578f8bbcd4e5f 104-113,121
+  s_5377814a5f6d1f::t_8ee55c9d382d53 192-194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "15735ceaae37822272127f08308ca39abfb13a7c",
+  "prompts": {},
+  "sessions": {
+    "s_5377814a5f6d1f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02914e6bdffepo2H8hDUq9wErS",
+        "model": "deepseek-v4-flash-forced"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
