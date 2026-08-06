@@ -1,0 +1,32 @@
+web/lib/__tests__/useAnalysisStore-setExecutiveDigest.test.ts
+  s_0eded1e9d0cab6::t_572de8701aae54 1-55
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_e0e72ca327790d 1138-1139
+web/components/templates/console/WordCloud.tsx
+  s_0eded1e9d0cab6::t_9f73d5328ea7db 510-514
+  s_0eded1e9d0cab6::t_a29bb554f836ec 74-82
+  s_0eded1e9d0cab6::t_ce1d2e5b418a4b 437
+  s_0eded1e9d0cab6::t_ad99f3a2d1e885 476-502
+  s_0eded1e9d0cab6::t_fa146aae23ee3d 467
+  s_0eded1e9d0cab6::t_247e2b2bc5ef84 375-393
+  s_0eded1e9d0cab6::t_0a234f6ef8b081 671-675
+  s_0eded1e9d0cab6::t_916caee19862f0 644-656
+web/store/useAnalysisStore.ts
+  s_0eded1e9d0cab6::t_497d13d942534f 47-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "07c0352b3212f214f181eaab4398710741b2901e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
