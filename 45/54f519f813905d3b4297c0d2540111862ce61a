@@ -1,0 +1,28 @@
+.memory/AGENT_LEDGER.md
+  s_5377814a5f6d1f::t_c09a7b354d7468 1145-1146
+  s_0eded1e9d0cab6::t_40853289da1915 1148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "4554f519f813905d3b4297c0d2540111862ce61a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_5377814a5f6d1f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02914e6bdffepo2H8hDUq9wErS",
+        "model": "deepseek-v4-flash-forced"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
