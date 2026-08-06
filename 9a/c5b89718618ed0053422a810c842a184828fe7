@@ -27,6 +27,7 @@ web/app/api/admin/logs/qstash/route.ts
 web/vitest.config.ts
   s_0eded1e9d0cab6::t_ca35270d249b9a 47,49-51
   s_0eded1e9d0cab6::t_8da07230749440 30-35,42,48,52
+  s_0eded1e9d0cab6::t_4aa911717c0d9c 36-41,43,53-62
 web/app/api/admin/logs/qstash/route.test.ts
   s_0eded1e9d0cab6::t_7ee4fc7837ea5f 1-15
 web/lib/embeddings.ts
