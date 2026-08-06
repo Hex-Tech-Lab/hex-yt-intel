@@ -101,7 +101,16 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
           });
           setLoadedFromApi(true);
         } else {
-          setGraph(EMPTY);
+          // Empty API result: do NOT setGraph(EMPTY) here. The
+          // /api/analyses/[id]/graph route is backed by the kg_entities /
+          // kg_relations tables, which are empty database-wide for exactly the
+          // "no knowledge graph anywhere" analyses the client-side fallback
+          // exists to render (ADR 023). Overwriting with EMPTY here would
+          // clobber a just-synthesized fallback graph, so on an empty result
+          // we leave whatever the fallback produced in place and only clear
+          // the `loadedFromApi` flag. The graph is fully cleared on analysis
+          // switch / null analysisId in the `if (!analysisId)` branch and in
+          // the fallback's own empty-dimensions branch.
           setLoadedFromApi(false);
         }
         setLoading(false);
@@ -109,7 +118,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
       })
       .catch(() => {
         if (!cancelled) {
-          setGraph(EMPTY);
+          // On a fetch error, do not wipe a synthesized fallback graph either.
           setLoadedFromApi(false);
           setLoading(false);
           setApiFetchDone(true);
@@ -180,11 +189,9 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
       }
     }
 
-    // If analysisId exists, only fall back to client-side synthesis if API fetch finished and returned no nodes
-    if (analysisId) {
-      if (!apiFetchDone) return;
-      if (loadedFromApi) return;
-    }
+    // If a real graph came back from the API (kg_entities), it wins -- don't
+    // overwrite it with the synthesized fallback.
+    if (loadedFromApi) return;
 
     if (dimensions.length < 1) {
       setGraph(EMPTY);
