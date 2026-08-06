@@ -1,0 +1,19 @@
+docs/agent-prompts/2026-08-06-agent-pr211-real-tests-and-rebase.md
+  s_0eded1e9d0cab6::t_3dec93486fcb9a 1-226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "fd217ccc64fb51c59bf330650efd7e6f998954d9",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
