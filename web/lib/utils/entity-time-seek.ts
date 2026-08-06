@@ -57,6 +57,35 @@ export interface EntityTimeSeekChapter {
   label?: string | null;
 }
 
+/** Per-mention match — used by findAllEntityMentions and findNearestEntityMention. */
+export interface EntityMentionMatch {
+  timestamp: string;
+  seekSeconds: number;
+  occurrenceIndex: number;
+}
+
+/**
+ * Find the nearest preceding timestamp (or range start) before a given
+ * position in text. Shared helper used by both findEntityTimestamp (single
+ * occurrence) and findAllEntityMentions (all occurrences).
+ */
+function findPrecedingTimestamp(text: string): string | null {
+  const rangeMatches = [...text.matchAll(TIMESTAMP_RANGE_RE)];
+  const lastRange = rangeMatches[rangeMatches.length - 1];
+  if (lastRange) {
+    const afterRange = text.slice(lastRange.index! + lastRange[0].length);
+    if (afterRange.trim() === '') {
+      const startTime = lastRange[0].match(TIMESTAMP_RE);
+      if (startTime) return startTime[0];
+    }
+  }
+  const timestamps = [...text.matchAll(TIMESTAMP_RE_GLOBAL)];
+  if (timestamps.length > 0) {
+    return timestamps[timestamps.length - 1]![0];
+  }
+  return null;
+}
+
 /**
  * Find the timestamp string most relevant to a given entity node.
  *
@@ -103,70 +132,107 @@ function applyChapterBoundary(candidateStr: string, chapters?: EntityTimeSeekCha
   return chapter ? formatTimestamp(chapter.start_seconds) : candidateStr;
 }
 
+/**
+ * Find all entity mentions in dimension content — returns every occurrence
+ * of the entity's label in the dimension prose, each resolved to its own
+ * timestamp via the same nearest-preceding-timestamp logic (including
+ * range-format handling and chapter-boundary snapping).
+ *
+ * For node.label/node.content/node.keyTerms direct-field timestamp matches
+ * (which are single authoritative values, not prose with multiple
+ * occurrences), returns a single-element array. Returns empty array when
+ * no timestamp can be resolved at all.
+ */
+export function findAllEntityMentions(
+  node: EntityTimeSeekNode,
+  dimensionContent?: string | null,
+  chapters?: EntityTimeSeekChapter[] | null,
+): EntityMentionMatch[] {
+  // Direct field matches (single authoritative value, not prose)
+  const labelMatch = (node.label ?? '').match(TIMESTAMP_RE);
+  if (labelMatch) {
+    const ts = applyChapterBoundary(labelMatch[0], chapters);
+    return [{ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: 0 }];
+  }
+
+  const contentMatch = (node.content ?? '').match(TIMESTAMP_RE);
+  if (contentMatch) {
+    const ts = applyChapterBoundary(contentMatch[0], chapters);
+    return [{ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: 0 }];
+  }
+
+  const keyTermsMatch = (node.keyTerms ?? []).join(' ').match(TIMESTAMP_RE);
+  if (keyTermsMatch) {
+    const ts = applyChapterBoundary(keyTermsMatch[0], chapters);
+    return [{ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: 0 }];
+  }
+
+  if (!dimensionContent) return [];
+
+  const label = node.label;
+  if (label) {
+    const mentions: EntityMentionMatch[] = [];
+    const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const labelRe = new RegExp(escapedLabel, 'g');
+
+    let labelMatchResult: RegExpExecArray | null;
+    while ((labelMatchResult = labelRe.exec(dimensionContent)) !== null) {
+      const beforeLabel = dimensionContent.slice(0, labelMatchResult.index);
+      const candidateStr = findPrecedingTimestamp(beforeLabel);
+      if (candidateStr) {
+        const ts = applyChapterBoundary(candidateStr, chapters);
+        mentions.push({ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: mentions.length });
+      }
+    }
+
+    if (mentions.length > 0) return mentions;
+  }
+
+  // No label match found — fall back to first timestamp in dimension content
+  const singleMatch = dimensionContent.match(TIMESTAMP_RE);
+  if (singleMatch) {
+    const ts = applyChapterBoundary(singleMatch[0], chapters);
+    return [{ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: 0 }];
+  }
+
+  const rangeMatch = dimensionContent.match(TIMESTAMP_RANGE_RE);
+  if (rangeMatch) {
+    const startTime = rangeMatch[0]!.match(TIMESTAMP_RE);
+    if (startTime) {
+      const ts = applyChapterBoundary(startTime[0], chapters);
+      return [{ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: 0 }];
+    }
+  }
+
+  return [];
+}
+
+/**
+ * Pick the entity mention nearest the video's current playback position.
+ * Falls back to the first mention when currentPlaybackSeconds is null
+ * (nothing has played yet) or when there are no mentions.
+ */
+export function findNearestEntityMention(
+  node: EntityTimeSeekNode,
+  dimensionContent: string | null | undefined,
+  chapters: EntityTimeSeekChapter[] | null | undefined,
+  currentPlaybackSeconds: number | null,
+): EntityMentionMatch | null {
+  const mentions = findAllEntityMentions(node, dimensionContent, chapters);
+  if (mentions.length === 0) return null;
+  if (currentPlaybackSeconds === null || currentPlaybackSeconds === undefined) return mentions[0]!;
+  return mentions.reduce((best, mention) => {
+    const dist = Math.abs(mention.seekSeconds - currentPlaybackSeconds);
+    const bestDist = Math.abs(best.seekSeconds - currentPlaybackSeconds);
+    return dist < bestDist ? mention : best;
+  });
+}
+
 export function findEntityTimestamp(
   node: EntityTimeSeekNode,
   dimensionContent?: string | null,
   chapters?: EntityTimeSeekChapter[] | null,
 ): string | null {
-  // Entity-relevant candidate found FIRST (label/content/keyTerms, then
-  // dimension-content proximity), chapter-boundary snapping applied to
-  // WHATEVER candidate is found -- uniformly, not just the dimension-content
-  // fallback. Applying it only to the fallback path (the original P0-4 fix,
-  // 2026-08-05) left node.label/content/keyTerms matches unsnapped whenever
-  // an entity's own field happened to carry a literal timestamp.
-  const labelMatch = (node.label ?? '').match(TIMESTAMP_RE);
-  if (labelMatch) return applyChapterBoundary(labelMatch[0], chapters);
-
-  const contentMatch = (node.content ?? '').match(TIMESTAMP_RE);
-  if (contentMatch) return applyChapterBoundary(contentMatch[0], chapters);
-
-  const keyTermsMatch = (node.keyTerms ?? []).join(' ').match(TIMESTAMP_RE);
-  if (keyTermsMatch) return applyChapterBoundary(keyTermsMatch[0], chapters);
-
-  if (dimensionContent) {
-    let candidateStr: string | null = null;
-
-    const label = node.label;
-    if (label) {
-      const labelIdx = dimensionContent.indexOf(label);
-      if (labelIdx >= 0) {
-        const beforeLabel = dimensionContent.slice(0, labelIdx);
-        // A range (e.g. "60:00 to 65:00") must be recognized as ONE unit
-        // before falling back to individual-timestamp matching -- otherwise
-        // TIMESTAMP_RE_GLOBAL matches the range's start and end as two
-        // separate timestamps and picks the END (last match) as the
-        // candidate, when the range's START is what should anchor the
-        // entity that immediately follows it.
-        const rangeMatches = [...beforeLabel.matchAll(TIMESTAMP_RANGE_RE)];
-        const lastRange = rangeMatches[rangeMatches.length - 1];
-        if (lastRange && beforeLabel.slice(lastRange.index! + lastRange[0].length).trim() === '') {
-          const startTime = lastRange[0].match(TIMESTAMP_RE);
-          if (startTime) candidateStr = startTime[0];
-        }
-        if (!candidateStr) {
-          const timestamps = [...beforeLabel.matchAll(TIMESTAMP_RE_GLOBAL)];
-          if (timestamps.length > 0) {
-            candidateStr = timestamps[timestamps.length - 1]![0];
-          }
-        }
-      }
-    }
-
-    if (!candidateStr) {
-      const singleMatch = dimensionContent.match(TIMESTAMP_RE);
-      if (singleMatch) candidateStr = singleMatch[0];
-    }
-
-    if (!candidateStr) {
-      const rangeMatch = dimensionContent.match(TIMESTAMP_RANGE_RE);
-      if (rangeMatch) {
-        const startTime = rangeMatch[0]!.match(TIMESTAMP_RE);
-        if (startTime) candidateStr = startTime[0];
-      }
-    }
-
-    if (candidateStr) return applyChapterBoundary(candidateStr, chapters);
-  }
-
-  return null;
+  const mentions = findAllEntityMentions(node, dimensionContent, chapters);
+  return mentions[0]?.timestamp ?? null;
 }

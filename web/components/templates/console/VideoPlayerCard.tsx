@@ -14,7 +14,7 @@ export function VideoPlayerCard() {
   const seekQueueRef = useRef<number | null>(null);
   const videoIdRef = useRef<string | null>(null);
   const isPlayingRef = useRef(false);
-  const { isPlaying, seekTo, clearSeek, setPlaying } = useVideoStore();
+  const { isPlaying, seekTo, clearSeek, setPlaying, setCurrentPlaybackSeconds } = useVideoStore();
   const videoMetadata = useAnalysisStore((s) => s.videoMetadata);
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
   const [mounted, setMounted] = useState(false);
@@ -165,6 +165,25 @@ export function VideoPlayerCard() {
       playerRef.current.pause();
     }
   }, [isPlaying, ready]);
+
+  // Poll current playback position while playing so entity-seek can pick the
+  // nearest mention to where the video currently is. Polls at ~250ms cadence
+  // (4 updates/sec) — fast enough for entity-mention distance ranking, not
+  // fast enough to cause meaningful re-render churn (Zustand only notifies
+  // subscribers on actual value changes, and the read is a native method call
+  // on the YT player object, not a React state update).
+  useEffect(() => {
+    if (!ready || !playerRef.current || !isPlaying) return;
+    let active = true;
+    const poll = () => {
+      if (!active) return;
+      const currentTime = playerRef.current?.getCurrentTime?.() ?? null;
+      if (currentTime !== null) setCurrentPlaybackSeconds(currentTime);
+      requestAnimationFrame(poll);
+    };
+    requestAnimationFrame(poll);
+    return () => { active = false; };
+  }, [ready, isPlaying, setCurrentPlaybackSeconds]);
 
   if (!mounted || !videoId) return null;
 
