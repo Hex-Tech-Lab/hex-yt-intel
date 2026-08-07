@@ -185,3 +185,33 @@ export function StatusBadge({ status, label, tooltip, style = {} }: StatusBadgeP
 
   return badgeElement;
 }
+
+/**
+ * 3-state Chapter Chip: green (chapters present) | orange (attempted/no
+ * markers) | grey (not attempted/predates feature, or still in flight).
+ *
+ * Single shared source of chapter-status chip logic -- moved here (was
+ * previously defined only inside AnalysisHistory.tsx) so every screen
+ * showing per-video status renders the identical chip instead of
+ * independently reimplementing it. That drift is exactly what caused the
+ * synth console's own aux-status row to be missing a Chapters entry
+ * entirely (user report, 2026-08-07) while AnalysisHistory's list rows had
+ * one -- one "chip" concept, one component, plugged in wherever needed.
+ */
+export function ChapterChip({ hasChapters }: { hasChapters: boolean | null }) {
+  const config =
+    hasChapters === true
+      ? { label: 'Chapters', cls: 'bg-[var(--ok)]/15 text-[var(--ok)] border border-[var(--ok)]/40', title: 'Transcript chapters extracted from description' }
+      : hasChapters === false
+      ? { label: 'No Chapters', cls: 'bg-[var(--warn)]/15 text-[var(--warn)] border border-[var(--warn)]/40', title: 'Chapter parse attempted, no valid markers found' }
+      : { label: 'Chapters N/A', cls: 'bg-transparent text-[var(--ink-muted)] border border-dashed border-[var(--line)]', title: 'Chapter parsing not attempted, still in progress, or failed for this video' };
+
+  return (
+    <Tooltip content={config.title}>
+      <span className={`shrink-0 inline-flex items-center gap-1 text-[9px] font-mono font-semibold tabular-nums px-1.5 py-0.5 rounded ${config.cls}`}>
+        <Icon icon="solar:bookmark-opened-linear" size={11} />
+        {config.label}
+      </span>
+    </Tooltip>
+  );
+}

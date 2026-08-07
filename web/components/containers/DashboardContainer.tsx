@@ -20,7 +20,7 @@ import { IntelligencePanel } from '@/components/templates/console/IntelligencePa
 import { ChatDock } from '@/components/templates/console/ChatDock';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
 import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
-import { Icon, StatusBadge } from '@/components/templates/_shared/primitives';
+import { Icon, StatusBadge, ChapterChip } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
 import { isStackedLayout } from '@/hooks/useIsStackedLayout';
@@ -140,7 +140,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // threads them into findEntityTimestamp. Empty during the fetch window —
   // findEntityTimestamp falls through to regex, which is the correct degraded
   // behavior.
-  const { chapters } = useChapters(videoMetadata?.videoId || nucleusAnalysis?.videoId || null);
+  const { chapters, status: chaptersStatus } = useChapters(videoMetadata?.videoId || nucleusAnalysis?.videoId || null);
 
   useEffect(() => {
     setUserRole(profile.role);
@@ -664,6 +664,11 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                           <StatusBadge status={auxStatus.description ? 'done' : 'idle'} label="Description" tooltip="YouTube video description ingested" />
                           <StatusBadge status={auxStatus.channelMeta ? 'done' : 'idle'} label="Channel Meta" tooltip="Channel metadata and statistics enriched" />
                           <StatusBadge status={auxStatus.comments ? 'done' : 'idle'} label="Comments" tooltip="Top audience comments sampled and analyzed" />
+                          <ChapterChip
+                            hasChapters={
+                              chaptersStatus === 'loaded' ? chapters.length > 0 : null
+                            }
+                          />
                         </div>
                       )}
                       {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
