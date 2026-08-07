@@ -1,0 +1,26 @@
+web/components/templates/console/AnalysisHistory.tsx
+  s_0eded1e9d0cab6::t_6b3f9b2393f190 12
+web/components/templates/_shared/primitives.tsx
+  s_0eded1e9d0cab6::t_48995783dc35ac 188-217
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_a4d702ec6acdd7 23
+  s_0eded1e9d0cab6::t_75eb190fe52353 143
+  s_0eded1e9d0cab6::t_9cda5dd685716d 667-669
+  s_0eded1e9d0cab6::t_6eb51b99e763ed 670-671
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "44b56a84bed51cbb6c0a7db143581fc743fdaa92",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
