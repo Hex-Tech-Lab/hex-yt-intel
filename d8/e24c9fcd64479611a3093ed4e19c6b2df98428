@@ -1,0 +1,24 @@
+worker/package.json
+  s_0eded1e9d0cab6::t_c8ca140ae8bc26 3
+web/app/api/health/route.ts
+  s_0eded1e9d0cab6::t_8297f2e342dc5c 13
+  s_0eded1e9d0cab6::t_6c0c2677015bcd 2
+package.json
+  s_0eded1e9d0cab6::t_3bd684e6512595 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d8e24c9fcd64479611a3093ed4e19c6b2df98428",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
