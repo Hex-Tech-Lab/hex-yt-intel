@@ -1,0 +1,49 @@
+web/lib/usecases/CreateAnalysisUseCase.ts
+  s_0eded1e9d0cab6::t_e37cdceb380123 177-180,183-184,186
+  s_0eded1e9d0cab6::t_b3b309a36dfc45 322
+  s_0eded1e9d0cab6::t_809bd4819cf60c 71
+  s_0eded1e9d0cab6::t_c54b7cc95bed60 321
+  s_0eded1e9d0cab6::t_ce9b81f32968e2 72
+  s_0eded1e9d0cab6::t_16fadc294616fb 181-182,185
+web/lib/services/dimension-remediation.ts
+  s_0eded1e9d0cab6::t_cdce1b746c91f8 399-408,411-412
+  s_0eded1e9d0cab6::t_dc3a0f7014acb6 394-398,409-410,413,437
+  s_0eded1e9d0cab6::t_eb5f1017640190 456
+  s_0eded1e9d0cab6::t_aca78f67d65164 444-455
+  s_0eded1e9d0cab6::t_9494281c969a83 438
+web/lib/types/contracts.ts
+  s_0eded1e9d0cab6::t_44a1df64dcba4f 244-248
+  s_0eded1e9d0cab6::t_0c488c54b0daea 249-251
+worker/src/services/LLMCascade.ts
+  s_0eded1e9d0cab6::t_0b38adb3ae820e 42-47,51,59,74,82
+  s_0eded1e9d0cab6::t_6e1933c7ce528d 259,261
+  s_0eded1e9d0cab6::t_dff695797f0861 160
+  s_0eded1e9d0cab6::t_24a90e77bda16a 444-458
+  s_0eded1e9d0cab6::t_bb7d81b0d590fd 549-555
+  s_0eded1e9d0cab6::t_d8ffb992d3e5ca 48-50,60,75-76,79
+  s_0eded1e9d0cab6::t_d77cbac3ad18e4 252
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_78c2d5e95cb9bd 100-102
+  s_0eded1e9d0cab6::t_d822faeb21b4fc 103-104
+  s_0eded1e9d0cab6::t_ff942d681237c2 1161
+CLAUDE.md
+  s_0eded1e9d0cab6::t_238ddbb1e94759 10-13,18,21
+supabase/migrations/20260807124414_analysis_llm_cascade_timeout_settings.sql
+  s_0eded1e9d0cab6::t_bde70bf70e85c9 1-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6c6236dd9073df4758e02d2fad2d8ef87b4132fa",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
