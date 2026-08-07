@@ -57,7 +57,7 @@ describe('BracketBuffer emission-boundary (ADR 021 Phase 1 verification)', () =>
     // fragments already (dims 1 and 2 are individually complete, valid JSON
     // objects). It does not -- feed() only fires at depth 0, and depth is
     // still 2 (envelope + dimensions array) at this point.
-    expect(fragments.filter((f) => f.type === 'dimension')).toHaveLength(0);
+    expect(fragments.filter((frag) => frag.type === 'dimension')).toHaveLength(0);
   });
 
   it('feed() DOES emit both dimensions the instant the outer envelope closes -- confirming the trigger is envelope-closure, not per-dimension-closure', () => {
@@ -69,9 +69,9 @@ describe('BracketBuffer emission-boundary (ADR 021 Phase 1 verification)', () =>
       ']}';
 
     const fragments = bb.feed(full);
-    const dims = fragments.filter((f) => f.type === 'dimension');
+    const dims = fragments.filter((frag) => frag.type === 'dimension');
     expect(dims).toHaveLength(2);
-    expect(dims.map((d) => d.dimension)).toEqual([1, 2]);
+    expect(dims.map((dim) => dim.dimension)).toEqual([1, 2]);
   });
 
   it('finalize() recovers dimensions from a truncated envelope via best-effort bracket/quote repair (the actual Phase 1 recovery path)', () => {
@@ -87,13 +87,13 @@ describe('BracketBuffer emission-boundary (ADR 021 Phase 1 verification)', () =>
 
     bb.feed(truncated); // no depth-0 closure reached -- feed() alone yields nothing
     const finalFragments = bb.finalize();
-    const dims = finalFragments.filter((f) => f.type === 'dimension');
+    const dims = finalFragments.filter((frag) => frag.type === 'dimension');
 
     // This specific truncation pattern (cut mid-string, inside the last
     // array element) IS recoverable by repairUnclosedJson's naive
     // quote+bracket closing -- all 3 dimensions come back, with dim 3's
     // content garbled but the object still valid JSON.
-    expect(dims.map((d) => d.dimension)).toEqual([1, 2, 3]);
+    expect(dims.map((dim) => dim.dimension)).toEqual([1, 2, 3]);
   });
 
   it('finalize() recovers ZERO dimensions when truncation happens mid-KEY (no value to repair) -- proves recovery is best-effort, not guaranteed', () => {
@@ -113,7 +113,7 @@ describe('BracketBuffer emission-boundary (ADR 021 Phase 1 verification)', () =>
 
     bb.feed(truncated);
     const finalFragments = bb.finalize();
-    const dims = finalFragments.filter((f) => f.type === 'dimension');
+    const dims = finalFragments.filter((frag) => frag.type === 'dimension');
 
     expect(dims).toHaveLength(0);
   });

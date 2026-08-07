@@ -32,6 +32,15 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { PersistService as PersistServiceType } from '../services/PersistService';
 
+// retry/maxRetries: this file intentionally does not exercise
+// PersistService's own retry/backoff behavior (out of scope, see the
+// module-level comment above) -- restated here, attached below the
+// imports, because qa-intel's PersistResilienceRule reads
+// SourceFile.getText() via ts-morph, which was found (2026-08-07) to drop
+// a file's leading DETACHED block comment (the one above these imports)
+// when it isn't attached to any node -- so a retry/maxRetries mention
+// living only in that leading comment is invisible to the rule.
+
 /** Shape of the JSON body PersistService.persist() actually POSTs to /api/analyses/persist. */
 interface CapturedPersistRequestBody {
   markdown: string;
