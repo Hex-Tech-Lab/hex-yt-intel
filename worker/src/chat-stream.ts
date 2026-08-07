@@ -209,10 +209,26 @@ export async function streamChatCascade(
       const isTimeout = e instanceof DOMException && e.name === 'AbortError';
       // skipcq: JS-0827
       console.warn(`[chat-cascade] Model ${translatedModel} failed: ${isTimeout ? 'timeout (50s)' : msg}`);
+      // Previously console-only -- tangent hunt after LLMCascade.ts's
+      // abort/timeout-suppression incident (see its timeoutMs doc comment).
+      // captureMessage matches LLMCascade's own fallback-capture convention.
+      Sentry.captureMessage(`chat-cascade model failed: ${translatedModel}`, {
+        level: 'warning',
+        tags: { operation: 'chat-cascade-fallback', model: translatedModel, isTimeout: String(isTimeout) },
+        extra: { msg, attempts },
+      });
     }
   }
   // skipcq: JS-0827
   console.error(`[chat-cascade] All models in cascade exhausted (attempted: ${attempts.join(' -> ')}), returning empty response`);
+  // Total exhaustion returns { content: "" } rather than throwing, so the
+  // caller's try/catch below never sees an error -- silently-empty chat
+  // response with zero Sentry trace, same shape as the LLMCascade incident.
+  Sentry.captureMessage('chat-cascade: all models exhausted, returning empty response', {
+    level: 'error',
+    tags: { operation: 'chat-cascade-exhausted' },
+    extra: { attempts, userId },
+  });
   return { content: "", servedByModel: null, servedByProvider: null, attempts };
 }
 

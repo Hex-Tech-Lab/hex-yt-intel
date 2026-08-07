@@ -246,6 +246,17 @@ async function captureQuestionAsync(
     } else {
       console.warn('[chat] Question capture failed (async, non-blocking):', msg);
     }
+    // Previously console-only, no Sentry call at all -- tangent-hunt fix
+    // 2026-08-07 after the LLMCascade abort/timeout-suppression incident.
+    // captureMessage (not captureException -- fire-and-forget by design,
+    // never throws), level mirrors the console severity above so an
+    // expected 5s timeout doesn't page anyone but IS still searchable if
+    // capture loss ever becomes systemic.
+    Sentry.captureMessage('chat question-capture failed', {
+      level: isTimeout ? 'debug' : 'warning',
+      tags: { operation: 'chat-question-capture', isTimeout: String(isTimeout) },
+      extra: { msg },
+    });
     // Never throw — fire-and-forget must never interfere with chat response
   }
 }
