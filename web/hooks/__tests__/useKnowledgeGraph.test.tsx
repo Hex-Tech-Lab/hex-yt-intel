@@ -73,4 +73,91 @@ describe('useKnowledgeGraph client-side fallback', () => {
 
     unmount();
   });
+
+  it('tags API-sourced nodes with a numeric dimension (regression, 2026-08-07 nav-remount entity-seek RCA)', async () => {
+    // kg_entities has no `dimension` column (see
+    // supabase/migrations/20260610110000_add_knowledge_graph_tables.sql) --
+    // nodes from this API path previously carried `dimension: undefined`.
+    // DashboardContainer's handleSelectNode calls
+    // useAnalysisDimensionsStore.getDimension(node.dimension), which returns
+    // undefined for a non-numeric input by construction, so every click on
+    // one of these nodes fell into the "wait 15s for a dimension that will
+    // never stream in" retry branch -- a real, permanently-silent entity-seek
+    // no-op for any node sourced from a populated kg_entities table.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          entities: [{ id: 'e1', label: 'Transformer', type: 'concept', weight: 3 }],
+          relations: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    useSynthesisNucleus.getState().initializeAnalysis({
+      id: 'analysis-kg-api-nodes',
+      videoId: 'vid2',
+      title: 'API-sourced KG nodes test',
+      dimensions: {},
+    });
+
+    const { result, unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-api-nodes'));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(result.current.graph.nodes.length).toBe(1);
+    expect(typeof result.current.graph.nodes[0].dimension).toBe('number');
+    expect(Number.isFinite(result.current.graph.nodes[0].dimension)).toBe(true);
+
+    unmount();
+  });
+
+  it('preserves the real dimension from raw_node when present (Cubic PR #217 P1 finding)', async () => {
+    // persistGraph() stores the original GraphNode losslessly in `raw_node`
+    // (SupabasePersistenceAdapter.persistGraph -- `rawNode: n`), which DOES
+    // carry the entity's real dimension even though the flat `kg_entities`
+    // row does not. The fix must prefer raw_node.dimension over the sentinel
+    // fallback -- otherwise every API-sourced node seeks against Dimension 8
+    // regardless of where it actually came from (silently WRONG, not just a
+    // no-op).
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          entities: [
+            { id: 'e1', label: 'Transformer', type: 'concept', weight: 3, raw_node: { dimension: 3 } },
+            { id: 'e2', label: 'No metadata', type: 'concept', weight: 1 },
+          ],
+          relations: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    useSynthesisNucleus.getState().initializeAnalysis({
+      id: 'analysis-kg-raw-node',
+      videoId: 'vid3',
+      title: 'raw_node dimension preservation test',
+      dimensions: {},
+    });
+
+    const { result, unmount } = renderHook(() => useKnowledgeGraph('analysis-kg-raw-node'));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(result.current.graph.nodes.length).toBe(2);
+    const withRawNode = result.current.graph.nodes.find((node) => node.id === 'e1');
+    const withoutRawNode = result.current.graph.nodes.find((node) => node.id === 'e2');
+    // Real dimension preserved from raw_node, NOT the DEFAULT_KG_EXTRACTION_DIMENSION sentinel.
+    expect(withRawNode?.dimension).toBe(3);
+    // No recoverable dimension anywhere -- sentinel fallback is still correct here.
+    expect(withoutRawNode?.dimension).toBe(8);
+
+    unmount();
+  });
 });

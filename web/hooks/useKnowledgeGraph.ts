@@ -76,13 +76,52 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
       })
       .then((data) => {
         if (cancelled) return;
-        const nodes = (data.entities || []).map((e: any) => ({
-          id: e.id,
-          label: e.label,
-          type: e.type,
-          entityType: e.type || 'concept',
-          weight: e.weight
-        }));
+        // Post-review finding (2026-08-07, nav-remount entity-seek RCA): the
+        // kg_entities table has NO `dimension` column (see
+        // supabase/migrations/20260610110000_add_knowledge_graph_tables.sql)
+        // -- nodes sourced from THIS API path previously had `dimension`
+        // silently omitted entirely (`undefined`). DashboardContainer's
+        // handleSelectNode then calls
+        // `useAnalysisDimensionsStore.getState().getDimension(node.dimension)`,
+        // which returns `undefined` for a non-numeric input by construction
+        // (isValidDimensionNumber gate) -- `dim` is always undefined for
+        // these nodes, so every click falls into the "dimension not yet
+        // streamed, subscribe and retry" branch, which can only ever resolve
+        // if that exact (undefined) dimension number later streams in --
+        // impossible. For a completed/restored analysis nothing streams
+        // again, so the retry silently times out after 15s with zero
+        // feedback: a real seek never happens, exactly the reported
+        // entity-click-seek no-op symptom. Falling back to the SAME sentinel
+        // (DEFAULT_KG_EXTRACTION_DIMENSION) the storeKnowledgeGraph branch
+        // below already uses for the identical "no reliable per-node
+        // dimension" situation keeps this path from being a guaranteed dead
+        // end -- worst case it seeks off dimension 8's content, but that is
+        // strictly better than never seeking at all.
+        const nodes = (data.entities || []).map((e: any) => {
+          // Cubic P1 (PR #217 review): kg_entities has no top-level `dimension`
+          // column, but persistGraph() stores the ORIGINAL GraphNode (which does
+          // carry a real `dimension`) losslessly in `raw_node` (see
+          // SupabasePersistenceAdapter.persistGraph -- `rawNode: n`). Checking
+          // only `e.dimension` (always undefined for this table) meant every
+          // API-sourced node silently fell back to DEFAULT_KG_EXTRACTION_DIMENSION
+          // even when its real dimension was recoverable from raw_node, producing
+          // a confidently WRONG seek instead of an honest no-op. Prefer the
+          // preserved raw_node.dimension; only use the sentinel when neither
+          // source has a valid number.
+          const rawDimension = e.raw_node?.dimension;
+          const resolvedDimension =
+            typeof rawDimension === 'number' ? rawDimension :
+            typeof e.dimension === 'number' ? e.dimension :
+            DEFAULT_KG_EXTRACTION_DIMENSION;
+          return {
+            id: e.id,
+            dimension: resolvedDimension,
+            label: e.label,
+            type: e.type,
+            entityType: e.type || 'concept',
+            weight: e.weight
+          };
+        });
         const nodeIds = new Set(nodes.map((n: any) => String(n.id)));
         const edges: Array<{ source: string; target: string; strength: number; kind: RelationKind }> = [];
         for (const rItem of (data.relations || [])) {
