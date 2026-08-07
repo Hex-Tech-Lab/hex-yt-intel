@@ -241,6 +241,14 @@ export interface WorkerStreamRequest {
   // Registry-resolved (2026-07-25) -- see CreateAnalysisUseCase and LLMCascade.ts's
   // MAX_TOKENS_FALLBACK doc comment for the production-outage RCA behind this field.
   maxOutputTokens?: { haiku: number; default: number };
+  // Registry-resolved (2026-08-07) -- see CreateAnalysisUseCase and LLMCascade.ts's
+  // timeoutMs doc comment for the RCA behind this field (a long-video timeout
+  // incident traced to a hardcoded value that falsely assumed a non-existent
+  // Cloudflare platform ceiling).
+  llmCascadeTimeoutMs?: number;
+  // Registry-resolved (2026-08-07, analysis.llmCascade.handshakeTimeoutMs) --
+  // sibling of llmCascadeTimeoutMs, per-model connection-handshake budget.
+  llmCascadeHandshakeTimeoutMs?: number;
   sig: string;
   exp: number;
   appUrl?: string;

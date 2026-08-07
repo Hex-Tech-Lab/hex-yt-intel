@@ -391,6 +391,26 @@ async function collectDimensionsFromWorker(
 ): Promise<Record<string, unknown> | null> {
   const token = await signStreamToken(gap.videoId, gap.id, models);
 
+  // Registry-resolved (2026-08-07) -- see LLMCascade.ts's timeoutMs doc
+  // comment for the RCA. Forwarded to the worker below AND used to derive
+  // this function's own outer fetch-abort timeout further down, so both
+  // layers agree on the same budget.
+  const timeoutRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+    [
+      'analysis.llmCascade.timeoutMs',
+      'analysis.llmCascade.handshakeTimeoutMs',
+      'analysis.remediation.connectionTimeoutMs',
+    ],
+    {
+      'analysis.llmCascade.timeoutMs': 240000,
+      'analysis.llmCascade.handshakeTimeoutMs': 15000,
+      'analysis.remediation.connectionTimeoutMs': 3000,
+    }
+  );
+  const resolvedLlmTimeoutMs = Number(timeoutRegistry['analysis.llmCascade.timeoutMs']) || 240000;
+  const resolvedHandshakeTimeoutMs = Number(timeoutRegistry['analysis.llmCascade.handshakeTimeoutMs']) || 15000;
+  const resolvedConnectionTimeoutMs = Number(timeoutRegistry['analysis.remediation.connectionTimeoutMs']) || 3000;
+
   const body = {
     videoId: gap.videoId,
     analysisId: gap.id,
@@ -414,16 +434,26 @@ async function collectDimensionsFromWorker(
     timezone: (gap.metadata.timezone as string) ?? 'UTC',
     models,
     cascade,
+    llmCascadeTimeoutMs: resolvedLlmTimeoutMs,
+    llmCascadeHandshakeTimeoutMs: resolvedHandshakeTimeoutMs,
     dimensions: gap.missingDimensions,
     sig: token.sig,
     exp: token.exp,
   };
 
-  // Stratified dual-timeout architecture (CLAUDE.md Law #2):
-  // - Connection handshake: 3-second hard timeout
-  // - Token streaming window: 90-second maximum read (Worker budget)
-  const CONNECTION_TIMEOUT_MS = 3_000;
-  const STREAMING_TIMEOUT_MS = 90_000;
+  // Stratified dual-timeout architecture (CLAUDE.md Law #2), both registry-
+  // resolved above:
+  // - Connection handshake: analysis.remediation.connectionTimeoutMs --
+  //   bounded by real network/TLS latency, deliberately kept short.
+  // - Token streaming window: resolvedLlmTimeoutMs + margin -- this is the
+  //   OUTER client-side fetch abort wrapping the worker's INNER per-model
+  //   timeout; it must never be shorter than what the worker itself is
+  //   configured to allow, or this caller aborts a request the worker was
+  //   still legitimately working on. Previously hardcoded to 90_000 (the
+  //   same debunked "90s Worker ceiling" assumption fixed 2026-08-07 -- see
+  //   LLMCascade.ts's timeoutMs doc comment for the full RCA).
+  const CONNECTION_TIMEOUT_MS = resolvedConnectionTimeoutMs;
+  const STREAMING_TIMEOUT_MS = resolvedLlmTimeoutMs + 30_000;
   const abortController = new AbortController();
 
   // Connection timeout aborts stalled handshakes

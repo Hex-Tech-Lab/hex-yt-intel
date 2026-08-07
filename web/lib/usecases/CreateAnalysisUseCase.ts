@@ -68,6 +68,8 @@ export interface UseCaseSuccess {
   models: string[];
   cascade: CascadeItem[];
   maxOutputTokens: { haiku: number; default: number };
+  llmCascadeTimeoutMs: number;
+  llmCascadeHandshakeTimeoutMs: number;
   commentsConfig: CommentsFetchConfig;
   channelMetaConfig: ChannelMetaFetchConfig;
   commentsSamplePlan?: { targetSampleCount: number; likeBucketCount: number; recencyBucketCount: number };
@@ -171,6 +173,16 @@ export class CreateAnalysisUseCase {
       haiku: Number(resolvedMaxTokensRegistry['analysis.maxOutputTokens.haiku']) || 8192,
       default: Number(resolvedMaxTokensRegistry['analysis.maxOutputTokens.default']) || 16000,
     };
+
+    // Registry-resolved (2026-08-07 -- see LLMCascade.ts's timeoutMs doc
+    // comment for the RCA behind this: the prior hardcoded 120000 falsely
+    // assumed a Cloudflare platform ceiling that doesn't actually exist).
+    const resolvedTimeoutRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+      ['analysis.llmCascade.timeoutMs', 'analysis.llmCascade.handshakeTimeoutMs'],
+      { 'analysis.llmCascade.timeoutMs': 240000, 'analysis.llmCascade.handshakeTimeoutMs': 15000 }
+    );
+    const llmCascadeTimeoutMs = Number(resolvedTimeoutRegistry['analysis.llmCascade.timeoutMs']) || 240000;
+    const llmCascadeHandshakeTimeoutMs = Number(resolvedTimeoutRegistry['analysis.llmCascade.handshakeTimeoutMs']) || 15000;
 
     // Compute transcript hash (ADR 006: input-based cache key)
     const transcriptHash = createHash('sha256')
@@ -306,6 +318,8 @@ export class CreateAnalysisUseCase {
         models,
         cascade: analysisCascade,
         maxOutputTokens,
+        llmCascadeTimeoutMs,
+        llmCascadeHandshakeTimeoutMs,
         commentsConfig,
         channelMetaConfig,
         commentsSamplePlan,

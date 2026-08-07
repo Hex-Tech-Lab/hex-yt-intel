@@ -7,18 +7,18 @@
 ### Law #1: Pre-Query Cache Hit Circuit
 Before EVERY analysis request, the system must query the Supabase `analyses` table matching the `video_id` and `user_id`. If found, it returns the cached markdown instantly.
 
-### Law #2: Stratified Dual-Timeouts
-The OpenRouter model fallback sequence utilizes a stratified dual-timeout architecture:
-- **Connection Handshake**: 3-second hard timeout.
-- **Token Streaming Window**: 25-second (Vercel) / 90-second (Worker) maximum read.
+### Law #2: Stratified Dual-Timeouts (corrected 2026-08-07)
+The OpenRouter model fallback sequence utilizes a stratified dual-timeout architecture, both registry-driven (`analysis.llmCascade.*` / `analysis.remediation.connectionTimeoutMs` -- see `scripts/quality-engine`'s no-hardcoded-tunables directive):
+- **Connection Handshake**: worker-internal per-model handshake `analysis.llmCascade.handshakeTimeoutMs` (default 15s); the outer client-side (Vercel) connection wait before the worker starts responding is `analysis.remediation.connectionTimeoutMs` (default 3s, remediation path only -- the live SSE path has no outer wrapper timeout since the browser fetch itself has no deadline while the worker keeps streaming).
+- **Token Streaming Window**: `analysis.llmCascade.timeoutMs` (default 4 min) per model-tier LLM call. This line previously said "90-second (Worker) maximum read" -- **that was never a real Cloudflare platform limit.** ADR 005 (`docs/specs/ADR_005_HYBRID_EDGE_ARCHITECTURE.md`) states plainly: "no execution timeouts (CF Workers have no duration limit while the client stays connected)" -- confirmed against Cloudflare's own current docs (CPU time is budgeted, default 30s/invocation on paid plans, up to 5 min configurable; time spent waiting on an outgoing `fetch()` does NOT count toward CPU time) and OpenRouter's own docs (no documented hard server-side timeout on streaming completions -- they send SSE keep-alive comments specifically to support long generations). The stale 90s figure caused a real incident (2026-08-06/07): a ~64-minute video's longer transcript/generation time hit the then-hardcoded 120000ms code timeout, force-aborted mid-generation with zero dimensions ever persisted (bundle-level, not dimension-level persistence -- separate open item, ADR 021) and zero Sentry visibility (timeouts were deliberately excluded from capture -- also fixed 2026-08-07, every abort/timeout is now captured).
 
 ### Law #3: Streaming Response Execution
 All analytical route handlers MUST implement dynamic response streaming to extend the connection lifetime.
 
-### Law #4: Hybrid Edge Symphony (ADR 005)
+### Law #4: Hybrid Edge Symphony (ADR 005, corrected 2026-08-07)
 The platform utilizes a multi-cloud hybrid flow:
 - **Vercel**: Auth/Quota Bouncer (~8s).
-- **Cloudflare**: High-latency LLM Streaming (~58s).
+- **Cloudflare**: LLM Streaming, effectively unbounded wall-clock duration while the client stays connected (see Law #2's correction -- the previous "~58s" figure here was never a real platform constraint either).
 - **S2S /persist**: Tamper-proof server-to-server data persistence using HMAC signatures.
 
 ---

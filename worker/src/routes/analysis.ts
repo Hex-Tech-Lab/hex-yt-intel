@@ -97,6 +97,11 @@ interface StreamRequest {
   // Registry-resolved (2026-07-25, analysis.maxOutputTokens.*) -- see LLMCascade.ts's
   // MAX_TOKENS_FALLBACK for why this must never be hardcoded worker-side again.
   maxOutputTokens?: { haiku: number; default: number };
+  // Registry-resolved (2026-08-07, analysis.llmCascade.timeoutMs) -- see
+  // LLMCascade.ts's timeoutMs doc comment for the RCA behind this field.
+  llmCascadeTimeoutMs?: number;
+  // Registry-resolved (2026-08-07, analysis.llmCascade.handshakeTimeoutMs).
+  llmCascadeHandshakeTimeoutMs?: number;
   sig: string;
   exp: number;
   appUrl?: string;
@@ -1153,7 +1158,7 @@ analysis.post("/analyze-llm-stream", async (c) => {
     }
   }
 
-  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId), new ValidationService(), cache);
+  const engine: ReasoningEnginePort = new ReasoningEngine(new PromptBuilder(promptConfig), new LLMCascade(apiKey, req.models, req.cascade, req.maxOutputTokens, req.userId, req.llmCascadeTimeoutMs, req.llmCascadeHandshakeTimeoutMs), new ValidationService(), cache);
 
   const persistController = new AbortController();
   const httpConnSignal = c.req.raw['signal'];

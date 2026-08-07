@@ -39,6 +39,16 @@ const HTTP_REFERER = 'https://yt-intel.hex-tech-lab.workers.dev';
 // ONLY the fallback for a stale client that didn't forward maxOutputTokens.
 const MAX_TOKENS_FALLBACK = { haiku: 8192, default: 16000 };
 
+// Fallback only, for a stale client that didn't forward llmCascadeTimeoutMs
+// -- see CreateAnalysisUseCase's resolution of analysis.llmCascade.timeoutMs
+// and this file's timeoutMs doc comment on streamCascade's callLLMStream
+// call for the full RCA (was hardcoded to 120000, falsely assumed a 90s
+// Cloudflare Worker platform ceiling that does not actually exist).
+const LLM_TIMEOUT_MS_FALLBACK = 240000;
+// Fallback only, for a stale client that didn't forward
+// llmCascadeHandshakeTimeoutMs (analysis.llmCascade.handshakeTimeoutMs).
+const LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK = 15000;
+
 export class LLMCascade implements LLMCascadePort {
   private apiKey: string;
   // The ordered cascade actually used. Defaults to the hardcoded MODEL_CHAIN, but the
@@ -46,6 +56,8 @@ export class LLMCascade implements LLMCascadePort {
   // the override source of truth; MODEL_CHAIN is the safety-net fallback.
   private chain: ReadonlyArray<{ model: string; name: string; providerOrder?: readonly string[] }>;
   private maxTokens: { haiku: number; default: number };
+  private llmTimeoutMs: number;
+  private llmHandshakeTimeoutMs: number;
   // Forwarded to OpenRouter's `user` field so requests are correlatable back
   // to a caller in OpenRouter's own activity dashboard (2026-07-30, security
   // correlation capability). Never used for authorization here -- Vercel
@@ -59,11 +71,15 @@ export class LLMCascade implements LLMCascadePort {
     models?: string[],
     cascade?: ReadonlyArray<{ model: string; name: string; cost?: number; providerOrder?: string[] }>,
     maxOutputTokens?: { haiku: number; default: number },
-    userId?: string
+    userId?: string,
+    llmTimeoutMs?: number,
+    llmHandshakeTimeoutMs?: number
   ) {
     this.apiKey = apiKey;
+    this.llmHandshakeTimeoutMs = llmHandshakeTimeoutMs ?? LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK;
     this.maxTokens = maxOutputTokens ?? MAX_TOKENS_FALLBACK;
     this.userId = userId;
+    this.llmTimeoutMs = llmTimeoutMs ?? LLM_TIMEOUT_MS_FALLBACK;
     if (cascade && cascade.length > 0) {
       // Preferred path: full registry-resolved tiers, providerOrder included
       // directly -- correct even when multiple tiers share one model id
@@ -141,7 +157,7 @@ export class LLMCascade implements LLMCascadePort {
           finalText += delta;
           onDelta(delta);
         },
-        120000,
+        this.llmTimeoutMs,
         signal,
         providerOrder as string[] | undefined
       );
@@ -233,16 +249,16 @@ export class LLMCascade implements LLMCascadePort {
     model: string,
     systemPrompt: string,
     onDelta: (text: string) => void,
-    timeoutMs = 120000,
+    timeoutMs = LLM_TIMEOUT_MS_FALLBACK,
     signal?: AbortSignal,
     providerOrder?: string[]
   ): Promise<{ started: boolean; text: string; error?: string; finishReason?: string; tokensUsed?: number; costUsd?: number; generationId?: string }> {
     const controller = new AbortController();
     const handshakeTimer = setTimeout(() => {
       // skipcq: JS-0827
-      console.warn(`[LLMCascade] Handshake timeout (15s exceeded) for model ${model}`);
+      console.warn(`[LLMCascade] Handshake timeout (${this.llmHandshakeTimeoutMs}ms exceeded) for model ${model}`);
       controller.abort();
-    }, 15000);
+    }, this.llmHandshakeTimeoutMs);
     const totalTimer = setTimeout(() => {
       // skipcq: JS-0827
       console.warn(`[LLMCascade] Total execution timeout (${timeoutMs}ms exceeded) for model ${model}`);
@@ -425,14 +441,21 @@ export class LLMCascade implements LLMCascadePort {
       clearTimeout(totalTimer);
       const message = error instanceof Error ? error.message : 'Unknown error';
       const isTimeout = message === 'The operation was aborted';
-      console.error('[LLMCascade.callLLMStream]', { model, requestModel, message, isTimeout });
-      // Deliberately not Sentry.captureException for a plain abort/timeout --
-      // those are expected under normal cascade operation (handshake/total
-      // budget exceeded) and would be pure noise at volume. Anything else
-      // here (a genuine unexpected throw) is real and worth seeing.
-      if (!isTimeout) {
-        Sentry.captureException(error, { contexts: { llmCascade: { model, requestModel } } });
-      }
+      console.error('[LLMCascade.callLLMStream]', { model, requestModel, message, isTimeout, timeoutMs });
+      // Previously NOT captured to Sentry at all for a plain abort/timeout
+      // (reasoning: "expected under normal cascade operation, pure noise at
+      // volume") -- reversed 2026-08-07 per explicit user directive during
+      // this project's stabilization phase: every abort/timeout must be
+      // visible for RCA, full stop, even if that means more volume. A
+      // captureException (not captureMessage) with `started`/timeoutMs/text
+      // length in context, so a timeout that already produced partial
+      // output (this session's actual live incident: bundle progress
+      // visible client-side, zero dimensions ever persisted) is
+      // distinguishable from one that never got any tokens at all.
+      Sentry.captureException(error, {
+        contexts: { llmCascade: { model, requestModel, isTimeout, timeoutMs, started, textLength: text.length } },
+        tags: { operation: 'llm-cascade-timeout-or-abort', isTimeout: String(isTimeout) },
+      });
       return { started, text, error: isTimeout ? 'Request timeout' : message, finishReason };
     } finally {
       clearTimeout(handshakeTimer);
@@ -523,10 +546,13 @@ export class LLMCascade implements LLMCascadePort {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       const isTimeout = message === 'The operation was aborted';
-      console.error('[LLMCascade.callLLM]', { model: requestModel, message, isTimeout });
-      if (!isTimeout) {
-        Sentry.captureException(error, { contexts: { llmCascade: { model: requestModel } } });
-      }
+      console.error('[LLMCascade.callLLM]', { model: requestModel, message, isTimeout, timeoutMs });
+      // Same reversal as callLLMStream's catch block above -- every
+      // abort/timeout captured, not just non-timeout throws (2026-08-07).
+      Sentry.captureException(error, {
+        contexts: { llmCascade: { model: requestModel, isTimeout, timeoutMs } },
+        tags: { operation: 'llm-cascade-timeout-or-abort', isTimeout: String(isTimeout) },
+      });
       return { success: false, error: isTimeout ? 'Request timeout' : message };
     } finally {
       clearTimeout(timeout);
