@@ -1,3 +1,12 @@
+// @vitest-environment happy-dom
+//
+// This test file renders real components via @testing-library/react but was
+// silently never executed by CI at all (see vitest.config.ts's include glob
+// fix, 2026-08-08 retro review of PR #212) -- the missing environment
+// pragma below was never caught because the file never ran. Added now that
+// the glob fix makes it actually run under the workspace's default `node`
+// environment, matching the pattern already used by every other RTL test
+// in this repo (see hooks/__tests__/*.test.tsx, components/.../WordCloud.test.tsx).
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TimestampLink } from '@/components/TimestampLink';
 import { useVideoStore } from '@/store/useVideoStore';

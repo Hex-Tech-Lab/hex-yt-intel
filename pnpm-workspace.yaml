@@ -57,7 +57,10 @@ overrides:
   "form-data": "^4.0.6"
   # Dependabot #61 (2026-07-24): bumped ^4.1.2 -> ^4.3.0 (YAML merge-key
   # quadratic-CPU CVE).
-  "js-yaml": "^4.3.0"
+  # Dependabot #108 (2026-08-07): bumped ^4.3.0 -> ^4.3.1 (GHSA-5p4m-2wfm-xmqj /
+  # CVE-2026-59870, quadratic CPU in !!omap resolution -- the 5.x fix for the
+  # same weakness was never backported to 3.x/4.x until 4.3.1).
+  "js-yaml": "^4.3.1"
   "@opentelemetry/core": "^2.8.0"
 
 allowBuilds:
