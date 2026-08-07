@@ -78,7 +78,16 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
       </aside>
 
       <main
-        inert={isAnyOverlayOpen ? true : undefined}
+        // Deliberately NOT inert'd, on any breakpoint: the backdrop below
+        // (bg-black/60, z-40, its own click-to-close handler) already blocks
+        // accidental interaction with main while a drawer/dimension overlay
+        // is open -- inert additionally froze all touch-scroll and video
+        // playback inside main, which on iOS/iPadOS Safari specifically
+        // reads as "scroll is stuck" (user-confirmed direction 2026-08-07:
+        // keep main scrollable everywhere, backdrop alone is enough -- match
+        // the desktop/wide-viewport experience, where main was never inert'd
+        // in the first place, on every breakpoint including the "stacked"
+        // one this used to gate on).
         className="relative flex flex-col h-[calc(100dvh-0.5rem)] sm:h-[calc(100dvh-0.75rem)] xl:h-full min-w-0 overflow-hidden bg-[var(--bg)] border border-[var(--line)] rounded-xl [transform:translateZ(0)] [-webkit-transform:translateZ(0)]"
       >
         <header className="border-b border-[var(--line)] bg-[rgb(17_20_29_/_0.8)] backdrop-blur-md z-20 flex-shrink-0">
