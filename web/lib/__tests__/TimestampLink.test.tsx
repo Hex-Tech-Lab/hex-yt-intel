@@ -90,6 +90,16 @@ describe('TimestampLink', () => {
     });
 
     it('should prevent default link behavior', () => {
+      // fireEvent.click(el, eventProperties) does NOT dispatch the passed
+      // Event instance itself -- Testing Library only reads it as an
+      // EventInit and constructs its own event, so spying on a MouseEvent
+      // built separately and handed to fireEvent as the second arg can
+      // never observe the handler's calls (stale assertion, found in the
+      // 2026-08-08 retro review of PR #212 -- this file was silently never
+      // executed by CI before that pass, so this bug in the test itself was
+      // never caught). Dispatch the spied event directly on the element
+      // instead, matching how the browser actually delivers it to the
+      // handler.
       const { container } = render(<TimestampLink timestamp="01:23" />);
       const link = container.querySelector('a');
       expect(link).toBeTruthy();
@@ -97,7 +107,7 @@ describe('TimestampLink', () => {
         const event = new MouseEvent('click', { bubbles: true, cancelable: true });
         const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
 
-        fireEvent.click(link, event as any);
+        link.dispatchEvent(event);
         expect(preventDefaultSpy).toHaveBeenCalled();
       }
     });
@@ -110,7 +120,7 @@ describe('TimestampLink', () => {
         const event = new MouseEvent('click', { bubbles: true, cancelable: true });
         const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
 
-        fireEvent.click(link, event as any);
+        link.dispatchEvent(event);
         expect(stopPropagationSpy).toHaveBeenCalled();
       }
     });
@@ -155,8 +165,12 @@ describe('TimestampLink', () => {
 
   describe('Rendering', () => {
     it('should render with default children (timestamp + icon)', () => {
+      // Astryx's Link renders a real <a>, whose accessible role is "link"
+      // -- "button" was a stale assertion (found in the 2026-08-08 retro
+      // review of PR #212, see vitest.config.ts history for why this file
+      // was never actually executed by CI until then).
       render(<TimestampLink timestamp="01:30" />);
-      const link = screen.getByRole('button', { name: /seek to 01:30/i });
+      const link = screen.getByRole('link', { name: /seek to 01:30/i });
       expect(link).toBeInTheDocument();
       expect(link.textContent).toContain('01:30');
     });
@@ -179,11 +193,18 @@ describe('TimestampLink', () => {
 
     it('should have proper accessibility attributes', () => {
       render(<TimestampLink timestamp="01:30" />);
-      const link = screen.getByRole('button', { name: /seek to 01:30/i });
+      const link = screen.getByRole('link', { name: /seek to 01:30/i });
 
-      expect(link).toHaveAttribute('tabIndex', '0');
+      // A native <a href="..."> is keyboard-focusable by default -- no
+      // explicit tabIndex is rendered (or needed). Astryx's Link renders
+      // its tooltip as a real popover element (role="tooltip", linked via
+      // aria-describedby) rather than a native `title` attribute -- both
+      // were stale assertions (found in the 2026-08-08 retro review of
+      // PR #212, see the file header for why this file was never actually
+      // executed by CI before that pass).
       expect(link).toHaveAttribute('aria-label', 'Seek to 01:30');
-      expect(link).toHaveAttribute('title', 'Seek to 01:30');
+      expect(link).toHaveAttribute('aria-describedby');
+      expect(screen.getByRole('tooltip', { hidden: true })).toHaveTextContent('Seek to 01:30');
     });
   });
 
