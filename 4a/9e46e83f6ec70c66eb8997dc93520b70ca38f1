@@ -1,0 +1,22 @@
+web/lib/__tests__/TimestampLink.test.tsx
+  s_0eded1e9d0cab6::t_3e5491748c6521 1-9
+web/vitest.config.ts
+  s_0eded1e9d0cab6::t_5060a809e6c5c5 62-75
+  s_0eded1e9d0cab6::t_edffea3dcff57e 39-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "4a9e46e83f6ec70c66eb8997dc93520b70ca38f1",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
