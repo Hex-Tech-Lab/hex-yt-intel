@@ -1,0 +1,47 @@
+CLAUDE.md
+  s_0eded1e9d0cab6::t_5933f7a406f81f 74
+worker/src/__tests__/persist-dimension-merge.test.ts
+  s_0eded1e9d0cab6::t_160dbf50d5d54f 140-142
+  s_0eded1e9d0cab6::t_36cabf9c04ed5a 150-304
+  s_0eded1e9d0cab6::t_6b2595fe5f97a8 15-21,33-39,54-60,62,65
+  s_0eded1e9d0cab6::t_2f98994c88deea 26-30
+  s_0eded1e9d0cab6::t_e9532194713068 98
+  s_0eded1e9d0cab6::t_f0606b6d4ca8dd 61
+docs/specs/ADR_021_GRANULAR_PARTIAL_RESUME_AND_REAPER_2026-08-02.md
+  s_0eded1e9d0cab6::t_95bce5ad7b3276 3-13
+  s_0eded1e9d0cab6::t_1c20710e36add2 168-200
+worker/src/services/MarkdownReconstructor.ts
+  s_0eded1e9d0cab6::t_6d9aed7f8b5cfb 34
+worker/src/__tests__/bracket-buffer-emission-boundary.test.ts
+  s_0eded1e9d0cab6::t_4332119bfa8389 1-120
+worker/src/services/PersistService.ts
+  s_0eded1e9d0cab6::t_9406e5a5420da6 47-52
+  s_0eded1e9d0cab6::t_33c97ddbe3a2d2 144-172
+  s_0eded1e9d0cab6::t_24db7ce932c943 2
+  s_0eded1e9d0cab6::t_fa9a6e070255ee 66-79,90-91,93-98,102-113
+  s_0eded1e9d0cab6::t_3bf88547229a1c 142
+  s_0eded1e9d0cab6::t_568fd0ef750cba 3
+  s_0eded1e9d0cab6::t_00ea932905f109 82,84
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_f7f3ad88d40921 704-733
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_46c1f4c89a6269 1165-1167
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0eded1e9d0cab6::t_2abacb9d3ed5e1 103-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "11fcef3bae3653d8ad54d831d92cace981d21630",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
