@@ -701,6 +701,21 @@ function buildStreamResponse(
   // when the description has no chapter markers (most videos) -- threaded to
   // persist so `transcript_chapters` gets a real row only when chapters exist.
   let resolvedChapters: VideoChapter[] | null = null;
+  // ADR 021 Phase 1: dimensions BracketBuffer already confirmed complete
+  // during streaming (see onFragment below), captured independently of
+  // finalText's own end-to-end re-parse. finalText's own extraction
+  // (extractJsonPayload + jsonrepair in PersistService) re-parses the WHOLE
+  // accumulated text from scratch and is all-or-nothing: a single malformed
+  // trailing dimension (mid-generation abort, unescaped char, etc.) can make
+  // jsonrepair fail entirely, discarding dimensions that were individually
+  // valid and already streamed to the client. BracketBuffer's incremental
+  // per-object parse doesn't have that failure mode -- each dimension is
+  // parsed and validated the moment its closing brace arrives, independent
+  // of every other dimension's fate. Threading these through to persist()
+  // gives it a reliable fallback source that survives a whole-text parse
+  // failure (see live-DB confirmation of this exact gap, cited in ADR 021's
+  // Implementation Note).
+  const capturedDimensions: Array<{ number: number; name: string; content: string }> = [];
 
   const persistService = new PersistService();
 
@@ -756,6 +771,15 @@ function buildStreamResponse(
         channelMeta: resolvedChannelMeta,
         comments: resolvedComments,
         chapters: resolvedChapters ?? undefined,
+        // ADR 021 Phase 1: snapshot by value -- capturedDimensions.push()
+        // keeps mutating the same array after this closure runs (persist()
+        // is called from atomicPersist's abort/flush handlers, which fire
+        // after streaming has produced more fragments than existed when
+        // buildStreamResponse's outer closures were first created), so a
+        // shallow copy at call time is required to avoid silently persisting
+        // whatever the array's LATEST unrelated state happens to be by the
+        // time the async persist HTTP call actually serializes it.
+        capturedDimensions: [...capturedDimensions],
       };
 
       // RCA (2026-07-22): this used to race EVERY persist call (including successful
@@ -933,7 +957,20 @@ function buildStreamResponse(
               finalText += delta;
               send({ type: "delta", content: delta });
             },
-            onFragment: (fragment: any) => send(fragment as unknown as Record<string, unknown>),
+            onFragment: (fragment: any) => {
+              // ADR 021 Phase 1: capture each fully-parsed dimension the moment
+              // BracketBuffer confirms it (see capturedDimensions declaration
+              // above) -- independent of send(), which only relays to the
+              // client and has no bearing on persistence.
+              if (fragment && fragment.type === 'dimension' && typeof fragment.dimension === 'number' && typeof fragment.content === 'string') {
+                capturedDimensions.push({
+                  number: fragment.dimension,
+                  name: fragment.name || `Dimension ${fragment.dimension}`,
+                  content: fragment.content,
+                });
+              }
+              send(fragment as unknown as Record<string, unknown>);
+            },
             onStatus: (statusEvent: StreamStatusEvent) => {
               if (statusEvent.stage === "model" && statusEvent.model) {
                 modelUsed = statusEvent.model;

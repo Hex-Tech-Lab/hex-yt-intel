@@ -44,9 +44,48 @@ export interface PersistOptions {
   channelMeta?: Record<string, unknown> | null;
   comments?: Array<{ author: string; text: string; publishedAt: string; likeCount: number }> | null;
   chapters?: Array<{ idx: number; start_seconds: number; end_seconds: number; label: string }> | null;
+  // ADR 021 Phase 1: dimensions BracketBuffer already confirmed complete
+  // during streaming, independent of finalText's own whole-document
+  // re-parse (see analysis.ts's capturedDimensions comment for the full
+  // RCA). Used as a merge/fallback source in mergeDimensions() below.
+  capturedDimensions?: Array<{ number: number; name: string; content: string }>;
 }
 
 const rawFetch = fetch;
+
+/**
+ * Merge BracketBuffer's incrementally-captured dimensions with whatever
+ * the whole-text extraction (extractJsonPayload, above) produced.
+ *
+ * Contract: every dimension BracketBuffer confirmed during streaming MUST
+ * survive to persistence, even if the whole-text parse/repair pass failed
+ * entirely for this attempt (extracted null) or silently dropped dimensions
+ * that were, individually, perfectly valid. Extracted dimensions win on a
+ * per-number conflict (they may carry richer/corrected content from a
+ * later, more complete parse of the same finalText), but captured ones fill
+ * every gap extracted didn't cover. No-op (returns extracted unchanged) when
+ * there are no captured dimensions to merge, or extracted already has every
+ * captured number covered -- this is deliberately conservative, not a
+ * replacement for whole-text extraction.
+ */
+function mergeDimensions(
+  extracted: Partial<{ schemaVersion: string; dimensions: Array<{ number: number; name: string; content: string }> }> | null,
+  captured: Array<{ number: number; name: string; content: string }> | undefined,
+): Partial<{ schemaVersion: string; dimensions: Array<{ number: number; name: string; content: string }> }> | null {
+  if (!captured || captured.length === 0) return extracted;
+
+  const extractedDims = Array.isArray(extracted?.dimensions) ? extracted!.dimensions : [];
+  const byNumber = new Map<number, { number: number; name: string; content: string }>();
+  for (const dim of captured) byNumber.set(dim.number, dim);
+  for (const dim of extractedDims) {
+    if (dim && typeof dim.number === 'number' && typeof dim.content === 'string') byNumber.set(dim.number, dim);
+  }
+
+  const mergedDims = [...byNumber.values()].sort((dimLeft, dimRight) => dimLeft.number - dimRight.number);
+  if (mergedDims.length === extractedDims.length && extracted) return extracted;
+
+  return { ...(extracted ?? {}), schemaVersion: '2.0', dimensions: mergedDims };
+}
 
 /** Schema selector: picks chunk or full schema based on chunk presence. Returns null if no schema matches. */
 function selectPersistSchema(isChunk: boolean): typeof ChunkPayloadSchema | typeof UCISPayloadSchema | null {
@@ -67,13 +106,19 @@ export class PersistService {
     let jsonPayload: Record<string, unknown> | null = null;
 
     const extracted = extractJsonPayload(options.finalText, options.finishReason);
+    // ADR 021 Phase 1: merge in BracketBuffer's incrementally-captured
+    // dimensions before schema validation, so a captured-only fallback (the
+    // whole-text extract failed/dropped dimensions entirely) is validated
+    // and persisted the same way a normal extraction would be, not silently
+    // skipped. See mergeDimensions()'s doc comment for the merge contract.
+    const merged = mergeDimensions(extracted as any, options.capturedDimensions);
 
-    if (extracted) {
+    if (merged) {
       const isChunk = options.chunkIndex !== undefined;
       const schema = selectPersistSchema(isChunk);
       if (!schema) return false;
 
-      const result = schema.safeParse(extracted);
+      const result = schema.safeParse(merged.dimensions && !merged.schemaVersion ? { ...merged, schemaVersion: '2.0' } : merged);
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       } else {
@@ -86,6 +131,7 @@ export class PersistService {
               videoId: options.videoId,
               chunkIndex: options.chunkIndex,
               totalChunks: options.totalChunks,
+              capturedDimensionCount: options.capturedDimensions?.length ?? 0,
               zodError: result.error.format(),
             },
           },

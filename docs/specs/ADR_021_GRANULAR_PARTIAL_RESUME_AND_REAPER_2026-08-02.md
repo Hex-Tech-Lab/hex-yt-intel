@@ -1,7 +1,9 @@
 # ADR 021: Granular Partial-Resume & Reaper Role Extension
 
-Status: 🔍 Scoping — not yet implemented. This document exists to get sign-off
-on the design before any code changes.
+Status: 🔍 Phase 1 (dimension-level persistence) implemented 2026-08-07 —
+see "Phase 1 Implementation Note" below. Phases 2-4 (presence-check-on-resume,
+Reaper extension, selective client bundle dispatch) remain 🔍 scoping, not
+started.
 
 ## Context
 
@@ -91,16 +93,100 @@ per-dimension.
 ## Open questions (need answers before implementation starts)
 
 1. **Bundle-level or dimension-level for v1?** — **RESOLVED (Product Owner Decision, 2026-08-03)**: **DIMENSION-LEVEL**. We go directly to per-dimension granular tracking and persistence for v1 rather than bundle-level batching.
-2. **Does the client or the reaper own resume?** The client already retries
-   on user action; the reaper resumes on a timer. Both paths need to agree
-   on the same "what's missing" query, ideally one shared function, not two
-   implementations that can drift.
+2. **Does the client or the reaper own resume?** — **RESOLVED (Product Owner
+   Decision, 2026-08-07)**: neither owns a new tracking mechanism. Reuse the
+   existing `remediation_retry_count` field already stored in
+   `validation_report` (`web/lib/services/dimension-remediation.ts`) — the
+   remediation/reaper path already knows how to query "what's missing" once
+   per-dimension data exists to query against (see Phase 1 Implementation
+   Note: it already does, via `analysis_chunks.dimensions_covered` /
+   `analysis_chunks.payload`, not a new column). No new "what's missing"
+   query needed for Phase 1; Phases 2-3 wire the reaper's existing
+   finalize/discard decision to read this instead of inventing a parallel
+   check.
 3. **Staleness threshold value** — reuse the reaper's existing timeout
    constant, or does per-dimension staleness need its own (shorter) value
-   since a single dimension is faster than a whole analysis?
-4. **Retry ceiling** — how many attempts before a piece gives up permanently
-   and surfaces to the user as "this specific part couldn't be completed"
-   rather than silently retrying forever?
+   since a single dimension is faster than a whole analysis? Still open,
+   Phase 2/3 scope.
+4. **Retry ceiling** — **RESOLVED (Product Owner Decision, 2026-08-07)**:
+   already enforced via the existing Settings Registry key
+   `remediation.maxRetries` (default 3, see `dimension-remediation.ts`). No
+   new ceiling invented.
+
+All new tunables (if any are added in Phases 2-4) MUST resolve from the
+Settings Registry (`setting_definitions`/`setting_values`, via
+`SupabaseSettingsAdapter.getRegistrySettings`), classified under the
+`analysis.*` or `remediation.*` prefix — never hardcoded (standing directive,
+restated explicitly by the product owner this session). Phase 1 required no
+new tunable at all (see Implementation Note below) — no new Settings
+Registry key or migration was needed.
+
+## Phase 1 Implementation Note (2026-08-07)
+
+**Investigation finding — the ADR's original framing above ("all-or-nothing
+at the bundle level... nothing is persisted") was more pessimistic than the
+actual code.** Before writing any Phase 1 code, the real write path was
+traced end-to-end and verified against live Supabase data:
+
+- `worker/src/routes/analysis.ts`'s `buildStreamResponse` already calls
+  `atomicPersist.flush()` unconditionally in the stream's `finally` block —
+  a persist attempt fires on every interruption/abort, not only on a clean
+  chunk completion. This was already true before Phase 1.
+- Each chunk (bundle) already lands in its own durable row: the web-side
+  `/api/analyses/persist` route upserts into `analysis_chunks` keyed on
+  `(analysis_id, chunk_index)` (`SupabasePersistenceAdapter.persistAnalysisChunk`),
+  so one chunk's write does NOT get clobbered by a sibling chunk's write —
+  chunk-level persistence, independent per chunk, already existed.
+- The real gap was **inside** a single chunk's persist attempt:
+  `PersistService.persist()` re-parses the *entire* accumulated `finalText`
+  from scratch via `extractJsonPayload` + `jsonrepair`
+  (`worker/src/services/MarkdownReconstructor.ts`), and that whole-text pass
+  is all-or-nothing — if the trailing (in-flight, uncompleted) dimension's
+  text is malformed enough that `jsonrepair` can't produce valid JSON at
+  all, `jsonPayload` stays `null` for the ENTIRE chunk, discarding every
+  dimension in it even ones that were individually complete and valid.
+  Confirmed live via Supabase (`adnmbikaqnxivalqoild`, `analyses` table,
+  2026-08-07): multiple real rows with `billing_status='failed'` and
+  `dim_count=0` (zero parsed dimensions in `analysis_payload->'dimensions'`)
+  despite a non-empty `analysis_markdown` (tens of KB) — the raw text
+  survived as an opaque markdown fallback, but the structured per-dimension
+  payload did not. Other rows in the same query showed `dim_count=11`
+  (full recovery worked fine when `jsonrepair` succeeded) — confirming the
+  failure is specifically the extraction step's fragility, not a total
+  absence of any persist attempt.
+- Separately, and independent of the finalize path: the worker already runs
+  an incremental, per-object streaming JSON parser, `BracketBuffer`
+  (`worker/src/services/BracketBuffer.ts`), which confirms each dimension
+  the *instant* its own closing brace streams in — bracket-balanced,
+  independent of every other dimension's fate — and fires an `onFragment`
+  event per dimension purely to relay it to the client over SSE. That
+  already-parsed, already-validated per-dimension data was never reused for
+  persistence.
+
+**Fix implemented**: `analysis.ts`'s `onFragment` handler now also appends
+each confirmed dimension fragment to a `capturedDimensions` array (a plain
+in-memory snapshot, no new DB writes, no new endpoint, no new debounce
+interval — the data was already being produced during normal streaming).
+`PersistService.persist()` gained a `capturedDimensions` option and a
+`mergeDimensions()` helper: it merges `capturedDimensions` with whatever the
+whole-text `extractJsonPayload` pass produced (extraction wins per-dimension
+on overlap since it may carry a more complete/corrected parse of the same
+text; captured fills every dimension extraction missed or dropped entirely),
+before Zod schema validation. This makes a captured-only fallback payload go
+through the exact same validation/reconstruction/signing path a normal
+extraction would — not a parallel code path.
+
+This is a smaller, more surgical change than the ADR originally anticipated
+because chunk-level durability and a reliable per-dimension source
+(`BracketBuffer`) already existed; the actual bug was that the finalize
+path never reused them, and re-derived per-dimension data from scratch via
+a fragile all-or-nothing whole-text repair pass instead. No schema
+migration, no new Settings Registry key, and no new endpoint were required
+for Phase 1 as a result — existing infrastructure covered the gap once
+wired together correctly. Phases 2-4 (presence-check-on-resume using
+`analysis_chunks.dimensions_covered`, reaper requeue-partial extension,
+selective client bundle dispatch) remain out of scope for this pass and
+still require their own design/implementation.
 
 ## Not in scope for this ADR
 
@@ -113,5 +199,10 @@ per-dimension.
 
 ## Next step
 
-- **Phase 1 (Planned, not started)**: Implement **dimension-level** per-piece persistence. Each dimension result returned by the LLM cascade is written immediately to Supabase `analyses` (not held until all bundles finish).
-- **Phases 2-4**: Presence check on resume, Reaper extension, and selective client bundle dispatch (will follow after Phase 1 lands).
+- **Phase 1 (✅ Implemented 2026-08-07)**: Dimension-level persistence —
+  see "Phase 1 Implementation Note" above for what shipped and why the
+  actual fix ended up narrower than originally scoped here.
+- **Phases 2-4 (Planned, not started)**: Presence check on resume (using
+  `analysis_chunks.dimensions_covered`, already populated), Reaper
+  finalize/discard/requeue-partial extension, and selective client bundle
+  dispatch.
