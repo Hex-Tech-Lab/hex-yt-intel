@@ -121,6 +121,25 @@ export function useAutoRestoreAnalysis(url: string) {
               } as any);
             }
 
+            // `analysisPayload` here is the ONLY place persona/knowledgeGraph/
+            // classification/monetizationVerdict/rawAnalysisPayload get applied
+            // for this restore -- initSynthesis (synthesis-nucleus-store.ts's
+            // initializeAnalysis) conditionally sets all of those internally
+            // when `analysisPayload` is present, AND tags rawAnalysisPayload
+            // with this analysis's id in the same call. A second manual block
+            // used to re-apply persona/knowledgeGraph/classification/
+            // monetizationVerdict from `restoreData.analysis_payload` right
+            // after this call -- real regression, caught writing
+            // hooks/__tests__/useAutoRestoreAnalysis.test.tsx (2026-08-07):
+            // that duplicated every one of those four setter calls on every
+            // auto-restore (each landed on the correct final value only
+            // because analysis-metadata-store.ts's setters happen to no-op on
+            // an unchanged value -- masking the double-call rather than
+            // preventing it). AnalysisHistory.tsx's history-click restore path
+            // never had this duplication: it never passes `analysisPayload`
+            // into its initSynthesis call, so its own manual block is its only
+            // application path. Removed here instead, matching that pattern by
+            // letting `analysisPayload` be the single source of truth.
             initSynthesis({
               id: restoreData.id,
               videoId: restoreData.videoId,
@@ -132,19 +151,8 @@ export function useAutoRestoreAnalysis(url: string) {
               dimensions,
               validation: restoreData.validation_report,
               streaming: restoreData.streaming,
+              analysisPayload: restoreData.analysis_payload,
             });
-
-            // Rehydrate the rich metadata stores (persona / knowledge graph /
-            // classification / monetization) so restored graphs render real
-            // content — matches the history-click restore path in AnalysisHistory.
-            if (restoreData.analysis_payload) {
-              const payload = restoreData.analysis_payload;
-              const nucleus = useSynthesisNucleus.getState();
-              if (payload.persona) nucleus.setPersonaConfig(payload.persona);
-              if (payload.knowledgeGraph) nucleus.setKnowledgeGraph(payload.knowledgeGraph);
-              if (payload.classification) nucleus.setClassification(payload.classification);
-              if (payload.monetizationVerdict) nucleus.setMonetizationVerdict(payload.monetizationVerdict);
-            }
 
             // Sync status to UI (either complete, error, partial, or processing/analyzing)
             if (data.status === 'processing' || restoreData.analysisStatus === 'incomplete') {
