@@ -1,0 +1,21 @@
+web/lib/utils/entity-time-seek.ts
+  s_5377814a5f6d1f::t_890d0c35a36746 221-227,237
+web/lib/__tests__/entity-time-seek.test.ts
+  s_5377814a5f6d1f::t_f1711165ee08b8 235,240-242
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6c74a23b45c2d332c1022550c57aa6169b131e6f",
+  "prompts": {},
+  "sessions": {
+    "s_5377814a5f6d1f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02914e6bdffepo2H8hDUq9wErS",
+        "model": "deepseek-v4-flash-forced"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
