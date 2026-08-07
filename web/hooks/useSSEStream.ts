@@ -199,7 +199,21 @@ export function useSSEStream() {
               store.logInfo(`Connecting to Cloudflare edge worker for unified intelligence synthesis...`);
               activeAnalysisIdRef.current = job.analysisId || job.id;
               initializeAnalysis(job.analysisId || job.id, job.title || 'Analysis Result');
-              initSynthesis(job);
+              // The description is real ingestion-time data (already fetched
+              // by the bouncer before this stream even starts, see
+              // WorkerIngestionAdapter.buildJobMetadata) -- wiring it in here
+              // lets the Description aux chip reflect the truth immediately
+              // instead of sitting idle for the whole streaming duration.
+              // channelMeta/comments are NOT included: those are genuine LLM
+              // synthesis output, only written by stitch-analysis-chunks.ts
+              // once the analysis completes, so there's no honest data to
+              // show for them yet -- leaving them unset (idle) here is
+              // correct, not a gap (Cubic review follow-up, PR #214).
+              initSynthesis(
+                job.metadata?.description
+                  ? { ...job, analysisPayload: { videoMetadata: { description: job.metadata.description } } }
+                  : job
+              );
               setStatus('analyzing');
 
               let hasSettled = false;
