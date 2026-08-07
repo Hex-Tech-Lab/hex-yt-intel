@@ -211,7 +211,7 @@ export function useSSEStream() {
               // correct, not a gap (Cubic review follow-up, PR #214).
               initSynthesis(
                 job.metadata?.description
-                  ? { ...job, analysisPayload: { videoMetadata: { description: job.metadata.description } } }
+                  ? { ...job, id: job.analysisId || job.id, analysisPayload: { videoMetadata: { description: job.metadata.description } } }
                   : job
               );
               setStatus('analyzing');
