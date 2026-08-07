@@ -1,0 +1,24 @@
+web/hooks/useKnowledgeGraph.ts
+  s_0eded1e9d0cab6::t_d97a68ec68a82f 79-99,102
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_3ac25bb50e4144 30
+  s_0eded1e9d0cab6::t_bde6d8d97e7710 227-237
+web/hooks/__tests__/useKnowledgeGraph.test.tsx
+  s_0eded1e9d0cab6::t_d34a288b3f446a 76-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8adad73799b38683c0628d123c56c80b89f1cb72",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
