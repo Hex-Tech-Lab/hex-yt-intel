@@ -4,6 +4,19 @@ All notable changes to hex-yt-intel are tracked here going forward. Entries belo
 
 Classification: **MAJOR** = breaking change to existing behavior, data, or operational safety. **MINOR** = new backward-compatible capability. **PATCH** = fixes only.
 
+## [2.6.2] — 2026-08-06 (PATCH)
+
+### Changed
+- Chapter persistence decoupled from the chunked-analysis request lifecycle (PR #206): new `POST/GET /api/videos/[videoId]/chapters` (HMAC-signed), worker fires chapter parsing via `waitUntil` in parallel with the LLM stream instead of gating on chunk completion, new `useChaptersStore` Zustand store with per-video generation counters to guard against a reset-vs-in-flight-fetch race, fixed a self-cancellation bug that made the whole decoupled path non-functional, fixed a stuck-`'loading'`-forever bug under React Strict Mode's dev-only double-invoke.
+- ADR 024: added happy-dom + React Testing Library, fixed a `vitest.config.ts` include-glob gap that meant no test could ever render a real component or hook (PR #212).
+
+### Fixed
+- 12 `SILENT_ERROR_RETURN_NO_TELEMETRY` contract-auditor findings — 9 real gaps (6 in the Upstash snapshot-poll route, 3 in the shared API client) now emit proper Sentry/console telemetry on failure instead of silently returning (PR #210).
+- 16 `UNVERIFIED_ENDPOINT_NO_TEST` findings — rewrote tautological tests (mocks that never actually exercised production code) to genuinely bind to it, plus real reliability fixes surfaced along the way: QStash pagination/timeout handling and dimension-remediation timeout/fallback-observability gaps (PR #211).
+
+### Ops note
+Package version had drifted from the changelog (2.6.1 was documented here but never bumped in `package.json`) — this entry also corrects that.
+
 ## [2.6.1] — 2026-08-04 (PATCH)
 
 ### Security
