@@ -1,0 +1,38 @@
+CLAUDE.md
+  s_0eded1e9d0cab6::t_2fe0c4ad33d460 74
+docs/specs/ADR_021_GRANULAR_PARTIAL_RESUME_AND_REAPER_2026-08-02.md
+  s_0eded1e9d0cab6::t_088866be051bb4 3-6
+  s_0eded1e9d0cab6::t_d372f3690df20c 202-208
+  s_0eded1e9d0cab6::t_eead299dc50103 96-106,109-189
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_592f539a1cee4f 960-973
+  s_0eded1e9d0cab6::t_5c7acd915c8e3f 704-718
+  s_0eded1e9d0cab6::t_305b8b5d71cd81 774-782
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_0596fae0db2d9b 1163
+worker/src/services/PersistService.ts
+  s_0eded1e9d0cab6::t_4e922632cf4d1d 84
+  s_0eded1e9d0cab6::t_2525e281c27789 109-114,116,121,134
+  s_0eded1e9d0cab6::t_f1ceedf776ea6f 47-51,56-83,85-88
+  s_0eded1e9d0cab6::t_51805698595905 89
+worker/src/__tests__/persist-dimension-merge.test.ts
+  s_0eded1e9d0cab6::t_a60f846ffa6ad3 53,79,90,123,133,154
+  s_0eded1e9d0cab6::t_d6b247c040cde8 1-25,27-35,42-46,50-52,54-78,80-89,91-122,124-132,134-153,155-158
+  s_0eded1e9d0cab6::t_e62a4adffe8c6d 26,36-41,47-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ee96232d7d7c34e5cec8438ee471cc2b407e5d71",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
