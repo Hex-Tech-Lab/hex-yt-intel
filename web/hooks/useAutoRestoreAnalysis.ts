@@ -132,6 +132,7 @@ export function useAutoRestoreAnalysis(url: string) {
               dimensions,
               validation: restoreData.validation_report,
               streaming: restoreData.streaming,
+              analysisPayload: restoreData.analysis_payload,
             });
 
             // Rehydrate the rich metadata stores (persona / knowledge graph /

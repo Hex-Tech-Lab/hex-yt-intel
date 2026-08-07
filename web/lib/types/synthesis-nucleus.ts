@@ -193,6 +193,7 @@ export interface SynthesisNucleusState {
   knowledgeGraph: KnowledgeGraphV2 | null;
   classification: ClassificationData | null;
   monetizationVerdict: MonetizationVerdict | null;
+  rawAnalysisPayload: import('@/lib/utils/aux-status-from-report').AuxStatusPayloadInput | null;
 
   activePersona: PersonaId;
   projection: PersonaProjection | null;
@@ -200,7 +201,7 @@ export interface SynthesisNucleusState {
   isStreaming: boolean;
   streamError: string | null;
 
-  initializeAnalysis: (payload: Partial<UCISPayload>) => void;
+  initializeAnalysis: (payload: Partial<UCISPayload> & { analysisPayload?: any }) => void;
   addDimension: (dimension: UCISDimension) => void;
   completeAnalysis: () => void;
   switchPersona: (persona: PersonaId) => void;
@@ -211,6 +212,7 @@ export interface SynthesisNucleusState {
   setKnowledgeGraph: (kg: KnowledgeGraphV2) => void;
   setClassification: (data: ClassificationData) => void;
   setMonetizationVerdict: (verdict: MonetizationVerdict) => void;
+  setRawAnalysisPayload: (payload: import('@/lib/utils/aux-status-from-report').AuxStatusPayloadInput | null) => void;
 
   getDimension: (number: number) => UCISDimension | undefined;
   isPersonaComplete: () => boolean;

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAnalysisStore } from '@/store/useAnalysisStore';
 import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { auxStatusFromAnalysisPayload } from '@/lib/utils/aux-status-from-report';
 import type { AuxStatusPayloadInput } from '@/lib/utils/aux-status-from-report';
@@ -12,34 +11,38 @@ export interface AuxElementStatus {
 
 /**
  * Auxiliary element status badge derivation.
- * Checks live Synthesis Nucleus / Analysis store metadata first for instant
- * active status during both streaming and completed analyses, falling back
- * to stored API payload parameters.
+ * Checks live Synthesis Nucleus / Analysis store raw payload first for instant
+ * active status during both streaming and restored analyses (sharing the canonical
+ * `auxStatusFromAnalysisPayload` SSOT with History Overview list), falling back to
+ * fetching stored API payload parameters when not present in memory.
  */
 export function useAuxElementStatus(analysisId: string | null, status: string): AuxElementStatus | null {
   const [auxStatus, setAuxStatus] = useState<AuxElementStatus | null>(null);
   const fetchedForRef = useRef<string | null>(null);
+  const rawPayload = useSynthesisNucleus((s) => s.rawAnalysisPayload);
 
-  const videoMeta = useAnalysisStore((s) => s.videoMetadata);
-  const nucleusPersona = useSynthesisNucleus((s) => s.personaConfig);
-  const nucleusClass = useSynthesisNucleus((s) => s.classification);
-
+  // Synchronous derivation from in-memory payload (streaming or restored)
   useEffect(() => {
-    const vm = videoMeta as (typeof videoMeta & { description?: string }) | null;
-    const hasDesc = Boolean(vm?.description || vm?.title);
-    const hasChannel = Boolean(vm?.channelTitle || nucleusClass || nucleusPersona);
-    const cCount = Number(vm?.commentCount ?? 0);
-    const hasComments = Boolean(Number.isFinite(cCount) && cCount > 0);
+    if (!analysisId) {
+      setAuxStatus(null);
+      fetchedForRef.current = null;
+      return;
+    }
 
-    setAuxStatus({
-      description: hasDesc,
-      channelMeta: hasChannel,
-      comments: hasComments,
-    });
-  }, [videoMeta, nucleusPersona, nucleusClass, status]);
+    if (rawPayload) {
+      const res = auxStatusFromAnalysisPayload(rawPayload);
+      setAuxStatus({
+        description: res.hasDescription,
+        channelMeta: res.hasChannelMeta,
+        comments: res.hasComments,
+      });
+    }
+  }, [analysisId, rawPayload]);
 
+  // Fetch persisted payload if completed and not yet present in memory
   useEffect(() => {
     if (!analysisId || status !== 'complete') return;
+    if (rawPayload) return; // Already present in memory
     if (fetchedForRef.current === analysisId) return;
     fetchedForRef.current = analysisId;
 
@@ -51,24 +54,15 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
         const data = await res.json();
         if (cancelled) return;
 
-        // Cubic review, PR #178 (investigated, not applied): flagged that
-        // rows with analysis_payload = null show every chip inactive with
-        // no validation_report fallback. Checked live: the 32 real
-        // completed/null-payload rows in prod are all June-era analyses
-        // (validation_report.stale_after ~2026-06), predating the
-        // channelMeta/comments features entirely (shipped 2026-07-24+) --
-        // their validation_report.metadata only holds YouTube video stats
-        // (title/duration/viewCount), never channelMeta/comments/
-        // description. A fallback to validation_report would find nothing
-        // for any of them; "all chips inactive" is the honest state for
-        // these rows, not a bug. Not adding dead fallback code.
         const payload = data.analysis_payload as AuxStatusPayloadInput | null | undefined;
-        const { hasDescription, hasChannelMeta, hasComments } = auxStatusFromAnalysisPayload(payload);
-
+        if (payload) {
+          useSynthesisNucleus.getState().setRawAnalysisPayload(payload);
+        }
+        const mapped = auxStatusFromAnalysisPayload(payload);
         setAuxStatus({
-          description: hasDescription,
-          channelMeta: hasChannelMeta,
-          comments: hasComments,
+          description: mapped.hasDescription,
+          channelMeta: mapped.hasChannelMeta,
+          comments: mapped.hasComments,
         });
       } catch (err) {
         console.debug('[useAuxElementStatus] fetch failed:', err);
@@ -78,7 +72,7 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
     return () => {
       cancelled = true;
     };
-  }, [analysisId, status]);
+  }, [analysisId, status, rawPayload]);
 
   return auxStatus;
 }

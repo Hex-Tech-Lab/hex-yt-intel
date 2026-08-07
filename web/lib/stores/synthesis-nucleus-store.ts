@@ -31,6 +31,7 @@ function readSubStores() {
     knowledgeGraph: ms.knowledgeGraph,
     classification: ms.classification,
     monetizationVerdict: ms.monetizationVerdict,
+    rawAnalysisPayload: ms.rawAnalysisPayload,
     streamError: ss.streamError,
     projection,
   };
@@ -66,6 +67,7 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
       useAnalysisStreamingStore.getState().clearStreamError();
       const ap = payload.analysisPayload;
       if (ap) {
+        useAnalysisMetadataStore.getState().setRawAnalysisPayload(ap);
         if (ap.persona) useAnalysisMetadataStore.getState().setPersonaConfig(ap.persona);
         if (ap.knowledgeGraph) useAnalysisMetadataStore.getState().setKnowledgeGraph(ap.knowledgeGraph);
         if (ap.classification) useAnalysisMetadataStore.getState().setClassification(ap.classification);
@@ -110,6 +112,10 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
 
     setMonetizationVerdict: (verdict: MonetizationVerdict) => {
       useAnalysisMetadataStore.getState().setMonetizationVerdict(verdict);
+    },
+
+    setRawAnalysisPayload: (payload) => {
+      useAnalysisMetadataStore.getState().setRawAnalysisPayload(payload);
     },
 
     getDimension: (number: number) => {

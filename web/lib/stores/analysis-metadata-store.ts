@@ -12,17 +12,21 @@ import {
   PERSONA_DIMENSIONS,
 } from '@/lib/types/synthesis-nucleus';
 
+import { type AuxStatusPayloadInput } from '@/lib/utils/aux-status-from-report';
+
 export interface AnalysisMetadataStore {
   activePersona: PersonaId;
   personaConfig: PersonaConfigV2 | null;
   knowledgeGraph: KnowledgeGraphV2 | null;
   classification: ClassificationData | null;
   monetizationVerdict: MonetizationVerdict | null;
+  rawAnalysisPayload: AuxStatusPayloadInput | null;
   switchPersona: (persona: PersonaId) => void;
   setPersonaConfig: (config: PersonaConfigV2) => void;
   setKnowledgeGraph: (kg: KnowledgeGraphV2) => void;
   setClassification: (data: ClassificationData) => void;
   setMonetizationVerdict: (verdict: MonetizationVerdict) => void;
+  setRawAnalysisPayload: (payload: AuxStatusPayloadInput | null) => void;
   isPersonaComplete: () => boolean;
   reset: () => void;
 }
@@ -33,6 +37,7 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
   knowledgeGraph: null,
   classification: null,
   monetizationVerdict: null,
+  rawAnalysisPayload: null,
 
   switchPersona: (persona: PersonaId) => {
     if (!isValidPersona(persona)) {
@@ -78,6 +83,10 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
     console.debug('[Metadata] Monetization verdict received');
   },
 
+  setRawAnalysisPayload: (payload: AuxStatusPayloadInput | null) => {
+    set({ rawAnalysisPayload: payload });
+  },
+
   isPersonaComplete: () => {
     const { activePersona } = get();
     const analysis = useAnalysisStateStore.getState().analysis;
@@ -96,6 +105,7 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
       knowledgeGraph: null,
       classification: null,
       monetizationVerdict: null,
+      rawAnalysisPayload: null,
     });
   },
 }));

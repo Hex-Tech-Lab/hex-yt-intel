@@ -324,6 +324,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           dimensions,
           validation: data.validation_report,
           streaming: data.streaming,
+          analysisPayload: data.analysis_payload,
         });
 
         if (data.analysis_payload) {
