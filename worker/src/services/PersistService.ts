@@ -89,10 +89,16 @@ function mergeDimensions(
   for (const dim of captured) byNumber.set(dim.number, dim);
 
   let anyExtractedEntryWasInvalid = false;
+  // Track which dimension numbers passed validation here so the coverage
+  // check below can reuse this result instead of re-parsing every extracted
+  // entry a second time (was O(captured.length * extractedDims.length) Zod
+  // parses; a Set lookup is O(1) per captured dimension instead).
+  const validExtractedNumbers = new Set<number>();
   for (const dim of extractedDims) {
     const parsed = UCISDimensionSchema.safeParse(dim);
     if (parsed.success) {
       byNumber.set(parsed.data.number, parsed.data);
+      validExtractedNumbers.add(parsed.data.number);
     } else {
       anyExtractedEntryWasInvalid = true;
     }
@@ -102,14 +108,7 @@ function mergeDimensions(
 
   const everyCapturedCoveredByValidExtracted =
     !anyExtractedEntryWasInvalid &&
-    captured.every((capturedDim) =>
-      extractedDims.some(
-        (extractedDim) =>
-          extractedDim &&
-          extractedDim.number === capturedDim.number &&
-          UCISDimensionSchema.safeParse(extractedDim).success,
-      ),
-    );
+    captured.every((capturedDim) => validExtractedNumbers.has(capturedDim.number));
   if (everyCapturedCoveredByValidExtracted && extracted) return extracted;
 
   return { ...(extracted ?? {}), schemaVersion: '2.0', dimensions: mergedDims };
@@ -173,7 +172,12 @@ export class PersistService {
       const schema = selectPersistSchema(isChunk);
       if (!schema) return false;
 
-      const result = schema.safeParse(merged.dimensions && !merged.schemaVersion ? { ...merged, schemaVersion: '2.0' } : merged);
+      // mergeDimensions() always stamps schemaVersion:'2.0' on every return
+      // path (the pass-through `extracted` branch already carries it --
+      // extractJsonPayload only returns non-null when schemaVersion==='2.0'
+      // -- and the constructed-merge branch sets it explicitly), so `merged`
+      // is never missing it here. No conditional stamping needed.
+      const result = schema.safeParse(merged);
       if (result.success) {
         jsonPayload = result.data as unknown as Record<string, unknown>;
       } else {
