@@ -84,6 +84,12 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
   },
 
   setRawAnalysisPayload: (payload: AuxStatusPayloadInput | null) => {
+    // Deep equality is overkill here (this is a raw API payload object, not
+    // a small typed shape like the sibling setters above) -- reference
+    // equality is cheap and still catches the real redundant-call case,
+    // e.g. the same data.analysis_payload object flowing through both
+    // initializeAnalysis and a fetch-effect resolution.
+    if (get().rawAnalysisPayload === payload) return;
     set({ rawAnalysisPayload: payload });
   },
 

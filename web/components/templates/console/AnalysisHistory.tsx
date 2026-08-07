@@ -326,15 +326,11 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           streaming: data.streaming,
           analysisPayload: data.analysis_payload,
         });
-
-        if (data.analysis_payload) {
-          const payload = data.analysis_payload;
-          const state = useSynthesisNucleus.getState();
-          if (payload.persona) state.setPersonaConfig(payload.persona);
-          if (payload.knowledgeGraph) state.setKnowledgeGraph(payload.knowledgeGraph);
-          if (payload.classification) state.setClassification(payload.classification);
-          if (payload.monetizationVerdict) state.setMonetizationVerdict(payload.monetizationVerdict);
-        }
+        // initSynthesis (above) already applies persona/knowledgeGraph/
+        // classification/monetizationVerdict from analysisPayload
+        // internally -- this used to redo the same 4 calls redundantly
+        // from the same data.analysis_payload, risking the two paths
+        // drifting apart (Cubic review, PR #214).
 
         if (data.analysisStatus === 'error') {
           setStatus('error');

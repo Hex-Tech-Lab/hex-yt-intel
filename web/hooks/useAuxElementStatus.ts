@@ -36,6 +36,13 @@ export function useAuxElementStatus(analysisId: string | null, status: string): 
         channelMeta: res.hasChannelMeta,
         comments: res.hasComments,
       });
+    } else {
+      // No payload in memory yet for THIS analysisId (switched to a
+      // completed analysis whose payload hasn't been fetched, or the fetch
+      // below hasn't resolved/failed) -- clear rather than leave the
+      // PREVIOUS analysis's chip states on screen until/unless the fetch
+      // effect below resolves (Cubic review, PR #214).
+      setAuxStatus(null);
     }
   }, [analysisId, rawPayload]);
 
