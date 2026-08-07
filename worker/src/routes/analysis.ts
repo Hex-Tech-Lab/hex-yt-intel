@@ -701,20 +701,36 @@ function buildStreamResponse(
   // when the description has no chapter markers (most videos) -- threaded to
   // persist so `transcript_chapters` gets a real row only when chapters exist.
   let resolvedChapters: VideoChapter[] | null = null;
-  // ADR 021 Phase 1: dimensions BracketBuffer already confirmed complete
-  // during streaming (see onFragment below), captured independently of
-  // finalText's own end-to-end re-parse. finalText's own extraction
-  // (extractJsonPayload + jsonrepair in PersistService) re-parses the WHOLE
-  // accumulated text from scratch and is all-or-nothing: a single malformed
-  // trailing dimension (mid-generation abort, unescaped char, etc.) can make
-  // jsonrepair fail entirely, discarding dimensions that were individually
-  // valid and already streamed to the client. BracketBuffer's incremental
-  // per-object parse doesn't have that failure mode -- each dimension is
-  // parsed and validated the moment its closing brace arrives, independent
-  // of every other dimension's fate. Threading these through to persist()
-  // gives it a reliable fallback source that survives a whole-text parse
-  // failure (see live-DB confirmation of this exact gap, cited in ADR 021's
-  // Implementation Note).
+  // ADR 021 Phase 1 (corrected 2026-08-07 per Cubic PR #216 review -- the
+  // original claim below was never verified against BracketBuffer's actual
+  // source before shipping; see worker/src/__tests__/bracket-buffer-
+  // emission-boundary.test.ts for the verification):
+  //
+  // BracketBuffer.feed() only emits a fragment when bracket depth returns
+  // to 0, i.e. when a TOP-LEVEL object closes. The real LLM output is one
+  // envelope object `{schemaVersion:"2.0", dimensions:[...]}` (see
+  // PromptBuilder.ts), so individual dimension objects sit INSIDE the
+  // `dimensions` array at depth 2 -- feed() does NOT confirm each dimension
+  // independently "the moment its closing brace arrives." It emits nothing
+  // until the whole envelope closes.
+  //
+  // The actual source of any dimensions captured from a TRUNCATED stream
+  // (the incident scenario this Phase covers) is BracketBuffer.finalize(),
+  // called once at stream end: it best-effort REPAIRS the trailing unclosed
+  // buffer (naive quote/bracket closing) and does a SINGLE JSON.parse pass
+  // over the whole repaired buffer. This recovers dimensions from many
+  // realistic truncations (e.g. cut mid-content-string, the common case),
+  // but is NOT guaranteed -- a truncation mid-key (e.g. `{"num`) produces
+  // unrepairable JSON and yields ZERO captured dimensions, the same
+  // all-or-nothing failure class as PersistService's own whole-text
+  // extraction path. capturedDimensions therefore reduces (but does not
+  // eliminate) the chance of losing already-valid dimensions on abort --
+  // it is a best-effort improvement, not a guarantee. finalText's own
+  // extraction (extractJsonPayload + jsonrepair in PersistService)
+  // re-parses the whole accumulated text separately and can fail
+  // independently of whether finalize()'s repair succeeded, which is why
+  // both sources are still merged in PersistService.mergeDimensions()
+  // rather than relying on either alone.
   const capturedDimensions: Array<{ number: number; name: string; content: string }> = [];
 
   const persistService = new PersistService();

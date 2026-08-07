@@ -1,5 +1,16 @@
 # ADR 021: Granular Partial-Resume & Reaper Role Extension
 
+**Filename**: `ADR_021_GRANULAR_PARTIAL_RESUME_AND_REAPER_2026-08-02.md`
+**Location**: `docs/specs/`
+**Version**: 1.1 (Phase 1 implementation note corrected 2026-08-07 per
+Cubic PR #216 review -- see `docs/agent-prompts/2026-08-07-self-pr216-cubic-fixes.md`)
+**Build**: hex-yt-intel `feat/adr021-phase1-dimension-persist` (PR #216)
+**Timestamp**: Originated 2026-08-02, Phase 1 implemented + corrected 2026-08-07
+**Purpose**: Extend the ADR 007 reaper's finalize-vs-discard decision from
+whole-row to per-piece (dimension/metadata/transcript/digest/comments)
+granularity, so a partial failure only loses the specific piece that failed
+instead of the entire analysis.
+
 Status: 🔍 Phase 1 (dimension-level persistence) implemented 2026-08-07 —
 see "Phase 1 Implementation Note" below. Phases 2-4 (presence-check-on-resume,
 Reaper extension, selective client bundle dispatch) remain 🔍 scoping, not
@@ -154,14 +165,39 @@ traced end-to-end and verified against live Supabase data:
   (full recovery worked fine when `jsonrepair` succeeded) — confirming the
   failure is specifically the extraction step's fragility, not a total
   absence of any persist attempt.
-- Separately, and independent of the finalize path: the worker already runs
-  an incremental, per-object streaming JSON parser, `BracketBuffer`
-  (`worker/src/services/BracketBuffer.ts`), which confirms each dimension
-  the *instant* its own closing brace streams in — bracket-balanced,
-  independent of every other dimension's fate — and fires an `onFragment`
-  event per dimension purely to relay it to the client over SSE. That
-  already-parsed, already-validated per-dimension data was never reused for
-  persistence.
+- Separately, the worker already runs an incremental, per-object streaming
+  JSON parser, `BracketBuffer` (`worker/src/services/BracketBuffer.ts`).
+  **Correction (2026-08-07, Cubic PR #216 review):** the claim originally
+  written here — that `BracketBuffer` "confirms each dimension the instant
+  its own closing brace streams in, independent of every other dimension's
+  fate" — was asserted without reading `BracketBuffer`'s source and is
+  **not accurate** for this pipeline's real payload shape. `feed()` only
+  emits a fragment when bracket depth returns to `0`, i.e. when a
+  **top-level** object closes. The LLM's actual output is one envelope
+  object (`{schemaVersion:"2.0", dimensions:[...]}` — see
+  `worker/src/services/PromptBuilder.ts`), so individual dimensions sit
+  *inside* the `dimensions` array at depth 2, not depth 0 — `feed()` does
+  not fire per-dimension while the envelope is still open. The verified
+  mechanism (see
+  `worker/src/__tests__/bracket-buffer-emission-boundary.test.ts`, added
+  2026-08-07) is: `feed()` emits nothing during normal in-progress
+  streaming, and any recovery from a truncated/aborted stream comes
+  entirely from `BracketBuffer.finalize()`, called once at stream end,
+  which best-effort **repairs** the trailing unclosed buffer (naive
+  quote/bracket closing) and does a single `JSON.parse` pass over the
+  *whole* repaired buffer. This recovers dimensions for many realistic
+  truncation points (e.g. a cut mid-content-string, closed by quote+
+  bracket repair) but is **not guaranteed** — a truncation mid-key (e.g.
+  `{"num`) produces unrepairable JSON and yields zero recovered
+  dimensions for that chunk, the same all-or-nothing failure class the
+  whole-text `extractJsonPayload`/`jsonrepair` path already has. Phase 1's
+  `capturedDimensions` therefore reduces, but does not eliminate, the
+  chance of losing already-valid dimensions on abort — it is a best-effort
+  improvement layered on an existing weakness, not an independent
+  guarantee. This does not invalidate Phase 1 (mergeDimensions() still
+  helps whenever `finalize()`'s repair succeeds, which is common), but the
+  original "independent recovery always works" framing was wrong and is
+  corrected here rather than left standing.
 
 **Fix implemented**: `analysis.ts`'s `onFragment` handler now also appends
 each confirmed dimension fragment to a `capturedDimensions` array (a plain
