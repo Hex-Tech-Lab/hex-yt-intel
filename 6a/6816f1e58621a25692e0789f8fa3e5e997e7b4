@@ -1,0 +1,41 @@
+web/lib/types/synthesis-nucleus.ts
+  s_0eded1e9d0cab6::t_bbe2b7730a98a8 33-51
+  s_0eded1e9d0cab6::t_33cab9e4ec650d 216-218
+  s_0eded1e9d0cab6::t_514bb2d763874a 215,226
+  s_0eded1e9d0cab6::t_1fa4657350e5b7 237
+web/lib/__tests__/chip-state-sync.test.ts
+  s_0eded1e9d0cab6::t_333b58826f83a1 1-140
+web/lib/stores/analysis-metadata-store.ts
+  s_0eded1e9d0cab6::t_4326c535b6a14d 45
+  s_0eded1e9d0cab6::t_5f2df6a2d69314 22,33,91
+  s_0eded1e9d0cab6::t_bbe89c6c3800c1 23-27
+  s_0eded1e9d0cab6::t_7e2be6af5988fd 97-99
+  s_0eded1e9d0cab6::t_4f43ee9cd9bbc8 10
+  s_0eded1e9d0cab6::t_3d6c53d35b33b7 121
+web/lib/stores/synthesis-nucleus-store.ts
+  s_0eded1e9d0cab6::t_7e3a4987086d06 15
+  s_0eded1e9d0cab6::t_08c472c2cfef00 36
+  s_0eded1e9d0cab6::t_1d8d804f5490c8 72
+  s_0eded1e9d0cab6::t_73470452f4db21 119-120
+  s_0eded1e9d0cab6::t_b971823d6ef72b 50
+web/hooks/useAuxElementStatus.ts
+  s_0eded1e9d0cab6::t_bcaeb65c88de53 80
+  s_0eded1e9d0cab6::t_e9d8ebc40e84c6 20-28,33-38,48-49,58,63,75-79,81-82,91
+  s_0eded1e9d0cab6::t_51bc7364311473 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6a6816f1e58621a25692e0789f8fa3e5e997e7b4",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
