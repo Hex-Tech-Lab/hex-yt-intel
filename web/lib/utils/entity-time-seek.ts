@@ -219,12 +219,18 @@ export function findAllEntityMentions(
 /**
  * Pick the entity mention nearest the video's current playback position.
  * When currentPlaybackSeconds is null (nothing has played yet), returns the
- * LAST occurrence rather than the first — the first occurrence is typically
- * a passing introduction near the start of the dimension content, so every
- * entity click before the first play would otherwise resolve to the same
- * early timestamp ("they almost all go to the same spot, near 0:00", live
- * report 2026-08-07). The last occurrence is the entity's most recent
- * discussion, which is a more useful default.
+ * mention with the LATEST seekSeconds — the earliest occurrence is
+ * typically a passing introduction near the start of the dimension
+ * content, so every entity click before the first play would otherwise
+ * resolve to the same early timestamp ("they almost all go to the same
+ * spot, near 0:00", live report 2026-08-07). The most-recent-discussion
+ * mention is a more useful default.
+ *
+ * Explicitly reduces by seekSeconds rather than trusting `mentions[mentions
+ * .length - 1]` -- findAllEntityMentions pushes mentions in left-to-right
+ * TEXT order, which usually but is not guaranteed to correlate with
+ * chronological/seekSeconds order (nothing enforces the source prose stays
+ * strictly chronological). Cubic review, PR #213, caught post-merge.
  */
 export function findNearestEntityMention(
   node: EntityTimeSeekNode,
@@ -234,7 +240,9 @@ export function findNearestEntityMention(
 ): EntityMentionMatch | null {
   const mentions = findAllEntityMentions(node, dimensionContent, chapters);
   if (mentions.length === 0) return null;
-  if (currentPlaybackSeconds === null || currentPlaybackSeconds === undefined) return mentions[mentions.length - 1]!;
+  if (currentPlaybackSeconds === null || currentPlaybackSeconds === undefined) {
+    return mentions.reduce((latest, mention) => (mention.seekSeconds > latest.seekSeconds ? mention : latest));
+  }
   return mentions.reduce((best, mention) => {
     const dist = Math.abs(mention.seekSeconds - currentPlaybackSeconds);
     const bestDist = Math.abs(best.seekSeconds - currentPlaybackSeconds);

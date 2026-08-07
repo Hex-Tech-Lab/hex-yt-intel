@@ -242,6 +242,17 @@ describe('findNearestEntityMention', () => {
     expect(mention!.occurrenceIndex).toBe(1);
   });
 
+  it('returns the mention with the LATEST seekSeconds when null, even if it is not the last one in text order', () => {
+    // Out-of-order prose: the LLM references the later moment first ("as they
+    // later note at 9:00...") before circling back to an earlier one -- the
+    // fallback must pick by actual seekSeconds, not by array/text position.
+    const node = { label: 'Patrick Winston', content: '', keyTerms: [] };
+    const content = 'At 9:00 Patrick Winston summarizes. Earlier, at 2:10, Patrick Winston is introduced.';
+    const mention = findNearestEntityMention(node, content, null, null);
+    expect(mention).not.toBeNull();
+    expect(mention!.timestamp).toBe('9:00');
+  });
+
   it('returns null when there are no mentions', () => {
     const node = { label: 'Pricing strategy', content: '', keyTerms: [] };
     expect(findNearestEntityMention(node, 'Nothing time-related here.', null, 100)).toBeNull();
