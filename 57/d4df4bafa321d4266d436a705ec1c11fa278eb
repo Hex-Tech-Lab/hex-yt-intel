@@ -1,0 +1,28 @@
+web/hooks/useAutoRestoreAnalysis.ts
+  s_0eded1e9d0cab6::t_391f440b9e6c17 124-142
+web/components/templates/console/__tests__/AnalysisHistory-restore.test.tsx
+  s_0eded1e9d0cab6::t_669d3a2c99c1bd 47-59
+  s_0eded1e9d0cab6::t_561333f3001d98 91-92
+  s_0eded1e9d0cab6::t_ab3cc330f7dcb7 1-36,38-41,43-46,60-90,93-194,215-216
+  s_0eded1e9d0cab6::t_5a2b896a2e721d 37,42,195-214
+web/hooks/__tests__/useAutoRestoreAnalysis.test.tsx
+  s_0eded1e9d0cab6::t_fbd4312214e509 115
+  s_0eded1e9d0cab6::t_92e2a7b9570398 1-39,41-114,116-174
+  s_0eded1e9d0cab6::t_8ddcce66d7d724 40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "57d4df4bafa321d4266d436a705ec1c11fa278eb",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
