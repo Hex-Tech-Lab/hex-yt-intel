@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import packageJson from '../../../package.json';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,7 @@ export async function GET() {
     status: 'ok',
     timestamp: new Date().toISOString(),
     message: 'System operational',
-    version: '2.6.0',
+    version: packageJson.version,
     subsystems: {
       engine: 'healthy',
       vector: 'healthy',
