@@ -76,8 +76,30 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
       })
       .then((data) => {
         if (cancelled) return;
+        // Post-review finding (2026-08-07, nav-remount entity-seek RCA): the
+        // kg_entities table has NO `dimension` column (see
+        // supabase/migrations/20260610110000_add_knowledge_graph_tables.sql)
+        // -- nodes sourced from THIS API path previously had `dimension`
+        // silently omitted entirely (`undefined`). DashboardContainer's
+        // handleSelectNode then calls
+        // `useAnalysisDimensionsStore.getState().getDimension(node.dimension)`,
+        // which returns `undefined` for a non-numeric input by construction
+        // (isValidDimensionNumber gate) -- `dim` is always undefined for
+        // these nodes, so every click falls into the "dimension not yet
+        // streamed, subscribe and retry" branch, which can only ever resolve
+        // if that exact (undefined) dimension number later streams in --
+        // impossible. For a completed/restored analysis nothing streams
+        // again, so the retry silently times out after 15s with zero
+        // feedback: a real seek never happens, exactly the reported
+        // entity-click-seek no-op symptom. Falling back to the SAME sentinel
+        // (DEFAULT_KG_EXTRACTION_DIMENSION) the storeKnowledgeGraph branch
+        // below already uses for the identical "no reliable per-node
+        // dimension" situation keeps this path from being a guaranteed dead
+        // end -- worst case it seeks off dimension 8's content, but that is
+        // strictly better than never seeking at all.
         const nodes = (data.entities || []).map((e: any) => ({
           id: e.id,
+          dimension: typeof e.dimension === 'number' ? e.dimension : DEFAULT_KG_EXTRACTION_DIMENSION,
           label: e.label,
           type: e.type,
           entityType: e.type || 'concept',

@@ -27,6 +27,7 @@ import { isStackedLayout } from '@/hooks/useIsStackedLayout';
 import { parseTimestamp } from '@/components/TimestampLink';
 import { findNearestEntityMention } from '@/lib/utils/entity-time-seek';
 import { useAnalysisDimensionsStore } from '@/lib/stores/analysis-dimensions-store';
+import { useAnalysisStateStore } from '@/lib/stores/analysis-state-store';
 
 // Lazy load visualization components to reduce initial bundle size
 const KnowledgeGraphCanvas = dynamic(() => import('@/components/templates/console/KnowledgeGraphCanvas').then(mod => ({ default: mod.KnowledgeGraphCanvas })), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse" /> });
@@ -223,8 +224,17 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         if (timestamp) {
           const secs = parseTimestamp(timestamp);
           if (secs >= 0) setSeekTo(secs);
-        } else if (!dim) {
-          // Race condition: dimension not yet streamed into store.
+        } else if (!dim && useAnalysisStateStore.getState().isStreaming) {
+          // Race condition: dimension not yet streamed into store. This
+          // retry path only makes sense mid-generation -- for a completed/
+          // restored analysis (isStreaming === false) NOTHING streams again,
+          // so subscribing here would wait the full 15s for a dimension that
+          // can never arrive, producing a silent no-op seek with zero
+          // feedback (real regression found investigating the nav-away/back
+          // entity-seek report, 2026-08-07: `node.dimension` was undefined
+          // for API-sourced graph nodes -- see useKnowledgeGraph.ts fix in
+          // the same commit -- so `dim` was always undefined for those nodes,
+          // and this branch fired every time with no way to ever resolve).
           // Subscribe and retry once when the dimension arrives. If the
           // dimension never streams in (permanently missing, or the user
           // navigates away before it does), the subscription would otherwise
