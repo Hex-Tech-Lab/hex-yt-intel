@@ -232,13 +232,14 @@ describe('findNearestEntityMention', () => {
     expect(mention!.occurrenceIndex).toBe(1);
   });
 
-  it('returns the first mention when currentPlaybackSeconds is null', () => {
+  it('returns the last mention when currentPlaybackSeconds is null (not the first — avoids "always near 0:00")', () => {
     const node = { label: 'Patrick Winston', content: '', keyTerms: [] };
     const content = 'At 2:10 Patrick Winston is introduced. At 5:45 Patrick Winston explains the K-P-T formula.';
     const mention = findNearestEntityMention(node, content, null, null);
     expect(mention).not.toBeNull();
-    expect(mention!.timestamp).toBe('2:10');
-    expect(mention!.occurrenceIndex).toBe(0);
+    // Should return the LAST occurrence (most recent mention), not the first.
+    expect(mention!.timestamp).toBe('5:45');
+    expect(mention!.occurrenceIndex).toBe(1);
   });
 
   it('returns null when there are no mentions', () => {

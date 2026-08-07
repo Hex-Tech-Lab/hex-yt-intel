@@ -218,8 +218,13 @@ export function findAllEntityMentions(
 
 /**
  * Pick the entity mention nearest the video's current playback position.
- * Falls back to the first mention when currentPlaybackSeconds is null
- * (nothing has played yet) or when there are no mentions.
+ * When currentPlaybackSeconds is null (nothing has played yet), returns the
+ * LAST occurrence rather than the first — the first occurrence is typically
+ * a passing introduction near the start of the dimension content, so every
+ * entity click before the first play would otherwise resolve to the same
+ * early timestamp ("they almost all go to the same spot, near 0:00", live
+ * report 2026-08-07). The last occurrence is the entity's most recent
+ * discussion, which is a more useful default.
  */
 export function findNearestEntityMention(
   node: EntityTimeSeekNode,
@@ -229,7 +234,7 @@ export function findNearestEntityMention(
 ): EntityMentionMatch | null {
   const mentions = findAllEntityMentions(node, dimensionContent, chapters);
   if (mentions.length === 0) return null;
-  if (currentPlaybackSeconds === null || currentPlaybackSeconds === undefined) return mentions[0]!;
+  if (currentPlaybackSeconds === null || currentPlaybackSeconds === undefined) return mentions[mentions.length - 1]!;
   return mentions.reduce((best, mention) => {
     const dist = Math.abs(mention.seekSeconds - currentPlaybackSeconds);
     const bestDist = Math.abs(best.seekSeconds - currentPlaybackSeconds);
