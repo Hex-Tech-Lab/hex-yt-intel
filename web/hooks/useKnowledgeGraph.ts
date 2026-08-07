@@ -97,14 +97,31 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
         // dimension" situation keeps this path from being a guaranteed dead
         // end -- worst case it seeks off dimension 8's content, but that is
         // strictly better than never seeking at all.
-        const nodes = (data.entities || []).map((e: any) => ({
-          id: e.id,
-          dimension: typeof e.dimension === 'number' ? e.dimension : DEFAULT_KG_EXTRACTION_DIMENSION,
-          label: e.label,
-          type: e.type,
-          entityType: e.type || 'concept',
-          weight: e.weight
-        }));
+        const nodes = (data.entities || []).map((e: any) => {
+          // Cubic P1 (PR #217 review): kg_entities has no top-level `dimension`
+          // column, but persistGraph() stores the ORIGINAL GraphNode (which does
+          // carry a real `dimension`) losslessly in `raw_node` (see
+          // SupabasePersistenceAdapter.persistGraph -- `rawNode: n`). Checking
+          // only `e.dimension` (always undefined for this table) meant every
+          // API-sourced node silently fell back to DEFAULT_KG_EXTRACTION_DIMENSION
+          // even when its real dimension was recoverable from raw_node, producing
+          // a confidently WRONG seek instead of an honest no-op. Prefer the
+          // preserved raw_node.dimension; only use the sentinel when neither
+          // source has a valid number.
+          const rawDimension = e.raw_node?.dimension;
+          const resolvedDimension =
+            typeof rawDimension === 'number' ? rawDimension :
+            typeof e.dimension === 'number' ? e.dimension :
+            DEFAULT_KG_EXTRACTION_DIMENSION;
+          return {
+            id: e.id,
+            dimension: resolvedDimension,
+            label: e.label,
+            type: e.type,
+            entityType: e.type || 'concept',
+            weight: e.weight
+          };
+        });
         const nodeIds = new Set(nodes.map((n: any) => String(n.id)));
         const edges: Array<{ source: string; target: string; strength: number; kind: RelationKind }> = [];
         for (const rItem of (data.relations || [])) {
