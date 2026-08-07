@@ -1,0 +1,21 @@
+docs/agent-prompts/2026-08-07-agy-chip-state-sync.md
+  s_0eded1e9d0cab6::t_2bfb74c52972e4 1-150
+docs/agent-prompts/2026-08-07-oc-entity-seek-still-broken.md
+  s_0eded1e9d0cab6::t_a71d6b286f0987 1-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d91acddfae313df3fb81f0fb2314025ab6ef9178",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
