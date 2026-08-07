@@ -12,6 +12,7 @@ import {
   type KnowledgeGraphV2,
   type ClassificationData,
   type MonetizationVerdict,
+  type RestoreAnalysisPayload,
   computePersonaProjection,
 } from '@/lib/types/synthesis-nucleus';
 
@@ -32,6 +33,7 @@ function readSubStores() {
     classification: ms.classification,
     monetizationVerdict: ms.monetizationVerdict,
     rawAnalysisPayload: ms.rawAnalysisPayload,
+    rawAnalysisPayloadId: ms.rawAnalysisPayloadId,
     streamError: ss.streamError,
     projection,
   };
@@ -45,7 +47,7 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
   return {
     ...readSubStores(),
 
-    initializeAnalysis: (payload: Partial<UCISPayload> & { analysisPayload?: any }) => {
+    initializeAnalysis: (payload: Partial<UCISPayload> & { analysisPayload?: RestoreAnalysisPayload | null }) => {
       // Switching to a genuinely different analysis (e.g. selecting a
       // different video from History) must clear the PREVIOUS analysis's
       // persona/knowledgeGraph/classification/monetizationVerdict before
@@ -67,7 +69,7 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
       useAnalysisStreamingStore.getState().clearStreamError();
       const ap = payload.analysisPayload;
       if (ap) {
-        useAnalysisMetadataStore.getState().setRawAnalysisPayload(ap);
+        useAnalysisMetadataStore.getState().setRawAnalysisPayload(ap, payload.id ?? null);
         if (ap.persona) useAnalysisMetadataStore.getState().setPersonaConfig(ap.persona);
         if (ap.knowledgeGraph) useAnalysisMetadataStore.getState().setKnowledgeGraph(ap.knowledgeGraph);
         if (ap.classification) useAnalysisMetadataStore.getState().setClassification(ap.classification);
@@ -114,8 +116,8 @@ export const useSynthesisNucleus = create<SynthesisNucleusState>((set) => {
       useAnalysisMetadataStore.getState().setMonetizationVerdict(verdict);
     },
 
-    setRawAnalysisPayload: (payload) => {
-      useAnalysisMetadataStore.getState().setRawAnalysisPayload(payload);
+    setRawAnalysisPayload: (payload, analysisId) => {
+      useAnalysisMetadataStore.getState().setRawAnalysisPayload(payload, analysisId);
     },
 
     getDimension: (number: number) => {

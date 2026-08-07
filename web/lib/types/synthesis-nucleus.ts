@@ -30,6 +30,25 @@ import type { UCISDimension } from './dimension';
 import type { ClassificationData } from './classification';
 import type { MonetizationVerdict } from './monetization';
 
+/**
+ * The `analysis_payload` JSON column's shape, as consumed by
+ * initializeAnalysis on restore/streaming-init. A superset of
+ * AuxStatusPayloadInput (which only covers the fields the aux-status chips
+ * derive from) -- this also carries the metadata-store fields
+ * (persona/knowledgeGraph/classification/monetizationVerdict) that
+ * initializeAnalysis conditionally applies. Replaces a prior `any` typing
+ * at this boundary (Cubic review, PR #214).
+ */
+export interface RestoreAnalysisPayload {
+  videoMetadata?: { description?: unknown };
+  channelMeta?: Record<string, unknown> | null;
+  comments?: unknown[] | null;
+  persona?: PersonaConfigV2;
+  knowledgeGraph?: KnowledgeGraphV2;
+  classification?: ClassificationData;
+  monetizationVerdict?: MonetizationVerdict;
+}
+
 // =============================================================================
 // Individual dimension in the UCIS framework
 // =============================================================================
@@ -193,7 +212,10 @@ export interface SynthesisNucleusState {
   knowledgeGraph: KnowledgeGraphV2 | null;
   classification: ClassificationData | null;
   monetizationVerdict: MonetizationVerdict | null;
-  rawAnalysisPayload: import('@/lib/utils/aux-status-from-report').AuxStatusPayloadInput | null;
+  rawAnalysisPayload: RestoreAnalysisPayload | null;
+  /** The analysisId `rawAnalysisPayload` belongs to -- consumers must check
+   *  this matches before trusting the payload (Cubic review, PR #214). */
+  rawAnalysisPayloadId: string | null;
 
   activePersona: PersonaId;
   projection: PersonaProjection | null;
@@ -201,7 +223,7 @@ export interface SynthesisNucleusState {
   isStreaming: boolean;
   streamError: string | null;
 
-  initializeAnalysis: (payload: Partial<UCISPayload> & { analysisPayload?: any }) => void;
+  initializeAnalysis: (payload: Partial<UCISPayload> & { analysisPayload?: RestoreAnalysisPayload | null }) => void;
   addDimension: (dimension: UCISDimension) => void;
   completeAnalysis: () => void;
   switchPersona: (persona: PersonaId) => void;
@@ -212,7 +234,7 @@ export interface SynthesisNucleusState {
   setKnowledgeGraph: (kg: KnowledgeGraphV2) => void;
   setClassification: (data: ClassificationData) => void;
   setMonetizationVerdict: (verdict: MonetizationVerdict) => void;
-  setRawAnalysisPayload: (payload: import('@/lib/utils/aux-status-from-report').AuxStatusPayloadInput | null) => void;
+  setRawAnalysisPayload: (payload: RestoreAnalysisPayload | null, analysisId: string | null) => void;
 
   getDimension: (number: number) => UCISDimension | undefined;
   isPersonaComplete: () => boolean;

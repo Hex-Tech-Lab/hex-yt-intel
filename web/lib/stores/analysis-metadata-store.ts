@@ -7,12 +7,11 @@ import {
   type KnowledgeGraphV2,
   type ClassificationData,
   type MonetizationVerdict,
+  type RestoreAnalysisPayload,
   computePersonaProjection,
   isValidPersona,
   PERSONA_DIMENSIONS,
 } from '@/lib/types/synthesis-nucleus';
-
-import { type AuxStatusPayloadInput } from '@/lib/utils/aux-status-from-report';
 
 export interface AnalysisMetadataStore {
   activePersona: PersonaId;
@@ -20,13 +19,18 @@ export interface AnalysisMetadataStore {
   knowledgeGraph: KnowledgeGraphV2 | null;
   classification: ClassificationData | null;
   monetizationVerdict: MonetizationVerdict | null;
-  rawAnalysisPayload: AuxStatusPayloadInput | null;
+  rawAnalysisPayload: RestoreAnalysisPayload | null;
+  /** The analysisId `rawAnalysisPayload` belongs to. Consumers must check
+   *  this matches the analysisId they're rendering before trusting the
+   *  payload -- a global unscoped payload can't tell two analyses apart
+   *  (Cubic review, PR #214). */
+  rawAnalysisPayloadId: string | null;
   switchPersona: (persona: PersonaId) => void;
   setPersonaConfig: (config: PersonaConfigV2) => void;
   setKnowledgeGraph: (kg: KnowledgeGraphV2) => void;
   setClassification: (data: ClassificationData) => void;
   setMonetizationVerdict: (verdict: MonetizationVerdict) => void;
-  setRawAnalysisPayload: (payload: AuxStatusPayloadInput | null) => void;
+  setRawAnalysisPayload: (payload: RestoreAnalysisPayload | null, analysisId: string | null) => void;
   isPersonaComplete: () => boolean;
   reset: () => void;
 }
@@ -38,6 +42,7 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
   classification: null,
   monetizationVerdict: null,
   rawAnalysisPayload: null,
+  rawAnalysisPayloadId: null,
 
   switchPersona: (persona: PersonaId) => {
     if (!isValidPersona(persona)) {
@@ -83,14 +88,15 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
     console.debug('[Metadata] Monetization verdict received');
   },
 
-  setRawAnalysisPayload: (payload: AuxStatusPayloadInput | null) => {
+  setRawAnalysisPayload: (payload: RestoreAnalysisPayload | null, analysisId: string | null) => {
     // Deep equality is overkill here (this is a raw API payload object, not
     // a small typed shape like the sibling setters above) -- reference
     // equality is cheap and still catches the real redundant-call case,
     // e.g. the same data.analysis_payload object flowing through both
     // initializeAnalysis and a fetch-effect resolution.
-    if (get().rawAnalysisPayload === payload) return;
-    set({ rawAnalysisPayload: payload });
+    const current = get();
+    if (current.rawAnalysisPayload === payload && current.rawAnalysisPayloadId === analysisId) return;
+    set({ rawAnalysisPayload: payload, rawAnalysisPayloadId: analysisId });
   },
 
   isPersonaComplete: () => {
@@ -112,6 +118,7 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
       classification: null,
       monetizationVerdict: null,
       rawAnalysisPayload: null,
+      rawAnalysisPayloadId: null,
     });
   },
 }));
