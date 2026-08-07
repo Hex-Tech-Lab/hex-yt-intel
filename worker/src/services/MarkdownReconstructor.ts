@@ -31,7 +31,7 @@ interface PersonaConfigV2 {
   selectionRationale: string;
 }
 
-interface UCISPayloadV2 {
+export interface UCISPayloadV2 {
   schemaVersion: '2.0';
   persona: PersonaConfigV2;
   dimensions: UCISDimensionV2[];

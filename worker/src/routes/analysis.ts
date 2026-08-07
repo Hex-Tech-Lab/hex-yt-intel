@@ -701,6 +701,37 @@ function buildStreamResponse(
   // when the description has no chapter markers (most videos) -- threaded to
   // persist so `transcript_chapters` gets a real row only when chapters exist.
   let resolvedChapters: VideoChapter[] | null = null;
+  // ADR 021 Phase 1 (corrected 2026-08-07 per Cubic PR #216 review -- the
+  // original claim below was never verified against BracketBuffer's actual
+  // source before shipping; see worker/src/__tests__/bracket-buffer-
+  // emission-boundary.test.ts for the verification):
+  //
+  // BracketBuffer.feed() only emits a fragment when bracket depth returns
+  // to 0, i.e. when a TOP-LEVEL object closes. The real LLM output is one
+  // envelope object `{schemaVersion:"2.0", dimensions:[...]}` (see
+  // PromptBuilder.ts), so individual dimension objects sit INSIDE the
+  // `dimensions` array at depth 2 -- feed() does NOT confirm each dimension
+  // independently "the moment its closing brace arrives." It emits nothing
+  // until the whole envelope closes.
+  //
+  // The actual source of any dimensions captured from a TRUNCATED stream
+  // (the incident scenario this Phase covers) is BracketBuffer.finalize(),
+  // called once at stream end: it best-effort REPAIRS the trailing unclosed
+  // buffer (naive quote/bracket closing) and does a SINGLE JSON.parse pass
+  // over the whole repaired buffer. This recovers dimensions from many
+  // realistic truncations (e.g. cut mid-content-string, the common case),
+  // but is NOT guaranteed -- a truncation mid-key (e.g. `{"num`) produces
+  // unrepairable JSON and yields ZERO captured dimensions, the same
+  // all-or-nothing failure class as PersistService's own whole-text
+  // extraction path. capturedDimensions therefore reduces (but does not
+  // eliminate) the chance of losing already-valid dimensions on abort --
+  // it is a best-effort improvement, not a guarantee. finalText's own
+  // extraction (extractJsonPayload + jsonrepair in PersistService)
+  // re-parses the whole accumulated text separately and can fail
+  // independently of whether finalize()'s repair succeeded, which is why
+  // both sources are still merged in PersistService.mergeDimensions()
+  // rather than relying on either alone.
+  const capturedDimensions: Array<{ number: number; name: string; content: string }> = [];
 
   const persistService = new PersistService();
 
@@ -756,6 +787,15 @@ function buildStreamResponse(
         channelMeta: resolvedChannelMeta,
         comments: resolvedComments,
         chapters: resolvedChapters ?? undefined,
+        // ADR 021 Phase 1: snapshot by value -- capturedDimensions.push()
+        // keeps mutating the same array after this closure runs (persist()
+        // is called from atomicPersist's abort/flush handlers, which fire
+        // after streaming has produced more fragments than existed when
+        // buildStreamResponse's outer closures were first created), so a
+        // shallow copy at call time is required to avoid silently persisting
+        // whatever the array's LATEST unrelated state happens to be by the
+        // time the async persist HTTP call actually serializes it.
+        capturedDimensions: [...capturedDimensions],
       };
 
       // RCA (2026-07-22): this used to race EVERY persist call (including successful
@@ -933,7 +973,20 @@ function buildStreamResponse(
               finalText += delta;
               send({ type: "delta", content: delta });
             },
-            onFragment: (fragment: any) => send(fragment as unknown as Record<string, unknown>),
+            onFragment: (fragment: any) => {
+              // ADR 021 Phase 1: capture each fully-parsed dimension the moment
+              // BracketBuffer confirms it (see capturedDimensions declaration
+              // above) -- independent of send(), which only relays to the
+              // client and has no bearing on persistence.
+              if (fragment && fragment.type === 'dimension' && typeof fragment.dimension === 'number' && typeof fragment.content === 'string') {
+                capturedDimensions.push({
+                  number: fragment.dimension,
+                  name: fragment.name || `Dimension ${fragment.dimension}`,
+                  content: fragment.content,
+                });
+              }
+              send(fragment as unknown as Record<string, unknown>);
+            },
             onStatus: (statusEvent: StreamStatusEvent) => {
               if (statusEvent.stage === "model" && statusEvent.model) {
                 modelUsed = statusEvent.model;
