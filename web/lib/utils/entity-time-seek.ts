@@ -394,42 +394,44 @@ export function getRankedMentionsForEntity(
     return { nodeId, mentions: [] };
   }
 
-  // Cubic review, PR #225: the original implementation built a plain
-  // ARRAY of every textual label-regex match's offset, then indexed it by
-  // `idx` into `matches` -- but findAllEntityMentions SKIPS a textual
-  // occurrence when no preceding timestamp can be resolved for it (see its
-  // own doc comment), while still incrementing its internal
-  // textOccurrenceIndex for every occurrence, skipped or not. That means
-  // `matches[idx].occurrenceIndex` is NOT guaranteed to equal `idx` once
-  // any earlier occurrence was skipped, silently misaligning which text
-  // offset (and therefore which TF-IDF context window / density score) got
-  // attributed to which resolved mention. Key the offset lookup by the
-  // mention's own `occurrenceIndex` (the SAME quantity
-  // findAllEntityMentions itself uses to identify a specific textual
-  // occurrence) instead of raw array position.
-  const offsetByOccurrenceIndex = new Map<number, number>();
-  const label = node.label;
-  if (label && dimensionContent) {
-    const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const labelRe = new RegExp(escapedLabel, 'g');
-    let textOccurrenceIndex = 0;
-    for (const matchResult of dimensionContent.matchAll(labelRe)) {
-      offsetByOccurrenceIndex.set(textOccurrenceIndex, matchResult.index);
-      textOccurrenceIndex++;
-    }
-  }
-
+  // Cubic review, PR #225 (fully resolved this pass): the original
+  // implementation built a plain ARRAY of every textual label-regex match's
+  // offset, then indexed it by `idx` into `matches` -- but
+  // findAllEntityMentions SKIPS a textual occurrence when no preceding
+  // timestamp can be resolved for it, while still incrementing its
+  // internal textOccurrenceIndex for every occurrence, skipped or not. That
+  // means `matches[idx].occurrenceIndex` is NOT guaranteed to equal `idx`
+  // once any earlier occurrence was skipped, silently misaligning which
+  // text offset got attributed to which resolved mention. A prior pass on
+  // this file already made findAllEntityMentions carry `offset` directly on
+  // each EntityMentionMatch it returns (same fix as this comment used to
+  // describe, applied at the source instead of re-derived here) -- reading
+  // `matchItem.offset` below reuses that instead of re-scanning
+  // dimensionContent with the same label regex a second time.
   const fullText = dimensionContent || '';
+
+  // Cubic review, PR #224 (issue ab9d49eb): `deriveSegmentEnd`'s "next
+  // mention" boundary must be the next mention CHRONOLOGICALLY
+  // (by seekSeconds), not the next one in `matches`' TEXT-occurrence order
+  // -- LLM-narrated dimension prose can refer back to an earlier timestamp
+  // mid-paragraph, so text order and chronological order aren't guaranteed
+  // to match. Precompute a seekSeconds-sorted view once and look up each
+  // mention's chronological successor by its seekSeconds, not by `idx + 1`.
+  const chronological = [...matches].sort((matchA, matchB) => matchA.seekSeconds - matchB.seekSeconds);
+  const nextSeekSecondsByMatch = new Map<EntityMentionMatch, number | null>();
+  chronological.forEach((matchItem, chronoIdx) => {
+    nextSeekSecondsByMatch.set(matchItem, chronoIdx + 1 < chronological.length ? chronological[chronoIdx + 1]!.seekSeconds : null);
+  });
 
   const mentions: RankedEntityMention[] = matches.map((matchItem, idx) => {
     const segmentEndSeconds = deriveSegmentEnd(
       matchItem.seekSeconds,
-      idx + 1 < matches.length ? matches[idx + 1]!.seekSeconds : null,
+      nextSeekSecondsByMatch.get(matchItem) ?? null,
       chapters,
       videoDuration ?? null,
     );
 
-    const offset = offsetByOccurrenceIndex.get(matchItem.occurrenceIndex);
+    const offset = matchItem.offset;
     const contextStart = Math.max(0, (offset ?? 0) - TFIDF_CONTEXT_WINDOW);
     const contextEnd = Math.min(fullText.length, (offset ?? 0) + TFIDF_CONTEXT_AFTER);
     const context = fullText.slice(contextStart, contextEnd);
@@ -455,7 +457,15 @@ export function getRankedMentionsForEntity(
     };
   });
 
-  mentions.sort((firstMention, secondMention) => secondMention.significance - firstMention.significance);
+  // Tie-break equal significance scores chronologically (earlier mention
+  // first) so ranking order is deterministic rather than left to whatever
+  // order `matches` happened to be in -- V8's sort is stable, but the sort
+  // key itself previously had no tiebreaker, so two equal-significance
+  // mentions could appear in either order depending on unrelated upstream
+  // iteration order.
+  mentions.sort((firstMention, secondMention) =>
+    secondMention.significance - firstMention.significance || firstMention.seekSeconds - secondMention.seekSeconds,
+  );
 
   return { nodeId, mentions };
 }

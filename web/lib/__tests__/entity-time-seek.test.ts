@@ -302,4 +302,45 @@ describe('getRankedMentionsForEntity', () => {
     const index = getRankedMentionsForEntity('node-1', node, 'Nothing time-related here.', null, 600);
     expect(index.mentions).toEqual([]);
   });
+
+  // Cubic review, PR #224 (issue ab9d49eb): segmentEndSeconds used to derive
+  // its "next mention" boundary from `matches[idx + 1]` -- the next mention
+  // in TEXT order -- not the next one chronologically. LLM-narrated prose
+  // can flash back to an earlier timestamp mid-paragraph, so text order and
+  // chronological order aren't guaranteed to match. Here "Flow" is
+  // mentioned at 0:40 (text position 1), then a flashback references 0:10
+  // (text position 2), then 0:45 (text position 3). The 0:40 mention's real
+  // chronological successor is 0:45, not the textually-next 0:10 mention --
+  // a buggy text-order implementation would let the 0:40 segment run to
+  // 0:40+30=70s, straight through the 0:45 mention's own start.
+  it('derives segmentEndSeconds from the chronologically-next mention, not the next one in text order', () => {
+    const node = { label: 'Flow', content: '', keyTerms: [] };
+    const content = 'At 0:40 Flow happens once. Later flashback: at 0:10 Flow was foreshadowed. Then at 0:45 Flow concludes.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 600);
+    expect(index.mentions.length).toBe(3);
+    const mentionAt40 = index.mentions.find((mention) => mention.seekSeconds === 40);
+    expect(mentionAt40).toBeDefined();
+    expect(mentionAt40!.segmentEndSeconds).toBeLessThanOrEqual(45);
+  });
+
+  // Cubic review PR #224 (P2.14, verified in 2026-08-08 re-audit): equal
+  // significance scores had no tiebreaker, leaving ranking order
+  // non-deterministic for entities whose mentions score identically.
+  it('tie-breaks equal significance scores chronologically', () => {
+    const node = { label: 'Same', content: '', keyTerms: [] };
+    // Identical surrounding prose for both mentions -> identical TF-IDF/
+    // density/position-adjacent scoring is plausible; regardless of the
+    // actual scores, verify the invariant: among any group of mentions
+    // that end up with equal significance, they are ordered by seekSeconds.
+    const content = 'At 0:05 Same appears. At 0:15 Same appears.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 600);
+    expect(index.mentions.length).toBe(2);
+    for (let i = 1; i < index.mentions.length; i++) {
+      const prev = index.mentions[i - 1]!;
+      const curr = index.mentions[i]!;
+      if (prev.significance === curr.significance) {
+        expect(prev.seekSeconds).toBeLessThanOrEqual(curr.seekSeconds);
+      }
+    }
+  });
 });
