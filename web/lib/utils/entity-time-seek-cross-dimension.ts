@@ -4,7 +4,7 @@
  * ComplexityRule threshold after PR #222 and PR #224 landed on top of each
  * other -- no behavior change, same function, same tests, new home.
  */
-import { findAllEntityMentions } from './entity-time-seek';
+import { findAllEntityMentions, pickNearestMention } from './entity-time-seek';
 import type { EntityTimeSeekNode, EntityTimeSeekChapter, EntityMentionMatch } from './entity-time-seek';
 
 /**
@@ -50,13 +50,5 @@ export function findNearestEntityMentionAcrossDimensions(
     if (!content.includes(label)) continue;
     allMentions.push(...findAllEntityMentions(node, content, chapters));
   }
-  if (allMentions.length === 0) return null;
-  if (currentPlaybackSeconds === null || currentPlaybackSeconds === undefined) {
-    return allMentions.reduce((latest, mention) => (mention.seekSeconds > latest.seekSeconds ? mention : latest));
-  }
-  return allMentions.reduce((best, mention) => {
-    const dist = Math.abs(mention.seekSeconds - currentPlaybackSeconds);
-    const bestDist = Math.abs(best.seekSeconds - currentPlaybackSeconds);
-    return dist < bestDist ? mention : best;
-  });
+  return pickNearestMention(allMentions, currentPlaybackSeconds);
 }

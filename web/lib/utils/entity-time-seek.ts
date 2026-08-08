@@ -225,7 +225,14 @@ export function findAllEntityMentions(
 }
 
 /**
- * Pick the entity mention nearest the video's current playback position.
+ * Pick whichever mention in a non-empty list is "best" relative to the
+ * video's current playback position. Shared by findNearestEntityMention
+ * (single-dimension) and findNearestEntityMentionAcrossDimensions
+ * (entity-time-seek-cross-dimension.ts) -- both previously carried an
+ * identical copy of this reduce (review-duplication finding, 2026-08-08
+ * post-merge audit of PR #222); extracted here so a future edit to the
+ * ranking policy can't land in one copy and not the other.
+ *
  * When currentPlaybackSeconds is null (nothing has played yet), returns the
  * mention with the LATEST seekSeconds — the earliest occurrence is
  * typically a passing introduction near the start of the dimension
@@ -234,19 +241,17 @@ export function findAllEntityMentions(
  * spot, near 0:00", live report 2026-08-07). The most-recent-discussion
  * mention is a more useful default.
  *
- * Explicitly reduces by seekSeconds rather than trusting `mentions[mentions
- * .length - 1]` -- findAllEntityMentions pushes mentions in left-to-right
- * TEXT order, which usually but is not guaranteed to correlate with
- * chronological/seekSeconds order (nothing enforces the source prose stays
- * strictly chronological). Cubic review, PR #213, caught post-merge.
+ * Explicitly reduces by seekSeconds rather than trusting
+ * `mentions[mentions.length - 1]` -- findAllEntityMentions pushes mentions
+ * in left-to-right TEXT order, which usually but is not guaranteed to
+ * correlate with chronological/seekSeconds order (nothing enforces the
+ * source prose stays strictly chronological). Cubic review, PR #213,
+ * caught post-merge.
  */
-export function findNearestEntityMention(
-  node: EntityTimeSeekNode,
-  dimensionContent: string | null | undefined,
-  chapters: EntityTimeSeekChapter[] | null | undefined,
-  currentPlaybackSeconds: number | null,
+export function pickNearestMention(
+  mentions: EntityMentionMatch[],
+  currentPlaybackSeconds: number | null | undefined,
 ): EntityMentionMatch | null {
-  const mentions = findAllEntityMentions(node, dimensionContent, chapters);
   if (mentions.length === 0) return null;
   if (currentPlaybackSeconds === null || currentPlaybackSeconds === undefined) {
     return mentions.reduce((latest, mention) => (mention.seekSeconds > latest.seekSeconds ? mention : latest));
@@ -256,6 +261,16 @@ export function findNearestEntityMention(
     const bestDist = Math.abs(best.seekSeconds - currentPlaybackSeconds);
     return dist < bestDist ? mention : best;
   });
+}
+
+export function findNearestEntityMention(
+  node: EntityTimeSeekNode,
+  dimensionContent: string | null | undefined,
+  chapters: EntityTimeSeekChapter[] | null | undefined,
+  currentPlaybackSeconds: number | null,
+): EntityMentionMatch | null {
+  const mentions = findAllEntityMentions(node, dimensionContent, chapters);
+  return pickNearestMention(mentions, currentPlaybackSeconds);
 }
 
 export function findEntityTimestamp(
