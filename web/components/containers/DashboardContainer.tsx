@@ -220,7 +220,37 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         // Gap 3: pass parsed chapters (from transcript_chapters via
         // useChapters) so findEntityTimestamp prefers a real chapter boundary
         // when the content timestamp falls inside one.
-        const timestamp = findNearestEntityMention(node, dimContent, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
+        let timestamp = findNearestEntityMention(node, dimContent, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
+        // Cross-dimension fallback (live-reported 2026-08-08, confirmed via
+        // instrumented live-console evidence on two separate accounts):
+        // `node.dimension` defaults to DEFAULT_KG_EXTRACTION_DIMENSION (8,
+        // "Semantic & Knowledge Graph Foundation") whenever a graph node's
+        // real originating dimension isn't tracked upstream -- which is
+        // effectively always for both the API-sourced and live-synthesized
+        // graph paths. Dimension 8's content is a structured KG summary list
+        // ("8.1 Primary Knowledge Graph Nodes\n1. Patrick Winston | type:
+        // person | ...") that NEVER contains inline timestamp markers by
+        // design -- confirmed live (5294 real chars, zero \d:\d\d matches).
+        // findNearestEntityMention's own header comment assumes the
+        // assigned dimension's prose has inline [MM:SS] markers, which is
+        // true for the actual narrative dimensions but never for 8. Rather
+        // than trust the (frequently wrong) assigned dimension, fall back to
+        // searching every OTHER populated dimension's content for a real
+        // mention -- `useAnalysisStateStore`'s dimensions map is "ALWAYS
+        // PERSISTED IN FULL" (its own type comment) even for a restored/
+        // completed analysis, unlike `useAnalysisDimensionsStore` above
+        // (stream-only, see the retry-branch comment below).
+        if (!timestamp) {
+          const allDimensions = useAnalysisStateStore.getState().analysis?.dimensions ?? {};
+          for (const otherDim of Object.values(allDimensions)) {
+            if (otherDim.number === node.dimension) continue;
+            const match = findNearestEntityMention(node, otherDim.content, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
+            if (match) {
+              timestamp = match;
+              break;
+            }
+          }
+        }
         if (timestamp) {
           const secs = parseTimestamp(timestamp);
           if (secs >= 0) setSeekTo(secs);
