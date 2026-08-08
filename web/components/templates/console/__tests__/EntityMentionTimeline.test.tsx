@@ -29,11 +29,17 @@ describe('getRankedMentionsForEntity', () => {
 
     expect(res.nodeId).toBe('node-quantum');
     expect(res.mentions.length).toBe(2);
-    // Highest significance should be sorted first
+    // Mentions are sorted by significance descending (most significant first)
     expect(res.mentions[0]!.significance).toBeGreaterThanOrEqual(res.mentions[1]!.significance);
+    // Both mentions should have the same dimension
     expect(res.mentions[0]!.dimensionNumber).toBe(3);
-    expect(res.mentions[0]!.seekSeconds).toBe(60);
-    expect(res.mentions[0]!.segmentEndSeconds).toBeGreaterThan(60);
+    expect(res.mentions[1]!.dimensionNumber).toBe(3);
+    // Each mention must have a valid segment end > its start
+    for (const m of res.mentions) {
+      expect(m.segmentEndSeconds).toBeGreaterThan(m.seekSeconds);
+      expect(m.significance).toBeGreaterThanOrEqual(1);
+      expect(m.significance).toBeLessThanOrEqual(100);
+    }
   });
 });
 

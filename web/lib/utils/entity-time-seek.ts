@@ -16,6 +16,7 @@
  * ("60:00–65:00", "60:00-65:00", "60:00 to 65:00") — extracts the start
  * time from any range.
  */
+import { TfIdfSimilarityEngine } from '@/lib/intelligence/similarity';
 
 const TIMESTAMP_RE = /\b(?:\d{1,2}:)?\d{1,2}:\d{2}\b/;
 const TIMESTAMP_RE_GLOBAL = /\b(?:\d{1,2}:)?\d{1,2}:\d{2}\b/g;
@@ -260,23 +261,98 @@ export function findEntityTimestamp(
 }
 
 export interface RankedEntityMention {
-  timestamp: string; // "MM:SS" or "HH:MM:SS", display form
-  seekSeconds: number; // parsed start time in seconds
+  timestamp: string;
+  seekSeconds: number;
   occurrenceIndex: number;
-  segmentEndSeconds: number; // where auto-play should stop and advance
-  significance: number; // 0-100, higher = more significant
+  segmentEndSeconds: number;
+  significance: number;
   dimensionNumber: number;
 }
 
 export interface EntityMentionIndex {
-  nodeId: string; // matches GraphNode.id
-  mentions: RankedEntityMention[]; // sorted by significance descending
+  nodeId: string;
+  mentions: RankedEntityMention[];
+}
+
+// --- Significance scoring & segment heuristics (ADR 025) ---
+const SIGNIFICANCE_TFIDF_WEIGHT = 0.55;
+const SIGNIFICANCE_DENSITY_WEIGHT = 0.30;
+const SIGNIFICANCE_POSITION_WEIGHT = 0.15;
+const SIGNIFICANCE_CEILING = 100;
+const SEGMENT_DEFAULT_SECONDS = 30;
+const SEGMENT_MAX_SECONDS = 45;
+const SEGMENT_MIN_SECONDS = 5;
+const CHAPTER_CAP_SECONDS = 60;
+const TFIDF_CONTEXT_WINDOW = 80;
+const TFIDF_CONTEXT_AFTER = 150;
+
+// Singleton TF-IDF engine reused across all mention-scoring calls.
+// The existing TfIdfSimilarityEngine (from knowledge-graph.ts) tokenizes,
+// computes IDF, and returns pairwise cosine similarity — we reuse it here
+// by comparing each mention's context window against the full dimension
+// text: a LOW cosine similarity means the context is lexically distinctive
+// (unusual/technical terms), which we interpret as higher significance.
+// A HIGH similarity means the context is typical prose — lower significance.
+const tfidfEngine = new TfIdfSimilarityEngine();
+
+function computeTfIdfScore(context: string, fullText: string): number {
+  if (!context.trim() || !fullText.trim()) return 0;
+  const result = tfidfEngine.compute([context, fullText]);
+  const cos = result.matrix[0]?.[1] ?? 0;
+  return Math.min(1, Math.max(0, 1 - cos));
+}
+
+function computeDensityScore(text: string, mentionOffset: number): number {
+  const afterMention = text.slice(mentionOffset);
+  let sentenceCount = 0;
+  const sentences = afterMention.split(/[.!?]+\s*/);
+  for (const sentenceItem of sentences) {
+    if (!sentenceItem.trim()) continue;
+    sentenceCount++;
+    if (sentenceCount > 5) { break; }
+    const hasTimestamp = TIMESTAMP_RE.test(sentenceItem);
+    if (hasTimestamp && sentenceCount >= 2) { break; }
+  }
+  return Math.min(1, sentenceCount / 5);
+}
+
+function computePositionScore(idx: number, total: number): number {
+  if (total <= 1) return 1;
+  return (idx + 1) / total;
+}
+
+function deriveSegmentEnd(
+  seekSeconds: number,
+  nextSeekSeconds: number | null,
+  chapters: EntityTimeSeekChapter[] | null | undefined,
+  videoDuration: number | null,
+): number {
+  let end = seekSeconds + SEGMENT_DEFAULT_SECONDS;
+
+  if (chapters && chapters.length > 0) {
+    const chapterItem = chapters.find((ch) => seekSeconds >= ch.start_seconds && seekSeconds <= ch.end_seconds);
+    if (chapterItem && chapterItem.end_seconds > seekSeconds) {
+      end = Math.min(chapterItem.end_seconds, seekSeconds + CHAPTER_CAP_SECONDS);
+    }
+  }
+
+  if (nextSeekSeconds !== null && nextSeekSeconds > seekSeconds && nextSeekSeconds < end) {
+    end = nextSeekSeconds;
+  }
+
+  if (videoDuration !== null && videoDuration > 0) {
+    end = Math.min(end, videoDuration);
+  }
+
+  end = Math.min(end, seekSeconds + SEGMENT_MAX_SECONDS);
+
+  return Math.max(seekSeconds + SEGMENT_MIN_SECONDS, end);
 }
 
 /**
  * Get all mentions for an entity node ranked by significance (ADR 025 contract).
- * Extracted so the UI components can render timeline markers and step through
- * mentions in significance-sorted order.
+ * Uses a hybrid TF-IDF + local discussion density + position heuristic to score
+ * each mention's significance 0-100, then sorts descending by score.
  */
 export function getRankedMentionsForEntity(
   nodeId: string,
@@ -292,32 +368,47 @@ export function getRankedMentionsForEntity(
     return { nodeId, mentions: [] };
   }
 
+  const mentionTextOffsets: number[] = [];
+  const label = node.label;
+  if (label && dimensionContent) {
+    const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const labelRe = new RegExp(escapedLabel, 'g');
+    for (const matchResult of dimensionContent.matchAll(labelRe)) {
+      mentionTextOffsets.push(matchResult.index);
+    }
+  }
+
+  const fullText = dimensionContent || '';
+
   const mentions: RankedEntityMention[] = matches.map((matchItem, idx) => {
-    let segmentEndSeconds = matchItem.seekSeconds + 30;
-    if (chapters && chapters.length > 0) {
-      const chapterItem = chapters.find((ch) => matchItem.seekSeconds >= ch.start_seconds && matchItem.seekSeconds <= ch.end_seconds);
-      if (chapterItem && chapterItem.end_seconds > matchItem.seekSeconds) {
-        segmentEndSeconds = Math.min(chapterItem.end_seconds, matchItem.seekSeconds + 60);
-      }
-    }
+    const segmentEndSeconds = deriveSegmentEnd(
+      matchItem.seekSeconds,
+      idx + 1 < matches.length ? matches[idx + 1]!.seekSeconds : null,
+      chapters,
+      videoDuration ?? null,
+    );
 
-    const nextMatch = matches[idx + 1];
-    if (nextMatch && nextMatch.seekSeconds > matchItem.seekSeconds && nextMatch.seekSeconds < segmentEndSeconds) {
-      segmentEndSeconds = nextMatch.seekSeconds;
-    }
+    const contextStart = Math.max(0, (mentionTextOffsets[idx] ?? 0) - TFIDF_CONTEXT_WINDOW);
+    const contextEnd = Math.min(fullText.length, (mentionTextOffsets[idx] ?? 0) + TFIDF_CONTEXT_AFTER);
+    const context = fullText.slice(contextStart, contextEnd);
 
-    if (videoDuration && videoDuration > 0) {
-      segmentEndSeconds = Math.min(segmentEndSeconds, videoDuration);
-    }
+    const tfidfScore = computeTfIdfScore(context, fullText);
+    const densityScore = mentionTextOffsets[idx] !== undefined ? computeDensityScore(fullText, mentionTextOffsets[idx]!) : 0.5;
+    const positionScore = computePositionScore(idx, matches.length);
 
-    const significance = Math.max(20, 95 - idx * 10);
+    const significance = Math.round(
+      (tfidfScore * SIGNIFICANCE_TFIDF_WEIGHT +
+       densityScore * SIGNIFICANCE_DENSITY_WEIGHT +
+       positionScore * SIGNIFICANCE_POSITION_WEIGHT) *
+      SIGNIFICANCE_CEILING
+    );
 
     return {
       timestamp: matchItem.timestamp,
       seekSeconds: matchItem.seekSeconds,
       occurrenceIndex: matchItem.occurrenceIndex,
-      segmentEndSeconds: Math.max(matchItem.seekSeconds + 5, segmentEndSeconds),
-      significance,
+      segmentEndSeconds: Math.max(matchItem.seekSeconds + SEGMENT_MIN_SECONDS, segmentEndSeconds),
+      significance: Math.max(1, Math.min(SIGNIFICANCE_CEILING, significance)),
       dimensionNumber,
     };
   });
@@ -326,4 +417,3 @@ export function getRankedMentionsForEntity(
 
   return { nodeId, mentions };
 }
-
