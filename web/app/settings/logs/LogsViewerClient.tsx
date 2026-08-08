@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { IconButton, Tooltip } from '@astryxdesign/core';
 
@@ -154,18 +155,25 @@ function coerceToUtcIso(timestampStr: string): string {
   return /[zZ]|[+-]\d{2}:?\d{2}$/.test(timestampStr) ? timestampStr : `${timestampStr}Z`;
 }
 
-function formatDualTimezone(timestampStr: string): { display: string; full: string } {
+// Stacked on 2 lines (UTC / CAI), not a single wide "10:52:09 UTC · 13:52:09
+// CAI" string -- a narrower timestamp column leaves more real estate for the
+// message column, which usually wraps to multiple lines anyway so the
+// vertical space is already being spent regardless (2026-08-08 directive).
+function formatDualTimezone(timestampStr: string): { utcLine: string; caiLine: string; full: string } {
   try {
     const d = new Date(coerceToUtcIso(timestampStr));
-    if (isNaN(d.getTime())) return { display: timestampStr, full: timestampStr };
+    if (isNaN(d.getTime())) return { utcLine: timestampStr, caiLine: '', full: timestampStr };
     const utcTime = d.toLocaleTimeString('en-US', { timeZone: 'UTC', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const caiTime = d.toLocaleTimeString('en-US', { timeZone: 'Africa/Cairo', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     return {
-      display: `${utcTime} UTC · ${caiTime} CAI`,
+      utcLine: `${utcTime} UTC`,
+      caiLine: `${caiTime} CAI`,
       full: `${d.toISOString()} (Cairo: ${caiTime})`,
     };
-  } catch {
-    return { display: timestampStr, full: timestampStr };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, { contexts: { formatDualTimezone: { timestampStr, message } } });
+    return { utcLine: timestampStr, caiLine: '', full: timestampStr };
   }
 }
 
@@ -484,8 +492,14 @@ export function LogsViewerClient() {
                         idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'
                       }`}
                     >
-                      <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)]" title={dualTime.full}>
-                        {dualTime.display}
+                      <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)] leading-tight text-center" title={dualTime.full}>
+                        <div>{dualTime.utcLine}</div>
+                        {dualTime.caiLine && (
+                          <>
+                            <div className="opacity-50">·</div>
+                            <div>{dualTime.caiLine}</div>
+                          </>
+                        )}
                       </td>
                       <td className="py-2 px-3 font-bold">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] ${
@@ -529,26 +543,35 @@ export function LogsViewerClient() {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-[var(--surface-raised)] border-b border-[var(--border-muted)] text-[var(--ink-muted)] font-semibold">
-                      <th className="py-2 px-3 w-[190px]">Polled At</th>
+                      <th className="py-2 px-3 w-[110px]">Polled At</th>
                       <th className="py-2 px-3 w-[70px]">Status</th>
                       <th className="py-2 px-3">Stats / Error</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(historyByTab[activeTab] || []).map((row, idx) => (
+                    {(historyByTab[activeTab] || []).map((row, idx) => {
+                      const dualTime = formatDualTimezone(row.polledAt);
+                      return (
                       <tr
                         key={`${row.polledAt}-${idx}`}
                         className={`border-b border-[var(--border-muted)]/50 ${!row.ok ? 'bg-[var(--err)]/10 text-[var(--err)]' : idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'}`}
                       >
-                        <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)]" title={formatDualTimezone(row.polledAt).full}>
-                          {formatDualTimezone(row.polledAt).display}
+                        <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)] leading-tight text-center" title={dualTime.full}>
+                          <div>{dualTime.utcLine}</div>
+                          {dualTime.caiLine && (
+                            <>
+                              <div className="opacity-50">·</div>
+                              <div>{dualTime.caiLine}</div>
+                            </>
+                          )}
                         </td>
                         <td className="py-2 px-3 font-bold">{row.ok ? 'OK' : 'FAIL'}</td>
                         <td className="py-2 px-3 font-mono break-all">
                           {row.ok ? JSON.stringify(row.stats) : row.error}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
