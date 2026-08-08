@@ -7,15 +7,47 @@
 // the glob fix makes it actually run under the workspace's default `node`
 // environment, matching the pattern already used by every other RTL test
 // in this repo (see hooks/__tests__/*.test.tsx, components/.../WordCloud.test.tsx).
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TimestampLink } from '@/components/TimestampLink';
 import { useVideoStore } from '@/store/useVideoStore';
-import { expect, describe, it, beforeEach, vi } from 'vitest';
+import { expect, describe, it, beforeEach, beforeAll, afterAll, vi } from 'vitest';
 
 /**
  * Unit tests for TimestampLink component
  * Tests timestamp parsing, store interaction, and accessibility
  */
+
+// Astryx's Tooltip renders via the native Popover API (showPopover/
+// hidePopover, :popover-open), which happy-dom doesn't implement. Same mock
+// as @astryxdesign/core's own Tooltip.test.tsx, needed here to assert the
+// tooltip actually becomes VISIBLE on real hover/focus, not just that it
+// exists in the DOM with the right aria-describedby linkage (CodeRabbit P2
+// on PR #219 -- the previous version of this test only checked DOM
+// presence + ID linkage, never a real interaction triggering visibility).
+const originalMatches = HTMLElement.prototype.matches;
+const popoverOpenState = new WeakMap<HTMLElement, boolean>();
+
+beforeAll(() => {
+  HTMLElement.prototype.showPopover = vi.fn(function (this: HTMLElement) {
+    popoverOpenState.set(this, true);
+  });
+  HTMLElement.prototype.hidePopover = vi.fn(function (this: HTMLElement) {
+    popoverOpenState.set(this, false);
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (HTMLElement.prototype as any).matches = function (selector: string): boolean {
+    if (selector === ':popover-open') {
+      return popoverOpenState.get(this) ?? false;
+    }
+    return originalMatches.call(this, selector);
+  };
+});
+
+afterAll(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (HTMLElement.prototype as any).matches = originalMatches;
+});
+
 describe('TimestampLink', () => {
   beforeEach(() => {
     // Reset the store before each test
@@ -214,6 +246,31 @@ describe('TimestampLink', () => {
       const tooltip = screen.getByRole('tooltip', { hidden: true });
       expect(tooltip).toHaveAttribute('id', describedbyId);
       expect(tooltip).toHaveTextContent('Seek to 01:30');
+    });
+
+    it('shows the tooltip via real hover and hides it on mouse leave', async () => {
+      // CodeRabbit P2 (PR #219): the accessibility test above only proves
+      // the tooltip exists and is correctly linked via aria-describedby --
+      // not that it ever becomes visible through the real user interaction
+      // (hover/focus) that's supposed to trigger it. Drives the actual
+      // Popover-API open/close path (mocked in beforeAll, above) via
+      // fireEvent.mouseEnter/mouseLeave, matching the precedent in
+      // @astryxdesign/core's own Tooltip.test.tsx.
+      render(<TimestampLink timestamp="01:30" />);
+      const link = screen.getByRole('link', { name: /seek to 01:30/i });
+      const tooltip = screen.getByRole('tooltip', { hidden: true });
+
+      expect(tooltip.matches(':popover-open')).toBe(false);
+
+      fireEvent.mouseEnter(link);
+      await waitFor(() => {
+        expect(tooltip.matches(':popover-open')).toBe(true);
+      });
+
+      fireEvent.mouseLeave(link);
+      await waitFor(() => {
+        expect(tooltip.matches(':popover-open')).toBe(false);
+      });
     });
   });
 
