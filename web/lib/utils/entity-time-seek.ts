@@ -310,13 +310,35 @@ export function getRankedMentionsForEntity(
       segmentEndSeconds = Math.min(segmentEndSeconds, videoDuration);
     }
 
+    // Cubic review, PR #224: the previous code forced a 5s MINIMUM window
+    // via Math.max AFTER the upper-bound clamps above (chapter end / next
+    // mention / video duration) -- so a mention within the video's final
+    // 5s, or two mentions <5s apart, produced a segment end pushed back
+    // PAST the video's own duration or into the next mention's territory,
+    // silently violating every bound just established. A short segment
+    // (even under 5s) is correct when that's genuinely all the room
+    // there is; only guard against a degenerate zero/negative window.
+    segmentEndSeconds = Math.max(segmentEndSeconds, matchItem.seekSeconds + 0.5);
+
+    // Cubic review, PR #224: this was `95 - idx*10` labeled "significance"
+    // (0-100 per the frozen contract) but is really just occurrence order
+    // with no evidentiary basis -- misleading once displayed as a
+    // percentage. The real significance scorer (TF-IDF distinctiveness +
+    // discussion-density heuristic, per ADR 025) is being built in the
+    // sibling OC dispatch (docs/agent-prompts/2026-08-08-oc-entity-mention-index-and-segments.md,
+    // branch feat/entity-mention-index-adr025) -- this occurrence-order
+    // placeholder is ONLY correct until that lands and this function is
+    // reconciled with the real implementation. Do not treat this value as
+    // meaningful signal in the meantime; it exists so mentions have a
+    // stable, deterministic display/sort order before the real scorer
+    // ships, nothing more.
     const significance = Math.max(20, 95 - idx * 10);
 
     return {
       timestamp: matchItem.timestamp,
       seekSeconds: matchItem.seekSeconds,
       occurrenceIndex: matchItem.occurrenceIndex,
-      segmentEndSeconds: Math.max(matchItem.seekSeconds + 5, segmentEndSeconds),
+      segmentEndSeconds,
       significance,
       dimensionNumber,
     };

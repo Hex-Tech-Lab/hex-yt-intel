@@ -258,14 +258,24 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
     }
   }, [graph.nodes, chapters]);
 
+  // Cubic review, PR #224: this previously read
+  // useAnalysisDimensionsStore.getState().getDimension(...) imperatively
+  // INSIDE useMemo -- a snapshot read, not a subscription, so the timeline
+  // never recomputed when dimension content changed (e.g. streaming
+  // completing, a dimension being patched) unless selectedNodeId/graph.nodes
+  // also happened to change at the same time. useAnalysisDimensionsStore's
+  // own getDimension() is itself just a passthrough to
+  // useAnalysisStateStore's analysis.dimensions map, so subscribe to THAT
+  // reactively here and use it as an explicit memo dependency.
+  const analysisDimensions = useAnalysisStateStore((s) => s.analysis?.dimensions);
+
   // Derived timeline mentions for selected entity (ADR 025 UI)
   const timelineEntityData = useMemo(() => {
     if (!selectedNodeId || !graph.nodes) return null;
     const node = graph.nodes.find((n) => n.id === selectedNodeId);
     if (!node) return null;
 
-    const dim = useAnalysisDimensionsStore.getState().getDimension(node.dimension ?? 1);
-    const dimContent = dim?.content;
+    const dimContent = analysisDimensions?.[node.dimension ?? 1]?.content;
     const index = getRankedMentionsForEntity(selectedNodeId, node, dimContent, chapters, videoMetadata?.duration ?? null);
 
     if (index.mentions.length <= 1) return null;
@@ -275,7 +285,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       entityLabel: node.label || selectedNodeId,
       mentions: index.mentions,
     };
-  }, [selectedNodeId, graph.nodes, chapters, videoMetadata?.duration]);
+  }, [selectedNodeId, graph.nodes, chapters, videoMetadata?.duration, analysisDimensions]);
 
   // Define Right Panel Accordion Items
   const handleExpandPanel = useCallback((id: string, mode: string) => {

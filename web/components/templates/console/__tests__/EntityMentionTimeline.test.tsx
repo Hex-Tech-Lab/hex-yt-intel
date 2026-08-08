@@ -7,7 +7,7 @@
 // @vitest-environment happy-dom
 
 import { createElement } from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { EntityMentionTimeline } from '@/components/templates/console/EntityMentionTimeline';
 import { getRankedMentionsForEntity, type RankedEntityMention } from '@/lib/utils/entity-time-seek';

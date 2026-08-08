@@ -28,9 +28,37 @@ export function EntityMentionTimeline({
 }: EntityMentionTimelineProps) {
   const [activeRankIndex, setActiveRankIndex] = useState(0);
   const [autoAdvance, setAutoAdvance] = useState(true);
+  // Cubic review, PR #224: a manual seek (marker click / Prev / Next) calls
+  // setSeekTo, but the store's currentPlaybackSeconds doesn't reflect the
+  // new position until the player actually catches up (a few polling ticks
+  // later). In that window, the auto-advance effect below was still
+  // evaluating the OLD (stale) currentPlaybackSeconds against the NEWLY
+  // selected mention's segmentEndSeconds -- selecting an EARLIER marker
+  // while playback was already past that marker's segment end immediately
+  // triggered another auto-advance, bouncing the user away from their own
+  // selection. Track the target of any seek we just issued and ignore
+  // auto-advance evaluation until currentPlaybackSeconds actually reflects
+  // having reached it.
+  const [pendingSeekSeconds, setPendingSeekSeconds] = useState<number | null>(null);
 
-  const currentPlaybackSeconds = useVideoStore((s) => s.currentPlaybackSeconds);
-  const isPlaying = useVideoStore((s) => s.isPlaying);
+  const currentPlaybackSeconds = useVideoStore((state) => state.currentPlaybackSeconds);
+  const isPlaying = useVideoStore((state) => state.isPlaying);
+
+  const issueSeek = useCallback((seconds: number) => {
+    setPendingSeekSeconds(seconds);
+    useVideoStore.getState().setSeekTo(seconds);
+  }, []);
+
+  // Clear the pending-seek guard once playback has genuinely caught up to
+  // (or past) the requested target -- a 1s tolerance since polling ticks
+  // are coarse (VideoPlayerCard polls ~4x/sec) and an exact match isn't
+  // guaranteed.
+  useEffect(() => {
+    if (pendingSeekSeconds === null || currentPlaybackSeconds === null) return;
+    if (currentPlaybackSeconds >= pendingSeekSeconds - 1) {
+      setPendingSeekSeconds(null);
+    }
+  }, [pendingSeekSeconds, currentPlaybackSeconds]);
 
   // Reset active index when selected entity changes
   useEffect(() => {
@@ -45,7 +73,7 @@ export function EntityMentionTimeline({
   const maxTime = useMemo(() => {
     if (videoDuration && videoDuration > 0) return videoDuration;
     if (mentions.length > 0) {
-      const maxSeek = Math.max(...mentions.map((m) => Math.max(m.seekSeconds, m.segmentEndSeconds)));
+      const maxSeek = Math.max(...mentions.map((mention) => Math.max(mention.seekSeconds, mention.segmentEndSeconds)));
       return Math.max(maxSeek + 30, 300);
     }
     return 600;
@@ -58,10 +86,10 @@ export function EntityMentionTimeline({
       setActiveRankIndex(index);
       const target = mentions[index];
       if (target) {
-        useVideoStore.getState().setSeekTo(target.seekSeconds);
+        issueSeek(target.seekSeconds);
       }
     },
-    [mentions],
+    [mentions, issueSeek],
   );
 
   const handlePrev = useCallback(() => {
@@ -80,6 +108,10 @@ export function EntityMentionTimeline({
   // when Crossing activeMention.segmentEndSeconds
   useEffect(() => {
     if (!autoAdvance || !isPlaying || !activeMention || currentPlaybackSeconds === null) return;
+    // Ignore stale currentPlaybackSeconds from before a manual seek we just
+    // issued has actually taken effect -- see issueSeek/pendingSeekSeconds
+    // above (Cubic review, PR #224).
+    if (pendingSeekSeconds !== null) return;
 
     if (currentPlaybackSeconds >= activeMention.segmentEndSeconds) {
       if (activeRankIndex < mentions.length - 1) {
@@ -88,14 +120,14 @@ export function EntityMentionTimeline({
         setActiveRankIndex(nextIndex);
         const nextMention = mentions[nextIndex];
         if (nextMention) {
-          useVideoStore.getState().setSeekTo(nextMention.seekSeconds);
+          issueSeek(nextMention.seekSeconds);
         }
       } else {
         // Reached end of ranked mentions sequence -- pause auto advance
         useVideoStore.getState().setPlaying(false);
       }
     }
-  }, [autoAdvance, isPlaying, activeMention, currentPlaybackSeconds, activeRankIndex, mentions]);
+  }, [autoAdvance, isPlaying, activeMention, currentPlaybackSeconds, activeRankIndex, mentions, pendingSeekSeconds, issueSeek]);
 
   // Do not render if no entity selected or zero mentions
   if (!entityId || !mentions || mentions.length <= 1) return null;
@@ -124,7 +156,7 @@ export function EntityMentionTimeline({
             <input
               type="checkbox"
               checked={autoAdvance}
-              onChange={(e) => setAutoAdvance(e.target.checked)}
+              onChange={(changeEvent) => setAutoAdvance(changeEvent.target.checked)}
               className="w-3.5 h-3.5 rounded border-[var(--line)] text-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] cursor-pointer"
             />
             Auto-advance segments
@@ -191,17 +223,17 @@ export function EntityMentionTimeline({
 
         {/* Individual Mention Markers */}
         <div className="absolute left-2 right-2 inset-y-0 pointer-events-none">
-          {mentions.map((m, idx) => {
-            const leftPct = Math.min(98, Math.max(1, (m.seekSeconds / maxTime) * 100));
+          {mentions.map((mention, idx) => {
+            const leftPct = Math.min(98, Math.max(1, (mention.seekSeconds / maxTime) * 100));
             const isActive = idx === activeRankIndex;
             return (
               <button
-                key={`${m.seekSeconds}-${idx}`}
+                key={`${mention.seekSeconds}-${idx}`}
                 type="button"
                 onClick={() => handleSelectMention(idx)}
                 style={{ left: `${leftPct}%` }}
-                title={`Rank #${idx + 1}: ${m.timestamp} (${m.significance}% significance) · Dim. ${m.dimensionNumber}`}
-                aria-label={`Jump to mention #${idx + 1} at ${m.timestamp}`}
+                title={`Rank #${idx + 1}: ${mention.timestamp} (${mention.significance}% significance) · Dim. ${mention.dimensionNumber}`}
+                aria-label={`Jump to mention #${idx + 1} at ${mention.timestamp}`}
                 className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto transition-transform hover:scale-125 focus:outline-none ${
                   isActive
                     ? 'w-4 h-4 rounded-full bg-[var(--accent)] shadow-[0_0_10px_rgba(59,130,246,0.8)] border-2 border-white z-10 scale-110'

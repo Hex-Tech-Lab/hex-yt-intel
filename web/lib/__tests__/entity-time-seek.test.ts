@@ -3,7 +3,7 @@
  * DashboardContainer's handleSelectNode entity-click seek.
  */
 import { describe, it, expect } from 'vitest';
-import { findEntityTimestamp, findAllEntityMentions, findNearestEntityMention } from '@/lib/utils/entity-time-seek';
+import { findEntityTimestamp, findAllEntityMentions, findNearestEntityMention, getRankedMentionsForEntity } from '@/lib/utils/entity-time-seek';
 
 describe('findEntityTimestamp', () => {
   it('prefers a timestamp in the label over one in content', () => {
@@ -266,5 +266,37 @@ describe('findNearestEntityMention', () => {
     const mention = findNearestEntityMention(node, content, null, 360);
     expect(mention).not.toBeNull();
     expect(mention!.timestamp).toBe('5:00');
+  });
+});
+
+describe('getRankedMentionsForEntity', () => {
+  // Cubic review, PR #224: segmentEndSeconds previously enforced a 5s
+  // MINIMUM window via Math.max AFTER the video-duration upper-bound clamp
+  // -- a mention within the video's final 5 seconds produced a segment end
+  // past the video's own duration.
+  it('never produces a segmentEndSeconds past the video duration, even for a mention near the very end', () => {
+    const node = { label: 'Closer', content: '', keyTerms: [] };
+    // Video is 100s long; mention at 98s -- only 2s of real room left.
+    const content = 'At 1:38 the Closer wraps up the talk.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 100);
+    expect(index.mentions.length).toBe(1);
+    expect(index.mentions[0]!.segmentEndSeconds).toBeLessThanOrEqual(100);
+  });
+
+  // Same class of bug: two mentions <5s apart previously let the minimum-
+  // window floor push the first mention's segment end past the second
+  // mention's own start.
+  it('never produces a segmentEndSeconds past the NEXT mention when mentions are close together', () => {
+    const node = { label: 'Rapid', content: '', keyTerms: [] };
+    const content = 'At 0:10 Rapid is introduced. At 0:12 Rapid is mentioned again.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 600);
+    expect(index.mentions.length).toBe(2);
+    expect(index.mentions[0]!.segmentEndSeconds).toBeLessThanOrEqual(index.mentions[1]!.seekSeconds);
+  });
+
+  it('returns an empty mentions array (not a crash) when the entity has no resolvable mentions', () => {
+    const node = { label: 'Nonexistent', content: '', keyTerms: [] };
+    const index = getRankedMentionsForEntity('node-1', node, 'Nothing time-related here.', null, 600);
+    expect(index.mentions).toEqual([]);
   });
 });
