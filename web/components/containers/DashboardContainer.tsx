@@ -267,25 +267,38 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
   // own getDimension() is itself just a passthrough to
   // useAnalysisStateStore's analysis.dimensions map, so subscribe to THAT
   // reactively here and use it as an explicit memo dependency.
-  const analysisDimensions = useAnalysisStateStore((s) => s.analysis?.dimensions);
+  //
+  // react-best-practices review, this pass: subscribing to the WHOLE
+  // dimensions map re-rendered this container (and re-derived
+  // timelineEntityData) on every dimension's streaming update, not just the
+  // currently-selected entity's dimension. Resolve the selected node first,
+  // then subscribe to only that one dimension's content string.
+  const selectedGraphNode = selectedNodeId && graph.nodes ? graph.nodes.find((n) => n.id === selectedNodeId) : null;
+  const selectedNodeDimension = selectedGraphNode?.dimension ?? 1;
+  const selectedDimensionContent = useAnalysisStateStore((state) =>
+    selectedNodeId ? state.analysis?.dimensions?.[selectedNodeDimension]?.content : undefined,
+  );
 
   // Derived timeline mentions for selected entity (ADR 025 UI)
   const timelineEntityData = useMemo(() => {
-    if (!selectedNodeId || !graph.nodes) return null;
-    const node = graph.nodes.find((n) => n.id === selectedNodeId);
-    if (!node) return null;
+    if (!selectedNodeId || !selectedGraphNode) return null;
 
-    const dimContent = analysisDimensions?.[node.dimension ?? 1]?.content;
-    const index = getRankedMentionsForEntity(selectedNodeId, node, dimContent, chapters, videoMetadata?.duration ?? null);
+    const index = getRankedMentionsForEntity(
+      selectedNodeId,
+      selectedGraphNode,
+      selectedDimensionContent,
+      chapters,
+      videoMetadata?.duration ?? null,
+    );
 
     if (index.mentions.length <= 1) return null;
 
     return {
       entityId: selectedNodeId,
-      entityLabel: node.label || selectedNodeId,
+      entityLabel: selectedGraphNode.label || selectedNodeId,
       mentions: index.mentions,
     };
-  }, [selectedNodeId, graph.nodes, chapters, videoMetadata?.duration, analysisDimensions]);
+  }, [selectedNodeId, selectedGraphNode, chapters, videoMetadata?.duration, selectedDimensionContent]);
 
   // Define Right Panel Accordion Items
   const handleExpandPanel = useCallback((id: string, mode: string) => {
