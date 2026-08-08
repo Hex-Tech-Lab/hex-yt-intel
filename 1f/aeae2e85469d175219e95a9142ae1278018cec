@@ -1,0 +1,23 @@
+pnpm-workspace.yaml
+  s_0eded1e9d0cab6::t_a6bdfe91e35a0a 45-51
+web/package.json
+  s_0eded1e9d0cab6::t_d0084f924829ef 39
+pnpm-lock.yaml
+  s_0eded1e9d0cab6::t_683ea7270438d6 25-27,127-128,3411-3412,4721-4722,4726-4727,8973,10038,10723,10725,11028
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "1faeae2e85469d175219e95a9142ae1278018cec",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
