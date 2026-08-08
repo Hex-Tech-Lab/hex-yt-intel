@@ -29,12 +29,12 @@ export function VideoPlayerCard() {
   const nucleusVideoId = useSynthesisNucleus((s) => s.analysis?.videoId);
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
-  // Facade pattern: the real YouTube IFrame API (www-widgetapi.js,
-  // player_embed_es6 base.js, www-player.css, iframe_api bootstrap) is a
-  // meaningful chunk of network/JS weight. Don't pull any of it in until the
-  // user has expressed real intent to watch — either clicking the facade's
-  // play button, or clicking a transcript timestamp (which implies "play
-  // from here").
+  // Facade pattern: the visible thumbnail+play-button is shown until the
+  // user clicks (or a transcript timestamp implies "play from here"). The
+  // REAL player, though, is no longer gated on this -- see the idle-preload
+  // effect below. `interacted` now controls only which overlay is on top
+  // (facade vs. the already-mounting/mounted player underneath it), not
+  // whether the player exists.
   const [interacted, setInteracted] = useState(false);
 
   const [playbackError, setPlaybackError] = useState<{ code: number | null; message: string } | null>(null);
@@ -51,11 +51,21 @@ export function VideoPlayerCard() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!mounted || !interacted || !videoId || !containerRef.current) return;
-    
+  // Mounts the real YouTube player into containerRef. Runs during idle time
+  // shortly after the facade paints, NOT gated on `interacted` -- see the
+  // scheduling effect below. Because no `autoplay` playerVar is set (see
+  // YouTubePlayerAdapter.mount), the mounted-but-hidden player never plays
+  // or shows a frame of its own; it sits behind the facade's opaque
+  // thumbnail (z-10 vs. containerRef's implicit z-0) until `interacted`
+  // reveals it. Perf rationale for pre-warming preserved from the prior
+  // click-gated version: the real IFrame API (www-widgetapi.js,
+  // player_embed_es6 base.js, www-player.css) is a meaningful chunk of
+  // network/JS weight, hence idle-time not immediate-on-mount.
+  const mountPlayer = () => {
+    if (!containerRef.current) return;
+
     let cancelled = false;
-    
+
     if (playerRef.current) {
       playerRef.current.destroy();
       playerRef.current = null;
@@ -63,11 +73,11 @@ export function VideoPlayerCard() {
     setReady(false);
     setPlaybackError(null);
     setFallbackSeek(null);
-    videoIdRef.current = videoId;
+    videoIdRef.current = videoId!;
 
     const adapter = new YouTubePlayerAdapter();
     playerRef.current = adapter;
-    
+
     // Timeout fallback: if onReady never fires, log and don't hang forever
     const readyTimeout = setTimeout(() => {
       if (cancelled) return;
@@ -78,8 +88,8 @@ export function VideoPlayerCard() {
       }
       setPlaybackError({ code: null, message: 'YouTube player failed to initialize' });
     }, 30000);
-    
-    adapter.mount(containerRef.current, videoId, {
+
+    adapter.mount(containerRef.current, videoId!, {
       onReady: () => {
         clearTimeout(readyTimeout);
         if (cancelled || videoIdRef.current !== videoId) {
@@ -136,7 +146,48 @@ export function VideoPlayerCard() {
       setReady(false);
       setPlaybackError(null);
     };
-  }, [mounted, interacted, videoId, setPlaying, retryNonce]);
+  };
+
+  useEffect(() => {
+    if (!mounted || !videoId || !containerRef.current) return;
+
+    let idleHandle: number | null = null;
+    let cleanupMount: (() => void) | undefined;
+    let disposed = false;
+
+    // requestIdleCallback isn't implemented in Safari -- setTimeout(…, 1) is
+    // the standard fallback used for this exact gap elsewhere in the web
+    // platform ecosystem; it still yields to the current paint/interaction
+    // first, just without idle's "only when truly free" guarantee.
+    const schedule =
+      typeof window.requestIdleCallback === 'function'
+        ? (cb: () => void) => window.requestIdleCallback(cb, { timeout: 2000 })
+        : (cb: () => void) => window.setTimeout(cb, 1);
+    const cancelSchedule =
+      typeof window.cancelIdleCallback === 'function' ? window.cancelIdleCallback : window.clearTimeout;
+
+    idleHandle = schedule(() => {
+      if (disposed) return;
+      cleanupMount = mountPlayer();
+    }) as unknown as number;
+
+    return () => {
+      disposed = true;
+      if (idleHandle !== null) cancelSchedule(idleHandle);
+      cleanupMount?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mountPlayer is
+    // redefined every render (closes over videoId/setPlaying/etc, all
+    // already covered by this effect's own deps) but is not itself a
+    // reactive value this effect should re-run on; including it would
+    // destroy and re-mount the player on every unrelated render.
+  }, [mounted, videoId, setPlaying, retryNonce]);
+
+  // A click (or a transcript timestamp arriving while still on the facade)
+  // reveals the already-mounting/mounted player -- it does NOT trigger a
+  // new mount. If the idle-scheduled mount hasn't started yet, `mountPlayer`
+  // above will still run on its own schedule; nothing here needs to force
+  // it, since containerRef/videoId are unchanged by `interacted` flipping.
 
   const embedRestricted = playbackError?.code === 101 || playbackError?.code === 150;
 
