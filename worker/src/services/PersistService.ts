@@ -114,11 +114,6 @@ function mergeDimensions(
   return { ...(extracted ?? {}), schemaVersion: '2.0', dimensions: mergedDims };
 }
 
-/** Schema selector: picks chunk or full schema based on chunk presence. Returns null if no schema matches. */
-function selectPersistSchema(isChunk: boolean): typeof ChunkPayloadSchema | typeof UCISPayloadSchema | null {
-  return isChunk ? ChunkPayloadSchema : UCISPayloadSchema;
-}
-
 /**
  * PersistService — Dual-write persistence via S2S HTTP postback.
  *
@@ -169,8 +164,12 @@ export class PersistService {
         },
       );
     } else if (merged) {
-      const schema = selectPersistSchema(isChunk);
-      if (!schema) return false;
+      // simplify (2026-08-08): selectPersistSchema() was a 2-line wrapper
+      // around this ternary whose JSDoc claimed it "returns null if no
+      // schema matches" -- it never could (isChunk is a boolean, both
+      // branches always return a real schema), so the call site's `if
+      // (!schema) return false` guard below was dead code. Inlined.
+      const schema = isChunk ? ChunkPayloadSchema : UCISPayloadSchema;
 
       // mergeDimensions() always stamps schemaVersion:'2.0' on every return
       // path (the pass-through `extracted` branch already carries it --
