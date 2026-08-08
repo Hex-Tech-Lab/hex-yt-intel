@@ -16,6 +16,7 @@
  * ("60:00–65:00", "60:00-65:00", "60:00 to 65:00") — extracts the start
  * time from any range.
  */
+import { TfIdfSimilarityEngine } from '@/lib/intelligence/similarity';
 
 const TIMESTAMP_RE = /\b(?:\d{1,2}:)?\d{1,2}:\d{2}\b/;
 const TIMESTAMP_RE_GLOBAL = /\b(?:\d{1,2}:)?\d{1,2}:\d{2}\b/g;
@@ -273,10 +274,96 @@ export interface EntityMentionIndex {
   mentions: RankedEntityMention[]; // sorted by significance descending
 }
 
+// --- Significance scoring & segment heuristics (ADR 025) ---
+// Reconciled from two parallel implementations (AGY's UI-consuming
+// placeholder on PR #224, OC's real TF-IDF+density scorer on PR #225) --
+// this is the merged, bug-fixed version both PRs converge on.
+const SIGNIFICANCE_TFIDF_WEIGHT = 0.55;
+const SIGNIFICANCE_DENSITY_WEIGHT = 0.30;
+const SIGNIFICANCE_POSITION_WEIGHT = 0.15;
+const SIGNIFICANCE_CEILING = 100;
+const SEGMENT_DEFAULT_SECONDS = 30;
+const SEGMENT_MAX_SECONDS = 45;
+const CHAPTER_CAP_SECONDS = 60;
+const TFIDF_CONTEXT_WINDOW = 80;
+const TFIDF_CONTEXT_AFTER = 150;
+
+// Singleton TF-IDF engine reused across all mention-scoring calls. The
+// existing TfIdfSimilarityEngine (from knowledge-graph.ts) tokenizes,
+// computes IDF, and returns pairwise cosine similarity -- reused here by
+// comparing each mention's context window against the full dimension text:
+// LOW cosine similarity means the context is lexically distinctive
+// (unusual/technical terms), interpreted as higher significance; HIGH
+// similarity means typical prose, lower significance.
+const tfidfEngine = new TfIdfSimilarityEngine();
+
+function computeTfIdfScore(context: string, fullText: string): number {
+  if (!context.trim() || !fullText.trim()) return 0;
+  const result = tfidfEngine.compute([context, fullText]);
+  const cos = result.matrix[0]?.[1] ?? 0;
+  return Math.min(1, Math.max(0, 1 - cos));
+}
+
+function computeDensityScore(text: string, mentionOffset: number): number {
+  const afterMention = text.slice(mentionOffset);
+  let sentenceCount = 0;
+  const sentences = afterMention.split(/[.!?]+\s*/);
+  for (const sentenceItem of sentences) {
+    if (!sentenceItem.trim()) continue;
+    sentenceCount++;
+    if (sentenceCount > 5) { break; }
+    const hasTimestamp = TIMESTAMP_RE.test(sentenceItem);
+    if (hasTimestamp && sentenceCount >= 2) { break; }
+  }
+  return Math.min(1, sentenceCount / 5);
+}
+
+function computePositionScore(idx: number, total: number): number {
+  if (total <= 1) return 1;
+  return (idx + 1) / total;
+}
+
+function deriveSegmentEnd(
+  seekSeconds: number,
+  nextSeekSeconds: number | null,
+  chapters: EntityTimeSeekChapter[] | null | undefined,
+  videoDuration: number | null,
+): number {
+  let end = seekSeconds + SEGMENT_DEFAULT_SECONDS;
+
+  if (chapters && chapters.length > 0) {
+    const chapterItem = chapters.find((ch) => seekSeconds >= ch.start_seconds && seekSeconds <= ch.end_seconds);
+    if (chapterItem && chapterItem.end_seconds > seekSeconds) {
+      end = Math.min(chapterItem.end_seconds, seekSeconds + CHAPTER_CAP_SECONDS);
+    }
+  }
+
+  if (nextSeekSeconds !== null && nextSeekSeconds > seekSeconds && nextSeekSeconds < end) {
+    end = nextSeekSeconds;
+  }
+
+  if (videoDuration !== null && videoDuration > 0) {
+    end = Math.min(end, videoDuration);
+  }
+
+  end = Math.min(end, seekSeconds + SEGMENT_MAX_SECONDS);
+
+  // Cubic review, PR #224 AND PR #225 (same bug in both independent
+  // implementations): a 5s MINIMUM window forced via Math.max AFTER every
+  // upper-bound clamp above (chapter end / next mention / video duration)
+  // can push the result back PAST those bounds -- a mention within the
+  // video's final 5s, or two mentions <5s apart, produced a segment end
+  // past the video's own duration or into the next mention's territory.
+  // A short segment (even under 5s) is correct when that's genuinely all
+  // the room there is; only guard against a degenerate zero/negative
+  // window, never re-violate an upper bound to hit an arbitrary minimum.
+  return Math.max(end, seekSeconds + 0.5);
+}
+
 /**
  * Get all mentions for an entity node ranked by significance (ADR 025 contract).
- * Extracted so the UI components can render timeline markers and step through
- * mentions in significance-sorted order.
+ * Uses a hybrid TF-IDF + local discussion density + position heuristic to
+ * score each mention's significance 0-100, then sorts descending by score.
  */
 export function getRankedMentionsForEntity(
   nodeId: string,
@@ -292,54 +379,63 @@ export function getRankedMentionsForEntity(
     return { nodeId, mentions: [] };
   }
 
+  // Cubic review, PR #225: the original implementation built a plain
+  // ARRAY of every textual label-regex match's offset, then indexed it by
+  // `idx` into `matches` -- but findAllEntityMentions SKIPS a textual
+  // occurrence when no preceding timestamp can be resolved for it (see its
+  // own doc comment), while still incrementing its internal
+  // textOccurrenceIndex for every occurrence, skipped or not. That means
+  // `matches[idx].occurrenceIndex` is NOT guaranteed to equal `idx` once
+  // any earlier occurrence was skipped, silently misaligning which text
+  // offset (and therefore which TF-IDF context window / density score) got
+  // attributed to which resolved mention. Key the offset lookup by the
+  // mention's own `occurrenceIndex` (the SAME quantity
+  // findAllEntityMentions itself uses to identify a specific textual
+  // occurrence) instead of raw array position.
+  const offsetByOccurrenceIndex = new Map<number, number>();
+  const label = node.label;
+  if (label && dimensionContent) {
+    const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const labelRe = new RegExp(escapedLabel, 'g');
+    let textOccurrenceIndex = 0;
+    for (const matchResult of dimensionContent.matchAll(labelRe)) {
+      offsetByOccurrenceIndex.set(textOccurrenceIndex, matchResult.index);
+      textOccurrenceIndex++;
+    }
+  }
+
+  const fullText = dimensionContent || '';
+
   const mentions: RankedEntityMention[] = matches.map((matchItem, idx) => {
-    let segmentEndSeconds = matchItem.seekSeconds + 30;
-    if (chapters && chapters.length > 0) {
-      const chapterItem = chapters.find((ch) => matchItem.seekSeconds >= ch.start_seconds && matchItem.seekSeconds <= ch.end_seconds);
-      if (chapterItem && chapterItem.end_seconds > matchItem.seekSeconds) {
-        segmentEndSeconds = Math.min(chapterItem.end_seconds, matchItem.seekSeconds + 60);
-      }
-    }
+    const segmentEndSeconds = deriveSegmentEnd(
+      matchItem.seekSeconds,
+      idx + 1 < matches.length ? matches[idx + 1]!.seekSeconds : null,
+      chapters,
+      videoDuration ?? null,
+    );
 
-    const nextMatch = matches[idx + 1];
-    if (nextMatch && nextMatch.seekSeconds > matchItem.seekSeconds && nextMatch.seekSeconds < segmentEndSeconds) {
-      segmentEndSeconds = nextMatch.seekSeconds;
-    }
+    const offset = offsetByOccurrenceIndex.get(matchItem.occurrenceIndex);
+    const contextStart = Math.max(0, (offset ?? 0) - TFIDF_CONTEXT_WINDOW);
+    const contextEnd = Math.min(fullText.length, (offset ?? 0) + TFIDF_CONTEXT_AFTER);
+    const context = fullText.slice(contextStart, contextEnd);
 
-    if (videoDuration && videoDuration > 0) {
-      segmentEndSeconds = Math.min(segmentEndSeconds, videoDuration);
-    }
+    const tfidfScore = computeTfIdfScore(context, fullText);
+    const densityScore = offset !== undefined ? computeDensityScore(fullText, offset) : 0.5;
+    const positionScore = computePositionScore(idx, matches.length);
 
-    // Cubic review, PR #224: the previous code forced a 5s MINIMUM window
-    // via Math.max AFTER the upper-bound clamps above (chapter end / next
-    // mention / video duration) -- so a mention within the video's final
-    // 5s, or two mentions <5s apart, produced a segment end pushed back
-    // PAST the video's own duration or into the next mention's territory,
-    // silently violating every bound just established. A short segment
-    // (even under 5s) is correct when that's genuinely all the room
-    // there is; only guard against a degenerate zero/negative window.
-    segmentEndSeconds = Math.max(segmentEndSeconds, matchItem.seekSeconds + 0.5);
-
-    // Cubic review, PR #224: this was `95 - idx*10` labeled "significance"
-    // (0-100 per the frozen contract) but is really just occurrence order
-    // with no evidentiary basis -- misleading once displayed as a
-    // percentage. The real significance scorer (TF-IDF distinctiveness +
-    // discussion-density heuristic, per ADR 025) is being built in the
-    // sibling OC dispatch (docs/agent-prompts/2026-08-08-oc-entity-mention-index-and-segments.md,
-    // branch feat/entity-mention-index-adr025) -- this occurrence-order
-    // placeholder is ONLY correct until that lands and this function is
-    // reconciled with the real implementation. Do not treat this value as
-    // meaningful signal in the meantime; it exists so mentions have a
-    // stable, deterministic display/sort order before the real scorer
-    // ships, nothing more.
-    const significance = Math.max(20, 95 - idx * 10);
+    const significance = Math.round(
+      (tfidfScore * SIGNIFICANCE_TFIDF_WEIGHT +
+       densityScore * SIGNIFICANCE_DENSITY_WEIGHT +
+       positionScore * SIGNIFICANCE_POSITION_WEIGHT) *
+      SIGNIFICANCE_CEILING
+    );
 
     return {
       timestamp: matchItem.timestamp,
       seekSeconds: matchItem.seekSeconds,
       occurrenceIndex: matchItem.occurrenceIndex,
       segmentEndSeconds,
-      significance,
+      significance: Math.max(1, Math.min(SIGNIFICANCE_CEILING, significance)),
       dimensionNumber,
     };
   });

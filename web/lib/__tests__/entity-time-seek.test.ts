@@ -291,7 +291,10 @@ describe('getRankedMentionsForEntity', () => {
     const content = 'At 0:10 Rapid is introduced. At 0:12 Rapid is mentioned again.';
     const index = getRankedMentionsForEntity('node-1', node, content, null, 600);
     expect(index.mentions.length).toBe(2);
-    expect(index.mentions[0]!.segmentEndSeconds).toBeLessThanOrEqual(index.mentions[1]!.seekSeconds);
+    // Results are significance-sorted, not chronological -- find the
+    // earlier-seeking mention explicitly rather than assuming array order.
+    const [earlier, later] = [...index.mentions].sort((mentionA, mentionB) => mentionA.seekSeconds - mentionB.seekSeconds);
+    expect(earlier!.segmentEndSeconds).toBeLessThanOrEqual(later!.seekSeconds);
   });
 
   it('returns an empty mentions array (not a crash) when the entity has no resolvable mentions', () => {

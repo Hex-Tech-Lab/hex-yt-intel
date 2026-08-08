@@ -32,8 +32,17 @@ describe('getRankedMentionsForEntity', () => {
     // Highest significance should be sorted first
     expect(res.mentions[0]!.significance).toBeGreaterThanOrEqual(res.mentions[1]!.significance);
     expect(res.mentions[0]!.dimensionNumber).toBe(3);
-    expect(res.mentions[0]!.seekSeconds).toBe(60);
-    expect(res.mentions[0]!.segmentEndSeconds).toBeGreaterThan(60);
+    // Reconciled with real significance scoring (Cubic review, PR #224/#225):
+    // WHICH specific mention (60s or 300s) ranks first is determined by
+    // real TF-IDF/density/position weighting, not a fixed occurrence-order
+    // assumption -- assert the invariant the scoring contract actually
+    // guarantees (both mentions present with valid, self-consistent
+    // boundaries), not which one happens to win for this fixture text.
+    const seekTimes = res.mentions.map((mention) => mention.seekSeconds).sort((secondsA, secondsB) => secondsA - secondsB);
+    expect(seekTimes).toEqual([60, 300]);
+    for (const mention of res.mentions) {
+      expect(mention.segmentEndSeconds).toBeGreaterThan(mention.seekSeconds);
+    }
   });
 });
 
