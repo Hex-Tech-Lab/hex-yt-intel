@@ -489,9 +489,14 @@ export function LogsViewerClient() {
                         idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'
                       }`}
                     >
-                      <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)] leading-tight" title={dualTime.full}>
+                      <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)] leading-tight text-center" title={dualTime.full}>
                         <div>{dualTime.utcLine}</div>
-                        {dualTime.caiLine && <div className="opacity-70">{dualTime.caiLine}</div>}
+                        {dualTime.caiLine && (
+                          <>
+                            <div className="opacity-50">·</div>
+                            <div>{dualTime.caiLine}</div>
+                          </>
+                        )}
                       </td>
                       <td className="py-2 px-3 font-bold">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] ${
@@ -546,9 +551,14 @@ export function LogsViewerClient() {
                         key={`${row.polledAt}-${idx}`}
                         className={`border-b border-[var(--border-muted)]/50 ${!row.ok ? 'bg-[var(--err)]/10 text-[var(--err)]' : idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'}`}
                       >
-                        <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)] leading-tight" title={formatDualTimezone(row.polledAt).full}>
+                        <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)] leading-tight text-center" title={formatDualTimezone(row.polledAt).full}>
                           <div>{formatDualTimezone(row.polledAt).utcLine}</div>
-                          {formatDualTimezone(row.polledAt).caiLine && <div className="opacity-70">{formatDualTimezone(row.polledAt).caiLine}</div>}
+                          {formatDualTimezone(row.polledAt).caiLine && (
+                            <>
+                              <div className="opacity-50">·</div>
+                              <div>{formatDualTimezone(row.polledAt).caiLine}</div>
+                            </>
+                          )}
                         </td>
                         <td className="py-2 px-3 font-bold">{row.ok ? 'OK' : 'FAIL'}</td>
                         <td className="py-2 px-3 font-mono break-all">
