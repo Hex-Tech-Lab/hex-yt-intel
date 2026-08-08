@@ -94,6 +94,31 @@ from information_schema.routine_privileges where routine_name = '...'`
 check, not a blind edit to an already-applied file. Not fixed yet — flagging
 for the next scan pass.
 
+## Open — stale `anon` UPDATE grant on `public.users` (2026-08-08)
+
+`information_schema.role_table_grants` shows table-level `UPDATE` on
+`public.users` still granted to `anon` (also `authenticated`, `service_role`,
+`postgres`) after PR #202's self-role-escalation fix. **Not currently
+exploitable**: `users_update_own`'s RLS `USING`/`WITH CHECK` requires
+`auth.role() = 'authenticated'`, which `anon` can never satisfy, so the
+table-level grant is dead weight, not a live hole. Found during a post-merge
+`supabase-postgres-best-practices` audit of PR #202 (2026-08-08) that
+independently re-verified the fix against the live DB (`pg_trigger`,
+`pg_policy`, `information_schema.role_table_grants`) rather than trusting the
+migration file alone — the fix itself (a `BEFORE UPDATE` trigger blocking
+`role` changes) is confirmed live and correctly enforced; this is a separate,
+lower-severity least-privilege cleanup on the same table.
+
+Deliberately not fixed in that pass: revoking a grant on `public.users` (a
+security-sensitive production table) without explicit sign-off, even though
+the fix itself is a trivial one-line migration:
+
+```sql
+revoke update on public.users from anon;
+```
+
+No `NOT VALID`/`VALIDATE CONSTRAINT` needed (grants aren't constraints).
+
 ## Next scan
 
 Re-run `pnpm tsx scripts/verify-quality-engine.ts --mode full` and
