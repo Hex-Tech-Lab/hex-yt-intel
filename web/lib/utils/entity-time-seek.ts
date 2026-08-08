@@ -287,9 +287,19 @@ export function findNearestEntityMentionAcrossDimensions(
   currentPlaybackSeconds: number | null,
 ): EntityMentionMatch | null {
   const label = node.label;
+  // CodeRabbit review, 2026-08-08: `label && !content.includes(label)`
+  // only skips a dimension when label IS present but not found in it. When
+  // label is missing/blank, the check short-circuits false and skips
+  // NOTHING -- every dimension gets included, and findAllEntityMentions'
+  // own degraded "first timestamp in content" fallback then fires for
+  // each one, reproducing the exact false-positive-per-dimension problem
+  // this function exists to prevent (see its own doc comment above). A
+  // node with no usable label can't be verified against any dimension's
+  // content, so it has no business searching across dimensions at all.
+  if (!label || !label.trim()) return null;
   const allMentions: EntityMentionMatch[] = [];
   for (const { content } of dimensionContents) {
-    if (label && !content.includes(label)) continue;
+    if (!content.includes(label)) continue;
     allMentions.push(...findAllEntityMentions(node, content, chapters));
   }
   if (allMentions.length === 0) return null;

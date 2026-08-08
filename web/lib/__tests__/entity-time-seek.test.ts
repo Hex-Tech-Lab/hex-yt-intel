@@ -318,4 +318,20 @@ describe('findNearestEntityMentionAcrossDimensions', () => {
     ];
     expect(findNearestEntityMentionAcrossDimensions(node, dimensionContents, null, null)).toBeNull();
   });
+
+  // CodeRabbit review, 2026-08-08: a node with a missing/blank label used
+  // to skip NOTHING (the presence check short-circuited false), so every
+  // dimension got included and each one's own degraded "first timestamp"
+  // fallback fired -- the exact false-positive-per-dimension bug this
+  // function exists to prevent, just triggered by absent-label nodes
+  // instead of present-but-unmatched ones.
+  it('returns null for a node with no usable label, even when dimensions contain timestamps', () => {
+    const dimensionContents = [
+      { dimensionNumber: 3, content: 'At 1:00 something is discussed.' },
+      { dimensionNumber: 5, content: 'At 2:00 something else is discussed.' },
+    ];
+    expect(findNearestEntityMentionAcrossDimensions({ label: undefined, content: '', keyTerms: [] }, dimensionContents, null, null)).toBeNull();
+    expect(findNearestEntityMentionAcrossDimensions({ label: '', content: '', keyTerms: [] }, dimensionContents, null, null)).toBeNull();
+    expect(findNearestEntityMentionAcrossDimensions({ label: '   ', content: '', keyTerms: [] }, dimensionContents, null, null)).toBeNull();
+  });
 });
