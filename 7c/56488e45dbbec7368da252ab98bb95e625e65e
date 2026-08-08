@@ -1,0 +1,36 @@
+web/components/templates/console/__tests__/EntityMentionTimeline.test.tsx
+  s_0eded1e9d0cab6::t_0ee7910e8aff22 10
+web/components/templates/console/EntityMentionTimeline.tsx
+  s_0eded1e9d0cab6::t_a6f3afcb2dd7be 89,92
+  s_0eded1e9d0cab6::t_fd6b5bb10ecc12 76,159
+  s_0eded1e9d0cab6::t_31c0325b4e129b 111-114,123,130
+  s_0eded1e9d0cab6::t_728c61db676cf7 226-227,231,235-236
+  s_0eded1e9d0cab6::t_873eb627f83535 31-42,46-61
+  s_0eded1e9d0cab6::t_e7bce38f3055d5 44-45
+  s_0eded1e9d0cab6::t_d4d8045db27292 43
+web/lib/utils/entity-time-seek.ts
+  s_0eded1e9d0cab6::t_60b0ed190aed33 321
+  s_0eded1e9d0cab6::t_a05d7b54711cfd 313-320
+  s_0eded1e9d0cab6::t_782196ea909167 322-334,341
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_d5044ef63d79fe 261-271,278,288
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0eded1e9d0cab6::t_3684250dbe36be 271-302
+  s_0eded1e9d0cab6::t_45f5c6879eb49e 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "7c56488e45dbbec7368da252ab98bb95e625e65e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
