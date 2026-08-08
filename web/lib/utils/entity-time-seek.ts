@@ -63,6 +63,8 @@ export interface EntityMentionMatch {
   timestamp: string;
   seekSeconds: number;
   occurrenceIndex: number;
+  /** Character offset of this occurrence's label match in dimensionContent, when resolved from prose (not a direct-field match). */
+  offset?: number;
 }
 
 /**
@@ -189,7 +191,12 @@ export function findAllEntityMentions(
       const candidateStr = findPrecedingTimestamp(beforeLabel);
       if (candidateStr) {
         const ts = applyChapterBoundary(candidateStr, chapters);
-        mentions.push({ timestamp: ts, seekSeconds: timeToSeconds(ts), occurrenceIndex: textOccurrenceIndex });
+        mentions.push({
+          timestamp: ts,
+          seekSeconds: timeToSeconds(ts),
+          occurrenceIndex: textOccurrenceIndex,
+          offset: labelMatchResult.index,
+        });
       }
       textOccurrenceIndex++;
     }
@@ -284,9 +291,13 @@ const SIGNIFICANCE_POSITION_WEIGHT = 0.15;
 const SIGNIFICANCE_CEILING = 100;
 const SEGMENT_DEFAULT_SECONDS = 30;
 const SEGMENT_MAX_SECONDS = 45;
-const CHAPTER_CAP_SECONDS = 60;
 const TFIDF_CONTEXT_WINDOW = 80;
 const TFIDF_CONTEXT_AFTER = 150;
+// /simplify's density-score slice window: computeDensityScore only needs a
+// bounded lookahead (5 sentences, checked via early break) -- slicing all
+// the way to the end of a long dimension (thousands of chars) for that was
+// pure waste. ~2000 chars comfortably covers 5 real sentences.
+const DENSITY_LOOKAHEAD_CHARS = 2000;
 
 // Singleton TF-IDF engine reused across all mention-scoring calls. The
 // existing TfIdfSimilarityEngine (from knowledge-graph.ts) tokenizes,
@@ -305,7 +316,7 @@ function computeTfIdfScore(context: string, fullText: string): number {
 }
 
 function computeDensityScore(text: string, mentionOffset: number): number {
-  const afterMention = text.slice(mentionOffset);
+  const afterMention = text.slice(mentionOffset, mentionOffset + DENSITY_LOOKAHEAD_CHARS);
   let sentenceCount = 0;
   const sentences = afterMention.split(/[.!?]+\s*/);
   for (const sentenceItem of sentences) {
@@ -332,9 +343,13 @@ function deriveSegmentEnd(
   let end = seekSeconds + SEGMENT_DEFAULT_SECONDS;
 
   if (chapters && chapters.length > 0) {
+    // /simplify finding: a separate CHAPTER_CAP_SECONDS (60) here was dead
+    // code -- the unconditional `Math.min(end, seekSeconds +
+    // SEGMENT_MAX_SECONDS)` clamp below always tightens further since
+    // SEGMENT_MAX_SECONDS (45) < 60, so it never had a chance to bind.
     const chapterItem = chapters.find((ch) => seekSeconds >= ch.start_seconds && seekSeconds <= ch.end_seconds);
     if (chapterItem && chapterItem.end_seconds > seekSeconds) {
-      end = Math.min(chapterItem.end_seconds, seekSeconds + CHAPTER_CAP_SECONDS);
+      end = chapterItem.end_seconds;
     }
   }
 
