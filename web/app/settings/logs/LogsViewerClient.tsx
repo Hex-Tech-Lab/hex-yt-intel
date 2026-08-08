@@ -496,7 +496,7 @@ export function LogsViewerClient() {
                         <div>{dualTime.utcLine}</div>
                         {dualTime.caiLine && (
                           <>
-                            <div className="opacity-50">·</div>
+                            <div className="opacity-50" aria-hidden="true">·</div>
                             <div>{dualTime.caiLine}</div>
                           </>
                         )}
@@ -560,7 +560,7 @@ export function LogsViewerClient() {
                           <div>{dualTime.utcLine}</div>
                           {dualTime.caiLine && (
                             <>
-                              <div className="opacity-50">·</div>
+                              <div className="opacity-50" aria-hidden="true">·</div>
                               <div>{dualTime.caiLine}</div>
                             </>
                           )}
