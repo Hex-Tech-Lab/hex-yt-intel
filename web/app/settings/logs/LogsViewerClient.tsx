@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { IconButton, Tooltip } from '@astryxdesign/core';
 
@@ -169,7 +170,9 @@ function formatDualTimezone(timestampStr: string): { utcLine: string; caiLine: s
       caiLine: `${caiTime} CAI`,
       full: `${d.toISOString()} (Cairo: ${caiTime})`,
     };
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    Sentry.captureException(error, { contexts: { formatDualTimezone: { timestampStr, message } } });
     return { utcLine: timestampStr, caiLine: '', full: timestampStr };
   }
 }
@@ -546,17 +549,19 @@ export function LogsViewerClient() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(historyByTab[activeTab] || []).map((row, idx) => (
+                    {(historyByTab[activeTab] || []).map((row, idx) => {
+                      const dualTime = formatDualTimezone(row.polledAt);
+                      return (
                       <tr
                         key={`${row.polledAt}-${idx}`}
                         className={`border-b border-[var(--border-muted)]/50 ${!row.ok ? 'bg-[var(--err)]/10 text-[var(--err)]' : idx % 2 === 0 ? 'bg-transparent' : 'bg-[var(--surface-raised)]/30'}`}
                       >
-                        <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)] leading-tight text-center" title={formatDualTimezone(row.polledAt).full}>
-                          <div>{formatDualTimezone(row.polledAt).utcLine}</div>
-                          {formatDualTimezone(row.polledAt).caiLine && (
+                        <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-muted)] leading-tight text-center" title={dualTime.full}>
+                          <div>{dualTime.utcLine}</div>
+                          {dualTime.caiLine && (
                             <>
                               <div className="opacity-50">·</div>
-                              <div>{formatDualTimezone(row.polledAt).caiLine}</div>
+                              <div>{dualTime.caiLine}</div>
                             </>
                           )}
                         </td>
@@ -565,7 +570,8 @@ export function LogsViewerClient() {
                           {row.ok ? JSON.stringify(row.stats) : row.error}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
