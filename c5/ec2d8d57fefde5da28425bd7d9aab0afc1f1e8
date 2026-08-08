@@ -1,0 +1,43 @@
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0eded1e9d0cab6::t_87d2d6e13624d5 6
+  s_0eded1e9d0cab6::t_bb19f326940b2c 367-431
+  s_0eded1e9d0cab6::t_5509874799d103 366
+  s_0eded1e9d0cab6::t_eaacd8222d6464 432
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_bb19f326940b2c 224-241
+  s_0eded1e9d0cab6::t_26fb8ce1166c2e 28
+web/lib/adapters/SupabaseAuxRemediationAdapter.ts
+  s_0eded1e9d0cab6::t_bb19f326940b2c 1-62
+web/lib/__tests__/TimestampLink.test.tsx
+  s_0eded1e9d0cab6::t_bb19f326940b2c 93-102,110,123,168-171,173,196-204,206-216
+web/app/api/analyses/persist/route.ts
+  s_0eded1e9d0cab6::t_bb19f326940b2c 280-326
+web/lib/utils/entity-time-seek.ts
+  s_0eded1e9d0cab6::t_bb19f326940b2c 482-534
+docs/audit/code_review_2026_07_31.md
+  s_0eded1e9d0cab6::t_bb19f326940b2c 1-153
+docs/audit/COMPARATIVE_ANALYSIS_2026_07_31_vs_2026_08_08.md
+  s_0eded1e9d0cab6::t_bb19f326940b2c 1-63
+docs/audit/HISTORICAL_TREND_ANALYSIS_2026_08_08.md
+  s_0eded1e9d0cab6::t_bb19f326940b2c 1-163
+docs/audit/10X_FULL_SPECTRUM_REAUDIT_2026_08_08.md
+  s_0eded1e9d0cab6::t_bb19f326940b2c 1-435
+web/lib/services/aux-remediation.ts
+  s_0eded1e9d0cab6::t_bb19f326940b2c 59,171,253-258
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "c5ec2d8d57fefde5da28425bd7d9aab0afc1f1e8",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
