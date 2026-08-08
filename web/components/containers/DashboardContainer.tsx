@@ -25,7 +25,8 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
 import { isStackedLayout } from '@/hooks/useIsStackedLayout';
 import { parseTimestamp } from '@/components/TimestampLink';
-import { findNearestEntityMention } from '@/lib/utils/entity-time-seek';
+import { findNearestEntityMention, getRankedMentionsForEntity } from '@/lib/utils/entity-time-seek';
+import { EntityMentionTimeline } from '@/components/templates/console/EntityMentionTimeline';
 import { useAnalysisDimensionsStore } from '@/lib/stores/analysis-dimensions-store';
 import { useAnalysisStateStore } from '@/lib/stores/analysis-state-store';
 
@@ -256,6 +257,25 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       }
     }
   }, [graph.nodes, chapters]);
+
+  // Derived timeline mentions for selected entity (ADR 025 UI)
+  const timelineEntityData = useMemo(() => {
+    if (!selectedNodeId || !graph.nodes) return null;
+    const node = graph.nodes.find((n) => n.id === selectedNodeId);
+    if (!node) return null;
+
+    const dim = useAnalysisDimensionsStore.getState().getDimension(node.dimension ?? 1);
+    const dimContent = dim?.content;
+    const index = getRankedMentionsForEntity(selectedNodeId, node, dimContent, chapters, videoMetadata?.duration ?? null);
+
+    if (index.mentions.length <= 1) return null;
+
+    return {
+      entityId: selectedNodeId,
+      entityLabel: node.label || selectedNodeId,
+      mentions: index.mentions,
+    };
+  }, [selectedNodeId, graph.nodes, chapters, videoMetadata?.duration]);
 
   // Define Right Panel Accordion Items
   const handleExpandPanel = useCallback((id: string, mode: string) => {
@@ -632,6 +652,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               {(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId) && (
                 <div className="flex flex-col gap-1">
                   <VideoPlayerCard />
+                  {timelineEntityData && (
+                    <EntityMentionTimeline
+                      entityId={timelineEntityData.entityId}
+                      entityLabel={timelineEntityData.entityLabel}
+                      mentions={timelineEntityData.mentions}
+                      videoDuration={videoMetadata?.duration ?? null}
+                      onClose={() => setSelectedNodeId(null)}
+                    />
+                  )}
                   {videoMetadata && (
                     <BentoMetadata
                       title={videoMetadata.title}

@@ -1,0 +1,123 @@
+/**
+ * Unit test suite for EntityMentionTimeline & getRankedMentionsForEntity (ADR 025).
+ * Tests marker positioning math, significance-ranking order, forward/back navigation,
+ * and auto-segment playback boundaries.
+ */
+
+// @vitest-environment happy-dom
+
+import { createElement } from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, cleanup, fireEvent } from '@testing-library/react';
+import { EntityMentionTimeline } from '@/components/templates/console/EntityMentionTimeline';
+import { getRankedMentionsForEntity, type RankedEntityMention } from '@/lib/utils/entity-time-seek';
+import { useVideoStore } from '@/store/useVideoStore';
+
+describe('getRankedMentionsForEntity', () => {
+  it('returns empty mentions when no matches found', () => {
+    const res = getRankedMentionsForEntity('node-1', { label: 'Quantum Computing' }, 'No matches here');
+    expect(res.nodeId).toBe('node-1');
+    expect(res.mentions).toEqual([]);
+  });
+
+  it('ranks mentions by significance and calculates segment boundaries', () => {
+    const dimensionContent = `
+      In this section [01:00], Quantum Computing is discussed.
+      Later on [05:00], Quantum Computing appears again for details.
+    `;
+    const res = getRankedMentionsForEntity('node-quantum', { label: 'Quantum Computing', dimension: 3 }, dimensionContent, [], 600);
+
+    expect(res.nodeId).toBe('node-quantum');
+    expect(res.mentions.length).toBe(2);
+    // Highest significance should be sorted first
+    expect(res.mentions[0]!.significance).toBeGreaterThanOrEqual(res.mentions[1]!.significance);
+    expect(res.mentions[0]!.dimensionNumber).toBe(3);
+    expect(res.mentions[0]!.seekSeconds).toBe(60);
+    expect(res.mentions[0]!.segmentEndSeconds).toBeGreaterThan(60);
+  });
+});
+
+describe('EntityMentionTimeline Component', () => {
+  beforeEach(() => {
+    useVideoStore.getState().reset();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  const sampleMentions: RankedEntityMention[] = [
+    {
+      timestamp: '01:00',
+      seekSeconds: 60,
+      occurrenceIndex: 0,
+      segmentEndSeconds: 90,
+      significance: 95,
+      dimensionNumber: 1,
+    },
+    {
+      timestamp: '04:00',
+      seekSeconds: 240,
+      occurrenceIndex: 1,
+      segmentEndSeconds: 270,
+      significance: 85,
+      dimensionNumber: 2,
+    },
+  ];
+
+  it('does not render when mentions length is <= 1', () => {
+    const { container } = render(
+      createElement(EntityMentionTimeline, {
+        entityId: 'node-1',
+        entityLabel: 'Single Mention Entity',
+        mentions: [sampleMentions[0]!],
+        videoDuration: 600,
+      }),
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('renders timeline strip with marker count when mentions > 1', () => {
+    const { getByText, getByRole, getAllByRole } = render(
+      createElement(EntityMentionTimeline, {
+        entityId: 'node-1',
+        entityLabel: 'Machine Learning',
+        mentions: sampleMentions,
+        videoDuration: 600,
+      }),
+    );
+
+    expect(getByText('Machine Learning')).toBeTruthy();
+    expect(getByText('2 mentions')).toBeTruthy();
+
+    const region = getByRole('region');
+    expect(region).toBeTruthy();
+    expect(region.getAttribute('aria-label')).toContain('Machine Learning');
+
+    const markers = getAllByRole('button', { name: /Jump to mention/i });
+    expect(markers.length).toBe(2);
+  });
+
+  it('navigates through mentions using Next / Prev controls', () => {
+    const { getByRole } = render(
+      createElement(EntityMentionTimeline, {
+        entityId: 'node-1',
+        entityLabel: 'Machine Learning',
+        mentions: sampleMentions,
+        videoDuration: 600,
+      }),
+    );
+
+    const nextBtn = getByRole('button', { name: 'Next ranked mention' });
+    const prevBtn = getByRole('button', { name: 'Previous ranked mention' });
+
+    expect((prevBtn as HTMLButtonElement).disabled).toBe(true);
+    expect((nextBtn as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(nextBtn);
+
+    expect(useVideoStore.getState().seekTo).toBe(240);
+    expect((prevBtn as HTMLButtonElement).disabled).toBe(false);
+    expect((nextBtn as HTMLButtonElement).disabled).toBe(true);
+  });
+});

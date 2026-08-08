@@ -258,3 +258,72 @@ export function findEntityTimestamp(
   const mentions = findAllEntityMentions(node, dimensionContent, chapters);
   return mentions[0]?.timestamp ?? null;
 }
+
+export interface RankedEntityMention {
+  timestamp: string; // "MM:SS" or "HH:MM:SS", display form
+  seekSeconds: number; // parsed start time in seconds
+  occurrenceIndex: number;
+  segmentEndSeconds: number; // where auto-play should stop and advance
+  significance: number; // 0-100, higher = more significant
+  dimensionNumber: number;
+}
+
+export interface EntityMentionIndex {
+  nodeId: string; // matches GraphNode.id
+  mentions: RankedEntityMention[]; // sorted by significance descending
+}
+
+/**
+ * Get all mentions for an entity node ranked by significance (ADR 025 contract).
+ * Extracted so the UI components can render timeline markers and step through
+ * mentions in significance-sorted order.
+ */
+export function getRankedMentionsForEntity(
+  nodeId: string,
+  node: EntityTimeSeekNode & { dimension?: number },
+  dimensionContent?: string | null,
+  chapters?: EntityTimeSeekChapter[] | null,
+  videoDuration?: number | null,
+): EntityMentionIndex {
+  const matches = findAllEntityMentions(node, dimensionContent, chapters);
+  const dimensionNumber = typeof node.dimension === 'number' && node.dimension > 0 ? node.dimension : 1;
+
+  if (matches.length === 0) {
+    return { nodeId, mentions: [] };
+  }
+
+  const mentions: RankedEntityMention[] = matches.map((matchItem, idx) => {
+    let segmentEndSeconds = matchItem.seekSeconds + 30;
+    if (chapters && chapters.length > 0) {
+      const chapterItem = chapters.find((ch) => matchItem.seekSeconds >= ch.start_seconds && matchItem.seekSeconds <= ch.end_seconds);
+      if (chapterItem && chapterItem.end_seconds > matchItem.seekSeconds) {
+        segmentEndSeconds = Math.min(chapterItem.end_seconds, matchItem.seekSeconds + 60);
+      }
+    }
+
+    const nextMatch = matches[idx + 1];
+    if (nextMatch && nextMatch.seekSeconds > matchItem.seekSeconds && nextMatch.seekSeconds < segmentEndSeconds) {
+      segmentEndSeconds = nextMatch.seekSeconds;
+    }
+
+    if (videoDuration && videoDuration > 0) {
+      segmentEndSeconds = Math.min(segmentEndSeconds, videoDuration);
+    }
+
+    const significance = Math.max(20, 95 - idx * 10);
+
+    return {
+      timestamp: matchItem.timestamp,
+      seekSeconds: matchItem.seekSeconds,
+      occurrenceIndex: matchItem.occurrenceIndex,
+      segmentEndSeconds: Math.max(matchItem.seekSeconds + 5, segmentEndSeconds),
+      significance,
+      dimensionNumber,
+    };
+  });
+
+  mentions.sort((firstMention, secondMention) => secondMention.significance - firstMention.significance);
+
+  return { nodeId, mentions };
+}
+
