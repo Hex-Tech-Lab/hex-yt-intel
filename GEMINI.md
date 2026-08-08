@@ -177,7 +177,7 @@ The system is transitioning to a triple-redundant hybrid model (ADR 005) to solv
 3. **Handover Documentation**: Update 10x THOS with cryptographic isolation lessons.
 4. **Infographics**: Visualize the bouncer-to-edge lifecycle.
 
-**Reference**: `/docs/specs/ADR_005_HYBRID_EDGE_ARCHITECTURE.md`
+**Reference**: `internal ADR doc (private)`
 
 ### Phase 1→2 Transition Gate
 

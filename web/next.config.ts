@@ -8,7 +8,7 @@ import path from "path";
 // Bundle analysis: `pnpm exec next experimental-analyze -o` (Turbopack-native,
 // no config needed) -- @next/bundle-analyzer doesn't work under this app's
 // Turbopack production build, don't reintroduce it. See
-// docs/specs/ADR_017_DASHBOARD_BUNDLE_ZOD_REGRESSION_2026-07-29.md.
+// internal ADR doc (private).
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,

@@ -25,7 +25,7 @@
  * them would blur both.
  *
  * Budget/concurrency (ADR 019, 2026-07-31 -- see
- * docs/specs/ADR_019_REMEDIATION_BUDGET_TOKEN_BUCKET_2026-07-31.md):
+ * internal ADR doc (private)):
  * OpenRouter exposes no hard concurrency limit (rate_limit.requests is -1,
  * deprecated, live-verified against the real account). The actual
  * constraint is the account's monthly $ spend cap, shared with live paying

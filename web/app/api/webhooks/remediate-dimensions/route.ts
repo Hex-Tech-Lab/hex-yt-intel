@@ -18,7 +18,7 @@ export const maxDuration = 300;
  * (billing_status='failed', validation_report.status='partial', real
  * content) and regenerates just the missing dimensions via the worker's
  * existing per-dimension-subset capability, budget-gated per ADR 019. See
- * docs/specs/ADR_019_REMEDIATION_BUDGET_TOKEN_BUCKET_2026-07-31.md.
+ * internal ADR doc (private).
  * Signature-verified before doing any work.
  */
 import * as Sentry from '@sentry/nextjs';

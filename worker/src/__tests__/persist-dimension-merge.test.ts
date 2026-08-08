@@ -1,7 +1,7 @@
 /**
  * ADR 021 Phase 1 regression test.
  *
- * RCA (2026-08-07, see docs/specs/ADR_021_...): the whole-text extraction
+ * RCA (2026-08-07, see internal ADR doc (private)): the whole-text extraction
  * path (extractJsonPayload + jsonrepair in PersistService.persist()) is
  * all-or-nothing -- a single malformed trailing dimension (mid-generation
  * abort, unescaped char, etc.) can make jsonrepair fail entirely, which

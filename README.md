@@ -3,7 +3,7 @@
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![Phase](https://img.shields.io/badge/Phase-2%20Stabilization-orange.svg)](ROADMAP.md)
-[![Architecture](https://img.shields.io/badge/Arch-Hybrid%20Edge-success.svg)](docs/specs/ADR_005_HYBRID_EDGE_ARCHITECTURE.md)
+![Architecture](https://img.shields.io/badge/Arch-Hybrid%20Edge-success.svg)
 
 ---
 

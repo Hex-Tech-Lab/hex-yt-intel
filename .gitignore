@@ -36,6 +36,12 @@ docs/skills/
 # Local-only sharing files
 docs/for_sharing/
 
+# Confidential/strategic docs (business decisions, pricing, payment provider
+# selection, launch strategy, ADRs with commercial/legal reasoning) --
+# per global CLAUDE.md Rule #0: never committed to a public repo, local disk
+# only. Directive 2026-08-08.
+docs/private/
+
 # Dataset assets (local-only calibration — never commit large CSV corpora)
 scripts/quality-engine/calibration/data/
 .qa-intel/baseline.json

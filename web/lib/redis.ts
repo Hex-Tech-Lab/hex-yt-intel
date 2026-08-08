@@ -358,7 +358,7 @@ export async function releaseRedisLock(key: string, token: string): Promise<void
 /**
  * Atomic token-bucket check-and-deduct, denominated in whatever integer
  * unit the caller chooses (USD cents for remediation's budget -- see ADR
- * 019, docs/specs/ADR_019_REMEDIATION_BUDGET_TOKEN_BUCKET_2026-07-31.md).
+ * 019, internal ADR doc (private)).
  *
  * Calendar-boundary hard reset (user decision, 2026-08-01): `periodAnchorMs`
  * is the start of the caller's current billing period (e.g. midnight UTC on
