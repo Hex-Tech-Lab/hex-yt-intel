@@ -57,6 +57,22 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
 
   const anyDrawerOpen = mobileNavOpen || mobileRightOpen;
 
+  // Close on Escape -- web-design-guidelines audit, 2026-08-08: the backdrop
+  // closes drawers on click but is aria-hidden (correctly unreachable via
+  // Tab), so keyboard-only users had NO way to close a mobile drawer at all
+  // before this. Standard modal/drawer dismissal keyboard affordance.
+  useEffect(() => {
+    if (!anyDrawerOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileNav(false);
+        setMobileRight(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [anyDrawerOpen, setMobileNav, setMobileRight]);
+
   // Lock body scroll on iOS Safari when off-canvas drawers are open
   useEffect(() => {
     if (anyDrawerOpen) {
