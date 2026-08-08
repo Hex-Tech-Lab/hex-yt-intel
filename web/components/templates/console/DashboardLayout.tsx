@@ -14,6 +14,21 @@ export interface DashboardLayoutProps {
   dock?: ReactNode;
 }
 
+// WheelEvent deltas aren't always CSS pixels -- deltaMode distinguishes
+// pixel (0), line (1), and page (2) units, and some mice/browsers emit
+// line-mode deltas by default (Cubic review, PR #221). Normalize to
+// pixels before forwarding, using a standard 16px line height for line
+// mode and the scroll container's own viewport size for page mode.
+// Module-level, not component-local: takes all its inputs as parameters
+// and closes over nothing component-specific, so defining it inside
+// DashboardLayout recreated the function on every render for no reason
+// (react-best-practices review, 2026-08-08).
+function normalizeWheelDelta(delta: number, deltaMode: number, viewportSize: number): number {
+  if (deltaMode === 1) return delta * 16; // DOM_DELTA_LINE
+  if (deltaMode === 2) return delta * viewportSize; // DOM_DELTA_PAGE
+  return delta; // DOM_DELTA_PIXEL
+}
+
 export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }: DashboardLayoutProps) {
   const isAnyOverlayOpen = useUIStore((s) => s.isAnyOverlayOpen);
   const mobileNavOpen = useUIStore((s) => s.mobileNavOpen);
@@ -33,17 +48,6 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   // from the backdrop to main's actual scroll container instead of
   // removing the backdrop (still needed for click-to-close and dimming).
   const mainScrollRef = useRef<HTMLDivElement>(null);
-
-  // WheelEvent deltas aren't always CSS pixels -- deltaMode distinguishes
-  // pixel (0), line (1), and page (2) units, and some mice/browsers emit
-  // line-mode deltas by default (Cubic review, PR #221). Normalize to
-  // pixels before forwarding, using a standard 16px line height for line
-  // mode and the scroll container's own viewport size for page mode.
-  const normalizeWheelDelta = (delta: number, deltaMode: number, viewportSize: number): number => {
-    if (deltaMode === 1) return delta * 16; // DOM_DELTA_LINE
-    if (deltaMode === 2) return delta * viewportSize; // DOM_DELTA_PAGE
-    return delta; // DOM_DELTA_PIXEL
-  };
 
   // Auto-close the mobile drawers whenever the route changes.
   useEffect(() => {
