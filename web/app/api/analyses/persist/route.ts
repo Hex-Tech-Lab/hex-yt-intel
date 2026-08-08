@@ -277,6 +277,53 @@ export async function POST(request: NextRequest) {
         chapters: rawChaptersInput,
       } = parsedBody.data;
 
+      // 10X re-audit, 2026-08-08 (P0.1): HMAC signature verification MUST
+      // happen before any per-field processing of the request body --
+      // chapters filtering, channelMeta size-checking, and the comments
+      // bounding loop below all did real work (including a JSON.stringify
+      // loop over a Zod-unbounded array/string) on UNAUTHENTICATED input,
+      // before contentSig was ever checked. A request with no valid
+      // signature could still force this route to do that work repeatedly
+      // -- confirmed live in route code, not a theoretical finding. Moved
+      // verification to run immediately after destructuring, before any of
+      // chapters/channelMeta/comments processing, so an invalid signature
+      // short-circuits before any of that cost is paid. `canonical` only
+      // depends on markdown/payload/cancelled/tokensUsed/costUsd/
+      // generationId, none of which come from the aux fields processed
+      // below, so this reorder changes nothing about what gets signed or
+      // verified -- purely a placement fix.
+      //
+      // cancelled/tokensUsed/costUsd included here (ADR 020 Phase 2/3
+      // security fix) -- must stay in lockstep with PersistService.ts's
+      // signer, field-for-field including the ?? null coercions (any
+      // mismatch, e.g. ?? undefined here vs ?? null there, changes the
+      // JSON.stringify output and every legitimate signature would fail
+      // verification). cancelled decides billing_status below; tokensUsed/
+      // costUsd feed the admin cost ledger -- all three need the same
+      // integrity guarantee as markdown/payload (Cubic review, PR #175).
+      const canonical = JSON.stringify({
+        markdown,
+        payload: payload ?? null,
+        cancelled,
+        tokensUsed: tokensUsed ?? null,
+        costUsd: costUsd ?? null,
+        generationId: generationId ?? null,
+      });
+      let isSigValid = false;
+      try {
+        isSigValid = await verifyContentSig(canonical, contentSig, exp !== undefined ? { purpose: 'persist', id: analysisId, exp } : undefined);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        Sentry.captureException(error, { contexts: { persist: { phase: 'verifyContentSig', analysisId, videoId } } });
+        console.error('[analyses/persist]', { message: msg, analysisId, videoId });
+        return { type: 'error' as const, error: 'Security configuration error', status: 500 };
+      }
+
+      if (!isSigValid) {
+        console.warn('[analyses/persist] Invalid content signature', { analysisId, videoId });
+        return { type: 'error' as const, error: 'Invalid signature', status: 401 };
+      }
+
       // Cross-field check (end_seconds > start_seconds) that Zod's
       // per-field constraints can't express -- see the schema comment above
       // for why this is a manual filter rather than z.refine(). Malformed
@@ -335,37 +382,6 @@ export async function POST(request: NextRequest) {
       }
 
       const resolvedTotal = totalChunks ?? TOTAL_STREAMS;
-
-      // cancelled/tokensUsed/costUsd included here (ADR 020 Phase 2/3
-      // security fix) -- must stay in lockstep with PersistService.ts's
-      // signer, field-for-field including the ?? null coercions (any
-      // mismatch, e.g. ?? undefined here vs ?? null there, changes the
-      // JSON.stringify output and every legitimate signature would fail
-      // verification). cancelled decides billing_status below; tokensUsed/
-      // costUsd feed the admin cost ledger -- all three need the same
-      // integrity guarantee as markdown/payload (cubic review, PR #175).
-      const canonical = JSON.stringify({
-        markdown,
-        payload: payload ?? null,
-        cancelled,
-        tokensUsed: tokensUsed ?? null,
-        costUsd: costUsd ?? null,
-        generationId: generationId ?? null,
-      });
-      let isSigValid = false;
-      try {
-        isSigValid = await verifyContentSig(canonical, contentSig, exp !== undefined ? { purpose: 'persist', id: analysisId, exp } : undefined);
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        Sentry.captureException(error, { contexts: { persist: { phase: 'verifyContentSig', analysisId, videoId } } });
-        console.error('[analyses/persist]', { message: msg, analysisId, videoId });
-        return { type: 'error' as const, error: 'Security configuration error', status: 500 };
-      }
-
-      if (!isSigValid) {
-        console.warn('[analyses/persist] Invalid content signature', { analysisId, videoId });
-        return { type: 'error' as const, error: 'Invalid signature', status: 401 };
-      }
 
       let validPayload: UCISPayloadV2 | undefined;
 
