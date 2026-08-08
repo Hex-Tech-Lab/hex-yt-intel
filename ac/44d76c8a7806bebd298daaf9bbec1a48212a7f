@@ -1,0 +1,25 @@
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_57b1b0ee4eea3a 28-29
+web/lib/utils/entity-time-seek-cross-dimension.ts
+  s_0eded1e9d0cab6::t_7596012a7abdbe 1-62
+web/lib/utils/entity-time-seek.ts
+  s_0eded1e9d0cab6::t_b7030ec9c5b6dd 482-484
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0eded1e9d0cab6::t_f3fc3d668bbcc0 6-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ac44d76c8a7806bebd298daaf9bbec1a48212a7f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
