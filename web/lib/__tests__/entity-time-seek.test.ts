@@ -3,7 +3,8 @@
  * DashboardContainer's handleSelectNode entity-click seek.
  */
 import { describe, it, expect } from 'vitest';
-import { findEntityTimestamp, findAllEntityMentions, findNearestEntityMention, findNearestEntityMentionAcrossDimensions } from '@/lib/utils/entity-time-seek';
+import { findEntityTimestamp, findAllEntityMentions, findNearestEntityMention, getRankedMentionsForEntity } from '@/lib/utils/entity-time-seek';
+import { findNearestEntityMentionAcrossDimensions } from '@/lib/utils/entity-time-seek-cross-dimension';
 
 describe('findEntityTimestamp', () => {
   it('prefers a timestamp in the label over one in content', () => {
@@ -266,6 +267,101 @@ describe('findNearestEntityMention', () => {
     const mention = findNearestEntityMention(node, content, null, 360);
     expect(mention).not.toBeNull();
     expect(mention!.timestamp).toBe('5:00');
+  });
+});
+
+describe('getRankedMentionsForEntity', () => {
+  // Cubic review, PR #224: segmentEndSeconds previously enforced a 5s
+  // MINIMUM window via Math.max AFTER the video-duration upper-bound clamp
+  // -- a mention within the video's final 5 seconds produced a segment end
+  // past the video's own duration.
+  it('never produces a segmentEndSeconds past the video duration, even for a mention near the very end', () => {
+    const node = { label: 'Closer', content: '', keyTerms: [] };
+    // Video is 100s long; mention at 98s -- only 2s of real room left.
+    const content = 'At 1:38 the Closer wraps up the talk.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 100);
+    expect(index.mentions.length).toBe(1);
+    expect(index.mentions[0]!.segmentEndSeconds).toBeLessThanOrEqual(100);
+  });
+
+  // Same class of bug: two mentions <5s apart previously let the minimum-
+  // window floor push the first mention's segment end past the second
+  // mention's own start.
+  it('never produces a segmentEndSeconds past the NEXT mention when mentions are close together', () => {
+    const node = { label: 'Rapid', content: '', keyTerms: [] };
+    const content = 'At 0:10 Rapid is introduced. At 0:12 Rapid is mentioned again.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 600);
+    expect(index.mentions.length).toBe(2);
+    // Results are significance-sorted, not chronological -- find the
+    // earlier-seeking mention explicitly rather than assuming array order.
+    const [earlier, later] = [...index.mentions].sort((mentionA, mentionB) => mentionA.seekSeconds - mentionB.seekSeconds);
+    expect(earlier!.segmentEndSeconds).toBeLessThanOrEqual(later!.seekSeconds);
+  });
+
+  // CodeRabbit review, 2026-08-08: the 5s-minimum-window fix above was
+  // itself relaxed to a 0.5s floor, but that floor was applied AFTER the
+  // upper-bound clamps without being clamped against them -- a mention
+  // with LESS than 0.5s of real room could still get pushed past the
+  // bound by the floor itself. `videoDuration` comes from real video
+  // metadata (a float), while mention timestamps are integer-second
+  // granularity (the "MM:SS" regex) -- so a sub-second gap between a
+  // mention and the video's real end is a realistic case, unlike two
+  // distinct mentions being <1s apart (impossible at this granularity).
+  it('never exceeds video duration even when less than 0.5s of room remains', () => {
+    const node = { label: 'Ender', content: '', keyTerms: [] };
+    // Mention resolves to exactly 99s ("1:39"); real video duration is
+    // 99.3s -- only 0.3s of genuine room left.
+    const content = 'At 1:39 Ender delivers the final line.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 99.3);
+    expect(index.mentions.length).toBe(1);
+    expect(index.mentions[0]!.segmentEndSeconds).toBeLessThanOrEqual(99.3);
+  });
+
+  it('returns an empty mentions array (not a crash) when the entity has no resolvable mentions', () => {
+    const node = { label: 'Nonexistent', content: '', keyTerms: [] };
+    const index = getRankedMentionsForEntity('node-1', node, 'Nothing time-related here.', null, 600);
+    expect(index.mentions).toEqual([]);
+  });
+
+  // Cubic review, PR #224 (issue ab9d49eb): segmentEndSeconds used to derive
+  // its "next mention" boundary from `matches[idx + 1]` -- the next mention
+  // in TEXT order -- not the next one chronologically. LLM-narrated prose
+  // can flash back to an earlier timestamp mid-paragraph, so text order and
+  // chronological order aren't guaranteed to match. Here "Flow" is
+  // mentioned at 0:40 (text position 1), then a flashback references 0:10
+  // (text position 2), then 0:45 (text position 3). The 0:40 mention's real
+  // chronological successor is 0:45, not the textually-next 0:10 mention --
+  // a buggy text-order implementation would let the 0:40 segment run to
+  // 0:40+30=70s, straight through the 0:45 mention's own start.
+  it('derives segmentEndSeconds from the chronologically-next mention, not the next one in text order', () => {
+    const node = { label: 'Flow', content: '', keyTerms: [] };
+    const content = 'At 0:40 Flow happens once. Later flashback: at 0:10 Flow was foreshadowed. Then at 0:45 Flow concludes.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 600);
+    expect(index.mentions.length).toBe(3);
+    const mentionAt40 = index.mentions.find((mention) => mention.seekSeconds === 40);
+    expect(mentionAt40).toBeDefined();
+    expect(mentionAt40!.segmentEndSeconds).toBeLessThanOrEqual(45);
+  });
+
+  // Cubic review PR #224 (P2.14, verified in 2026-08-08 re-audit): equal
+  // significance scores had no tiebreaker, leaving ranking order
+  // non-deterministic for entities whose mentions score identically.
+  it('tie-breaks equal significance scores chronologically', () => {
+    const node = { label: 'Same', content: '', keyTerms: [] };
+    // Identical surrounding prose for both mentions -> identical TF-IDF/
+    // density/position-adjacent scoring is plausible; regardless of the
+    // actual scores, verify the invariant: among any group of mentions
+    // that end up with equal significance, they are ordered by seekSeconds.
+    const content = 'At 0:05 Same appears. At 0:15 Same appears.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 600);
+    expect(index.mentions.length).toBe(2);
+    for (let i = 1; i < index.mentions.length; i++) {
+      const prev = index.mentions[i - 1]!;
+      const curr = index.mentions[i]!;
+      if (prev.significance === curr.significance) {
+        expect(prev.seekSeconds).toBeLessThanOrEqual(curr.seekSeconds);
+      }
+    }
   });
 });
 

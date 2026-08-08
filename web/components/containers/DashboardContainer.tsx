@@ -25,7 +25,9 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
 import { isStackedLayout } from '@/hooks/useIsStackedLayout';
 import { parseTimestamp } from '@/components/TimestampLink';
-import { findNearestEntityMention, findNearestEntityMentionAcrossDimensions } from '@/lib/utils/entity-time-seek';
+import { findNearestEntityMention, getRankedMentionsForEntity } from '@/lib/utils/entity-time-seek';
+import { findNearestEntityMentionAcrossDimensions } from '@/lib/utils/entity-time-seek-cross-dimension';
+import { EntityMentionTimeline } from '@/components/templates/console/EntityMentionTimeline';
 import { useAnalysisDimensionsStore } from '@/lib/stores/analysis-dimensions-store';
 import { useAnalysisStateStore } from '@/lib/stores/analysis-state-store';
 
@@ -273,6 +275,48 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       }
     }
   }, [graph.nodes, chapters]);
+
+  // Cubic review, PR #224: this previously read
+  // useAnalysisDimensionsStore.getState().getDimension(...) imperatively
+  // INSIDE useMemo -- a snapshot read, not a subscription, so the timeline
+  // never recomputed when dimension content changed (e.g. streaming
+  // completing, a dimension being patched) unless selectedNodeId/graph.nodes
+  // also happened to change at the same time. useAnalysisDimensionsStore's
+  // own getDimension() is itself just a passthrough to
+  // useAnalysisStateStore's analysis.dimensions map, so subscribe to THAT
+  // reactively here and use it as an explicit memo dependency.
+  //
+  // react-best-practices review, this pass: subscribing to the WHOLE
+  // dimensions map re-rendered this container (and re-derived
+  // timelineEntityData) on every dimension's streaming update, not just the
+  // currently-selected entity's dimension. Resolve the selected node first,
+  // then subscribe to only that one dimension's content string.
+  const selectedGraphNode = selectedNodeId && graph.nodes ? graph.nodes.find((n) => n.id === selectedNodeId) : null;
+  const selectedNodeDimension = selectedGraphNode?.dimension ?? 1;
+  const selectedDimensionContent = useAnalysisStateStore((state) =>
+    selectedNodeId ? state.analysis?.dimensions?.[selectedNodeDimension]?.content : undefined,
+  );
+
+  // Derived timeline mentions for selected entity (ADR 025 UI)
+  const timelineEntityData = useMemo(() => {
+    if (!selectedNodeId || !selectedGraphNode) return null;
+
+    const index = getRankedMentionsForEntity(
+      selectedNodeId,
+      selectedGraphNode,
+      selectedDimensionContent,
+      chapters,
+      videoMetadata?.duration ?? null,
+    );
+
+    if (index.mentions.length <= 1) return null;
+
+    return {
+      entityId: selectedNodeId,
+      entityLabel: selectedGraphNode.label || selectedNodeId,
+      mentions: index.mentions,
+    };
+  }, [selectedNodeId, selectedGraphNode, chapters, videoMetadata?.duration, selectedDimensionContent]);
 
   // Define Right Panel Accordion Items
   const handleExpandPanel = useCallback((id: string, mode: string) => {
@@ -649,6 +693,15 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
               {(hasHadVideoRef.current || videoMetadata || nucleusAnalysis?.videoId) && (
                 <div className="flex flex-col gap-1">
                   <VideoPlayerCard />
+                  {timelineEntityData && (
+                    <EntityMentionTimeline
+                      entityId={timelineEntityData.entityId}
+                      entityLabel={timelineEntityData.entityLabel}
+                      mentions={timelineEntityData.mentions}
+                      videoDuration={videoMetadata?.duration ?? null}
+                      onClose={() => setSelectedNodeId(null)}
+                    />
+                  )}
                   {videoMetadata && (
                     <BentoMetadata
                       title={videoMetadata.title}
