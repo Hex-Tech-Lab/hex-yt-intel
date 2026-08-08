@@ -1,0 +1,22 @@
+web/app/settings/logs/LogsViewerClient.tsx
+  s_0eded1e9d0cab6::t_3ca93a44cf2e27 549-551
+  s_0eded1e9d0cab6::t_1a2b4341775b02 157-161,164,168-169,173
+  s_0eded1e9d0cab6::t_d0e6623c861155 538
+  s_0eded1e9d0cab6::t_b00e4fd9f8c465 492-494
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "34a0427e2757e686c2f5c56c346660a35adf6a93",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
