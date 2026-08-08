@@ -3,7 +3,7 @@
  * DashboardContainer's handleSelectNode entity-click seek.
  */
 import { describe, it, expect } from 'vitest';
-import { findEntityTimestamp, findAllEntityMentions, findNearestEntityMention } from '@/lib/utils/entity-time-seek';
+import { findEntityTimestamp, findAllEntityMentions, findNearestEntityMention, findNearestEntityMentionAcrossDimensions } from '@/lib/utils/entity-time-seek';
 
 describe('findEntityTimestamp', () => {
   it('prefers a timestamp in the label over one in content', () => {
@@ -266,5 +266,56 @@ describe('findNearestEntityMention', () => {
     const mention = findNearestEntityMention(node, content, null, 360);
     expect(mention).not.toBeNull();
     expect(mention!.timestamp).toBe('5:00');
+  });
+});
+
+describe('findNearestEntityMentionAcrossDimensions', () => {
+  // Cubic review, PR #222: findAllEntityMentions degrades to "first
+  // timestamp in the content" when the label isn't found -- a reasonable
+  // last resort for a SINGLE assigned dimension, but a false-positive
+  // generator if applied blindly across many unrelated dimensions.
+  it('does NOT accept a timestamp from a dimension where the entity is never mentioned', () => {
+    const node = { label: 'Patrick Winston', content: '', keyTerms: [] };
+    const dimensionContents = [
+      { dimensionNumber: 3, content: 'At 12:00 the speaker discusses an unrelated framework, never named here.' },
+    ];
+    const mention = findNearestEntityMentionAcrossDimensions(node, dimensionContents, null, null);
+    expect(mention).toBeNull();
+  });
+
+  it('accepts a timestamp from a dimension where the label genuinely appears', () => {
+    const node = { label: 'Patrick Winston', content: '', keyTerms: [] };
+    const dimensionContents = [
+      { dimensionNumber: 3, content: 'At 12:00 the speaker discusses an unrelated framework, never named here.' },
+      { dimensionNumber: 5, content: 'At 4:20 Patrick Winston introduces the topic.' },
+    ];
+    const mention = findNearestEntityMentionAcrossDimensions(node, dimensionContents, null, null);
+    expect(mention).not.toBeNull();
+    expect(mention!.timestamp).toBe('4:20');
+  });
+
+  it('ranks candidates from ALL matching dimensions globally, not first-dimension-scanned-wins', () => {
+    const node = { label: 'Patrick Winston', content: '', keyTerms: [] };
+    // Dimension 3 (scanned first) has a real mention, but far from the
+    // playhead; dimension 5 (scanned second) has a real mention much closer
+    // to the playhead. The globally-nearest one must win, not the first
+    // dimension that happened to produce any match at all.
+    const dimensionContents = [
+      { dimensionNumber: 3, content: 'At 1:00 Patrick Winston is mentioned in passing.' },
+      { dimensionNumber: 5, content: 'At 9:55 Patrick Winston is the main focus.' },
+    ];
+    const currentPlaybackSeconds = 600; // 10:00
+    const mention = findNearestEntityMentionAcrossDimensions(node, dimensionContents, null, currentPlaybackSeconds);
+    expect(mention).not.toBeNull();
+    expect(mention!.timestamp).toBe('9:55');
+  });
+
+  it('returns null when no candidate dimension contains the entity at all', () => {
+    const node = { label: 'Nonexistent Entity', content: '', keyTerms: [] };
+    const dimensionContents = [
+      { dimensionNumber: 3, content: 'At 1:00 something else is discussed.' },
+      { dimensionNumber: 5, content: 'At 2:00 something else again.' },
+    ];
+    expect(findNearestEntityMentionAcrossDimensions(node, dimensionContents, null, null)).toBeNull();
   });
 });

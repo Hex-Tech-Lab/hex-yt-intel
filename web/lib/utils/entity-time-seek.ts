@@ -258,3 +258,47 @@ export function findEntityTimestamp(
   const mentions = findAllEntityMentions(node, dimensionContent, chapters);
   return mentions[0]?.timestamp ?? null;
 }
+
+/**
+ * Cross-dimension nearest-mention search (Cubic review, PR #222).
+ *
+ * The single-dimension `findAllEntityMentions` deliberately degrades to
+ * "first timestamp in the content" when the entity's label isn't literally
+ * found in that dimension's prose (see its own doc comment) -- a reasonable
+ * last resort for the ONE dimension a node is nominally assigned to, but a
+ * false-positive generator when applied across every OTHER dimension: it
+ * would report a "mention" for practically any dimension that contains any
+ * timestamp at all, regardless of whether the entity was ever discussed
+ * there, and the first dimension scanned would silently win over a genuinely
+ * closer mention in a later one.
+ *
+ * This variant requires the label to literally appear in a candidate
+ * dimension's content before accepting any of its mentions, and ranks ALL
+ * accepted mentions from ALL candidate dimensions together with the same
+ * nearest-to-playhead (or latest, if nothing has played yet) policy
+ * `findNearestEntityMention` already uses for a single dimension --  so
+ * "search more dimensions" only adds real candidates, never degrades match
+ * quality within a single dimension.
+ */
+export function findNearestEntityMentionAcrossDimensions(
+  node: EntityTimeSeekNode,
+  dimensionContents: Array<{ dimensionNumber: number; content: string }>,
+  chapters: EntityTimeSeekChapter[] | null | undefined,
+  currentPlaybackSeconds: number | null,
+): EntityMentionMatch | null {
+  const label = node.label;
+  const allMentions: EntityMentionMatch[] = [];
+  for (const { content } of dimensionContents) {
+    if (label && !content.includes(label)) continue;
+    allMentions.push(...findAllEntityMentions(node, content, chapters));
+  }
+  if (allMentions.length === 0) return null;
+  if (currentPlaybackSeconds === null || currentPlaybackSeconds === undefined) {
+    return allMentions.reduce((latest, mention) => (mention.seekSeconds > latest.seekSeconds ? mention : latest));
+  }
+  return allMentions.reduce((best, mention) => {
+    const dist = Math.abs(mention.seekSeconds - currentPlaybackSeconds);
+    const bestDist = Math.abs(best.seekSeconds - currentPlaybackSeconds);
+    return dist < bestDist ? mention : best;
+  });
+}
