@@ -34,6 +34,17 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   // removing the backdrop (still needed for click-to-close and dimming).
   const mainScrollRef = useRef<HTMLDivElement>(null);
 
+  // WheelEvent deltas aren't always CSS pixels -- deltaMode distinguishes
+  // pixel (0), line (1), and page (2) units, and some mice/browsers emit
+  // line-mode deltas by default (Cubic review, PR #221). Normalize to
+  // pixels before forwarding, using a standard 16px line height for line
+  // mode and the scroll container's own viewport size for page mode.
+  const normalizeWheelDelta = (delta: number, deltaMode: number, viewportSize: number): number => {
+    if (deltaMode === 1) return delta * 16; // DOM_DELTA_LINE
+    if (deltaMode === 2) return delta * viewportSize; // DOM_DELTA_PAGE
+    return delta; // DOM_DELTA_PIXEL
+  };
+
   // Auto-close the mobile drawers whenever the route changes.
   useEffect(() => {
     setMobileNav(false);
@@ -77,7 +88,19 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm xl:hidden"
           onClick={() => { setMobileNav(false); setMobileRight(false); }}
-          onWheel={(wheelEvent) => { mainScrollRef.current?.scrollBy({ top: wheelEvent.deltaY, left: wheelEvent.deltaX }); }}
+          onWheel={(wheelEvent) => {
+            const target = mainScrollRef.current;
+            if (!target) return;
+            // 'instant' (not the container's own scroll-smooth CSS) so
+            // rapid trackpad/wheel events apply immediately instead of
+            // each one queuing/extending a smooth-scroll animation
+            // (Cubic review, PR #221).
+            target.scrollBy({
+              top: normalizeWheelDelta(wheelEvent.deltaY, wheelEvent.deltaMode, target.clientHeight),
+              left: normalizeWheelDelta(wheelEvent.deltaX, wheelEvent.deltaMode, target.clientWidth),
+              behavior: 'instant',
+            });
+          }}
           aria-hidden
         />
       )}
