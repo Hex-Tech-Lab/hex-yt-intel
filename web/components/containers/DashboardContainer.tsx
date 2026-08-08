@@ -25,7 +25,7 @@ import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
 import { isStackedLayout } from '@/hooks/useIsStackedLayout';
 import { parseTimestamp } from '@/components/TimestampLink';
-import { findNearestEntityMention, getRankedMentionsForEntity } from '@/lib/utils/entity-time-seek';
+import { findNearestEntityMention, findNearestEntityMentionAcrossDimensions, getRankedMentionsForEntity } from '@/lib/utils/entity-time-seek';
 import { EntityMentionTimeline } from '@/components/templates/console/EntityMentionTimeline';
 import { useAnalysisDimensionsStore } from '@/lib/stores/analysis-dimensions-store';
 import { useAnalysisStateStore } from '@/lib/stores/analysis-state-store';
@@ -221,7 +221,24 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
         // Gap 3: pass parsed chapters (from transcript_chapters via
         // useChapters) so findEntityTimestamp prefers a real chapter boundary
         // when the content timestamp falls inside one.
-        const timestamp = findNearestEntityMention(node, dimContent, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
+        let timestamp = findNearestEntityMention(node, dimContent, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
+        // Cross-dimension fallback (live-reported 2026-08-08; RCA + fix in
+        // ADR entity-seek notes and entity-time-seek.ts's
+        // findNearestEntityMentionAcrossDimensions doc comment): node.dimension
+        // frequently defaults to a dimension with no inline timestamps at all
+        // (e.g. a structured KG-summary dimension), so the assigned
+        // dimension's own content is often the wrong place to search. Search
+        // every OTHER populated dimension too, requiring the label to
+        // actually appear in a candidate's content (not the degraded
+        // "first timestamp found" fallback) and ranking all accepted
+        // mentions together by nearest-to-playhead -- not first-dimension-
+        // scanned-wins.
+        if (!timestamp) {
+          const allDimensions = Object.values(useAnalysisStateStore.getState().analysis?.dimensions ?? {})
+            .filter((otherDim) => otherDim.number !== node.dimension)
+            .map((otherDim) => ({ dimensionNumber: otherDim.number, content: otherDim.content }));
+          timestamp = findNearestEntityMentionAcrossDimensions(node, allDimensions, chapters, useVideoStore.getState().currentPlaybackSeconds ?? null)?.timestamp ?? null;
+        }
         if (timestamp) {
           const secs = parseTimestamp(timestamp);
           if (secs >= 0) setSeekTo(secs);

@@ -53,10 +53,10 @@
  */
 import * as Sentry from '@sentry/nextjs';
 
-import { getSupabaseServiceClient } from '@/lib/supabase';
 import { env } from '@/lib/env';
 import { signChannelMetaToken, signCommentsTier3Token } from '@/lib/stream-token';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
+import { SupabaseAuxRemediationAdapter } from '@/lib/adapters/SupabaseAuxRemediationAdapter';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
 import { parseToUCISDimensions } from '@/lib/utils/ucis-parser';
 import { auxStatusFromAnalysisPayload, type AuxStatusPayloadInput } from '@/lib/utils/aux-status-from-report';
@@ -168,15 +168,7 @@ export function classifyAuxGap(row: {
  */
 export async function findAnalysesWithMissingAux(opts?: { limit?: number }): Promise<AuxGap[]> {
   const limit = opts?.limit ?? 100;
-  const service = getSupabaseServiceClient();
-
-  const { data, error } = await service
-    .from('analyses')
-    .select('id, video_id, analysis_markdown, analysis_payload, validation_report, billing_status, user_id')
-    .eq('billing_status', 'failed')
-    .order('created_at', { ascending: true })
-    .limit(limit);
-  if (error) throw error;
+  const data = await SupabaseAuxRemediationAdapter.findFailedAnalysesForAuxScan(limit);
 
   const gaps: AuxGap[] = [];
   for (const row of data ?? []) {
@@ -250,7 +242,6 @@ async function fetchChannelMetaViaWorker(gap: AuxGap): Promise<{ channelMeta: Re
  * service-role client, at zero cost to the user's wallet.
  */
 async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
-  const service = getSupabaseServiceClient();
   const reportObj = asReportObject(gap.validationReport);
   const rawCount = (reportObj.metadata as Record<string, unknown> | undefined)?.commentCount;
   const totalCommentCount = typeof rawCount === 'number' ? rawCount : typeof rawCount === 'string' ? parseInt(rawCount, 10) || 0 : 0;
@@ -259,20 +250,12 @@ async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
     return false;
   }
 
-  const { data: runRow, error: insertError } = await service
-    .from('comment_sample_runs')
-    .insert({
-      analysis_id: gap.id,
-      user_id: gap.userId,
-      tier: 3,
-      total_comment_count: totalCommentCount,
-      requested_percent: 100,
-      status: 'pending',
-    })
-    .select('id')
-    .single();
-  if (insertError || !runRow) {
-    console.error('[aux-remediation] comment_sample_runs insert failed', { analysisId: gap.id, err: insertError?.message });
+  const runRow = await SupabaseAuxRemediationAdapter.insertSystemCommentSampleRun({
+    analysisId: gap.id,
+    userId: gap.userId,
+    totalCommentCount,
+  });
+  if (!runRow) {
     return false;
   }
 
