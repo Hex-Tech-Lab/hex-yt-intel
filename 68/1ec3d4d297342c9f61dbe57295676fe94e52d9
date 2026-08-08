@@ -1,0 +1,23 @@
+docs/audit/COMPARATIVE_ANALYSIS_2026_07_31_vs_2026_08_08.md
+  s_0eded1e9d0cab6::t_68e6caa1b73e3a 1-63
+docs/audit/10X_FULL_SPECTRUM_REAUDIT_2026_08_08.md
+  s_0eded1e9d0cab6::t_59790af07ad914 1-435
+docs/audit/code_review_2026_07_31.md
+  s_0eded1e9d0cab6::t_59790af07ad914 1-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "681ec3d4d297342c9f61dbe57295676fe94e52d9",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
