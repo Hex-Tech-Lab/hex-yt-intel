@@ -36,7 +36,7 @@ export default defineConfig({
     // (unrelated debt, out of scope for this pass) rather than reverting to
     // a narrow allowlist that would just recreate the original gap.
     include: [
-      // .tsx included: lib/__tests__/TimestampLink.test.tsx (18 real RTL
+      // .tsx included: lib/__tests__/TimestampLink.test.tsx (19 real RTL
       // render() tests) silently never ran under the .ts-only glob -- found
       // 2026-08-08 retro review of PR #212's vitest.config.ts. It wasn't in
       // the 86-file run at all (verified via `vitest run --reporter=verbose`
