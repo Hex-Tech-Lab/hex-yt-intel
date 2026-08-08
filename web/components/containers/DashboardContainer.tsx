@@ -216,6 +216,18 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
       const node = graph.nodes.find((n) => n.id === id);
       if (node) {
         const dim = useAnalysisDimensionsStore.getState().getDimension(node.dimension);
+        // TEMP DEBUG INSTRUMENTATION (2026-08-08 entity-seek nav-remount RCA, remove before merge)
+        // eslint-disable-next-line no-console
+        console.log('[ENTITY-SEEK-DEBUG] handleSelectNode', {
+          entityTimeSeekEnabled,
+          nodeId: id,
+          nodeDimension: node.dimension,
+          dim,
+          analysisStateDimensionsKeys: Object.keys(useAnalysisStateStore.getState().analysis?.dimensions ?? {}),
+          isStreaming: useAnalysisStateStore.getState().isStreaming,
+          chapters,
+          currentPlaybackSeconds: useVideoStore.getState().currentPlaybackSeconds,
+        });
         const dimContent = dim?.content;
         // Gap 3: pass parsed chapters (from transcript_chapters via
         // useChapters) so findEntityTimestamp prefers a real chapter boundary
