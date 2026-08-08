@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
-import type { RankedEntityMention } from '@/lib/utils/entity-time-seek';
+import { formatTimestamp, type RankedEntityMention } from '@/lib/utils/entity-time-seek';
 
 export interface EntityMentionTimelineProps {
   entityId: string | null;
@@ -50,19 +50,32 @@ export function EntityMentionTimeline({
   }, []);
 
   // Clear the pending-seek guard once playback has genuinely caught up to
-  // (or past) the requested target -- a 1s tolerance since polling ticks
-  // are coarse (VideoPlayerCard polls ~4x/sec) and an exact match isn't
-  // guaranteed.
+  // the requested target -- a 1s tolerance since polling ticks are coarse
+  // (VideoPlayerCard polls ~4x/sec) and an exact match isn't guaranteed.
+  // CodeRabbit review, 2026-08-08: the original `currentPlaybackSeconds >=
+  // pendingSeekSeconds - 1` only guarded FORWARD seeks -- for a BACKWARD
+  // seek (target behind the current position), that condition is already
+  // true before the player has moved at all, clearing the guard
+  // immediately and letting the stale pre-seek currentPlaybackSeconds
+  // trigger another auto-advance right away (the same cascade class this
+  // guard exists to prevent, just from the opposite direction). A
+  // symmetric absolute-distance check requires playback to actually arrive
+  // near the target regardless of seek direction.
   useEffect(() => {
     if (pendingSeekSeconds === null || currentPlaybackSeconds === null) return;
-    if (currentPlaybackSeconds >= pendingSeekSeconds - 1) {
+    if (Math.abs(currentPlaybackSeconds - pendingSeekSeconds) <= 1) {
       setPendingSeekSeconds(null);
     }
   }, [pendingSeekSeconds, currentPlaybackSeconds]);
 
-  // Reset active index when selected entity changes
+  // Reset active index (and any leftover pending-seek guard) when the
+  // selected entity changes -- CodeRabbit review, 2026-08-08: a pending
+  // seek from the PREVIOUS entity's timeline could otherwise carry over
+  // and suppress auto-advance evaluation for the newly-selected entity
+  // until it happened to resolve on its own.
   useEffect(() => {
     setActiveRankIndex(0);
+    setPendingSeekSeconds(null);
   }, [entityId]);
 
   const activeMention = useMemo(() => {
@@ -234,7 +247,7 @@ export function EntityMentionTimeline({
                 style={{ left: `${leftPct}%` }}
                 title={`Rank #${idx + 1}: ${mention.timestamp} (${mention.significance}% significance) · Dim. ${mention.dimensionNumber}`}
                 aria-label={`Jump to mention #${idx + 1} at ${mention.timestamp}`}
-                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto transition-transform hover:scale-125 focus:outline-none ${
+                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto transition-transform hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1 ${
                   isActive
                     ? 'w-4 h-4 rounded-full bg-[var(--accent)] shadow-[0_0_10px_rgba(59,130,246,0.8)] border-2 border-white z-10 scale-110'
                     : 'w-2.5 h-2.5 rounded-full bg-[var(--ink-muted)] hover:bg-[var(--accent)]'
@@ -254,10 +267,9 @@ export function EntityMentionTimeline({
             </span>
             <span>→</span>
             <span className="font-mono text-[var(--ink-secondary)]">
-              {Math.floor(activeMention.segmentEndSeconds / 60)}:
-              {String(Math.floor(activeMention.segmentEndSeconds % 60)).padStart(2, '0')}
+              {formatTimestamp(activeMention.segmentEndSeconds)}
             </span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--surface-quiet)] border border-[var(--line)]">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-quiet)] border border-[var(--line)]">
               Dim. {activeMention.dimensionNumber}
             </span>
           </div>

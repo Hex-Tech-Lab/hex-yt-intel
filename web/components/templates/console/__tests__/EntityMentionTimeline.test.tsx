@@ -29,8 +29,15 @@ describe('getRankedMentionsForEntity', () => {
 
     expect(res.nodeId).toBe('node-quantum');
     expect(res.mentions.length).toBe(2);
-    // Highest significance should be sorted first
-    expect(res.mentions[0]!.significance).toBeGreaterThanOrEqual(res.mentions[1]!.significance);
+    // CodeRabbit review, 2026-08-08: `mentions[0].significance >=
+    // mentions[1].significance` is tautologically true by construction --
+    // getRankedMentionsForEntity always sorts descending by significance,
+    // so this alone would still pass even if scoring were completely
+    // broken and returned an identical constant for every mention. Assert
+    // the scores actually DIFFER (real differentiation happened) instead
+    // of just re-checking the sort the function itself guarantees.
+    expect(res.mentions[0]!.significance).not.toBe(res.mentions[1]!.significance);
+    expect(res.mentions[0]!.significance).toBeGreaterThan(res.mentions[1]!.significance);
     expect(res.mentions[0]!.dimensionNumber).toBe(3);
     // Reconciled with real significance scoring (Cubic review, PR #224/#225):
     // WHICH specific mention (60s or 300s) ranks first is determined by

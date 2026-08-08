@@ -37,7 +37,7 @@ function timeToSeconds(ts: string): number {
 }
 
 /** Format seconds back to the "MM:SS" / "HH:MM:SS" display form. */
-function formatTimestamp(totalSeconds: number): string {
+export function formatTimestamp(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = Math.floor(totalSeconds % 60);
@@ -340,39 +340,48 @@ function deriveSegmentEnd(
   chapters: EntityTimeSeekChapter[] | null | undefined,
   videoDuration: number | null,
 ): number {
+  // The tightest real upper bound this segment must never cross, no matter
+  // what the rest of this function computes -- either the video's own end,
+  // or the next mention's start, whichever is closer. CodeRabbit review,
+  // PR #224 (2026-08-08 pass): the earlier fix for the "5s minimum window"
+  // bug (see below) applied its replacement 0.5s floor AFTER this bound was
+  // computed but didn't clamp the floor itself against it -- a mention with
+  // LESS than 0.5s of real room left (video ends there, or the next mention
+  // is that close) could still get pushed past the bound by the floor.
+  // Clamping the floor's own candidate value against upperBound closes that
+  // gap for good, rather than shrinking the floor to some other small
+  // constant that would just move the same class of bug to a different
+  // threshold.
+  const upperBound = Math.min(
+    videoDuration !== null && videoDuration > 0 ? videoDuration : Infinity,
+    nextSeekSeconds !== null && nextSeekSeconds > seekSeconds ? nextSeekSeconds : Infinity,
+  );
+
   let end = seekSeconds + SEGMENT_DEFAULT_SECONDS;
 
   if (chapters && chapters.length > 0) {
     // /simplify finding: a separate CHAPTER_CAP_SECONDS (60) here was dead
-    // code -- the unconditional `Math.min(end, seekSeconds +
-    // SEGMENT_MAX_SECONDS)` clamp below always tightens further since
-    // SEGMENT_MAX_SECONDS (45) < 60, so it never had a chance to bind.
+    // code -- the SEGMENT_MAX_SECONDS clamp below always tightened further
+    // since SEGMENT_MAX_SECONDS (45) < 60, so it never had a chance to bind.
     const chapterItem = chapters.find((ch) => seekSeconds >= ch.start_seconds && seekSeconds <= ch.end_seconds);
     if (chapterItem && chapterItem.end_seconds > seekSeconds) {
       end = chapterItem.end_seconds;
     }
   }
 
-  if (nextSeekSeconds !== null && nextSeekSeconds > seekSeconds && nextSeekSeconds < end) {
-    end = nextSeekSeconds;
-  }
-
-  if (videoDuration !== null && videoDuration > 0) {
-    end = Math.min(end, videoDuration);
-  }
-
-  end = Math.min(end, seekSeconds + SEGMENT_MAX_SECONDS);
+  end = Math.min(end, upperBound, seekSeconds + SEGMENT_MAX_SECONDS);
 
   // Cubic review, PR #224 AND PR #225 (same bug in both independent
   // implementations): a 5s MINIMUM window forced via Math.max AFTER every
   // upper-bound clamp above (chapter end / next mention / video duration)
-  // can push the result back PAST those bounds -- a mention within the
+  // could push the result back PAST those bounds -- a mention within the
   // video's final 5s, or two mentions <5s apart, produced a segment end
   // past the video's own duration or into the next mention's territory.
-  // A short segment (even under 5s) is correct when that's genuinely all
-  // the room there is; only guard against a degenerate zero/negative
-  // window, never re-violate an upper bound to hit an arbitrary minimum.
-  return Math.max(end, seekSeconds + 0.5);
+  // A short segment (even under 0.5s) is correct when that's genuinely all
+  // the room there is; the floor candidate itself is now clamped to
+  // upperBound so it can never re-violate the bound it exists to guard
+  // against a degenerate zero/negative window from.
+  return Math.max(end, Math.min(seekSeconds + 0.5, upperBound));
 }
 
 /**

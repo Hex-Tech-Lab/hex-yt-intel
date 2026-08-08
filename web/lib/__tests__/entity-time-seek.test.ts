@@ -297,6 +297,25 @@ describe('getRankedMentionsForEntity', () => {
     expect(earlier!.segmentEndSeconds).toBeLessThanOrEqual(later!.seekSeconds);
   });
 
+  // CodeRabbit review, 2026-08-08: the 5s-minimum-window fix above was
+  // itself relaxed to a 0.5s floor, but that floor was applied AFTER the
+  // upper-bound clamps without being clamped against them -- a mention
+  // with LESS than 0.5s of real room could still get pushed past the
+  // bound by the floor itself. `videoDuration` comes from real video
+  // metadata (a float), while mention timestamps are integer-second
+  // granularity (the "MM:SS" regex) -- so a sub-second gap between a
+  // mention and the video's real end is a realistic case, unlike two
+  // distinct mentions being <1s apart (impossible at this granularity).
+  it('never exceeds video duration even when less than 0.5s of room remains', () => {
+    const node = { label: 'Ender', content: '', keyTerms: [] };
+    // Mention resolves to exactly 99s ("1:39"); real video duration is
+    // 99.3s -- only 0.3s of genuine room left.
+    const content = 'At 1:39 Ender delivers the final line.';
+    const index = getRankedMentionsForEntity('node-1', node, content, null, 99.3);
+    expect(index.mentions.length).toBe(1);
+    expect(index.mentions[0]!.segmentEndSeconds).toBeLessThanOrEqual(99.3);
+  });
+
   it('returns an empty mentions array (not a crash) when the entity has no resolvable mentions', () => {
     const node = { label: 'Nonexistent', content: '', keyTerms: [] };
     const index = getRankedMentionsForEntity('node-1', node, 'Nothing time-related here.', null, 600);
