@@ -1,0 +1,26 @@
+web/lib/utils/entity-time-seek.ts
+  s_0eded1e9d0cab6::t_2a99708630fffb 19
+  s_0eded1e9d0cab6::t_91372ea0ee3035 277-362,365-366,382-403,405,407,409-431,438
+web/components/templates/console/__tests__/EntityMentionTimeline.test.tsx
+  s_0eded1e9d0cab6::t_856e94c14f4cf3 35-40,42-45
+  s_0eded1e9d0cab6::t_e74385228af48b 41
+web/lib/__tests__/entity-time-seek.test.ts
+  s_0eded1e9d0cab6::t_f1e5a57afe4766 294-295,297
+  s_0eded1e9d0cab6::t_e66eae9a701fe9 296
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a5b1e738d0f4dbf2f71f067b0c1081aba4ee203d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
