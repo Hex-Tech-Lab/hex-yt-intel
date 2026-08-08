@@ -1,0 +1,20 @@
+docs/agent-prompts/2026-08-08-self-entity-seek-narrowed-root-cause.md
+  s_0eded1e9d0cab6::t_9135d46884ef07 117-160
+  s_0eded1e9d0cab6::t_689f671abbbb3e 1-116,161-275
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "bd72ce4d56bf88e55492ae0e5a1e43430e37e35b",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
