@@ -3,7 +3,8 @@
  * DashboardContainer's handleSelectNode entity-click seek.
  */
 import { describe, it, expect } from 'vitest';
-import { findEntityTimestamp, findAllEntityMentions, findNearestEntityMention, findNearestEntityMentionAcrossDimensions, getRankedMentionsForEntity } from '@/lib/utils/entity-time-seek';
+import { findEntityTimestamp, findAllEntityMentions, findNearestEntityMention, getRankedMentionsForEntity } from '@/lib/utils/entity-time-seek';
+import { findNearestEntityMentionAcrossDimensions } from '@/lib/utils/entity-time-seek-cross-dimension';
 
 describe('findEntityTimestamp', () => {
   it('prefers a timestamp in the label over one in content', () => {
