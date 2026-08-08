@@ -203,8 +203,17 @@ describe('TimestampLink', () => {
       // PR #212, see the file header for why this file was never actually
       // executed by CI before that pass).
       expect(link).toHaveAttribute('aria-label', 'Seek to 01:30');
-      expect(link).toHaveAttribute('aria-describedby');
-      expect(screen.getByRole('tooltip', { hidden: true })).toHaveTextContent('Seek to 01:30');
+      // Cubic review (PR #219): asserting aria-describedby merely EXISTS,
+      // and separately that A tooltip with the right text exists somewhere
+      // in the document, doesn't prove they're the SAME element -- a
+      // dangling or wrong-target aria-describedby would still pass. Assert
+      // the actual ID relationship: the tooltip getByRole finds must be the
+      // exact element aria-describedby points to.
+      const describedbyId = link.getAttribute('aria-describedby');
+      expect(describedbyId).toBeTruthy();
+      const tooltip = screen.getByRole('tooltip', { hidden: true });
+      expect(tooltip).toHaveAttribute('id', describedbyId);
+      expect(tooltip).toHaveTextContent('Seek to 01:30');
     });
   });
 
