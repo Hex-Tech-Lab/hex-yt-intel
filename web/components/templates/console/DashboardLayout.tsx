@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useUIStore } from '@/store/useUIStore';
 
@@ -21,6 +21,18 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
   const setMobileNav = useUIStore((s) => s.setMobileNav);
   const setMobileRight = useUIStore((s) => s.setMobileRight);
   const pathname = usePathname();
+  // The mobile/tablet drawer backdrop below is a full-screen `fixed
+  // inset-0` div sitting above <main> in stacking order (z-40) purely to
+  // catch "click outside to close" -- but that also makes it the topmost
+  // hit-target for wheel/trackpad scroll events everywhere on screen,
+  // silently blocking scroll over main while a drawer is open below the
+  // xl breakpoint (1280px). The 2026-08-07 fix only removed `inert` (which
+  // blocked iOS touch-scroll specifically) and never covered this separate
+  // wheel-event-interception issue, live-reported 2026-08-08 at a viewport
+  // pinned under 1280px by an open devtools panel. Forward wheel deltas
+  // from the backdrop to main's actual scroll container instead of
+  // removing the backdrop (still needed for click-to-close and dimming).
+  const mainScrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-close the mobile drawers whenever the route changes.
   useEffect(() => {
@@ -65,6 +77,7 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm xl:hidden"
           onClick={() => { setMobileNav(false); setMobileRight(false); }}
+          onWheel={(wheelEvent) => { mainScrollRef.current?.scrollBy({ top: wheelEvent.deltaY, left: wheelEvent.deltaX }); }}
           aria-hidden
         />
       )}
@@ -94,7 +107,10 @@ export function DashboardLayout({ sidebar, topbar, children, rightPanel, dock }:
           {topbar}
         </header>
 
-        <div className="flex-1 overflow-y-auto px-1.5 py-1.5 sm:px-2 sm:py-2 xl:px-2.5 xl:py-2 scroll-smooth [-webkit-overflow-scrolling:touch] [overscroll-behavior-y:contain]">
+        <div
+          ref={mainScrollRef}
+          className="flex-1 overflow-y-auto px-1.5 py-1.5 sm:px-2 sm:py-2 xl:px-2.5 xl:py-2 scroll-smooth [-webkit-overflow-scrolling:touch] [overscroll-behavior-y:contain]"
+        >
           <div className="max-w-[1200px] mx-auto min-h-full flex flex-col">
             <div className="flex-1 min-w-0">
               {children}
