@@ -1,0 +1,20 @@
+web/components/templates/console/VideoPlayerCard.tsx
+  s_0eded1e9d0cab6::t_d5d4ee190ac5b2 32-37
+  s_0eded1e9d0cab6::t_80598452c0bb76 54-66,68,76,80,91-92,149-190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d8944126e529668a56e471a300526f6c4c6026df",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
