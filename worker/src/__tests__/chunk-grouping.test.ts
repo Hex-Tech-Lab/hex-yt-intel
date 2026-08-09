@@ -35,7 +35,7 @@ describe('groupSegmentsIntoChunks (ADR 026 §4.1)', () => {
     expect(chunks[1]!.startSeconds).toBe(60);
   });
 
-  it('assigns real, monotonically increasing chunk timestamps with no gaps in coverage', () => {
+  it('assigns real, monotonically increasing chunk timestamps with exact segment coverage (no drops, no duplicates, no reordering)', () => {
     const segments = [
       seg(0, 20, 'one'),
       seg(20, 20, 'two'),
@@ -44,12 +44,30 @@ describe('groupSegmentsIntoChunks (ADR 026 §4.1)', () => {
       seg(80, 20, 'five'),
     ];
     const chunks = groupSegmentsIntoChunks(segments, 45);
-    // Every segment must appear in exactly one chunk (no drops, no duplicates).
-    const totalSegments = chunks.reduce((sum, chunk) => sum + chunk.segments.length, 0);
-    expect(totalSegments).toBe(segments.length);
+    // Cubic (PR #227 review): a count-only check would pass even if a real
+    // segment were dropped and a duplicate substituted -- assert identity.
+    const flattened = chunks.flatMap((chunk) => chunk.segments);
+    expect(flattened).toEqual(segments);
     for (let i = 1; i < chunks.length; i++) {
       expect(chunks[i]!.startSeconds).toBeGreaterThanOrEqual(chunks[i - 1]!.endSeconds);
     }
+  });
+
+  it('sorts out-of-order input before grouping, so chunk timestamps stay monotonic', () => {
+    const outOfOrder = [seg(40, 20, 'three'), seg(0, 20, 'one'), seg(20, 20, 'two')];
+    const chunks = groupSegmentsIntoChunks(outOfOrder, 45);
+    const flattened = chunks.flatMap((chunk) => chunk.segments);
+    expect(flattened.map((segment) => segment.text)).toEqual(['one', 'two', 'three']);
+    for (let i = 1; i < chunks.length; i++) {
+      expect(chunks[i]!.startSeconds).toBeGreaterThanOrEqual(chunks[i - 1]!.endSeconds);
+    }
+  });
+
+  it('falls back to the default window for a non-finite target (Infinity/NaN), not just non-positive (Cubic follow-up)', () => {
+    const segments = [seg(0, 20, 'one'), seg(20, 20, 'two'), seg(40, 20, 'three')];
+    const defaultWindow = groupSegmentsIntoChunks(segments);
+    expect(groupSegmentsIntoChunks(segments, Infinity)).toEqual(defaultWindow);
+    expect(groupSegmentsIntoChunks(segments, NaN)).toEqual(defaultWindow);
   });
 
   it('uses a real default target window when none is passed', () => {
