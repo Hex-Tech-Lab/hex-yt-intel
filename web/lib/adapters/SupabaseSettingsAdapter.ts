@@ -219,4 +219,52 @@ export class SupabaseSettingsAdapter
       return [];
     }
   }
+
+  /**
+   * ADR 026 Phase 1: fetch the retention policy row for a (tier, dataType) pair.
+   * Schema/read-only for now -- no enforcement job consumes this yet.
+   * Returns null if no policy is defined for that pair (not an error).
+   */
+  static async getRetentionPolicy(
+    tier: string,
+    dataType: string
+  ): Promise<{
+    maxAgeDays: number;
+    lastAccessedCutoffDays: number | null;
+    boosterPackExtendable: boolean;
+  } | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('retention_policies')
+        .select('max_age_days, last_accessed_cutoff_days, booster_pack_extendable')
+        .eq('tier', tier)
+        .eq('data_type', dataType)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[SupabaseSettingsAdapter] getRetentionPolicy failed:', error.message);
+        Sentry.captureException(error, {
+          tags: { method: 'getRetentionPolicy' },
+          extra: { tier, dataType },
+        });
+        return null;
+      }
+
+      if (!data) return null;
+
+      return {
+        maxAgeDays: data.max_age_days,
+        lastAccessedCutoffDays: data.last_accessed_cutoff_days,
+        boosterPackExtendable: data.booster_pack_extendable,
+      };
+    } catch (error: unknown) {
+      console.error('[SupabaseSettingsAdapter] getRetentionPolicy error:', error);
+      Sentry.captureException(error, {
+        tags: { method: 'getRetentionPolicy' },
+        extra: { tier, dataType },
+      });
+      return null;
+    }
+  }
 }
