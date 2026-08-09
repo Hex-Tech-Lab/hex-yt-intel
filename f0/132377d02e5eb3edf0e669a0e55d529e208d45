@@ -1,0 +1,23 @@
+web/lib/config/cascade.ts
+  s_0eded1e9d0cab6::t_96af16250fb409 84
+  s_0eded1e9d0cab6::t_cb2df6bb18cfb1 56-63
+  s_0eded1e9d0cab6::t_97704352e36f28 101
+supabase/migrations/20260809110135_cascade_entity_extraction.sql
+  s_0eded1e9d0cab6::t_91ee65bd3c083e 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f0132377d02e5eb3edf0e669a0e55d529e208d45",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
