@@ -69,7 +69,7 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
     let cancelled = false;
     setLoading(true);
     setLoadedFromApi(false);
-    fetch(`/api/analyses/${analysisId}/graph`)
+    fetch(`/api/analyses/${encodeURIComponent(analysisId)}/graph`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
