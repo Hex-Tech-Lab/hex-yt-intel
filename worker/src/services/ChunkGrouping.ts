@@ -32,18 +32,16 @@ const DEFAULT_TARGET_WINDOW_SECONDS = 75;
  * order and filter to `start >= 0 && duration > 0`). Defensively sorted here
  * anyway (cheap for a per-video segment list) so a caller that violates the
  * precondition gets a still-correct grouping instead of non-monotonic chunk
- * timestamps -- Cubic PR #227 review.
+ * timestamps.
  */
 export function groupSegmentsIntoChunks(
   segments: TranscriptSegment[],
   targetWindowSeconds: number = DEFAULT_TARGET_WINDOW_SECONDS
 ): GroundedChunk[] {
   if (segments.length === 0) return [];
-  // Cubic + Sourcery (PR #227 review): a non-positive window silently produced
-  // one chunk per segment instead of failing or falling back sanely. Fall back
-  // to the default rather than throwing -- this is a soft target, not a hard
-  // contract callers must get exactly right. Also guard non-finite (Infinity/
-  // NaN) values (Cubic follow-up), which `> 0` alone doesn't catch for +Infinity.
+  // A non-positive or non-finite (Infinity/NaN) window falls back to the
+  // default rather than throwing or degrading to one-chunk-per-segment --
+  // this is a soft target, not a hard contract callers must get exactly right.
   const effectiveWindowSeconds =
     Number.isFinite(targetWindowSeconds) && targetWindowSeconds > 0
       ? targetWindowSeconds

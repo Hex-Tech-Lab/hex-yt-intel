@@ -44,8 +44,8 @@ describe('groupSegmentsIntoChunks (ADR 026 §4.1)', () => {
       seg(80, 20, 'five'),
     ];
     const chunks = groupSegmentsIntoChunks(segments, 45);
-    // Cubic (PR #227 review): a count-only check would pass even if a real
-    // segment were dropped and a duplicate substituted -- assert identity.
+    // Assert full identity, not just a count -- a count-only check would pass
+    // even if a real segment were dropped and a duplicate substituted.
     const flattened = chunks.flatMap((chunk) => chunk.segments);
     expect(flattened).toEqual(segments);
     for (let i = 1; i < chunks.length; i++) {
@@ -53,17 +53,19 @@ describe('groupSegmentsIntoChunks (ADR 026 §4.1)', () => {
     }
   });
 
-  it('sorts out-of-order input before grouping, so chunk timestamps stay monotonic', () => {
+  it('sorts out-of-order input before grouping, preserving complete segment objects, so chunk timestamps stay monotonic', () => {
     const outOfOrder = [seg(40, 20, 'three'), seg(0, 20, 'one'), seg(20, 20, 'two')];
     const chunks = groupSegmentsIntoChunks(outOfOrder, 45);
     const flattened = chunks.flatMap((chunk) => chunk.segments);
-    expect(flattened.map((segment) => segment.text)).toEqual(['one', 'two', 'three']);
+    // Assert full object identity, not just `.text` -- a text-only check would
+    // still pass if sorting corrupted `start`/`duration`.
+    expect(flattened).toEqual([outOfOrder[1], outOfOrder[2], outOfOrder[0]]);
     for (let i = 1; i < chunks.length; i++) {
       expect(chunks[i]!.startSeconds).toBeGreaterThanOrEqual(chunks[i - 1]!.endSeconds);
     }
   });
 
-  it('falls back to the default window for a non-finite target (Infinity/NaN), not just non-positive (Cubic follow-up)', () => {
+  it('falls back to the default window for a non-finite target (Infinity/NaN), not just non-positive', () => {
     const segments = [seg(0, 20, 'one'), seg(20, 20, 'two'), seg(40, 20, 'three')];
     const defaultWindow = groupSegmentsIntoChunks(segments);
     expect(groupSegmentsIntoChunks(segments, Infinity)).toEqual(defaultWindow);
@@ -75,7 +77,7 @@ describe('groupSegmentsIntoChunks (ADR 026 §4.1)', () => {
     expect(() => groupSegmentsIntoChunks(segments)).not.toThrow();
   });
 
-  it('falls back to the default window instead of degrading to one-chunk-per-segment on a non-positive window (Cubic/Sourcery PR #227 finding)', () => {
+  it('falls back to the default window instead of degrading to one-chunk-per-segment on a non-positive window', () => {
     const segments = [seg(0, 20, 'one'), seg(20, 20, 'two'), seg(40, 20, 'three')];
     const zeroWindow = groupSegmentsIntoChunks(segments, 0);
     const negativeWindow = groupSegmentsIntoChunks(segments, -10);
