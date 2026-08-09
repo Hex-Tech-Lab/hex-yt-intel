@@ -53,6 +53,14 @@ const STANCE_CASCADE_FALLBACK: readonly CascadeItem[] = [
   { model: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (Groq)', cost: 0.0000004, providerOrder: ['groq'] },
 ];
 
+// ADR 026 §4.5: dedicated cascade for chunk-scoped grounded entity extraction,
+// separately named/logged from cascade.analysis so OpenRouter's app-source
+// logs attribute extraction cost independently from dimension-synthesis cost.
+const ENTITY_EXTRACTION_CASCADE_FALLBACK: readonly CascadeItem[] = [
+  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Cerebras)', cost: 0.00035, providerOrder: ['cerebras'] },
+  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Groq)', cost: 0.00015, providerOrder: ['groq'] },
+];
+
 const REASONING_CASCADE_FREE_FALLBACK: readonly CascadeItem[] = [
   { model: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' },
 ];
@@ -73,6 +81,7 @@ export const CASCADE_FALLBACKS = {
   chat: CHAT_CASCADE_FALLBACK,
   analysis: ANALYSIS_CASCADE_FALLBACK,
   stance: STANCE_CASCADE_FALLBACK,
+  entityExtraction: ENTITY_EXTRACTION_CASCADE_FALLBACK,
   reasoningFree: REASONING_CASCADE_FREE_FALLBACK,
   reasoningPro: REASONING_CASCADE_PRO_FALLBACK,
 } as const;
@@ -89,6 +98,7 @@ async function resolveCascade(key: string, fallback: readonly CascadeItem[]): Pr
 export const resolveChatCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.chat', CHAT_CASCADE_FALLBACK);
 export const resolveAnalysisCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.analysis', ANALYSIS_CASCADE_FALLBACK);
 export const resolveStanceCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.stance', STANCE_CASCADE_FALLBACK);
+export const resolveEntityExtractionCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.entityExtraction', ENTITY_EXTRACTION_CASCADE_FALLBACK);
 export const resolveReasoningCascade = (tier: 'free' | 'pro' | 'enterprise'): Promise<CascadeItem[]> =>
   tier === 'free'
     ? resolveCascade('cascade.reasoning.free', REASONING_CASCADE_FREE_FALLBACK)
