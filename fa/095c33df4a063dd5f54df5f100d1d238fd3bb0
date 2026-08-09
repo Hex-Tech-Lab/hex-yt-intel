@@ -1,0 +1,23 @@
+worker/src/__tests__/chunk-grouping.test.ts
+  s_0eded1e9d0cab6::t_144e52b279607e 47-48,60-61,68,80
+  s_0eded1e9d0cab6::t_5a2ba281a36510 56,62
+worker/src/services/ChunkGrouping.ts
+  s_0eded1e9d0cab6::t_0372dd07f1fab8 42-44
+  s_0eded1e9d0cab6::t_79df0bf3dc9d56 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "fa095c33df4a063dd5f54df5f100d1d238fd3bb0",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
