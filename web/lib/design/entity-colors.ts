@@ -6,40 +6,21 @@
  * as design tokens rather than in globals.css. Every component derives its
  * colors from this module — do not re-declare the hues anywhere else.
  */
-export type EntityType =
-  | 'person'
-  | 'concept'
-  | 'framework'
-  | 'tool'
-  | 'organization'
-  | 'study'
-  | 'trend'
-  | 'metric'
-  // ADR 026 §6.2 POLE+O base types (kg_entities.type going forward, PascalCase
-  // per the DB's own CHECK constraint) — distinct keys from the lowercase
-  // legacy values above so both old and new rows render a real, non-fallback
-  // color rather than the generic gray default.
-  | 'Person'
-  | 'Organization'
-  | 'Location'
-  | 'Event'
-  | 'Object';
+// ADR 026 §6.2 POLE+O base types — the only values kg_entities.type can hold
+// going forward (enforced by kg_entities_type_poleo_check). The old lowercase
+// categories (person/concept/framework/tool/organization/study/trend/metric)
+// were removed, not kept alongside these: kg_entities.type is their only real
+// consumer, and 2026-08-09's full reclassification (not a blind default) means
+// zero live rows use the old values after that migration completes.
+export type EntityType = 'Person' | 'Organization' | 'Location' | 'Event' | 'Object';
 
 /** Base hex per entity type — the one place these values are defined. */
 export const ENTITY_HEX: Record<EntityType, string> = {
-  person: '#F43F5E', // rose
-  concept: '#A855F7', // purple
-  framework: '#EAB308', // yellow
-  tool: '#06B6D4', // cyan (== --accent)
-  organization: '#3B82F6', // blue
-  study: '#10B981', // emerald
-  trend: '#F97316', // orange
-  metric: '#EC4899', // pink
-  Person: '#F43F5E', // rose, matches legacy 'person'
-  Organization: '#3B82F6', // blue, matches legacy 'organization'
+  Person: '#F43F5E', // rose
+  Organization: '#3B82F6', // blue
   Location: '#10B981', // emerald
   Event: '#F97316', // orange
-  Object: '#A855F7', // purple, matches legacy 'concept' as the catch-all
+  Object: '#A855F7', // purple, the POLE+O catch-all
 };
 
 /** Fallback for unknown / missing entity types (slate-400). */
