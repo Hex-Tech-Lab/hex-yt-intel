@@ -101,3 +101,36 @@ export interface RelationsResult {
   model: string;
   insights: RelationInsight[];
 }
+
+// --- ADR 026 Phase 1: grounded extraction schema (additive only, not yet wired) ---
+
+/**
+ * Where a grounded entity mention was actually found, typed per input modality.
+ * `video_timestamp` is the only variant produced today (Problem A); the rest
+ * exist so Problem C (multimodal ingestion) needs no future schema migration.
+ */
+export type GroundedLocation =
+  | { type: 'video_timestamp'; seconds: number }
+  | { type: 'pdf_page'; page: number; paragraph: number }
+  | { type: 'audio_timestamp'; seconds: number }
+  | { type: 'spreadsheet_cell'; sheet: string; column: string; row: number }
+  | { type: 'text_offset'; charStart: number; charEnd: number };
+
+/** POLE+O base entity typing (Neo4j pattern) — enables future cross-source merging (Problem B) without retrofitting existing rows. */
+export type PoleOBaseType = 'Person' | 'Organization' | 'Location' | 'Event' | 'Object';
+
+/** One real, chunk-scoped occurrence of an entity — the 1-to-many unit: a GroundedEntity has many of these. */
+export interface GroundedMention {
+  chunkId: string;
+  location: GroundedLocation;
+  matchMethod: 'exact' | 'embedding';
+  matchConfidence: number;
+}
+
+/** A single canonical entity resolved across all its chunk-scoped mentions (ADR 026 §4.4 dedup). */
+export interface GroundedEntity {
+  id: string;
+  label: string;
+  baseType: PoleOBaseType;
+  mentions: GroundedMention[];
+}
