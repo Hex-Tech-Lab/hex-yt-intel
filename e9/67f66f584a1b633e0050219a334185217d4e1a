@@ -1,0 +1,27 @@
+worker/src/services/ChunkGrouping.ts
+  s_0eded1e9d0cab6::t_5732f1b322a674 28-35,45-51
+  s_0eded1e9d0cab6::t_9376786a62eb68 73
+  s_0eded1e9d0cab6::t_e6c3d389c535e8 52
+worker/src/__tests__/chunk-grouping.test.ts
+  s_0eded1e9d0cab6::t_8f9bd0eaea675c 60
+  s_0eded1e9d0cab6::t_b5ff5a49debfb5 38,47-50,56-59,61-71
+  s_0eded1e9d0cab6::t_13efc7bff19b1b 72
+supabase/migrations/20260809134605_retention_policies_followup.sql
+  s_0eded1e9d0cab6::t_8aeccb0b53a59f 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "e967f66f584a1b633e0050219a334185217d4e1a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
