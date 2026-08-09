@@ -31,6 +31,11 @@ export function groupSegmentsIntoChunks(
   targetWindowSeconds: number = DEFAULT_TARGET_WINDOW_SECONDS
 ): GroundedChunk[] {
   if (segments.length === 0) return [];
+  // Cubic + Sourcery (PR #227 review): a non-positive window silently produced
+  // one chunk per segment instead of failing or falling back sanely. Fall back
+  // to the default rather than throwing -- this is a soft target, not a hard
+  // contract callers must get exactly right.
+  const effectiveWindowSeconds = targetWindowSeconds > 0 ? targetWindowSeconds : DEFAULT_TARGET_WINDOW_SECONDS;
 
   const chunks: GroundedChunk[] = [];
   let current: TranscriptSegment[] = [];
@@ -55,7 +60,7 @@ export function groupSegmentsIntoChunks(
     if (current.length > 0) {
       const chunkStart = current[0]!.start;
       const wouldBeSpan = segment.start + segment.duration - chunkStart;
-      if (wouldBeSpan > targetWindowSeconds) {
+      if (wouldBeSpan > effectiveWindowSeconds) {
         flush();
       }
     }

@@ -56,4 +56,14 @@ describe('groupSegmentsIntoChunks (ADR 026 §4.1)', () => {
     const segments = [seg(0, 10, 'a'), seg(10, 10, 'b')];
     expect(() => groupSegmentsIntoChunks(segments)).not.toThrow();
   });
+
+  it('falls back to the default window instead of degrading to one-chunk-per-segment on a non-positive window (Cubic/Sourcery PR #227 finding)', () => {
+    const segments = [seg(0, 20, 'one'), seg(20, 20, 'two'), seg(40, 20, 'three')];
+    const zeroWindow = groupSegmentsIntoChunks(segments, 0);
+    const negativeWindow = groupSegmentsIntoChunks(segments, -10);
+    const defaultWindow = groupSegmentsIntoChunks(segments);
+    expect(zeroWindow).toEqual(defaultWindow);
+    expect(negativeWindow).toEqual(defaultWindow);
+    expect(zeroWindow).toHaveLength(1);
+  });
 });
