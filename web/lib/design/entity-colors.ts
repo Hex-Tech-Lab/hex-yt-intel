@@ -14,7 +14,16 @@ export type EntityType =
   | 'organization'
   | 'study'
   | 'trend'
-  | 'metric';
+  | 'metric'
+  // ADR 026 §6.2 POLE+O base types (kg_entities.type going forward, PascalCase
+  // per the DB's own CHECK constraint) — distinct keys from the lowercase
+  // legacy values above so both old and new rows render a real, non-fallback
+  // color rather than the generic gray default.
+  | 'Person'
+  | 'Organization'
+  | 'Location'
+  | 'Event'
+  | 'Object';
 
 /** Base hex per entity type — the one place these values are defined. */
 export const ENTITY_HEX: Record<EntityType, string> = {
@@ -26,6 +35,11 @@ export const ENTITY_HEX: Record<EntityType, string> = {
   study: '#10B981', // emerald
   trend: '#F97316', // orange
   metric: '#EC4899', // pink
+  Person: '#F43F5E', // rose, matches legacy 'person'
+  Organization: '#3B82F6', // blue, matches legacy 'organization'
+  Location: '#10B981', // emerald
+  Event: '#F97316', // orange
+  Object: '#A855F7', // purple, matches legacy 'concept' as the catch-all
 };
 
 /** Fallback for unknown / missing entity types (slate-400). */
