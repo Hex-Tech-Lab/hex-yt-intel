@@ -1,46 +1,27 @@
 'use client';
 
-import { useState, useEffect, startTransition, ViewTransition } from 'react';
+import { useState, startTransition, ViewTransition } from 'react';
 import { Button, ButtonGroup, TextInput } from '@astryxdesign/core';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { LogsViewerClient } from '@/app/settings/logs/LogsViewerClient';
 import { AdminSettingsClient } from '@/app/admin/settings/AdminSettingsClient';
 import { UsersAdminClient } from '@/app/admin/users/UsersAdminClient';
+import { useUsageSummary } from '@/hooks/useUsageSummary';
 
-interface UsageSummary {
-  tier: string;
-  analyses: { used: number; quota: number | null };
-  chatTurns: { synthesisConsole: number; atlas: number; total: number };
-  estimatedCostUsd: number;
-}
-
-/** Activity & Usage pane -- fetches the real per-user summary from
- *  /api/usage/summary (own-user-only, already computes this from usage_logs)
- *  instead of hardcoding placeholder numbers. */
+/** Activity & Usage pane -- reuses the shared useUsageSummary hook (same
+ *  /api/usage/summary fetch UsageTab.tsx already implements) instead of
+ *  re-implementing the fetch/cancel/error dance locally. */
 function UsagePane() {
-  const [data, setData] = useState<UsageSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/usage/summary')
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json) => { if (!cancelled) setData(json); })
-      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : String(err)); })
-      .finally(() => {
-        // Guaranteed cleanup block
-      });
-    return () => { cancelled = true; };
-  }, []);
+  const { summary: data, loading, error } = useUsageSummary(true);
 
   if (error) {
     return <p className="text-xs text-[var(--err)]">Failed to load usage summary: {error}</p>;
   }
-  if (!data) {
+  if (loading && !data) {
     return <p className="text-xs text-[var(--ink-muted)]">Loading usage summary…</p>;
+  }
+  if (!data) {
+    return <p className="text-xs text-[var(--ink-muted)]">No usage yet this period.</p>;
   }
 
   return (
