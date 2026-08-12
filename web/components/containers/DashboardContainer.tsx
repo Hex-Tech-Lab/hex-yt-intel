@@ -14,7 +14,6 @@ import type { Dimension } from '@/components/templates/console/DimensionAccordio
 import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
 import { useTotalDimensions, useSynthesisConfig } from '@/lib/config/synthesis-with-settings';
 import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
-import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { AnalysisHistory } from '@/components/templates/console/AnalysisHistory';
 import { IntelligencePanel } from '@/components/templates/console/IntelligencePanel';
 import { ChatDock } from '@/components/templates/console/ChatDock';
@@ -751,7 +750,10 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                           />
                         </div>
                       )}
-                      {status === 'complete' && dimensions.length > 0 && <PersonaSelector />}
+                      {/* PersonaSelector removed from runtime per LLM Council Round 1 (2026-08-12):
+                          persona is a marketing/design lens, not a user-facing picker. Defaults
+                          to the apex 'creator' view (all 11 dimensions) instead.
+                          See docs/private/council/2026-08-12_1500_v1_round1_full_transcript.md */}
                       <DimensionAccordion
                         dimensions={dimensions}
                         selectedDimensionKey={selectedDimensionKey}
