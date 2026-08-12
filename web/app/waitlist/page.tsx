@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
-const SUPABASE_URL = 'https://adnmbikaqnxivalqoild.supabase.co';
+// NEXT_PUBLIC_* so preview/staging deploys hit their own configured Supabase
+// project instead of a hardcoded one (CodeRabbit review, PR #231).
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 function WaitlistForm() {
@@ -24,9 +28,15 @@ function WaitlistForm() {
         },
         body: JSON.stringify({ email, source: 'landing_page' }),
       });
-      if (!res.ok) throw new Error('insert failed');
+      // 409 = unique-email conflict (PostgREST maps Postgres 23505 to 409) --
+      // a duplicate signup is a success from the user's point of view, not
+      // an error (CodeRabbit review, PR #231).
+      if (!res.ok && res.status !== 409) {
+        throw new Error(`waitlist insert failed: ${res.status}`);
+      }
       setStatus('done');
-    } catch {
+    } catch (err) {
+      Sentry.captureException(err, { contexts: { waitlist: { layer: 'signup_insert' } } });
       setStatus('error');
     }
   }
@@ -141,7 +151,7 @@ export default function WaitlistPage() {
 
         <main className="wrap">
           <section className="hero">
-            <p className="eyebrow">// visual research for creators</p>
+            <p className="eyebrow">{'// visual research for creators'}</p>
             <h1>Watch <span className="strike">60&nbsp;min</span> in 4.</h1>
             <p className="sub">
               <strong>v-intel</strong> compresses competitor research videos into a visual pass you can actually see —
