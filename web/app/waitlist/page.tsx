@@ -1,8 +1,8 @@
 'use client';
 
+import * as Sentry from '@sentry/nextjs';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import * as Sentry from '@sentry/nextjs';
 
 // NEXT_PUBLIC_* so preview/staging deploys hit their own configured Supabase
 // project instead of a hardcoded one (CodeRabbit review, PR #231).
@@ -12,11 +12,14 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 function WaitlistForm() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
+  async function handleSubmit(submitEvent: FormEvent<HTMLFormElement>) {
+    submitEvent.preventDefault();
+    const form = submitEvent.currentTarget;
     const email = (form.elements.namedItem('email') as HTMLInputElement).value;
     setStatus('loading');
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist_signups`, {
         method: 'POST',
@@ -27,6 +30,7 @@ function WaitlistForm() {
           Prefer: 'return=minimal',
         },
         body: JSON.stringify({ email, source: 'landing_page' }),
+        signal: controller.signal,
       });
       // 409 = unique-email conflict (PostgREST maps Postgres 23505 to 409) --
       // a duplicate signup is a success from the user's point of view, not
@@ -38,6 +42,8 @@ function WaitlistForm() {
     } catch (err) {
       Sentry.captureException(err, { contexts: { waitlist: { layer: 'signup_insert' } } });
       setStatus('error');
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
