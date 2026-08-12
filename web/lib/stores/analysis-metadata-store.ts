@@ -36,7 +36,12 @@ export interface AnalysisMetadataStore {
 }
 
 export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get) => ({
-  activePersona: 'consultant',
+  // Default persona view: LLM Council Round 1 (2026-08-12) ruled persona is a
+  // marketing/design lens, not a user-facing runtime picker. Defaults to the
+  // apex 'creator' view (all 11 dimensions) rather than a guessed persona.
+  // Owner of this default: product owner. Revisit when Round 2 (dimension
+  // remapping) concludes -- see docs/private/council/2026-08-12_1500_v1_round1_full_transcript.md
+  activePersona: 'creator',
   personaConfig: null,
   knowledgeGraph: null,
   classification: null,
@@ -112,7 +117,7 @@ export const useAnalysisMetadataStore = create<AnalysisMetadataStore>((set, get)
 
   reset: () => {
     set({
-      activePersona: 'consultant',
+      activePersona: 'creator',
       personaConfig: null,
       knowledgeGraph: null,
       classification: null,

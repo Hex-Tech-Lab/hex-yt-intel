@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { ConsoleTabSwitcher } from './ConsoleTabSwitcher';
 import { ExecutiveDigestCard } from '@/components/dashboard/ExecutiveDigestCard';
-import { PersonaSelector } from '@/components/templates/console/PersonaSelector';
 import { DimensionAccordion } from '@/components/dashboard/DimensionAccordion';
 import { VisualizationPanel } from '@/components/dashboard/VisualizationPanel';
 import { useTotalDimensions } from '@/lib/config/synthesis-with-settings';
@@ -33,8 +32,11 @@ export interface DashboardMainContentProps {
  * - Tab switcher (synthesis vs graph)
  * - Executive digest card (Dimension 0)
  * - Partial analysis warning
- * - PersonaSelector
  * - DimensionAccordion or VisualizationPanel based on active tab
+ *
+ * PersonaSelector removed per LLM Council Round 1 (2026-08-12): persona is a
+ * marketing/design lens now, not a runtime picker. Defaults to the apex
+ * 'creator' view (all 11 dimensions).
  *
  * Memoizes expensive renders to prevent unnecessary re-renders from parent state changes.
  */
@@ -88,12 +90,6 @@ export function DashboardMainContent({
     return <ExecutiveDigestCard digest={digest} loading={digestLoading} />;
   }, [status, digest, digestLoading]);
 
-  // Memoize persona selector
-  const personaSection = useMemo(() => {
-    if (status !== 'complete' || dimensions.length === 0) return null;
-    return <PersonaSelector />;
-  }, [status, dimensions.length]);
-
   // Memoize dimension accordion
   const dimensionAccordion = useMemo(
     () => (
@@ -129,7 +125,6 @@ export function DashboardMainContent({
         <>
           {digestCard}
           {partialInfoContent}
-          {personaSection}
           {dimensionAccordion}
         </>
       ) : (
