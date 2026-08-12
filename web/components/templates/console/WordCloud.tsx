@@ -150,7 +150,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           tokenMap[key] = {
             label: word,
             weight: node.weight || 1,
-            type: node.entityType || 'concept',
+            type: node.entityType || 'Object',
             id: node.id,
             maxWeight: node.weight || 1,
           };
@@ -180,7 +180,7 @@ export function WordCloud({ graph, selectedId, onSelect }: WordCloudProps) {
           tokenMap[key] = {
             label: bigram,
             weight: (node.weight || 1) * 0.8,
-            type: node.entityType || 'concept',
+            type: node.entityType || 'Object',
             id: node.id,
             maxWeight: node.weight || 1,
           };

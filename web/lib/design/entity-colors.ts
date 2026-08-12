@@ -6,26 +6,16 @@
  * as design tokens rather than in globals.css. Every component derives its
  * colors from this module — do not re-declare the hues anywhere else.
  */
-export type EntityType =
-  | 'person'
-  | 'concept'
-  | 'framework'
-  | 'tool'
-  | 'organization'
-  | 'study'
-  | 'trend'
-  | 'metric';
+// POLE+O base types (ADR 026 §6.2) — see docs/architecture/entity-colors-poleo-rationale.md
+export type EntityType = 'Person' | 'Organization' | 'Location' | 'Event' | 'Object';
 
 /** Base hex per entity type — the one place these values are defined. */
 export const ENTITY_HEX: Record<EntityType, string> = {
-  person: '#F43F5E', // rose
-  concept: '#A855F7', // purple
-  framework: '#EAB308', // yellow
-  tool: '#06B6D4', // cyan (== --accent)
-  organization: '#3B82F6', // blue
-  study: '#10B981', // emerald
-  trend: '#F97316', // orange
-  metric: '#EC4899', // pink
+  Person: '#F43F5E', // rose
+  Organization: '#3B82F6', // blue
+  Location: '#10B981', // emerald
+  Event: '#F97316', // orange
+  Object: '#A855F7', // purple, the POLE+O catch-all
 };
 
 /** Fallback for unknown / missing entity types (slate-400). */
