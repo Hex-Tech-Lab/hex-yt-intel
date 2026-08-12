@@ -1,0 +1,22 @@
+web/app/waitlist/page.tsx
+  s_0eded1e9d0cab6::t_80515a2c03a3d7 154
+  s_0eded1e9d0cab6::t_c3b307b2ed60e4 3-5,7-9,31-36,38-39
+supabase/migrations/20260812234751_waitlist_signups_constraints.sql
+  s_0eded1e9d0cab6::t_67fb6de0f257fb 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f9e0c1e6d1be08d93945d09ee4b918178cf2f27d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
