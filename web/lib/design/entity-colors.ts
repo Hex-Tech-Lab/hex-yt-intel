@@ -6,12 +6,7 @@
  * as design tokens rather than in globals.css. Every component derives its
  * colors from this module — do not re-declare the hues anywhere else.
  */
-// ADR 026 §6.2 POLE+O base types — the only values kg_entities.type can hold
-// going forward (enforced by kg_entities_type_poleo_check). The old lowercase
-// categories (person/concept/framework/tool/organization/study/trend/metric)
-// were removed, not kept alongside these: kg_entities.type is their only real
-// consumer, and 2026-08-09's full reclassification (not a blind default) means
-// zero live rows use the old values after that migration completes.
+// POLE+O base types (ADR 026 §6.2) — see docs/architecture/entity-colors-poleo-rationale.md
 export type EntityType = 'Person' | 'Organization' | 'Location' | 'Event' | 'Object';
 
 /** Base hex per entity type — the one place these values are defined. */
