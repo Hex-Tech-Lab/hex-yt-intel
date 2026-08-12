@@ -1,0 +1,23 @@
+docs/architecture/entity-colors-poleo-rationale.md
+  s_0eded1e9d0cab6::t_256dbe7d4e58dc 1-9
+web/lib/design/entity-colors.ts
+  s_0eded1e9d0cab6::t_712a01bfe44208 9
+supabase/migrations/20260812234150_kg_entity_mentions_drop_redundant_index.sql
+  s_0eded1e9d0cab6::t_3968c128457e4f 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "78a3c5f7b8506b29eb0f9c57337f76d53f3d0001",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
