@@ -1,0 +1,39 @@
+web/lib/prompts/highlights-extraction.ts
+  s_0eded1e9d0cab6::t_29a6f428f56d57 1-57
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_4c430f6c6c03ab 22
+  s_0eded1e9d0cab6::t_47285a55bf34a5 727-729
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_0eded1e9d0cab6::t_5bde64318447f5 781-835
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_aea255a9ad12d0 1-112
+web/lib/ports/ExecutiveDigestPorts.ts
+  s_0eded1e9d0cab6::t_de8a57b63b8d7f 48,56-66
+  s_0eded1e9d0cab6::t_321fb882a7c560 67
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_0eded1e9d0cab6::t_45ea25b4407c85 145-156
+  s_0eded1e9d0cab6::t_ad09c7bd578a4f 7-11
+  s_0eded1e9d0cab6::t_764269c7f19248 78
+  s_0eded1e9d0cab6::t_3a125ed0d02970 159-175,177-180,182-183
+  s_0eded1e9d0cab6::t_692f792d837668 176,181
+web/app/api/analyses/highlights/route.ts
+  s_0eded1e9d0cab6::t_0cf18aa5422d2a 1-46
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_0eded1e9d0cab6::t_c26ebb296a83e4 104-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a4c5d3a6801adeff57bb4350ecc6956d404c9655",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
