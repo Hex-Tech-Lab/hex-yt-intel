@@ -1,9 +1,16 @@
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { PublicHighlightsReel } from './PublicHighlightsReel';
 
 export const dynamic = 'force-dynamic';
+
+const HIGHLIGHTS_REGISTRY_FALLBACK = {
+  'highlights.segmentDurationSeconds': 10,
+  'highlights.contextLeadSeconds': 2.5,
+} as const;
 
 export default async function SharePage(props: {
   params: Promise<{ token: string }>;
@@ -34,6 +41,14 @@ export default async function SharePage(props: {
     }
   }
 
+  // Highlights are optional -- older shared analyses (pre task #7/#14) or
+  // ones where extraction failed simply have zero rows; fail quiet, same
+  // as the authenticated HighlightsScrubber does.
+  const [highlights, registrySettings] = await Promise.all([
+    adapter.findHighlightsForAnalysis(analysis.id),
+    SupabaseSettingsAdapter.getRegistrySettings(Object.keys(HIGHLIGHTS_REGISTRY_FALLBACK), HIGHLIGHTS_REGISTRY_FALLBACK),
+  ]);
+
   return (
     <div className="bg-surface min-h-screen">
       {/* Header */}
@@ -47,6 +62,19 @@ export default async function SharePage(props: {
           </div>
         </div>
       </div>
+
+      {/* Highlights reel (Read-Only, no sign-in) */}
+      {analysis.videoId && highlights.length > 0 && (
+        <div className="px-6 pt-8 max-w-4xl mx-auto">
+          <PublicHighlightsReel
+            videoId={analysis.videoId}
+            highlights={highlights}
+            segmentDurationSeconds={Number(registrySettings['highlights.segmentDurationSeconds'])}
+            contextLeadSeconds={Number(registrySettings['highlights.contextLeadSeconds'])}
+            videoDurationSeconds={analysis.videoDurationSeconds}
+          />
+        </div>
+      )}
 
       {/* Content (Read-Only) */}
       <div className="px-6 py-12 max-w-4xl mx-auto">
