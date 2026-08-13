@@ -783,49 +783,55 @@ export class SupabaseAnalysisAdapter {
   static async getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null> {
     try {
       const service = getSupabaseServiceClient();
+      // Enforce the 72h retention boundary (ADR 012) at the read path itself,
+      // not only via the purge cron's eventual row deletion -- a delayed
+      // purge run must not let extraction read past the stated compliance
+      // window, even briefly.
       const { data, error } = await service
         .from('transcripts')
         .select('segments')
         .eq('video_id', videoId)
+        .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 
       if (error) throw error;
       if (!data?.segments || !Array.isArray(data.segments)) return null;
+
+      const seenStarts = new Set<number>();
       return data.segments
-        .filter((s: any) => typeof s?.start === 'number' && typeof s?.text === 'string')
-        .map((s: any) => ({ start: s.start, text: s.text }));
+        .filter((s: any) => typeof s?.start === 'number' && typeof s?.text === 'string' && Number.isFinite(s.start) && s.start >= 0 && s.text.trim().length > 0)
+        .map((s: any) => ({ start: s.start, text: s.text.trim() }))
+        // Dedupe by start (keep first) and sort -- feeding the highlights
+        // extraction LLM call unordered or duplicate-start segments would
+        // corrupt the [start] text ordering it relies on to pick real
+        // timestamps.
+        .filter((s) => {
+          if (seenStarts.has(s.start)) return false;
+          seenStarts.add(s.start);
+          return true;
+        })
+        .sort((left, right) => left.start - right.start);
     } catch (error: any) {
       Sentry.captureException(error, { tags: { method: 'getTranscriptSegments' }, extra: { videoId } });
       return null;
     }
   }
 
-  /** Idempotent replace: deletes any prior highlight set for this analysis
-   *  before inserting, so a digest re-gen doesn't leave stale rows behind. */
+  /** Atomic replace via RPC (migration 20260813230239) -- a plain app-level
+   *  delete-then-insert could leave an analysis with no highlights at all if
+   *  the insert failed after the delete succeeded (real P0 finding, review
+   *  of PR #233). The RPC's plpgsql body is one implicit transaction. */
   static async saveHighlights(params: {
     analysisId: string;
     highlights: Array<{ idx: number; start: number; end: number; label: string }>;
   }): Promise<boolean> {
     try {
       const service = getSupabaseServiceClient();
-      const { error: deleteError } = await service
-        .from('analysis_highlights')
-        .delete()
-        .eq('analysis_id', params.analysisId);
-      if (deleteError) throw deleteError;
-
-      if (params.highlights.length === 0) return true;
-
-      const { error: insertError } = await service.from('analysis_highlights').insert(
-        params.highlights.map((h) => ({
-          analysis_id: params.analysisId,
-          idx: h.idx,
-          start_seconds: h.start,
-          end_seconds: h.end,
-          label: h.label,
-        }))
-      );
-      if (insertError) throw insertError;
+      const { error } = await service.rpc('replace_analysis_highlights', {
+        p_analysis_id: params.analysisId,
+        p_highlights: params.highlights,
+      });
+      if (error) throw error;
       return true;
     } catch (error: any) {
       Sentry.captureException(error, { tags: { method: 'saveHighlights' }, extra: { analysisId: params.analysisId } });

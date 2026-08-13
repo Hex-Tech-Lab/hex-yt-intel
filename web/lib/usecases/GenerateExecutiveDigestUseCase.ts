@@ -174,11 +174,22 @@ export class GenerateExecutiveDigestUseCase {
     });
 
     const validStarts = new Set(segments.map((segment) => segment.start));
-    const extracted = parseHighlightsExtraction(completion.text, validStarts);
+    const result = parseHighlightsExtraction(completion.text, validStarts);
+
+    // 'invalid' means the model response was unparseable -- a transient LLM
+    // failure, not a genuine "no highlights" finding. Must NOT touch any
+    // existing highlight set in that case (real data-loss bug caught in
+    // review: a bad response used to silently wipe a prior valid set via an
+    // empty-array save). Only 'ok' (structurally valid, empty or not) is
+    // ever persisted.
+    if (result.status === 'invalid') {
+      console.warn(`[digest-usecase] Highlights extraction unparseable for ${params.analysisId}; leaving existing set untouched`);
+      return;
+    }
 
     await this.persistence.saveHighlights({
       analysisId: params.analysisId,
-      highlights: extracted.map((highlight, idx) => ({ idx, start: highlight.start, end: highlight.end, label: highlight.label })),
+      highlights: result.highlights.map((highlight, idx) => ({ idx, start: highlight.start, end: highlight.end, label: highlight.label })),
     });
   }
 }

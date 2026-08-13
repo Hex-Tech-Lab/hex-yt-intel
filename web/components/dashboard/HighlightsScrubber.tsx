@@ -18,9 +18,9 @@ interface HighlightsResponse {
 }
 
 function fmtDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
-  return m > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${s}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainderSeconds = Math.round(seconds % 60);
+  return minutes > 0 ? `${minutes}m${remainderSeconds.toString().padStart(2, '0')}s` : `${remainderSeconds}s`;
 }
 
 /**
@@ -33,8 +33,9 @@ function fmtDuration(seconds: number): string {
 export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analysisId: string; videoDurationSeconds: number | null }) {
   const [data, setData] = useState<HighlightsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
-  const setSeekTo = useVideoStore((s) => s.setSeekTo);
+  const setSeekTo = useVideoStore((state) => state.setSeekTo);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopRef = useRef(false);
 
@@ -52,25 +53,37 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     // player against stale timestamps from the old video's highlights.
     stop();
 
-    // Ignore-flag guard: if analysisId changes again while this fetch is in
-    // flight, an older response resolving after a newer request started must
-    // not clobber `data` with the wrong analysis's highlights.
-    let ignore = false;
-    setData(null);
-    setError(null);
-    fetch(`/api/analyses/highlights?analysisId=${analysisId}`)
-      .then(async (res) => {
+    // AbortController: if analysisId changes again (or the component
+    // unmounts) while this fetch is in flight, cancel the actual request --
+    // not just an ignore-flag -- so an older response can never clobber
+    // `data` with the wrong analysis's highlights, and the browser doesn't
+    // keep a now-pointless request alive.
+    const controller = new AbortController();
+
+    async function loadHighlights() {
+      setData(null);
+      setError(null);
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/analyses/highlights?analysisId=${analysisId}`, { signal: controller.signal });
         if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: HighlightsResponse) => {
-        if (!ignore) setData(json);
-      })
-      .catch((err) => {
-        if (!ignore) setError(err instanceof Error ? err.message : String(err));
-      });
+        const json: HighlightsResponse = await res.json();
+        setData(json);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          console.debug(`[HighlightsScrubber] fetch aborted for ${analysisId} (analysisId changed or unmounted)`);
+          return;
+        }
+        console.warn(`[HighlightsScrubber] failed to load highlights for ${analysisId}:`, err);
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadHighlights();
+
     return () => {
-      ignore = true;
+      controller.abort();
     };
   }, [analysisId, stop]);
 
@@ -97,12 +110,18 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   }, [playFrom]);
 
   if (error) return null; // No highlights available (analysis predates the feature, or extraction failed) -- fail quiet, not a broken UI.
-  if (!data) return <Spinner size="sm" />;
+  if (loading || !data) return <Spinner size="sm" />;
   if (data.highlights.length === 0) return null;
 
-  const totalHighlightsSeconds = data.highlights.length * data.segmentDurationSeconds;
+  // Clamped display: the highlights' nominal total (count * fixed segment
+  // duration) can exceed the source video for a short/dense video -- never
+  // report a "reel" longer than the video it's summarizing.
+  const totalHighlightsSeconds = Math.min(
+    data.highlights.length * data.segmentDurationSeconds,
+    videoDurationSeconds ?? Infinity
+  );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
-    ? Math.round((totalHighlightsSeconds / videoDurationSeconds) * 100)
+    ? Math.min(100, Math.round((totalHighlightsSeconds / videoDurationSeconds) * 100))
     : null;
 
   return (

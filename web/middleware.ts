@@ -143,6 +143,11 @@ export async function middleware(request: NextRequest) {
     '/api/health',         // Health check endpoint
     '/api/metadata',       // Public video metadata endpoint
     '/api/transcript-proxy', // Transcript proxy (diagnostic bypass for routing validation)
+    // Waitlist signup: anonymous landing-page visitors have no session by
+    // definition. Live-caught 2026-08-14 -- this was missing since the
+    // route shipped (PR #231), so every real signup 401'd silently at the
+    // middleware gate before ever reaching the route's own rate limiting.
+    '/api/waitlist',
     // S2S persist: the Cloudflare Worker posts to these from ctx.waitUntil with NO
     // cookies. They are gated by an HMAC content signature inside the handler, not
     // by session auth — so they must bypass the cookie-based middleware gate. The

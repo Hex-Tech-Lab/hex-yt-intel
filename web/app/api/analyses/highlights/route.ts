@@ -11,6 +11,16 @@ const REGISTRY_FALLBACK = {
   'highlights.contextLeadSeconds': 2.5,
 } as const;
 
+/** A malformed/missing/out-of-range registry value must never reach the
+ *  client as-is -- it drives setTimeout durations and seek offsets in
+ *  HighlightsScrubber. Same min/max bounds as the migration's own
+ *  validation jsonb (20260813222120_highlights_reel_settings_registry.sql). */
+function clampSetting(value: unknown, fallback: number, min: number, max: number): number {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < min || numericValue > max) return fallback;
+  return numericValue;
+}
+
 /**
  * GET /api/analyses/highlights?analysisId=... — request-scoped client, so
  * RLS (owner-only select policy on analysis_highlights) does the ownership
@@ -39,8 +49,8 @@ export async function GET(request: NextRequest) {
   const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
 
   return NextResponse.json({
-    highlights: (data ?? []).map((h) => ({ idx: h.idx, start: h.start_seconds, end: h.end_seconds, label: h.label })),
-    segmentDurationSeconds: Number(settings['highlights.segmentDurationSeconds']),
-    contextLeadSeconds: Number(settings['highlights.contextLeadSeconds']),
+    highlights: (data ?? []).map((row) => ({ idx: row.idx, start: row.start_seconds, end: row.end_seconds, label: row.label })),
+    segmentDurationSeconds: clampSetting(settings['highlights.segmentDurationSeconds'], REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
+    contextLeadSeconds: clampSetting(settings['highlights.contextLeadSeconds'], REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
   });
 }

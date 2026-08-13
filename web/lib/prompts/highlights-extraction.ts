@@ -24,34 +24,69 @@ export interface ExtractedHighlight {
   label: string;
 }
 
+const MAX_HIGHLIGHTS = 12;
+const MAX_LABEL_LENGTH = 200;
+
+/**
+ * 'invalid' (couldn't parse a JSON array at all) is a DISTINCT outcome from
+ * 'ok' with an empty highlights array (the model genuinely found nothing
+ * noteworthy) -- the caller must never delete an existing highlight set on
+ * 'invalid' (a transient LLM/parse failure), only ever replace it on 'ok'
+ * (a structurally valid response, empty or not). Conflating these two was a
+ * real data-loss bug caught in review: a malformed response would silently
+ * wipe a previously-extracted, still-valid highlight set.
+ */
+export type HighlightsExtractionResult =
+  | { status: 'invalid' }
+  | { status: 'ok'; highlights: ExtractedHighlight[] };
+
 /**
  * Parses the model's JSON array response, dropping any entry that doesn't
  * match a real segment start time (guards against a hallucinated timestamp
  * slipping through despite the prompt instruction) or is otherwise malformed.
+ * De-dupes by start (keeps the first), sorts by start, and caps at
+ * MAX_HIGHLIGHTS -- defensive limits even though the prompt already asks for
+ * this shape, since a bad model response shouldn't be trusted to self-limit.
  */
 export function parseHighlightsExtraction(
   text: string,
   validSegmentStarts: ReadonlySet<number>
-): ExtractedHighlight[] {
+): HighlightsExtractionResult {
   const jsonMatch = text.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) return [];
+  if (!jsonMatch) return { status: 'invalid' };
 
   let raw: unknown;
   try {
     raw = JSON.parse(jsonMatch[0]);
-  } catch {
-    return [];
+  } catch (parseError) {
+    console.warn('[highlights-extraction] model response matched a JSON-array shape but failed to parse:', parseError);
+    return { status: 'invalid' };
   }
-  if (!Array.isArray(raw)) return [];
+  if (!Array.isArray(raw)) return { status: 'invalid' };
 
+  const seenStarts = new Set<number>();
   const out: ExtractedHighlight[] = [];
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
     const { start, end, label } = item as Record<string, unknown>;
     if (typeof start !== 'number' || typeof end !== 'number' || typeof label !== 'string') continue;
+    if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
     if (!validSegmentStarts.has(start)) continue;
-    if (end <= start || label.trim().length === 0) continue;
-    out.push({ start, end, label: label.trim() });
+    // end must also be a real segment start, matching the prompt's own
+    // contract ("the start of the next selected segment or a later
+    // segment's start") -- an arbitrary numeric end is exactly the kind of
+    // interpolated/fabricated timestamp the prompt explicitly forbids.
+    if (!validSegmentStarts.has(end)) continue;
+    if (end <= start) continue;
+    if (seenStarts.has(start)) continue;
+    const rawLabel = label.trim();
+    const trimmedLabel = rawLabel.length > MAX_LABEL_LENGTH ? `${rawLabel.slice(0, MAX_LABEL_LENGTH)}...` : rawLabel;
+    if (trimmedLabel.length === 0) continue;
+    seenStarts.add(start);
+    out.push({ start, end, label: trimmedLabel });
   }
-  return out;
+
+  out.sort((left, right) => left.start - right.start);
+  while (out.length > MAX_HIGHLIGHTS) out.pop(); // cap item count, not a string-display truncation
+  return { status: 'ok', highlights: out };
 }
