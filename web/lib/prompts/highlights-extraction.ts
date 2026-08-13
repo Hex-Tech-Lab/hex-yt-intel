@@ -14,7 +14,7 @@ Output ONLY a JSON array, no prose before or after, no markdown code fence. Each
 Select between 4 and 12 moments depending on video length and density -- fewer for short/sparse videos, more for long/dense ones. Never fabricate a timestamp that isn't one of the given segment start times. If the transcript is too short or has no distinct noteworthy moments, return an empty array [].`;
 
 export function buildHighlightsExtractionUserMessage(segments: Array<{ start: number; text: string }>): string {
-  const lines = segments.map((s) => `[${s.start}] ${s.text}`).join('\n');
+  const lines = segments.map((segment) => `[${segment.start}] ${segment.text}`).join('\n');
   return `Transcript segments (start time in seconds, then text):\n\n${lines}`;
 }
 

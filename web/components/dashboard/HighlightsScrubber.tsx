@@ -38,23 +38,41 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopRef = useRef(false);
 
-  useEffect(() => {
-    fetch(`/api/analyses/highlights?analysisId=${analysisId}`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: HighlightsResponse) => setData(json))
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
-  }, [analysisId]);
-
   const stop = useCallback(() => {
     stopRef.current = true;
     if (timerRef.current) clearTimeout(timerRef.current);
     setPlayingIdx(null);
   }, []);
 
-  useEffect(() => stop, [stop]);
+  useEffect(() => stop, [stop]); // unmount cleanup
+
+  useEffect(() => {
+    // Stop any in-progress playback from the previous analysisId -- otherwise
+    // switching videos mid-playback keeps auto-seeking a now-different
+    // player against stale timestamps from the old video's highlights.
+    stop();
+
+    // Ignore-flag guard: if analysisId changes again while this fetch is in
+    // flight, an older response resolving after a newer request started must
+    // not clobber `data` with the wrong analysis's highlights.
+    let ignore = false;
+    setData(null);
+    setError(null);
+    fetch(`/api/analyses/highlights?analysisId=${analysisId}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((json: HighlightsResponse) => {
+        if (!ignore) setData(json);
+      })
+      .catch((err) => {
+        if (!ignore) setError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [analysisId, stop]);
 
   const playFrom = useCallback(
     (index: number) => {

@@ -43,7 +43,9 @@ export class DubShortLinkAdapter implements ShortLinkPort {
 
   async getClickAnalytics(linkId: string): Promise<ShortLinkClickAnalytics> {
     try {
-      const result = await this.request<number | { clicks: number }>(`/analytics?linkId=${linkId}&event=clicks`);
+      const result = await this.request<number | { clicks: number }>(
+        `/analytics?linkId=${encodeURIComponent(linkId)}&event=clicks`
+      );
       return { clicks: typeof result === 'number' ? result : result.clicks };
     } catch (err) {
       Sentry.captureException(err, { contexts: { shortLink: { layer: 'analytics' } } });
@@ -52,6 +54,6 @@ export class DubShortLinkAdapter implements ShortLinkPort {
   }
 
   async deleteLink(linkId: string): Promise<void> {
-    await this.request(`/links/${linkId}`, { method: 'DELETE' });
+    await this.request(`/links/${encodeURIComponent(linkId)}`, { method: 'DELETE' });
   }
 }
