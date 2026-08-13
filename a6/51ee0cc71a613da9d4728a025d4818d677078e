@@ -1,0 +1,58 @@
+supabase/migrations/20260813230239_replace_analysis_highlights_atomic_rpc.sql
+  s_0eded1e9d0cab6::t_8f42807b5b6be9 1-28
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0eded1e9d0cab6::t_90a9e3db3034ea 18-25
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_b4ba7bdae81b7a 21-23
+  s_0eded1e9d0cab6::t_1b72b6922671d0 56-61,68,71,78,80,86
+  s_0eded1e9d0cab6::t_675a5523c61987 73-77
+  s_0eded1e9d0cab6::t_81252031328200 62-67,70,72,79,81-84
+  s_0eded1e9d0cab6::t_b56dfb080c71b4 113,116-122,124
+  s_0eded1e9d0cab6::t_ff90d6494ac935 36,38
+supabase/migrations/20260813230031_dub_request_timeout_setting.sql
+  s_0eded1e9d0cab6::t_0889a5e2949aa4 1-21
+web/lib/prompts/highlights-extraction.ts
+  s_0eded1e9d0cab6::t_d8166c9589178c 90-91
+  s_0eded1e9d0cab6::t_453c617cfa1c3f 82-83
+  s_0eded1e9d0cab6::t_acec3b79637fad 75-79
+  s_0eded1e9d0cab6::t_2ad211f2397f39 61-62
+  s_0eded1e9d0cab6::t_ac43350f694567 89
+  s_0eded1e9d0cab6::t_5b06ade6033e9a 27-42,47-49,54,56,63,65,67,73,80-81,84-86,88
+web/middleware.ts
+  s_0eded1e9d0cab6::t_1c4698e5fcf67c 146-150
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_0eded1e9d0cab6::t_79024eb1038b26 813
+  s_0eded1e9d0cab6::t_abc4f1ca5aa2f5 799-800,802-812
+  s_0eded1e9d0cab6::t_887a1e1902679e 786-789,794
+  s_0eded1e9d0cab6::t_c2696ad3aab508 820-823,830-834
+web/app/api/analyses/highlights/route.ts
+  s_0eded1e9d0cab6::t_f48b8016689611 14-18,22-23
+  s_0eded1e9d0cab6::t_d7a0f69f2cd662 19-21
+  s_0eded1e9d0cab6::t_9c393b0d6ce090 52-54
+web/lib/adapters/DubShortLinkAdapter.ts
+  s_0eded1e9d0cab6::t_ee72ff611d3838 77
+  s_0eded1e9d0cab6::t_ad10ac2c93276b 90
+  s_0eded1e9d0cab6::t_b982c799d2daad 2,6,15-16,21,37-48,53-57,69-71,82-84,89,91-96
+  s_0eded1e9d0cab6::t_d1454d75be4012 7-13,17-20
+  s_0eded1e9d0cab6::t_1234cdea27a9d2 49-52
+  s_0eded1e9d0cab6::t_f45586e9693db2 78-79
+  s_0eded1e9d0cab6::t_eadf931c4f71bb 14
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_0eded1e9d0cab6::t_87b6269686c7b9 177-188,192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a651ee0cc71a613da9d4728a025d4818d677078e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
