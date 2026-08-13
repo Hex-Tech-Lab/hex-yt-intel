@@ -1,0 +1,27 @@
+supabase/migrations/20260813222120_highlights_reel_settings_registry.sql
+  s_0eded1e9d0cab6::t_31f66e9198a265 1-33
+web/lib/ports/ShortLinkPort.ts
+  s_0eded1e9d0cab6::t_ba26b670746da6 1-16
+web/lib/adapters/DubShortLinkAdapter.ts
+  s_0eded1e9d0cab6::t_e856306fd38640 1-57
+supabase/migrations/20260813222218_analysis_highlights_table.sql
+  s_0eded1e9d0cab6::t_7ab962abbb0d97 1-22
+supabase/migrations/20260813222233_analysis_highlights_revoke_leftover_grants.sql
+  s_0eded1e9d0cab6::t_cb5611665ae35d 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "8ae5a3b7962654f5e3d7962c57ec29e46da61862",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
