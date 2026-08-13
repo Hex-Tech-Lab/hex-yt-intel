@@ -1,0 +1,46 @@
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_0eded1e9d0cab6::t_3143b1782f8655 1-119,121-131
+  s_0eded1e9d0cab6::t_36b8ee255e2a62 120
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_0eded1e9d0cab6::t_6e13b66b65ac93 654-655,661,671-677,685-686,697-728
+  s_0eded1e9d0cab6::t_b87a14a319b412 729-731
+  s_0f821744a3f940::t_cc3a5672c4b9f0 732-733
+web/lib/adapters/SupabasePersistenceAdapter.ts
+  s_0eded1e9d0cab6::t_3bb4c9084c9edf 88,92-93
+  s_0eded1e9d0cab6::t_e26de3bb13435b 94-95
+web/app/share/[token]/page.tsx
+  s_0eded1e9d0cab6::t_de79b1cb70f7cb 44-51,66-77
+  s_0eded1e9d0cab6::t_999cc629783b72 2,6,10-13
+  s_0eded1e9d0cab6::t_d95205489cc700 14
+  s_0eded1e9d0cab6::t_56609d5d5afe4c 78
+web/app/api/analyses/[id]/share/route.ts
+  s_0eded1e9d0cab6::t_8d9f1262e08f0c 6-7
+  s_0eded1e9d0cab6::t_c4e0bc4c4aabb9 61-73,76
+web/lib/ports/AnalysisPersistencePort.ts
+  s_0eded1e9d0cab6::t_15db29e7ac2472 204-205,208-220
+  s_0eded1e9d0cab6::t_e76b43ac5645c7 221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c23f2a659970e5b1276d9c9c84485f2837a6372d",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_0f821744a3f940": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a72fc58005602902e",
+        "model": "unknown"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
