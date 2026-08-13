@@ -19,6 +19,7 @@ import { IntelligencePanel } from '@/components/templates/console/IntelligencePa
 import { ChatDock } from '@/components/templates/console/ChatDock';
 import { RightPanelAccordion } from '@/components/dashboard/RightPanelAccordion';
 import { ExecutiveSummary } from '@/components/organisms/ExecutiveSummary';
+import { HighlightsScrubber } from '@/components/dashboard/HighlightsScrubber';
 import { Icon, StatusBadge, ChapterChip } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { useStreamReattach } from '@/hooks/useStreamReattach';
@@ -722,6 +723,9 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                     <>
                       {status === 'complete' && (digest || digestLoading) && (
                         <ExecutiveSummary data={mappedDigestData} loading={digestLoading} />
+                      )}
+                      {status === 'complete' && analysisId && (
+                        <HighlightsScrubber analysisId={analysisId} videoDurationSeconds={videoMetadata?.duration ?? null} />
                       )}
                       {partialInfo && (
                         <div

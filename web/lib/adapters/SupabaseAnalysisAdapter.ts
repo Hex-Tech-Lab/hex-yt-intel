@@ -778,6 +778,61 @@ export class SupabaseAnalysisAdapter {
     }
   }
 
+  /** Real segment timing for the source video, if still within the 72h
+   *  retention window (ADR 012). Null once the transcript is purged. */
+  static async getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('transcripts')
+        .select('segments')
+        .eq('video_id', videoId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data?.segments || !Array.isArray(data.segments)) return null;
+      return data.segments
+        .filter((s: any) => typeof s?.start === 'number' && typeof s?.text === 'string')
+        .map((s: any) => ({ start: s.start, text: s.text }));
+    } catch (error: any) {
+      Sentry.captureException(error, { tags: { method: 'getTranscriptSegments' }, extra: { videoId } });
+      return null;
+    }
+  }
+
+  /** Idempotent replace: deletes any prior highlight set for this analysis
+   *  before inserting, so a digest re-gen doesn't leave stale rows behind. */
+  static async saveHighlights(params: {
+    analysisId: string;
+    highlights: Array<{ idx: number; start: number; end: number; label: string }>;
+  }): Promise<boolean> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { error: deleteError } = await service
+        .from('analysis_highlights')
+        .delete()
+        .eq('analysis_id', params.analysisId);
+      if (deleteError) throw deleteError;
+
+      if (params.highlights.length === 0) return true;
+
+      const { error: insertError } = await service.from('analysis_highlights').insert(
+        params.highlights.map((h) => ({
+          analysis_id: params.analysisId,
+          idx: h.idx,
+          start_seconds: h.start,
+          end_seconds: h.end,
+          label: h.label,
+        }))
+      );
+      if (insertError) throw insertError;
+      return true;
+    } catch (error: any) {
+      Sentry.captureException(error, { tags: { method: 'saveHighlights' }, extra: { analysisId: params.analysisId } });
+      return false;
+    }
+  }
+
   /**
    * Atomically bump `viewed_count` for one owned analysis row (surfaced as
    * "Views" in the history overview). Delegates to the `increment_analysis_view`

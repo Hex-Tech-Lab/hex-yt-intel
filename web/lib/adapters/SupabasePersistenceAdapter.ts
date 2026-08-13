@@ -101,6 +101,17 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.saveExecutiveDigest(params);
   }
 
+  getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null> {
+    return SupabaseAnalysisAdapter.getTranscriptSegments(videoId);
+  }
+
+  saveHighlights(params: {
+    analysisId: string;
+    highlights: Array<{ idx: number; start: number; end: number; label: string }>;
+  }): Promise<boolean> {
+    return SupabaseAnalysisAdapter.saveHighlights(params);
+  }
+
   async updateAnalysisResult(params: {
     analysisId: string;
     markdown: string;
