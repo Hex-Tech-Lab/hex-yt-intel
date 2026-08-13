@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+import { DubShortLinkAdapter } from '@/lib/adapters/DubShortLinkAdapter';
 
 export async function POST(
   _request: NextRequest,
@@ -56,8 +58,22 @@ export async function POST(
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
   const shareUrl = `${baseUrl}/share/${token}`;
 
+  // Dub.co short link wrapping the public share URL (task #11, highlights-reel
+  // share spec). Best-effort: a Dub outage must not block sharing -- the raw
+  // shareUrl still works on its own, it's just longer/untracked.
+  let shortUrl: string | null = null;
+  try {
+    const shortLinkAdapter = new DubShortLinkAdapter();
+    const link = await shortLinkAdapter.createLink({ url: shareUrl, tenantId: userId });
+    shortUrl = link.shortLink;
+  } catch (err) {
+    console.error('[analyses/share] Dub short-link creation failed, falling back to raw shareUrl:', err instanceof Error ? err.message : String(err));
+    Sentry.captureException(err, { tags: { route: 'analyses/[id]/share', layer: 'dub-shortlink' }, extra: { analysisId: id } });
+  }
+
   return NextResponse.json({
     shareUrl,
+    shortUrl,
     token,
     expiresAt: expiryDate.toISOString(),
   });

@@ -651,12 +651,14 @@ export class SupabaseAnalysisAdapter {
     analysisMarkdown: string | null;
     sharedExpiresAt: string | null;
     createdAt: string;
+    videoId: string | null;
+    videoDurationSeconds: number | null;
   } | null> {
     try {
       const service = getSupabaseServiceClient();
       const { data, error } = await service
         .from('analyses')
-        .select('id, title, channel_title, analysis_markdown, shared_expires_at, created_at')
+        .select('id, title, channel_title, analysis_markdown, shared_expires_at, created_at, video_id, analysis_payload')
         .eq('shared_token', token)
         .maybeSingle();
 
@@ -666,6 +668,13 @@ export class SupabaseAnalysisAdapter {
       }
       if (!data) return null;
 
+      const payload = (data as any).analysis_payload as Record<string, unknown> | null;
+      const rawDuration =
+        (payload && typeof (payload as any).metadata === 'object' && (payload as any).metadata?.duration) ||
+        (payload && (payload as any).videoMetadata && typeof (payload as any).videoMetadata === 'object' && (payload as any).videoMetadata.duration) ||
+        null;
+      const videoDurationSeconds = typeof rawDuration === 'number' && rawDuration > 0 ? rawDuration : null;
+
       return {
         id: data.id,
         title: data.title || 'Untitled',
@@ -673,11 +682,50 @@ export class SupabaseAnalysisAdapter {
         analysisMarkdown: data.analysis_markdown || null,
         sharedExpiresAt: data.shared_expires_at,
         createdAt: data.created_at,
+        videoId: data.video_id || null,
+        videoDurationSeconds,
       };
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { method: 'findAnalysisByShareToken' },
         extra: { token: '[REDACTED]' },
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Highlights rows for one already-resolved analysisId. Service-role read
+   * explicitly scoped to a single row's foreign key (never a table scan) —
+   * the caller (public share page) must have already validated the
+   * analysisId via findAnalysisByShareToken before calling this, since
+   * analysis_highlights' RLS policy is owner-only and grants nothing to
+   * anon/authenticated (migrations 20260813222218 / ...222233).
+   */
+  static async findHighlightsForAnalysis(analysisId: string): Promise<Array<{
+    idx: number;
+    start: number;
+    end: number;
+    label: string;
+  }>> {
+    try {
+      const service = getSupabaseServiceClient();
+      const { data, error } = await service
+        .from('analysis_highlights')
+        .select('idx, start_seconds, end_seconds, label')
+        .eq('analysis_id', analysisId)
+        .order('idx', { ascending: true });
+
+      if (error) {
+        console.error('[SupabaseAnalysisAdapter] findHighlightsForAnalysis failed:', error.message);
+        throw error;
+      }
+
+      return (data ?? []).map((h) => ({ idx: h.idx, start: h.start_seconds, end: h.end_seconds, label: h.label }));
+    } catch (error: any) {
+      Sentry.captureException(error, {
+        tags: { method: 'findHighlightsForAnalysis' },
+        extra: { analysisId },
       });
       throw error;
     }
