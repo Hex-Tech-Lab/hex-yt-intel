@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 /**
  * QStash Webhook Handler: UCIS Validation & Embedding Generation
  * Receives guaranteed background task delivery from Upstash QStash
- * Processes UCIS v5.1 validation reports and prepares embeddings for semantic search
+ * Processes UCIS v5.3 validation reports and prepares embeddings for semantic search
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       markdownLength: markdown.length,
     });
 
-    // Run UCIS v5.1 validation
+    // Run UCIS v5.3 validation
     const report = UCISValidator.validate(markdown, filename);
     console.log('[validate-webhook] Validation report', {
       videoId,

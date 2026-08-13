@@ -5,7 +5,7 @@
 **hex-yt-intel** is a YouTube Content Intelligence Platform that implements the **Hybrid Edge Symphony** architecture for deep video analysis. The platform transcends standard serverless limitations by separating high-security authentication/billing from high-latency LLM compute using a triple-redundant trust model.
 
 ### Core Purpose
-- Perform deep YouTube video analysis using UCIS v5.1 framework (11-16 dimensions)
+- Perform deep YouTube video analysis using UCIS v5.3 framework (11-16 dimensions)
 - Provide secure, reliable analysis with zero timeouts and zero exposed database keys
 - Enable persistent storage of results even if client disconnects during processing
 
@@ -30,7 +30,7 @@ The platform implements a three-layer architecture:
 
 2. **Layer 2: Cloudflare (The Streaming Engine) — ~58 Seconds**
    - Stateless compute & real-time delivery
-   - Verifies StreamToken HMAC, builds UCIS v5.1 prompt server-side
+   - Verifies StreamToken HMAC, builds UCIS v5.3 prompt server-side
    - Executes model cascade, streams chunks via SSE to browser
    - Computes final ContentSignature for tamper-proofing
 

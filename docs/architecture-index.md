@@ -187,7 +187,7 @@
 
 4. Background: QStash Webhook (POST /api/webhooks/validate)
    ├─ Verify QStash signature (HMAC)
-   ├─ Run UCIS v5.1 validation
+   ├─ Run UCIS v5.3 validation
    ├─ Update Supabase: validation_report, validation_passed
    └─ (Via after()): Publish embedding task to QStash
 

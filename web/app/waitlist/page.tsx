@@ -1,82 +1,107 @@
 'use client';
 
 import * as Sentry from '@sentry/nextjs';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { FormEvent } from 'react';
 
-// NEXT_PUBLIC_* so preview/staging deploys hit their own configured Supabase
-// project instead of a hardcoded one (CodeRabbit review, PR #231).
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+type Status = 'idle' | 'loading' | 'done' | 'error';
 
-function WaitlistForm() {
-  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+/**
+ * Shared across both form mounts (hero + footer CTA) so a signup in one
+ * reflects in the other instead of leaving a stale "empty form" below
+ * (Ultrareview finding: independent per-mount state).
+ */
+function useWaitlistSignup() {
+  const [status, setStatus] = useState<Status>('idle');
 
-  async function handleSubmit(submitEvent: FormEvent<HTMLFormElement>) {
-    submitEvent.preventDefault();
-    const form = submitEvent.currentTarget;
-    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+  const submit = useCallback(async (rawEmail: string, honeypot: string) => {
+    const email = rawEmail.trim();
     setStatus('loading');
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist_signups`, {
+      const res = await fetch('/api/waitlist', {
         method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=minimal',
-        },
-        body: JSON.stringify({ email, source: 'landing_page' }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, hp: honeypot }),
         signal: controller.signal,
       });
-      // 409 = unique-email conflict (PostgREST maps Postgres 23505 to 409) --
-      // a duplicate signup is a success from the user's point of view, not
-      // an error (CodeRabbit review, PR #231).
-      if (!res.ok && res.status !== 409) {
-        throw new Error(`waitlist insert failed: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`waitlist insert failed: ${res.status}`);
       setStatus('done');
     } catch (err) {
-      Sentry.captureException(err, { contexts: { waitlist: { layer: 'signup_insert' } } });
+      // A client-side abort/timeout isn't a server error worth Sentry noise
+      // -- the route already captures real insert failures on its side
+      // (Ultrareview finding: AbortError was polluting the error stream).
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        Sentry.captureException(err, { contexts: { waitlist: { layer: 'signup_submit' } } });
+      }
       setStatus('error');
     } finally {
       clearTimeout(timeout);
     }
+  }, []);
+
+  return { status, submit };
+}
+
+function WaitlistForm({ status, submit }: { status: Status; submit: (email: string, honeypot: string) => void }) {
+  function handleSubmit(submitEvent: FormEvent<HTMLFormElement>) {
+    submitEvent.preventDefault();
+    const form = submitEvent.currentTarget;
+    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+    const honeypot = (form.elements.namedItem('company') as HTMLInputElement).value;
+    submit(email, honeypot);
   }
 
   return (
     <form className="waitlist" onSubmit={handleSubmit}>
-      <input type="email" name="email" placeholder="you@channel.com" required aria-label="Email address" />
+      <input
+        type="text"
+        name="company"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+      />
+      <input
+        type="email"
+        name="email"
+        placeholder="you@channel.com"
+        required
+        maxLength={320}
+        autoComplete="email"
+        aria-label="Email address"
+      />
       <button type="submit" className="primary" disabled={status === 'loading' || status === 'done'}>
         {status === 'done' ? 'On the list.' : status === 'loading' ? 'Joining...' : 'Get early access'}
       </button>
-      {status === 'error' && (
-        <p style={{ color: '#E24B1B', fontSize: 13, width: '100%' }}>Something went wrong — try again in a moment.</p>
-      )}
+      <p role="status" aria-live="polite" style={{ margin: 0, width: '100%', fontSize: 13 }}>
+        {status === 'error' && <span style={{ color: '#E24B1B' }}>Something went wrong — try again in a moment.</span>}
+      </p>
     </form>
   );
 }
 
 export default function WaitlistPage() {
+  const { status, submit } = useWaitlistSignup();
+
   return (
     <>
       <style>{`
-        :root {
+        .vintel-waitlist {
           --bg: #EDEEEA; --bg-raised: #E3E4DE; --ink: #15171A; --ink-muted: #5B5F5A;
           --line: #C9CBC2; --accent: #E24B1B; --accent-ink: #FFFFFF; --track: #D5D6CE;
           --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
           --sans: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
         }
         @media (prefers-color-scheme: dark) {
-          :root:not([data-theme="light"]) {
+          .vintel-waitlist:not([data-theme="light"]) {
             --bg: #0B0C0E; --bg-raised: #151719; --ink: #EDEEEA; --ink-muted: #90948E;
             --line: #2A2D2E; --accent: #FF5C26; --accent-ink: #0B0C0E; --track: #1E2022;
           }
         }
-        :root[data-theme="dark"] {
+        .vintel-waitlist[data-theme="dark"] {
           --bg: #0B0C0E; --bg-raised: #151719; --ink: #EDEEEA; --ink-muted: #90948E;
           --line: #2A2D2E; --accent: #FF5C26; --accent-ink: #0B0C0E; --track: #1E2022;
         }
@@ -183,7 +208,7 @@ export default function WaitlistPage() {
             </div>
 
             <div className="cta-row">
-              <WaitlistForm />
+              <WaitlistForm status={status} submit={submit} />
             </div>
             <p className="fine">First 200 creators get founder pricing. No spam — one email when we open.</p>
           </section>
@@ -235,7 +260,7 @@ export default function WaitlistPage() {
           <section className="block" style={{ borderBottom: '1px solid var(--line)' }}>
             <p className="kicker">Join the waitlist</p>
             <h2>Your next competitor breakdown, in one sitting.</h2>
-            <WaitlistForm />
+            <WaitlistForm status={status} submit={submit} />
           </section>
         </main>
 

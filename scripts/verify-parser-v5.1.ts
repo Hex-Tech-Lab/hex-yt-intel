@@ -36,7 +36,7 @@ Content for dimension 11.
 `;
 
 function verify() {
-  console.log('🚀 Verifying UCIS v5.1 Parser...');
+  console.log('🚀 Verifying UCIS v5.3 Parser...');
   const sections = parseUCISSections(mockMarkdown);
   
   const expected = [

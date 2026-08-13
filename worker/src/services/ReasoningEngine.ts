@@ -4,7 +4,7 @@
  * HEXAGONAL ARCHITECTURE:
  * - PORT: ReasoningEnginePort (executeAndStream(context, handlers) / execute(context))
  * - DEPENDENCIES (constructor DI):
- *     PromptBuilderPort      — UCIS v5.1 prompt synthesis (IP stays server-side)
+ *     PromptBuilderPort      — UCIS v5.3 prompt synthesis (IP stays server-side)
  *     LLMCascadePort         — OpenRouter multi-model fallback (streaming + batch)
  *     ValidationService      — 11D structure validation
  *     PersistenceRepositoryPort — Upstash KV cache (optional; insulated behind port)
