@@ -1,0 +1,23 @@
+web/app/api/analyses/[id]/fail/route.ts
+  s_0eded1e9d0cab6::t_3630c4e38c9f51 1-79
+web/lib/icons/solar-subset.json
+  s_0eded1e9d0cab6::t_498c3d870bc64f 1
+web/hooks/useSSEStream.ts
+  s_0eded1e9d0cab6::t_8c1424acf5023f 280-293
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f82f810a00c2c082f34882a844711a3430f4ca0a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
