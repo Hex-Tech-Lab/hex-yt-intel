@@ -1,0 +1,26 @@
+web/components/templates/console/__tests__/EntityMentionTimeline.test.tsx
+  s_0eded1e9d0cab6::t_cc020f2ee30248 178-180
+  s_0eded1e9d0cab6::t_1007c3cb671af4 144-148,151-152,165,175-177,181-215,221-229
+  s_0eded1e9d0cab6::t_6c0cbea277c1da 216-220,230
+  s_0eded1e9d0cab6::t_1b69300b4591f6 155,167
+web/components/templates/console/EntityMentionTimeline.tsx
+  s_0eded1e9d0cab6::t_137bbd6711347f 79
+  s_0eded1e9d0cab6::t_3ee4c2575fc1a5 100-107,110-111
+  s_0eded1e9d0cab6::t_9948eac36a05a0 137-138,140,143-144,146,158,160,171,210,219,223,269
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "77474e1ce18b88f916eaa65bc1c3e34035ddfda6",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
