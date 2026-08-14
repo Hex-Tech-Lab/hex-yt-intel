@@ -1,0 +1,32 @@
+web/app/api/admin/waitlist/route.ts
+  s_0eded1e9d0cab6::t_39c93d46105955 4
+web/app/admin/waitlist/WaitlistAdminClient.tsx
+  s_0eded1e9d0cab6::t_b87cffa6ce97e4 80
+  s_0eded1e9d0cab6::t_96ab6a39ed63ff 125,127,131-132
+  s_0eded1e9d0cab6::t_f163f3e4bec23e 52,54-56
+  s_0eded1e9d0cab6::t_0b482384fcb5ee 71
+  s_0eded1e9d0cab6::t_ea2cb948a39506 27
+  s_0eded1e9d0cab6::t_d3673a8412c4ce 97,105
+  s_0eded1e9d0cab6::t_a70e78c1075f9a 133
+  s_0eded1e9d0cab6::t_fbfd7cf8fb0127 39
+  s_0eded1e9d0cab6::t_92ff42c0188be1 50-51
+  s_0eded1e9d0cab6::t_c8f892b22976a3 32-34,36-38,40-45
+docs/qa-intel/RULESET_LESSONS_LEDGER.md
+  s_0eded1e9d0cab6::t_3684c84353230a 18-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "3a2eb4edea68c19903c1c37185435d5c503c6219",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
