@@ -4,6 +4,11 @@ import {
   parseExecutiveDigest,
   type ExecutiveDigest,
 } from '@/lib/prompts/executive-digest';
+import {
+  HIGHLIGHTS_EXTRACTION_SYSTEM_PROMPT,
+  buildHighlightsExtractionUserMessage,
+  parseHighlightsExtraction,
+} from '@/lib/prompts/highlights-extraction';
 import type {
   TextCompletionPort,
   CompletionModel,
@@ -70,7 +75,7 @@ export class GenerateExecutiveDigestUseCase {
     const row = await this.persistence.verifyOwnership({
       analysisId,
       userId,
-      select: 'analysis_markdown, analysis_payload, executive_digest',
+      select: 'analysis_markdown, analysis_payload, executive_digest, video_id',
     });
     if (!row) {
       return { type: 'error', code: 'ERR_ANALYSIS_NOT_FOUND', status: 404, message: 'Analysis not found' };
@@ -137,7 +142,55 @@ export class GenerateExecutiveDigestUseCase {
       return { type: 'error', code: 'ERR_ANALYSIS_NOT_FOUND', status: 404, message: 'Analysis not found' };
     }
 
+    // Highlights extraction rides this same pass -- see execute()'s doc
+    // comment. Best-effort: a failure here must never break digest delivery,
+    // which is the primary feature. Skipped entirely once the transcript's
+    // 72h retention window (ADR 012) has closed -- there is no other source
+    // of real segment timing, so a missing transcript here is a real, expected
+    // outcome for an old/re-generated analysis, not an error to surface.
+    if (row.video_id) {
+      await this.extractHighlights({ analysisId, videoId: row.video_id, models }).catch((error) => {
+        console.warn(`[digest-usecase] Highlights extraction failed for ${analysisId}:`, error);
+      });
+    }
+
     return { type: 'success', digest, cached: false };
+  }
+
+  /** See execute()'s doc comment for why this rides the digest pass. */
+  private async extractHighlights(params: {
+    analysisId: string;
+    videoId: string;
+    models: readonly CompletionModel[];
+  }): Promise<void> {
+    const segments = await this.persistence.getTranscriptSegments(params.videoId);
+    if (!segments || segments.length === 0) return;
+
+    const completion = await this.completion.complete({
+      system: HIGHLIGHTS_EXTRACTION_SYSTEM_PROMPT,
+      user: buildHighlightsExtractionUserMessage(segments),
+      models: params.models,
+      analysisId: params.analysisId,
+    });
+
+    const validStarts = new Set(segments.map((segment) => segment.start));
+    const result = parseHighlightsExtraction(completion.text, validStarts);
+
+    // 'invalid' means the model response was unparseable -- a transient LLM
+    // failure, not a genuine "no highlights" finding. Must NOT touch any
+    // existing highlight set in that case (real data-loss bug caught in
+    // review: a bad response used to silently wipe a prior valid set via an
+    // empty-array save). Only 'ok' (structurally valid, empty or not) is
+    // ever persisted.
+    if (result.status === 'invalid') {
+      console.warn(`[digest-usecase] Highlights extraction unparseable for ${params.analysisId}; leaving existing set untouched`);
+      return;
+    }
+
+    await this.persistence.saveHighlights({
+      analysisId: params.analysisId,
+      highlights: result.highlights.map((highlight, idx) => ({ idx, start: highlight.start, end: highlight.end, label: highlight.label })),
+    });
   }
 }
 

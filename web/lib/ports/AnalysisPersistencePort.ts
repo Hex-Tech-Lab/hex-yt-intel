@@ -201,7 +201,23 @@ export interface AnalysisPersistencePort {
     analysisMarkdown: string | null;
     sharedExpiresAt: string | null;
     createdAt: string;
+    videoId: string | null;
+    videoDurationSeconds: number | null;
   } | null>;
+
+  /**
+   * Highlights-reel rows for one specific, already-resolved analysis id
+   * (the caller must have already validated the id, e.g. via
+   * findAnalysisByShareToken) — service-role read explicitly scoped to a
+   * single analysisId, never a table-wide query, since analysis_highlights'
+   * RLS policy is owner-only and public share viewers have no session.
+   */
+  findHighlightsForAnalysis(analysisId: string): Promise<Array<{
+    idx: number;
+    start: number;
+    end: number;
+    label: string;
+  }>>;
 
   /**
    * Update validation report and status.

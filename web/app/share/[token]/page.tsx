@@ -1,7 +1,11 @@
+import * as Sentry from '@sentry/nextjs';
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { PublicHighlightsReel } from './PublicHighlightsReel';
+import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +38,20 @@ export default async function SharePage(props: {
     }
   }
 
+  // Highlights are optional -- older shared analyses (pre task #7/#14) or
+  // ones where extraction failed simply have zero rows; fail quiet, same as
+  // the authenticated HighlightsScrubber does. A plain Promise.all does NOT
+  // fail quiet: if findHighlightsForAnalysis rejects, the whole page 500s
+  // even though the markdown analysis (the actual valuable content) is
+  // unaffected -- caught in review, fixed by isolating that one fetch.
+  const [highlights, registrySettings] = await Promise.all([
+    adapter.findHighlightsForAnalysis(analysis.id).catch((error) => {
+      Sentry.captureException(error, { contexts: { share: { layer: 'highlights_fetch', analysisId: analysis.id } } });
+      return [];
+    }),
+    SupabaseSettingsAdapter.getRegistrySettings(Object.keys(HIGHLIGHTS_REGISTRY_FALLBACK), HIGHLIGHTS_REGISTRY_FALLBACK),
+  ]);
+
   return (
     <div className="bg-surface min-h-screen">
       {/* Header */}
@@ -47,6 +65,19 @@ export default async function SharePage(props: {
           </div>
         </div>
       </div>
+
+      {/* Highlights reel (Read-Only, no sign-in) */}
+      {analysis.videoId && highlights.length > 0 && (
+        <div className="px-6 pt-8 max-w-4xl mx-auto">
+          <PublicHighlightsReel
+            videoId={analysis.videoId}
+            highlights={highlights}
+            segmentDurationSeconds={clampHighlightsSetting(registrySettings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30)}
+            contextLeadSeconds={clampHighlightsSetting(registrySettings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10)}
+            videoDurationSeconds={analysis.videoDurationSeconds}
+          />
+        </div>
+      )}
 
       {/* Content (Read-Only) */}
       <div className="px-6 py-12 max-w-4xl mx-auto">

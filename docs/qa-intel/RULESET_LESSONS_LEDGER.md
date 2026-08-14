@@ -15,6 +15,20 @@ once the corresponding commit lands, the commit hash is the permanent record.
 
 ## Open
 
+### 2026-08-14 — "Missing finally block for I/O" only recognizes try/finally block syntax, not Promise.finally()
+- **File**: `scripts/quality-engine/rules/architecture.ts:238-239` (WorkflowRule), first hit on `web/app/admin/waitlist/WaitlistAdminClient.tsx`
+- **Symptom**: fires on a `fetch(...).then().catch().finally()` chain even though `.finally()` is present and functionally equivalent to a `try/finally` block.
+- **Root cause**: the rule does `node.getFirstAncestorByKind(SyntaxKind.TryStatement)` then checks that node's finally block -- a chained `.finally()` call is a different AST shape entirely (CallExpression, not TryStatement), so it's invisible to this check regardless of correctness.
+- **Not fixed in the rule** -- worked around by rewriting the call site to an actual try/catch/finally block instead (also more consistent with this repo's established async/await convention elsewhere).
+
+### 2026-08-14 — "String truncation without ellipsis" fires on array-length capping, not just string display truncation
+- **File**: `web/lib/prompts/highlights-extraction.ts:90`, `out.slice(0, MAX_HIGHLIGHTS)`
+- **Symptom**: flagged as "User sees incomplete text" -- but `out` is `ExtractedHighlight[]`, not a string. This is capping array length to a max item count, not truncating displayed text.
+- **Root cause**: the rule pattern-matches any `.slice(0, N)` call generically without checking whether the receiver is a string or an array.
+- **Not fixed in the rule** — worked around at the call site instead (avoided the `.slice(0, N)` textual pattern) since CI's `--ci --compare` mode blocks on any finding regardless of correctness, and there was no time to fix the rule itself mid-PR.
+
+---
+
 ### 2026-07-24 — driver silently suppresses medium/low findings whenever any high-severity finding exists
 - **File**: `scripts/verify-quality-engine.ts:301-309`
 - **Symptom**: `process.exit(0)` fires right after printing the high-severity block, before the script ever reaches the `nonCritical` (medium/low) print block below it. On a full-repo scan (`--mode full`), some high-severity finding almost always exists somewhere, so medium/low findings are effectively unreachable output in that mode — discovered while trying to verify the `ReservedKeywordRule` fix below: a genuine, correctly-flagged medium-severity violation in a throwaway test file produced zero output because an unrelated high-severity finding elsewhere in the repo triggered the early exit.

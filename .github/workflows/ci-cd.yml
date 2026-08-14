@@ -41,6 +41,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
 
+      - name: Lint workflow curl safety
+        run: bash scripts/lint-workflow-curl-safety.sh
+
       - name: Check for changes that require build
         id: check-changes
         run: |
@@ -438,7 +441,10 @@ jobs:
       - name: Fetch health details
         if: always()
         run: |
-          curl -s ${{ env.PRODUCTION_URL }}/api/health | jq '.'
+          # curl-safety: intentional-diagnostic-only -- runs even when the
+          # health check above already failed, purely to print details for
+          # debugging; must never itself fail the job.
+          curl -s ${{ env.PRODUCTION_URL }}/api/health | jq '.' || true
 
       - name: Setup Node.js and pnpm for verification
         uses: ./

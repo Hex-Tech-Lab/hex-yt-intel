@@ -45,12 +45,25 @@ export interface DigestPersistencePort {
     analysis_payload?: unknown;
     executive_digest?: unknown;
     validation_report?: unknown;
+    video_id?: string;
   } | null>;
 
   saveExecutiveDigest(params: {
     analysisId: string;
     userId: string;
     digest: unknown;
+  }): Promise<boolean>;
+
+  /** Real segment timing for the source video, if still within the 72h
+   *  retention window (ADR 012). Null once purged -- highlights can only
+   *  ever be generated while this is available. */
+  getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null>;
+
+  /** Idempotent: safe to call even if highlights already exist for this
+   *  analysis (e.g. a digest re-gen) -- replaces the prior set. */
+  saveHighlights(params: {
+    analysisId: string;
+    highlights: Array<{ idx: number; start: number; end: number; label: string }>;
   }): Promise<boolean>;
 }
 

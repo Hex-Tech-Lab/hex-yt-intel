@@ -6,6 +6,7 @@ import { Icon } from '@/components/templates/_shared/primitives';
 import { LogsViewerClient } from '@/app/settings/logs/LogsViewerClient';
 import { AdminSettingsClient } from '@/app/admin/settings/AdminSettingsClient';
 import { UsersAdminClient } from '@/app/admin/users/UsersAdminClient';
+import { WaitlistAdminClient } from '@/app/admin/waitlist/WaitlistAdminClient';
 import { useUsageSummary } from '@/hooks/useUsageSummary';
 
 /** Activity & Usage pane -- reuses the shared useUsageSummary hook (same
@@ -53,7 +54,7 @@ function UsagePane() {
   );
 }
 
-export type SettingsSubmenuKey = 'overview' | 'logs' | 'usage' | 'preferences' | 'admin-settings' | 'admin-users';
+export type SettingsSubmenuKey = 'overview' | 'logs' | 'usage' | 'preferences' | 'admin-settings' | 'admin-users' | 'admin-waitlist';
 
 export interface SettingsItem {
   key: SettingsSubmenuKey;
@@ -97,6 +98,13 @@ export const SETTINGS_TREE: SettingsItem[] = [
     label: 'User Activity',
     description: 'Signups, sessions, videos analyzed, and reports downloaded per user',
     icon: 'solar:users-group-rounded-linear',
+    category: 'SYSTEM REGISTRY',
+  },
+  {
+    key: 'admin-waitlist',
+    label: 'Waitlist Signups',
+    description: 'Email, source, and signup time for the /waitlist landing page',
+    icon: 'solar:letter-unread-linear',
     category: 'SYSTEM REGISTRY',
   },
 ];
@@ -200,6 +208,8 @@ export function SettingsContentPane({ activeKey, onNavigate }: SettingsContentPa
         {activeKey === 'admin-settings' && <AdminSettingsClient />}
 
         {activeKey === 'admin-users' && <UsersAdminClient />}
+
+        {activeKey === 'admin-waitlist' && <WaitlistAdminClient />}
       </div>
     </ViewTransition>
   );

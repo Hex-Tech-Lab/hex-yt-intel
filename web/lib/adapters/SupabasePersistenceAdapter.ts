@@ -85,8 +85,12 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
     return SupabaseAnalysisAdapter.getAnalysisGrounding(params);
   }
 
-  findAnalysisByShareToken(token: string): Promise<{ id: string; title: string; channelTitle: string | null; analysisMarkdown: string | null; sharedExpiresAt: string | null; createdAt: string } | null> {
+  findAnalysisByShareToken(token: string): Promise<{ id: string; title: string; channelTitle: string | null; analysisMarkdown: string | null; sharedExpiresAt: string | null; createdAt: string; videoId: string | null; videoDurationSeconds: number | null } | null> {
     return SupabaseAnalysisAdapter.findAnalysisByShareToken(token);
+  }
+
+  findHighlightsForAnalysis(analysisId: string): Promise<Array<{ idx: number; start: number; end: number; label: string }>> {
+    return SupabaseAnalysisAdapter.findHighlightsForAnalysis(analysisId);
   }
 
   updateValidationReport(params: { analysisId: string; report: any; passed?: boolean; preserveValidationPassed?: boolean }): Promise<void> {
@@ -99,6 +103,17 @@ export class SupabasePersistenceAdapter implements AnalysisPersistencePort, Grap
 
   saveExecutiveDigest(params: { analysisId: string; userId: string; digest: unknown }): Promise<boolean> {
     return SupabaseAnalysisAdapter.saveExecutiveDigest(params);
+  }
+
+  getTranscriptSegments(videoId: string): Promise<Array<{ start: number; text: string }> | null> {
+    return SupabaseAnalysisAdapter.getTranscriptSegments(videoId);
+  }
+
+  saveHighlights(params: {
+    analysisId: string;
+    highlights: Array<{ idx: number; start: number; end: number; label: string }>;
+  }): Promise<boolean> {
+    return SupabaseAnalysisAdapter.saveHighlights(params);
   }
 
   async updateAnalysisResult(params: {
