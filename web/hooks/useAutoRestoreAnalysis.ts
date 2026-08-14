@@ -118,6 +118,7 @@ export function useAutoRestoreAnalysis(url: string) {
                 duration,
                 viewCount,
                 likeCount,
+                description: meta.description,
               } as any);
             }
 

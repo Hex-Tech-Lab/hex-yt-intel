@@ -1,10 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@astryxdesign/core';
 import { Icon, MonoLabel } from '@/components/templates/_shared/primitives';
 
 const MotionCard = motion.create(Card);
+
+// Below this length a 2-line clamp wouldn't hide anything anyway -- skip the
+// toggle rather than pay for a layout-measurement effect just to find out.
+const DESCRIPTION_EXPAND_THRESHOLD = 140;
 
 export interface BentoMetadataProps {
   title: string;
@@ -13,6 +18,7 @@ export interface BentoMetadataProps {
   likeCount: string | number;
   duration: number;
   publishedAt: string;
+  description?: string;
 }
 
 /**
@@ -27,7 +33,11 @@ export function BentoMetadata({
   likeCount,
   duration,
   publishedAt,
+  description,
 }: BentoMetadataProps) {
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const canExpandDescription = Boolean(description && description.length > DESCRIPTION_EXPAND_THRESHOLD);
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -80,6 +90,24 @@ export function BentoMetadata({
           <p className="mt-1 text-sm font-medium text-[var(--accent)] break-words">
             {channelTitle}
           </p>
+          {description && (
+            <div className="mt-2">
+              <p className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line ${descriptionExpanded ? '' : 'line-clamp-2'}`}>
+                {description}
+              </p>
+              {canExpandDescription && (
+                <button
+                  type="button"
+                  onClick={() => setDescriptionExpanded((prev) => !prev)}
+                  aria-expanded={descriptionExpanded}
+                  className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[var(--accent)] hover:underline"
+                >
+                  <span>{descriptionExpanded ? 'Show less' : 'Show more'}</span>
+                  <Icon icon={descriptionExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} size={12} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </MotionCard>
 

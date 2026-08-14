@@ -28,6 +28,7 @@ export interface VideoMetadata {
   likeCount: string;
   commentCount: string;
   thumbnailUrl: string | null;
+  description?: string;
 }
 
 export type AnalysisStatus = 'idle' | 'downloading' | 'parsing' | 'analyzing' | 'complete' | 'error';
