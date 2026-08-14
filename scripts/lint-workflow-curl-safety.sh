@@ -47,7 +47,7 @@ for file in .github/workflows/*.yml; do
       echo "$block" | sed 's/^/    /'
       FAILED=1
     fi
-  done < <(grep -n 'curl ' "$file" | cut -d: -f1)
+  done < <(grep -nE 'curl[[:space:]]+(-|['"'"'"]?https?:)' "$file" | cut -d: -f1)
 done
 
 if [ "$FAILED" -ne 0 ]; then
