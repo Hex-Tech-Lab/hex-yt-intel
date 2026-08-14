@@ -516,7 +516,16 @@ export function useSSEStream() {
                     store.logError(`Stream dispatch failed: ${err.message}`);
                     settleAnalysis('error', err.message);
                   }
-                  if (!hasSettled) {
+                  // Guarded, matching every other settleAnalysis('error', ...)
+                  // call site in this function: without the aborted check, an
+                  // intentional user stop or component unmount -- which aborts
+                  // currentSignal but leaves every per-bundle promise resolving
+                  // quietly via its own AbortError guard, never touching
+                  // completedIndexes/failedIndexes -- fell through to here and
+                  // got persisted as a genuine terminal failure (real bug,
+                  // caught by review on PR #234: intentional aborts must never
+                  // reach settleAnalysis/POST /fail).
+                  if (!hasSettled && !currentSignal.aborted) {
                     settleAnalysis('error', 'Analysis stream ended unexpectedly.');
                   }
                 }

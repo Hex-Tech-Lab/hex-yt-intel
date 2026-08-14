@@ -48,7 +48,11 @@ export async function POST(
   const reason = body.success ? body.data.reason : undefined;
 
   try {
-    const { error } = await verifyResourceOwnership<any>(analysisId, 'analyses', 'id, user_id');
+    const { data: owned, error } = await verifyResourceOwnership<{ validation_report: unknown }>(
+      analysisId,
+      'analyses',
+      'id, user_id, validation_report'
+    );
 
     if (error === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -63,7 +67,7 @@ export async function POST(
     const service = getSupabaseServiceClient();
     const { data, error: updateError } = await service
       .from('analyses')
-      .update(buildFailPatch(reason))
+      .update(buildFailPatch(reason, owned?.validation_report))
       .eq('id', analysisId)
       .eq('billing_status', 'processing')
       .select('id')
