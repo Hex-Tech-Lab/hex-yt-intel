@@ -1,0 +1,23 @@
+web/components/templates/console/BentoMetadata.tsx
+  s_0eded1e9d0cab6::t_ac38897f798e96 103-106,114-115
+  s_0eded1e9d0cab6::t_804078ab64c19a 40-47
+  s_0eded1e9d0cab6::t_763bae5d10864f 3
+web/hooks/useAutoRestoreAnalysis.ts
+  s_0eded1e9d0cab6::t_2e281a6174b1b8 123-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "234d13aa1692a1ed4b31a1252f17af52684c15c6",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
