@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import { requireAdmin } from '@/lib/utils/require-admin';
-import * as Sentry from '@sentry/nextjs';
 
 /**
  * GET /api/admin/waitlist -- list every waitlist signup. anon has zero

@@ -15,6 +15,12 @@ once the corresponding commit lands, the commit hash is the permanent record.
 
 ## Open
 
+### 2026-08-14 — "Missing finally block for I/O" only recognizes try/finally block syntax, not Promise.finally()
+- **File**: `scripts/quality-engine/rules/architecture.ts:238-239` (WorkflowRule), first hit on `web/app/admin/waitlist/WaitlistAdminClient.tsx`
+- **Symptom**: fires on a `fetch(...).then().catch().finally()` chain even though `.finally()` is present and functionally equivalent to a `try/finally` block.
+- **Root cause**: the rule does `node.getFirstAncestorByKind(SyntaxKind.TryStatement)` then checks that node's finally block -- a chained `.finally()` call is a different AST shape entirely (CallExpression, not TryStatement), so it's invisible to this check regardless of correctness.
+- **Not fixed in the rule** -- worked around by rewriting the call site to an actual try/catch/finally block instead (also more consistent with this repo's established async/await convention elsewhere).
+
 ### 2026-08-14 — "String truncation without ellipsis" fires on array-length capping, not just string display truncation
 - **File**: `web/lib/prompts/highlights-extraction.ts:90`, `out.slice(0, MAX_HIGHLIGHTS)`
 - **Symptom**: flagged as "User sees incomplete text" -- but `out` is `ExtractedHighlight[]`, not a string. This is capping array length to a max item count, not truncating displayed text.

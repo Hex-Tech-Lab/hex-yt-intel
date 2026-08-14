@@ -24,28 +24,36 @@ function fmt(ts: string): string {
 export function WaitlistAdminClient() {
   const [signups, setSignups] = useState<WaitlistRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
 
   useEffect(() => {
-    fetch('/api/admin/waitlist')
-      .then(async (res) => {
+    async function loadSignups() {
+      try {
+        const res = await fetch('/api/admin/waitlist');
         if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || `HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data: { signups: WaitlistRow[] }) => setSignups(data.signups))
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+        const data: { signups: WaitlistRow[] } = await res.json();
+        setSignups(data.signups);
+      } catch (err) {
+        console.error('[WaitlistAdminClient] failed to load signups:', err);
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSignups();
   }, []);
 
   const visibleSignups = useMemo(() => {
     if (!signups) return null;
-    const q = search.trim().toLowerCase();
-    const filtered = q ? signups.filter((s) => s.email.toLowerCase().includes(q)) : signups;
-    const sorted = [...filtered].sort((a, b) => {
+    const searchQuery = search.trim().toLowerCase();
+    const filtered = searchQuery ? signups.filter((signup) => signup.email.toLowerCase().includes(searchQuery)) : signups;
+    const sorted = [...filtered].sort((left, right) => {
       switch (sortKey) {
-        case 'newest': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'email_asc': return a.email.localeCompare(b.email);
+        case 'newest': return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+        case 'oldest': return new Date(left.created_at).getTime() - new Date(right.created_at).getTime();
+        case 'email_asc': return left.email.localeCompare(right.email);
         default: return 0;
       }
     });
@@ -60,7 +68,7 @@ export function WaitlistAdminClient() {
     );
   }
 
-  if (!signups || !visibleSignups) {
+  if (loading || !signups || !visibleSignups) {
     return (
       <div className="p-4 flex items-center gap-2 text-xs font-mono text-[var(--ink-muted)]">
         <Spinner size="sm" />
@@ -69,7 +77,7 @@ export function WaitlistAdminClient() {
     );
   }
 
-  const uniqueEmails = new Set(signups.map((s) => s.email.toLowerCase())).size;
+  const uniqueEmails = new Set(signups.map((signup) => signup.email.toLowerCase())).size;
 
   return (
     <div className="flex flex-col gap-3 font-mono text-xs">
@@ -86,7 +94,7 @@ export function WaitlistAdminClient() {
           id="waitlist-admin-search"
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(changeEvent) => setSearch(changeEvent.target.value)}
           placeholder="Search by email…"
           className="flex-1 rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] placeholder:text-[var(--ink-muted)] outline-none focus:border-[var(--accent)]"
         />
@@ -94,7 +102,7 @@ export function WaitlistAdminClient() {
         <select
           id="waitlist-admin-sort"
           value={sortKey}
-          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          onChange={(changeEvent) => setSortKey(changeEvent.target.value as SortKey)}
           className="rounded-lg border border-[var(--border-muted)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--ink-main)] outline-none focus:border-[var(--accent)]"
         >
           <option value="newest">Sort: newest signup</option>
@@ -114,15 +122,15 @@ export function WaitlistAdminClient() {
             </tr>
           </thead>
           <tbody>
-            {visibleSignups.map((s, idx) => (
+            {visibleSignups.map((signup, idx) => (
               <tr
-                key={s.id}
+                key={signup.id}
                 className={`border-t border-[var(--border-muted)]${idx % 2 === 0 ? ' bg-[var(--surface-muted)]' : ''}`}
               >
                 <td className="px-3 py-2 text-center font-medium text-[var(--ink-muted)]">{idx + 1}</td>
-                <td className="px-3 py-2 font-semibold text-[var(--ink-main)]">{s.email}</td>
-                <td className="px-3 py-2"><Badge variant="neutral" label={s.source} /></td>
-                <td className="px-3 py-2">{fmt(s.created_at)}</td>
+                <td className="px-3 py-2 font-semibold text-[var(--ink-main)]">{signup.email}</td>
+                <td className="px-3 py-2"><Badge variant="neutral" label={signup.source} /></td>
+                <td className="px-3 py-2">{fmt(signup.created_at)}</td>
               </tr>
             ))}
           </tbody>
