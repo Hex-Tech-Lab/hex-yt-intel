@@ -124,8 +124,8 @@ describe('EntityMentionTimeline Component', () => {
       }),
     );
 
-    const nextBtn = getByRole('button', { name: 'Next ranked mention' });
-    const prevBtn = getByRole('button', { name: 'Previous ranked mention' });
+    const nextBtn = getByRole('button', { name: 'Next mention' });
+    const prevBtn = getByRole('button', { name: 'Previous mention' });
 
     expect((prevBtn as HTMLButtonElement).disabled).toBe(true);
     expect((nextBtn as HTMLButtonElement).disabled).toBe(false);
@@ -135,5 +135,41 @@ describe('EntityMentionTimeline Component', () => {
     expect(useVideoStore.getState().seekTo).toBe(240);
     expect((prevBtn as HTMLButtonElement).disabled).toBe(false);
     expect((nextBtn as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  // Root cause (live-reported, 2026-08-15): `mentions` arrives sorted by
+  // significance descending (ADR 025), but this component renders a
+  // time-positioned track -- indexing the "#N of M" counter and the
+  // highlighted marker straight into the significance-sorted array desynced
+  // them from the dots' actual left-to-right time order. This fixture
+  // deliberately has significance order (95, 60, 85) DIFFER from
+  // chronological order (60s, 150s, 240s) to catch a regression back to
+  // indexing the raw `mentions` prop.
+  it('counts and highlights by time order, not the incoming significance-ranked order', () => {
+    const outOfOrderMentions: RankedEntityMention[] = [
+      { timestamp: '04:00', seekSeconds: 240, occurrenceIndex: 0, segmentEndSeconds: 260, significance: 95, dimensionNumber: 1 },
+      { timestamp: '01:00', seekSeconds: 60, occurrenceIndex: 1, segmentEndSeconds: 90, significance: 60, dimensionNumber: 2 },
+      { timestamp: '02:30', seekSeconds: 150, occurrenceIndex: 2, segmentEndSeconds: 170, significance: 85, dimensionNumber: 3 },
+    ];
+
+    const { getByText, getAllByRole } = render(
+      createElement(EntityMentionTimeline, {
+        entityId: 'node-1',
+        entityLabel: 'Test Entity',
+        mentions: outOfOrderMentions,
+        videoDuration: 600,
+      }),
+    );
+
+    // Starts at index 0 -> the chronologically-first mention (60s), which is
+    // significance-rank #2 in the incoming prop, NOT rank #1.
+    expect(getByText('#1 of 3')).toBeTruthy();
+
+    const markers = getAllByRole('button', { name: /Jump to mention/i });
+    expect(markers.length).toBe(3);
+    // Markers render left-to-right in time order: 60s, 150s, 240s.
+    const leftOffsets = markers.map((marker) => parseFloat((marker as HTMLElement).style.left));
+    expect(leftOffsets[0]!).toBeLessThan(leftOffsets[1]!);
+    expect(leftOffsets[1]!).toBeLessThan(leftOffsets[2]!);
   });
 });

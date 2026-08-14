@@ -78,10 +78,29 @@ export function EntityMentionTimeline({
     setPendingSeekSeconds(null);
   }, [entityId]);
 
+  // `mentions` arrives sorted by significance descending (ADR 025 contract,
+  // relied on elsewhere -- not changed here). But this component renders a
+  // horizontal TIME-positioned track (each dot's left offset is
+  // seekSeconds/maxTime), so navigating/counting/highlighting by the
+  // significance-sorted index desyncs the "#N of M" counter and the
+  // highlighted dot from what the track visually shows -- "#5 of 6" could
+  // highlight the dot sitting 3rd from the left. Re-sort chronologically
+  // for every visual/navigation concern in this component; each mention
+  // still carries its own `significance` for the tooltip/detail footer, and
+  // `originalRank` (1-indexed position in the significance-sorted prop)
+  // preserves "how significant was this one" independent of screen position.
+  // Root-caused live, 2026-08-15: matches the exact reported symptom
+  // (counter/marker-position mismatch, "wrong" timestamp jumps from Next).
+  const chronologicalMentions = useMemo(() => {
+    return [...mentions]
+      .map((mention, originalIndex) => ({ mention, originalRank: originalIndex + 1 }))
+      .sort((entryA, entryB) => entryA.mention.seekSeconds - entryB.mention.seekSeconds);
+  }, [mentions]);
+
   const activeMention = useMemo(() => {
-    if (!mentions || mentions.length === 0) return null;
-    return mentions[Math.min(activeRankIndex, mentions.length - 1)] ?? null;
-  }, [mentions, activeRankIndex]);
+    if (chronologicalMentions.length === 0) return null;
+    return chronologicalMentions[Math.min(activeRankIndex, chronologicalMentions.length - 1)]?.mention ?? null;
+  }, [chronologicalMentions, activeRankIndex]);
 
   const maxTime = useMemo(() => {
     if (videoDuration && videoDuration > 0) return videoDuration;
@@ -92,17 +111,18 @@ export function EntityMentionTimeline({
     return 600;
   }, [videoDuration, mentions]);
 
-  // Jump to specific mention
+  // Jump to specific mention (index into chronologicalMentions, not the
+  // significance-sorted `mentions` prop -- see chronologicalMentions above).
   const handleSelectMention = useCallback(
     (index: number) => {
-      if (index < 0 || index >= mentions.length) return;
+      if (index < 0 || index >= chronologicalMentions.length) return;
       setActiveRankIndex(index);
-      const target = mentions[index];
+      const target = chronologicalMentions[index]?.mention;
       if (target) {
         issueSeek(target.seekSeconds);
       }
     },
-    [mentions, issueSeek],
+    [chronologicalMentions, issueSeek],
   );
 
   const handlePrev = useCallback(() => {
@@ -112,10 +132,10 @@ export function EntityMentionTimeline({
   }, [activeRankIndex, handleSelectMention]);
 
   const handleNext = useCallback(() => {
-    if (activeRankIndex < mentions.length - 1) {
+    if (activeRankIndex < chronologicalMentions.length - 1) {
       handleSelectMention(activeRankIndex + 1);
     }
-  }, [activeRankIndex, mentions.length, handleSelectMention]);
+  }, [activeRankIndex, chronologicalMentions.length, handleSelectMention]);
 
   // Auto-segment playback watcher: polls currentPlaybackSeconds and advances
   // when Crossing activeMention.segmentEndSeconds
@@ -127,20 +147,20 @@ export function EntityMentionTimeline({
     if (pendingSeekSeconds !== null) return;
 
     if (currentPlaybackSeconds >= activeMention.segmentEndSeconds) {
-      if (activeRankIndex < mentions.length - 1) {
-        // Advance to next ranked mention
+      if (activeRankIndex < chronologicalMentions.length - 1) {
+        // Advance to the next mention in time
         const nextIndex = activeRankIndex + 1;
         setActiveRankIndex(nextIndex);
-        const nextMention = mentions[nextIndex];
+        const nextMention = chronologicalMentions[nextIndex]?.mention;
         if (nextMention) {
           issueSeek(nextMention.seekSeconds);
         }
       } else {
-        // Reached end of ranked mentions sequence -- pause auto advance
+        // Reached end of the timeline -- pause auto advance
         useVideoStore.getState().setPlaying(false);
       }
     }
-  }, [autoAdvance, isPlaying, activeMention, currentPlaybackSeconds, activeRankIndex, mentions, pendingSeekSeconds, issueSeek]);
+  }, [autoAdvance, isPlaying, activeMention, currentPlaybackSeconds, activeRankIndex, chronologicalMentions, pendingSeekSeconds, issueSeek]);
 
   // Do not render if no entity selected or zero mentions
   if (!entityId || !mentions || mentions.length <= 1) return null;
@@ -181,21 +201,21 @@ export function EntityMentionTimeline({
               type="button"
               disabled={activeRankIndex === 0}
               onClick={handlePrev}
-              title="Previous ranked mention"
-              aria-label="Previous ranked mention"
+              title="Previous mention"
+              aria-label="Previous mention"
               className="p-1 rounded text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/30 transition-colors"
             >
               <Icon icon="solar:alt-arrow-left-linear" size={14} />
             </button>
             <span className="text-[10px] font-mono font-medium px-1 text-[var(--ink-muted)]">
-              #{activeRankIndex + 1} of {mentions.length}
+              #{activeRankIndex + 1} of {chronologicalMentions.length}
             </span>
             <button
               type="button"
-              disabled={activeRankIndex >= mentions.length - 1}
+              disabled={activeRankIndex >= chronologicalMentions.length - 1}
               onClick={handleNext}
-              title="Next ranked mention"
-              aria-label="Next ranked mention"
+              title="Next mention"
+              aria-label="Next mention"
               className="p-1 rounded text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/30 transition-colors"
             >
               <Icon icon="solar:alt-arrow-right-linear" size={14} />
@@ -236,7 +256,7 @@ export function EntityMentionTimeline({
 
         {/* Individual Mention Markers */}
         <div className="absolute left-2 right-2 inset-y-0 pointer-events-none">
-          {mentions.map((mention, idx) => {
+          {chronologicalMentions.map(({ mention, originalRank }, idx) => {
             const leftPct = Math.min(98, Math.max(1, (mention.seekSeconds / maxTime) * 100));
             const isActive = idx === activeRankIndex;
             return (
@@ -245,8 +265,8 @@ export function EntityMentionTimeline({
                 type="button"
                 onClick={() => handleSelectMention(idx)}
                 style={{ left: `${leftPct}%` }}
-                title={`Rank #${idx + 1}: ${mention.timestamp} (${mention.significance}% significance) · Dim. ${mention.dimensionNumber}`}
-                aria-label={`Jump to mention #${idx + 1} at ${mention.timestamp}`}
+                title={`${mention.timestamp} (Rank #${originalRank}, ${mention.significance}% significance) · Dim. ${mention.dimensionNumber}`}
+                aria-label={`Jump to mention at ${mention.timestamp}`}
                 className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto transition-transform hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1 ${
                   isActive
                     ? 'w-4 h-4 rounded-full bg-[var(--accent)] shadow-[0_0_10px_rgba(59,130,246,0.8)] border-2 border-white z-10 scale-110'
