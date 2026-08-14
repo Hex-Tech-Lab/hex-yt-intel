@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import * as Sentry from '@sentry/nextjs';
+import { z } from 'zod';
 import { verifyResourceOwnership } from '@/lib/services/ownership';
 import { getSupabaseServiceClient } from '@/lib/supabase';
 
@@ -19,10 +19,19 @@ export const runtime = 'nodejs';
  * "Re-attached to active background analysis" for a stream that had already
  * died (live-reported "amnesia" bug, 2026-08-15).
  *
- * Guarded update, same single-winner pattern as analysis-reaper.ts's
- * buildSettlePatch/updateAnalysisResult(guardBillingStatus) — only flips a
- * row that is STILL 'processing', so this can never race a legitimate
- * worker-side /persist completion into a false failure.
+ * Guarded update (hand-written, not routed through updateAnalysisResult —
+ * that RPC unconditionally requires markdown/payload params this failure
+ * report never has): `.eq('id', ...).eq('billing_status', 'processing')`
+ * is the same single-winner compare-and-swap semantics as analysis-reaper.ts's
+ * buildSettlePatch, so this can never race a legitimate worker-side /persist
+ * completion into a false failure.
+ *
+ * Uses the service-role client (bypasses RLS) for a different reason than
+ * the reaper does: the reaper bypasses because it runs with no user session
+ * at all; this route bypasses because the write must succeed independent of
+ * `analyses_update_own`'s `auth.uid() = user_id` RLS check on a
+ * service-triggered failure report — ownership is verified separately,
+ * above, before this query ever runs.
  */
 export async function POST(
   request: NextRequest,
