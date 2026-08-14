@@ -1,0 +1,26 @@
+web/components/containers/dashboard/SettingsPanel.tsx
+  s_0eded1e9d0cab6::t_58a1b58eaf390d 211-212
+  s_0eded1e9d0cab6::t_af368369c167a5 57
+  s_0eded1e9d0cab6::t_075efee701e7c5 9
+  s_0eded1e9d0cab6::t_fc34ec8ad614c3 103-109
+web/app/api/admin/waitlist/route.ts
+  s_0eded1e9d0cab6::t_490cb5a414c4a1 1-39
+web/app/admin/waitlist/WaitlistAdminClient.tsx
+  s_0eded1e9d0cab6::t_fa0ebd8955673a 1-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "1aa019c0f44fc1c59f01861e81c3dcb5a2ba7471",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
