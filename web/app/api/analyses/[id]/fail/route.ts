@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { verifyResourceOwnership } from '@/lib/services/ownership';
 import { getSupabaseServiceClient } from '@/lib/supabase';
+import { buildFailPatch } from '@/lib/services/analysis-fail-patch';
 
 const analysisIdSchema = z.string().uuid();
 const bodySchema = z.object({ reason: z.string().max(500).optional() });
@@ -60,14 +61,9 @@ export async function POST(
     }
 
     const service = getSupabaseServiceClient();
-    const nowIso = new Date().toISOString();
     const { data, error: updateError } = await service
       .from('analyses')
-      .update({
-        billing_status: 'failed',
-        validation_report: { status: 'failed', client_reported: true, reason: reason || 'Client-observed stream failure', failed_at: nowIso },
-        updated_at: nowIso,
-      })
+      .update(buildFailPatch(reason))
       .eq('id', analysisId)
       .eq('billing_status', 'processing')
       .select('id')
