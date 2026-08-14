@@ -1,0 +1,29 @@
+web/lib/adapters/SupabaseAnalysisAdapter.ts
+  s_0eded1e9d0cab6::t_0c9503bcb3e0f1 685
+web/lib/utils/highlights-settings.ts
+  s_0eded1e9d0cab6::t_3b252e1eac8267 1-23
+web/app/share/[token]/page.tsx
+  s_0eded1e9d0cab6::t_a312d4dda979a4 42-46,48-51
+  s_0eded1e9d0cab6::t_c81f6fe1a4ed86 75-76
+  s_0eded1e9d0cab6::t_624fd5ebea176e 1,8
+web/app/api/analyses/highlights/route.ts
+  s_0eded1e9d0cab6::t_a6a103e216a714 8,35-38,42-43
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_0eded1e9d0cab6::t_b43c5b23b73926 99-105,107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "652048abd703304a2c7b71a9c342badf6211d75b",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
