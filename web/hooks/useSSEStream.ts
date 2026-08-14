@@ -277,6 +277,20 @@ export function useSSEStream() {
                   setError({ code: 'ERR_STREAM_FATAL_FAILURE', status: 0, message: msg });
                   setStatus('error');
                   setIsLoading(false);
+                  // Write the terminal failure back to the DB row so a page
+                  // refresh (or any other tab) sees the real outcome instead
+                  // of a stale 'processing' row -- without this, only the
+                  // ADR 007 reaper's delayed sweep would ever fix it (live-
+                  // reported "amnesia" bug, 2026-08-15).
+                  const failedAnalysisId = job.analysisId || job.id;
+                  if (failedAnalysisId) {
+                    fetch(`/api/analyses/${failedAnalysisId}/fail`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ reason: msg.slice(0, 500) }),
+                      keepalive: true,
+                    }).catch((e) => console.debug('[useSSEStream] Fail write-back failed (best-effort):', e));
+                  }
                 }
               };
 
