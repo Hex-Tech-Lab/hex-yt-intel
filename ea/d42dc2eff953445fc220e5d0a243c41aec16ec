@@ -1,0 +1,24 @@
+scripts/lint-workflow-curl-safety.sh
+  s_0eded1e9d0cab6::t_a548c953dbdf48 6,8-11,13-17,25-26,28-37,42,44,47
+  s_0eded1e9d0cab6::t_49787f66b28d5f 12,24,27,38-41,43,46,50
+  s_0eded1e9d0cab6::t_b285fc0a759df5 1-5,7,18-23,45,48-49,51-61
+.github/workflows/ci-cd.yml
+  s_0eded1e9d0cab6::t_88c8c97492d5f9 444-447
+  s_0eded1e9d0cab6::t_deea676c1cc76a 44-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ead42dc2eff953445fc220e5d0a243c41aec16ec",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
