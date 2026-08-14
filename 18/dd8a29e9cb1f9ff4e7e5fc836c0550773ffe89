@@ -1,0 +1,26 @@
+web/components/templates/console/__tests__/EntityMentionTimeline.test.tsx
+  s_0eded1e9d0cab6::t_0f1566b0ed71df 139-174
+  s_0eded1e9d0cab6::t_930b1948e4fe21 127-128
+web/components/templates/console/EntityMentionTimeline.tsx
+  s_0eded1e9d0cab6::t_e125d4a17bc951 204-205,211,215,217-218
+  s_0eded1e9d0cab6::t_4e611338103f84 259,268-269
+  s_0eded1e9d0cab6::t_4906ff8bce9d7a 81-96,98-99,101-103
+  s_0eded1e9d0cab6::t_a73cfa686a8103 114-115,118,120,125,135,138,150-151,154,159,163
+  s_0eded1e9d0cab6::t_f72f2a185a22a2 97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "18dd8a29e9cb1f9ff4e7e5fc836c0550773ffe89",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
