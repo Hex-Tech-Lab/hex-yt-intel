@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@astryxdesign/core';
 import { Icon, MonoLabel } from '@/components/templates/_shared/primitives';
@@ -37,6 +37,14 @@ export function BentoMetadata({
 }: BentoMetadataProps) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const canExpandDescription = Boolean(description && description.length > DESCRIPTION_EXPAND_THRESHOLD);
+  const descriptionId = useId();
+
+  // Reset on every new description (switching videos, restoring a different
+  // analysis) -- this component instance is reused across analyses, so
+  // without this an expanded state from a prior video would carry over.
+  useEffect(() => {
+    setDescriptionExpanded(false);
+  }, [description]);
 
   const container = {
     hidden: { opacity: 0 },
@@ -92,7 +100,10 @@ export function BentoMetadata({
           </p>
           {description && (
             <div className="mt-2">
-              <p className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line ${descriptionExpanded ? '' : 'line-clamp-2'}`}>
+              <p
+                id={descriptionId}
+                className={`text-xs text-[var(--ink-muted)] break-words whitespace-pre-line ${canExpandDescription && !descriptionExpanded ? 'line-clamp-2' : ''}`}
+              >
                 {description}
               </p>
               {canExpandDescription && (
@@ -100,7 +111,8 @@ export function BentoMetadata({
                   type="button"
                   onClick={() => setDescriptionExpanded((prev) => !prev)}
                   aria-expanded={descriptionExpanded}
-                  className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[var(--accent)] hover:underline"
+                  aria-controls={descriptionId}
+                  className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[var(--accent)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
                 >
                   <span>{descriptionExpanded ? 'Show less' : 'Show more'}</span>
                   <Icon icon={descriptionExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} size={12} />
