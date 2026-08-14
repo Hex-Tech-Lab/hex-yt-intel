@@ -5,21 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
-
-const REGISTRY_FALLBACK = {
-  'highlights.segmentDurationSeconds': 10,
-  'highlights.contextLeadSeconds': 2.5,
-} as const;
-
-/** A malformed/missing/out-of-range registry value must never reach the
- *  client as-is -- it drives setTimeout durations and seek offsets in
- *  HighlightsScrubber. Same min/max bounds as the migration's own
- *  validation jsonb (20260813222120_highlights_reel_settings_registry.sql). */
-function clampSetting(value: unknown, fallback: number, min: number, max: number): number {
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue) || numericValue < min || numericValue > max) return fallback;
-  return numericValue;
-}
+import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 
 /**
  * GET /api/analyses/highlights?analysisId=... — request-scoped client, so
@@ -46,11 +32,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to load highlights' }, { status: 500 });
   }
 
-  const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
+  const settings = await SupabaseSettingsAdapter.getRegistrySettings(
+    Object.keys(HIGHLIGHTS_REGISTRY_FALLBACK),
+    HIGHLIGHTS_REGISTRY_FALLBACK
+  );
 
   return NextResponse.json({
     highlights: (data ?? []).map((row) => ({ idx: row.idx, start: row.start_seconds, end: row.end_seconds, label: row.label })),
-    segmentDurationSeconds: clampSetting(settings['highlights.segmentDurationSeconds'], REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
-    contextLeadSeconds: clampSetting(settings['highlights.contextLeadSeconds'], REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
+    segmentDurationSeconds: clampHighlightsSetting(settings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30),
+    contextLeadSeconds: clampHighlightsSetting(settings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10),
   });
 }

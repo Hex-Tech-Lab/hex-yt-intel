@@ -1,16 +1,13 @@
+import * as Sentry from '@sentry/nextjs';
 import { SupabasePersistenceAdapter } from '@/lib/adapters/SupabasePersistenceAdapter';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { PublicHighlightsReel } from './PublicHighlightsReel';
+import { HIGHLIGHTS_REGISTRY_FALLBACK, clampHighlightsSetting } from '@/lib/utils/highlights-settings';
 
 export const dynamic = 'force-dynamic';
-
-const HIGHLIGHTS_REGISTRY_FALLBACK = {
-  'highlights.segmentDurationSeconds': 10,
-  'highlights.contextLeadSeconds': 2.5,
-} as const;
 
 export default async function SharePage(props: {
   params: Promise<{ token: string }>;
@@ -42,10 +39,16 @@ export default async function SharePage(props: {
   }
 
   // Highlights are optional -- older shared analyses (pre task #7/#14) or
-  // ones where extraction failed simply have zero rows; fail quiet, same
-  // as the authenticated HighlightsScrubber does.
+  // ones where extraction failed simply have zero rows; fail quiet, same as
+  // the authenticated HighlightsScrubber does. A plain Promise.all does NOT
+  // fail quiet: if findHighlightsForAnalysis rejects, the whole page 500s
+  // even though the markdown analysis (the actual valuable content) is
+  // unaffected -- caught in review, fixed by isolating that one fetch.
   const [highlights, registrySettings] = await Promise.all([
-    adapter.findHighlightsForAnalysis(analysis.id),
+    adapter.findHighlightsForAnalysis(analysis.id).catch((error) => {
+      Sentry.captureException(error, { contexts: { share: { layer: 'highlights_fetch', analysisId: analysis.id } } });
+      return [];
+    }),
     SupabaseSettingsAdapter.getRegistrySettings(Object.keys(HIGHLIGHTS_REGISTRY_FALLBACK), HIGHLIGHTS_REGISTRY_FALLBACK),
   ]);
 
@@ -69,8 +72,8 @@ export default async function SharePage(props: {
           <PublicHighlightsReel
             videoId={analysis.videoId}
             highlights={highlights}
-            segmentDurationSeconds={Number(registrySettings['highlights.segmentDurationSeconds'])}
-            contextLeadSeconds={Number(registrySettings['highlights.contextLeadSeconds'])}
+            segmentDurationSeconds={clampHighlightsSetting(registrySettings['highlights.segmentDurationSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.segmentDurationSeconds'], 3, 30)}
+            contextLeadSeconds={clampHighlightsSetting(registrySettings['highlights.contextLeadSeconds'], HIGHLIGHTS_REGISTRY_FALLBACK['highlights.contextLeadSeconds'], 0, 10)}
             videoDurationSeconds={analysis.videoDurationSeconds}
           />
         </div>

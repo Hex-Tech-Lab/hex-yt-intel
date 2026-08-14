@@ -682,7 +682,7 @@ export class SupabaseAnalysisAdapter {
         analysisMarkdown: data.analysis_markdown || null,
         sharedExpiresAt: data.shared_expires_at,
         createdAt: data.created_at,
-        videoId: data.video_id || null,
+        videoId: stripArchivedVideoIdSuffix(data.video_id) ?? null,
         videoDurationSeconds,
       };
     } catch (error: any) {

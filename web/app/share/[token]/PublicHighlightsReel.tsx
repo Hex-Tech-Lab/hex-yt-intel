@@ -96,9 +96,15 @@ export function PublicHighlightsReel({
 
   if (highlights.length === 0) return null;
 
-  const totalHighlightsSeconds = highlights.length * segmentDurationSeconds;
+  // Clamped display, matching HighlightsScrubber.tsx: the nominal total
+  // (count * fixed segment duration) can exceed the source video for a
+  // short/dense video -- never report a "reel" longer than the video.
+  const totalHighlightsSeconds = Math.min(
+    highlights.length * segmentDurationSeconds,
+    videoDurationSeconds ?? Infinity
+  );
   const compressionPct = videoDurationSeconds && videoDurationSeconds > 0
-    ? Math.round((totalHighlightsSeconds / videoDurationSeconds) * 100)
+    ? Math.min(100, Math.round((totalHighlightsSeconds / videoDurationSeconds) * 100))
     : null;
 
   return (
