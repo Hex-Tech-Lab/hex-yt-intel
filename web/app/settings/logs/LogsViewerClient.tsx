@@ -119,6 +119,44 @@ interface LogRow {
 // treating an absence-of-data marker as a dated event.
 const NO_DATA_MESSAGE_RE = /^No .+ (returned|recorded|found|entries)/i;
 
+/** A parsed API error field down to a displayable string -- `error` can be a
+ *  plain string, a structured `{ message }` object, or missing entirely. */
+function formatErrorField(error: unknown): string | null {
+  if (typeof error === 'string' && error.trim()) return error;
+  if (error && typeof error === 'object') {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Shared response formatter for both the individual-tab fetch and Copy All --
+ * extracted so the two paths can't drift again the way they did before (Copy
+ * All silently dropped real errors while the per-tab view surfaced them
+ * correctly). Every code path returns a real, displayable string; nothing
+ * silently resolves to the empty/no-data placeholder for an actual failure.
+ */
+function formatLogResponse(res: Response, data: unknown): string {
+  const body = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  if (!res.ok) {
+    return `[ERROR] ${formatErrorField(body.error) || `HTTP ${res.status}`}`;
+  }
+  if (typeof body.logs === 'string' && body.logs) return body.logs;
+  // A 2xx with no usable `logs` field is a malformed success response, not a
+  // genuine empty result -- surface it as an error rather than rendering the
+  // same placeholder a real empty log window would show.
+  if (!('logs' in body)) {
+    return `[ERROR] Invalid logs response (missing "logs" field)`;
+  }
+  return 'No log data returned.';
+}
+
 function parseLogLine(line: string): LogRow {
   const timeMatch = line.match(/^\[(.*?)\]\s*\[(.*?)\]\s*\[(.*?)\]\s*(.*)$/);
   if (timeMatch) {
@@ -214,19 +252,9 @@ export function LogsViewerClient() {
 
       const res = await fetch(url);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setTabLogs((prev) => ({
-          ...prev,
-          [tab.key]: `[ERROR] ${data.error || `HTTP ${res.status}`}`,
-        }));
-      } else {
-        setTabLogs((prev) => ({
-          ...prev,
-          [tab.key]: data.logs || 'No log data returned.',
-        }));
-        if (tab.hasHistory) {
-          setHistoryByTab((prev) => ({ ...prev, [tab.key]: data.history || [] }));
-        }
+      setTabLogs((prev) => ({ ...prev, [tab.key]: formatLogResponse(res, data) }));
+      if (res.ok && tab.hasHistory) {
+        setHistoryByTab((prev) => ({ ...prev, [tab.key]: (data as { history?: SnapshotHistoryRow[] }).history || [] }));
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -269,11 +297,24 @@ export function LogsViewerClient() {
               ? `?startTime=${encodeURIComponent(customStart)}&endTime=${encodeURIComponent(customEnd)}`
               : `?range=${timeRange}`;
             const res = await fetch(`${tab.endpoint}${query}`);
-            if (res.ok) {
-              const data = await res.json();
-              fetchedLogs[tab.key] = data.logs || 'No log data returned.';
-            }
+            const data = await res.json().catch(() => ({}));
+            // Shares formatLogResponse with the individual-tab fetch above --
+            // this path used to only assign the slot when res.ok, silently
+            // dropping real error responses (missing admin token, 503, etc.)
+            // and leaving the slot to render as the generic '(No log data)'
+            // placeholder. Made "same env, different output between the
+            // per-tab view and Copy All" look like tokens were disappearing
+            // between builds when the tokens were never actually the
+            // problem -- this aggregation path was.
+            fetchedLogs[tab.key] = formatLogResponse(res, data);
           } catch (err) {
+            // A rejected fetch (network failure, CORS, abort) previously left
+            // this slot unset too, same silent-drop class as the res.ok-only
+            // check above -- an explicit per-tab error keeps Copy All's
+            // partial-results behavior (other tabs still copy) while never
+            // rendering a real failure as if there were simply no data.
+            const msg = err instanceof Error ? err.message : String(err);
+            fetchedLogs[tab.key] = `[ERROR] Network request failed: ${msg}`;
             console.error('[copyAllLogs] Failed fetching tab logs for', tab.key, err);
           }
         }
