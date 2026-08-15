@@ -269,10 +269,18 @@ export function LogsViewerClient() {
               ? `?startTime=${encodeURIComponent(customStart)}&endTime=${encodeURIComponent(customEnd)}`
               : `?range=${timeRange}`;
             const res = await fetch(`${tab.endpoint}${query}`);
-            if (res.ok) {
-              const data = await res.json();
-              fetchedLogs[tab.key] = data.logs || 'No log data returned.';
-            }
+            const data = await res.json().catch(() => ({}));
+            // Mirror the individual-tab fetch's error handling above --
+            // without this, a real error response (e.g. a missing admin API
+            // token, 503) was silently dropped here, leaving the slot empty
+            // and rendering as the generic '(No log data)' placeholder
+            // instead of the actual error. Made "same env, different
+            // output between the per-tab view and Copy All" look like
+            // tokens were disappearing between builds when the tokens were
+            // never actually the problem -- this aggregation path was.
+            fetchedLogs[tab.key] = res.ok
+              ? (data.logs || 'No log data returned.')
+              : `[ERROR] ${data.error || `HTTP ${res.status}`}`;
           } catch (err) {
             console.error('[copyAllLogs] Failed fetching tab logs for', tab.key, err);
           }
