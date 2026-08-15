@@ -25,17 +25,29 @@ const DEFAULT_TARGET_WINDOW_SECONDS = 75;
  * ceiling, not an exact cut). Closes the current chunk the moment the next
  * segment would push its span past the target, then starts a new chunk with
  * that segment -- a segment is never split across two chunks.
+ *
+ * Precondition: `segments` should already be in chronological (`start`
+ * ascending) order, as `TranscriptExtractor`'s real output always is
+ * (verified: both extraction paths build segments by iterating captions in
+ * order and filter to `start >= 0 && duration > 0`). Defensively sorted here
+ * anyway (cheap for a per-video segment list) so a caller that violates the
+ * precondition gets a still-correct grouping instead of non-monotonic chunk
+ * timestamps.
  */
 export function groupSegmentsIntoChunks(
   segments: TranscriptSegment[],
   targetWindowSeconds: number = DEFAULT_TARGET_WINDOW_SECONDS
 ): GroundedChunk[] {
   if (segments.length === 0) return [];
-  // Cubic + Sourcery (PR #227 review): a non-positive window silently produced
-  // one chunk per segment instead of failing or falling back sanely. Fall back
-  // to the default rather than throwing -- this is a soft target, not a hard
-  // contract callers must get exactly right.
-  const effectiveWindowSeconds = targetWindowSeconds > 0 ? targetWindowSeconds : DEFAULT_TARGET_WINDOW_SECONDS;
+  // A non-positive or non-finite (Infinity/NaN) window falls back to the
+  // default rather than throwing or degrading to one-chunk-per-segment --
+  // this is a soft target, not a hard contract callers must get exactly right.
+  const effectiveWindowSeconds =
+    Number.isFinite(targetWindowSeconds) && targetWindowSeconds > 0
+      ? targetWindowSeconds
+      : DEFAULT_TARGET_WINDOW_SECONDS;
+
+  const orderedSegments = [...segments].sort((segmentA, segmentB) => segmentA.start - segmentB.start);
 
   const chunks: GroundedChunk[] = [];
   let current: TranscriptSegment[] = [];
@@ -56,7 +68,7 @@ export function groupSegmentsIntoChunks(
     current = [];
   };
 
-  for (const segment of segments) {
+  for (const segment of orderedSegments) {
     if (current.length > 0) {
       const chunkStart = current[0]!.start;
       const wouldBeSpan = segment.start + segment.duration - chunkStart;

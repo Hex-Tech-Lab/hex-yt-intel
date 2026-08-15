@@ -45,7 +45,7 @@ export interface EngineContext {
   timezone: string;
   /** Video id, used only as the deterministic cache-key suffix (legacy execute). */
   videoId?: string;
-  /** Optional system prompt override (legacy /analyze-llm). Falls back to UCIS v5.3. */
+  /** Optional system prompt override (legacy /analyze-llm). Falls back to UCIS v5.1. */
   systemPrompt?: string;
   /** Optional dimension bundle for multi-stream execution. */
   dimensions?: number[];
