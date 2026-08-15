@@ -277,6 +277,20 @@ export function useSSEStream() {
                   setError({ code: 'ERR_STREAM_FATAL_FAILURE', status: 0, message: msg });
                   setStatus('error');
                   setIsLoading(false);
+                  // Write the terminal failure back to the DB row so a page
+                  // refresh (or any other tab) sees the real outcome instead
+                  // of a stale 'processing' row -- without this, only the
+                  // ADR 007 reaper's delayed sweep would ever fix it (live-
+                  // reported "amnesia" bug, 2026-08-15).
+                  const failedAnalysisId = job.analysisId || job.id;
+                  if (failedAnalysisId) {
+                    fetch(`/api/analyses/${failedAnalysisId}/fail`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ reason: msg.slice(0, 500) }),
+                      keepalive: true,
+                    }).catch((e) => console.debug('[useSSEStream] Fail write-back failed (best-effort):', e));
+                  }
                 }
               };
 
@@ -502,7 +516,16 @@ export function useSSEStream() {
                     store.logError(`Stream dispatch failed: ${err.message}`);
                     settleAnalysis('error', err.message);
                   }
-                  if (!hasSettled) {
+                  // Guarded, matching every other settleAnalysis('error', ...)
+                  // call site in this function: without the aborted check, an
+                  // intentional user stop or component unmount -- which aborts
+                  // currentSignal but leaves every per-bundle promise resolving
+                  // quietly via its own AbortError guard, never touching
+                  // completedIndexes/failedIndexes -- fell through to here and
+                  // got persisted as a genuine terminal failure (real bug,
+                  // caught by review on PR #234: intentional aborts must never
+                  // reach settleAnalysis/POST /fail).
+                  if (!hasSettled && !currentSignal.aborted) {
                     settleAnalysis('error', 'Analysis stream ended unexpectedly.');
                   }
                 }
