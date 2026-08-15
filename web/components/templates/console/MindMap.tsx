@@ -78,7 +78,7 @@ export function MindMap({ graph, selectedId, onSelect }: MindMapProps) {
       nodeMap[n.id] = {
         id: n.id,
         label: n.label,
-        type: n.entityType || 'Object',
+        type: n.entityType || 'concept',
         weight: n.weight || 1,
         parentId: null,
         children: [],
