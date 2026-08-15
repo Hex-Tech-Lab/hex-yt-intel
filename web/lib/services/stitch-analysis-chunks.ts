@@ -13,6 +13,7 @@
  * specifically to not repeat that mistake here.
  */
 import { UCISPayloadV2Schema, KGNodeSchema, KGEdgeSchema } from '@/lib/validators/synthesis';
+import { normalizeEntityType } from '@/lib/design/entity-taxonomy';
 import type { UCISPayloadV2 } from '@/lib/types/synthesis-nucleus';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
 import { TOTAL_DIMENSIONS } from '@/lib/config/synthesis';
@@ -133,7 +134,13 @@ export function stitchChunksIntoPayload(
       stitchedMonetization = chunkPayload.monetizationVerdict;
     }
     if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.nodes)) {
-      stitchedNodes.push(...chunkPayload.knowledgeGraph.nodes);
+      // Normalize to POLE+O at the write boundary -- see entity-taxonomy.ts.
+      // All other node fields pass through unchanged; only entityType (the
+      // field color/UI code reads) is overwritten to the canonical value.
+      stitchedNodes.push(...chunkPayload.knowledgeGraph.nodes.map((node: any) => ({
+        ...node,
+        entityType: normalizeEntityType(node.entityType ?? node.type),
+      })));
     }
     if (chunkPayload.knowledgeGraph && Array.isArray(chunkPayload.knowledgeGraph.edges)) {
       stitchedEdges.push(...chunkPayload.knowledgeGraph.edges);

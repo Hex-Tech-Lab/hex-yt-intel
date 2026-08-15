@@ -5,30 +5,23 @@
  * KnowledgeGraphCanvas), never by a pure-CSS rule, so the palette lives here
  * as design tokens rather than in globals.css. Every component derives its
  * colors from this module — do not re-declare the hues anywhere else.
+ *
+ * Keyed on POLE+O, the canonical entity-type vocabulary (see
+ * entity-taxonomy.ts) — the one actually enforced by kg_entities' Postgres
+ * CHECK constraint. Every write path normalizes to POLE+O before
+ * persistence, so this module only ever needs to know one vocabulary.
  */
-// The worker's actual KG extraction schema (worker/src/services/ZodSchemas.ts
-// KGNodeSchema.entityType) emits a lowercase 8-value enum -- NOT the
-// capitalized 5-value POLE+O taxonomy this module previously defined (see
-// docs/architecture/entity-colors-poleo-rationale.md for that design's
-// original rationale). The mismatch meant every real entity type failed the
-// ENTITY_HEX lookup and fell to the gray default, hex-uniformly, across
-// WordCloud/MindMap/KnowledgeGraphCanvas simultaneously (live-reported
-// "everything went monochrome" bug, 2026-08-15 RCA). Palette now matches the
-// worker's real vocabulary directly rather than silently collapsing it into
-// POLE+O's 5 categories -- that collapse is a separate, not-yet-decided
-// product/IA question, not something to resolve unilaterally in a color fix.
-export type EntityType = 'person' | 'concept' | 'framework' | 'tool' | 'organization' | 'study' | 'trend' | 'metric';
+import type { PoleOType } from './entity-taxonomy';
 
-/** Base hex per entity type — the one place these values are defined. */
+export type EntityType = PoleOType;
+
+/** Base hex per POLE+O type — the one place these values are defined. */
 export const ENTITY_HEX: Record<EntityType, string> = {
-  person: '#F43F5E', // rose
-  organization: '#3B82F6', // blue
-  concept: '#A855F7', // purple
-  framework: '#0EA5E9', // sky
-  tool: '#F97316', // orange
-  study: '#10B981', // emerald
-  trend: '#EAB308', // yellow
-  metric: '#EC4899', // pink
+  Person: '#F43F5E', // rose
+  Organization: '#3B82F6', // blue
+  Location: '#10B981', // emerald
+  Event: '#EAB308', // yellow
+  Object: '#A855F7', // purple
 };
 
 /** Fallback for unknown / missing entity types (slate-400). */
