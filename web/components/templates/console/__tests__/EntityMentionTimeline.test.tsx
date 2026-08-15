@@ -222,7 +222,7 @@ describe('EntityMentionTimeline Component', () => {
       createElement(EntityMentionTimeline, {
         entityId: 'node-1',
         entityLabel: 'Test Entity',
-        mentions: threeMentions.slice(0, 2),
+        mentions: [threeMentions[0]!, threeMentions[1]!],
         videoDuration: 600,
       }),
     );
