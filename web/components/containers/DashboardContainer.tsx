@@ -710,6 +710,7 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                       likeCount={videoMetadata.likeCount}
                       duration={videoMetadata.duration || 0}
                       publishedAt={videoMetadata.publishedAt}
+                      description={videoMetadata.description}
                     />
                   )}
                 </div>

@@ -311,6 +311,7 @@ export function AnalysisHistory({ onSelectAnalysis }: AnalysisHistoryProps) {
           duration,
           viewCount,
           likeCount,
+          description: meta.description,
         } as never);
 
         initSynthesis({

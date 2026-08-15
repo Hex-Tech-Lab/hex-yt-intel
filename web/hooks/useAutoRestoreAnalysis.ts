@@ -118,7 +118,14 @@ export function useAutoRestoreAnalysis(url: string) {
                 duration,
                 viewCount,
                 likeCount,
+                description: meta.description,
               } as any);
+            } else if (!currentMeta?.description && typeof meta.description === 'string') {
+              // The block above is skipped for an already-initialized same-
+              // video metadata (eager-fetch already set title/duration) --
+              // without this, the restored description would never reach
+              // the store at all (real bug, caught by review on PR #235).
+              setVideoMetadata({ ...currentMeta, description: meta.description } as any);
             }
 
             // `analysisPayload` here is the ONLY place persona/knowledgeGraph/
