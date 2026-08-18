@@ -33,10 +33,25 @@ const CHAT_CASCADE_FALLBACK: readonly CascadeItem[] = [
   { model: 'google/gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Vertex)', cost: 0.00025, providerOrder: ['google-vertex'] },
 ];
 
+// Dedicated from cascade.chat (2026-08-18, supabase/migrations/20260818000000_cascade_digest.sql)
+// per the "each helper function gets its own cascade" standing directive --
+// Groq-primary/Cerebras-fallback rather than chat's Cerebras-primary, since
+// the digest pass runs in the background and does not need chat's
+// speed-first tradeoff (user directive 2026-08-17).
+const DIGEST_CASCADE_FALLBACK: readonly CascadeItem[] = [
+  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Groq)', cost: 0.00015, providerOrder: ['groq'] },
+  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Cerebras)', cost: 0.00035, providerOrder: ['cerebras'] },
+  { model: 'openai/gpt-oss-120b', name: 'gpt-oss-120b (Baseten)', cost: 0.00015, providerOrder: ['baseten'] },
+];
+
 const ANALYSIS_CASCADE_FALLBACK: readonly CascadeItem[] = [
+  // Provider order (2026-08-18, explicit user directive): Vertex/global first,
+  // Azure second, Bedrock third -- same model/cost, Bedrock observed slower
+  // in practice. Anthropic Direct kept as a fallback ahead of Bedrock.
   { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Vertex)', cost: 0.0015, providerOrder: ['google-vertex'] },
-  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Anthropic Direct)', cost: 0.0015, providerOrder: ['anthropic'] },
   { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Azure)', cost: 0.0015, providerOrder: ['azure'] },
+  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Anthropic Direct)', cost: 0.0015, providerOrder: ['anthropic'] },
+  { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Bedrock)', cost: 0.0015, providerOrder: ['amazon-bedrock'] },
   { model: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5 (Vertex)', cost: 0.003, providerOrder: ['google-vertex'] },
   { model: 'anthropic/claude-sonnet-5', name: 'Claude Sonnet 5 (Anthropic Direct)', cost: 0.003, providerOrder: ['anthropic'] },
 ];
@@ -79,6 +94,7 @@ const REASONING_CASCADE_PRO_FALLBACK: readonly CascadeItem[] = [
  * without a redeploy. */
 export const CASCADE_FALLBACKS = {
   chat: CHAT_CASCADE_FALLBACK,
+  digest: DIGEST_CASCADE_FALLBACK,
   analysis: ANALYSIS_CASCADE_FALLBACK,
   stance: STANCE_CASCADE_FALLBACK,
   entityExtraction: ENTITY_EXTRACTION_CASCADE_FALLBACK,
@@ -96,6 +112,7 @@ async function resolveCascade(key: string, fallback: readonly CascadeItem[]): Pr
 }
 
 export const resolveChatCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.chat', CHAT_CASCADE_FALLBACK);
+export const resolveDigestCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.digest', DIGEST_CASCADE_FALLBACK);
 export const resolveAnalysisCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.analysis', ANALYSIS_CASCADE_FALLBACK);
 export const resolveStanceCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.stance', STANCE_CASCADE_FALLBACK);
 export const resolveEntityExtractionCascade = (): Promise<CascadeItem[]> => resolveCascade('cascade.entityExtraction', ENTITY_EXTRACTION_CASCADE_FALLBACK);

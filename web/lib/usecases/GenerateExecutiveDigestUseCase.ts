@@ -16,8 +16,19 @@ import type {
   StoredExecutiveDigest,
 } from '@/lib/ports/ExecutiveDigestPorts';
 import { reconstructMarkdown } from '@/lib/utils/markdown-reconstructor';
+import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 
 const MAX_DIGEST_PAYLOAD_BYTES = 100_000;
+
+// Registry-resolved (2026-08-18 -- see docs/research/2026-08-18-digest-fresh-haiku-baseline-fidelity-test.md
+// for the RCA: GPT-OSS-120B, a reasoning model, hit finish_reason=length on
+// 5/14 real rows at the prior hardcoded DEFAULT_MAX_TOKENS=2000 in
+// OpenRouterCompletionAdapter.ts; Haiku 4.5 never truncated on the same rows).
+// Fallback value is the real empirical derivation from
+// docs/research/2026-08-18-digest-token-cap-empirical-study.md (n=24,
+// observed max 2471 tokens x 1.18 margin = 3000), matching the live
+// digest.maxOutputTokens registry value -- not a padded guess.
+const DIGEST_MAX_TOKENS_FALLBACK = 3000;
 
 /**
  * Prefer stored markdown; fall back to reconstructing from analysis_payload.
@@ -101,10 +112,16 @@ export class GenerateExecutiveDigestUseCase {
     let model: string;
     try {
       const systemPrompt = await getExecutiveDigestSystemPrompt();
+      const resolvedMaxTokensRegistry = await SupabaseSettingsAdapter.getRegistrySettings(
+        ['digest.maxOutputTokens'],
+        { 'digest.maxOutputTokens': DIGEST_MAX_TOKENS_FALLBACK }
+      );
+      const maxTokens = Number(resolvedMaxTokensRegistry['digest.maxOutputTokens']) || DIGEST_MAX_TOKENS_FALLBACK;
       const completion = await this.completion.complete({
         system: systemPrompt,
         user: buildExecutiveDigestUserMessage(markdown),
         models,
+        maxTokens,
         analysisId,
         requestingUserId: userId,
       });

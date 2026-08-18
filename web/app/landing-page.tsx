@@ -8,6 +8,7 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Divider } from '@astryxdesign/core/Divider';
 import { Icon } from '@/components/templates/_shared/primitives';
 import { Footer } from '@/components/Footer';
+import { PRICING_PLANS } from '@/lib/constants/pricing-plans';
 
 /**
  * LANDING PAGE - ASTRYX ROLLOUT + MOTION
@@ -213,37 +214,42 @@ export function LandingPage() {
           </motion.div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginBottom: 40 }}>
-            {[
-              { name: "Free", price: "$0", desc: "Individual experimenters", isPro: false },
-              { name: "Pro", price: "$9", desc: "Serious content analysts", isPro: true },
-              { name: "Enterprise", price: "$99", desc: "For high-volume operations", isPro: false, isEnterprise: true },
-            ].map((plan, i) => (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.45, delay: i * 0.08 }}
-                whileHover={{ y: -4 }}
-              >
-                <Card
-                  variant={plan.isPro || plan.isEnterprise ? "cyan" : "default"}
-                  padding={8}
-                  className={plan.isPro ? "hx-glow" : undefined}
+            {PRICING_PLANS.map((plan, i) => {
+              const isEnterprise = plan.monthlyPrice === null;
+              const isPro = plan.recommended;
+              const price = isEnterprise
+                ? "Contact us*"
+                : plan.monthlyPrice === 0
+                  ? "$0"
+                  : `$${plan.monthlyPrice}/mo*`;
+              return (
+                <motion.div
+                  key={plan.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-60px" }}
+                  transition={{ duration: 0.45, delay: i * 0.08 }}
+                  whileHover={{ y: -4 }}
                 >
-                  <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{plan.name}</h3>
-                  <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 500, color: "var(--accent)" }}>{plan.price}</p>
-                  <p style={{ margin: "2px 0 20px", fontSize: 13, color: "var(--ink-secondary)" }}>{plan.desc}</p>
-                  <Button
-                    label={plan.isEnterprise ? "Contact Sales" : "Get started"}
-                    variant={plan.isPro ? "primary" : "secondary"}
-                    width="100%"
-                    as={Link}
-                    href="/pricing"
-                  />
-                </Card>
-              </motion.div>
-            ))}
+                  <Card
+                    variant={isPro || isEnterprise ? "cyan" : "default"}
+                    padding={8}
+                    className={isPro ? "hx-glow" : undefined}
+                  >
+                    <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{plan.name}</h3>
+                    <p style={{ margin: "4px 0 0", fontSize: 32, fontWeight: 500, color: "var(--accent)" }}>{price}</p>
+                    <p style={{ margin: "2px 0 20px", fontSize: 13, color: "var(--ink-secondary)" }}>{plan.desc}</p>
+                    <Button
+                      label={isEnterprise ? "Contact Sales" : "Get started"}
+                      variant={isPro ? "primary" : "secondary"}
+                      width="100%"
+                      as={Link}
+                      href="/pricing"
+                    />
+                  </Card>
+                </motion.div>
+              );
+            })}
           </div>
 
           <Divider />

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { SupabaseAuthAdapter, SupabasePersistenceAdapter } from '@/lib/adapters';
 import { OpenRouterCompletionAdapter } from '@/lib/adapters/OpenRouterCompletionAdapter';
 import { GenerateExecutiveDigestUseCase } from '@/lib/usecases/GenerateExecutiveDigestUseCase';
-import { resolveChatCascade } from '@/lib/config/cascade';
+import { resolveDigestCascade } from '@/lib/config/cascade';
 
 /**
  * POST /api/analyses/digest — generate (once) the Dimension-0 executive digest
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const result = await useCase.execute({
       analysisId: parsed.data.analysisId,
       userId: identity.userId,
-      models: await resolveChatCascade(),
+      models: await resolveDigestCascade(),
     });
 
     if (result.type === 'error') {
