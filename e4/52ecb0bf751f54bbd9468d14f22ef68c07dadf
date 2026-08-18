@@ -1,0 +1,93 @@
+web/components/billing/pricing-table-client.tsx
+  s_0eded1e9d0cab6::t_d80b6d408f1f21 25
+  s_0eded1e9d0cab6::t_9a3ca2eaee86ab 47,79-81,90,92,96,102-104,127-128,130-132
+  s_0eded1e9d0cab6::t_ef9001128a385b 3-4,6,18-24,26-39,42,48-63,65-78,82-89,91,93-95,97-101,105-124,126
+  s_0eded1e9d0cab6::t_447fbabdaa9de3 64
+  s_0eded1e9d0cab6::t_66e336316b6fa5 9
+  s_0eded1e9d0cab6::t_675ee3fcdfcbd2 44
+web/app/waitlist/page.tsx
+  s_0eded1e9d0cab6::t_605ff1a460707a 213-216
+  s_0eded1e9d0cab6::t_0b94ac1251256a 263-264,266-274
+  s_0eded1e9d0cab6::t_21380e59828c85 265
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_d13ce5c11f16a2 128-148
+  s_0eded1e9d0cab6::t_00f010f9ea8232 149-176
+supabase/migrations/20260818070107_digest_max_output_tokens_empirical.sql
+  s_0eded1e9d0cab6::t_42d0992e984f33 1-44
+web/app/pricing/page.tsx
+  s_0eded1e9d0cab6::t_1ad2d9bd0cca46 29
+  s_0eded1e9d0cab6::t_957dbfc6eba8b2 55-57
+web/lib/config/cascade.ts
+  s_0eded1e9d0cab6::t_b77905f6c81b5c 48-50,53-54
+  s_0eded1e9d0cab6::t_76c61859a7f1fc 97
+  s_0eded1e9d0cab6::t_7f36fe6b8982b8 115
+  s_0eded1e9d0cab6::t_1814d015c4e5b3 36-46
+web/components/marketing/FaqAccordion.tsx
+  s_0eded1e9d0cab6::t_d7cefc4114c4a0 4,25,27-29
+  s_0eded1e9d0cab6::t_afbdfc3b638a74 55
+AGENTS.md
+  s_0eded1e9d0cab6::t_0073d2f129276f 174-175
+  s_0eded1e9d0cab6::t_a51ead7cb87a7e 148-158
+  s_0eded1e9d0cab6::t_1baf0eb7cc3b4b 121-132
+  s_0eded1e9d0cab6::t_c2ecac01159870 159-169
+  s_0eded1e9d0cab6::t_f92186ec5b4de6 172-173
+  s_0eded1e9d0cab6::t_410fa14de42227 133-147
+  s_0eded1e9d0cab6::t_34568fed770c6f 170-171
+web/app/founders/page.tsx
+  s_0eded1e9d0cab6::t_c14a6e42b23867 1-29,31,33-51,53,56-64
+  s_0eded1e9d0cab6::t_b2a52cc027e572 30,32
+  s_0eded1e9d0cab6::t_fd76b1a65e4e34 52,54-55
+web/app/api/admin/parity-review/route.ts
+  s_0eded1e9d0cab6::t_b3d92f8f540830 1-41
+web/app/api/analyses/digest/route.ts
+  s_0eded1e9d0cab6::t_dff10784c167b3 10
+  s_0eded1e9d0cab6::t_4a0fe543ea8007 40
+web/lib/constants/pricing-plans.ts
+  s_0eded1e9d0cab6::t_203bd5ae4a6172 1-67
+web/app/admin/parity-review/ParityReviewClient.tsx
+  s_0eded1e9d0cab6::t_0fade0ba10eaae 1-274
+web/components/containers/dashboard/SettingsPanel.tsx
+  s_0eded1e9d0cab6::t_dec186688688ad 58
+  s_0eded1e9d0cab6::t_142d4921f67665 10
+  s_0eded1e9d0cab6::t_10f1b9df9c2dfb 221-222
+  s_0eded1e9d0cab6::t_9731870fc9c862 111-117
+web/components/marketing/PricingComparisonTable.tsx
+  s_0eded1e9d0cab6::t_ea447be2284bf4 37-38
+  s_0eded1e9d0cab6::t_08ef52a8c2f569 10,12,21-22,27-30,36,40,44,46-47
+  s_0eded1e9d0cab6::t_32406549846a57 63-67,69-74,76-84,86-90,100-113,133-141
+  s_0eded1e9d0cab6::t_fdb9a3c9e9a99f 75
+  s_0eded1e9d0cab6::t_4507a2f3bbe3d5 39
+web/app/api/webhooks/digest/route.ts
+  s_0eded1e9d0cab6::t_1d0d1e649b454c 18
+  s_0eded1e9d0cab6::t_43b12540ecd95b 48
+web/app/admin/parity-review/page.tsx
+  s_0eded1e9d0cab6::t_c4e57e5955c964 1-45
+web/app/landing-page.tsx
+  s_0eded1e9d0cab6::t_b78e09dd5546f0 217-232,234-252
+  s_0eded1e9d0cab6::t_b3f43c2ef3e6dc 11
+web/components/billing/founders-table-client.tsx
+  s_0eded1e9d0cab6::t_2cdbeb4303db08 1-128
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_0eded1e9d0cab6::t_e2f31059e6a772 19,23-26
+  s_0eded1e9d0cab6::t_1fdd3deae91344 27-31
+  s_0eded1e9d0cab6::t_c7d084bbf3b98a 115-119,124
+  s_0eded1e9d0cab6::t_60c783a970db24 32
+supabase/migrations/20260817232804_cascade_digest.sql
+  s_0eded1e9d0cab6::t_94e24546e20abf 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "e452ecb0bf751f54bbd9468d14f22ef68c07dadf",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
