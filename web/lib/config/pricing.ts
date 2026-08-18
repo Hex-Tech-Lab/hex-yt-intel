@@ -31,8 +31,8 @@ import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter'
  * ID out from under it.
  */
 
-export type PriceTier = 'light' | 'pro' | 'max';
-export type PriceInterval = 'month' | 'year';
+export type PriceTier = 'light' | 'pro' | 'max' | 'free' | 'founder_tier_a' | 'founder_tier_b';
+export type PriceInterval = 'month' | 'year' | 'once';
 /**
  * Provider identifiers the registry understands. Broader than
  * `BillingProviderType` (web/lib/types/billing.ts) on purpose -- `dodo` and
@@ -44,7 +44,41 @@ export type PriceInterval = 'month' | 'year';
  */
 export type PriceProviderId = 'paddle' | 'stripe' | 'dodo' | 'creem';
 
-export type PriceIdRegistry = Record<PriceTier, Record<PriceInterval, Record<PriceProviderId, string | null>>>;
+export type PriceIdRegistry = Record<PriceTier, Partial<Record<PriceInterval, Record<PriceProviderId, string | null>>>>;
+
+/**
+ * Booster pack sizes (2026-08-18) -- real preset quantities, NOT the same
+ * axis as tier/interval above (a booster is a one-time top-up, not a
+ * recurring plan), so it gets its own registry key/shape rather than being
+ * forced into PriceTier/PriceInterval. Sizes fixed 5/10/20/50/100 per
+ * docs/private/2026-08-16_PRICING_ECONOMICS_MASTER_MODEL.md §6t.
+ *
+ * IMPORTANT PROVENANCE FLAG: the master pricing doc's own §6g/§6t say pack
+ * PRICES were explicitly NOT finalized ("Exact pack prices ... need the
+ * same market-comparable exercise the Council should run, not a number
+ * invented here") -- despite the dispatching task's framing that real
+ * pricing was "already researched." The sandbox prices seeded below
+ * ($4.99/$8.99/$15.99/$34.99/$59.99) are a candidate sub-linear discount
+ * ladder anchored to the real comparables §6g DOES cite (Monica credit
+ * packs, Gistilo topup, Happy Scribe overage) -- real market anchors, but
+ * NOT a Council-approved final number. Treat as provisional the same way
+ * pricing-plans.ts's PRICING_APPROVED gate treats Max's placeholder price.
+ */
+export type BoosterSize = 5 | 10 | 20 | 50 | 100;
+export type BoosterPriceIdRegistry = Record<BoosterSize, Record<PriceProviderId, string | null>>;
+
+/**
+ * Region -> preferred provider routing (2026-08-18). Only Paddle has a real
+ * live integration today, so every real region key below resolves to
+ * 'paddle' -- but the shape is provider-agnostic and ready to route
+ * elsewhere (Dodo for India, Creem for a third region, etc.) the moment
+ * those integrations exist, without a code change -- just a registry-value
+ * edit, same as the rest of this file's pattern. `default` is the required
+ * catch-all for any region/country not explicitly listed.
+ */
+export type RegionRoutingRegistry = {
+  default: PriceProviderId;
+} & Record<string, PriceProviderId>;
 
 function emptyProviderMap(): Record<PriceProviderId, string | null> {
   return { paddle: null, stripe: null, dodo: null, creem: null };
@@ -75,9 +109,59 @@ export const PRICE_IDS_FALLBACK: PriceIdRegistry = {
     month: { ...emptyProviderMap(), paddle: 'pri_01m0azm0gxd599sca4acw17vkp' },
     year: { ...emptyProviderMap(), paddle: 'pri_01m0azm0np6qyp6zq8e51qdffk' },
   },
+  // Free -- real Paddle sandbox PRODUCT exists (pro_01m0bjt0nvzdpfhkz8hr28def9)
+  // but deliberately has NO Price object: Paddle checkout requires a
+  // positive amount, and $0 entitlement/quota is tracked in our own DB, not
+  // via a Paddle price -- same convention Stripe uses for a $0 "Free" plan
+  // (no Price, just a Product record for identity/reporting). `once`/all
+  // providers stay null; callers must treat free-tier signup as a non-
+  // checkout code path, never call resolvePriceId('free', ...) expecting a
+  // real ID.
+  free: {
+    once: emptyProviderMap(),
+  },
+  founder_tier_a: {
+    // Placeholder internal key -- real marketing display name pending a
+    // separate naming task (see task dispatch note). Price $49 one-time per
+    // master pricing doc §6q (illustrative-but-decided per explicit
+    // instruction).
+    once: { ...emptyProviderMap(), paddle: 'pri_01m0bjt2sv9qkr4jyq1kpfjgmt' },
+  },
+  founder_tier_b: {
+    // Placeholder internal key. Price $99 one-time per master pricing doc §6q.
+    once: { ...emptyProviderMap(), paddle: 'pri_01m0bjt33qc1njber48kx9ewtx' },
+  },
+};
+
+/**
+ * Booster pack fallback, real Paddle SANDBOX price IDs created 2026-08-18
+ * (see PRICE_IDS_FALLBACK's booster doc comment above for the pricing
+ * provenance caveat -- these are a candidate ladder, not Council-approved).
+ */
+export const BOOSTER_PRICE_IDS_FALLBACK: BoosterPriceIdRegistry = {
+  5: { ...emptyProviderMap(), paddle: 'pri_01m0bjt0zkyktq7cchfyngbd4e' },
+  10: { ...emptyProviderMap(), paddle: 'pri_01m0bjt19dr1fsvbt30by07b8c' },
+  20: { ...emptyProviderMap(), paddle: 'pri_01m0bjt1wzfn85tztbcy5f3rx8' },
+  50: { ...emptyProviderMap(), paddle: 'pri_01m0bjt26sgefp7awhfwg8x9ne' },
+  100: { ...emptyProviderMap(), paddle: 'pri_01m0bjt2gf0r2kt4a7shrjde5k' },
+};
+
+/**
+ * Region routing fallback -- Paddle-for-everything today (only real live
+ * integration), structure ready for per-region providers once Dodo/Creem
+ * are wired in (see module doc comment).
+ */
+export const REGION_ROUTING_FALLBACK: RegionRoutingRegistry = {
+  default: 'paddle',
+  US: 'paddle',
+  EU: 'paddle',
+  IN: 'paddle',
+  GB: 'paddle',
 };
 
 const REGISTRY_KEY = 'billing.priceIds';
+const BOOSTER_REGISTRY_KEY = 'billing.boosterPriceIds';
+const REGION_ROUTING_REGISTRY_KEY = 'billing.regionRouting';
 
 export async function resolvePriceIds(): Promise<PriceIdRegistry> {
   const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
@@ -107,4 +191,41 @@ export async function resolvePriceId(
   }
   const registry = await resolvePriceIds();
   return registry[tier]?.[interval]?.[provider] ?? null;
+}
+
+export async function resolveBoosterPriceIds(): Promise<BoosterPriceIdRegistry> {
+  const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
+    [BOOSTER_REGISTRY_KEY],
+    { [BOOSTER_REGISTRY_KEY]: BOOSTER_PRICE_IDS_FALLBACK as unknown }
+  );
+  const value = resolved[BOOSTER_REGISTRY_KEY];
+  return value && typeof value === 'object' ? (value as BoosterPriceIdRegistry) : BOOSTER_PRICE_IDS_FALLBACK;
+}
+
+export async function resolveBoosterPriceId(
+  size: BoosterSize,
+  provider: PriceProviderId
+): Promise<string | null> {
+  const registry = await resolveBoosterPriceIds();
+  return registry[size]?.[provider] ?? null;
+}
+
+export async function resolveRegionRouting(): Promise<RegionRoutingRegistry> {
+  const resolved = await SupabaseSettingsAdapter.getRegistrySettings(
+    [REGION_ROUTING_REGISTRY_KEY],
+    { [REGION_ROUTING_REGISTRY_KEY]: REGION_ROUTING_FALLBACK as unknown }
+  );
+  const value = resolved[REGION_ROUTING_REGISTRY_KEY];
+  return value && typeof value === 'object' ? (value as RegionRoutingRegistry) : REGION_ROUTING_FALLBACK;
+}
+
+/**
+ * Resolve the preferred provider for a given region/country code. Falls
+ * back to `default` for anything not explicitly listed -- never throws,
+ * never returns undefined, since checkout must always have SOME provider
+ * to route to.
+ */
+export async function resolveProviderForRegion(regionOrCountryCode: string): Promise<PriceProviderId> {
+  const routing = await resolveRegionRouting();
+  return routing[regionOrCountryCode.toUpperCase()] ?? routing.default;
 }
