@@ -1,0 +1,95 @@
+web/lib/types/billing.ts
+  s_0eded1e9d0cab6::t_4a0ad8f71709e6 12-14
+web/lib/types/contracts.ts
+  s_0eded1e9d0cab6::t_0d73bfce0e0543 103-109
+web/lib/constants/pricing-plans.ts
+  s_0eded1e9d0cab6::t_8d431eba7fc2d7 39,52,65,78
+  s_0eded1e9d0cab6::t_811e2864679d39 13-15,22-34
+  s_0eded1e9d0cab6::t_04de1e9cb86b08 35
+web/components/billing/checkout-button.tsx
+  s_0eded1e9d0cab6::t_98873004d8637f 5,10-14,17,37-38
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_1ddc8f7911bf65 1223
+  s_0eded1e9d0cab6::t_1e9c4a778a064b 1230
+  s_0eded1e9d0cab6::t_782ede37bfed92 1236
+  s_0eded1e9d0cab6::t_1f67f0b10e1746 1244
+  s_0eded1e9d0cab6::t_13ef11bdfb19aa 1220-1221
+  s_0eded1e9d0cab6::t_338a5d76f698ac 1231-1232
+  s_0eded1e9d0cab6::t_acf268c554d4b9 1228-1229
+  s_0eded1e9d0cab6::t_c74fd0efb030d9 1237
+  s_0eded1e9d0cab6::t_bea734cb395f93 1218
+  s_52423cc2597236::t_04041cb785a4e9 1195
+  s_0eded1e9d0cab6::t_5c5279467973c1 1207
+  s_0eded1e9d0cab6::t_5bf0a4910f8f5f 1217
+  s_0eded1e9d0cab6::t_a40677ab3b2597 1210
+  s_0eded1e9d0cab6::t_563566705c1fff 1211
+  s_0eded1e9d0cab6::t_d848fc39e6f138 1227
+  s_0eded1e9d0cab6::t_6d8271f5d42a6c 1239
+  s_0eded1e9d0cab6::t_306dc304c9e2bb 1225
+  s_0eded1e9d0cab6::t_bb736d8383a072 1215
+  s_0eded1e9d0cab6::t_199ea723606a33 1242
+  s_0eded1e9d0cab6::t_87c6500e59602c 1235
+  s_0eded1e9d0cab6::t_2586274024670c 1212,1214
+  s_0eded1e9d0cab6::t_b7a6c13753664a 1240
+  s_0eded1e9d0cab6::t_2f88f80de64e08 1222
+  s_0eded1e9d0cab6::t_fd7b58b1f08773 1245-1246
+  s_0eded1e9d0cab6::t_5199cae7698904 1196-1206,1208-1209
+  s_0eded1e9d0cab6::t_fa9624f2b43650 1243
+  s_0eded1e9d0cab6::t_b223f7310a4577 1234
+  s_52423cc2597236::t_7a7e04ef5c5539 1194
+  s_0eded1e9d0cab6::t_6341172a801953 1216
+  s_0eded1e9d0cab6::t_41538edba9f925 1238
+  s_0eded1e9d0cab6::t_44b27ffb542116 1219
+  s_0eded1e9d0cab6::t_b12571ce1efa46 1213
+  s_0eded1e9d0cab6::t_11f4c8be1085af 1226
+  s_0eded1e9d0cab6::t_981b11439cbfbc 1233
+  s_0eded1e9d0cab6::t_37e627c5798d8a 1241
+  s_0eded1e9d0cab6::t_c46515fb87f4e5 1247-1248
+  s_0eded1e9d0cab6::t_db5be5043e33b8 1224
+web/components/billing/pricing-table-client.tsx
+  s_0eded1e9d0cab6::t_0c89ffadc911ce 9
+  s_0eded1e9d0cab6::t_89a183fde3325d 109-116,122-123
+web/app/api/billing/checkout/route.ts
+  s_0eded1e9d0cab6::t_f0f9807f682615 10-43
+  s_0eded1e9d0cab6::t_0fc4d0b6a2f788 72-85,92
+  s_0eded1e9d0cab6::t_4e65be974c9283 101
+web/app/admin/parity-review/ParityReviewClient.tsx
+  s_0eded1e9d0cab6::t_2fccd6989b4011 70,85-89
+  s_0eded1e9d0cab6::t_eb21abbccecdba 122,131-146
+web/components/billing/billing-dashboard-client.tsx
+  s_0eded1e9d0cab6::t_50e09cacaf6fa8 108
+web/components/marketing/PricingComparisonTable.tsx
+  s_0eded1e9d0cab6::t_60978b0be526d4 121
+web/components/billing/founders-table-client.tsx
+  s_0eded1e9d0cab6::t_2e6f7380cad011 84
+  s_0eded1e9d0cab6::t_4d461368440515 27
+  s_0eded1e9d0cab6::t_968b4d8c1277af 123
+  s_0eded1e9d0cab6::t_7edf8ec828a3ba 124-126
+  s_0eded1e9d0cab6::t_df7dc490d1832d 43
+web/app/api/admin/parity-review/route.ts
+  s_0eded1e9d0cab6::t_2975f54bed40ca 6-7,19-30,32-48,59-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "fd05cadd3c97a7440aff1f0d24ff0eae13310747",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_52423cc2597236": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c03065a-0218-4a0a-9ba2-07107fe8775b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
