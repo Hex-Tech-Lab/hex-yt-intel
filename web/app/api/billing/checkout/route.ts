@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getBillingProvider } from '@/lib/billing-factory';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { CheckoutSchema } from '@/lib/types/contracts';
 import { guardTraffic, getUserTier } from '@/lib/services/traffic';
 import { resolvePriceId, type PriceProviderId } from '@/lib/config/pricing';
-import * as Sentry from '@sentry/nextjs';
 
 /**
  * Real (plan, interval, provider) -> price ID resolution, now Settings-
@@ -25,7 +25,7 @@ import * as Sentry from '@sentry/nextjs';
  * resolution is a 400, never a silent substitution of a different
  * plan/interval than what the user actually requested.
  */
-async function resolveCheckoutPriceId(
+function resolveCheckoutPriceId(
   providerType: 'paddle' | 'stripe' | 'lemonsqueezy',
   plan: 'light' | 'pro' | 'max',
   interval: 'month' | 'year'
@@ -34,7 +34,7 @@ async function resolveCheckoutPriceId(
   // include lemonsqueezy -- it was never part of the real MoR shortlist
   // (Paddle/Dodo/Creem) this registry was built for, so it has no price IDs
   // and always fails closed here.
-  if (providerType === 'lemonsqueezy') return null;
+  if (providerType === 'lemonsqueezy') return Promise.resolve(null);
   return resolvePriceId(plan, interval, providerType as PriceProviderId);
 }
 

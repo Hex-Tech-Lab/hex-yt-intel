@@ -79,7 +79,7 @@ export function PricingComparisonTable() {
 
   const colHandlers = (col: PlanColumn) => ({
     onMouseEnter: () => setHoveredCol(col),
-    onMouseLeave: () => setHoveredCol((c) => (c === col ? null : c)),
+    onMouseLeave: () => setHoveredCol((current) => (current === col ? null : current)),
   });
 
   return (

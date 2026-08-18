@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic';
 
+import { NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import * as Sentry from '@sentry/nextjs';
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/utils/require-admin';
 

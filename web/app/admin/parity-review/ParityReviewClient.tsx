@@ -105,7 +105,7 @@ export function ParityReviewClient() {
   }, [batch, selectedVideoId]);
 
   const selectedVideo = useMemo(
-    () => batch?.videos.find((v) => v.video_id === selectedVideoId) ?? null,
+    () => batch?.videos.find((video) => video.video_id === selectedVideoId) ?? null,
     [batch, selectedVideoId]
   );
 
