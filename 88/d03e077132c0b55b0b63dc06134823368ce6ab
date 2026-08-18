@@ -1,0 +1,25 @@
+web/lib/design/__tests__/entity-colors-contract.test.ts
+  s_0eded1e9d0cab6::t_e5bc90f5b93b7b 32-33,35
+web/components/templates/console/KnowledgeGraphCanvas.tsx
+  s_0eded1e9d0cab6::t_a42cbd1ae5bf06 124-135
+web/hooks/useKnowledgeGraph.ts
+  s_0eded1e9d0cab6::t_8faf51328bcb2a 17
+  s_0eded1e9d0cab6::t_04e522adc7d85e 122-126
+  s_0eded1e9d0cab6::t_f87ca5a655034a 194-206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "88d03e077132c0b55b0b63dc06134823368ce6ab",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
