@@ -29,10 +29,10 @@ describe('entity type taxonomy contract (POLE+O canonical)', () => {
   });
 
   it('every POLE+O type resolves to a real, distinct color, never the gray fallback', () => {
-    const colors = POLE_O_TYPES.map((type) => entityHex(type));
-    for (const [i, type] of POLE_O_TYPES.entries()) {
+    const colors = POLE_O_TYPES.map((entityType) => entityHex(entityType));
+    for (const [i, entityType] of POLE_O_TYPES.entries()) {
       expect(colors[i]).not.toBe(ENTITY_DEFAULT_HEX);
-      expect(ENTITY_HEX[type as EntityType]).toBeDefined();
+      expect(ENTITY_HEX[entityType as EntityType]).toBeDefined();
     }
     expect(new Set(colors).size).toBe(colors.length);
   });

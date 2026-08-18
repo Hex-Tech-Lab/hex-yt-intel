@@ -121,6 +121,18 @@ export function KnowledgeGraphCanvas({
           return r + (compact ? 4 : 8);
         })
       );
+
+      // react-force-graph-2d does NOT automatically reheat the simulation
+      // when a force is swapped in imperatively via d3Force() -- only the
+      // library's own graphData/dimension changes trigger that. Without this
+      // call, this effect's charge/center/collide overrides get registered
+      // AFTER the child component's own mount-time warmupTicks (50) already
+      // ran to convergence using the library's DEFAULT forces (React commits
+      // child effects before parent effects), leaving nodes stuck in
+      // whatever near-static layout those default forces produced -- the
+      // real cause of the reported "rigid grid" look. Reheating forces the
+      // simulation to actually run cooldownTicks under OUR forces.
+      fgRef.current.d3ReheatSimulation?.();
     }
   }, [size, compact, data]);
 
