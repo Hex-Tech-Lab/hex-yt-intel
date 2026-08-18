@@ -1,0 +1,28 @@
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_b05c45ba840374 1256
+  s_0eded1e9d0cab6::t_664cd4b42c7e1f 1254-1255
+  s_0eded1e9d0cab6::t_06e3c726149628 1253
+web/lib/config/pricing.ts
+  s_0eded1e9d0cab6::t_18cd390fce8429 34-35
+  s_0eded1e9d0cab6::t_0ae736bd4bc51e 195-231
+  s_0eded1e9d0cab6::t_ef2ea17f693249 47-81
+  s_0eded1e9d0cab6::t_99d686c41b31dd 112-159,163-164
+supabase/migrations/20260818232212_billing_free_booster_founder_region_registry.sql
+  s_0eded1e9d0cab6::t_2b572adf2fe171 1-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "84a2f416da8871a57fb95e6f93b1117a27048aea",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
