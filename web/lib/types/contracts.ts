@@ -100,6 +100,13 @@ export const AnalysisCreateSchema = z.object({
 export const CheckoutSchema = z.object({
   successUrl: z.string().url('Invalid success URL'),
   cancelUrl: z.string().url('Invalid cancel URL'),
+  // Real plan + billing interval the user selected on the pricing table.
+  // Required (not defaulted) so the server can never silently assume
+  // "pro"/"month" for a request that actually meant something else -- see
+  // ADR/Cubic P0 finding 2026-08-18: the yearly toggle previously changed
+  // display only and never reached checkout at all.
+  plan: z.enum(['light', 'pro', 'max']).describe('Selected pricing tier'),
+  interval: z.enum(['month', 'year']).describe('Selected billing interval'),
 }).refine(
   (data) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');

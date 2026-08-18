@@ -6,7 +6,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { Switch, Tooltip } from '@astryxdesign/core';
 import { CheckoutButton } from './checkout-button';
 import { Icon } from '@/components/templates/_shared/primitives';
-import { PRICING_PLANS, type PricingPlan } from '@/lib/constants/pricing-plans';
+import { PRICING_APPROVED, PRICING_PLANS, type PricingPlan } from '@/lib/constants/pricing-plans';
 
 interface PricingTableClientProps {
   userInfo: {
@@ -106,11 +106,21 @@ export function PricingTableClient({ userInfo }: PricingTableClientProps) {
             <div style={{ marginTop: "auto" }}>
               {p.name === "Free" ? (
                 <Button label="Current Plan" variant="secondary" size="md" width="100%" isDisabled />
+              ) : !PRICING_APPROVED ? (
+                // Candidate/unapproved pricing (see PRICING_APPROVED doc
+                // comment) -- render as a non-transactable preview instead
+                // of a working checkout, so a candidate price can never be
+                // bought for real before it's actually approved.
+                <Tooltip content="This pricing is a candidate range under review, not final -- checkout opens once it's locked.">
+                  <Button label="Coming soon" variant="secondary" size="md" width="100%" isDisabled />
+                </Tooltip>
               ) : (p.recommended && userInfo) ? (
                 <div style={{ width: "100%" }}>
                   <CheckoutButton
                     isLoading={isCheckoutLoading}
                     setIsLoading={setIsCheckoutLoading}
+                    plan={p.checkoutPlan}
+                    interval={isYearly ? 'year' : 'month'}
                   />
                 </div>
               ) : (

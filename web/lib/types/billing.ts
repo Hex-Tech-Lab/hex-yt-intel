@@ -9,6 +9,9 @@ export type UserTier = 'free' | 'pro' | 'enterprise';
 
 export type BillingProviderType = 'paddle' | 'stripe' | 'lemonsqueezy';
 
+export type CheckoutPlan = 'light' | 'pro' | 'max';
+export type CheckoutInterval = 'month' | 'year';
+
 export interface CheckoutOptions {
   userId: string;
   userEmail: string;

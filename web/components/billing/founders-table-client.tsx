@@ -24,7 +24,7 @@ const FOUNDER_PLANS: FounderPlan[] = [
   {
     name: "Founder Light",
     price: 49,
-    lockLabel: "Price locked ~1 year (candidate)",
+    lockLabel: "One-time payment -- discount honored ~1 year (candidate)",
     desc: "Full access, first-cohort pricing, shorter lock",
     included: [
       { label: "Full UCIS access unlocked", tooltip: "Every feature-gated capability, not a scoped-down starter set." },
@@ -40,7 +40,7 @@ const FOUNDER_PLANS: FounderPlan[] = [
   {
     name: "Founder Pro",
     price: 99,
-    lockLabel: "Price locked ~2 years (candidate)",
+    lockLabel: "One-time payment -- discount honored ~2 years (candidate)",
     desc: "Everything in Light, longer price-lock, first pick on quota",
     included: [
       { label: "Everything in Founder Light", tooltip: "Full UCIS access, full Knowledge Graph, Executive Digest — no scope reduction." },
@@ -81,7 +81,7 @@ export function FoundersTableClient() {
 
             <div style={{ marginTop: 4, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
               <p style={{ margin: 0, fontSize: 32, fontWeight: 500, color: "var(--accent)" }}>${p.price}*</p>
-              <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>one-time</span>
+              <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>one-time payment, not a subscription</span>
             </div>
             <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--ok)", fontWeight: 600 }}>{p.lockLabel}</p>
             <p style={{ margin: "2px 0 20px", fontSize: 13, color: "var(--ink-secondary)" }}>{p.desc}</p>
@@ -120,8 +120,10 @@ export function FoundersTableClient() {
 
       <p style={{ marginTop: 16, fontSize: 11, color: "var(--ink-muted)" }}>
         * Candidate numbers, not final — illustrative starting points still under review, not a live offer yet.
-        Discount-lock durations, exact bounded quota sizes, and checkout are not yet built. First cohort target
-        is roughly 200 founding members; oversubscription is welcomed, not capped.
+        This is a single one-time payment, not a recurring subscription or renewal. The &quot;~1yr/~2yr&quot; figures
+        describe how long the founding-member discount stays honored after that one-time payment — not a
+        billing interval. Exact discount-lock durations, exact bounded quota sizes, and checkout are not yet
+        built. First cohort target is roughly 200 founding members; oversubscription is welcomed, not capped.
       </p>
     </div>
   );

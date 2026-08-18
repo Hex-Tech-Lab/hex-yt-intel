@@ -118,7 +118,7 @@ export function PricingComparisonTable() {
             <React.Fragment key={cat.category}>
               {/* Category Header */}
               <TableRow style={{ background: "rgb(17 20 29 / 0.6)" }}>
-                <TableCell colSpan={4} style={{ padding: "12px 32px", borderBottom: "1px solid var(--line)" }}>
+                <TableCell colSpan={PLAN_COLUMNS.length + 1} style={{ padding: "12px 32px", borderBottom: "1px solid var(--line)" }}>
                   <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {cat.category}
                   </span>

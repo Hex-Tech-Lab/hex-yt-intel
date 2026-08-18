@@ -105,7 +105,7 @@ export function BillingDashboardClient({ initialData }: BillingDashboardProps) {
         </div>
 
         {!isPro ? (
-           <CheckoutButton isLoading={isLoading} setIsLoading={setIsLoading} />
+           <CheckoutButton isLoading={isLoading} setIsLoading={setIsLoading} plan="pro" interval="month" />
         ) : (
           <Button
             type="button"

@@ -10,15 +10,33 @@
 
 export interface PricingPlan {
   name: string;
+  /** Lowercase checkout identifier -- must match a key `resolvePriceId` in
+   *  web/app/api/billing/checkout/route.ts understands. */
+  checkoutPlan: 'light' | 'pro' | 'max';
   monthlyPrice: number | null; // null = "contact us"
   desc: string;
   features: { label: string; tooltip: string }[];
   recommended: boolean;
 }
 
+/**
+ * Whether the numbers in PRICING_PLANS below are real, approved, purchasable
+ * pricing -- or still a candidate/draft range awaiting sign-off.
+ *
+ * Real fix for Cubic P0 finding (2026-08-18): candidate prices were publicly
+ * rendered AND purchasable (a user could buy a "candidate, not final" price
+ * for real money). While this stays `false`, the pricing table renders every
+ * paid tier's CTA as a non-transactable "Coming soon" preview instead of a
+ * working checkout button -- flip to `true` only once real pricing is locked
+ * (see docs/private/2026-08-16_PRICING_ECONOMICS_MASTER_MODEL.md) AND real
+ * provider price IDs exist for every tier this flag would unlock.
+ */
+export const PRICING_APPROVED = false;
+
 export const PRICING_PLANS: PricingPlan[] = [
   {
     name: "Free",
+    checkoutPlan: "light",
     monthlyPrice: 0,
     desc: "Try a full analysis, no card required",
     features: [
@@ -31,6 +49,7 @@ export const PRICING_PLANS: PricingPlan[] = [
   },
   {
     name: "Light",
+    checkoutPlan: "light",
     monthlyPrice: 5,
     desc: "A focused view of every analysis",
     features: [
@@ -43,6 +62,7 @@ export const PRICING_PLANS: PricingPlan[] = [
   },
   {
     name: "Pro",
+    checkoutPlan: "pro",
     monthlyPrice: 9,
     desc: "The complete intelligence breakdown",
     features: [
@@ -55,6 +75,7 @@ export const PRICING_PLANS: PricingPlan[] = [
   },
   {
     name: "Max",
+    checkoutPlan: "max",
     monthlyPrice: null,
     desc: "For high-volume research",
     features: [
