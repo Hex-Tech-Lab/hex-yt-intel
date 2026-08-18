@@ -5,40 +5,37 @@ import { getBillingProvider } from '@/lib/billing-factory';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { CheckoutSchema } from '@/lib/types/contracts';
 import { guardTraffic, getUserTier } from '@/lib/services/traffic';
+import { resolvePriceId, type PriceProviderId } from '@/lib/config/pricing';
 import * as Sentry from '@sentry/nextjs';
 
 /**
- * Real (plan, interval) -> price ID allowlist, per provider.
+ * Real (plan, interval, provider) -> price ID resolution, now Settings-
+ * Registry-backed (2026-08-18, web/lib/config/pricing.ts) instead of a
+ * hardcoded allowlist -- adding a new tier/interval/provider price ID is a
+ * registry edit (admin settings page), not a code change/redeploy.
  *
- * Only Pro/monthly has a real, live price ID today (STRIPE_PRICE_ID_PRO /
- * PADDLE_PRO_PRICE_ID -- confirmed $9/mo, matching the current Pro tier
- * candidate price). Light and Max, and Pro/yearly, have NO real provider
- * price ID yet. Previously the route ignored `plan`/`interval` entirely and
- * always charged the Pro monthly price regardless of what the user selected
- * on the pricing table (Cubic P0 finding, 2026-08-18) -- a user who picked
- * "yearly" billing would still be charged the monthly amount/interval with
- * no indication anything was substituted.
+ * Only Pro/monthly has a real, live-or-sandbox price ID resolved from an env
+ * var today (STRIPE_PRICE_ID_PRO / PADDLE_PRO_PRICE_ID); Light/Pro-yearly/Max
+ * resolve real Paddle SANDBOX price IDs seeded by migration
+ * 20260818174553_billing_price_ids_registry.sql. Dodo/Creem resolve to null
+ * for every combo until those providers get a real BillingProvider
+ * implementation + API keys (see that migration's header comment).
  *
- * Real fix: validate the requested (plan, interval) against this explicit
- * allowlist and fail loudly (400) for anything unsupported, instead of
- * silently substituting the Pro/monthly price. Add a new entry here only
- * once a real price ID exists for that combination in the provider
- * dashboard + env vars.
+ * Same fail-closed contract as before (Cubic P0 finding, 2026-08-18): a null
+ * resolution is a 400, never a silent substitution of a different
+ * plan/interval than what the user actually requested.
  */
-function resolvePriceId(
+async function resolveCheckoutPriceId(
   providerType: 'paddle' | 'stripe' | 'lemonsqueezy',
   plan: 'light' | 'pro' | 'max',
   interval: 'month' | 'year'
-): string | null {
-  if (providerType === 'paddle') {
-    if (plan === 'pro' && interval === 'month') return process.env.PADDLE_PRO_PRICE_ID || null;
-    return null;
-  }
-  if (providerType === 'stripe') {
-    if (plan === 'pro' && interval === 'month') return process.env.STRIPE_PRICE_ID_PRO || null;
-    return null;
-  }
-  return null;
+): Promise<string | null> {
+  // The registry's PriceProviderId union (paddle/stripe/dodo/creem) doesn't
+  // include lemonsqueezy -- it was never part of the real MoR shortlist
+  // (Paddle/Dodo/Creem) this registry was built for, so it has no price IDs
+  // and always fails closed here.
+  if (providerType === 'lemonsqueezy') return null;
+  return resolvePriceId(plan, interval, providerType as PriceProviderId);
 }
 
 export async function POST(request: NextRequest) {
@@ -73,7 +70,7 @@ export async function POST(request: NextRequest) {
     // 3b. Resolve the real price ID for the requested plan+interval. Fail
     // loudly rather than substituting a different plan/interval than what
     // the user actually selected (see resolvePriceId's doc comment).
-    const priceId = resolvePriceId(provider.type, validation.data.plan, validation.data.interval);
+    const priceId = await resolveCheckoutPriceId(provider.type, validation.data.plan, validation.data.interval);
     if (!priceId) {
       return NextResponse.json(
         {
