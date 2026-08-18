@@ -1,0 +1,29 @@
+web/components/billing/founders-table-client.tsx
+  s_0eded1e9d0cab6::t_340c41c04f227d 59,61,68,77,80,83,86-87,90-91,93-94,98-99,101-102
+web/app/admin/parity-review/ParityReviewClient.tsx
+  s_0eded1e9d0cab6::t_7ee483543a9d2b 108
+web/app/api/admin/parity-review/route.ts
+  s_0eded1e9d0cab6::t_5db5405f44e017 3-4
+web/components/marketing/PricingComparisonTable.tsx
+  s_0eded1e9d0cab6::t_2d4b1b87cef54d 82
+web/app/api/billing/checkout/route.ts
+  s_0eded1e9d0cab6::t_c6e5e81808e306 28
+  s_0eded1e9d0cab6::t_98fe96e681ea00 37
+  s_0eded1e9d0cab6::t_9d165178f26fb5 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "63e02e378cc1faaaefa7f817f1d79da2cf83ff04",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
