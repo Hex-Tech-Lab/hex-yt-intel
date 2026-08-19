@@ -31,7 +31,8 @@ type OptionalEnvVar =
   | 'QSTASH_TOKEN'
   | 'QSTASH_CURRENT_SIGNING_KEY'
   | 'QSTASH_NEXT_SIGNING_KEY'
-  | 'DECODO_API_KEY';
+  | 'DECODO_API_KEY'
+  | 'TEST_AUTH_BYPASS_SECRET';
 
 type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];
 type EnvVar = RequiredEnvVar | OptionalEnvVar;
@@ -163,6 +164,20 @@ const isVercel = Boolean(process.env.VERCEL);
   get stripeSecretKey(): string { return validateEnvVar('STRIPE_SECRET_KEY', true)!; },
   get stripeWebhookSecret(): string { return validateEnvVar('STRIPE_WEBHOOK_SECRET', true)!; },
   get decodoApiKey(): string | undefined { return validateEnvVar('DECODO_API_KEY', false); },
+  /**
+   * Test-only auth bypass secret (see app/api/test-auth/login/route.ts).
+   * Deliberately has NO mock default — unlike every other optional var in this
+   * module, an unset value here must stay genuinely `undefined`, not fall back
+   * to a functional mock, or the bypass route would be reachable with no
+   * configuration at all in every environment. Read directly from
+   * process.env, bypassing validateEnvVar's mock-fallback branch entirely, so
+   * there is no path (mocked or otherwise) that resolves this to a truthy
+   * value unless a real secret is explicitly configured.
+   */
+  get testAuthBypassSecret(): string | undefined {
+    const val = process.env.TEST_AUTH_BYPASS_SECRET;
+    return val && !isPlaceholder(val) ? val : undefined;
+  },
   get streamHmacSecret(): string {
     const val = validateEnvVar('STREAM_HMAC_SECRET', true);
     if (val) return val;
