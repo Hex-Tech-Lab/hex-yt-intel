@@ -1,6 +1,7 @@
 import { getSupabaseServiceClient } from '@/lib/supabase';
 import * as Sentry from '@sentry/nextjs';
 import type { GraphNode, GraphEdge } from '@/lib/types/knowledge-graph';
+import { normalizeEntityType } from '@/lib/design/entity-taxonomy';
 
 export class SupabaseGraphAdapter {
   static async getAnalysesByTenant(tenantId: string): Promise<Array<{ id: string; title: string; nodes: GraphNode[]; edges: GraphEdge[] }>> {
@@ -70,7 +71,7 @@ export class SupabaseGraphAdapter {
       .insert(params.entities.map(e => ({
         analysis_id: params.analysisId,
         label: e.label,
-        type: e.type,
+        type: normalizeEntityType(e.type),
         weight: e.weight,
         raw_node: e.rawNode ?? null
       })))

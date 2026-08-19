@@ -14,6 +14,7 @@ import { useSynthesisNucleus } from '@/lib/stores/synthesis-nucleus-store';
 import { PERSONA_DIMENSIONS } from '@/lib/types/persona';
 import { KnowledgeGraphSynthesizer } from '@/lib/intelligence/knowledge-graph';
 import { TfIdfSimilarityEngine } from '@/lib/intelligence/similarity';
+import { normalizeEntityType } from '@/lib/design/entity-taxonomy';
 import type { KnowledgeGraph, GraphNode, GraphEdge, RelationKind } from '@/lib/types/knowledge-graph';
 
 const EMPTY: KnowledgeGraph = { nodes: [], edges: [], rootId: null };
@@ -118,7 +119,11 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
             dimension: resolvedDimension,
             label: e.label,
             type: e.type,
-            entityType: e.type || 'Object',
+            // e.type is API-sourced from kg_entities, which is normalized at
+            // write time -- but normalize again here defensively rather than
+            // trusting that invariant at render time (belt-and-suspenders,
+            // same reasoning as the storeKnowledgeGraph branch below).
+            entityType: normalizeEntityType(e.type),
             weight: e.weight
           };
         });
@@ -186,7 +191,19 @@ export function useKnowledgeGraph(analysisId?: string | null): { graph: Knowledg
           polarity: typeof n.polarity === 'number' ? n.polarity : 0,
           keyTerms: Array.isArray(n.keyTerms) ? n.keyTerms : [],
           inPersona: typeof n.inPersona === 'boolean' ? n.inPersona : true,
-          entityType: n.entityType || n.type || 'Object',
+          // ROOT CAUSE of PR #239's remaining gray-WordCloud gap: this is the
+          // client-state path fed directly by the worker's live SSE stream
+          // (ADR 023 fallback + fresh in-progress analyses), which carries
+          // the worker's raw legacy lowercase 8-value enum
+          // (concept/framework/tool/study/trend/metric/...), never the
+          // persisted/normalized POLE+O value. entity-colors.ts does an exact
+          // Record lookup with no legacy-alias handling, so every one of
+          // those unnormalized values fell through to the gray default --
+          // reproducing on a real fresh analysis even with #239's fix
+          // otherwise applied. Normalize here, at the same hook boundary
+          // used by the API-sourced branch above, so every consumer
+          // (WordCloud/MindMap/KnowledgeGraphCanvas) always receives POLE+O.
+          entityType: normalizeEntityType(n.entityType || n.type),
         }];
       });
 

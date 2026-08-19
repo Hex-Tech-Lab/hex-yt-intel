@@ -5,17 +5,23 @@
  * KnowledgeGraphCanvas), never by a pure-CSS rule, so the palette lives here
  * as design tokens rather than in globals.css. Every component derives its
  * colors from this module — do not re-declare the hues anywhere else.
+ *
+ * Keyed on POLE+O, the canonical entity-type vocabulary (see
+ * entity-taxonomy.ts) — the one actually enforced by kg_entities' Postgres
+ * CHECK constraint. Every write path normalizes to POLE+O before
+ * persistence, so this module only ever needs to know one vocabulary.
  */
-// POLE+O base types (ADR 026 §6.2) — see docs/architecture/entity-colors-poleo-rationale.md
-export type EntityType = 'Person' | 'Organization' | 'Location' | 'Event' | 'Object';
+import type { PoleOType } from './entity-taxonomy';
 
-/** Base hex per entity type — the one place these values are defined. */
+export type EntityType = PoleOType;
+
+/** Base hex per POLE+O type — the one place these values are defined. */
 export const ENTITY_HEX: Record<EntityType, string> = {
   Person: '#F43F5E', // rose
   Organization: '#3B82F6', // blue
   Location: '#10B981', // emerald
-  Event: '#F97316', // orange
-  Object: '#A855F7', // purple, the POLE+O catch-all
+  Event: '#EAB308', // yellow
+  Object: '#A855F7', // purple
 };
 
 /** Fallback for unknown / missing entity types (slate-400). */
