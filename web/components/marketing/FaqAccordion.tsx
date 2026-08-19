@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Collapsible } from '@astryxdesign/core/Collapsible';
 
 interface FaqItem {
@@ -21,8 +22,11 @@ export function FaqAccordion({ items }: FaqAccordionProps) {
         const isOpen = openIndex === i;
 
         return (
-          <div
+          <motion.div
             key={item.q}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.05, ease: "easeOut" }}
             style={{
               background: "var(--surface)",
               border: "1px solid var(--line)",
@@ -48,7 +52,7 @@ export function FaqAccordion({ items }: FaqAccordionProps) {
                 {item.a}
               </p>
             </Collapsible>
-          </div>
+          </motion.div>
         );
       })}
     </div>

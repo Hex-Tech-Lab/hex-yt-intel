@@ -210,7 +210,10 @@ export default function WaitlistPage() {
             <div className="cta-row">
               <WaitlistForm status={status} submit={submit} />
             </div>
-            <p className="fine">First 200 creators get founder pricing. No spam — one email when we open.</p>
+            <p className="fine">
+              First 200 creators get founder pricing. No spam — one email when we open.{' '}
+              <a href="/founders" style={{ color: 'var(--accent)', fontWeight: 600 }}>See the founder pre-sale &rarr;</a>
+            </p>
           </section>
 
           <section className="block">
@@ -255,6 +258,18 @@ export default function WaitlistPage() {
               <li><span className="num">02</span><h4>Grounded chat</h4><p>Ask it anything about the video — every answer cites the exact timestamp it came from.</p></li>
               <li><span className="num">03</span><h4>Research library</h4><p>Every video you&apos;ve analyzed, searchable, so last month&apos;s research pays off again today.</p></li>
             </ul>
+          </section>
+
+          <section className="block">
+            <p className="kicker">Funding the build</p>
+            <h2>We&apos;re bootstrapped and solo. The founder pre-sale is how this gets funded.</h2>
+            <p className="lead">
+              No VC round. A bounded first cohort gets full access locked in at founding pricing — real runway
+              for us, a real deal for you, not a marketing discount.
+            </p>
+            <p className="fine" style={{ marginTop: 8 }}>
+              <a href="/founders" style={{ color: 'var(--accent)', fontWeight: 700 }}>See the founder pre-sale &rarr;</a>
+            </p>
           </section>
 
           <section className="block" style={{ borderBottom: '1px solid var(--line)' }}>

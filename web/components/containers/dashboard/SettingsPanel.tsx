@@ -7,6 +7,7 @@ import { LogsViewerClient } from '@/app/settings/logs/LogsViewerClient';
 import { AdminSettingsClient } from '@/app/admin/settings/AdminSettingsClient';
 import { UsersAdminClient } from '@/app/admin/users/UsersAdminClient';
 import { WaitlistAdminClient } from '@/app/admin/waitlist/WaitlistAdminClient';
+import { ParityReviewClient } from '@/app/admin/parity-review/ParityReviewClient';
 import { useUsageSummary } from '@/hooks/useUsageSummary';
 
 /** Activity & Usage pane -- reuses the shared useUsageSummary hook (same
@@ -54,7 +55,7 @@ function UsagePane() {
   );
 }
 
-export type SettingsSubmenuKey = 'overview' | 'logs' | 'usage' | 'preferences' | 'admin-settings' | 'admin-users' | 'admin-waitlist';
+export type SettingsSubmenuKey = 'overview' | 'logs' | 'usage' | 'preferences' | 'admin-settings' | 'admin-users' | 'admin-waitlist' | 'admin-parity-review';
 
 export interface SettingsItem {
   key: SettingsSubmenuKey;
@@ -105,6 +106,13 @@ export const SETTINGS_TREE: SettingsItem[] = [
     label: 'Waitlist Signups',
     description: 'Email, source, and signup time for the /waitlist landing page',
     icon: 'solar:letter-unread-linear',
+    category: 'SYSTEM REGISTRY',
+  },
+  {
+    key: 'admin-parity-review',
+    label: 'Model Parity Review',
+    description: 'Side-by-side comparison of Haiku 4.5 vs GPT-OSS-120B analysis output',
+    icon: 'solar:scale-linear',
     category: 'SYSTEM REGISTRY',
   },
 ];
@@ -210,6 +218,8 @@ export function SettingsContentPane({ activeKey, onNavigate }: SettingsContentPa
         {activeKey === 'admin-users' && <UsersAdminClient />}
 
         {activeKey === 'admin-waitlist' && <WaitlistAdminClient />}
+
+        {activeKey === 'admin-parity-review' && <ParityReviewClient />}
       </div>
     </ViewTransition>
   );

@@ -125,3 +125,52 @@ No `NOT VALID`/`VALIDATE CONSTRAINT` needed (grants aren't constraints).
 Re-run `pnpm tsx scripts/verify-quality-engine.ts --mode full` and
 `pnpm tsx web/scripts/contract-auditor.ts` after clearing the top of the
 roster to confirm no regressions and re-sort.
+
+## 2026-08-18 — `analyses.duration_seconds` is a dead/NULL column
+
+Found while running the digest/UCIS parity test: `analyses.duration_seconds`
+is NULL on all 210 real rows checked. Real video-duration data lives instead
+at `analysis_payload->'videoMetadata'->>'duration'`, and even that's only
+populated on 32/210 rows — the rest have no video-length metadata captured
+at all.
+
+**Impact**: any real analytics/pricing work relying on video length (e.g.
+the compound-quota design in the pricing master doc, which caps by
+"total video hours") currently has no reliable source for it across most
+of the dataset.
+
+**Not fixed this pass** — flagged for next wave. Real fix needs: (1) confirm
+whether `duration_seconds` should be backfilled from `videoMetadata.duration`
+where available, or deprecated/dropped since it's never written; (2) confirm
+why `videoMetadata` itself is missing on ~85% of rows (fetch failure? column
+added after those rows were created? worth checking real ingestion code path
+via `code-review-graph` before assuming); (3) if kept, add real write-path
+coverage so future rows populate it consistently.
+
+## 2026-08-18 — Cascade provider order has THREE sources of truth, not one — real SSOT violation
+
+Found while fixing Haiku 4.5's provider order (Vertex→Azure→Anthropic Direct→
+Bedrock, per real OpenRouter speed data). There are actually THREE places
+this config lives, out of sync:
+
+1. `web/lib/config/cascade.ts` — `ANALYSIS_CASCADE_FALLBACK` constant (fixed 2026-08-18)
+2. `setting_values` DB table, `cascade.analysis` key — the documented "real" source of truth (fixed 2026-08-18)
+3. `worker/src/services/LLMCascade.ts` (2 occurrences) — a SEPARATE hardcoded
+   fallback `['anthropic', 'google-vertex', 'amazon-bedrock']` for Haiku 4.5,
+   with NO Azure at all, never touched by today's fix. This may be the
+   actual code path driving real worker-side analysis calls, meaning
+   today's registry fix might not have changed real production behavior.
+
+**Not fixed this pass** (checkpoint-constrained, flagged for immediate next
+session): the worker needs to read `cascade.analysis` from the same
+Settings Registry as the web app (worker has no DB access per ADR 005 —
+check how it currently receives cascade config, likely via the signed
+stream payload forwarded from web per cascade.ts's own comment — the fix
+is probably "web resolves the real registry value and forwards it to the
+worker," not "worker queries DB directly"). Until fixed, do not trust that
+editing `cascade.ts`/the DB registry alone changes real worker behavior for
+Haiku 4.5 specifically — verify against `LLMCascade.ts`'s actual behavior too.
+
+Real Vertex-Europe OpenRouter slug (needed for the pending "Vertex EU as
+top priority" request): `google-vertex/europe` (confirmed by user, not yet
+applied to any of the three locations above).

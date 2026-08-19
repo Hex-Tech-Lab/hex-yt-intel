@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SupabasePersistenceAdapter } from '@/lib/adapters';
 import { OpenRouterCompletionAdapter } from '@/lib/adapters/OpenRouterCompletionAdapter';
 import { GenerateExecutiveDigestUseCase } from '@/lib/usecases/GenerateExecutiveDigestUseCase';
-import { resolveChatCascade } from '@/lib/config/cascade';
+import { resolveDigestCascade } from '@/lib/config/cascade';
 import { verifyQStashSignature, type DigestPayload } from '@/lib/qstash-client';
 import * as Sentry from '@sentry/nextjs';
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       new OpenRouterCompletionAdapter()
     );
 
-    const result = await useCase.execute({ analysisId, userId, models: await resolveChatCascade() });
+    const result = await useCase.execute({ analysisId, userId, models: await resolveDigestCascade() });
 
     if (result.type === 'error') {
       // ERR_ANALYSIS_NOT_FOUND / not-yet-usable-markdown are not transient --

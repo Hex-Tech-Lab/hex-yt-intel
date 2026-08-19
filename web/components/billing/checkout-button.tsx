@@ -2,13 +2,19 @@
 
 import { useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
+import type { CheckoutInterval, CheckoutPlan } from '@/lib/types/billing';
 
 interface CheckoutButtonProps {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  /** Real plan + billing interval to send to /api/billing/checkout -- must
+   *  match what's actually displayed/selected on the pricing table (Cubic
+   *  P0 fix, 2026-08-18: the yearly toggle previously never reached here). */
+  plan: CheckoutPlan;
+  interval: CheckoutInterval;
 }
 
-export function CheckoutButton({ isLoading, setIsLoading }: CheckoutButtonProps) {
+export function CheckoutButton({ isLoading, setIsLoading, plan, interval }: CheckoutButtonProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleCheckout = async () => {
@@ -28,6 +34,8 @@ export function CheckoutButton({ isLoading, setIsLoading }: CheckoutButtonProps)
         body: JSON.stringify({
           successUrl,
           cancelUrl,
+          plan,
+          interval,
         }),
       });
 

@@ -1,11 +1,42 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { getBillingProvider } from '@/lib/billing-factory';
 import { getSupabaseClientWithAuth } from '@/lib/supabase';
 import { CheckoutSchema } from '@/lib/types/contracts';
 import { guardTraffic, getUserTier } from '@/lib/services/traffic';
-import * as Sentry from '@sentry/nextjs';
+import { resolvePriceId, type PriceProviderId } from '@/lib/config/pricing';
+
+/**
+ * Real (plan, interval, provider) -> price ID resolution, now Settings-
+ * Registry-backed (2026-08-18, web/lib/config/pricing.ts) instead of a
+ * hardcoded allowlist -- adding a new tier/interval/provider price ID is a
+ * registry edit (admin settings page), not a code change/redeploy.
+ *
+ * Only Pro/monthly has a real, live-or-sandbox price ID resolved from an env
+ * var today (STRIPE_PRICE_ID_PRO / PADDLE_PRO_PRICE_ID); Light/Pro-yearly/Max
+ * resolve real Paddle SANDBOX price IDs seeded by migration
+ * 20260818174553_billing_price_ids_registry.sql. Dodo/Creem resolve to null
+ * for every combo until those providers get a real BillingProvider
+ * implementation + API keys (see that migration's header comment).
+ *
+ * Same fail-closed contract as before (Cubic P0 finding, 2026-08-18): a null
+ * resolution is a 400, never a silent substitution of a different
+ * plan/interval than what the user actually requested.
+ */
+function resolveCheckoutPriceId(
+  providerType: 'paddle' | 'stripe' | 'lemonsqueezy',
+  plan: 'light' | 'pro' | 'max',
+  interval: 'month' | 'year'
+): Promise<string | null> {
+  // The registry's PriceProviderId union (paddle/stripe/dodo/creem) doesn't
+  // include lemonsqueezy -- it was never part of the real MoR shortlist
+  // (Paddle/Dodo/Creem) this registry was built for, so it has no price IDs
+  // and always fails closed here.
+  if (providerType === 'lemonsqueezy') return Promise.resolve(null);
+  return resolvePriceId(plan, interval, providerType as PriceProviderId);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,14 +66,27 @@ export async function POST(request: NextRequest) {
 
     // 3. Determine active provider via switch
     const provider = getBillingProvider();
-    
+
+    // 3b. Resolve the real price ID for the requested plan+interval. Fail
+    // loudly rather than substituting a different plan/interval than what
+    // the user actually selected (see resolvePriceId's doc comment).
+    const priceId = await resolveCheckoutPriceId(provider.type, validation.data.plan, validation.data.interval);
+    if (!priceId) {
+      return NextResponse.json(
+        {
+          error: `Checkout for the "${validation.data.plan}" plan billed ${validation.data.interval}ly is not yet available. Only Pro (monthly) supports checkout today.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // 4. Create checkout using active provider
     const { url, id } = await provider.createCheckout({
       userId,
       userEmail,
       successUrl: validation.data.successUrl,
       cancelUrl: validation.data.cancelUrl,
-      priceId: provider.type === 'paddle' ? process.env.PADDLE_PRO_PRICE_ID! : process.env.STRIPE_PRO_PRICE_ID!,
+      priceId,
     });
 
     if (!url && !id) return NextResponse.json({ error: 'Failed to create checkout' }, { status: 500 });
@@ -51,7 +95,7 @@ export async function POST(request: NextRequest) {
     await supabase.from('usage_logs').insert({
       user_id: userId,
       action: 'checkout_initiated',
-      metadata: { provider: provider.type },
+      metadata: { provider: provider.type, plan: validation.data.plan, interval: validation.data.interval },
       created_at: new Date().toISOString(),
     });
 
