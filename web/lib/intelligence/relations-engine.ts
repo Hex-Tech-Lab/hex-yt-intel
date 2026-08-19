@@ -86,7 +86,7 @@ async function* callStanceModelStream(
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://yt-intel.getmytestdrive.com',
+        'HTTP-Referer': 'https://getvintel.com',
         'X-Title': 'hex-yt-intel / stance-relations',
       },
       body: JSON.stringify({

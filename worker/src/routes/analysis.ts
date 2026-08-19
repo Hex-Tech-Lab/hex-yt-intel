@@ -766,7 +766,7 @@ function buildStreamResponse(
   const atomicPersist = createAtomicPersist({
     hasContent: () => finalText.length > 0,
     persist: (status) => {
-      const url = appUrl || "https://yt-intel.getmytestdrive.com";
+      const url = appUrl || "https://getvintel.com";
       const persistParams = {
         analysisId: req.analysisId,
         videoId: req.videoId,

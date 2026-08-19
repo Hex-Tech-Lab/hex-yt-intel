@@ -1,10 +1,20 @@
 import type { MiddlewareHandler } from "hono";
 
+// Worker-side code constant, not Settings-Registry-driven: the CF Worker has
+// no direct DB access by design (ADR 005 -- resolved config is forwarded
+// through the signed stream payload from Vercel, not queried per-request),
+// and a live DB lookup on every CORS preflight would add a real latency/
+// reliability regression. Update this array by hand when the domain changes.
 const ALLOWED_ORIGINS = [
   "https://hex-yt-intel.vercel.app",
+  // New canonical production domain (2026-08-19 migration).
+  "https://getvintel.com",
+  "https://www.getvintel.com",
   "https://yt-intel.getmytestdrive.com",
-  // Parallel domain cutover (2026-07-25): both domains valid during
-  // transition; drop yt-intel.getmytestdrive.com once the hard cutoff happens.
+  // Parallel domain cutover (2026-07-25): both getmytestdrive.com domains
+  // still valid, currently-live parallel-cutover domains per CLAUDE.md's
+  // Infrastructure Coordinates section; drop once the hard cutoff to
+  // getvintel.com is confirmed by the user.
   "https://v-intel.getmytestdrive.com",
   "http://localhost:3000",
   "http://localhost:3005",
@@ -44,8 +54,13 @@ export function isValidAppUrl(
       listMatch: originList.includes(origin),
       localhost: hostname === "localhost" || hostname === "127.0.0.1",
       vercel: hostname.endsWith(".vercel.app"),
-      // Parallel domain cutover (2026-07-25) -- both valid until hard cutoff.
-      production: hostname === "yt-intel.getmytestdrive.com" || hostname === "v-intel.getmytestdrive.com",
+      // New canonical production domain (2026-08-19) + parallel-cutover
+      // getmytestdrive.com domains (2026-07-25) -- all valid until hard cutoff.
+      production:
+        hostname === "getvintel.com" ||
+        hostname === "www.getvintel.com" ||
+        hostname === "yt-intel.getmytestdrive.com" ||
+        hostname === "v-intel.getmytestdrive.com",
     };
 
     if (originMap.envMatch || originMap.listMatch) return true;

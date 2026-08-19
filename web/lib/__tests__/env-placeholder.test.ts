@@ -62,7 +62,7 @@ describe('env.ts — isPlaceholder detection', () => {
 
   it('does NOT flag legitimate worker URLs', () => {
     expect(isPlaceholder('https://hex-yt-intel.kelly-melvin.workers.dev')).toBe(false);
-    expect(isPlaceholder('https://yt-intel.getmytestdrive.com')).toBe(false);
+    expect(isPlaceholder('https://getvintel.com')).toBe(false);
   });
 
   it('does NOT flag undefined or non-string', () => {

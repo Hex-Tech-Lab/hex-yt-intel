@@ -66,7 +66,7 @@ interface ChatStreamRequest {
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const HTTP_REFERER = "https://yt-intel.getmytestdrive.com";
+const HTTP_REFERER = "https://getvintel.com";
 
 // HMAC-SHA256 hex — byte-identical to web/lib/stream-token.ts so the token minted on
 // Vercel verifies here and the content signature verifies back on Vercel.
@@ -428,7 +428,7 @@ export async function handleChatStream(c: Context<{ Bindings: ChatEnv }>) {
           // observed body can't be replayed. Verified on Vercel by verifyContentSig.
           const persistExp = Date.now() + CHAT_PERSIST_SIG_TTL_MS;
           const contentSig = await signBoundContent(signingKey, "chat-persist", req.conversationId, persistExp, full);
-          const appUrl = req.appUrl || c.env.APP_URL || "https://yt-intel.getmytestdrive.com";
+          const appUrl = req.appUrl || c.env.APP_URL || "https://getvintel.com";
 
           try {
             const res = await fetch(`${appUrl}/api/chat/persist`, {

@@ -269,7 +269,7 @@ async function enqueueSystemCommentsBackfill(gap: AuxGap): Promise<boolean> {
         videoId: gap.videoId,
         userId: gap.userId,
         totalCommentCount,
-        appUrl: env.appUrl || 'https://yt-intel.getmytestdrive.com',
+        appUrl: env.appUrl || 'https://getvintel.com',
         sig: token.sig,
         exp: token.exp,
       }),

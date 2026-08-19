@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'https://yt-intel.getmytestdrive.com',
+    baseURL: 'https://getvintel.com',
     trace: 'on-first-retry',
   },
 
