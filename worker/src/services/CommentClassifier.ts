@@ -14,7 +14,7 @@ import type {
 import type { VideoComment } from "../ports/CommentIngestionPort";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const HTTP_REFERER = "https://yt-intel.getmytestdrive.com";
+const HTTP_REFERER = "https://getvintel.com";
 const REQUEST_TIMEOUT_MS = 30_000;
 
 const VALID_SENTIMENTS: readonly CommentSentiment[] = ["positive", "negative", "neutral", "mixed"];

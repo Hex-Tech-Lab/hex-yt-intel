@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         videoId,
         userId: user.id,
         totalCommentCount,
-        appUrl: env.appUrl || 'https://yt-intel.getmytestdrive.com',
+        appUrl: env.appUrl || 'https://getvintel.com',
         sig: token.sig,
         exp: token.exp,
       }),

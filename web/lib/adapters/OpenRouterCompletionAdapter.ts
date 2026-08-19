@@ -3,7 +3,7 @@ import type { TextCompletionPort, CompletionModel } from '@/lib/ports/ExecutiveD
 import * as Sentry from '@sentry/nextjs';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const HTTP_REFERER = 'https://yt-intel.getmytestdrive.com';
+const HTTP_REFERER = 'https://getvintel.com';
 const REQUEST_TIMEOUT_MS = 45_000;
 const DEFAULT_MAX_TOKENS = 2000;
 
