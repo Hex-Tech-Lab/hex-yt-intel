@@ -20,12 +20,16 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3005",
 ];
 
+const VERCEL_PREVIEW_ORIGIN_RE = /^https:\/\/hex-yt-intel-[a-z0-9-]+\.vercel\.app$/;
+
 export function resolveCorsOrigin(origin: string | undefined): string | null {
   if (!origin) return null;
-  if (ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed))) {
+  // Exact match, not startsWith: `startsWith` let a spoofed origin like
+  // `https://getvintel.com.evil.com` pass (real gap found 2026-08-20).
+  if (ALLOWED_ORIGINS.includes(origin)) {
     return origin;
   }
-  if (origin.startsWith("https://hex-yt-intel-") && origin.endsWith(".vercel.app")) {
+  if (VERCEL_PREVIEW_ORIGIN_RE.test(origin)) {
     return origin;
   }
   return null;
