@@ -52,12 +52,12 @@ const COMPARISON_DATA: FeatureCategory[] = [
 function CheckOrValue({ value }: { value: string | boolean }) {
   if (typeof value === 'boolean') {
     return value ? (
-      <Icon icon="solar:check-circle-bold" size={18} style={{ color: "var(--ok)" }} />
+      <Icon icon="solar:check-circle-bold" size={18} className="text-[var(--ok)]" />
     ) : (
-      <Icon icon="solar:close-circle-linear" size={18} style={{ color: "var(--ink-muted)", opacity: 0.3 }} />
+      <Icon icon="solar:close-circle-linear" size={18} className="text-[var(--ink-muted)] opacity-30" />
     );
   }
-  return <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{value}</span>;
+  return <span className="text-[13px] font-medium text-[var(--ink)]">{value}</span>;
 }
 
 const PLAN_COLUMNS = ["free", "light", "pro", "max"] as const;
@@ -83,32 +83,21 @@ export function PricingComparisonTable() {
   });
 
   return (
-    <div style={{
-      marginTop: 80,
-      width: "100%",
-      borderRadius: 16,
-      border: "1px solid var(--line)",
-      background: "rgb(26 31 43 / 0.4)",
-      overflow: "hidden"
-    }}>
-      <Table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+    <div className="mt-20 w-full overflow-hidden rounded-2xl border border-[var(--line)] bg-[rgb(26_31_43_/_0.4)]">
+      <Table className="w-full border-collapse text-left">
         <TableHeader>
-          <TableRow style={{ borderBottom: "1px solid var(--line)", background: "var(--bg)" }}>
-            <TableHeaderCell style={{ padding: "24px 32px", width: "40%" }}>
-              <p style={{ margin: 0, fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>{"// Capability"}</p>
+          <TableRow className="border-b border-[var(--line)] bg-[var(--bg)]">
+            <TableHeaderCell className="w-2/5 px-8 py-6">
+              <p className="m-0 font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--ink-muted)]">{"// Capability"}</p>
             </TableHeaderCell>
             {PLAN_COLUMNS.map((col) => (
               <TableHeaderCell
                 key={col}
-                style={{
-                  padding: "24px 20px",
-                  textAlign: "center",
-                  background: colBg(col),
-                  transition: "background 0.15s ease",
-                }}
+                className="px-5 py-6 text-center transition-[background] duration-150 ease-out"
+                style={{ background: colBg(col) }}
                 {...colHandlers(col)}
               >
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: col === "pro" ? "var(--accent)" : "var(--ink)" }}>{PLAN_LABELS[col]}</p>
+                <p className={`m-0 text-sm font-semibold ${col === "pro" ? "text-[var(--accent)]" : "text-[var(--ink)]"}`}>{PLAN_LABELS[col]}</p>
               </TableHeaderCell>
             ))}
           </TableRow>
@@ -117,26 +106,27 @@ export function PricingComparisonTable() {
           {COMPARISON_DATA.map((cat) => (
             <React.Fragment key={cat.category}>
               {/* Category Header */}
-              <TableRow style={{ background: "rgb(17 20 29 / 0.6)" }}>
-                <TableCell colSpan={PLAN_COLUMNS.length + 1} style={{ padding: "12px 32px", borderBottom: "1px solid var(--line)" }}>
-                  <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <TableRow className="bg-[rgb(17_20_29_/_0.6)]">
+                <TableCell colSpan={PLAN_COLUMNS.length + 1} className="border-b border-[var(--line)] px-8 py-3">
+                  <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.05em] text-[var(--ink-muted)]">
                     {cat.category}
                   </span>
                 </TableCell>
               </TableRow>
               {/* Features */}
               {cat.features.map((feat) => (
-                <TableRow key={feat.name} style={{ borderBottom: "1px solid var(--line-faint)" }}>
-                  <TableCell style={{ padding: "16px 32px" }}>
-                    <p style={{ margin: 0, fontSize: 14, color: "var(--ink-secondary)" }}>{feat.name}</p>
+                <TableRow key={feat.name} className="border-b border-[var(--line-faint)]">
+                  <TableCell className="px-8 py-4">
+                    <p className="m-0 text-sm text-[var(--ink-secondary)]">{feat.name}</p>
                   </TableCell>
                   {PLAN_COLUMNS.map((col) => (
                     <TableCell
                       key={col}
-                      style={{ padding: "16px 20px", background: colBg(col), transition: "background 0.15s ease" }}
+                      className="px-5 py-4 transition-[background] duration-150 ease-out"
+                      style={{ background: colBg(col) }}
                       {...colHandlers(col)}
                     >
-                      <div style={{ display: "flex", justifyContent: "center" }}><CheckOrValue value={feat[col]} /></div>
+                      <div className="flex justify-center"><CheckOrValue value={feat[col]} /></div>
                     </TableCell>
                   ))}
                 </TableRow>

@@ -55,7 +55,7 @@ const FOUNDER_PLANS: FounderPlan[] = [
 export function FoundersTableClient() {
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, alignItems: "stretch", maxWidth: 900 }}>
+      <div className="grid max-w-[900px] grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-stretch gap-6">
         {FOUNDER_PLANS.map((plan, i) => (
           <motion.div
             key={plan.name}
@@ -63,41 +63,32 @@ export function FoundersTableClient() {
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -4, background: "var(--accent-a06)" }}
             transition={{ duration: 0.45, delay: i * 0.06, ease: "easeOut" }}
-            style={{
-              padding: 32,
-              border: plan.recommended ? "1px solid var(--accent)" : "1px solid var(--line)",
-              borderRadius: 16,
-              background: "rgb(26 31 43 / 0.6)",
-              position: "relative",
-              display: "flex",
-              flexDirection: "column",
-              height: "100%",
-            }}
+            className={`relative flex h-full flex-col rounded-2xl bg-[rgb(26_31_43_/_0.6)] p-8 ${plan.recommended ? "border border-[var(--accent)]" : "border border-[var(--line)]"}`}
           >
             {plan.recommended && (
-              <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "var(--accent)", color: "var(--void)", padding: "4px 12px", borderRadius: 20, fontSize: 10, fontWeight: 700, fontFamily: "var(--font-mono)", letterSpacing: "0.1em" }}>LONGEST LOCK</div>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-[20px] bg-[var(--accent)] px-3 py-1 font-mono text-[10px] font-bold tracking-[0.1em] text-[var(--void)]">LONGEST LOCK</div>
             )}
-            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: "var(--ink)" }}>{plan.name}</h3>
+            <h3 className="m-0 text-xl font-semibold text-[var(--ink)]">{plan.name}</h3>
 
-            <div style={{ marginTop: 4, display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-              <p style={{ margin: 0, fontSize: 32, fontWeight: 500, color: "var(--accent)" }}>${plan.price}*</p>
-              <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>one-time payment, not a subscription</span>
+            <div className="mt-1 flex flex-wrap items-baseline gap-2">
+              <p className="m-0 text-[32px] font-medium text-[var(--accent)]">${plan.price}*</p>
+              <span className="text-[13px] text-[var(--ink-muted)]">one-time payment, not a subscription</span>
             </div>
-            <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--ok)", fontWeight: 600 }}>{plan.lockLabel}</p>
-            <p style={{ margin: "2px 0 20px", fontSize: 13, color: "var(--ink-secondary)" }}>{plan.desc}</p>
+            <p className="mb-0 mt-1.5 text-xs font-semibold text-[var(--ok)]">{plan.lockLabel}</p>
+            <p className="mb-5 mt-0.5 text-[13px] text-[var(--ink-secondary)]">{plan.desc}</p>
 
-            <ul style={{ margin: 0, marginBottom: 20, listStyle: "none", padding: 0, flex: 1 }}>
+            <ul className="m-0 mb-5 flex-1 list-none p-0">
               {plan.included.map((feature) => (
-                <li key={feature.label} style={{ fontSize: 13, color: "var(--ink-secondary)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
-                  <Icon icon="solar:check-circle-linear" size={16} style={{ color: "var(--ok)", flexShrink: 0 }} />
+                <li key={feature.label} className="mb-2.5 flex items-center gap-2 text-[13px] text-[var(--ink-secondary)]">
+                  <Icon icon="solar:check-circle-linear" size={16} className="shrink-0 text-[var(--ok)]" />
                   <Tooltip content={feature.tooltip}>
                     <span>{feature.label}</span>
                   </Tooltip>
                 </li>
               ))}
               {plan.notIncluded.map((feature) => (
-                <li key={feature.label} style={{ fontSize: 13, color: "var(--ink-muted)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8, opacity: 0.7 }}>
-                  <Icon icon="solar:close-circle-linear" size={16} style={{ color: "var(--ink-muted)", flexShrink: 0 }} />
+                <li key={feature.label} className="mb-2.5 flex items-center gap-2 text-[13px] text-[var(--ink-muted)] opacity-70">
+                  <Icon icon="solar:close-circle-linear" size={16} className="shrink-0 text-[var(--ink-muted)]" />
                   <Tooltip content={feature.tooltip}>
                     <span>{feature.label}</span>
                   </Tooltip>
@@ -105,7 +96,7 @@ export function FoundersTableClient() {
               ))}
             </ul>
 
-            <div style={{ marginTop: "auto" }}>
+            <div className="mt-auto">
               <Button
                 label="Join the founder waitlist"
                 variant="primary"
@@ -118,7 +109,7 @@ export function FoundersTableClient() {
         ))}
       </div>
 
-      <p style={{ marginTop: 16, fontSize: 11, color: "var(--ink-muted)" }}>
+      <p className="mt-4 text-[11px] text-[var(--ink-muted)]">
         * Candidate numbers, not final — illustrative starting points still under review, not a live offer yet.
         This is a single one-time payment, not a recurring subscription or renewal. The &quot;~1yr/~2yr&quot; figures
         describe how long the founding-member discount stays honored after that one-time payment — not a
