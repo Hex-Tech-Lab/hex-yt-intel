@@ -1,0 +1,23 @@
+web/components/billing/founders-table-client.tsx
+  s_0eded1e9d0cab6::t_83aac5f83068c1 58
+  s_0eded1e9d0cab6::t_0a794600fd9f1b 66,69,71,73-75,77-78,80,82-83,90-91,99,112
+web/components/marketing/PricingComparisonTable.tsx
+  s_0eded1e9d0cab6::t_1c5027e8a04f88 86-87,89-91,96-97,100,109-111,118-120,125-126,129
+  s_0eded1e9d0cab6::t_6a35832da9db62 55,57,60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ed9b4c676cbdf59df0a664767a37ab9f4f83564a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
