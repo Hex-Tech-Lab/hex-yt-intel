@@ -1,5 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
+import { resolveDubConfig } from '@/lib/config/dub';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 import type { ShortLinkPort, ShortLinkResult, ShortLinkClickAnalytics } from '@/lib/ports/ShortLinkPort';
 
 const DUB_API_BASE = 'https://api.dub.co';
@@ -29,10 +31,6 @@ export class DubShortLinkAdapter implements ShortLinkPort {
     return key;
   }
 
-  private get domain(): string {
-    return process.env.DUB_DOMAIN || 'link.getmytestdrive.com';
-  }
-
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
     const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
     const timeoutMs = Number(settings['dub.requestTimeoutMs']) || REGISTRY_FALLBACK['dub.requestTimeoutMs'];
@@ -60,15 +58,31 @@ export class DubShortLinkAdapter implements ShortLinkPort {
 
   async createLink({ url, key, tenantId }: { url: string; key?: string; tenantId?: string }): Promise<ShortLinkResult> {
     try {
+      const { domain, enabled } = await resolveDubConfig();
+      if (!enabled) {
+        throw new Error('Dub short-link creation disabled via Settings Registry (dub.enabled=false)');
+      }
       const link = await this.request<{ id: string; shortLink: string; url: string }>('/links', {
         method: 'POST',
-        body: JSON.stringify({ domain: this.domain, url, ...(key && { key }), ...(tenantId && { tenantId }) }),
+        body: JSON.stringify({ domain, url, ...(key && { key }), ...(tenantId && { tenantId }) }),
       });
+      await DubShortLinkAdapter.logActivity('dub_share', { linkId: link.id, tenantId: tenantId ?? null });
       return { id: link.id, shortLink: link.shortLink, url: link.url };
     } catch (err) {
       const error = toError(err);
       Sentry.captureException(error, { contexts: { shortLink: { layer: 'create' } } });
       throw error;
+    }
+  }
+
+  /** Best-effort activity_log write -- never blocks or fails the caller's real
+   *  operation if logging itself errors (e.g. table unreachable). */
+  private static async logActivity(category: string, detail: Record<string, unknown>): Promise<void> {
+    try {
+      const service = getSupabaseServiceClient();
+      await service.from('activity_log').insert({ category, detail });
+    } catch (logErr) {
+      console.warn('[DubShortLinkAdapter] activity_log write failed:', logErr instanceof Error ? logErr.message : String(logErr));
     }
   }
 

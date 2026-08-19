@@ -5,6 +5,8 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { env } from '@/lib/env';
+import { resolveTestAuthBypassEnabled } from '@/lib/config/test-auth';
+import { getSupabaseServiceClient } from '@/lib/supabase';
 
 /**
  * TEST-ONLY AUTH BYPASS — why this route exists
@@ -84,6 +86,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
+  // Gate 3 (registry): the bypass must ALSO be explicitly enabled in the
+  // Settings Registry (testAuthBypass.enabled, default false) -- having the
+  // env secret configured is no longer sufficient on its own. Same 404 as
+  // the other gates so a failure here doesn't reveal which check failed.
+  const registryEnabled = await resolveTestAuthBypassEnabled();
+  if (!registryEnabled) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   if (!env.supabaseServiceRoleKey) {
     Sentry.captureMessage('test-auth bypass: secret matched but no service-role key configured', {
       level: 'error',
@@ -135,6 +146,24 @@ export async function POST(request: NextRequest) {
   if (verifyError) {
     Sentry.captureException(verifyError, { tags: { operation: 'test-auth-bypass' } });
     return NextResponse.json({ error: 'Failed to verify test session' }, { status: 500 });
+  }
+
+  // Real activity log of bypass usage (never the secret itself) -- best-effort,
+  // never blocks the actual login response.
+  try {
+    const service = getSupabaseServiceClient();
+    await service.from('activity_log').insert({
+      category: 'testsprite_bypass',
+      detail: {
+        email: TEST_ACCOUNT_EMAIL,
+        outcome: 'success',
+        requestIp: request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? null,
+        userAgent: request.headers.get('user-agent') ?? null,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (logErr) {
+    console.warn('[test-auth-bypass] activity_log write failed:', logErr instanceof Error ? logErr.message : String(logErr));
   }
 
   return response;

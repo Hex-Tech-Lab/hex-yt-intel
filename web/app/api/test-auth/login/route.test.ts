@@ -31,6 +31,18 @@ vi.mock('@sentry/nextjs', () => ({
   captureMessage: vi.fn(),
 }));
 
+const resolveTestAuthBypassEnabledMock = vi.fn();
+vi.mock('@/lib/config/test-auth', () => ({
+  resolveTestAuthBypassEnabled: () => resolveTestAuthBypassEnabledMock(),
+}));
+
+const activityLogInsertMock = vi.fn().mockResolvedValue({ error: null });
+vi.mock('@/lib/supabase', () => ({
+  getSupabaseServiceClient: () => ({
+    from: () => ({ insert: activityLogInsertMock }),
+  }),
+}));
+
 const ORIGINAL_ENV = { ...process.env };
 
 function makeRequest(headers: Record<string, string> = {}) {
@@ -45,6 +57,9 @@ describe('POST /api/test-auth/login', () => {
     vi.resetModules();
     generateLinkMock.mockReset();
     verifyOtpMock.mockReset();
+    resolveTestAuthBypassEnabledMock.mockReset();
+    resolveTestAuthBypassEnabledMock.mockResolvedValue(true);
+    activityLogInsertMock.mockClear();
     capturedSetAll = null;
     process.env = { ...ORIGINAL_ENV };
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://adnmbikaqnxivalqoild.supabase.co';
@@ -81,6 +96,17 @@ describe('POST /api/test-auth/login', () => {
     const { POST } = await import('./route');
 
     const res = await POST(makeRequest());
+
+    expect(res.status).toBe(404);
+    expect(generateLinkMock).not.toHaveBeenCalled();
+  });
+
+  it('404s when the registry toggle testAuthBypass.enabled is false, even with a correct secret', async () => {
+    process.env.TEST_AUTH_BYPASS_SECRET = 'correct-secret';
+    resolveTestAuthBypassEnabledMock.mockResolvedValue(false);
+    const { POST } = await import('./route');
+
+    const res = await POST(makeRequest({ 'x-test-auth-secret': 'correct-secret' }));
 
     expect(res.status).toBe(404);
     expect(generateLinkMock).not.toHaveBeenCalled();
