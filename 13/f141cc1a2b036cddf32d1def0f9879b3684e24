@@ -1,0 +1,26 @@
+web/app/api/test-auth/login/route.test.ts
+  s_0eded1e9d0cab6::t_b7b30d08737b93 1-123
+web/vitest.config.ts
+  s_0eded1e9d0cab6::t_3a4c44c9ea01be 50
+web/app/api/test-auth/login/route.ts
+  s_0eded1e9d0cab6::t_39fcde3dd18d47 1-141
+web/lib/env.ts
+  s_0eded1e9d0cab6::t_0d68a49509a0c4 34-35
+  s_0eded1e9d0cab6::t_80f8c80da5b0a3 167-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "13f141cc1a2b036cddf32d1def0f9879b3684e24",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
