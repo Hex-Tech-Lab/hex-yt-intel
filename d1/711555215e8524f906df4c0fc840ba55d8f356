@@ -1,0 +1,43 @@
+web/lib/adapters/OpenRouterCompletionAdapter.ts
+  s_0eded1e9d0cab6::t_71cfb99889a33d 6
+web/lib/intelligence/relations-engine.ts
+  s_0eded1e9d0cab6::t_8242aa4a9982aa 89
+worker/src/chat-stream.ts
+  s_0eded1e9d0cab6::t_8fae5b6515f895 69
+  s_0eded1e9d0cab6::t_8a2dc61ef8fc8d 431
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_e2a7b5a74838e5 769
+web/app/api/comments/tier3/start/route.ts
+  s_0eded1e9d0cab6::t_f4d6de0465d155 104
+worker/src/services/CommentClassifier.ts
+  s_0eded1e9d0cab6::t_61eb8bc99422e0 17
+worker/src/middleware/cors.ts
+  s_0eded1e9d0cab6::t_2f80076972f011 3-7,10-12,14-17
+  s_0eded1e9d0cab6::t_deeb1f18b558b9 57-63
+web/lib/services/openrouter.ts
+  s_0eded1e9d0cab6::t_9eb8216959772a 100
+web/lib/__tests__/env-placeholder.test.ts
+  s_0eded1e9d0cab6::t_c14df51817c44f 65
+web/lib/embeddings.ts
+  s_0eded1e9d0cab6::t_8e64c68cdee033 67
+web/playwright.prod.config.ts
+  s_0eded1e9d0cab6::t_7d5a840220dd9c 11
+web/lib/services/aux-remediation.ts
+  s_0eded1e9d0cab6::t_c9b2d94dcaf7bb 272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d1711555215e8524f906df4c0fc840ba55d8f356",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
