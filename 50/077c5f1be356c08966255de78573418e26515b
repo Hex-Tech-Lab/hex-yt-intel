@@ -1,0 +1,32 @@
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_5260302d248940 1261
+web/components/markdown/dimensionMarkdownComponents.tsx
+  s_0eded1e9d0cab6::t_3117ff3a54b767 1-38
+web/components/dashboard/SelectedDimensionReadout.tsx
+  s_0eded1e9d0cab6::t_d3d53fba59efd1 37
+  s_0eded1e9d0cab6::t_378b0f36943c10 6
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_609275595cd943 271
+web/components/markdown/__tests__/dimensionMarkdownComponents.test.tsx
+  s_0eded1e9d0cab6::t_e93c3da41e7415 55,67
+  s_0eded1e9d0cab6::t_ceb51b8cd92285 30,46,58
+  s_0eded1e9d0cab6::t_9ea87f228daff8 1-29,31-45,47-54,56-57,59-66,68-75
+web/components/templates/console/ApexSummaryCard.tsx
+  s_0eded1e9d0cab6::t_c1bfd229324c9d 7,20-22,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "50077c5f1be356c08966255de78573418e26515b",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
