@@ -1,0 +1,14 @@
+-- Real fix (2026-08-20, GitHub issue #242): analyses.duration_seconds
+-- (added 20260514000000_baseline_core_tables.sql) has zero references
+-- anywhere in application code -- no write path ever populated it, no read
+-- path ever consumed it (confirmed via grep across web/ and worker/, zero
+-- hits). NULL on all 210 real rows checked during digest/UCIS parity
+-- testing. Real video-duration data lives at
+-- analysis_payload->'videoMetadata'->>'duration' and is what the app
+-- actually reads (DashboardContainer.tsx, DashboardStats.tsx,
+-- SupabaseAnalysisAdapter.ts). No "total video hours" quota feature
+-- currently reads this column either -- it was never wired to anything.
+-- Dropping rather than backfilling: there is no live feature depending on
+-- it, and backfilling a column nothing reads would just be dead weight
+-- with an extra maintenance surface.
+alter table public.analyses drop column if exists duration_seconds;
