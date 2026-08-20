@@ -1,0 +1,22 @@
+web/lib/prompts/ucis-v5.3.ts
+  s_0eded1e9d0cab6::t_b13c95813261ec 541-555
+  s_0eded1e9d0cab6::t_1a11afbe1efc81 282-287,291-296,318-328,330-336
+web/lib/prompts/ucis-v5.3.test.ts
+  s_0eded1e9d0cab6::t_0a443a35c88574 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2d75b134eda60f3899d6f6d878759e2924c3ee0f",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
