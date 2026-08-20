@@ -282,7 +282,22 @@ DO NOT extract structural document headers as nodes.
 For every node, provide:
 - \`label\`: The entity name.
 - \`type\`: Category (person|concept|framework|tool|organization|study|trend|metric).
-- \`weight\`: Importance (1-10).
+- \`weight\`: Importance (1-10), scored against these concrete criteria, not a
+  vague overall impression:
+  - **Mention frequency**: how many times this entity is referenced across
+    the transcript (more mentions -> higher weight).
+  - **Centrality to the core thesis**: does the content's argument depend on
+    this entity, or is it a passing/incidental reference? (load-bearing to
+    the thesis -> higher weight; a one-off aside -> lower weight).
+  - **Explicit speaker emphasis**: did the speaker call this out as
+    important, foundational, or a key takeaway (e.g. "the main thing to
+    understand is...", repeated for emphasis)? -> higher weight.
+  - **Connection count**: how many edges (8.2) this entity participates in
+    -> more connections signals higher structural importance -> higher
+    weight.
+  Use the full 1-10 range across a video's nodes -- do not cluster every
+  entity around the same middle value. A video's most load-bearing entity
+  should score near 10; a single incidental mention should score 1-3.
 
 #### 8.2 Semantic Relations
 
