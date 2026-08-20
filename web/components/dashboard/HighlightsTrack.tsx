@@ -102,6 +102,12 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
             const leftPct = Math.min(98, Math.max(1, (highlight.start / maxTime) * 100));
             const isActive = idx === clampedActiveIndex;
             return (
+              // Real accessibility fix (automated review on PR #266): the
+              // marker's visual square (2-4px wide) was previously ALSO the
+              // interactive hit area -- nearly unclickable, especially on
+              // touch. The button now keeps a proper minimum hit target
+              // (24x24px min, WCAG 2.5.5-adjacent guidance) while an inner
+              // span carries the actual thin Obsidian-Escher marker mark.
               <button
                 key={highlight.idx}
                 type="button"
@@ -109,12 +115,17 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
                 style={{ left: `${leftPct}%` }}
                 title={highlight.label}
                 aria-label={`Jump to highlight ${idx + 1}: ${highlight.label}`}
-                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto transition-transform hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1 ${
-                  isActive
-                    ? 'w-1 h-4 bg-[var(--accent)] z-10'
-                    : 'w-0.5 h-3 bg-[var(--ink-muted)] hover:bg-[var(--accent)]'
-                }`}
-              />
+                className="group absolute top-1/2 -translate-y-1/2 -translate-x-1/2 pointer-events-auto flex items-center justify-center w-6 h-7 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`block transition-transform group-hover:scale-125 ${
+                    isActive
+                      ? 'w-1 h-4 bg-[var(--accent)] z-10'
+                      : 'w-0.5 h-3 bg-[var(--ink-muted)] group-hover:bg-[var(--accent)]'
+                  }`}
+                />
+              </button>
             );
           })}
         </div>

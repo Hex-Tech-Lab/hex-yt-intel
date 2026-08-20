@@ -49,4 +49,23 @@ describe('HighlightsTrack', () => {
     fireEvent.click(screen.getByRole('button', { name: /Jump to highlight 3/i }));
     expect(onSelect).toHaveBeenCalledWith(2); // idx is 0-based, label is 1-based
   });
+
+  // Real regression test (automated review on PR #266): marker buttons
+  // previously sized their interactive hit area to the visual mark itself
+  // (2-4px wide) -- nearly unclickable, especially on touch. The button's
+  // own Tailwind classes must carry a real minimum hit target; the thin
+  // Obsidian-Escher mark lives in an inner (aria-hidden) span instead.
+  it('marker buttons carry a real minimum hit target, not just the thin visual mark', () => {
+    const highlights = makeHighlights(3);
+    render(<HighlightsTrack highlights={highlights} activeIndex={0} onSelect={() => {}} videoDurationSeconds={90} />);
+
+    const marker = screen.getByRole('button', { name: /Jump to highlight 1/i });
+    // w-6 h-7 in Tailwind = 24px x 28px -- both well above the ~2-4px the
+    // visual mark itself is, and above a 24x24 minimum hit-target floor.
+    expect(marker.className).toMatch(/\bw-6\b/);
+    expect(marker.className).toMatch(/\bh-7\b/);
+    // The old bug put the tiny w-1/w-0.5 sizing directly on the button;
+    // confirm those classes now live on the inner mark, not the button.
+    expect(marker.className).not.toMatch(/\bw-1\b|\bw-0\.5\b/);
+  });
 });

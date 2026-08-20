@@ -1,18 +1,11 @@
 // @vitest-environment happy-dom
 //
-// Regression test for a live-reported bug (2026-08-20, screenshot: "click
-// Play highlights, nothing happens"): PR #263's readiness gate on
-// useSegmentPlayback's start()/jumpTo() made HighlightsScrubber's "Play
-// highlights" button a permanent no-op. Root cause: currentPlaybackSeconds
-// starts null (nothing has played yet) and VideoPlayerCard only ever writes
-// to it while isPlaying is true -- but isPlaying only becomes true via the
-// very setSeekTo call the readiness gate was withholding while
-// getCurrentTime() returned null. A hard deadlock: nothing left to ever
-// flush the queued start. Fixed by treating null as t=0 (not "not ready")
-// in this caller's primitives, since VideoPlayerCard is already mounted by
-// the time this component renders (DashboardContainer's own render guard).
+// Regression test for PR #264: "Play highlights" was a permanent no-op
+// because currentPlaybackSeconds starts null and the readiness gate
+// treated null as "not ready" instead of "t=0" for this store-backed
+// caller. See HighlightsScrubber.tsx's own comment for the full mechanism.
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { HighlightsScrubber } from '@/components/dashboard/HighlightsScrubber';
 import { useVideoStore } from '@/store/useVideoStore';
 
@@ -35,6 +28,11 @@ describe('HighlightsScrubber', () => {
         json: () => HIGHLIGHTS_RESPONSE,
       })
     );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    useVideoStore.setState({ seekTo: null, isPlaying: false, currentPlaybackSeconds: null });
   });
 
   it('clicking "Play highlights" actually seeks and starts playback even before any video time is known', async () => {

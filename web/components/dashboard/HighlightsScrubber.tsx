@@ -54,25 +54,14 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   const setPlaybackRate = useVideoStore((state) => state.setPlaybackRate);
 
   // Store-backed primitives -- getCurrentTime reads the store value
-  // directly rather than polling itself; the shared hook's own poll
-  // interval re-reads this closure every tick, and useVideoStore's
-  // currentPlaybackSeconds is already kept fresh by VideoPlayerCard's own
-  // 250ms poll, so no second independent poller is introduced here.
-  //
-  // Real regression fix (live report, 2026-08-20, post PR #263): PR #263
-  // made useSegmentPlayback's start()/jumpTo() queue instead of acting when
-  // getCurrentTime() returns null -- correct for PublicHighlightsReel.tsx,
-  // where null genuinely means "player iframe not mounted yet". But here,
-  // currentPlaybackSeconds starts null simply because nothing has PLAYED
-  // yet -- VideoPlayerCard.tsx only writes to it while isPlaying is true
-  // (its own poll effect is gated on `isPlaying`), and isPlaying only
-  // becomes true via the very `setSeekTo` call the readiness gate was
-  // withholding. By the time HighlightsScrubber mounts, VideoPlayerCard
-  // is ALREADY mounted (DashboardContainer's render guard requires
-  // `status === 'complete' && analysisId`, itself downstream of the video
-  // having loaded) -- so "no time yet" here means "at t=0", not "not
-  // ready", and null must not be forwarded as-is or every first click on
-  // "Play highlights" queues forever with nothing left to ever flush it.
+  // directly; VideoPlayerCard's own 250ms poll keeps currentPlaybackSeconds
+  // fresh, so no second poller here. currentPlaybackSeconds is null until
+  // playback first starts (not "player not mounted" -- VideoPlayerCard is
+  // already mounted by the time this component renders), so null must map
+  // to t=0, not "not ready" (PR #264: mapping it to "not ready" deadlocked
+  // the Play button, since nothing else would ever flip isPlaying to make
+  // it non-null). PublicHighlightsReel.tsx's own primitives are correctly
+  // different -- its null really does mean "player iframe not mounted yet".
   const primitives: SegmentPlaybackPrimitives = useMemo(
     () => ({
       getCurrentTime: () => useVideoStore.getState().currentPlaybackSeconds ?? 0,
