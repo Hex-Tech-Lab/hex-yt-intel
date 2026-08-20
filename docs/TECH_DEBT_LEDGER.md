@@ -274,3 +274,16 @@ Real findings from the mandatory 4-agent /simplify pass, applied where safe, def
 5. **`astryx-list-item > span:first-child` CSS selector** (numbered-marker width fix, `web/app/globals.css`) targets Astryx's private/undocumented DOM structure inferred from reading its source, not a public contract -- any Astryx version bump could silently break it with no compile-time signal. No better option available without an upstream Astryx fix; flagged, not fixable from this repo alone.
 
 None of these are correctness bugs in the shipped code -- all were judged safe to defer past this merge, not silently dropped.
+
+## 2026-08-20 — Rebrand: text/copy done separately from infra (deferred here)
+
+Old branding: "Hex-YT Intel" / "Hex YT Intel" / "yt-intel" / "yt intel", domains `yt-intel.getmytestdrive.com` + `v-intel.getmytestdrive.com`.
+New branding: "vIntel", domains `getvintel.com` / `www.getvintel.com` (already correctly in the CORS allowlist as of tonight's PR #257).
+
+User's explicit sequencing (2026-08-20): text/copy rebrand only, done as its own pass after tonight's 3 PRs merge — NOT bundled into this session's other work. Infra/technical renames deferred to a later, separate pass:
+
+- `web/package.json` name field
+- Cloudflare Worker service name (`yt-intel` → currently deployed at `yt-intel.hex-tech-lab.workers.dev`) — a real rename here changes the live deploy URL, needs explicit go-ahead and careful sequencing with DNS/any hardcoded worker URLs.
+- Any DB refs, GitHub repo/org name, or other infra identifiers still carrying the old name.
+
+Text-only scope (222 hits across code+docs, 6 legal documents in `docs/legal/*.md` + their `web/app/*/page.tsx` renders) is a real KYC-driven ask (MOR payment provider review) — not cosmetic, needs to actually land, just sequenced after the open PRs.

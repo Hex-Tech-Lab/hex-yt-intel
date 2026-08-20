@@ -50,3 +50,5 @@ scripts/quality-engine/calibration/data/
 supabase/.branches/
 # Added by code-review-graph
 .code-review-graph/
+testsprite_tests/tmp/
+testsprite_tests/tmp/config.json
