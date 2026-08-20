@@ -1,4 +1,4 @@
-# CUSTOM LICENSE ADDENDUM FOR HEX-YT-INTEL
+# CUSTOM LICENSE ADDENDUM FOR VINTEL
 Last Updated: 2026-06-10
 
 This Addendum applies to all source code, workflows, prompts,

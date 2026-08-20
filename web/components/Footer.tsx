@@ -23,7 +23,7 @@ export function Footer() {
               <span style={{ display: "grid", placeItems: "center", width: 24, height: 24, borderRadius: 6, background: "var(--accent-strong)", color: "var(--void)" }}>
                 <Icon icon="solar:graph-up-linear" size={14} />
               </span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>HEX·YT·INTEL</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600, letterSpacing: "0.04em", color: "var(--ink)" }}>VINTEL</span>
             </div>
             <p style={{ fontSize: 13, color: "var(--ink-secondary)", lineHeight: 1.6, maxWidth: "24ch" }}>
               Technical instrumentation for high-volume video intelligence.
@@ -63,7 +63,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 24, borderTop: "1px solid var(--line)" }}>
           <p style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--ink-muted)" }}>
-            © 2026 HEX-YT-INTEL. PROVENANCE ASSURED.
+            © 2026 VINTEL. PROVENANCE ASSURED.
           </p>
           <div style={{ display: "flex", gap: 16 }}>
             <Link href="#" style={{ color: "var(--ink-muted)" }}><Icon icon="solar:letter-linear" size={16} /></Link>

@@ -1,4 +1,4 @@
-# HEX-YT-INTEL NOTICE
+# VINTEL NOTICE
 
 Copyright (c) 2026 Hex-Tech-Lab. 
 

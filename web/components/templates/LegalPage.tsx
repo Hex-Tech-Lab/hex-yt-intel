@@ -26,7 +26,7 @@ export function LegalPage({ content }: LegalPageProps) {
               <Icon icon="solar:graph-up-linear" size={18} />
             </span>
             <span className="font-mono text-[13px] sm:text-[15px] font-bold tracking-[0.04em] text-[#E2E8F0] truncate">
-              HEX{"\u00b7"}YT{"\u00b7"}INTEL
+              VINTEL
             </span>
           </Link>
           <nav className="flex gap-2 sm:gap-4 items-center flex-none">

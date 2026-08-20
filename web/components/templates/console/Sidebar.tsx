@@ -77,7 +77,7 @@ function SidebarImpl({
         <SideNavHeading
           as={Link}
           headingHref="/?v=landing"
-          heading={`HEX${"\u00b7"}YT`}
+          heading="VINTEL"
           icon={<NavIcon icon={<Icon icon="solar:graph-up-linear" size={18} />} />}
         />
       </div>

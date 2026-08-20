@@ -33,7 +33,7 @@ export function ResponsiveHeader({ user }: { user?: User | null }) {
         <TopNavHeading
           as={Link}
           headingHref="/"
-          heading="HEX·YT·INTEL"
+          heading="VINTEL"
           logo={
             <div className="grid place-items-center w-7 h-7 sm:w-8 sm:h-8 rounded bg-[var(--accent)] flex-shrink-0">
               <Icon icon="solar:graph-up-linear" size={16} className="text-[var(--void)]" />

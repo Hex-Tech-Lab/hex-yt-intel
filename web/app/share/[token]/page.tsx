@@ -31,7 +31,7 @@ export default async function SharePage(props: {
           <div className="bg-surface p-8 rounded-lg shadow max-w-md text-center">
             <h1 className="text-2xl font-bold text-gray-900">Link Expired</h1>
             <p className="text-gray-600 mt-2">This shared link has expired.</p>
-            <Link href="/" className="mt-6 inline-block text-blue-600 hover:underline">Go to Hex-YT-Intel</Link>
+            <Link href="/" className="mt-6 inline-block text-blue-600 hover:underline">Go to vIntel</Link>
           </div>
         </div>
       );
@@ -89,7 +89,7 @@ export default async function SharePage(props: {
       {/* Footer */}
       <div className="border-t border-gray-100 bg-gray-50 px-6 py-12 text-center text-sm text-gray-500">
         <div className="max-w-4xl mx-auto">
-          <p className="font-semibold text-gray-700 mb-1">Hex-YT-Intel</p>
+          <p className="font-semibold text-gray-700 mb-1">vIntel</p>
           <p>This is a read-only shared synthesis of a YouTube video.</p>
           <div className="mt-4">
             <Link href="/" className="text-blue-600 hover:text-blue-800 font-medium">

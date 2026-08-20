@@ -63,7 +63,7 @@ function Nav() {
           letterSpacing: "0.04em",
           color: "var(--ink)",
           whiteSpace: "nowrap",
-        }}>HEX·YT·INTEL</span>
+        }}>VINTEL</span>
       </div>
       <nav style={{ display: "flex", gap: "clamp(6px, 2vw, 16px)", alignItems: "center", flex: "none" }}>
         <Button label="Pricing" variant="ghost" as={Link} href="/pricing" />

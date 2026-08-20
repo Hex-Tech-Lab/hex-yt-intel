@@ -4,8 +4,8 @@ import { Metadata } from 'next';
 import { LegalPage } from '@/components/templates/LegalPage';
 
 export const metadata: Metadata = {
-  title: 'Sub-processors | Hex YT Intel',
-  description: 'A complete list of third-party sub-processors used by Hex-YT Intel for data processing.',
+  title: 'Sub-processors | vIntel',
+  description: 'A complete list of third-party sub-processors used by vIntel for data processing.',
 };
 
 export default function SubProcessorsPage() {

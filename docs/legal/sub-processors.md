@@ -2,7 +2,7 @@
 **Status**: ACTIVE
 **Last Updated**: 2026-06-10
 
-To provide high-fidelity intelligence and global billing, HEX-YT-INTEL engages the following sub-processors. These entities have been vetted for security and data protection compliance (GDPR/SOC2).
+To provide high-fidelity intelligence and global billing, vIntel engages the following sub-processors. These entities have been vetted for security and data protection compliance (GDPR/SOC2).
 
 ## Core Infrastructure
 

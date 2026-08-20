@@ -10,7 +10,7 @@ export async function Navigation({ user }: { user?: User | null }) {
       {/* Logo / Title (Left) */}
       <div className="flex items-center gap-4">
         <Link href="/" className="text-xl font-bold text-white hover:text-accent transition-colors">
-          Hex-YT-Intel
+          vIntel
         </Link>
         {safeUser && (
           <Link href="/dashboard" className="text-sm font-medium text-text-secondary hover:text-white transition-colors">

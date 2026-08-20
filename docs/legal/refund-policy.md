@@ -2,10 +2,10 @@
 
 **Last Updated:** June 9, 2026
 
-Thank you for subscribing to Hex-YT Intel. Please read this Refund Policy carefully before purchasing any subscription or usage-based credit packages. 
+Thank you for subscribing to vIntel. Please read this Refund Policy carefully before purchasing any subscription or usage-based credit packages. 
 
 ## 1. General "No Refund" Policy
-Hex-YT Intel provides digital AI processing services. Due to the irreversible infrastructure costs and immediate third-party API fees incurred the moment an AI summary is generated, **we operate on a strict "no-refund" basis**. 
+vIntel provides digital AI processing services. Due to the irreversible infrastructure costs and immediate third-party API fees incurred the moment an AI summary is generated, **we operate on a strict "no-refund" basis**. 
 
 All sales of subscription plans and usage-based API credits are final. We do not offer cash refunds for consumed API tokens, partial billing periods, or unused subscription time.
 
@@ -14,7 +14,7 @@ All sales of subscription plans and usage-based API credits are final. We do not
 - **Usage-Based Charges (Credits):** Credits purchased for extended token usage are non-refundable and expire only upon account closure, unless otherwise stated.
 
 ## 3. EU Right of Withdrawal Waiver
-Under EU consumer protection laws, users generally have a 14-day right of withdrawal for online purchases. However, by purchasing a Hex-YT Intel subscription and immediately utilizing the Service to process a video or generate an AI summary, you expressly consent to the immediate delivery of the digital service and acknowledge that you lose your right of withdrawal once the service has been performed.
+Under EU consumer protection laws, users generally have a 14-day right of withdrawal for online purchases. However, by purchasing a vIntel subscription and immediately utilizing the Service to process a video or generate an AI summary, you expressly consent to the immediate delivery of the digital service and acknowledge that you lose your right of withdrawal once the service has been performed.
 
 ## 4. Exceptions and Service Credits
 While we do not offer cash refunds for buyer's remorse, we are committed to service quality. We may, at our sole discretion, issue **service credits** to your account in the following limited circumstances:
@@ -30,4 +30,4 @@ We provide a free tier so that all users can evaluate the accuracy, latency, and
 If you believe there has been a billing error, please contact our support team immediately. Initiating a fraudulent chargeback or dispute with your bank without first attempting to resolve the issue with us constitutes "API Abuse." We reserve the right to immediately suspend or permanently terminate accounts that initiate unwarranted chargebacks.
 
 ## 7. Contact Us
-For billing inquiries, exceptions, or technical support, please contact us at billing@hex-yt-intel.com.
+For billing inquiries, exceptions, or technical support, please contact us at billing@getvintel.com.

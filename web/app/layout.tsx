@@ -25,7 +25,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hex YT Intel | YouTube Synthesis Engine",
+  title: "vIntel | YouTube Synthesis Engine",
   description: "AI-powered intelligence for video content",
   other: {
     "theme-color": "#0B0E14",

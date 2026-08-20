@@ -4,8 +4,8 @@ import { Metadata } from 'next';
 import { LegalPage } from '@/components/templates/LegalPage';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | Hex YT Intel',
-  description: 'Terms of Service for Hex YT Intel',
+  title: 'Terms of Service | vIntel',
+  description: 'Terms of Service for vIntel',
 };
 
 export default async function TermsAndConditionsPage() {
