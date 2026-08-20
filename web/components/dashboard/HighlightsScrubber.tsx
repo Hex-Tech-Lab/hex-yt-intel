@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Selector, Spinner } from '@astryxdesign/core';
+import { Card, IconButton, Selector, Spinner } from '@astryxdesign/core';
+import { Icon } from '@/components/templates/_shared/primitives';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
 import { HighlightsTrack, HighlightsNav } from '@/components/dashboard/HighlightsTrack';
@@ -152,11 +153,11 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
 
   return (
     <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)]">
+      {/* Header row: title left, keypoint/duration stats right -- the
+          moment stepper moved to the footer row (below) per the 2nd
+          layout revision, replacing the old text-label Play button slot. */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-[var(--ink)]">Highlights reel</span>
-          <HighlightsNav highlights={data.highlights} activeIndex={playingIdx} onSelect={jumpTo} />
-        </div>
+        <span className="text-xs font-semibold text-[var(--ink)]">Highlights reel</span>
         <span className="text-[10px] text-[var(--ink-muted)] whitespace-nowrap">
           {data.highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
           {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
@@ -164,19 +165,33 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
         </span>
       </div>
 
-      <HighlightsTrack
-        highlights={data.highlights}
-        activeIndex={playingIdx}
-        onSelect={jumpTo}
-        videoDurationSeconds={videoDurationSeconds}
-        hideNav
-      />
+      {/* Timeline row: the track stays one continuous element (real
+          highlight-timestamp positions preserved -- unlike a visually
+          split two-segment track, which would misplace markers relative
+          to their true percentage position). The icon-only Play/Pause
+          toggle overlays it, centered, z-index above the markers. */}
+      <div className="relative w-full">
+        <HighlightsTrack
+          highlights={data.highlights}
+          activeIndex={playingIdx}
+          onSelect={jumpTo}
+          videoDurationSeconds={videoDurationSeconds}
+          hideNav
+        />
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+          <IconButton
+            label={playingIdx === null ? 'Play highlights' : 'Stop highlights'}
+            icon={<Icon icon={playingIdx === null ? 'solar:play-bold' : 'solar:pause-bold'} size={14} />}
+            variant="primary"
+            size="sm"
+            onClick={playingIdx === null ? start : stop}
+          />
+        </div>
+      </div>
 
-      {/* Transcript ticker (left, grows) + Speed + Play/Stop (flush right) --
-          replaces the old stacked Play-button-then-label layout so this row
-          carries live transcript text instead of empty vertical space when
-          nothing is playing. */}
-      <div className="flex items-center gap-2">
+      {/* Footer row: live transcript ticker (left, grows/truncates) +
+          Speed dropdown + relocated moment stepper (right). */}
+      <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0 text-xs text-[var(--ink-secondary)] leading-snug truncate" aria-live="polite">
           {activeHighlight ? (
             <>
@@ -192,21 +207,18 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
           )}
         </div>
 
-        <Selector
-          label="Playback speed"
-          isLabelHidden
-          size="sm"
-          value={`${speed}x`}
-          onChange={(val) => setSpeed(Number(val.replace('x', '')))}
-          options={speedOptions}
-          width={80}
-        />
-
-        {playingIdx === null ? (
-          <Button label="Play highlights" variant="primary" size="sm" onClick={start} />
-        ) : (
-          <Button label="Stop" variant="ghost" size="sm" onClick={stop} />
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Selector
+            label="Playback speed"
+            isLabelHidden
+            size="sm"
+            value={`${speed}x`}
+            onChange={(val) => setSpeed(Number(val.replace('x', '')))}
+            options={speedOptions}
+            width={80}
+          />
+          <HighlightsNav highlights={data.highlights} activeIndex={playingIdx} onSelect={jumpTo} />
+        </div>
       </div>
     </Card>
   );
