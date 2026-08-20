@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { TabList, Tab, Skeleton, Markdown } from '@astryxdesign/core';
 import { MonoLabel, GlowBorder, Icon, CornerFrame } from '@/components/templates/_shared/primitives';
 import { preprocessMarkdown } from '@/lib/utils/format';
-import { TimestampLink } from '@/components/TimestampLink';
+import { MarkdownLink } from '@/components/markdown/dimensionMarkdownComponents';
 import type { Dimension } from './StreamingGrid';
 
 interface ApexSummaryCardProps {
@@ -17,30 +17,11 @@ interface ApexSummaryCardProps {
 // (linkifyTimestamps, converts bare "00:30" into `[00:30](#t=30)`) never ran,
 // and even if it had, there was no `link` override to route `#t=` hrefs
 // through TimestampLink. Timestamps here (e.g. "Source Anchor: 00:30 -
-// 02:15") rendered as indistinguishable plain text. Matches the same `link`
-// override used in SelectedDimensionReadout.tsx for consistency.
+// 02:15") rendered as indistinguishable plain text. Now uses the shared
+// `MarkdownLink` override (see web/components/markdown/dimensionMarkdownComponents.tsx)
+// for consistency with SelectedDimensionReadout.tsx.
 const apexComponents = {
-  link: ({ href, children }: { href: string; children: React.ReactNode }) => {
-    if (href?.startsWith('#t=')) {
-      const timestamp = href.replace('#t=', '');
-      return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
-    }
-    // Real bug fix (automated review, same session): only genuinely external
-    // http(s) links should open in a new tab -- a catch-all target="_blank"
-    // here would also break relative/same-origin/mailto/in-page links (a
-    // pre-existing pattern copied verbatim from SelectedDimensionReadout.tsx,
-    // fixed here since this file was already being touched).
-    const isExternal = /^https?:\/\//i.test(href ?? '');
-    return (
-      <a
-        href={href}
-        className="text-[var(--accent)] hover:underline"
-        {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-      >
-        {children}
-      </a>
-    );
-  },
+  link: MarkdownLink,
 };
 
 type SummaryTab = 'executive' | 'short' | 'long';

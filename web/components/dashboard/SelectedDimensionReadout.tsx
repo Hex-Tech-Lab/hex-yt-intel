@@ -3,7 +3,7 @@
 import type React from 'react';
 import { Markdown } from '@astryxdesign/core';
 import { preprocessMarkdown } from '@/lib/utils/format';
-import { TimestampLink } from '@/components/TimestampLink';
+import { MarkdownLink } from '@/components/markdown/dimensionMarkdownComponents';
 
 const HEADING_CLASS: Record<1 | 2 | 3 | 4 | 5 | 6, string> = {
   1: 'font-mono text-[16px] font-bold text-[var(--ink)] mt-6 mb-3 pb-2 border-b border-[var(--line-faint)]',
@@ -34,25 +34,7 @@ const readoutComponents = {
     </blockquote>
   ),
   hr: () => <hr className="my-4 border-0 border-t border-[var(--line-faint)]" />,
-  link: ({ href, children }: { href: string; children: React.ReactNode }) => {
-    if (href?.startsWith('#t=')) {
-      const timestamp = href.replace('#t=', '');
-      return <TimestampLink timestamp={timestamp}>{children}</TimestampLink>;
-    }
-    // Real bug fix (automated review, same session): only genuinely external
-    // http(s) links should open in a new tab -- a catch-all target="_blank"
-    // would also break relative/same-origin/mailto/in-page links.
-    const isExternal = /^https?:\/\//i.test(href ?? '');
-    return (
-      <a
-        href={href}
-        className="text-[var(--accent)] hover:underline"
-        {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-      >
-        {children}
-      </a>
-    );
-  },
+  link: MarkdownLink,
 };
 
 interface SelectedDimensionReadoutProps {
