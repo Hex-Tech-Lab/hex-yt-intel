@@ -14,7 +14,7 @@ import { MarkdownLink } from '@/components/markdown/dimensionMarkdownComponents'
 import { useVideoStore } from '@/store/useVideoStore';
 
 const MARKDOWN_WITH_LINKS =
-  '#### [EXECUTIVE_SUMMARY]\n\nSee [00:30](#t=30) and also [external site](https://example.com/docs).\n';
+  '#### [EXECUTIVE_SUMMARY]\n\nSee [00:30](#t=30), [external site](https://example.com/docs), and [dashboard](/dashboard).\n';
 
 describe('shared MarkdownLink override', () => {
   beforeEach(() => {
@@ -46,6 +46,9 @@ describe('shared MarkdownLink override', () => {
 
       const seekLink = screen.getByRole('link', { name: /seek to 30/i });
       expect(seekLink).not.toHaveAttribute('target', '_blank');
+
+      const relativeLink = screen.getByRole('link', { name: 'dashboard' });
+      expect(relativeLink).not.toHaveAttribute('target', '_blank');
     });
   });
 
