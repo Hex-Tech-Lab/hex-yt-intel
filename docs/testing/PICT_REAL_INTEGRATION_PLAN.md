@@ -98,9 +98,18 @@ Note: PICT constraint lines **must** end with `;` (semicolons) — a common pitf
 | 26 | Production | Pro | None | Fresh | metadata | Admin |
 | 27 | Development | Free | None | Stale | export | Public |
 
-**Statistics**: 193 valid combinations (after constraint filtering), 27 generated tests. Full factorial would be 1944.
+**Statistics** (PICT's own `/s` model-statistics output, verified via `pict('tests/pairwise/model.pict', { options: { show_model_statistics: true } })`): PICT reports **193 "Combinations"** — the count of distinct 2-way (pairwise) parameter-value interactions the model requires coverage for after constraint filtering, NOT the count of valid full 6-parameter assignments (that number is not directly reported by PICT's statistics mode). **27 generated tests** is the actual row count of the output table above — the minimal case set PICT computed to cover all 193 pairwise interactions. Unconstrained full factorial (6 × 3 × 4 × 3 × 6 × 3, ignoring the 3 constraints) is 1944.
 
 ### 2.3 How to Run It
+
+```bash
+# From repo root:
+pnpm --filter @hex-yt-intel/web run gen-pairwise
+# Verified working (this exact command), 2026-08-20 -- prints the 27
+# generated cases as JSON to stdout, case count to stderr.
+```
+
+Or directly:
 
 ```bash
 # One-time: add to web package
@@ -128,10 +137,48 @@ pnpm --filter @hex-yt-intel/web gen-pairwise
     "pict-pairwise-testing": "^1.1.0"
   },
   "scripts": {
-    "gen-pairwise": "pict-pairwise-testing tests/pairwise/model.pict"
+    "gen-pairwise": "node tests/pairwise/generate.mjs"
   }
 }
 ```
+
+(Corrected from an earlier draft that assumed a `pict-pairwise-testing`
+CLI binary — the package's actual `bin` entry is oddly named `hello` and
+maps directly to the raw platform binary, not a usable CLI wrapper. The
+real integration point is the package's exported `pict()` JS function,
+called from `web/tests/pairwise/generate.mjs`, added in this pass and
+verified to actually run via `pnpm --filter @hex-yt-intel/web run
+gen-pairwise`.)
+
+---
+
+## 3.5 Constraint Validity — Not Yet Verified
+
+The 3 constraints in `web/tests/pairwise/model.pict` are **illustrative for
+this proof-of-concept**, not verified against this codebase's real routes,
+auth model, billing tiers, or error-handling behavior. They demonstrate the
+PICT model-file mechanics (parameter/value/constraint syntax, semicolon
+requirement, real generation) work — they do not yet demonstrate that the
+6 dimensions and their values/constraints correctly model this app's actual
+test-relevant states.
+
+**Before this model is used to generate cases anyone treats as real
+coverage**, each dimension and constraint needs to be traced to a concrete,
+observable point in the current code:
+
+| Dimension | Claimed source | Verification status |
+|---|---|---|
+| `Environment` | Deployment/runtime context | Not traced to a real injection point |
+| `RateTier` | Billing/plan tier | Not traced to current billing model (post pricing-model migration, see recent session history) |
+| `ErrorType` | Route error responses | Not traced to actual error-handling code paths |
+| `CacheState` | Upstash Redis cache states | Not traced to real cache-key/TTL behavior |
+| `APIEndpoint` | `web/app/api/` routes | Endpoint names are plausible but not confirmed against the current route list |
+| `AuthLevel` | Supabase auth / RLS | Not traced to actual auth-gating logic per route |
+
+This table itself is not verification — it is the explicit list of what
+verification would need to cover, so a future implementer doesn't have to
+rediscover the gap. Recommend a dedicated pass (real route enumeration,
+auth/billing code read, cache-key audit) before Step 3 in section 6 below.
 
 ---
 
@@ -229,10 +276,17 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Generate PICT cases
-        run: pnpm --filter @hex-yt-intel/web gen-pairwise > tests/pairwise/generated.txt
+        run: pnpm --filter @hex-yt-intel/web run gen-pairwise > web/tests/pairwise/generated.txt
       - name: Run Playwright tests
         run: pnpm --filter @hex-yt-intel/web exec playwright test tests/pairwise/
 ```
+
+(Corrected from an earlier draft of this workflow that redirected to a
+root-level `tests/pairwise/generated.txt` — that directory doesn't exist;
+the real model and generated output both live under `web/tests/pairwise/`,
+matching where the model file was actually created in this pass. This
+workflow is still a DRAFT — no Playwright harness under `tests/pairwise/`
+consumes the generated output yet; see Step 4 below.)
 
 ---
 
@@ -255,10 +309,11 @@ jobs:
 | File | Action | Note |
 |------|--------|------|
 | `web/tests/pairwise/model.pict` | **Created** | Proof-of-concept PICT model, 6 dims × 3 constraints, 27 generated cases |
+| `web/tests/pairwise/generate.mjs` | **Created** | Real generation script — proves the reproduction command actually works, not just documented |
+| `web/package.json` | **Modified** | Added `pict-pairwise-testing` devDependency + `gen-pairwise` script (verified runnable: `pnpm --filter @hex-yt-intel/web run gen-pairwise`) |
 | `docs/testing/PICT_REAL_INTEGRATION_PLAN.md` | **Created** | This document |
 | `.memory/AGENT_LEDGER.md` | **Appended** | `[IN_PROGRESS]` / `[DONE]` entry |
-| `.github/workflows/pairwise-test.yml` | ❌ No change | Plan recommends full replacement |
-| `web/package.json` | ❌ No change | Step 1 if/when authorized |
+| `.github/workflows/pairwise-test.yml` | ❌ No change | Plan recommends full replacement (Step 4 below), not done in this pass |
 
 ---
 
