@@ -1,0 +1,23 @@
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_0eded1e9d0cab6::t_56fb322272dc79 53-63,83,92,97,102,105-135
+  s_0eded1e9d0cab6::t_a021823e40a4f5 136
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_97e66882426818 54-62,65,67-72,76
+  s_0eded1e9d0cab6::t_a8dc388fb7df34 126,132,135,138-161,168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "032803e1d8fa90c4ffc0642594a7e1eafeaf4ab4",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
