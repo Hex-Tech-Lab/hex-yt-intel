@@ -17,23 +17,54 @@ export function preprocessMarkdown(content: string): string {
 
   let processed = content;
 
-  // Normalize table delimiters if column count mismatches header
+  // Normalize table column count across header/delimiter/data rows.
+  //
+  // Real bug found 2026-08-20 (live Supabase data, analysis
+  // 7f7ea06e-593a-4827-a8c7-432b1a611e5d, dimension 11 "Commercial Yield"):
+  // the LLM emitted a table whose HEADER row has 3 columns
+  // ("Risk Factor | Severity | Mitigation Path") but whose DATA rows have 4
+  // ("Tool Launch Velocity | High | Niche saturation... | Specialize
+  // further..."). The original version of this function blindly rewrote the
+  // delimiter to match the HEADER's column count -- the wrong direction when
+  // the header itself is what's short a label. That left an orphan 4th data
+  // column with no header-defined width; under Astryx Markdown's
+  // table-layout:fixed rendering, an unlabeled trailing column collapses to
+  // near-zero width and its text wraps one character per line (the exact
+  // "single-column-of-letters" bug reported live). Fix: derive the true
+  // column count from the WIDEST row (header or any data row up to the next
+  // blank line / table end), pad the header with empty labels to match, and
+  // set the delimiter to that same count -- never truncate real data.
   const rawLines = processed.split(/\r?\n/);
+  const isTableRow = (row: string) => row.startsWith('|') && row.endsWith('|');
+  const isDelimiterRow = (row: string) => isTableRow(row) && /^[ \t|:-]+$/.test(row);
+  const countCols = (row: string) => row.split('|').filter(cell => cell.trim() !== '').length;
+
   for (let i = 0; i < rawLines.length - 1; i++) {
     const line = rawLines[i]?.trim() || '';
     const nextLine = rawLines[i + 1]?.trim() || '';
-    
-    const isHeader = line.startsWith('|') && line.endsWith('|');
-    const isDelimiter = nextLine.startsWith('|') && nextLine.endsWith('|') && /^[ \t|:-]+$/.test(nextLine);
 
-    if (isHeader && isDelimiter) {
-      const headerCols = line.split('|').filter(c => c.trim() !== '').length;
-      const delimiterCols = nextLine.split('|').filter(c => c.trim() !== '').length;
+    if (!isTableRow(line) || !isDelimiterRow(nextLine)) continue;
 
-      if (headerCols !== delimiterCols && headerCols > 0) {
-        rawLines[i + 1] = '|' + Array(headerCols).fill('---').join('|') + '|';
-      }
+    // Walk forward to find every data row belonging to this table (until a
+    // non-table-row line ends the block) so the true column count reflects
+    // the actual widest row, not just the (possibly short) header.
+    let maxCols = countCols(line);
+    let j = i + 2;
+    while (j < rawLines.length) {
+      const dataLine = rawLines[j]?.trim() || '';
+      if (!isTableRow(dataLine)) break;
+      maxCols = Math.max(maxCols, countCols(dataLine));
+      j++;
     }
+
+    const headerCols = countCols(line);
+    if (headerCols < maxCols) {
+      // Pad the header with empty labels rather than dropping/misaligning
+      // real data -- an untitled trailing column still renders and wraps
+      // correctly; missing data would not.
+      rawLines[i] = line.slice(0, -1) + ' |'.repeat(maxCols - headerCols) + '|';
+    }
+    rawLines[i + 1] = '|' + Array(maxCols).fill('---').join('|') + '|';
   }
   processed = rawLines.join('\n');
 

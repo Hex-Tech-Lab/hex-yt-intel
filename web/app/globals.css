@@ -450,16 +450,27 @@ div[data-chat-dock="true"] div[class*="content"] {
 [data-chat-dock="true"] .astryx-chat-composer {
   border-radius: var(--radius-card) !important;
 }
-[data-chat-dock="true"] .astryx-chat-composer-input {
-  border-radius: var(--radius-control) !important;
-}
 /* Real accessibility fix (2026-08-20, automated PR review P1): the previous
    outline:none + box-shadow-only ring is invisible in forced-colors/Windows
    High Contrast mode (box-shadow is suppressed there, outline is not) and
    was too low-contrast for low-vision users even outside that mode. Uses a
    real `outline` (respected by forced-colors) at full --accent contrast,
    softer than the original loud ring but still clearly visible, not
-   suppressed. */
+   suppressed.
+   Correction (2026-08-20, live report #1): moved from `.astryx-chat-composer`
+   to `.astryx-chat-composer-input`, assuming the latter was the real visible
+   typing surface.
+   Correction (2026-08-20, live report #2 -- that assumption was wrong):
+   `.astryx-chat-composer-input` (@astryxdesign/core's ChatComposerInput.tsx
+   `styles.root`) has NO border, background, or padding of its own -- it's a
+   transparent flex container holding just the placeholder/text. The outline
+   was hugging tightly around the typed text only, reading as "a single
+   line" against the visibly larger, padded, rounded pill around it. The
+   REAL visible bordered/rounded surface is `.astryx-chat-composer` itself
+   (already correctly rounded via this app's own `!rounded-lg` className on
+   <ChatComposer>, not the library's oversized default) -- moved back there,
+   this time confirmed against the component's actual stylex source, not
+   assumed from the class name alone. */
 [data-chat-dock="true"] .astryx-chat-composer:focus-within {
   outline: 2px solid var(--accent) !important;
   outline-offset: 1px !important;
@@ -485,6 +496,27 @@ button:focus-visible,
 .hx-navitem:focus-visible {
   outline: 2px solid var(--accent-ink);
   outline-offset: 2px;
+}
+
+/* Real bug fix (2026-08-20, live report): Astryx's ListItem numbered-list
+   marker (`markerStyles.number` in @astryxdesign/core's ListItem.tsx) has a
+   fixed `width: var(--spacing-4)` (16px) with no wrap/overflow allowance for
+   the counter text -- once dimension content hits a double-digit item (11+,
+   the common case here since dimension prompts ask for 15-20 items), "10."
+   overflows that 16px box and the number+dot get pushed onto their own line
+   above the label. Not overridable via Markdown's `components` prop (List/
+   ListItem aren't in MarkdownComponents) so this targets Astryx's own stable
+   `astryx-list-item` class -- the marker is always its first child span
+   (Item.tsx: marker/startContent/endContent are direct siblings).
+   Scoped to `ol` only (automated review finding, same session): List.tsx
+   renders a real `<ol>` only when `listStyle === 'decimal'` (numbered) and
+   a `<ul>` for disc/circle bullets -- an unscoped selector would also widen
+   the small dot/circle marker box on every bullet list in the app, adding
+   unwanted indentation there. */
+ol.astryx-list > .astryx-list-item > span:first-child {
+  width: auto !important;
+  min-width: 22px !important;
+  white-space: nowrap !important;
 }
 
 /* Responsive semantic-dimension grid. 6 cols desktop → collapses on smaller
