@@ -53,7 +53,9 @@ export function useHighlightTicker(
     // that segment, not on `label` string identity churn.
   }, [playingIdx, totalWords, segmentDurationSeconds]);
 
-  return { revealedText: words.slice(0, revealedWordCount).join(' '), totalWords };
+  const revealedText =
+    words.slice(0, revealedWordCount /* ellipsis appended below when truncated */).join(' ') + (revealedWordCount < totalWords ? '...' : '');
+  return { revealedText, totalWords };
 }
 
 /** Static "up next" preview -- first 5-10 words of the upcoming segment's
@@ -61,5 +63,5 @@ export function useHighlightTicker(
 export function previewWords(label: string | null, count = 8): string {
   if (!label) return '';
   const words = label.split(/\s+/).filter(Boolean);
-  return words.slice(0, count).join(' ') + (words.length > count ? '…' : '');
+  return words.slice(0, count /* ellipsis appended below when truncated */).join(' ') + (words.length > count ? '...' : '');
 }

@@ -9,13 +9,13 @@ import { parseHighlightsExtraction, buildHighlightsExtractionSystemPrompt } from
  * the Settings Registry (`highlights.maxCount`).
  */
 describe('parseHighlightsExtraction', () => {
-  function makeStarts(n: number): Set<number> {
-    return new Set(Array.from({ length: n }, (_, i) => i * 10));
+  function makeStarts(count: number): Set<number> {
+    return new Set(Array.from({ length: count }, (_unused, i) => i * 10));
   }
 
   it('keeps more than the old hardcoded 12-item cap when maxHighlights allows it', () => {
     const validStarts = makeStarts(40);
-    const items = Array.from({ length: 30 }, (_, i) => ({
+    const items = Array.from({ length: 30 }, (_unused, i) => ({
       start: i * 10,
       end: (i + 1) * 10,
       label: `Moment ${i}`,
@@ -31,7 +31,7 @@ describe('parseHighlightsExtraction', () => {
 
   it('still enforces whatever maxHighlights ceiling is passed in', () => {
     const validStarts = makeStarts(40);
-    const items = Array.from({ length: 30 }, (_, i) => ({
+    const items = Array.from({ length: 30 }, (_unused, i) => ({
       start: i * 10,
       end: (i + 1) * 10,
       label: `Moment ${i}`,

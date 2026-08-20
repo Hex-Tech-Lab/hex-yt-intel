@@ -9,8 +9,8 @@ import { HighlightsTrack, type HighlightsTrackHighlight } from './HighlightsTrac
  * PublicHighlightsReel.tsx. A pure unit test can't catch a render crash or
  * a broken click handler; this renders the actual DOM.
  */
-function makeHighlights(n: number): HighlightsTrackHighlight[] {
-  return Array.from({ length: n }, (_, i) => ({ idx: i, start: i * 30, end: i * 30 + 10, label: `Highlight ${i}` }));
+function makeHighlights(count: number): HighlightsTrackHighlight[] {
+  return Array.from({ length: count }, (_unused, i) => ({ idx: i, start: i * 30, end: i * 30 + 10, label: `Highlight ${i}` }));
 }
 
 describe('HighlightsTrack', () => {

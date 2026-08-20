@@ -38,7 +38,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
   const maxTime =
     videoDurationSeconds && videoDurationSeconds > 0
       ? videoDurationSeconds
-      : Math.max(...highlights.map((h) => h.end)) || 1;
+      : Math.max(...highlights.map((highlight) => highlight.end)) || 1;
 
   const clampedActiveIndex = activeIndex !== null ? Math.min(Math.max(activeIndex, 0), highlights.length - 1) : null;
   const activeHighlight = clampedActiveIndex !== null ? highlights[clampedActiveIndex] : null;
