@@ -161,6 +161,17 @@ export async function middleware(request: NextRequest) {
     // app/api/admin/logs/snapshot/route.ts) -- same pattern as the S2S
     // persist routes above, this was just missed when the route was added.
     '/api/admin/logs/snapshot',
+    // TestSprite auth-bypass: legitimate caller has NO session by definition
+    // (that's the entire point of the route -- it mints one). Real gap found
+    // 2026-08-20: this route was launch-blocked in production despite being
+    // shipped and gated correctly, because THIS middleware's fail-closed
+    // /api/:path* gate ran first and 401'd every request before the route's
+    // own env-secret + registry-toggle + timingSafeEqual checks ever ran.
+    // Same bug class as the /api/waitlist incident above -- the route's own
+    // internal gating (TEST_AUTH_BYPASS_SECRET + testAuthBypass.enabled +
+    // hardcoded single target account) is the real security boundary here,
+    // not this middleware.
+    '/api/test-auth/login',
   ];
 
   // Segment-boundary match so a public prefix can't unintentionally exempt a
