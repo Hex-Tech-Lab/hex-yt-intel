@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-
 /**
  * Drives the highlights-reel "ticker" text reveal (2026-08-20 redesign --
  * no existing precedent for this piece, per the dispatch prompt). While a
@@ -15,43 +13,36 @@ import { useEffect, useRef, useState } from 'react';
  * for its counter text. Documented here rather than silently assumed.
  *
  * `playingIdx` is the caller's source of truth for which segment is
- * currently active; this hook only owns the word-reveal timer, keyed off
- * that index changing (a new segment starting resets the reveal from word 0).
+ * currently active; `elapsedSeconds` (new 2026-08-20, shared-hook
+ * extraction) is the caller's source of truth for how far into that
+ * segment playback actually is. This hook now derives revealedWordCount
+ * from that externally-supplied value on every render instead of owning
+ * its own `setInterval` + `Date.now()` timer -- it was previously the
+ * THIRD independent timer deriving "how far into this segment are we"
+ * alongside each scrubber's own 250ms advance-poller (finding #2,
+ * docs/agent-prompts/2026-08-20-cc-simplify-shared-playback-hook.md). No
+ * timer of its own means no timer to leak/desync from the real playback
+ * clock -- `elapsedSeconds` already comes from `useSegmentPlayback`'s
+ * media-time poll, which is itself clamped to the real player/store time.
  */
 export function useHighlightTicker(
   playingIdx: number | null,
   label: string | null,
-  segmentDurationSeconds: number
+  segmentDurationSeconds: number,
+  elapsedSeconds: number | null
 ): { revealedText: string; totalWords: number } {
-  const [revealedWordCount, setRevealedWordCount] = useState(0);
-  const startedAtRef = useRef<number | null>(null);
-
   const words = label ? label.split(/\s+/).filter(Boolean) : [];
   const totalWords = words.length;
 
-  useEffect(() => {
-    if (playingIdx === null || totalWords === 0) {
-      setRevealedWordCount(0);
-      startedAtRef.current = null;
-      return;
-    }
-    startedAtRef.current = Date.now();
-    setRevealedWordCount(totalWords > 0 ? 1 : 0); // first word visible immediately, not a blank flash
+  if (playingIdx === null || totalWords === 0 || elapsedSeconds === null) {
+    return { revealedText: '', totalWords };
+  }
 
-    const durationMs = Math.max(1, segmentDurationSeconds) * 1000;
-    const intervalId = setInterval(() => {
-      const startedAt = startedAtRef.current;
-      if (startedAt === null) return;
-      const elapsedMs = Date.now() - startedAt;
-      const nextCount = Math.min(totalWords, Math.max(1, Math.ceil((elapsedMs / durationMs) * totalWords)));
-      setRevealedWordCount(nextCount);
-    }, 150);
-
-    return () => clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally
-    // keyed on playingIdx (a new segment starting) + totalWords/duration for
-    // that segment, not on `label` string identity churn.
-  }, [playingIdx, totalWords, segmentDurationSeconds]);
+  const durationSeconds = Math.max(1, segmentDurationSeconds);
+  const revealedWordCount = Math.min(
+    totalWords,
+    Math.max(1, Math.ceil((elapsedSeconds / durationSeconds) * totalWords))
+  );
 
   const revealedText =
     words.slice(0, revealedWordCount /* ellipsis appended below when truncated */).join(' ') + (revealedWordCount < totalWords ? '...' : '');

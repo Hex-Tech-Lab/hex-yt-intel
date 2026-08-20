@@ -708,16 +708,27 @@ export function DashboardContainer({ profile }: DashboardContainerProps) {
                       Context, disconnected from the player it controls.
                       Moved directly under the video (and its own entity
                       timeline scrubber above) per explicit instruction.
-                      Real regression fix (automated review, same session):
-                      requires videoMetadata specifically, not just the
-                      broader hasHadVideoRef/nucleusAnalysis fallback this
-                      block itself renders under -- without it, a completed
-                      analysis whose metadata is still loading, failed, or
-                      never arrived could render an orphaned scrubber with
-                      no real player/duration context (setSeekTo would fire
-                      against a VideoPlayerCard with nothing to seek). */}
-                  {status === 'complete' && analysisId && videoMetadata && (
-                    <HighlightsScrubber analysisId={analysisId} videoDurationSeconds={videoMetadata.duration ?? null} />
+                      Guard simplified 2026-08-20 (shared-hook extraction,
+                      docs/agent-prompts/2026-08-20-cc-simplify-shared-
+                      playback-hook.md finding #3): previously also required
+                      `videoMetadata` specifically to avoid an "orphaned
+                      scrubber with no real player context" -- that guard is
+                      now redundant. HighlightsScrubber's internal
+                      useSegmentPlayback hook refuses to start/advance
+                      playback on its own (its getCurrentTime primitive
+                      reads null until the store actually has a real
+                      position), so a player-not-ready state is safe
+                      whether or not videoMetadata has arrived yet.
+                      `status === 'complete' && analysisId` remains: both
+                      are genuine "is there anything to show" requirements
+                      (analysisId is a required prop; highlights only exist
+                      once analysis is complete), not a player-readiness
+                      guess. videoDurationSeconds is passed through as
+                      possibly-null -- the component's own display logic
+                      already handles that (see its
+                      `videoDurationSeconds ? ... : ''` duration line). */}
+                  {status === 'complete' && analysisId && (
+                    <HighlightsScrubber analysisId={analysisId} videoDurationSeconds={videoMetadata?.duration ?? null} />
                   )}
                   {videoMetadata && (
                     <BentoMetadata

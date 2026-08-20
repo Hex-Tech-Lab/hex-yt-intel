@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
+import { HIGHLIGHTS_SPEED_MIN, HIGHLIGHTS_SPEED_MAX } from '@/lib/utils/highlights-settings';
 import type { VideoPlayerPort, VideoPlayerCallbacks } from '@/lib/ports/VideoPlayerPort';
 
 interface YTPlayerEvent {
@@ -187,9 +188,12 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
   setPlaybackRate(rate: number): void {
     // YouTube's IFrame API silently ignores rates outside its own supported
     // set (getAvailablePlaybackRates(), typically 0.25-2 in the real
-    // player); clamp to this component's documented 0.5-3 UI range so a bad
-    // caller value can't be passed through unchecked, even though the
-    // player itself is the final authority on what it actually applies.
+    // player); clamp to the shared highlights-reel UI range (single source
+    // of truth in lib/utils/highlights-settings.ts as of 2026-08-20 -- was
+    // previously a THIRD independent hardcoding of the same 0.5-3 bounds,
+    // alongside useSegmentPlayback's SPEED_OPTIONS) so a bad caller value
+    // can't be passed through unchecked, even though the player itself is
+    // the final authority on what it actually applies.
     if (this.player?.setPlaybackRate && !this.destroyed) {
       // Real bug fix (automated review): a non-finite `rate` (NaN in
       // particular -- Infinity/-Infinity already clamp correctly through
@@ -197,7 +201,7 @@ export class YouTubePlayerAdapter implements VideoPlayerPort {
       // invalid rate to the YouTube IFrame API. Reject non-finite input
       // before clamping.
       if (!Number.isFinite(rate)) return;
-      const clamped = Math.min(3, Math.max(0.5, rate));
+      const clamped = Math.min(HIGHLIGHTS_SPEED_MAX, Math.max(HIGHLIGHTS_SPEED_MIN, rate));
       this.player.setPlaybackRate(clamped);
     }
   }
