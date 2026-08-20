@@ -1,0 +1,50 @@
+supabase/migrations/20260819230000_dub_and_testsprite_registry.sql
+  s_0eded1e9d0cab6::t_97a6fc8e13347e 1-109
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_8a904caeb6b964 722-725
+  s_0eded1e9d0cab6::t_bce8372d5d3c2d 23
+web/lib/config/test-auth.ts
+  s_0eded1e9d0cab6::t_15fd82059a3b41 1-21
+web/app/api/test-auth/login/route.ts
+  s_0eded1e9d0cab6::t_ae40cef517e2e6 8-9
+  s_0eded1e9d0cab6::t_09341dcc0f9b49 151-168
+  s_0eded1e9d0cab6::t_21726cef70c512 89-97
+web/app/layout.tsx
+  s_0eded1e9d0cab6::t_44030dd63b6589 47
+  s_0eded1e9d0cab6::t_88328d109cf9b7 3,9-12
+  s_0eded1e9d0cab6::t_ea4e3f5f5507ae 13
+  s_0eded1e9d0cab6::t_ce7816174276f9 14
+web/app/api/test-auth/login/route.test.ts
+  s_0eded1e9d0cab6::t_ad07bcc05c8901 60-62
+  s_0eded1e9d0cab6::t_3e96c09e3e3e91 104-114
+  s_0eded1e9d0cab6::t_60719a1bde6b39 34-45
+web/components/dashboard/ShareButton.tsx
+  s_0eded1e9d0cab6::t_5b51c00e625f69 1-55,57-61
+  s_0eded1e9d0cab6::t_6286de2720cd9a 56
+web/lib/config/dub.ts
+  s_0eded1e9d0cab6::t_1d5d2e43ee0ee7 1-35
+web/package.json
+  s_0eded1e9d0cab6::t_42fbdb4e40ec61 21
+web/lib/adapters/DubShortLinkAdapter.ts
+  s_0eded1e9d0cab6::t_3cca6c0912a67c 3-4
+  s_0eded1e9d0cab6::t_db1329d268aef2 61-64,67,69,78-85
+  s_0eded1e9d0cab6::t_59529c4fc31e7c 86-88
+pnpm-lock.yaml
+  s_0eded1e9d0cab6::t_1b7a4fdb6fc4e9 72-74,501-503,5278-5280,6304-6307,11412-11413
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "12c12241a1291d928dbe5e47c15825e64a3d0b0a",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
