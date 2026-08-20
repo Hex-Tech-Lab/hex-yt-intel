@@ -79,4 +79,56 @@ describe('LLMCascade.streamCascade', () => {
     expect(result.finalText).toBe('recovered');
     expect(statuses).toContain('fallback');
   });
+
+  // Issue #241: LLMCascade.ts previously ignored the forwarded `cascade` field's
+  // per-tier providerOrder for claude-haiku-4.5 tiers and always substituted its
+  // own hardcoded ['anthropic', 'google-vertex', 'amazon-bedrock'] literal
+  // (missing 'azure' entirely) -- a third, independently-drifting source of
+  // truth alongside web/lib/config/cascade.ts and the `cascade.analysis`
+  // Settings Registry key. These tests prove the forwarded value from the
+  // `cascade` constructor arg (the payload field populated end-to-end from
+  // CreateAnalysisUseCase's resolveAnalysisCascade()) is what actually reaches
+  // OpenRouter, and that the hardcoded literal is used only as a defensive
+  // fallback when a tier genuinely carries no providerOrder.
+  it('uses the forwarded per-tier providerOrder for a claude-haiku-4.5 tier, not the hardcoded default', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      sseResponse(['data: {"choices":[{"delta":{"content":"ok"}}]}', 'data: [DONE]']),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cascade = new LLMCascade('test-api-key', undefined, [
+      {
+        model: 'anthropic/claude-haiku-4.5',
+        name: 'Claude Haiku 4.5 (Azure)',
+        providerOrder: ['azure'],
+      },
+    ]);
+
+    await cascade.streamCascade('sys', () => {}, () => {});
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    // Forwarded single-provider order must win outright -- not merged with,
+    // or replaced by, the hardcoded multi-provider default.
+    expect(body.provider).toEqual({ order: ['azure'], allow_fallbacks: false });
+  });
+
+  it('falls back to the hardcoded default provider order (including azure) when a claude-haiku-4.5 tier has no providerOrder at all', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      sseResponse(['data: {"choices":[{"delta":{"content":"ok"}}]}', 'data: [DONE]']),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const cascade = new LLMCascade('test-api-key', undefined, [
+      { model: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5 (no providerOrder)' },
+    ]);
+
+    await cascade.streamCascade('sys', () => {}, () => {});
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.provider.allow_fallbacks).toBe(false);
+    expect(body.provider.order).toContain('azure');
+    expect(body.provider.order).toEqual(['google-vertex', 'azure', 'anthropic', 'amazon-bedrock']);
+  });
 });
