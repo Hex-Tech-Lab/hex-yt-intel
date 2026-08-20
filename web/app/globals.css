@@ -450,9 +450,6 @@ div[data-chat-dock="true"] div[class*="content"] {
 [data-chat-dock="true"] .astryx-chat-composer {
   border-radius: var(--radius-card) !important;
 }
-[data-chat-dock="true"] .astryx-chat-composer-input {
-  border-radius: 6px !important;
-}
 /* Real accessibility fix (2026-08-20, automated PR review P1): the previous
    outline:none + box-shadow-only ring is invisible in forced-colors/Windows
    High Contrast mode (box-shadow is suppressed there, outline is not) and
@@ -460,12 +457,21 @@ div[data-chat-dock="true"] div[class*="content"] {
    real `outline` (respected by forced-colors) at full --accent contrast,
    softer than the original loud ring but still clearly visible, not
    suppressed.
-   Correction (2026-08-20, live report): the ring was placed on
-   `.astryx-chat-composer` (the outer wrapper), so focusing the input
-   highlighted an unrelated outer box instead of the actual rounded input
-   surface. Moved to `.astryx-chat-composer-input` -- the real typing
-   surface -- so the ring hugs the element the user is actually focused in. */
-[data-chat-dock="true"] .astryx-chat-composer:focus-within .astryx-chat-composer-input {
+   Correction (2026-08-20, live report #1): moved from `.astryx-chat-composer`
+   to `.astryx-chat-composer-input`, assuming the latter was the real visible
+   typing surface.
+   Correction (2026-08-20, live report #2 -- that assumption was wrong):
+   `.astryx-chat-composer-input` (@astryxdesign/core's ChatComposerInput.tsx
+   `styles.root`) has NO border, background, or padding of its own -- it's a
+   transparent flex container holding just the placeholder/text. The outline
+   was hugging tightly around the typed text only, reading as "a single
+   line" against the visibly larger, padded, rounded pill around it. The
+   REAL visible bordered/rounded surface is `.astryx-chat-composer` itself
+   (already correctly rounded via this app's own `!rounded-lg` className on
+   <ChatComposer>, not the library's oversized default) -- moved back there,
+   this time confirmed against the component's actual stylex source, not
+   assumed from the class name alone. */
+[data-chat-dock="true"] .astryx-chat-composer:focus-within {
   outline: 2px solid var(--accent) !important;
   outline-offset: 1px !important;
 }
