@@ -285,5 +285,11 @@ User's explicit sequencing (2026-08-20): text/copy rebrand only, done as its own
 - `web/package.json` name field
 - Cloudflare Worker service name (`yt-intel` → currently deployed at `yt-intel.hex-tech-lab.workers.dev`) — a real rename here changes the live deploy URL, needs explicit go-ahead and careful sequencing with DNS/any hardcoded worker URLs.
 - Any DB refs, GitHub repo/org name, or other infra identifiers still carrying the old name.
+- Copyright holder "Hex-Tech-Lab" in `docs/legal/LICENSE-ADDENDUM.md`/`NOTICE.md` — a legal-entity-name question distinct from the product brand; left untouched pending an actual new legal entity name from the user.
+- Operational verification of the 3 new contact mailboxes (`privacy@`/`legal@`/`billing@getvintel.com`) — DNS/MX/inbound delivery/monitoring not verified by this session (code-only rebrand). Flagged by post-merge automated review on PR #261, not a code defect.
+
+## 2026-08-20 — `useSegmentPlayback` readiness enforcement gap (found post-merge on PR #262, fixed PR #263)
+
+Post-merge automated review found `isReady` was computed and returned by the hook but never actually consulted by its own `start()`/`jumpTo()` actions — both called `seekTo`/`play` unconditionally even while `getCurrentTime()` still returned `null` (player not ready). Fixed: `start()`/`jumpTo()` now queue the requested index in `pendingStartIndexRef` when not ready; the existing poll loop flushes it on the first tick the primitive becomes ready; `stop()` cancels a pending queued start. 3 new regression tests added. See PR #263.
 
 Text-only scope (222 hits across code+docs, 6 legal documents in `docs/legal/*.md` + their `web/app/*/page.tsx` renders) is a real KYC-driven ask (MOR payment provider review) — not cosmetic, needs to actually land, just sequenced after the open PRs.
