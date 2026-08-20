@@ -174,3 +174,53 @@ Haiku 4.5 specifically — verify against `LLMCascade.ts`'s actual behavior too.
 Real Vertex-Europe OpenRouter slug (needed for the pending "Vertex EU as
 top priority" request): `google-vertex/europe` (confirmed by user, not yet
 applied to any of the three locations above).
+
+## 2026-08-20 — Automated review findings on PRs #246/#247, deferred (P2/P3, not launch-blocking)
+
+Real findings from automated PR review, investigated and either fixed (see
+commit `1d469d10` — activity_log error handling, empty-array cascade
+fallback, defensive registry-resolve wrap) or deliberately deferred here:
+
+1. **Cascade SSOT still has 2 copies of the Haiku fallback order**
+   (`web/lib/config/cascade.ts` and `worker/src/services/LLMCascade.ts`'s
+   `HAIKU_PROVIDER_ORDER_FALLBACK`) — the worker can't read the DB registry
+   directly (ADR 005), so full consolidation needs a shared package/constant
+   or a build-time sync check, not a quick fix. Real risk: if the registry
+   order ever changes, the worker's defensive-only fallback (used only when
+   a client sends no `providerOrder` at all) can silently drift again.
+2. **`LLMCascade.test.ts` only covers the streaming call site**
+   (`callLLMStream`) — the non-streaming path (`callLLM`) uses the identical
+   fallback logic but has zero direct test coverage. Add non-streaming tests
+   mirroring the streaming ones (explicit providerOrder precedence + no-order
+   fallback + empty-array fallback).
+3. **No end-to-end test from cascade resolution through to the OpenRouter
+   payload** — current tests construct `LLMCascade` directly with a manually
+   supplied cascade array, so a regression in `resolveAnalysisCascade()`,
+   payload serialization, or constructor wiring could pass unit tests while
+   production silently loses the provider order. Needs a real contract test.
+4. **`/api/test-auth/login` has no rate limiting** — a leaked
+   `TEST_AUTH_BYPASS_SECRET` plus the registry toggle enabled would allow
+   unlimited session minting. Existing `web/lib/services/traffic.ts`
+   (`checkRateLimitSlidingWindow`) is the real primitive to reuse, but it's
+   keyed on `userId`/`tier`/`endpoint` (built for authenticated-user rate
+   limiting) — this route has no user yet at the point rate limiting would
+   need to apply. Needs a small IP-or-secret-hash-keyed variant, not a blind
+   reuse of the existing function signature.
+5. **`dub.domain` registry value has no hostname validation** — only
+   `maxLength` in the migration's `validation` jsonb. An admin could persist
+   a malformed value (URL, path, whitespace) and every Dub share would
+   silently fall back to the raw un-shortened URL with no visible error.
+6. **`activity_log`'s "append-only" is a convention, not a DB invariant** —
+   RLS blocks ordinary UPDATE/DELETE, but the service role (used by the app
+   itself) can bypass RLS entirely. Real hardening would need a trigger or
+   REVOKE on UPDATE/DELETE even for the owning role, with an explicit
+   documented exception path if one is ever needed.
+7. **`ShareButton.tsx` doesn't check clipboard availability before creating
+   the share link** — on a browser/context where `navigator.clipboard` is
+   blocked (some iframes, older browsers, non-HTTPS), a real Dub link gets
+   created and audited, but the user only sees a generic error, and a retry
+   creates a duplicate link. Should check clipboard support first and offer
+   a manual-copy fallback instead of silently discarding a created link.
+
+None of these are launch-blocking; all are real hardening/coverage gaps
+worth a dedicated pass post-launch.
