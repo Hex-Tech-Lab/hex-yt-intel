@@ -397,13 +397,24 @@
   will-change: transform;
 }
 
-/* Astryx Toast dark theme override — force dark surface + crisp text */
+/* Astryx Toast dark theme override — force dark surface + crisp text.
+   Real root cause (2026-08-20, verified live via Playwright): Astryx's
+   Toast.js deliberately inverts to a LIGHT/white surface for a dark-mode
+   app (its own documented "inverted contrast" pattern -- mediaMode is
+   'light' when the app theme is 'dark'). This rule set only ever targeted
+   the OUTER [data-toast-id] positioning wrapper -- the actual painted
+   white surface is the INNER `.astryx-toast` element Toast.js renders,
+   one level deeper, which this override never reached. Confirmed via a
+   real triggered toast: outer wrapper honored the dark override, but
+   `.astryx-toast` computed to rgb(255,255,255) with near-white text on
+   top of it (the washed-out-white-on-white look from the report). */
 div[data-astryx-toast-fallback] {
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
 }
 div[data-toast-id],
+div[data-toast-id] .astryx-toast,
 div[data-astryx-toast-fallback] div,
 div[data-astryx-toast-fallback] [role="status"],
 div[data-astryx-toast-fallback] [role="alert"] {
@@ -425,12 +436,26 @@ div[data-chat-dock="true"] div[class*="content"] {
   border-radius: 8px !important;
 }
 
-/* Chat composer (input box) corner radius override */
+/* Chat composer (input box) styling override.
+   Real root cause (2026-08-20, same class of bug as the toast fix above):
+   only the OUTER `.astryx-chat-composer` wrapper was ever targeted. The
+   actual message-typing surface is a SEPARATE inner element,
+   `.astryx-chat-composer-input` (confirmed via @astryxdesign/core's
+   themeProps('chat-composer-input') -> stableClassName), which kept its
+   own oversized library-default border-radius untouched -- matching the
+   report ("internal actual message box has very large rounded corners").
+   Also softened the focus-within ring from a loud unrelated accent color
+   to the app's own subtle --line-based ring, matching the report that the
+   external outline looked out of place next to the rest of the UI. */
 [data-chat-dock="true"] .astryx-chat-composer {
-  border-radius: 12px !important;
+  border-radius: var(--radius-card) !important;
+}
+[data-chat-dock="true"] .astryx-chat-composer-input {
+  border-radius: var(--radius-control) !important;
 }
 [data-chat-dock="true"] .astryx-chat-composer:focus-within {
-  box-shadow: 0 0 0 2px var(--accent-a40, rgba(56, 189, 248, 0.4)) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1.5px var(--line) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
