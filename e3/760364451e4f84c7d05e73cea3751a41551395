@@ -1,0 +1,36 @@
+web/lib/adapters/DubShortLinkAdapter.ts
+  s_0eded1e9d0cab6::t_998b72e7335c0f 4
+  s_0eded1e9d0cab6::t_c49ae158c496d0 69-72
+web/middleware.test.ts
+  s_0eded1e9d0cab6::t_0a5112cdd6fa06 1-38
+web/vitest.config.ts
+  s_0eded1e9d0cab6::t_35332d7f37b461 51-55
+web/lib/config/dub.ts
+  s_0eded1e9d0cab6::t_55af3aa2c1ffdf 17,23-29,32-36,38-41,50-53
+web/lib/services/activity-log.ts
+  s_0eded1e9d0cab6::t_c2590ee1dd3345 1-36
+web/middleware.ts
+  s_0eded1e9d0cab6::t_c7dab7f8e5f995 176-185
+  s_0eded1e9d0cab6::t_e70f8420d24d2c 186
+docs/TECH_DEBT_LEDGER.md
+  s_0eded1e9d0cab6::t_33f45cb351780a 227-244
+worker/src/services/LLMCascade.ts
+  s_0eded1e9d0cab6::t_60882cc4f64436 339,523
+  s_0eded1e9d0cab6::t_ecc7a80137c86f 63-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "e3760364451e4f84c7d05e73cea3751a41551395",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
