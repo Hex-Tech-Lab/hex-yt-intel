@@ -35,9 +35,9 @@ export function preprocessMarkdown(content: string): string {
   // blank line / table end), pad the header with empty labels to match, and
   // set the delimiter to that same count -- never truncate real data.
   const rawLines = processed.split(/\r?\n/);
-  const isTableRow = (l: string) => l.startsWith('|') && l.endsWith('|');
-  const isDelimiterRow = (l: string) => isTableRow(l) && /^[ \t|:-]+$/.test(l);
-  const countCols = (l: string) => l.split('|').filter(c => c.trim() !== '').length;
+  const isTableRow = (row: string) => row.startsWith('|') && row.endsWith('|');
+  const isDelimiterRow = (row: string) => isTableRow(row) && /^[ \t|:-]+$/.test(row);
+  const countCols = (row: string) => row.split('|').filter(cell => cell.trim() !== '').length;
 
   for (let i = 0; i < rawLines.length - 1; i++) {
     const line = rawLines[i]?.trim() || '';
