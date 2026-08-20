@@ -10,3 +10,4 @@ dist/
 .turbo/
 test-results/
 review-loop.log
+docs/skills/
