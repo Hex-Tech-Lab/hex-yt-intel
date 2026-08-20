@@ -279,14 +279,21 @@ Recommended order of execution across systems, prerequisite chains, and quick-wi
 Extract domain-specific semantic entities (People, Concepts, Frameworks, Tools, Organizations, Metrics) as nodes. 
 DO NOT extract structural document headers as nodes.
 
+First mentally draft the full candidate relation set (8.2) for this node
+list before finalizing weights below -- \`weight\` partly depends on
+connection count, which only exists once relations are known. Extract
+nodes and relations together as one pass internally; only the OUTPUT order
+(8.1 before 8.2) is fixed.
+
 For every node, provide:
 - \`label\`: The entity name.
 - \`type\`: Category (person|concept|framework|tool|organization|study|trend|metric).
-- \`weight\`: Importance (1-10), scored against these concrete criteria, not a
-  vague overall impression and NOT primarily mention count -- a concept
-  named once but explained at length, or one that other important concepts
-  depend on understanding first, can outweigh a concept repeated many times
-  in passing:
+- \`weight\`: Importance, an INTEGER from 1 to 10 inclusive (never a decimal,
+  string, or out-of-range value), scored against these concrete criteria,
+  not a vague overall impression and NOT primarily mention count -- a
+  concept named once but explained at length, or one that other important
+  concepts depend on understanding first, can outweigh a concept repeated
+  many times in passing:
   - **Explanatory depth/duration**: how much of the transcript's TIME or
     TEXT is spent explaining, defining, or developing this entity -- not
     how many times it is merely named. A concept mentioned once but given a
@@ -308,12 +315,25 @@ For every node, provide:
     entities that score similarly on the criteria above; never let raw
     repetition alone outrank a briefly-stated but foundational or
     deeply-explained entity.
-  - **Connection count**: how many edges (8.2) this entity participates in
-    -- more connections signals higher structural importance.
-  Use the full 1-10 range across a video's nodes -- do not cluster every
-  entity around the same middle value. A video's most load-bearing entity
+  - **Connection count**: a SECONDARY, CAPPED signal only -- how many of
+    the relations you drafted for 8.2 this entity participates in. Never
+    let a generic, broadly-connected entity (a hub with many incidental
+    edges) outrank a less-connected entity that is more central to the
+    thesis or more foundational -- degree can only nudge a score set by
+    the criteria above, never override them. Exclude duplicate, self, and
+    structural/incidental edges from this count.
+  Use a broad portion of the 1-10 range when the candidate set actually
+  supports meaningful separation -- do not cluster every entity around the
+  same middle value, and do not force scores to the endpoints (1 or 10)
+  when the evidence doesn't support it. A video's most load-bearing entity
   should score near 10 even if mentioned only once; a single incidental,
-  briefly-explained aside should score 1-3 even if repeated often.
+  briefly-explained aside should score low even if repeated often. For a
+  video with only one or two valid entities, or entities whose importance
+  is genuinely comparable, assign evidence-based scores and permit ties --
+  do not fabricate a distinction that isn't there just to spread the
+  range. Weights are ordinal WITHIN this video only; a 9 in one video's
+  graph is not guaranteed to mean the same absolute importance as a 9 in
+  another video's graph.
 
 #### 8.2 Semantic Relations
 
@@ -518,15 +538,21 @@ For Dimension 11, compute:
 ### Step 6 – Internal Knowledge-Graph Entity Ranking (CRITICAL)
 Before assigning \`weight\` values in 8.1, do NOT score each entity in
 isolation as you write it -- relative importance is a comparative judgment,
-not an absolute one. First hold the full candidate entity list internally
-and rank them against each other using the criteria in 8.1 (explanatory
-depth/duration, foundational/prerequisite role, centrality to thesis,
-explicit speaker emphasis; mention frequency only as a tie-breaker). Only
-after ranking the full set relative to each other, map rank position to the
-1-10 \`weight\` scale. This mirrors Step 2's insight-ranking approach --
-writing scores node-by-node without first ranking the whole set produces
-inconsistent, clustered values that don't actually reflect relative
-importance.
+not an absolute one. First extract and deduplicate the full candidate
+entity list AND draft the full 8.2 relation set (so each entity's real
+connection count is known), then rank the entities against each other
+using the criteria in 8.1 -- explanatory depth/duration, foundational/
+prerequisite role, centrality to thesis, and explicit speaker emphasis as
+the primary signals; connection count (from the relations you just
+drafted) as a secondary, capped signal only; mention frequency only as a
+last-resort tie-breaker. Never invent a connection count before the
+relation set is actually drafted. Only after ranking the full set relative
+to each other, map rank position to an INTEGER 1-10 \`weight\`, permitting
+ties when entities are genuinely comparable and without forcing scores to
+the endpoints on a small candidate set. This mirrors Step 2's
+insight-ranking approach -- writing scores node-by-node without first
+ranking the whole set produces inconsistent, clustered values that don't
+actually reflect relative importance.
 
 ---
 
