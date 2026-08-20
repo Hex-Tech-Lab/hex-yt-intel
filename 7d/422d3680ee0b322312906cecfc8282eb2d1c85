@@ -1,0 +1,22 @@
+web/lib/services/__tests__/activity-log.test.ts
+  s_0eded1e9d0cab6::t_6c2b7ad9014236 2
+web/app/api/test-auth/login/route.ts
+  s_0eded1e9d0cab6::t_c7ebb9bd827f07 133,154,162,167,179,183,186-188,196,209,232
+  s_0eded1e9d0cab6::t_8a077279fa6e10 68-96,98-116,121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "7d422d3680ee0b322312906cecfc8282eb2d1c85",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
