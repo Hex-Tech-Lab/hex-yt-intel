@@ -1,0 +1,37 @@
+docs/agent-prompts/2026-08-20-oc-highlights-reel-design-overhaul.md
+  s_0eded1e9d0cab6::t_bd2c720411dfbf 1-109
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_bd2c720411dfbf 1265
+  s_37acd71fd38c2e::t_31cfa7b7f04306 5
+web/components/dashboard/HighlightsScrubber.tsx
+  s_37acd71fd38c2e::t_2e30b628441cc6 4
+  s_37acd71fd38c2e::t_9c8861e71a23c5 146
+  s_0eded1e9d0cab6::t_157cdfa294b09b 145
+  s_37acd71fd38c2e::t_6d9787c0346570 165,167,189,191-200,216
+web/components/dashboard/HighlightsTrack.tsx
+  s_37acd71fd38c2e::t_89157274e34a82 56,63,67,76,84-85,88,112,114-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "5344dfe1a69ef3da0d43c7df04ea57206725fdf9",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    },
+    "s_37acd71fd38c2e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fdf001f23ffegW7ewx8OUQWloA",
+        "model": "deepseek-v4-flash-forced"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
