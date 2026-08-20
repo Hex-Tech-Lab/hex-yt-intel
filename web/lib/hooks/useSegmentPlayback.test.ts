@@ -248,6 +248,53 @@ describe('useSegmentPlayback', () => {
     expect(result.current.playingIdx).toBe(2);
   });
 
+  it('multiple pre-ready requests use latest-request-wins semantics', () => {
+    const fake = makeFakePrimitives(null);
+    const { result } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start(); // queues index 0
+      result.current.jumpTo(2); // overwrites queue with index 2
+    });
+    expect(fake.seekCalls).toEqual([]);
+
+    act(() => {
+      fake.setTime(0);
+      vi.advanceTimersByTime(250);
+    });
+    // Only the last-queued request (index 2) flushes -- index 0 was
+    // overwritten, not queued behind it.
+    expect(fake.seekCalls).toEqual([58]);
+    expect(result.current.playingIdx).toBe(2);
+  });
+
+  it('unmounting while a start is queued does not flush it after unmount', () => {
+    const fake = makeFakePrimitives(null);
+    const { result, unmount } = renderHook(() =>
+      useSegmentPlayback({
+        segments: SEGMENTS,
+        contextLeadSeconds: 2,
+        segmentDurationSeconds: 5,
+        primitives: fake.primitives,
+      })
+    );
+    act(() => {
+      result.current.start();
+    });
+    unmount(); // runs the hook's own unmount cleanup (stop())
+    act(() => {
+      fake.setTime(0);
+      vi.advanceTimersByTime(250);
+    });
+    expect(fake.seekCalls).toEqual([]);
+  });
+
   it('stop() while a start is queued cancels the queued start', () => {
     const fake = makeFakePrimitives(null);
     const { result } = renderHook(() =>

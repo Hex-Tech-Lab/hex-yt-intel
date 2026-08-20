@@ -84,6 +84,14 @@ export interface UseSegmentPlaybackResult {
    *  "should the component render at all" -- callers may still choose a
    *  component-level guard for other reasons (nothing to show, etc). */
   isReady: boolean;
+  /** Both `start()` and `jumpTo()` queue their request (latest-request-wins:
+   *  a scalar ref, not a FIFO queue) when the primitive isn't ready yet, and
+   *  flush on the next poll tick where it becomes ready. Both current call
+   *  sites (`HighlightsScrubber.tsx`, `PublicHighlightsReel.tsx`) only wire
+   *  these to user click handlers, never at mount/effect time, so the
+   *  pre-ready path is a defensive guard today, not a load-bearing race a
+   *  caller relies on. `stop()` (including the hook's own unmount cleanup)
+   *  cancels any pending queued request. */
   start: () => void;
   stop: () => void;
   jumpTo: (index: number) => void;
