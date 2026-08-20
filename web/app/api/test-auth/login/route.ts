@@ -176,6 +176,7 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') ?? null,
       timestamp: new Date().toISOString(),
     },
+    'test-auth-bypass',
     'test-auth-bypass-audit'
   );
 

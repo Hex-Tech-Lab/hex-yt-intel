@@ -51,8 +51,10 @@ export default defineConfig({
       // Real coverage gap found 2026-08-20 (automated PR review P1): a
       // top-level web/middleware.test.ts matched none of the globs above --
       // same class of silent-non-execution as the .tsx gap documented
-      // above (ADR 024).
-      '*.test.ts',
+      // above (ADR 024). Named explicitly, not a broad '*.test.ts' -- a
+      // wide top-level glob would silently pick up any future helper/
+      // fixture file matching the pattern (real finding, CodeRabbit).
+      'middleware.test.ts',
       '../worker/src/__tests__/**/*.test.ts',
       '../worker/src/*.test.ts',
       '../worker/src/services/LLMCascade.test.ts',
