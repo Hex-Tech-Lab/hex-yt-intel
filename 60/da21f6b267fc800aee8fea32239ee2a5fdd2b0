@@ -1,0 +1,21 @@
+supabase/migrations/20260820160000_drop_dead_duration_seconds_column.sql
+  s_0eded1e9d0cab6::t_b73905ff069e25 1-14
+web/lib/utils/format.tsx
+  s_0eded1e9d0cab6::t_6962c3eb094043 20-36,38-41,46-58,60-65,67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "60da21f6b267fc800aee8fea32239ee2a5fdd2b0",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
