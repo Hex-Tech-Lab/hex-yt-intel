@@ -1,0 +1,22 @@
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_5906ec371a409e 78
+  s_0eded1e9d0cab6::t_901de4468d5b4f 61-75
+web/components/dashboard/__tests__/HighlightsScrubber.test.tsx
+  s_0eded1e9d0cab6::t_0b98b30487e233 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "44c3615b3b9eed1d1f0c7b1e3b39276537a23e43",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
