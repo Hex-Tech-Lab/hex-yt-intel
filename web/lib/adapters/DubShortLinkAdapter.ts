@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { resolveDubConfig } from '@/lib/config/dub';
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { logActivityBestEffort } from '@/lib/services/activity-log';
 import type { ShortLinkPort, ShortLinkResult, ShortLinkClickAnalytics } from '@/lib/ports/ShortLinkPort';
 
 const DUB_API_BASE = 'https://api.dub.co';
@@ -66,35 +66,15 @@ export class DubShortLinkAdapter implements ShortLinkPort {
         method: 'POST',
         body: JSON.stringify({ domain, url, ...(key && { key }), ...(tenantId && { tenantId }) }),
       });
-      await DubShortLinkAdapter.logActivity('dub_share', { linkId: link.id, tenantId: tenantId ?? null });
+      // Fire-and-forget: a real user-facing Share click shouldn't wait on an
+      // audit-log DB round-trip (real efficiency finding 2026-08-20, /simplify
+      // review) -- logActivityBestEffort already swallows its own errors.
+      void logActivityBestEffort('dub_share', { linkId: link.id, tenantId: tenantId ?? null }, 'DubShortLinkAdapter');
       return { id: link.id, shortLink: link.shortLink, url: link.url };
     } catch (err) {
       const error = toError(err);
       Sentry.captureException(error, { contexts: { shortLink: { layer: 'create' } } });
       throw error;
-    }
-  }
-
-  /** Best-effort activity_log write -- never blocks or fails the caller's real
-   *  operation if logging itself errors (e.g. table unreachable). */
-  private static async logActivity(category: string, detail: Record<string, unknown>): Promise<void> {
-    try {
-      const service = getSupabaseServiceClient();
-      // Supabase's .insert() resolves with { error } on a DB-level failure
-      // (RLS, schema, constraint) rather than throwing -- the catch block
-      // alone silently missed that class of failure (real gap found
-      // 2026-08-20, automated PR review).
-      const { error: logError } = await service.from('activity_log').insert({ category, detail });
-      if (logError) {
-        Sentry.captureMessage('[DubShortLinkAdapter] activity_log insert returned an error', {
-          level: 'warning',
-          tags: { operation: 'dub-share-audit' },
-          extra: { message: logError.message, code: logError.code, category },
-        });
-        console.warn('[DubShortLinkAdapter] activity_log write returned an error:', logError.message);
-      }
-    } catch (logErr) {
-      console.warn('[DubShortLinkAdapter] activity_log write failed:', logErr instanceof Error ? logErr.message : String(logErr));
     }
   }
 

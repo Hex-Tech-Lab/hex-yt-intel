@@ -60,6 +60,25 @@ const LLM_HANDSHAKE_TIMEOUT_MS_FALLBACK = 15000;
 // was never wired to reach this file until the `cascade` field was added).
 const HAIKU_PROVIDER_ORDER_FALLBACK = ['google-vertex', 'azure', 'anthropic', 'amazon-bedrock'];
 
+/**
+ * Builds the OpenRouter `provider` request field. Extracted (real
+ * duplication finding 2026-08-20, /simplify review) -- was identical
+ * inline logic at both callLLMStream and callLLM, meaning any future
+ * change to the fallback/allow_fallbacks behavior had to be made twice.
+ */
+function buildRequestProvider(
+  isHaiku45: boolean,
+  providerOrder: string[] | undefined
+): { order: string[]; allow_fallbacks: false } | undefined {
+  if (isHaiku45) {
+    return {
+      order: providerOrder && providerOrder.length > 0 ? providerOrder : HAIKU_PROVIDER_ORDER_FALLBACK,
+      allow_fallbacks: false,
+    };
+  }
+  return providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined;
+}
+
 export class LLMCascade implements LLMCascadePort {
   private apiKey: string;
   // The ordered cascade actually used. Defaults to the hardcoded MODEL_CHAIN, but the
@@ -317,9 +336,7 @@ export class LLMCascade implements LLMCascadePort {
     // its own tier-to-tier fallback (Cerebras -> Groq -> Baseten -> ...), so
     // OpenRouter-level substitution is redundant and actively defeats
     // deliberate provider choice (e.g. paying more for Cerebras speed).
-    const requestProvider = isHaiku45
-      ? { order: (providerOrder && providerOrder.length > 0 ? providerOrder : HAIKU_PROVIDER_ORDER_FALLBACK), allow_fallbacks: false }
-      : (providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined);
+    const requestProvider = buildRequestProvider(isHaiku45, providerOrder);
 
     try {
       const response = await fetch(OPENROUTER_URL, {
@@ -503,9 +520,7 @@ export class LLMCascade implements LLMCascadePort {
     // there. OpenRouter-level provider substitution is redundant given the
     // cascade's own tier-to-tier fallback and defeats deliberate provider
     // pinning (e.g. Cerebras for chat speed).
-    const requestProvider = isHaiku45
-      ? { order: (providerOrder && providerOrder.length > 0 ? providerOrder : HAIKU_PROVIDER_ORDER_FALLBACK), allow_fallbacks: false }
-      : (providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined);
+    const requestProvider = buildRequestProvider(isHaiku45, providerOrder);
 
     try {
       const response = await fetch(OPENROUTER_URL, {

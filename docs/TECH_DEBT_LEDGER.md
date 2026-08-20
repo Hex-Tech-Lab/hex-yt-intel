@@ -224,3 +224,21 @@ fallback, defensive registry-resolve wrap) or deliberately deferred here:
 
 None of these are launch-blocking; all are real hardening/coverage gaps
 worth a dedicated pass post-launch.
+
+## 2026-08-20 — Astryx CSS class-name targeting accumulating in globals.css (altitude finding, deferred)
+
+`/simplify` altitude review flagged: three independent overrides now reach past
+Astryx components into their internal, unversioned class names
+(`.astryx-tooltip`, `.astryx-toast`, `.astryx-chat-composer-input`) rather than
+going through a proper theme-level override. Each is individually justified
+and documented with its own RCA, but collectively they signal the `<Theme>`
+provider wired up tonight (`web/app/providers.tsx`) isn't yet the single place
+all Astryx theming flows through — a future Astryx version bump could rename
+any of these classes and silently break the override with no compile error.
+
+**Deferred, not fixed tonight**: investigate whether `@astryxdesign/theme-neutral`'s
+`defineTheme()` API can absorb these three via `onDark.components`/token
+overrides instead of CSS class targeting (per `MediaTheme.tsx`'s own doc
+comment, this may be exactly what that API is for). If genuinely no override
+slot exists for these specific cases, that's an upstream/dependency gap worth
+filing directly with Astryx rather than treating as tribal CSS knowledge.
