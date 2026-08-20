@@ -30,4 +30,4 @@ We provide a free tier so that all users can evaluate the accuracy, latency, and
 If you believe there has been a billing error, please contact our support team immediately. Initiating a fraudulent chargeback or dispute with your bank without first attempting to resolve the issue with us constitutes "API Abuse." We reserve the right to immediately suspend or permanently terminate accounts that initiate unwarranted chargebacks.
 
 ## 7. Contact Us
-For billing inquiries, exceptions, or technical support, please contact us at billing@hex-yt-intel.com.
+For billing inquiries, exceptions, or technical support, please contact us at billing@getvintel.com.

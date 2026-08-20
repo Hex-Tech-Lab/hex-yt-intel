@@ -44,7 +44,7 @@ You have the right to request access to your data, request deletion, and opt-out
 Under the GDPR, you have the following rights:
 - **Access & Portability:** Request a copy of your personal data.
 - **Right to be Forgotten:** Request deletion of your account and associated data.
-To exercise any of these rights, please contact our Data Protection Officer at privacy@hex-yt-intel.com.
+To exercise any of these rights, please contact our Data Protection Officer at privacy@getvintel.com.
 
 ## 8. Security
 We implement robust security measures, including HMAC validation for internal edge communication, encrypted database columns, and secure OAuth flows, to protect your data. However, no method of transmission over the internet is 100% secure.

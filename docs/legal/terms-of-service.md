@@ -16,7 +16,7 @@ vIntel provides an AI-powered summarization, transcription, and intelligence syn
 ## 3. DMCA Safe Harbor Registry
 vIntel operates strictly as a service provider under the "Safe Harbor" provisions of the Digital Millennium Copyright Act (DMCA), 17 U.S.C. Section 512. We maintain a designated DMCA Agent registered with the US Copyright Office. We do not host original video content and are immune from copyright damages for user-submitted links, provided we strictly comply with valid takedown requests.
 
-**DMCA Takedown Process:** If you are a copyright owner, please send a written notification to our designated Copyright Agent (legal@hex-yt-intel.com) including:
+**DMCA Takedown Process:** If you are a copyright owner, please send a written notification to our designated Copyright Agent (legal@getvintel.com) including:
 - Identification of the copyrighted work claimed to have been infringed.
 - Identification of the material to be removed (e.g., specific vIntel summary URLs).
 - Your contact information.
