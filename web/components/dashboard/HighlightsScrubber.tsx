@@ -51,14 +51,29 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   const [loading, setLoading] = useState(true);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [speed, setSpeed] = useState<number>(1);
+  // Real bug class fix (2026-08-20, live report + external research corroboration
+  // on the exact same wall-clock-vs-media-time failure mode): segment advance
+  // was a setTimeout keyed off segmentDurationSeconds -- immune to neither
+  // buffering stalls (timer keeps ticking while the player is frozen
+  // mid-seek/rebuffer) nor speed changes mid-segment (only fixed at the moment
+  // playFrom fires). Replaced with a media-time watcher against the shared
+  // useVideoStore.currentPlaybackSeconds (already polled by VideoPlayerCard at
+  // 250ms for EntityMentionTimeline's own auto-advance -- same established
+  // pattern, reused here rather than adding a second independent poller).
   const setSeekTo = useVideoStore((state) => state.setSeekTo);
   const setPlaybackRate = useVideoStore((state) => state.setPlaybackRate);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentPlaybackSeconds = useVideoStore((state) => state.currentPlaybackSeconds);
   const stopRef = useRef(false);
+  // Seek-settlement guard (mirrors EntityMentionTimeline.tsx's issueSeek/
+  // pendingSeekSeconds pattern): a just-issued seek doesn't land in
+  // currentPlaybackSeconds for a poll tick or two -- without this guard the
+  // stale pre-seek time could still read as "past the new segment's end" and
+  // trigger an immediate double-advance.
+  const [pendingSeekTarget, setPendingSeekTarget] = useState<number | null>(null);
 
   const stop = useCallback(() => {
     stopRef.current = true;
-    if (timerRef.current) clearTimeout(timerRef.current);
+    setPendingSeekTarget(null);
     setPlayingIdx(null);
   }, []);
 
@@ -108,23 +123,41 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
     (index: number) => {
       if (!data || index >= data.highlights.length) {
         setPlayingIdx(null);
+        setPendingSeekTarget(null);
         return;
       }
       const highlight = data.highlights[index]!;
       const leadIn = Math.max(0, highlight.start - data.contextLeadSeconds);
       setSeekTo(leadIn);
+      setPendingSeekTarget(leadIn);
       setPlayingIdx(index);
-      // Real bug fix (automated review): this timeout is wall-clock, but the
-      // video advances at `speed`x -- scale by the current speed so the
-      // timer tracks media time, not wall time. Does not rescale an
-      // already-running timer if speed changes mid-segment -- deferred,
-      // known limitation (same as the public-share variant).
-      timerRef.current = setTimeout(() => {
-        if (!stopRef.current) playFrom(index + 1);
-      }, (data.segmentDurationSeconds * 1000) / speed);
     },
-    [data, setSeekTo, speed]
+    [data, setSeekTo]
   );
+
+  // Media-time clamping: advance once the shared playback-position store
+  // (polled from the real player, not a timer) crosses this segment's end.
+  // 0.3s lead buffer accounts for the store's 250ms poll cadence (tighter
+  // than the naive fixed-duration timeout, and immune to buffering stalls
+  // and speed changes since it reads the actual media clock every tick).
+  useEffect(() => {
+    if (playingIdx === null || !data || currentPlaybackSeconds === null || stopRef.current) return;
+    const highlight = data.highlights[playingIdx];
+    if (!highlight) return;
+    const leadIn = Math.max(0, highlight.start - data.contextLeadSeconds);
+    const segmentEnd = leadIn + data.segmentDurationSeconds;
+
+    if (pendingSeekTarget !== null) {
+      if (Math.abs(currentPlaybackSeconds - pendingSeekTarget) <= 1) {
+        setPendingSeekTarget(null);
+      }
+      return;
+    }
+
+    if (currentPlaybackSeconds >= segmentEnd - 0.3) {
+      playFrom(playingIdx + 1);
+    }
+  }, [currentPlaybackSeconds, playingIdx, data, pendingSeekTarget, playFrom]);
 
   const start = useCallback(() => {
     stopRef.current = false;
@@ -132,12 +165,10 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
   }, [playFrom]);
 
   // Prev/Next navigation jumps directly rather than replaying the sequence
-  // from index 0 -- restarts the per-segment timer for the newly-selected
-  // index exactly like playFrom(0) does.
+  // from index 0.
   const jumpTo = useCallback(
     (index: number) => {
       stopRef.current = false;
-      if (timerRef.current) clearTimeout(timerRef.current);
       playFrom(index);
     },
     [playFrom]

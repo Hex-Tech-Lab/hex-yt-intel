@@ -49,8 +49,18 @@ export function PublicHighlightsReel({
   const [ready, setReady] = useState(false);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [speed, setSpeed] = useState<number>(1);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopRef = useRef(false);
+  // Media-time clamping (2026-08-20, same fix as HighlightsScrubber.tsx --
+  // see that file's comment for full rationale). This variant has no shared
+  // Zustand store (anonymous viewers), so it runs its own dedicated poller
+  // against the adapter's real getCurrentTime() instead of reusing a store
+  // value, matching the pattern directly.
+  const pendingSeekTargetRef = useRef<number | null>(null);
+  const playingIdxRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    playingIdxRef.current = playingIdx;
+  }, [playingIdx]);
 
   useEffect(() => {
     const adapter = new YouTubePlayerAdapter();
@@ -62,7 +72,6 @@ export function PublicHighlightsReel({
     }
     return () => {
       stopRef.current = true;
-      if (timerRef.current) clearTimeout(timerRef.current);
       adapter.destroy();
       playerRef.current = null;
     };
@@ -71,7 +80,7 @@ export function PublicHighlightsReel({
 
   const stop = useCallback(() => {
     stopRef.current = true;
-    if (timerRef.current) clearTimeout(timerRef.current);
+    pendingSeekTargetRef.current = null;
     setPlayingIdx(null);
     playerRef.current?.pause();
   }, []);
@@ -80,27 +89,50 @@ export function PublicHighlightsReel({
     (index: number) => {
       if (index >= highlights.length) {
         setPlayingIdx(null);
+        pendingSeekTargetRef.current = null;
         return;
       }
       const highlight = highlights[index]!;
       const leadIn = Math.max(0, highlight.start - contextLeadSeconds);
+      pendingSeekTargetRef.current = leadIn;
       playerRef.current?.seekTo(leadIn);
       playerRef.current?.play();
       setPlayingIdx(index);
-      // Real bug fix (automated review): this timeout is wall-clock, but the
-      // video advances at `speed`x -- at 2x the segment finishes playing in
-      // half the wall-clock time (leaving a stall before advancing); at
-      // 0.5x the timer fires while the segment is still mid-playback
-      // (cutting it short). Scale by the current speed so the timer tracks
-      // media time, not wall time. Does not rescale an already-running
-      // timer if speed changes mid-segment (would need a remaining-time
-      // recompute) -- deferred, flagged as a known limitation.
-      timerRef.current = setTimeout(() => {
-        if (!stopRef.current) playFrom(index + 1);
-      }, (segmentDurationSeconds * 1000) / speed);
     },
-    [highlights, contextLeadSeconds, segmentDurationSeconds, speed]
+    [highlights, contextLeadSeconds]
   );
+
+  // Dedicated 250ms media-time poll (matches this project's existing
+  // VideoPlayerCard.POLL_INTERVAL_MS cadence). Advances once the real
+  // player clock crosses this segment's end, immune to buffering stalls and
+  // speed changes -- neither of which a wall-clock timer could track.
+  useEffect(() => {
+    if (!ready) return;
+    const intervalId = setInterval(() => {
+      if (stopRef.current) return;
+      const idx = playingIdxRef.current;
+      if (idx === null) return;
+      const highlight = highlights[idx];
+      if (!highlight) return;
+      const currentTime = playerRef.current?.getCurrentTime?.() ?? null;
+      if (currentTime === null) return;
+
+      const pendingTarget = pendingSeekTargetRef.current;
+      if (pendingTarget !== null) {
+        if (Math.abs(currentTime - pendingTarget) <= 1) {
+          pendingSeekTargetRef.current = null;
+        }
+        return;
+      }
+
+      const leadIn = Math.max(0, highlight.start - contextLeadSeconds);
+      const segmentEnd = leadIn + segmentDurationSeconds;
+      if (currentTime >= segmentEnd - 0.3) {
+        playFrom(idx + 1);
+      }
+    }, 250);
+    return () => clearInterval(intervalId);
+  }, [ready, highlights, contextLeadSeconds, segmentDurationSeconds, playFrom]);
 
   const start = useCallback(() => {
     stopRef.current = false;
@@ -110,7 +142,6 @@ export function PublicHighlightsReel({
   const jumpTo = useCallback(
     (index: number) => {
       stopRef.current = false;
-      if (timerRef.current) clearTimeout(timerRef.current);
       playFrom(index);
     },
     [playFrom]
