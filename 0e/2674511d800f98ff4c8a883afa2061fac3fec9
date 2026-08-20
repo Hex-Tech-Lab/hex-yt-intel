@@ -1,0 +1,29 @@
+docs/UI_FEEDBACK_TRIAGE_2026-08-20.md
+  s_0eded1e9d0cab6::t_3243225e376923 1-27,29-37
+  s_0eded1e9d0cab6::t_7152919df3c645 28
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_072d2ff7744827 706-713
+web/app/globals.css
+  s_0eded1e9d0cab6::t_f030c2c6857bc0 495-510
+  s_0eded1e9d0cab6::t_6ae95ca0058287 454,462-468
+web/components/templates/console/ApexSummaryCard.tsx
+  s_0eded1e9d0cab6::t_3d1a5ceb5906fb 6-7,14-30
+  s_0eded1e9d0cab6::t_98194172dd082a 142-143
+  s_0eded1e9d0cab6::t_3a52f67d6f8078 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "0e2674511d800f98ff4c8a883afa2061fac3fec9",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
