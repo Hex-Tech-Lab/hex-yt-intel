@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import * as Sentry from '@sentry/nextjs';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { logActivityBestEffort } from '../activity-log';
 
 const insertMock = vi.fn();
