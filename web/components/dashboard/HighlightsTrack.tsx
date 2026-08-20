@@ -30,9 +30,62 @@ export interface HighlightsTrackProps {
   activeIndex: number | null;
   onSelect: (index: number) => void;
   videoDurationSeconds: number | null;
+  /** Suppress the built-in Prev/Next + "#N of M" nav row -- set when a
+   *  caller renders <HighlightsNav> itself elsewhere (e.g. in a shared
+   *  header row alongside other stats) instead of stacked above the track. */
+  hideNav?: boolean;
 }
 
-export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurationSeconds }: HighlightsTrackProps) {
+/**
+ * Prev/Next + "#N of M" (or "N moments" when nothing is active) nav strip.
+ * Extracted out of HighlightsTrack (2026-08-20 layout revision) so
+ * HighlightsScrubber.tsx can place it in its header row instead of stacked
+ * above the track, without duplicating the index-clamp/prev/next logic.
+ */
+export function HighlightsNav({
+  highlights,
+  activeIndex,
+  onSelect,
+}: Pick<HighlightsTrackProps, 'highlights' | 'activeIndex' | 'onSelect'>) {
+  const clampedActiveIndex = activeIndex !== null ? Math.min(Math.max(activeIndex, 0), highlights.length - 1) : null;
+
+  const handlePrev = () => {
+    if (clampedActiveIndex !== null && clampedActiveIndex > 0) onSelect(clampedActiveIndex - 1);
+  };
+  const handleNext = () => {
+    if (clampedActiveIndex !== null && clampedActiveIndex < highlights.length - 1) onSelect(clampedActiveIndex + 1);
+  };
+
+  return (
+    <div className="flex items-center gap-1 bg-[var(--surface-quiet)] border border-[var(--line)]">
+      <button
+        type="button"
+        disabled={clampedActiveIndex === null || clampedActiveIndex === 0}
+        onClick={handlePrev}
+        title="Previous highlight"
+        aria-label="Previous highlight"
+        className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+      >
+        <span aria-hidden="true">‹</span>
+      </button>
+      <span className="text-[10px] font-mono font-medium px-1 text-[var(--ink-muted)]">
+        {clampedActiveIndex !== null ? `#${clampedActiveIndex + 1} of ${highlights.length}` : `${highlights.length} moments`}
+      </span>
+      <button
+        type="button"
+        disabled={clampedActiveIndex === null || clampedActiveIndex >= highlights.length - 1}
+        onClick={handleNext}
+        title="Next highlight"
+        aria-label="Next highlight"
+        className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
+      >
+        <span aria-hidden="true">›</span>
+      </button>
+    </div>
+  );
+}
+
+export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurationSeconds, hideNav = false }: HighlightsTrackProps) {
   if (highlights.length === 0) return null;
 
   const maxTime =
@@ -43,42 +96,13 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
   const clampedActiveIndex = activeIndex !== null ? Math.min(Math.max(activeIndex, 0), highlights.length - 1) : null;
   const activeHighlight = clampedActiveIndex !== null ? highlights[clampedActiveIndex] : null;
 
-  const handlePrev = () => {
-    if (clampedActiveIndex !== null && clampedActiveIndex > 0) onSelect(clampedActiveIndex - 1);
-  };
-  const handleNext = () => {
-    if (clampedActiveIndex !== null && clampedActiveIndex < highlights.length - 1) onSelect(clampedActiveIndex + 1);
-  };
-
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1 bg-[var(--surface-quiet)] border border-[var(--line)]">
-          <button
-            type="button"
-            disabled={clampedActiveIndex === null || clampedActiveIndex === 0}
-            onClick={handlePrev}
-            title="Previous highlight"
-            aria-label="Previous highlight"
-            className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
-          >
-            <span aria-hidden="true">‹</span>
-          </button>
-          <span className="text-[10px] font-mono font-medium px-1 text-[var(--ink-muted)]">
-            {clampedActiveIndex !== null ? `#${clampedActiveIndex + 1} of ${highlights.length}` : `${highlights.length} moments`}
-          </span>
-          <button
-            type="button"
-            disabled={clampedActiveIndex === null || clampedActiveIndex >= highlights.length - 1}
-            onClick={handleNext}
-            title="Next highlight"
-            aria-label="Next highlight"
-            className="p-1 text-[var(--ink-secondary)] hover:text-[var(--ink)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--line)]/50"
-          >
-            <span aria-hidden="true">›</span>
-          </button>
+      {!hideNav && (
+        <div className="flex items-center justify-between gap-2">
+          <HighlightsNav highlights={highlights} activeIndex={activeIndex} onSelect={onSelect} />
         </div>
-      </div>
+      )}
 
       {/* Scrubber track container */}
       <div className="relative w-full h-7 flex items-center bg-[var(--surface-quiet)] border border-[var(--line-faint)] px-2">

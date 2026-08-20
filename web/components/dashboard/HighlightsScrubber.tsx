@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Selector, Spinner } from '@astryxdesign/core';
 import { useVideoStore } from '@/store/useVideoStore';
 import { fmtHighlightsDuration } from '@/lib/utils/highlights-settings';
-import { HighlightsTrack } from '@/components/dashboard/HighlightsTrack';
+import { HighlightsTrack, HighlightsNav } from '@/components/dashboard/HighlightsTrack';
 import { useHighlightTicker, previewWords } from '@/lib/hooks/useHighlightTicker';
 import { useSegmentPlayback, SPEED_OPTIONS, type SegmentPlaybackPrimitives } from '@/lib/hooks/useSegmentPlayback';
 
@@ -152,9 +152,12 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
 
   return (
     <Card variant="transparent" padding={3} className="flex flex-col gap-2 border border-[var(--border-muted)] bg-[var(--surface)]">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-[var(--ink)]">Highlights reel</span>
-        <span className="text-[10px] text-[var(--ink-muted)]">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-[var(--ink)]">Highlights reel</span>
+          <HighlightsNav highlights={data.highlights} activeIndex={playingIdx} onSelect={jumpTo} />
+        </div>
+        <span className="text-[10px] text-[var(--ink-muted)] whitespace-nowrap">
           {data.highlights.length} keypoints · {fmtHighlightsDuration(totalHighlightsSeconds)}
           {videoDurationSeconds ? ` of ${fmtHighlightsDuration(videoDurationSeconds)}` : ''}
           {compressionPct !== null ? ` (${compressionPct}%)` : ''}
@@ -166,42 +169,45 @@ export function HighlightsScrubber({ analysisId, videoDurationSeconds }: { analy
         activeIndex={playingIdx}
         onSelect={jumpTo}
         videoDurationSeconds={videoDurationSeconds}
+        hideNav
       />
 
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* Transcript ticker (left, grows) + Speed + Play/Stop (flush right) --
+          replaces the old stacked Play-button-then-label layout so this row
+          carries live transcript text instead of empty vertical space when
+          nothing is playing. */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0 text-xs text-[var(--ink-secondary)] leading-snug truncate" aria-live="polite">
+          {activeHighlight ? (
+            <>
+              <span className="font-mono text-[10px] text-[var(--ink-muted)] mr-1">
+                {playingIdx! + 1}/{data.highlights.length}
+              </span>
+              {revealedText || activeHighlight.label}
+            </>
+          ) : nextHighlight ? (
+            <span className="italic text-[var(--ink-muted)]">Up next: {previewWords(nextHighlight.label)}</span>
+          ) : (
+            <span className="text-[var(--ink-muted)]">{data.highlights.length} keypoints ready to play</span>
+          )}
+        </div>
+
+        <Selector
+          label="Playback speed"
+          isLabelHidden
+          size="sm"
+          value={`${speed}x`}
+          onChange={(val) => setSpeed(Number(val.replace('x', '')))}
+          options={speedOptions}
+          width={80}
+        />
+
         {playingIdx === null ? (
           <Button label="Play highlights" variant="primary" size="sm" onClick={start} />
         ) : (
           <Button label="Stop" variant="ghost" size="sm" onClick={stop} />
         )}
-
-        <span className="flex items-center gap-1.5 text-[10px] text-[var(--ink-muted)]">
-          Speed
-          <Selector
-            label="Playback speed"
-            isLabelHidden
-            size="sm"
-            value={`${speed}x`}
-            onChange={(val) => setSpeed(Number(val.replace('x', '')))}
-            options={speedOptions}
-            width={80}
-          />
-        </span>
       </div>
-
-      {activeHighlight && (
-        <div className="text-xs text-[var(--ink-secondary)] leading-snug" aria-live="polite">
-          <span className="font-mono text-[10px] text-[var(--ink-muted)] mr-1">
-            {playingIdx! + 1}/{data.highlights.length}
-          </span>
-          {revealedText || activeHighlight.label}
-        </div>
-      )}
-      {nextHighlight && (
-        <div className="text-[10px] text-[var(--ink-muted)] italic truncate">
-          Up next: {previewWords(nextHighlight.label)}
-        </div>
-      )}
     </Card>
   );
 }
