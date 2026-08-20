@@ -44,7 +44,7 @@ const routeTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/search': 'Search Analyses',
   '/pricing': 'Pricing Plans',
-  '/': 'Hex YT Intel',
+  '/': 'vIntel',
 };
 
 export function MobileBreadcrumb({

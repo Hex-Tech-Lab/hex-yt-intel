@@ -4,8 +4,8 @@ import { Metadata } from 'next';
 import { LegalPage } from '@/components/templates/LegalPage';
 
 export const metadata: Metadata = {
-  title: 'Refund Policy | Hex YT Intel',
-  description: 'Refund Policy for Hex YT Intel',
+  title: 'Refund Policy | vIntel',
+  description: 'Refund Policy for vIntel',
 };
 
 export default async function RefundPolicyPage() {

@@ -96,7 +96,7 @@ export default function SignInForm({ showTestAuth = false }: { showTestAuth?: bo
             letterSpacing: "0.04em",
             color: "var(--ink)",
             margin: 0,
-          }}>HEX·YT·INTEL</h1>
+          }}>VINTEL</h1>
           <p style={{
             fontFamily: "var(--font-mono)",
             fontSize: 11,

@@ -4,8 +4,8 @@ import { Metadata } from 'next';
 import { LegalPage } from '@/components/templates/LegalPage';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | Hex YT Intel',
-  description: 'Privacy Policy for Hex YT Intel',
+  title: 'Privacy Policy | vIntel',
+  description: 'Privacy Policy for vIntel',
 };
 
 export default async function PrivacyPolicyPage() {
