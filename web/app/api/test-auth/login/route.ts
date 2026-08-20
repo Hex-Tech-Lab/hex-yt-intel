@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import * as Sentry from '@sentry/nextjs';
 import { timingSafeEqual } from 'node:crypto';
 import { env } from '@/lib/env';
 import { resolveTestAuthBypassEnabled } from '@/lib/config/test-auth';
@@ -90,7 +90,19 @@ export async function POST(request: NextRequest) {
   // Settings Registry (testAuthBypass.enabled, default false) -- having the
   // env secret configured is no longer sufficient on its own. Same 404 as
   // the other gates so a failure here doesn't reveal which check failed.
-  const registryEnabled = await resolveTestAuthBypassEnabled();
+  // resolveTestAuthBypassEnabled() already fails closed internally
+  // (SupabaseSettingsAdapter.getRegistrySettings catches every DB error and
+  // returns the `false` fallback) -- this try/catch is defense-in-depth
+  // insurance against that contract changing underneath this route later,
+  // not a currently-reachable path. A rejection here must still 404, same
+  // as every other gate, never 500 (which would reveal the route's own
+  // existence to a prober).
+  let registryEnabled = false;
+  try {
+    registryEnabled = await resolveTestAuthBypassEnabled();
+  } catch (registryErr) {
+    Sentry.captureException(registryErr, { tags: { operation: 'test-auth-bypass-registry' } });
+  }
   if (!registryEnabled) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
@@ -152,7 +164,11 @@ export async function POST(request: NextRequest) {
   // never blocks the actual login response.
   try {
     const service = getSupabaseServiceClient();
-    await service.from('activity_log').insert({
+    // Supabase's .insert() does NOT throw on a DB-level failure (RLS, schema,
+    // constraint) -- it resolves with { error }. Real gap found 2026-08-20
+    // (automated PR review): the catch block alone silently missed any such
+    // failure, since a returned error object isn't a thrown exception.
+    const { error: logError } = await service.from('activity_log').insert({
       category: 'testsprite_bypass',
       detail: {
         email: TEST_ACCOUNT_EMAIL,
@@ -162,6 +178,14 @@ export async function POST(request: NextRequest) {
         timestamp: new Date().toISOString(),
       },
     });
+    if (logError) {
+      Sentry.captureMessage('[test-auth-bypass] activity_log insert returned an error', {
+        level: 'warning',
+        tags: { operation: 'test-auth-bypass-audit' },
+        extra: { message: logError.message, code: logError.code },
+      });
+      console.warn('[test-auth-bypass] activity_log write returned an error:', logError.message);
+    }
   } catch (logErr) {
     console.warn('[test-auth-bypass] activity_log write failed:', logErr instanceof Error ? logErr.message : String(logErr));
   }

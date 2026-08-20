@@ -318,7 +318,7 @@ export class LLMCascade implements LLMCascadePort {
     // OpenRouter-level substitution is redundant and actively defeats
     // deliberate provider choice (e.g. paying more for Cerebras speed).
     const requestProvider = isHaiku45
-      ? { order: providerOrder ?? HAIKU_PROVIDER_ORDER_FALLBACK, allow_fallbacks: false }
+      ? { order: (providerOrder && providerOrder.length > 0 ? providerOrder : HAIKU_PROVIDER_ORDER_FALLBACK), allow_fallbacks: false }
       : (providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined);
 
     try {
@@ -504,7 +504,7 @@ export class LLMCascade implements LLMCascadePort {
     // cascade's own tier-to-tier fallback and defeats deliberate provider
     // pinning (e.g. Cerebras for chat speed).
     const requestProvider = isHaiku45
-      ? { order: providerOrder ?? HAIKU_PROVIDER_ORDER_FALLBACK, allow_fallbacks: false }
+      ? { order: (providerOrder && providerOrder.length > 0 ? providerOrder : HAIKU_PROVIDER_ORDER_FALLBACK), allow_fallbacks: false }
       : (providerOrder ? { order: providerOrder, allow_fallbacks: false } : undefined);
 
     try {

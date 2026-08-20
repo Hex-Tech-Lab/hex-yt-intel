@@ -80,7 +80,19 @@ export class DubShortLinkAdapter implements ShortLinkPort {
   private static async logActivity(category: string, detail: Record<string, unknown>): Promise<void> {
     try {
       const service = getSupabaseServiceClient();
-      await service.from('activity_log').insert({ category, detail });
+      // Supabase's .insert() resolves with { error } on a DB-level failure
+      // (RLS, schema, constraint) rather than throwing -- the catch block
+      // alone silently missed that class of failure (real gap found
+      // 2026-08-20, automated PR review).
+      const { error: logError } = await service.from('activity_log').insert({ category, detail });
+      if (logError) {
+        Sentry.captureMessage('[DubShortLinkAdapter] activity_log insert returned an error', {
+          level: 'warning',
+          tags: { operation: 'dub-share-audit' },
+          extra: { message: logError.message, code: logError.code, category },
+        });
+        console.warn('[DubShortLinkAdapter] activity_log write returned an error:', logError.message);
+      }
     } catch (logErr) {
       console.warn('[DubShortLinkAdapter] activity_log write failed:', logErr instanceof Error ? logErr.message : String(logErr));
     }
