@@ -1,0 +1,26 @@
+worker/src/middleware/cors.ts
+  s_0eded1e9d0cab6::t_204e1b70efc454 13,21-28,31-33,44-45,72
+  s_0eded1e9d0cab6::t_f7dadd6b3595eb 3-5
+  s_0eded1e9d0cab6::t_58a77fbf981dbb 30
+  s_0eded1e9d0cab6::t_947e93cfaecd90 6-12,29,34-40,66-67,69-70
+worker/src/routes/analysis.ts
+  s_0eded1e9d0cab6::t_31d54e42d72ca3 1179-1183
+worker/src/__tests__/cors.test.ts
+  s_0eded1e9d0cab6::t_01c8b0e08a7e4e 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "73ebd4333b5e8d40dec81202e6f9e01c34375206",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
