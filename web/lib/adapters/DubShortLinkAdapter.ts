@@ -1,11 +1,9 @@
 import * as Sentry from '@sentry/nextjs';
-import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter';
 import { resolveDubConfig } from '@/lib/config/dub';
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { logActivityBestEffort } from '@/lib/services/activity-log';
 import type { ShortLinkPort, ShortLinkResult, ShortLinkClickAnalytics } from '@/lib/ports/ShortLinkPort';
 
 const DUB_API_BASE = 'https://api.dub.co';
-const REGISTRY_FALLBACK = { 'dub.requestTimeoutMs': 8000 } as const;
 // Dub link IDs are their own opaque `link_<alphanumeric>` format -- reject
 // anything else before it ever reaches a URL. Not full SSRF exposure (the
 // host is always the DUB_API_BASE constant above, never attacker-supplied;
@@ -31,10 +29,14 @@ export class DubShortLinkAdapter implements ShortLinkPort {
     return key;
   }
 
-  private async request<T>(path: string, init?: RequestInit): Promise<T> {
-    const settings = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_FALLBACK), REGISTRY_FALLBACK);
-    const timeoutMs = Number(settings['dub.requestTimeoutMs']) || REGISTRY_FALLBACK['dub.requestTimeoutMs'];
-
+  // Takes the already-resolved timeout instead of resolving its own registry
+  // settings -- real fix 2026-08-20 (automated PR review): the previous
+  // version fetched dub.requestTimeoutMs here independently of
+  // resolveDubConfig()'s domain/enabled fetch, meaning every call still did
+  // two sequential registry round-trips despite DubConfig already carrying
+  // requestTimeoutMs. Every caller below resolves config once and passes the
+  // timeout through.
+  private async request<T>(path: string, timeoutMs: number, init?: RequestInit): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -58,15 +60,23 @@ export class DubShortLinkAdapter implements ShortLinkPort {
 
   async createLink({ url, key, tenantId }: { url: string; key?: string; tenantId?: string }): Promise<ShortLinkResult> {
     try {
-      const { domain, enabled } = await resolveDubConfig();
+      const { domain, enabled, requestTimeoutMs } = await resolveDubConfig();
       if (!enabled) {
         throw new Error('Dub short-link creation disabled via Settings Registry (dub.enabled=false)');
       }
-      const link = await this.request<{ id: string; shortLink: string; url: string }>('/links', {
+      const link = await this.request<{ id: string; shortLink: string; url: string }>('/links', requestTimeoutMs, {
         method: 'POST',
         body: JSON.stringify({ domain, url, ...(key && { key }), ...(tenantId && { tenantId }) }),
       });
-      await DubShortLinkAdapter.logActivity('dub_share', { linkId: link.id, tenantId: tenantId ?? null });
+      // Awaited, not fire-and-forget: this app has no established waitUntil
+      // pattern for surviving past the response on Vercel's serverless
+      // runtime (unlike the Cloudflare Worker's ctx.waitUntil), so a
+      // fire-and-forget write here risked being silently killed mid-flight
+      // when the function invocation ends (real correctness gap found
+      // 2026-08-20, automated PR review -- reverted from an earlier
+      // fire-and-forget attempt in this same session that traded a real
+      // audit-durability guarantee for a minor latency win).
+      await logActivityBestEffort('dub_share', { linkId: link.id, tenantId: tenantId ?? null }, 'dub-share-audit');
       return { id: link.id, shortLink: link.shortLink, url: link.url };
     } catch (err) {
       const error = toError(err);
@@ -75,34 +85,12 @@ export class DubShortLinkAdapter implements ShortLinkPort {
     }
   }
 
-  /** Best-effort activity_log write -- never blocks or fails the caller's real
-   *  operation if logging itself errors (e.g. table unreachable). */
-  private static async logActivity(category: string, detail: Record<string, unknown>): Promise<void> {
-    try {
-      const service = getSupabaseServiceClient();
-      // Supabase's .insert() resolves with { error } on a DB-level failure
-      // (RLS, schema, constraint) rather than throwing -- the catch block
-      // alone silently missed that class of failure (real gap found
-      // 2026-08-20, automated PR review).
-      const { error: logError } = await service.from('activity_log').insert({ category, detail });
-      if (logError) {
-        Sentry.captureMessage('[DubShortLinkAdapter] activity_log insert returned an error', {
-          level: 'warning',
-          tags: { operation: 'dub-share-audit' },
-          extra: { message: logError.message, code: logError.code, category },
-        });
-        console.warn('[DubShortLinkAdapter] activity_log write returned an error:', logError.message);
-      }
-    } catch (logErr) {
-      console.warn('[DubShortLinkAdapter] activity_log write failed:', logErr instanceof Error ? logErr.message : String(logErr));
-    }
-  }
-
   async getClickAnalytics(linkId: string): Promise<ShortLinkClickAnalytics> {
     try {
       assertValidLinkId(linkId);
+      const { requestTimeoutMs } = await resolveDubConfig();
       const query = new URLSearchParams({ linkId, event: 'clicks' });
-      const result = await this.request<number | { clicks: number }>(`/analytics?${query.toString()}`);
+      const result = await this.request<number | { clicks: number }>(`/analytics?${query.toString()}`, requestTimeoutMs);
       return { clicks: typeof result === 'number' ? result : result.clicks };
     } catch (err) {
       const error = toError(err);
@@ -114,7 +102,8 @@ export class DubShortLinkAdapter implements ShortLinkPort {
   async deleteLink(linkId: string): Promise<void> {
     try {
       assertValidLinkId(linkId);
-      await this.request(`/links/${encodeURIComponent(linkId)}`, { method: 'DELETE' });
+      const { requestTimeoutMs } = await resolveDubConfig();
+      await this.request(`/links/${encodeURIComponent(linkId)}`, requestTimeoutMs, { method: 'DELETE' });
     } catch (err) {
       const error = toError(err);
       Sentry.captureException(error, { contexts: { shortLink: { layer: 'delete' } } });

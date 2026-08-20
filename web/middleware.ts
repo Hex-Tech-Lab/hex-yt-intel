@@ -171,8 +171,18 @@ export async function middleware(request: NextRequest) {
     // internal gating (TEST_AUTH_BYPASS_SECRET + testAuthBypass.enabled +
     // hardcoded single target account) is the real security boundary here,
     // not this middleware.
-    '/api/test-auth/login',
   ];
+
+  // A small number of security-sensitive single-purpose routes get EXACT
+  // path matching only, not the prefix match below -- real finding
+  // 2026-08-20 (automated PR review): the general `startsWith(route + '/')`
+  // rule would let any future child path under these silently inherit the
+  // exemption (e.g. a hypothetical /api/test-auth/login/whatever) without
+  // anyone noticing. These routes have no legitimate child paths.
+  const exactPublicRoutes = ['/api/test-auth/login'];
+  if (exactPublicRoutes.includes(pathname)) {
+    return NextResponse.next();
+  }
 
   // Segment-boundary match so a public prefix can't unintentionally exempt a
   // sibling route (e.g. '/api/stripe' must NOT exempt '/api/stripe-admin').

@@ -14,15 +14,31 @@ import { SupabaseSettingsAdapter } from '@/lib/adapters/SupabaseSettingsAdapter'
 export interface DubConfig {
   domain: string;
   enabled: boolean;
+  requestTimeoutMs: number;
 }
 
 const DUB_CONFIG_FALLBACK: DubConfig = {
   domain: 'go.getvintel.com',
   enabled: true,
+  // 'dub.requestTimeoutMs' is not yet a registered setting_definitions row
+  // (not in the 20260819233412 migration) -- this always resolves to the
+  // fallback for now. Tracked in docs/TECH_DEBT_LEDGER.md; not worth a
+  // dedicated migration under launch pressure for one timeout value, but
+  // keeping it in this single resolve call (not a second registry
+  // round-trip) means it's free to register properly later.
+  requestTimeoutMs: 8000,
 };
 
-const REGISTRY_KEYS = { 'dub.domain': DUB_CONFIG_FALLBACK.domain, 'dub.enabled': DUB_CONFIG_FALLBACK.enabled };
+const REGISTRY_KEYS = {
+  'dub.domain': DUB_CONFIG_FALLBACK.domain,
+  'dub.enabled': DUB_CONFIG_FALLBACK.enabled,
+  'dub.requestTimeoutMs': DUB_CONFIG_FALLBACK.requestTimeoutMs,
+};
 
+// Single Settings-Registry round-trip for all Dub config (real efficiency
+// finding 2026-08-20, /simplify review -- createLink() previously fetched
+// dub.domain/dub.enabled here, then request() independently fetched
+// dub.requestTimeoutMs, two sequential DB round-trips per share-link create).
 export async function resolveDubConfig(): Promise<DubConfig> {
   const resolved = await SupabaseSettingsAdapter.getRegistrySettings(Object.keys(REGISTRY_KEYS), REGISTRY_KEYS);
   const domain = typeof resolved['dub.domain'] === 'string' && resolved['dub.domain'].length > 0
@@ -31,5 +47,14 @@ export async function resolveDubConfig(): Promise<DubConfig> {
   const enabled = typeof resolved['dub.enabled'] === 'boolean'
     ? (resolved['dub.enabled'] as boolean)
     : DUB_CONFIG_FALLBACK.enabled;
-  return { domain, enabled };
+  // Number.isFinite (not typeof + > 0) so a malformed registry value of
+  // Infinity/NaN can't slip through and hang every Dub request indefinitely
+  // -- real validation gap found 2026-08-20, automated PR review. Also caps
+  // at a sane 60s ceiling.
+  const rawTimeout = resolved['dub.requestTimeoutMs'];
+  const requestTimeoutMs =
+    typeof rawTimeout === 'number' && Number.isFinite(rawTimeout) && rawTimeout > 0 && rawTimeout <= 60000
+      ? rawTimeout
+      : DUB_CONFIG_FALLBACK.requestTimeoutMs;
+  return { domain, enabled, requestTimeoutMs };
 }

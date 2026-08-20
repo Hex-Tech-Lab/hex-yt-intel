@@ -6,7 +6,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { timingSafeEqual } from 'node:crypto';
 import { env } from '@/lib/env';
 import { resolveTestAuthBypassEnabled } from '@/lib/config/test-auth';
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { logActivityBestEffort } from '@/lib/services/activity-log';
 
 /**
  * TEST-ONLY AUTH BYPASS — why this route exists
@@ -161,34 +161,23 @@ export async function POST(request: NextRequest) {
   }
 
   // Real activity log of bypass usage (never the secret itself) -- best-effort,
-  // never blocks the actual login response.
-  try {
-    const service = getSupabaseServiceClient();
-    // Supabase's .insert() does NOT throw on a DB-level failure (RLS, schema,
-    // constraint) -- it resolves with { error }. Real gap found 2026-08-20
-    // (automated PR review): the catch block alone silently missed any such
-    // failure, since a returned error object isn't a thrown exception.
-    const { error: logError } = await service.from('activity_log').insert({
-      category: 'testsprite_bypass',
-      detail: {
-        email: TEST_ACCOUNT_EMAIL,
-        outcome: 'success',
-        requestIp: request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? null,
-        userAgent: request.headers.get('user-agent') ?? null,
-        timestamp: new Date().toISOString(),
-      },
-    });
-    if (logError) {
-      Sentry.captureMessage('[test-auth-bypass] activity_log insert returned an error', {
-        level: 'warning',
-        tags: { operation: 'test-auth-bypass-audit' },
-        extra: { message: logError.message, code: logError.code },
-      });
-      console.warn('[test-auth-bypass] activity_log write returned an error:', logError.message);
-    }
-  } catch (logErr) {
-    console.warn('[test-auth-bypass] activity_log write failed:', logErr instanceof Error ? logErr.message : String(logErr));
-  }
+  // awaited (not fire-and-forget, see DubShortLinkAdapter.createLink's same
+  // reasoning: no waitUntil pattern established in this app to survive past
+  // the response). Now uses the shared helper -- real gap found 2026-08-20
+  // (automated PR review): this route still had its own inline duplicate of
+  // the exact same logic after the helper was extracted, an incomplete
+  // refactor.
+  await logActivityBestEffort(
+    'testsprite_bypass',
+    {
+      email: TEST_ACCOUNT_EMAIL,
+      outcome: 'success',
+      requestIp: request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? null,
+      userAgent: request.headers.get('user-agent') ?? null,
+      timestamp: new Date().toISOString(),
+    },
+    'test-auth-bypass-audit'
+  );
 
   return response;
 }
