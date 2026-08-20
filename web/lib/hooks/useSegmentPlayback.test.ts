@@ -48,8 +48,8 @@ function makeFakePrimitives(initialTime: number | null = null) {
     get playCalls() {
       return playCalls;
     },
-    setTime: (t: number | null) => {
-      currentTime = t;
+    setTime: (nextTime: number | null) => {
+      currentTime = nextTime;
     },
   };
 }
