@@ -32,7 +32,7 @@ describe('HighlightsScrubber', () => {
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => HIGHLIGHTS_RESPONSE,
+        json: () => HIGHLIGHTS_RESPONSE,
       })
     );
   });
