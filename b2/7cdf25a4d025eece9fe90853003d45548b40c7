@@ -1,0 +1,63 @@
+docs/UI_FEEDBACK_TRIAGE_2026-08-20.md
+  s_0eded1e9d0cab6::t_2a5357da2a4bd8 31-37
+supabase/migrations/20260820120000_highlights_reel_uncap_settings.sql
+  s_0eded1e9d0cab6::t_71ca6cb2764682 1-46
+web/lib/usecases/GenerateExecutiveDigestUseCase.ts
+  s_0eded1e9d0cab6::t_087c423fe8b78a 8,12
+  s_0eded1e9d0cab6::t_238e57a89714cc 187-198,200,203,208
+web/components/dashboard/HighlightsTrack.test.tsx
+  s_0eded1e9d0cab6::t_f7ca63e5a3ef3f 1
+  s_0eded1e9d0cab6::t_064c82453216c7 2-52
+web/lib/ports/VideoPlayerPort.ts
+  s_0eded1e9d0cab6::t_7b8d17dc22e50a 21-25
+web/store/useVideoStore.ts
+  s_0eded1e9d0cab6::t_9ded41d7bbd89b 11-17,21,35,37
+  s_0eded1e9d0cab6::t_70d119b4a05003 50
+web/components/dashboard/HighlightsTrack.tsx
+  s_0eded1e9d0cab6::t_6c94644201a356 1-124
+web/components/templates/console/VideoPlayerCard.tsx
+  s_0eded1e9d0cab6::t_a7cd7ec5deb9c8 28
+  s_0eded1e9d0cab6::t_23d822c5ecc148 247-256
+.memory/AGENT_LEDGER.md
+  s_0eded1e9d0cab6::t_df225f471db4f4 1258-1259
+web/app/share/[token]/PublicHighlightsReel.tsx
+  s_0eded1e9d0cab6::t_9575de79606b0f 166
+  s_0eded1e9d0cab6::t_cdd11451eb29f5 6-7,16-17,27-32,51,102-119,122-124,148-158,160-165,167-182,184,187-188
+  s_0eded1e9d0cab6::t_4db7e7e4fa0caf 126
+  s_0eded1e9d0cab6::t_2c210a2136b360 189
+web/lib/prompts/highlights-extraction.test.ts
+  s_0eded1e9d0cab6::t_33ae37c482ac8a 1-70
+web/lib/prompts/highlights-extraction.ts
+  s_0eded1e9d0cab6::t_d00623cdbcf93c 102
+  s_0eded1e9d0cab6::t_fe53c0b778f799 9-20,24-25
+  s_0eded1e9d0cab6::t_85c92a131d2e15 58-60,64-65
+web/lib/adapters/YouTubePlayerAdapter.ts
+  s_0eded1e9d0cab6::t_486215b554e27b 187-198
+  s_0eded1e9d0cab6::t_dc7abac105a153 14
+web/lib/hooks/useHighlightTicker.ts
+  s_0eded1e9d0cab6::t_a66b6f6b0c989c 1-65
+web/lib/prompts/chat-grounding.ts
+  s_0eded1e9d0cab6::t_67df10fbfebc83 13
+web/lib/utils/highlights-settings.ts
+  s_0eded1e9d0cab6::t_329aeba747bf18 9-17
+web/components/dashboard/HighlightsScrubber.tsx
+  s_0eded1e9d0cab6::t_fbf4af1ee62ea8 199
+  s_0eded1e9d0cab6::t_5622dd4ccfa752 163
+  s_0eded1e9d0cab6::t_c2ef064f7624ce 6-7,22-23,31-39,41-46,53,55,129-152,157-161,180-191,193-198,200-215,217-222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b27cdf25a4d025eece9fe90853003d45548b40c7",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
