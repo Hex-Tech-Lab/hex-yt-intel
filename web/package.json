@@ -78,6 +78,7 @@
     "eslint-config-next": "16.2.6",
     "happy-dom": "^20.11.1",
     "next": "16.2.11",
+    "pict-pairwise-testing": "^1.1.0",
     "postcss": "^8.5.16",
     "prettier": "3.8.4",
     "tailwindcss": "4.3.0",
