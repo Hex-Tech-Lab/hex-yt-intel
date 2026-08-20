@@ -453,9 +453,16 @@ div[data-chat-dock="true"] div[class*="content"] {
 [data-chat-dock="true"] .astryx-chat-composer-input {
   border-radius: var(--radius-control) !important;
 }
+/* Real accessibility fix (2026-08-20, automated PR review P1): the previous
+   outline:none + box-shadow-only ring is invisible in forced-colors/Windows
+   High Contrast mode (box-shadow is suppressed there, outline is not) and
+   was too low-contrast for low-vision users even outside that mode. Uses a
+   real `outline` (respected by forced-colors) at full --accent contrast,
+   softer than the original loud ring but still clearly visible, not
+   suppressed. */
 [data-chat-dock="true"] .astryx-chat-composer:focus-within {
-  outline: none !important;
-  box-shadow: 0 0 0 1.5px var(--line) !important;
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 1px !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
