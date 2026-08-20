@@ -1,0 +1,27 @@
+web/components/templates/console/ApexSummaryCard.tsx
+  s_0eded1e9d0cab6::t_bb4797bc21665e 28-42
+web/components/containers/DashboardContainer.tsx
+  s_0eded1e9d0cab6::t_c0768c22afff7e 710-720
+docs/UI_FEEDBACK_TRIAGE_2026-08-20.md
+  s_0eded1e9d0cab6::t_05f809f58eaa3f 3,8-10,14-24
+web/components/dashboard/SelectedDimensionReadout.tsx
+  s_0eded1e9d0cab6::t_95fd1480ab3a56 42-54
+web/app/globals.css
+  s_0eded1e9d0cab6::t_5a4b7af662a899 504-510
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c8958392eea8527aabcf3498d5f49995e08ed36e",
+  "prompts": {},
+  "sessions": {
+    "s_0eded1e9d0cab6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5bf75d7-c4b7-4717-8eb2-2c88006b2cd9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Kelly Bakri <noreply@github.com>"
+    }
+  }
+}
