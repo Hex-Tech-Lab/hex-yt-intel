@@ -96,6 +96,14 @@ export function HighlightsNav({
   );
 }
 
+// Real density constraint (live report, 2026-08-21): highlight count is
+// uncapped up to highlights.maxCount (currently 40). Permanent per-marker
+// timestamp labels are only legible when there are few enough markers that
+// they don't visually collide -- above this count, hover (the Tooltip
+// already on every marker) stays the only way to see a timestamp. User's
+// own number, not a guess.
+const PERMANENT_LABEL_MAX_COUNT = 15;
+
 export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurationSeconds, hideNav = false }: HighlightsTrackProps) {
   if (highlights.length === 0) return null;
 
@@ -106,6 +114,7 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
 
   const clampedActiveIndex = activeIndex !== null ? Math.min(Math.max(activeIndex, 0), highlights.length - 1) : null;
   const activeHighlight = clampedActiveIndex !== null ? highlights[clampedActiveIndex] : null;
+  const showPermanentLabels = highlights.length <= PERMANENT_LABEL_MAX_COUNT;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -115,7 +124,10 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
         </div>
       )}
 
-      {/* Scrubber track container */}
+      {/* Scrubber track container -- fixed height regardless of label mode;
+          permanent labels render in a separate sibling row below (next
+          block) rather than growing this container, so they don't fight
+          the markers' own top-1/2 vertical-centering math. */}
       <div className="relative w-full h-7 flex items-center bg-[var(--surface-quiet)] border border-[var(--line-faint)] px-2">
         <div className="absolute left-2 right-2 h-1 bg-[var(--line-faint)]">
           {activeHighlight && (() => {
@@ -197,6 +209,28 @@ export function HighlightsTrack({ highlights, activeIndex, onSelect, videoDurati
           )}
         </div>
       </div>
+
+      {/* Permanent per-marker timestamp row, only when the highlight count
+          is low enough to stay legible (user-specified threshold). Above
+          that count, the Tooltip on each marker (hover) remains the only
+          way to see a timestamp -- deliberately not shown here to avoid
+          label collision at high density. */}
+      {showPermanentLabels && (
+        <div className="relative w-full h-3 px-2" aria-hidden="true">
+          {highlights.map((highlight) => {
+            const leftPct = Math.min(98, Math.max(1, (highlight.start / maxTime) * 100));
+            return (
+              <span
+                key={highlight.idx}
+                className="absolute -translate-x-1/2 text-[9px] font-mono text-[var(--ink-muted)] whitespace-nowrap"
+                style={{ left: `${leftPct}%` }}
+              >
+                {formatClock(highlight.start)}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
